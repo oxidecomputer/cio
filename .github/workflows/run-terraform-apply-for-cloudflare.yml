@@ -1,0 +1,28 @@
+on:
+  push:
+    branches:
+      - master # Push events on master branch
+name: Run terraform apply for Cloudflare
+jobs:
+  runTerraformApplyForCloudflare:
+    name: Run terraform apply for Cloudflare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Download terraform
+        run: make download-terraform
+      - name: Run terraform apply for Cloudflare
+        run: make cf-apply
+        env:
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+        shell: bash
+      - name: Commit changes to terraform.tfstate
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add terraform.tfstate
+          git commit -m "Run terraform apply for Cloudflare" || echo "Nothing to commit"
+      - name: Push Changes
+        run: |
+          git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master
