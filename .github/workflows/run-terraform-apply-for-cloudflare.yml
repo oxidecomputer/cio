@@ -12,7 +12,7 @@ jobs:
       - name: Download terraform
         run: make download-terraform
       - name: Run terraform apply for Cloudflare
-        run: make cf-apply
+        run: make cf-apply EXTRA_ARGS=-auto-approve
         env:
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
           CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
