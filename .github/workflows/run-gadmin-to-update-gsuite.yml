@@ -17,10 +17,9 @@ jobs:
           echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
         env:
           GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
-      - name: Testing
-        run: cat ${{ github.workspace }}/gsuite_key
       - name: Run gadmin to update GSuite
         run: make gsuite
         shell: bash
         env:
           GOOGLE_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
+          GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
