@@ -1,0 +1,24 @@
+on:
+  push:
+    branches:
+      - master # Push events on master branch
+name: Run gadmin to update GSuite
+jobs:
+  runGadminToUpdate GSuite:
+    name: Run gadmin to update GSuite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Download gadmin
+        run: make download-gadmin
+      - name: Set up environment
+        shell: bash
+        run: |
+          echo "$GSUITE_KEY" > /tmp/gsuite_key
+        env:
+          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
+      - name: Run gadmin to update GSuite
+        run: make gsuite
+        shell: bash
+        env:
+          GOOGLE_CREDENTIAL_FILE: /tmp/gsuite_key
