@@ -4,7 +4,7 @@ on:
       - master # Push events on master branch
 name: Run gadmin to update GSuite
 jobs:
-  runGadminToUpdate GSuite:
+  runGadminToUpdateGSuite:
     name: Run gadmin to update GSuite
     runs-on: ubuntu-latest
     steps:
