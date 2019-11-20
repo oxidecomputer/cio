@@ -14,11 +14,11 @@ jobs:
       - name: Set up environment
         shell: bash
         run: |
-          echo "$GSUITE_KEY" > /tmp/gsuite_key
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
         env:
           GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
       - name: Run gadmin to update GSuite
         run: make gsuite
         shell: bash
         env:
-          GOOGLE_CREDENTIAL_FILE: /tmp/gsuite_key
+          GOOGLE_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
