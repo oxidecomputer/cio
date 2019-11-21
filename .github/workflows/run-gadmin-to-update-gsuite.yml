@@ -21,5 +21,6 @@ jobs:
         run: make gsuite
         shell: bash
         env:
-          GOOGLE_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
+          GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
+          GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
