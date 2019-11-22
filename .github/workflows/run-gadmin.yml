@@ -25,3 +25,4 @@ jobs:
           GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
           GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ORG: oxidecomputer
