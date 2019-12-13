@@ -27,3 +27,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           GITHUB_ORG: oxidecomputer
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          ZOOM_API_KEY: ${{ secrets.ZOOM_API_KEY }}
+          ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
