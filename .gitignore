@@ -1,3 +1,7 @@
 # terraform ignores
 .terraform/
 terraform.tfstate.backup
+
+# hugo
+directory/public
+directory/resources
