@@ -37,7 +37,8 @@ jobs:
           git commit -m "Run gadmin to update directory files" || echo "Nothing to commit"
       - name: Rebase
         run: |
-          git rebase https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git rebase origin/master
       - name: Push Changes
         run: |
-          git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master
+          git push origin master
