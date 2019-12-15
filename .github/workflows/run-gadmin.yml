@@ -35,6 +35,9 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add directory
           git commit -m "Run gadmin to update directory files" || echo "Nothing to commit"
+      - name: Rebase
+        run: |
+          git rebase https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
       - name: Push Changes
         run: |
           git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master
