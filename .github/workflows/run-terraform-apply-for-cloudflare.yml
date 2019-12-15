@@ -23,6 +23,10 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add terraform/cloudflare/terraform.tfstate
           git commit -m "Run terraform apply for Cloudflare" || echo "Nothing to commit"
+      - name: Rebase
+        run: |
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git rebase origin/master
       - name: Push Changes
         run: |
-          git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master
+          git push origin master
