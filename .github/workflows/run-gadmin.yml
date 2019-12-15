@@ -29,3 +29,12 @@ jobs:
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           ZOOM_API_KEY: ${{ secrets.ZOOM_API_KEY }}
           ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
+      - name: Commit changes to directory
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add directory
+          git commit -m "Run gadmin to update directory files" || echo "Nothing to commit"
+      - name: Push Changes
+        run: |
+          git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master
