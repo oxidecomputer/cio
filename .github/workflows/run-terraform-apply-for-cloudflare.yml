@@ -26,6 +26,7 @@ jobs:
       - name: Rebase
         run: |
           git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git fetch origin
           git rebase origin/master
       - name: Push Changes
         run: |
