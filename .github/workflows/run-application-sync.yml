@@ -1,0 +1,27 @@
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+name: Run sync-applications
+jobs:
+  runSyncApplications:
+    name: Run sync-applications
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Download gadmin
+        run: make download-gadmin
+      - name: Set up environment
+        shell: bash
+        run: |
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
+        env:
+          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
+      - name: Run sync-applications
+        run: make sync-applications
+        shell: bash
+        env:
+          GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
+          GADMIN_SUBJECT: ${{ secrets.sync-applications_SUBJECT }}
+          GADMIN_ACCOUNT_ID: ${{ secrets.sync-applications_ACCOUNT_ID }}
+          GITHUB_TOKEN: ${{ secrets.sync-applications_GITHUB_TOKEN }}
+          GITHUB_ORG: oxidecomputer
