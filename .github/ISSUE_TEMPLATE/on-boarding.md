@@ -10,5 +10,5 @@ Add to users.toml.
 
 Start Date: [START DATE (ex. Monday, January 20th, 2020)]
 Personal Email: [PERSONAL EMAIL]
-Twitter Handle: [TWITTER HANDLE]
-GitHub Handle: [GITHUB HANDLE]
+Twitter: [TWITTER HANDLE]
+GitHub: [GITHUB HANDLE]
