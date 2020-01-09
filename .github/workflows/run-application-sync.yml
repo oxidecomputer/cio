@@ -1,6 +1,9 @@
 on:
   schedule:
     - cron: "*/15 * * * *"
+  push:
+    branches:
+      - master # Push events on master branch
 name: Run sync-applications
 jobs:
   runSyncApplications:
@@ -21,7 +24,7 @@ jobs:
         shell: bash
         env:
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
-          GADMIN_SUBJECT: ${{ secrets.sync-applications_SUBJECT }}
-          GADMIN_ACCOUNT_ID: ${{ secrets.sync-applications_ACCOUNT_ID }}
-          GITHUB_TOKEN: ${{ secrets.sync-applications_GITHUB_TOKEN }}
+          GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
+          GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           GITHUB_ORG: oxidecomputer
