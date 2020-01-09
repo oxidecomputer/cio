@@ -9,6 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - uses: actions/checkout@v2
+        with:
+          repository: oxidecomputer/meta
+          token: ${{ secrets.GADMIN_GITHUB_TOKEN }}
+          path: meta
       - name: Download gadmin
         run: make download-gadmin
       - name: Set up environment
@@ -31,15 +36,18 @@ jobs:
           ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
       - name: Commit changes to directory
         run: |
+          cd meta
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add static-sites
-          git commit -m "Run gadmin to update directory files" || echo "Nothing to commit"
+          git commit -m "Run gadmin to update generated tables files" || echo "Nothing to commit"
       - name: Rebase
         run: |
-          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          cd meta
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/oxidecomputer/meta.git
           git fetch origin
           git rebase origin/master
       - name: Push Changes
         run: |
+          cd meta
           git push origin master

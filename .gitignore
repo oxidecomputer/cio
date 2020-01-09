@@ -5,3 +5,6 @@ terraform.tfstate.backup
 # hugo
 directory/public
 directory/resources
+
+# meta repo
+meta
