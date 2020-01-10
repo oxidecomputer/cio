@@ -6,7 +6,7 @@ labels: hiring
 assignees: jessfraz, bcantrill, sdtuck
 ---
 
-Add to users.toml.
+- [ ] Add to users.toml
 
 Start Date: [START DATE (ex. Monday, January 20th, 2020)]
 Personal Email: [PERSONAL EMAIL]
