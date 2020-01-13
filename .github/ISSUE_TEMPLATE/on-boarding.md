@@ -7,6 +7,7 @@ assignees: jessfraz, bcantrill, sdtuck
 ---
 
 - [ ] Add to users.toml
+- [ ] Add to matrix chat
 
 Start Date: [START DATE (ex. Monday, January 20th, 2020)]
 Personal Email: [PERSONAL EMAIL]
