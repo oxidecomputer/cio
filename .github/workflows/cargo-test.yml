@@ -1,0 +1,13 @@
+on: push
+name: cargo test
+jobs:
+  cargotest:
+    name: cargo test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: cargo test
+        uses: docker://rust:latest
+        with:
+          entrypoint: cargo
+          args: test

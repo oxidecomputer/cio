@@ -8,3 +8,11 @@ directory/resources
 
 # meta repo
 meta
+
+
+#Added by cargo
+#
+#already existing elements are commented out
+
+/target
+**/*.rs.bk

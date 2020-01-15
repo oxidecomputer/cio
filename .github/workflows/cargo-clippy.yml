@@ -1,0 +1,13 @@
+on: push
+name: cargo clippy
+jobs:
+  cargoclippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: cargo clippy
+        uses: docker://rust:latest
+        with:
+          entrypoint: bash
+          args: -c "rustup component add clippy && cargo clippy"

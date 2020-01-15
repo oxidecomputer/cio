@@ -1,0 +1,13 @@
+on: push
+name: rustfmt
+jobs:
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: rustfmt
+        uses: docker://rust:latest
+        with:
+          entrypoint: bash
+          args: -c "rustup component add rustfmt && rustfmt --check **/*.rs"
