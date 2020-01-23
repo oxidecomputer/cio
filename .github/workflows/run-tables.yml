@@ -1,0 +1,47 @@
+on:
+  push:
+    branches:
+      - master # Push events on master branch
+name: Run tables
+jobs:
+  runTables:
+    name: Run tables
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
+        with:
+          repository: oxidecomputer/meta
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: meta
+      - name: cargo build
+        uses: docker://rust:latest
+        with:
+          entrypoint: cargo
+          args: build
+      - name: Set up environment
+        shell: bash
+        run: |
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
+        env:
+          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
+      - name: Run tables
+        run: make tables
+        shell: bash
+      - name: Commit changes to directory
+        run: |
+          cd meta
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add directory links
+          git commit -m "Run 'make tables' to update generated tables files" || echo "Nothing to commit"
+      - name: Rebase
+        run: |
+          cd meta
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/oxidecomputer/meta.git
+          git fetch origin
+          git rebase origin/master
+      - name: Push Changes
+        run: |
+          cd meta
+          git push origin master
