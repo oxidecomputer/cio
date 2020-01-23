@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: oxidecomputer/meta
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           path: meta
       - name: cargo build
         uses: docker://rust:latest
@@ -38,7 +38,7 @@ jobs:
       - name: Rebase
         run: |
           cd meta
-          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/oxidecomputer/meta.git
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GADMIN_GITHUB_TOKEN }}@github.com/oxidecomputer/meta.git
           git fetch origin
           git rebase origin/master
       - name: Push Changes
