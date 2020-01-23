@@ -2,23 +2,26 @@ on:
   push:
     branches:
       - master # Push events on master branch
-name: Run gadmin
+name: Run sync
 jobs:
-  runGadmin:
-    name: Run gadmin
+  runSync:
+    name: Run sync
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - name: Download gadmin
-        run: make download-gadmin
+      - name: cargo build
+        uses: docker://rust:latest
+        with:
+          entrypoint: cargo
+          args: build
       - name: Set up environment
         shell: bash
         run: |
           echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
         env:
           GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
-      - name: Run gadmin
-        run: make gadmin
+      - name: Run sync
+        run: make sync
         shell: bash
         env:
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
