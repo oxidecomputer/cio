@@ -28,6 +28,7 @@ jobs:
         env:
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
+          GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
           GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           GITHUB_ORG: oxidecomputer
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
