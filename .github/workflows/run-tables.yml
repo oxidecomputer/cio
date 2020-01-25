@@ -19,15 +19,11 @@ jobs:
         with:
           entrypoint: cargo
           args: build
-      - name: Set up environment
-        shell: bash
-        run: |
-          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
-        env:
-          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
       - name: Run tables
         run: make tables
         shell: bash
+        env:
+          RUST_BACKTRACE: 1
       - name: Commit changes to directory
         run: |
           cd meta
