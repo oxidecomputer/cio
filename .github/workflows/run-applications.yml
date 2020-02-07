@@ -34,4 +34,5 @@ jobs:
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           ZOOM_API_KEY: ${{ secrets.ZOOM_API_KEY }}
           ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
+          ZOOM_ACCOUNT_ID: ${{ secrets.ZOOM_ACCOUNT_ID }}
           RUST_BACKTRACE: 1
