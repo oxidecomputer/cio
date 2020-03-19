@@ -1,0 +1,17 @@
+on:
+  - pull_request
+name: Run terraform plan for Cloudflare
+jobs:
+  runTerraformPlanForCloudflare:
+    name: Run terraform plan for Cloudflare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Download terraform
+        run: make download-terraform
+      - name: Run terraform plan for Cloudflare
+        run: make cf-plan
+        env:
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+        shell: bash
