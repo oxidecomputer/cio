@@ -1,5 +1,7 @@
 on:
-  - pull_request
+  pull_request:
+    paths:
+      - "terraform/**" # Only run on changes to the terraform directory.
 name: Run terraform plan for Cloudflare
 jobs:
   runTerraformPlanForCloudflare:
