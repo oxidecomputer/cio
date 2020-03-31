@@ -1,0 +1,35 @@
+on:
+  push:
+    branches:
+      - master # Push events on master branch
+name: Run nginx
+jobs:
+  runNginx:
+    name: Run nginx
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: cargo build
+        uses: docker://rust:latest
+        with:
+          entrypoint: cargo
+          args: build
+      - name: Run nginx
+        run: make nginx
+        shell: bash
+        env:
+          RUST_BACKTRACE: 1
+      - name: Commit changes to directory
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add nginx/generated.conf.d
+          git commit -m "Run 'make nginx' to update generated nginx files" || echo "Nothing to commit"
+      - name: Rebase
+        run: |
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git fetch origin
+          git rebase origin/master
+      - name: Push Changes
+        run: |
+          git push origin master
