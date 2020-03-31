@@ -2,17 +2,14 @@
 .terraform/
 terraform.tfstate.backup
 
-# hugo
-directory/public
-directory/resources
-
-# meta repo
+# ignore the meta repo when we clone it within this directory to generate
+# the tables
 meta
 
-
-#Added by cargo
-#
-#already existing elements are commented out
-
+# files added by cargo
 /target
 **/*.rs.bk
+
+# nginx ignores
+nginx/ssl
+nginx/.htpasswd
