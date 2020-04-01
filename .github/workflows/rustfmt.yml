@@ -1,4 +1,7 @@
-on: push
+on:
+  - push
+  paths:
+    - "src/**" # Only run on changes to the src directory.
 name: rustfmt
 jobs:
   rustfmt:
