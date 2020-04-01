@@ -1,6 +1,7 @@
 # terraform ignores
 .terraform/
 terraform.tfstate.backup
+.terraform.tfstate.lock.info
 
 # ignore the meta repo when we clone it within this directory to generate
 # the tables
