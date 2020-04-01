@@ -22,6 +22,8 @@ jobs:
         shell: bash
         env:
           RUST_BACKTRACE: 1
+          GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
+          GITHUB_ORG: oxidecomputer
       - name: Commit changes to directory
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
