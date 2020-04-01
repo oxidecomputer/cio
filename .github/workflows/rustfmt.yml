@@ -1,7 +1,10 @@
 on:
-  - push
-  paths:
-    - "src/**" # Only run on changes to the src directory.
+  push:
+    paths:
+      - "src/**" # Only run on changes to the src directory.
+  pull_request:
+    paths:
+      - "src/**" # Only run on changes to the src directory.
 name: rustfmt
 jobs:
   rustfmt:
