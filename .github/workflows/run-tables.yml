@@ -2,6 +2,9 @@ on:
   push:
     branches:
       - master # Push events on master branch
+    paths:
+      - "configs/**" # Only run on changes to the configs directory.
+      - "src/**" # Only run on changes to the src directory.
 name: Run tables
 jobs:
   runTables:
