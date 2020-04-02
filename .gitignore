@@ -12,5 +12,4 @@ meta
 **/*.rs.bk
 
 # nginx ignores
-nginx/ssl
 nginx/.htpasswd
