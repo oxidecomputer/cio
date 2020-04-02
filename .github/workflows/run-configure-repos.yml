@@ -1,0 +1,27 @@
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  push:
+    branches:
+      - master # Push events on master branch
+    paths:
+      - "src/**" # Only run on changes to the src directory.
+      - ".github/workflows/run-configure-repos.yaml" # Run when this file changes.
+name: Run configure-repos
+jobs:
+  runConfigureRepos:
+    name: Run configure-repos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: cargo build
+        uses: docker://rust:latest
+        with:
+          entrypoint: cargo
+          args: build
+      - name: Run configure-repos
+        run: make configure-repos
+        shell: bash
+        env:
+          RUST_BACKTRACE: 1
+          GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
