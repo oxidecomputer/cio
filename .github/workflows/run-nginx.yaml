@@ -37,6 +37,14 @@ jobs:
           git remote set-url origin https://${{ github.actor }}:${{ secrets.GADMIN_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git fetch origin
           git rebase origin/master
-      - name: Push Changes
+      - name: Push Changes to GitHub
         run: |
           git push origin master
+      - name: Save the SSH Key for our nginx server locally
+        run: |
+          mkdir -p ${HOME}/.ssh
+          echo "${{ secrets.GITRECEIVE_SSH_KEY }}" > ${HOME}/.ssh/id_ed25519
+      - name: Push Changes to nginx server
+        run: |
+          git remote add server git@corp.oxide.computer:configs
+          git push server master
