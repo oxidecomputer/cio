@@ -7,11 +7,11 @@ on:
     paths:
       - "configs/links.toml" # Only run on changes to the links file.
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-nginx.yml" # Run when this file changes.
-name: Run nginx
+      - ".github/workflows/run-shorturls.yml" # Run when this file changes.
+name: Run shorturls
 jobs:
-  runNginx:
-    name: Run nginx
+  runShorturls:
+    name: Run shorturls
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -25,8 +25,8 @@ jobs:
         with:
           entrypoint: cargo
           args: build
-      - name: Run nginx
-        run: make nginx
+      - name: Run shorturls
+        run: make shorturls
         shell: bash
         env:
           RUST_BACKTRACE: 1
@@ -37,7 +37,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add nginx/conf.d/generated* terraform/cloudflare/generated*
-          git commit -m "Run 'make nginx' to update generated nginx and CloudFlare terraform files" || echo "Nothing to commit"
+          git commit -m "Run 'make shorturls' to update generated nginx and CloudFlare terraform files" || echo "Nothing to commit"
       - name: Rebase
         run: |
           git remote set-url origin https://${{ github.actor }}:${{ secrets.GADMIN_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git

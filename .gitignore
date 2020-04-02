@@ -6,6 +6,9 @@ terraform.tfstate.backup
 # ignore the meta repo when we clone it within this directory to generate
 # the tables
 meta
+# Generated tables directories
+directory/
+links/
 
 # files added by cargo
 /target
@@ -13,3 +16,4 @@ meta
 
 # nginx ignores
 nginx/.htpasswd
+
