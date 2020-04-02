@@ -44,12 +44,12 @@ jobs:
       - name: Save the SSH Key for our nginx server locally
         run: |
           mkdir -p ${HOME}/.ssh
-          echo "${{ secrets.GITRECEIVE_SSH_KEY }}" > ${HOME}/.ssh/id_ed25519
-          chmod 0644 .ssh/id_ed25519
+          echo "${{ secrets.GITRECEIVE_SSH_KEY }}" > ${{ github.workspace}}/id_ed25519
+          chmod 0644 ${{ github.workspace}}/id_ed25519
           echo "|1|50+v3T5YxXYp2pVRfkKE9JKI0pQ=|39YTUA+yLhazBnDrAckGBR95wO4= ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJ5H4fXwGsi8ZFe8w9oLAg6lp7pw9p9M9Wi+dwgEvcTbvhcJLcuUmDjwZRfq1Fl6T5OPCiiNHYw4eUzKpo4idHk=" >> ${HOME}/.ssh/known_hosts
       - name: Push Changes to nginx server
         run: |
           git remote add server git@corp.oxide.computer:configs
           git push server master
-#env:
-#GIT_SSH_COMMAND: "ssh -i ${HOME}/.ssh/id_ed25519"
+        env:
+          GIT_SSH_COMMAND: "ssh -i ${{ github.workspace}}/id_ed25519"
