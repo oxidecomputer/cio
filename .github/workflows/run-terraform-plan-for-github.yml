@@ -1,0 +1,20 @@
+on:
+  pull_request:
+    paths:
+      - "terraform/github/**" # Only run on changes to the terraform directory.
+      - ".github/workflows/run-terraform-plan-for-github.yml" # Run when this file changes.
+name: Run terraform plan for GitHub
+jobs:
+  runTerraformPlanForGitHub:
+    name: Run terraform plan for GitHub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Download terraform
+        run: make download-terraform
+      - name: Run terraform plan for GitHub
+        run: make gh-plan
+        env:
+          GITHUB_ORG: oxidecomputer
+          GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
+        shell: bash

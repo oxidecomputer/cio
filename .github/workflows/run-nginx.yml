@@ -19,7 +19,7 @@ jobs:
           # This toekn needs to be a personal one so this action can trigger
           # the terraform cloudflare action.
           # See: https://github.community/t5/GitHub-Actions/Action-does-not-trigger-another-on-push-tag-action/td-p/40692
-          - token: ${{ secrets.GADMIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GADMIN_GITHUB_TOKEN }}
       - name: cargo build
         uses: docker://rust:latest
         with:
