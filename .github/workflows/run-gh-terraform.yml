@@ -5,13 +5,13 @@ on:
     branches:
       - master # Push events on master branch
     paths:
-      - "configs/links.toml" # Only run on changes to the links file.
+      - "configs/users.toml" # Only run on changes to the users file.
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-nginx.yml" # Run when this file changes.
-name: Run nginx
+      - ".github/workflows/run-gh-terraform.yml" # Run when this file changes.
+name: Run gh-terraform
 jobs:
-  runNginx:
-    name: Run nginx
+  runGitHubTerraform:
+    name: Run gh-terraform
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -25,8 +25,8 @@ jobs:
         with:
           entrypoint: cargo
           args: build
-      - name: Run nginx
-        run: make nginx
+      - name: Run gh-terraform
+        run: make gh-terraform
         shell: bash
         env:
           RUST_BACKTRACE: 1
@@ -36,8 +36,8 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add nginx/conf.d/generated* terraform/cloudflare/generated*
-          git commit -m "Run 'make nginx' to update generated nginx and CloudFlare terraform files" || echo "Nothing to commit"
+          git add terraform/github/generated*
+          git commit -m "Run 'make gh-terraform' to update generated GitHub terraform files" || echo "Nothing to commit"
       - name: Rebase
         run: |
           git remote set-url origin https://${{ github.actor }}:${{ secrets.GADMIN_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
@@ -46,15 +46,3 @@ jobs:
       - name: Push Changes to GitHub
         run: |
           git push origin master
-      - name: Save the SSH Key for our nginx server locally
-        run: |
-          mkdir -p ${HOME}/.ssh
-          echo "${{ secrets.GITRECEIVE_SSH_KEY }}" > ${{ github.workspace}}/id_ed25519
-          chmod 0400 ${{ github.workspace}}/id_ed25519
-          echo "|1|50+v3T5YxXYp2pVRfkKE9JKI0pQ=|39YTUA+yLhazBnDrAckGBR95wO4= ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJ5H4fXwGsi8ZFe8w9oLAg6lp7pw9p9M9Wi+dwgEvcTbvhcJLcuUmDjwZRfq1Fl6T5OPCiiNHYw4eUzKpo4idHk=" >> ${HOME}/.ssh/known_hosts
-      - name: Push Changes to nginx server
-        run: |
-          git remote add server git@corp.oxide.computer:configs
-          git push server master
-        env:
-          GIT_SSH_COMMAND: "ssh -i ${{ github.workspace}}/id_ed25519"
