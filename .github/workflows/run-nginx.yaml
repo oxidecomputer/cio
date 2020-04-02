@@ -34,7 +34,7 @@ jobs:
           git commit -m "Run 'make nginx' to update generated nginx files" || echo "Nothing to commit"
       - name: Rebase
         run: |
-          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GADMIN_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git fetch origin
           git rebase origin/master
       - name: Push Changes
