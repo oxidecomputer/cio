@@ -6,7 +6,7 @@ on:
       - master # Push events on master branch
     paths:
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-configure-repos.yaml" # Run when this file changes.
+      - ".github/workflows/run-configure-repos.yml" # Run when this file changes.
 name: Run configure-repos
 jobs:
   runConfigureRepos:

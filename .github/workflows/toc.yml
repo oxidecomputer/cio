@@ -5,7 +5,7 @@ on:
     paths:
       - "**/*.md" # Only run on changes to markdown files.
       - "README.md"
-      - ".github/workflows/toc.yaml" # Run when this file changes.
+      - ".github/workflows/toc.yml" # Run when this file changes.
 name: Table of Contents Generator
 jobs:
   generateTOC:

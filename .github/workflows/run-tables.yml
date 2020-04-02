@@ -5,7 +5,7 @@ on:
     paths:
       - "configs/**" # Only run on changes to the configs directory.
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-tables.yaml" # Run when this file changes.
+      - ".github/workflows/run-tables.yml" # Run when this file changes.
 name: Run tables
 jobs:
   runTables:

@@ -4,7 +4,7 @@ on:
       - master # Push events on master branch
     paths:
       - "terraform/cloudflare/**" # Only run on changes to the terraform directory.
-      - ".github/workflows/run-terraform-apply-for-cloudflare.yaml" # Run when this file changes.
+      - ".github/workflows/run-terraform-apply-for-cloudflare.yml" # Run when this file changes.
 name: Run terraform apply for Cloudflare
 jobs:
   runTerraformApplyForCloudflare:

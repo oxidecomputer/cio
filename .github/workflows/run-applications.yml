@@ -6,7 +6,7 @@ on:
       - master # Push events on master branch
     paths:
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-applications.yaml" # Run when this file changes.
+      - ".github/workflows/run-applications.yml" # Run when this file changes.
 name: Run applications
 jobs:
   runApplications:

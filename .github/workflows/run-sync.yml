@@ -5,7 +5,7 @@ on:
     paths:
       - "configs/**" # Only run on changes to the configs directory.
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-sync.yaml" # Run when this file changes.
+      - ".github/workflows/run-sync.yml" # Run when this file changes.
 name: Run sync
 jobs:
   runSync:
