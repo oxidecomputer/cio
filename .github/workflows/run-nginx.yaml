@@ -7,6 +7,7 @@ on:
     paths:
       - "configs/links.toml" # Only run on changes to the links file.
       - "src/**" # Only run on changes to the src directory.
+      - ".github/workflows/run-nginx.yaml" # Run when this file changes.
 name: Run nginx
 jobs:
   runNginx:

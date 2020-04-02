@@ -2,9 +2,11 @@ on:
   push:
     paths:
       - "src/**" # Only run on changes to the src directory.
+      - ".github/workflows/cargo-build.yaml" # Run when this file changes.
   pull_request:
     paths:
       - "src/**" # Only run on changes to the src directory.
+      - ".github/workflows/cargo-build.yaml" # Run when this file changes.
 name: cargo build
 jobs:
   cargobuild:

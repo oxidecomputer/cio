@@ -2,6 +2,7 @@ on:
   pull_request:
     paths:
       - "terraform/cloudflare/**" # Only run on changes to the terraform directory.
+      - ".github/workflows/run-terraform-plan-for-cloudflare.yaml" # Run when this file changes.
 name: Run terraform plan for Cloudflare
 jobs:
   runTerraformPlanForCloudflare:
