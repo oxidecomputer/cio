@@ -31,11 +31,7 @@ jobs:
         env:
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
-          GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
           GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           GITHUB_ORG: oxidecomputer
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          ZOOM_API_KEY: ${{ secrets.ZOOM_API_KEY }}
-          ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
-          ZOOM_ACCOUNT_ID: ${{ secrets.ZOOM_ACCOUNT_ID }}
           RUST_BACKTRACE: 1
