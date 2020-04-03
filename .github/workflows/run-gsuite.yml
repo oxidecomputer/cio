@@ -5,11 +5,11 @@ on:
     paths:
       - "configs/**" # Only run on changes to the configs directory.
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-sync.yml" # Run when this file changes.
-name: Run sync
+      - ".github/workflows/run-gsuite.yml" # Run when this file changes.
+name: Run gsuite
 jobs:
-  runSync:
-    name: Run sync
+  runGSuite:
+    name: Run gsuite
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -24,17 +24,12 @@ jobs:
           echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
         env:
           GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
-      - name: Run sync
-        run: make sync
+      - name: Run gsuite
+        run: make gsuite
         shell: bash
         env:
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
           GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
-          GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
-          GITHUB_ORG: oxidecomputer
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          ZOOM_API_KEY: ${{ secrets.ZOOM_API_KEY }}
-          ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
-          ZOOM_ACCOUNT_ID: ${{ secrets.ZOOM_ACCOUNT_ID }}
           RUST_BACKTRACE : 1

@@ -1,0 +1,28 @@
+on:
+  push:
+    branches:
+      - master # Push events on master branch
+    paths:
+      - "configs/**" # Only run on changes to the configs directory.
+      - "src/**" # Only run on changes to the src directory.
+      - ".github/workflows/run-zoom.yml" # Run when this file changes.
+name: Run zoom
+jobs:
+  runZoom:
+    name: Run zoom
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: cargo build
+        uses: docker://rust:latest
+        with:
+          entrypoint: cargo
+          args: build
+      - name: Run zoom
+        run: make zoom
+        shell: bash
+        env:
+          ZOOM_API_KEY: ${{ secrets.ZOOM_API_KEY }}
+          ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
+          ZOOM_ACCOUNT_ID: ${{ secrets.ZOOM_ACCOUNT_ID }}
+          RUST_BACKTRACE : 1
