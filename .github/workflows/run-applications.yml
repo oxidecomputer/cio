@@ -34,4 +34,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           GITHUB_ORG: oxidecomputer
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          EMAIL_TEMPLATE_DOMAIN: oxide.computer
           RUST_BACKTRACE: 1

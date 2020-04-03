@@ -32,4 +32,6 @@ jobs:
           GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
           GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          EMAIL_TEMPLATE_DOMAIN: oxide.computer
+          GITHUB_ORG: oxidecomputer
           RUST_BACKTRACE : 1
