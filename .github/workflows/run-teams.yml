@@ -7,11 +7,11 @@ on:
     paths:
       - "configs/users.toml" # Only run on changes to the users file.
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-gh-terraform.yml" # Run when this file changes.
-name: Run gh-terraform
+      - ".github/workflows/run-teams.yml" # Run when this file changes.
+name: Run teams
 jobs:
-  runGitHubTerraform:
-    name: Run gh-terraform
+  runTeams:
+    name: Run teams
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -25,8 +25,8 @@ jobs:
         with:
           entrypoint: cargo
           args: build
-      - name: Run gh-terraform
-        run: make gh-terraform
+      - name: Run teams
+        run: make teams
         shell: bash
         env:
           RUST_BACKTRACE: 1
@@ -37,7 +37,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add terraform/github/generated*
-          git commit -m "Run 'make gh-terraform' to update generated GitHub terraform files" || echo "Nothing to commit"
+          git commit -m "Run 'make teams' to update generated GitHub terraform files" || echo "Nothing to commit"
       - name: Rebase
         run: |
           git remote set-url origin https://${{ github.actor }}:${{ secrets.GADMIN_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git

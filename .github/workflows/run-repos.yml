@@ -6,11 +6,11 @@ on:
       - master # Push events on master branch
     paths:
       - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/run-configure-repos.yml" # Run when this file changes.
-name: Run configure-repos
+      - ".github/workflows/run-repos.yml" # Run when this file changes.
+name: Run repos
 jobs:
-  runConfigureRepos:
-    name: Run configure-repos
+  runRepos:
+    name: Run repos
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -19,8 +19,8 @@ jobs:
         with:
           entrypoint: cargo
           args: build
-      - name: Run configure-repos
-        run: make configure-repos
+      - name: Run repos
+        run: make repos
         shell: bash
         env:
           RUST_BACKTRACE: 1
