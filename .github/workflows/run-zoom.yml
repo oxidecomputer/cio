@@ -20,10 +20,18 @@ jobs:
         with:
           entrypoint: cargo
           args: build
+      - name: Set up environment
+        shell: bash
+        run: |
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
+        env:
+          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
       - name: Run zoom
         run: make zoom
         shell: bash
         env:
+          GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
+          GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
           ZOOM_API_KEY: ${{ secrets.ZOOM_API_KEY }}
           ZOOM_API_SECRET: ${{ secrets.ZOOM_API_SECRET }}
           ZOOM_ACCOUNT_ID: ${{ secrets.ZOOM_ACCOUNT_ID }}
