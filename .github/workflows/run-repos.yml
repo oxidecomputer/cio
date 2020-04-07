@@ -23,6 +23,6 @@ jobs:
         run: make repos
         shell: bash
         env:
-          RUST_BACKTRACE: 1
           GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           GITHUB_ORG: oxidecomputer
+          RUST_BACKTRACE: 1

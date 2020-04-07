@@ -1,0 +1,36 @@
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  push:
+    branches:
+      - master # Push events on master branch
+    paths:
+      - "configs/**" # Only run on changes to the configs directory.
+      - ".github/workflows/run-airtable.yml" # Run when this file changes.
+name: Run airtable
+jobs:
+  runAirtable:
+    name: Run airtable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: cargo build
+        uses: docker://rust:latest
+        with:
+          entrypoint: cargo
+          args: build
+      - name: Set up environment
+        shell: bash
+        run: |
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
+        env:
+          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
+      - name: Run airtable
+        run: make airtable
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
+          GITHUB_ORG: oxidecomputer
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+          RUST_BACKTRACE : 1
