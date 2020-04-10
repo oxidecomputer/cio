@@ -8,6 +8,7 @@ on:
       - "configs/links.toml" # Only run on changes to the links file.
       - "src/**" # Only run on changes to the src directory.
       - ".github/workflows/run-shorturls.yml" # Run when this file changes.
+      - "nginx/**"
 name: Run shorturls
 jobs:
   runShorturls:
