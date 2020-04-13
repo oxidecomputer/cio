@@ -52,7 +52,7 @@ jobs:
           mkdir -p ${HOME}/.ssh
           echo "${{ secrets.GITRECEIVE_SSH_KEY }}" > ${{ github.workspace}}/id_ed25519
           chmod 0400 ${{ github.workspace}}/id_ed25519
-          echo "|1|50+v3T5YxXYp2pVRfkKE9JKI0pQ=|39YTUA+yLhazBnDrAckGBR95wO4= ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJ5H4fXwGsi8ZFe8w9oLAg6lp7pw9p9M9Wi+dwgEvcTbvhcJLcuUmDjwZRfq1Fl6T5OPCiiNHYw4eUzKpo4idHk=" >> ${HOME}/.ssh/known_hosts
+          echo "|1|3bRNoLwLfl6UXiJqlpieH9U6Dyc=|0834SA+u65q9QMHx1BqGkR/xT1Q= ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHhPRAyDhpXIy/a8vP1Oub3YhGx5+cFQREG9qYPdyxBhX5NVK9qTriOOdFV3R43W9A7vw9gigKJqFYBoAklhHG0=" >> ${HOME}/.ssh/known_hosts
       - name: Push Changes to nginx server
         run: |
           git remote add server git@corp.oxide.computer:configs
