@@ -2,9 +2,17 @@ on:
   push:
     paths-ignore:
     - '.cache/**'
+    - 'src/**'
+    - '.github/**'
+    - 'README.md'
+    - 'Makefile'
   pull_request:
     paths-ignore:
     - '.cache/**'
+    - 'src/**'
+    - '.github/**'
+    - 'README.md'
+    - 'Makefile'
 name: Shellcheck
 jobs:
   runShellcheck:
