@@ -34,3 +34,17 @@ jobs:
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
           RUST_BACKTRACE : 1
+      - name: Commit changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .cache
+          git commit -m "Run 'make airtable' and .cache/github" || echo "Nothing to commit"
+      - name: Rebase
+        run: |
+          git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git fetch --unshallow origin
+          git rebase origin/master
+      - name: Push Changes to GitHub
+        run: |
+          git push origin master
