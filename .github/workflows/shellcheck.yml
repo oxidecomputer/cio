@@ -1,4 +1,10 @@
-on: push
+on:
+  push:
+    paths-ignore:
+    - '.cache/**'
+  pull_request:
+    paths-ignore:
+    - '.cache/**'
 name: Shellcheck
 jobs:
   runShellcheck:
