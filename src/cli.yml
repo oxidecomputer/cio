@@ -1,0 +1,172 @@
+name: configs
+version: 0.1.0
+about: A multi-purpose tool made for automating the role of the Chief Infrastructure Officer.
+subcommands:
+  - airtable:
+      about: |
+        Sync airtable.
+
+        This includes:
+
+          - RFDs
+  - applications:
+      about: |
+        Generate GitHub issues for various stages of the application process
+        based on their status in a Google Sheet.
+
+        When a new application is submitted by an applicant, it gets added to
+        the Google sheet with the cell "received application" set to `false`.
+        This command will automatically send the applicant an email thanking
+        them for their application and let them know we are reading it over.
+
+        An email is then sent to all@{domain} to notify everyone that there has
+        been a new application submitted with the applicant's information.
+
+        The command then sets the "received application" cell to `true`, so we
+        can ensure we only send opurselves and them one email.
+
+        The status for an application can be one of the following:
+
+          - deferred (gray): For folks we want to keep around for a different
+              stage of the company. This command ignores a status of "deferred"
+              and does nothing.
+
+          - declined (red): For folks who did not have an impressive application
+              and we have declined their employment. This command ignores a
+              status of "declined" and does nothing.
+
+          - next steps (yellow): For folks we are working through next steps in
+              the application process. This command will create a GitHub issue
+              for the applicant in the meta repository so we can track their
+              interview process.
+
+          - hired (green): For folks we have decided to hire. This command will
+              create an issue in the configs repository for tracking their
+              on-boarding.
+
+      args:
+        - sheet:
+            help: Google sheet ID
+            required: true
+            use_delimiter: true
+            multiple: true
+  - repos:
+      about: |
+        Set default configurations for all repos in the GitHub organization.
+
+        The defaults are as follows:
+
+          - Give the GitHub teams: "eng" and "all", push access to every
+              repository.
+          - Adds and updates each of the labels from labels.toml.
+          - Turns off the wiki.
+          - Adds protection to the default branch to disallow force pushes.
+      args:
+        - file:
+            help: path to a configuration file
+            required: true
+            use_delimiter: true
+            multiple: true
+
+  - shorturls:
+      about: |
+        Generate nginx and Cloudflare terraform configs for short url redirects
+        from the links.toml file, rfd repo, and github repos.
+
+        The URLs that are configured from this subcommand are:
+
+          - {link}.corp.oxide.computer
+          - {repo}.git.oxide.computer
+          - {num}.rfd.oxide.computer
+
+      args:
+        - file:
+            help: path to a configuration file
+            required: true
+            use_delimiter: true
+            multiple: true
+  - gsuite:
+      about: |
+        Sync the configuration files with GSuite.
+
+        This will create or update user's accounts, Google groups, GSuite
+        buildings, and resources.
+
+      args:
+        - file:
+            help: path to a configuration file
+            required: true
+            use_delimiter: true
+            multiple: true
+        - domain:
+            help: |
+              domain for the company
+            short: d
+            long: domain
+            required: true
+            multiple: false
+            takes_value: true
+  - tables:
+      about: |
+        Generate markdown files with tables populated with data from the config
+        files.
+
+        The files generated are from the following configs:
+
+          - groups.toml -> {dir}/directory/groups/README.md
+          - links.toml -> {dir}/links/README.md
+          - users.toml -> {dir}/directory/people/README.md
+
+      args:
+        - file:
+            help: path to a configuration file
+            required: true
+            use_delimiter: true
+            multiple: true
+        - dir:
+            help: |
+              path to output directory, defaults to the current directory when
+              omitted
+            short: d
+            long: dir
+            required: false
+            multiple: false
+            takes_value: true
+  - teams:
+      about: |
+        Generate GitHub terraform configs that configure members of the
+        organization and team membership.
+
+        This command uses the users.toml file for information.
+      args:
+        - file:
+            help: path to a configuration file
+            required: true
+            use_delimiter: true
+            multiple: true
+  - zoom:
+      about: |
+        Sync the configuration files with Zoom.
+
+        This command does the following:
+
+          - Create or update user's accounts
+          - Create or update Zoom buildings
+          - Create or update Zoom rooms
+          - Download any Zoom recordings and automatically upload them
+              to Google drive.
+
+      args:
+        - file:
+            help: path to a configuration file
+            required: true
+            use_delimiter: true
+            multiple: true
+        - domain:
+            help: |
+              domain for the company
+            short: d
+            long: domain
+            required: true
+            multiple: false
+            takes_value: true
