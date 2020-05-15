@@ -114,11 +114,14 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
         }
 
         // For each label, add the label to the repo.
-        // TODO: delete any labels that are not in the config file but present in GitHub.
         for label in &config.labels {
             // Check if we already have this label.
-            match labels.get(&label.name) {
+            match labels.clone().get(&label.name) {
                 Some(val) => {
+                    // Remove this label from our map so that when we are all finished we can
+                    // delete any labels that exist in repos and should not be there.
+                    labels.remove(&label.name);
+
                     // Check if the description and color are the same.
                     let mut description = "";
                     match &val.description {
@@ -178,6 +181,18 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
                     label.name, r.name, e
                 ),
             }
+        }
+
+        // Iterate over the remaining labels for the repo and delete any that were not in our
+        // config file.
+        for (name, _label) in labels {
+            warn!(
+                "repo {} has label {} but that is not in the config file, DELETING",
+                r.name, name
+            );
+
+            // Delete the label.
+            runtime.block_on(repo.labels().delete(&name)).unwrap();
         }
 
         info!("updated labels for repo {}", r.name);

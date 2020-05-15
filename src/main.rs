@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate clap;
 use clap::App;
-use simplelog::{CombinedLogger, Config as LogConfig, LevelFilter, SimpleLogger};
+use simplelog::{CombinedLogger, Config as LogConfig, LevelFilter, TermLogger, TerminalMode};
 
 use configs::airtable_cmd::cmd_airtable_run;
 use configs::applications::cmd_applications_run;
@@ -14,8 +14,8 @@ use configs::zoom_cmd::cmd_zoom_run;
 
 fn main() {
     let _ = CombinedLogger::init(vec![
-        SimpleLogger::new(LevelFilter::Info, LogConfig::default()),
-        SimpleLogger::new(LevelFilter::Warn, LogConfig::default()),
+        TermLogger::new(LevelFilter::Info, LogConfig::default(), TerminalMode::Mixed).unwrap(),
+        TermLogger::new(LevelFilter::Warn, LogConfig::default(), TerminalMode::Mixed).unwrap(),
     ]);
 
     // Initialize clap.
