@@ -25,3 +25,4 @@ letsencrypt
 .cache/github/v1/https/api.github.com/orgs/oxidecomputer/repos
 .cache/github/v1/https/api.github.com/repos/oxidecomputer/*.etag
 .cache/github/v1/https/api.github.com/repos/oxidecomputer/*.json
+.cache/github/v1/https/api.github.com/repos/oxidecomputer/configs/branches/master.*
