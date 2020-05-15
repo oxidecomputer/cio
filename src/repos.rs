@@ -9,11 +9,11 @@ use hubcaps::teams::{Permission, Team};
 use log::{info, warn};
 use tokio::runtime::Runtime;
 
-use crate::utils::{authenticate_github, read_config_from_files, write_file};
+use crate::utils::{authenticate_github, read_config_from_files};
 
 pub fn cmd_repos_run(cli_matches: &ArgMatches) {
     // Get the config.
-    let mut config = read_config_from_files(cli_matches);
+    let config = read_config_from_files(cli_matches);
 
     // Initialize Github and the runtime.
     let github = authenticate_github();
@@ -116,17 +116,8 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
         // For each label, add the label to the repo.
         // TODO: delete any labels that are not in the config file but present in GitHub.
         for label in &config.labels {
-            // Get the new name of the label if there is one.
-            let mut new_name = label.name.to_string();
-            match &label.new_name {
-                Some(val) => {
-                    new_name = val.to_string();
-                }
-                None => (),
-            }
-
             // Check if we already have this label.
-            match labels.get(&new_name) {
+            match labels.get(&label.name) {
                 Some(val) => {
                     // Check if the description and color are the same.
                     let mut description = "";
@@ -152,7 +143,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
                 &LabelOptions {
                     description: label.description.to_string(),
                     color: label.color.to_string(),
-                    name: new_name.to_string(),
+                    name: label.name.to_string(),
                 },
             )) {
                 // Continue early since we do not need to create a label now.
@@ -234,32 +225,4 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
             );
         }
     }
-
-    // For each label, update the label then write back out to the file.
-    for (i, label) in config.labels.clone().iter().enumerate() {
-        // Get the new name of the label if there is one.
-        let mut new_name = label.name.to_string();
-        match &label.new_name {
-            Some(val) => {
-                new_name = val.to_string();
-            }
-            None => (),
-        }
-        // If the label has a new name, then make that new name the actual
-        // label name.
-        // This will help us re-write the file back out again.
-        if new_name != label.name {
-            config.labels[i].new_name = None;
-            config.labels[i].name = new_name;
-        }
-    }
-
-    // Get the current working directory.
-    let curdir = env::current_dir().unwrap();
-
-    // Now that we have updated all the labels, re-write the file back out.
-    let toml = toml::to_string(&config.labels)
-        .unwrap()
-        .replace("[[]]", "[[labels]]");
-    write_file(curdir.join("configs/labels.new.toml"), toml);
 }

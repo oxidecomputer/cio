@@ -201,8 +201,6 @@ pub struct LabelConfig {
     pub name: String,
     pub description: String,
     pub color: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub new_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
