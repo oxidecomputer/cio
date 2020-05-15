@@ -14,6 +14,10 @@ jobs:
     name: Run teams
     runs-on: ubuntu-latest
     steps:
+      - name: print the event
+        shell: bash
+        run:
+          echo "${{ github.event }}"
       - uses: actions/checkout@v2
         with:
           # This toekn needs to be a personal one so this action can trigger
