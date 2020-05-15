@@ -97,7 +97,7 @@ impl Airtable {
         return request;
     }
 
-    pub fn list_records(&self, table: &str) -> Result<Vec<Record>, APIError> {
+    pub fn list_records(&self, table: &str, view: &str) -> Result<Vec<Record>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -105,7 +105,7 @@ impl Airtable {
             {},
             Some(vec![
                 ("maxRecords", "100".to_string()),
-                ("view", "Grid view".to_string()),
+                ("view", view.to_string()),
             ]),
         );
 

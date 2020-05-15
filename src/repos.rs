@@ -110,7 +110,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
         // Create the BTreeMap of labelss.
         let mut labels: BTreeMap<String, Label> = Default::default();
         for l in ls {
-            labels.insert(l.clone().name, l.clone());
+            labels.insert(l.name.to_string(), l);
         }
 
         // For each label, add the label to the repo.

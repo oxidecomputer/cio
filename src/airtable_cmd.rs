@@ -19,9 +19,9 @@ pub fn cmd_airtable_run() {
     let mut rfds = get_rfds_from_repo(github);
 
     // Get the current RFD list from airtable.
-    let mut records = airtable.list_records(RFD_TABLE).unwrap();
+    let mut records = airtable.list_records(RFD_TABLE, "Grid view").unwrap();
 
-    // Iterate over the aitable records and update the RFD where we have one.
+    // Iterate over the airtable records and update the RFD where we have one.
     for (i, record) in records.clone().iter().enumerate() {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.

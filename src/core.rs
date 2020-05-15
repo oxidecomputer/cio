@@ -3,6 +3,8 @@ use std::collections::BTreeMap;
 use chrono::naive::NaiveDate;
 use serde::{Deserialize, Serialize};
 
+use crate::airtable::core::User as AirtableUser;
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub users: BTreeMap<String, UserConfig>,
@@ -254,4 +256,89 @@ pub struct RFDFields {
     // Never modify this, it is based on a function.
     #[serde(skip_serializing_if = "Option::is_none", rename = "Link")]
     pub link: Option<String>,
+}
+
+/// The Airtable fields type for discussion topics.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DiscussionFields {
+    #[serde(rename = "Topic")]
+    pub topic: String,
+    #[serde(rename = "Submitter")]
+    pub submitter: AirtableUser,
+    #[serde(rename = "Priority")]
+    pub priority: String,
+    #[serde(rename = "Notes")]
+    pub notes: String,
+    // Never modify this, it is a linked record.
+    #[serde(rename = "Associated meetings")]
+    pub associated_meetings: Vec<String>,
+}
+
+/// The Airtable fields type for meetings.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MeetingFields {
+    #[serde(rename = "Name")]
+    pub name: String,
+    #[serde(with = "meeting_date_format", rename = "Date")]
+    pub date: NaiveDate,
+    #[serde(rename = "Week")]
+    pub week: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Notes")]
+    pub notes: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Action items")]
+    pub action_items: Option<String>,
+    // Never modify this, it is a linked record.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Proposed discussion"
+    )]
+    pub proposed_discussion: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Recording")]
+    pub recording: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Attendees")]
+    pub attendees: Option<Vec<AirtableUser>>,
+}
+
+mod meeting_date_format {
+    use chrono::naive::NaiveDate;
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    const FORMAT: &'static str = "%Y-%m-%d";
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = format!("{}", date.format(FORMAT));
+        serializer.serialize_str(&s)
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+
+        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap())
+    }
+}
+
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct ProductEmailData {
+    pub date: String,
+    pub topics: Vec<DiscussionFields>,
 }

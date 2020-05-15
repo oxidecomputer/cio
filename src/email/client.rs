@@ -220,6 +220,24 @@ Sincerely,
         self.send_mail(message);
     }
 
+    pub fn send(&self, body: &str, subject: &str, from: &str, to: &str) {
+        // Create the message.
+        let message = Message::new()
+            .set_from(Email::new().set_email(&from).set_name(&from))
+            .set_subject(&subject)
+            .add_content(
+                Content::new()
+                    .set_content_type("text/plain")
+                    .set_value(&body),
+            )
+            .add_personalization(
+                Personalization::new().add_to(Email::new().set_email(&to).set_name(&to)),
+            );
+
+        // Send the message.
+        self.send_mail(message);
+    }
+
     pub fn send_uploaded_zoom_dump(&self, drive_url: &str) {
         let drive_email = format!("drive@{}", self.domain);
 

@@ -9,6 +9,7 @@ use simplelog::{
 use configs::airtable_cmd::cmd_airtable_run;
 use configs::applications::cmd_applications_run;
 use configs::gsuite::cmd_gsuite_run;
+use configs::product_huddle::cmd_product_huddle_run;
 use configs::repos::cmd_repos_run;
 use configs::shorturls::cmd_shorturls_run;
 use configs::tables::cmd_tables_run;
@@ -48,6 +49,10 @@ fn main() {
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("gsuite") {
         cmd_gsuite_run(cli_matches);
+    }
+
+    if let Some(_) = cli_matches.subcommand_matches("product-huddle") {
+        cmd_product_huddle_run();
     }
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("repos") {

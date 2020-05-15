@@ -7,6 +7,7 @@ pub mod drive;
 pub mod email;
 pub mod gsuite;
 pub mod password;
+pub mod product_huddle;
 pub mod repos;
 pub mod sheets;
 pub mod shorturls;

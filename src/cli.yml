@@ -106,6 +106,9 @@ subcommands:
             required: true
             multiple: false
             takes_value: true
+  - product-huddle:
+      about: |
+        Send an email before the regular product huddle meeting with what will be covered from the discussion topics as well as reminding everyone to fill out the form and add their topics.
   - tables:
       about: |
         Generate markdown files with tables populated with data from the config

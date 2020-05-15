@@ -26,3 +26,10 @@ pub struct Record {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_time: Option<String>,
 }
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct User {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+}
