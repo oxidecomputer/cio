@@ -1,10 +1,11 @@
+use std::collections::BTreeMap;
 use std::env;
 
 use clap::ArgMatches;
 use hubcaps::branches::Protection;
-use hubcaps::labels::LabelOptions;
+use hubcaps::labels::{Label, LabelOptions};
 use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, RepoEditOptions};
-use hubcaps::teams::Permission;
+use hubcaps::teams::{Permission, Team};
 use log::{info, warn};
 use tokio::runtime::Runtime;
 
@@ -74,26 +75,73 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
             }))
             .unwrap();
 
-        // Add branch protection to disallow force pushing to the default branch.
-        runtime
-            .block_on(repo.branches().protection(
-                r.default_branch.to_string(),
-                &Protection {
-                    required_status_checks: None,
-                    enforce_admins: true,
-                    required_pull_request_reviews: None,
-                    restrictions: None,
-                },
-            ))
+        // Get the branch protection for the repo.
+        let default_branch = runtime
+            .block_on(repo.branches().get(r.default_branch.to_string()))
             .unwrap();
 
+        // Add branch protection to disallow force pushing to the default branch.
+        // Only do this if it is not already protected.
+        let mut is_protected = false;
+        match default_branch.protected {
+            Some(val) => {
+                if val {
+                    is_protected = true
+                }
+            }
+            None => (),
+        }
+        if !is_protected {
+            runtime
+                .block_on(repo.branches().protection(
+                    r.default_branch.to_string(),
+                    &Protection {
+                        required_status_checks: None,
+                        enforce_admins: true,
+                        required_pull_request_reviews: None,
+                        restrictions: None,
+                    },
+                ))
+                .unwrap();
+        }
+
+        // Get the current labels for the repo.
+        let ls = runtime.block_on(repo.labels().list()).unwrap();
+        // Create the BTreeMap of labelss.
+        let mut labels: BTreeMap<String, Label> = Default::default();
+        for l in ls {
+            labels.insert(l.clone().name, l.clone());
+        }
+
         // For each label, add the label to the repo.
+        // TODO: delete any labels that are not in the config file but present in GitHub.
         for label in &config.labels {
             // Get the new name of the label if there is one.
             let mut new_name = label.name.to_string();
             match &label.new_name {
                 Some(val) => {
                     new_name = val.to_string();
+                }
+                None => (),
+            }
+
+            // Check if we already have this label.
+            match labels.get(&new_name) {
+                Some(val) => {
+                    // Check if the description and color are the same.
+                    let mut description = "";
+                    match &val.description {
+                        Some(d) => {
+                            description = d;
+                        }
+                        None => (),
+                    }
+                    if description == &label.description.to_string()
+                        && val.color == label.color.to_string()
+                    {
+                        // We already have the label so continue through our loop.
+                        continue;
+                    }
                 }
                 None => (),
             }
@@ -143,14 +191,40 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
 
         info!("updated labels for repo {}", r.name);
 
+        // Get this repository's teams.
+        let ts = runtime.block_on(repo.teams().list()).unwrap();
+        // Create the BTreeMap of labelss.
+        let mut teams: BTreeMap<u64, Team> = Default::default();
+        for t in ts {
+            teams.insert(t.clone().id, t.clone());
+        }
+
         // For each team id, add the team to the permissions.
         for team_id in &default_team_ids {
+            let perms = Permission::Push;
+
+            // Check if the team already has the permission.
+            match teams.get(team_id) {
+                Some(val) => {
+                    if val.permission == perms.to_string() {
+                        // Continue since they already have permission.
+                        info!(
+                            "team {} already has push access to {}/{}",
+                            team_id, github_org, r.name
+                        );
+
+                        continue;
+                    }
+                }
+                None => (),
+            }
+
             runtime
                 .block_on(
                     github
                         .org(github_org.to_string())
                         .teams()
-                        .add_repo_permission(*team_id, r.name.to_string(), Permission::Push),
+                        .add_repo_permission(*team_id, r.name.to_string(), perms),
                 )
                 .unwrap();
 
