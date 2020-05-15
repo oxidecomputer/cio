@@ -13,6 +13,10 @@ use crate::email::client::SendGrid;
 pub static DISCUSSION_TOPICS_TABLE: &'static str = "Discussion topics";
 pub static MEETING_SCHEDULE_TABLE: &'static str = "Meeting schedule";
 
+// TODO: automatically add notes to the reports repo.
+// TODO: make this a cron job
+// TODO: test when there are actually topics
+// TODO: send out last meetings notes in the email as well with the link to the reports repo
 pub fn cmd_product_huddle_run() {
     // Initialize the Airtable client.
     let airtable = Airtable::new_from_env();
