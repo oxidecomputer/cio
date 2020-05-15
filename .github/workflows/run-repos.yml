@@ -7,6 +7,7 @@ on:
     paths:
       - "src/**" # Only run on changes to the src directory.
       - ".github/workflows/run-repos.yml" # Run when this file changes.
+      - "configs/labels.toml" # When the labels change.
 name: Run repos
 jobs:
   runRepos:
