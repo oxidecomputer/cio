@@ -35,7 +35,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
     // Set the array of default teams to add to the repo.
     // TODO: do not hard code these.
     let default_teams = vec!["all", "eng"];
-    let mut default_team_ids: Vec<u64> = Default::default();
+    let mut default_team_ids: BTreeMap<u64, String> = Default::default();
 
     // Get the ids for the teams.
     let teams = runtime
@@ -44,7 +44,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
     // Add the team to the ids if it is a match.
     for team in teams {
         if default_teams.contains(&team.name.as_str()) {
-            default_team_ids.push(team.id);
+            default_team_ids.insert(team.id, team.name);
         }
     }
 
@@ -191,7 +191,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
         }
 
         // For each team id, add the team to the permissions.
-        for team_id in &default_team_ids {
+        for (team_id, team_name) in &default_team_ids {
             let perms = Permission::Push;
 
             // Check if the team already has the permission.
@@ -201,7 +201,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
                         // Continue since they already have permission.
                         info!(
                             "team {} already has push access to {}/{}",
-                            team_id, github_org, r.name
+                            team_name, github_org, r.name
                         );
 
                         continue;
@@ -221,7 +221,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
 
             info!(
                 "gave team {} push access to {}/{}",
-                team_id, github_org, r.name
+                team_name, github_org, r.name
             );
         }
     }
