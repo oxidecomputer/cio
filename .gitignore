@@ -22,4 +22,4 @@ letsencrypt
 
 # Ignore files that cannot be cached and cause a lot of conflicts.
 # This is the rfd repo since we update it so frequently.
-.cache/github/v1/https/api.github.com/orgs/oxidecomputer/repos/213b873857ecddcb*
+.cache/github/v1/https/api.github.com/orgs/oxidecomputer/repos
