@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate clap;
 use clap::App;
-use simplelog::{CombinedLogger, Config as LogConfig, LevelFilter, TermLogger, TerminalMode};
+use simplelog::{
+    CombinedLogger, Config as LogConfig, LevelFilter, SharedLogger, SimpleLogger, TermLogger,
+    TerminalMode,
+};
 
 use configs::airtable_cmd::cmd_airtable_run;
 use configs::applications::cmd_applications_run;
@@ -13,10 +16,22 @@ use configs::teams::cmd_teams_run;
 use configs::zoom_cmd::cmd_zoom_run;
 
 fn main() {
-    let _ = CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Info, LogConfig::default(), TerminalMode::Mixed).unwrap(),
-        TermLogger::new(LevelFilter::Warn, LogConfig::default(), TerminalMode::Mixed).unwrap(),
-    ]);
+    // Set up the logger, we can't use TermLogger in GitHub actions.
+    let mut loggers: Vec<Box<dyn SharedLogger>> = vec![
+        SimpleLogger::new(LevelFilter::Info, LogConfig::default()),
+        SimpleLogger::new(LevelFilter::Warn, LogConfig::default()),
+    ];
+    match TermLogger::new(LevelFilter::Info, LogConfig::default(), TerminalMode::Mixed) {
+        Some(term_logger) => {
+            loggers = vec![
+                term_logger,
+                TermLogger::new(LevelFilter::Warn, LogConfig::default(), TerminalMode::Mixed)
+                    .unwrap(),
+            ];
+        }
+        None => (),
+    };
+    let _ = CombinedLogger::init(loggers);
 
     // Initialize clap.
     // The YAML file is found relative to the current file, similar to how modules are found.
