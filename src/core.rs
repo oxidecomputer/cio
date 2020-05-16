@@ -341,4 +341,7 @@ mod meeting_date_format {
 pub struct ProductEmailData {
     pub date: String,
     pub topics: Vec<DiscussionFields>,
+    pub last_meeting_reports_link: String,
+    pub meeting_id: String,
+    pub should_send: bool,
 }

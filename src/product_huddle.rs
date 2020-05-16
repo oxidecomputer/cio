@@ -1,11 +1,10 @@
-use std::collections::BTreeMap;
 use std::env;
 use std::str::from_utf8;
 
 use chrono::naive::NaiveTime;
 use chrono::Utc;
 use handlebars::Handlebars;
-use log::{info, warn};
+use log::info;
 use serde_json;
 use tokio::runtime::Runtime;
 
@@ -36,17 +35,41 @@ pub fn cmd_product_huddle_run() {
         .list_records(MEETING_SCHEDULE_TABLE, "All Meetings")
         .unwrap();
 
+    // Get the time now.
     let date_format = "%A, %-d %B, %C%y";
+    let now = Utc::now().naive_utc();
+
+    // Create our email data struct.
+    let mut email_data: ProductEmailData = Default::default();
 
     // Iterate over the airtable records and update the RFD where we have one.
-    // Add them to a BTreeMap so we can easily access them later.
-    let mut meetings: BTreeMap<String, MeetingFields> = Default::default();
-    for (_i, record) in records_ms.clone().iter().enumerate() {
+    for (i, record) in records_ms.clone().iter().enumerate() {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.
         let meeting: MeetingFields = serde_json::from_value(record.fields.clone()).unwrap();
 
-        meetings.insert(record.clone().id.unwrap(), meeting.clone());
+        // Check if the meeting is in the future or the past.
+        // 18 is 11am Pacific Time in UTC time.
+        let date = meeting.date.and_time(NaiveTime::from_hms(18, 0, 0));
+        // Compare the dates.
+        let dur = date.signed_duration_since(now);
+
+        if dur.num_seconds() > 0 && dur.num_days() < 7 {
+            // This is our next meeting!
+            email_data.date = meeting.date.format(date_format).to_string();
+            email_data.meeting_id = record.clone().id.unwrap().to_string();
+
+            // TODO: Check if we should send the email.
+
+            // Get the meeting just before this one and attach it's reports link.
+            let last_record = &records_ms[i - 1];
+            let last_meeting: MeetingFields =
+                serde_json::from_value(last_record.fields.clone()).unwrap();
+            email_data.last_meeting_reports_link = format!(
+                "https://github.com/oxidecomputer/reports/blob/master/product/meetings/{}.txt",
+                last_meeting.date.format("%Y%m%d").to_string()
+            );
+        }
 
         // Check if we have the meeting notes in the reports repo.
         match &meeting.notes {
@@ -59,8 +82,9 @@ pub fn cmd_product_huddle_run() {
                     );
 
                     let notes = format!(
-                        "# Product Huddle on {}\n\n## Notes\n\n{}\n\n## Action Items\n\n{}",
+                        "# Product Huddle on {}\n\n**Meeting Recording:** {}\n\n## Notes\n\n{}\n\n## Action Items\n\n{}",
                         meeting.clone().date.format(date_format),
+                        meeting.recording.unwrap_or("".to_string()),
                         raw,
                         meeting.action_items.unwrap_or(
                             "There were no action items as a result of this meeting".to_string()
@@ -117,65 +141,41 @@ pub fn cmd_product_huddle_run() {
         .list_records(DISCUSSION_TOPICS_TABLE, "Proposed Topics")
         .unwrap();
 
-    // Get the time now.
-    let now = Utc::now().naive_utc();
-    // Create our discussion topics array.
-    let mut email_data: ProductEmailData = Default::default();
-
     // Iterate over the airtable records and update the RFD where we have one.
     for (_i, record) in records_dt.clone().iter().enumerate() {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.
         let fields: DiscussionFields = serde_json::from_value(record.fields.clone()).unwrap();
 
-        // Get the meetings that match this discussion topic.
-        for meeting_id in &fields.associated_meetings {
-            match meetings.get(meeting_id) {
-                Some(meeting) => {
-                    // Check if the meeting is in the future or the past.
-                    // 18 is 11am Pacific Time in UTC time.
-                    let date = meeting.date.and_time(NaiveTime::from_hms(18, 0, 0));
-                    // Compare the dates.
-                    let dur = date.signed_duration_since(now);
-                    if dur.num_seconds() < 0 {
-                        // The meeting happened in the past.
-                        // Continue since it is not relevant unless it is in the
-                        // future.
-                        continue;
-                    }
-
-                    // If we are here then our date is in the future.
-                    if dur.num_days() < 7 {
-                        email_data.date = meeting.date.format(date_format).to_string();
-                        // Add it to our list for the email.
-                        email_data.topics.push(fields);
-                        break;
-                    }
-                }
-                None => warn!("could not find matching meeting for id: {}", meeting_id),
-            }
+        // Check if this is our next meeting, and add the topics to our email!
+        if fields.associated_meetings.contains(&email_data.meeting_id) {
+            // Add it to our list for the email.
+            email_data.topics.push(fields);
         }
     }
 
-    // Initialize handlebars.
-    let handlebars = Handlebars::new();
-    // Render the template.
-    let template = &handlebars
-        .render_template(EMAIL_TEMPLATE, &email_data)
-        .unwrap();
-    println!("{}", template);
+    // Send the email if this is the right time to do it.
+    if email_data.should_send {
+        // Initialize handlebars.
+        let handlebars = Handlebars::new();
+        // Render the email template.
+        let template = &handlebars
+            .render_template(EMAIL_TEMPLATE, &email_data)
+            .unwrap();
+        println!("{}", template);
 
-    // Initialize the SendGrid client.
-    let sendgrid = SendGrid::new_from_env();
-    // Send the email.
-    sendgrid.send(
-        template,
-        "Reminder Product Huddle Tomorrow",
-        "product@oxide.computer",
-        "jess@oxide.computer",
-    );
+        // Initialize the SendGrid client.
+        let sendgrid = SendGrid::new_from_env();
+        // Send the email.
+        sendgrid.send(
+            template,
+            "Reminder Product Huddle Tomorrow",
+            "product@oxide.computer",
+            "jess@oxide.computer",
+        );
 
-    info!("successfully sent the email!")
+        info!("successfully sent the email!");
+    }
 }
 
 pub static EMAIL_TEMPLATE: &'static str = r#"Hello All!!
