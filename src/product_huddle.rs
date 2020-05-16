@@ -1,14 +1,18 @@
 use std::collections::BTreeMap;
+use std::env;
+use std::str::from_utf8;
 
 use chrono::naive::NaiveTime;
 use chrono::Utc;
 use handlebars::Handlebars;
 use log::{info, warn};
 use serde_json;
+use tokio::runtime::Runtime;
 
 use crate::airtable::client::Airtable;
 use crate::core::{DiscussionFields, MeetingFields, ProductEmailData};
 use crate::email::client::SendGrid;
+use crate::utils::authenticate_github;
 
 pub static DISCUSSION_TOPICS_TABLE: &'static str = "Discussion topics";
 pub static MEETING_SCHEDULE_TABLE: &'static str = "Meeting schedule";
@@ -21,10 +25,19 @@ pub fn cmd_product_huddle_run() {
     // Initialize the Airtable client.
     let airtable = Airtable::new_from_env();
 
+    // Initialize Github and the runtime.
+    let mut runtime = Runtime::new().unwrap();
+    let github_org = env::var("GITHUB_ORG").unwrap();
+    let github = authenticate_github();
+    // Get the reports repo client.
+    let reports_repo = github.repo(github_org, "reports");
+
     // Get the meeting schedule table from airtable.
     let records_ms = airtable
         .list_records(MEETING_SCHEDULE_TABLE, "All Meetings")
         .unwrap();
+
+    let date_format = "%A, %-d %B, %C%y";
 
     // Iterate over the airtable records and update the RFD where we have one.
     // Add them to a BTreeMap so we can easily access them later.
@@ -32,9 +45,60 @@ pub fn cmd_product_huddle_run() {
     for (_i, record) in records_ms.clone().iter().enumerate() {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.
-        let fields: MeetingFields = serde_json::from_value(record.fields.clone()).unwrap();
+        let meeting: MeetingFields = serde_json::from_value(record.fields.clone()).unwrap();
 
-        meetings.insert(record.clone().id.unwrap(), fields);
+        meetings.insert(record.clone().id.unwrap(), meeting.clone());
+
+        // Check if we have the meeting notes in the reports repo.
+        match &meeting.notes {
+            None => (),
+            Some(raw) => {
+                if raw.len() > 0 {
+                    let notes_path = format!(
+                        "/product/meetings/{}.txt",
+                        meeting.date.format("%Y%m%d").to_string()
+                    );
+
+                    let notes = format!(
+                        "# Product Huddle on {}\n\n## Notes\n\n{}\n\n## Action Items\n\n{}",
+                        meeting.clone().date.format(date_format),
+                        raw,
+                        meeting.action_items.unwrap_or(
+                            "There were no action items as a result of this meeting".to_string()
+                        ),
+                    );
+
+                    // Try to get the notes from this meeting from the reports repo.
+                    match runtime.block_on(reports_repo.content().file(&notes_path)) {
+                        Ok(file) => {
+                            let decoded = from_utf8(&file.content).unwrap();
+                            // Compare the notes and see if we need to update them.
+                            if notes == decoded {
+                                // They are the same so we can continue through the loop.
+                                continue;
+                            }
+
+                            // We need to update the file.
+                            info!(
+                                "Updated the notes file in the reports repo at {}",
+                                notes_path
+                            );
+                        }
+                        Err(_) => {
+                            // Create the notes file in the repo.
+                            runtime
+                                .block_on(reports_repo.content().create(&notes_path, &notes))
+                                .unwrap();
+
+                            info!(
+                                "Created the notes file in the reports repo at {}",
+                                notes_path
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Get the current discussion list from airtable.
@@ -71,7 +135,7 @@ pub fn cmd_product_huddle_run() {
 
                     // If we are here then our date is in the future.
                     if dur.num_days() < 7 {
-                        email_data.date = meeting.date.format("%A, %-d %B, %C%y").to_string();
+                        email_data.date = meeting.date.format(date_format).to_string();
                         // Add it to our list for the email.
                         email_data.topics.push(fields);
                         break;
