@@ -203,7 +203,7 @@ fn generate_files_for_links(links: Vec<LinkConfig>) {
     write_file(terraform_file, terraform_rendered);
 }
 
-static TEMPLATE_NGINX: &'static str = "{{#each this}}
+static TEMPLATE_NGINX: &'static str = r#"{{#each this}}
 # Redirect {{this.link}} to {{this.name}}.{{this.subdomain}}.oxide.computer
 # Description: {{this.description}}
 server {
@@ -219,7 +219,7 @@ server {
 
 	# Add redirect.
 	location / {
-		return 301 {{this.link}};
+		return 301 "{{this.link}}";
 	}
 
 	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}
@@ -235,9 +235,9 @@ server {
 	}
 }
 {{/each}}
-";
+"#;
 
-static TEMPLATE_NGINX_PATHS: &'static str = "server {
+static TEMPLATE_NGINX_PATHS: &'static str = r#"server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
 	server_name {{this.0.subdomain}}.oxide.computer;
@@ -256,7 +256,7 @@ static TEMPLATE_NGINX_PATHS: &'static str = "server {
 	# Redirect {{this.subdomain}}.oxide.computer/{{this.name}} to {{this.link}}
 	# Description: {{this.description}}
 	location = /{{this.name}} {
-		return 301 {{this.link}};
+		return 301 "{{this.link}}";
 	}
 {{#if this.discussion}}	# Redirect /{{this.name}}/discussion to {{this.discussion}}
 	# Description: Discussion link for {{this.name}}
@@ -271,7 +271,7 @@ static TEMPLATE_NGINX_PATHS: &'static str = "server {
 		allow all;
 	}
 }
-";
+"#;
 
 static TEMPLATE_CLOUDFLARE_TERRAFORM: &'static str = r#"{{#each this}}
 resource "cloudflare_record" "{{terraformize this.name}}_{{this.subdomain}}_oxide_computer" {
