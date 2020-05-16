@@ -17,7 +17,6 @@ use crate::utils::authenticate_github;
 pub static DISCUSSION_TOPICS_TABLE: &'static str = "Discussion topics";
 pub static MEETING_SCHEDULE_TABLE: &'static str = "Meeting schedule";
 
-// TODO: automatically add notes to the reports repo.
 // TODO: make this a cron job
 // TODO: test when there are actually topics
 // TODO: send out last meetings notes in the email as well with the link to the reports repo
@@ -79,6 +78,14 @@ pub fn cmd_product_huddle_run() {
                             }
 
                             // We need to update the file.
+                            runtime
+                                .block_on(reports_repo.content().update(
+                                        &notes_path,
+                                        &notes,
+                                        "Updating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
+                                        &file.sha))
+                                .unwrap();
+
                             info!(
                                 "Updated the notes file in the reports repo at {}",
                                 notes_path
@@ -87,7 +94,11 @@ pub fn cmd_product_huddle_run() {
                         Err(_) => {
                             // Create the notes file in the repo.
                             runtime
-                                .block_on(reports_repo.content().create(&notes_path, &notes))
+                                .block_on(reports_repo.content().create(
+                                        &notes_path,
+                                        &notes,
+                                        "Creating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
+                                        ))
                                 .unwrap();
 
                             info!(
