@@ -9,13 +9,13 @@ on:
     - 'scripts/**'
     - '.github/workflows/shellcheck.yml'
     - 'Makefile'
-name: Shellcheck
+name: make shellcheck
 jobs:
-  runShellcheck:
-    name: Run shellcheck
+  shellcheck:
+    name: make shellcheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - name: Run shellcheck
+      - name: make shellcheck
         run: make shellcheck
         shell: bash
