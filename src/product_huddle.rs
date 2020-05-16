@@ -201,6 +201,9 @@ to discuss yet! If no one submits any before the meeting tomorrow, we will cance
 the meeting. So get your topics in!!
 {{/if}}
 
+Last meeting's notes are in the reports GitHub repo at:
+{{this.last_meeting_reports_link}}.
+
 As a friendly reminder, the product huddle meetings are stored in Airtable at:
 https://airtable-product-huddle.corp.oxide.computer.
 
