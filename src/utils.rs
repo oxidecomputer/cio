@@ -17,7 +17,9 @@ use yup_oauth2::{
     service_account_key_from_file, GetToken, ServiceAccountAccess, Token,
 };
 
-use crate::core::{Config, RFD};
+use crate::core::RFD;
+
+use cio::Config;
 
 /// Write a file.
 pub fn write_file(file: PathBuf, contents: String) {

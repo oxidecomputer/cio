@@ -1,8 +1,8 @@
 use log::{info, warn};
 use serde_json;
 
-use crate::airtable::client::Airtable;
-use crate::airtable::core::Record;
+use airtable::{Airtable, Record};
+
 use crate::core::{RFDFields, RFD};
 use crate::utils::{authenticate_github, get_rfds_from_repo};
 

@@ -4,8 +4,9 @@ use clap::ArgMatches;
 use handlebars::Handlebars;
 use serde::{Deserialize, Serialize};
 
-use crate::core::UserConfig;
 use crate::utils::{read_config_from_files, write_file};
+
+use cio::UserConfig;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct GitHubTeamMembers {

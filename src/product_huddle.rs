@@ -8,10 +8,11 @@ use log::info;
 use serde_json;
 use tokio::runtime::Runtime;
 
-use crate::airtable::client::Airtable;
 use crate::core::{DiscussionFields, MeetingFields, ProductEmailData};
-use crate::email::client::SendGrid;
 use crate::utils::authenticate_github;
+
+use airtable::Airtable;
+use sendgrid::SendGrid;
 
 pub static DISCUSSION_TOPICS_TABLE: &'static str = "Discussion topics";
 pub static MEETING_SCHEDULE_TABLE: &'static str = "Meeting schedule";

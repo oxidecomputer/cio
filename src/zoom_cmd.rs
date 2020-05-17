@@ -5,11 +5,11 @@ use chrono::DateTime;
 use clap::{value_t, ArgMatches};
 use log::{info, warn};
 
-use crate::drive::client::Drive;
-use crate::email::client::SendGrid;
 use crate::utils::{get_gsuite_token, read_config_from_files};
-use crate::zoom::client::Zoom;
-use crate::zoom::core::{Building as ZoomBuilding, Room, User as ZoomUser};
+
+use drive::GoogleDrive;
+use sendgrid::SendGrid;
+use zoom::{Building as ZoomBuilding, Room, User as ZoomUser, Zoom};
 
 /// The Zoom passcode for overriding the room configuration when you are in a room.
 pub static ZOOM_PASSCODE: &'static str = "6274";
@@ -33,8 +33,8 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
     // Get the GSuite token.
     let token = get_gsuite_token();
 
-    // Get the GSuite Drive client.
-    let drive = Drive::new(token.clone());
+    // Get the Google Drive client.
+    let drive = GoogleDrive::new(token.clone());
 
     // Get the current zoom users.
     info!("[zoom] getting current users...");
@@ -257,7 +257,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
 
         // Get the correct parent folder for the uploads as the top-level parent.
         let folders = drive
-            .find_file_by_name(&drive_id, "Zoom Dumps to be Sorted")
+            .get_file_by_name(&drive_id, "Zoom Dumps to be Sorted")
             .unwrap();
 
         if folders.len() < 1 {

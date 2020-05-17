@@ -1,27 +1,667 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use reqwest::blocking::{Client, Request};
+use reqwest::{header, Method, StatusCode, Url};
 use serde::{Deserialize, Serialize};
+use yup_oauth2::Token;
 
-use crate::core::{BuildingConfig, ResourceConfig, UserConfig};
-use crate::password;
+use cio::{BuildingConfig, ResourceConfig, UserConfig};
 
-/// JSON template for Group resource in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [get groups](struct.GroupGetCall.html) (response)
-/// * [aliases insert groups](struct.GroupAliaseInsertCall.html) (none)
-/// * [delete groups](struct.GroupDeleteCall.html) (none)
-/// * [aliases delete groups](struct.GroupAliaseDeleteCall.html) (none)
-/// * [patch groups](struct.GroupPatchCall.html) (request|response)
-/// * [list groups](struct.GroupListCall.html) (none)
-/// * [aliases list groups](struct.GroupAliaseListCall.html) (none)
-/// * [update groups](struct.GroupUpdateCall.html) (request|response)
-/// * [insert groups](struct.GroupInsertCall.html) (request|response)
-///
+/// The endpoint for the GSuite directory API.
+const DIRECTORY_ENDPOINT: &str =
+    "https://www.googleapis.com/admin/directory/v1/";
+
+/// Endpoint for the Google Groups settings API.
+const GROUPS_SETTINGS_ENDPOINT: &str =
+    "https://www.googleapis.com/groups/v1/groups/";
+
+/// Entrypoint for interacting with the GSuite APIs.
+pub struct GSuite {
+    customer: String,
+    domain: String,
+
+    token: Token,
+
+    client: Rc<Client>,
+}
+
+impl GSuite {
+    /// Create a new GSuite client struct. It takes a type that can convert into
+    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
+    /// given a valid API Key and Secret your requests will work.
+    pub fn new(customer: String, domain: String, token: Token) -> Self {
+        let client = Client::builder().build();
+        match client {
+            Ok(c) => Self {
+                customer: customer,
+                domain: domain,
+                token: token,
+                client: Rc::new(c),
+            },
+            Err(e) => panic!("creating client failed: {:?}", e),
+        }
+    }
+
+    /// Get the currently set authorization token.
+    pub fn get_token(&self) -> &Token {
+        &self.token
+    }
+
+    fn request<B>(
+        &self,
+        endpoint: &str,
+        method: Method,
+        path: String,
+        body: B,
+        query: Option<Vec<(&str, String)>>,
+    ) -> Request
+    where
+        B: Serialize,
+    {
+        let base = Url::parse(endpoint).unwrap();
+        let url = base.join(&path).unwrap();
+
+        // Check if the token is expired and panic.
+        if self.token.expired() {
+            panic!("token is expired");
+        }
+
+        let bt = format!("Bearer {}", self.token.access_token);
+        let bearer = header::HeaderValue::from_str(&bt).unwrap();
+
+        // Set the default headers.
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::AUTHORIZATION, bearer);
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
+        headers.append(
+            header::ACCEPT,
+            header::HeaderValue::from_static("application/json"),
+        );
+
+        let mut rb = self.client.request(method.clone(), url).headers(headers);
+
+        match query {
+            None => (),
+            Some(val) => {
+                rb = rb.query(&val);
+            }
+        }
+
+        // Add the body, this is to ensure our GET and DELETE calls succeed.
+        if method != Method::GET && method != Method::DELETE {
+            rb = rb.json(&body);
+        }
+
+        // Build the request.
+        let request = rb.build().unwrap();
+
+        return request;
+    }
+
+    /// List Google groups.
+    pub fn list_groups(&self) -> Vec<Group> {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            "groups".to_string(),
+            {},
+            Some(vec![
+                ("customer", self.customer.to_string()),
+                ("domain", self.domain.to_string()),
+            ]),
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        let value: Groups = resp.json().unwrap();
+
+        return value.groups.unwrap();
+    }
+
+    /// Get the settings for a Google group.
+    pub fn get_group_settings(&self, group_email: String) -> GroupSettings {
+        // Build the request.
+        let request = self.request(
+            GROUPS_SETTINGS_ENDPOINT,
+            Method::GET,
+            group_email,
+            {},
+            Some(vec![("alt", "json".to_string())]),
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        return resp.json().unwrap();
+    }
+
+    /// Update a Google group.
+    pub fn update_group(&self, group: Group) {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            format!("groups/{}", group.clone().id.unwrap()),
+            group,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// Update a Google group's settings.
+    pub fn update_group_settings(&self, settings: GroupSettings) {
+        // Build the request.
+        let request = self.request(
+            GROUPS_SETTINGS_ENDPOINT,
+            Method::PUT,
+            settings.clone().email.unwrap(),
+            settings,
+            Some(vec![("alt", "json".to_string())]),
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// Create a google group.
+    pub fn create_group(&self, group: Group) -> Group {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            "groups".to_string(),
+            group,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        return resp.json().unwrap();
+    }
+
+    /// Update a Google group's aliases.
+    pub fn update_group_aliases(
+        &self,
+        group_key: String,
+        aliases: Vec<String>,
+    ) {
+        for alias in aliases {
+            self.update_group_alias(group_key.to_string(), alias.to_string());
+        }
+    }
+
+    /// Update an alias for a Google group.
+    pub fn update_group_alias(&self, group_key: String, alias: String) {
+        let mut a: HashMap<String, String> = HashMap::new();
+        a.insert("alias".to_string(), alias);
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            format!("groups/{}/aliases", group_key.to_string()),
+            a,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                let body = resp.text().unwrap();
+
+                if body.contains("duplicate") {
+                    // Ignore the error because we don't care about if it is a duplicate.
+                    return;
+                }
+
+                panic!(
+                    "received response status: {:?}\nresponse body: {:?}",
+                    s, body,
+                );
+            }
+        };
+    }
+
+    /// Check if a user is a member of a Google group.
+    pub fn group_has_member(&self, group_id: String, email: String) -> bool {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            format!("groups/{}/hasMember/{}", group_id, email),
+            {},
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        let value: MembersHasMember = resp.json().unwrap();
+
+        return value.is_member.unwrap();
+    }
+
+    /// Update a member of a Google group.
+    pub fn group_update_member(
+        &self,
+        group_id: String,
+        email: String,
+        role: String,
+    ) {
+        let mut member: Member = Default::default();
+        member.role = Some(role.to_string());
+        member.email = Some(email.to_string());
+        member.delivery_settings = Some("ALL_MAIL".to_string());
+
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            format!("groups/{}/members/{}", group_id, email.to_string()),
+            member,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// Add a user as a member of a Google group.
+    pub fn group_insert_member(
+        &self,
+        group_id: String,
+        email: String,
+        role: String,
+    ) {
+        let mut member: Member = Default::default();
+        member.role = Some(role.to_string());
+        member.email = Some(email.to_string());
+        member.delivery_settings = Some("ALL_MAIL".to_string());
+
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            format!("groups/{}/members", group_id),
+            member,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// Remove a user as a member of a Google group.
+    pub fn group_remove_member(&self, group_id: String, email: String) {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::DELETE,
+            format!("groups/{}/members/{}", group_id, email),
+            {},
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// List users.
+    pub fn list_users(&self) -> Vec<User> {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            "users".to_string(),
+            {},
+            Some(vec![
+                ("customer", self.customer.to_string()),
+                ("domain", self.domain.to_string()),
+                ("projection", "full".to_string()),
+            ]),
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        let value: Users = resp.json().unwrap();
+
+        return value.users.unwrap();
+    }
+
+    /// Update a user.
+    pub fn update_user(&self, user: User) {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            format!("users/{}", user.clone().id.unwrap()),
+            user,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// Create a user.
+    pub fn create_user(&self, user: User) -> User {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            "users".to_string(),
+            user,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        return resp.json().unwrap();
+    }
+
+    /// Update a user's aliases.
+    pub fn update_user_aliases(&self, user_id: String, aliases: Vec<String>) {
+        for alias in aliases {
+            self.update_user_alias(user_id.to_string(), alias.to_string());
+        }
+    }
+
+    /// Update an alias for a user.
+    pub fn update_user_alias(&self, user_id: String, alias: String) {
+        let mut a: HashMap<String, String> = HashMap::new();
+        a.insert("alias".to_string(), alias);
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            format!("users/{}/aliases", user_id.to_string()),
+            a,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                let body = resp.text().unwrap();
+
+                if body.contains("duplicate") {
+                    // Ignore the error because we don't care about if it is a duplicate.
+                    return;
+                }
+
+                panic!(
+                    "received response status: {:?}\nresponse body: {:?}",
+                    s, body,
+                );
+            }
+        };
+    }
+
+    /// List calendar resources.
+    pub fn list_calendar_resources(&self) -> Vec<CalendarResource> {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            format!("customer/{}/resources/calendars", self.customer),
+            {},
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        let value: CalendarResources = resp.json().unwrap();
+
+        return value.items.unwrap();
+    }
+
+    /// Update a calendar resource.
+    pub fn update_calendar_resource(&self, resource: CalendarResource) {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            format!(
+                "customer/{}/resources/calendars/{}",
+                self.customer,
+                resource.clone().id
+            ),
+            resource,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// Create a calendar resource.
+    pub fn create_calendar_resource(&self, resource: CalendarResource) {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            format!("customer/{}/resources/calendars", self.customer),
+            resource,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// List buildings.
+    pub fn list_buildings(&self) -> Vec<Building> {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            format!("customer/{}/resources/buildings", self.customer),
+            {},
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+
+        // Try to deserialize the response.
+        let value: Buildings = resp.json().unwrap();
+
+        return value.buildings.unwrap();
+    }
+
+    /// Update a building.
+    pub fn update_building(&self, building: Building) {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            format!(
+                "customer/{}/resources/buildings/{}",
+                self.customer,
+                building.clone().id
+            ),
+            building,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+
+    /// Create a building.
+    pub fn create_building(&self, building: Building) {
+        // Build the request.
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            format!("customer/{}/resources/buildings", self.customer),
+            building,
+            None,
+        );
+
+        let resp = self.client.execute(request).unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => panic!(
+                "received response status: {:?}\nbody: {}",
+                s,
+                resp.text().unwrap()
+            ),
+        };
+    }
+}
+
+/// Generate a random string that we can use as a temporary password for new users
+/// when we set up their account.
+pub fn generate_password() -> String {
+    let rand_string: String =
+        thread_rng().sample_iter(&Alphanumeric).take(30).collect();
+
+    return rand_string;
+}
+
+/// A Google group.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Group {
     /// List of non editable aliases (Read-only)
@@ -55,6 +695,7 @@ pub struct Group {
     pub name: Option<String>,
 }
 
+/// A Google group's settings.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct GroupSettings {
     /// Permission to ban users. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
@@ -347,7 +988,7 @@ pub struct GroupSettings {
     /// Is the group listed in groups directory
     #[serde(
         skip_serializing_if = "Option::is_none",
-        rename = "showInGroupDirectory"
+        rename = "showInGroupGSuite"
     )]
     pub show_in_group_directory: Option<String>,
     /// Permission to post announcements, a special topic type. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
@@ -388,17 +1029,8 @@ pub struct GroupSettings {
     pub who_can_hide_abuse: Option<String>,
 }
 
-/// JSON response template for List Groups operation in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [list groups](struct.GroupListCall.html) (response)
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct Groups {
+struct Groups {
     /// Token used to access next page of this result.
     #[serde(skip_serializing_if = "Option::is_none", rename = "nextPageToken")]
     pub next_page_token: Option<String>,
@@ -410,33 +1042,15 @@ pub struct Groups {
     pub groups: Option<Vec<Group>>,
 }
 
-/// JSON template for Has Member response in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [has member members](struct.MemberHasMemberCall.html) (response)
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct MembersHasMember {
+struct MembersHasMember {
     /// Identifies whether the given user is a member of the group. Membership can be direct or nested.
     #[serde(skip_serializing_if = "Option::is_none", rename = "isMember")]
     pub is_member: Option<bool>,
 }
 
-/// JSON response template for List Members operation in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [list members](struct.MemberListCall.html) (response)
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct Members {
+struct Members {
     /// Token used to access next page of this result.
     #[serde(skip_serializing_if = "Option::is_none", rename = "nextPageToken")]
     pub next_page_token: Option<String>,
@@ -448,23 +1062,8 @@ pub struct Members {
     pub members: Option<Vec<Member>>,
 }
 
-/// JSON template for Member resource in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [patch members](struct.MemberPatchCall.html) (request|response)
-/// * [list members](struct.MemberListCall.html) (none)
-/// * [insert members](struct.MemberInsertCall.html) (request|response)
-/// * [get members](struct.MemberGetCall.html) (response)
-/// * [has member members](struct.MemberHasMemberCall.html) (none)
-/// * [delete members](struct.MemberDeleteCall.html) (none)
-/// * [update members](struct.MemberUpdateCall.html) (request|response)
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct Member {
+struct Member {
     /// Status of member (Immutable)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
@@ -488,31 +1087,7 @@ pub struct Member {
     pub id: Option<String>,
 }
 
-/// JSON template for User object in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [photos patch users](struct.UserPhotoPatchCall.html) (none)
-/// * [aliases delete users](struct.UserAliaseDeleteCall.html) (none)
-/// * [undelete users](struct.UserUndeleteCall.html) (none)
-/// * [photos get users](struct.UserPhotoGetCall.html) (none)
-/// * [update users](struct.UserUpdateCall.html) (request|response)
-/// * [aliases watch users](struct.UserAliaseWatchCall.html) (none)
-/// * [insert users](struct.UserInsertCall.html) (request|response)
-/// * [photos delete users](struct.UserPhotoDeleteCall.html) (none)
-/// * [patch users](struct.UserPatchCall.html) (request|response)
-/// * [photos update users](struct.UserPhotoUpdateCall.html) (none)
-/// * [watch users](struct.UserWatchCall.html) (none)
-/// * [get users](struct.UserGetCall.html) (response)
-/// * [aliases insert users](struct.UserAliaseInsertCall.html) (none)
-/// * [make admin users](struct.UserMakeAdminCall.html) (none)
-/// * [aliases list users](struct.UserAliaseListCall.html) (none)
-/// * [list users](struct.UserListCall.html) (none)
-/// * [delete users](struct.UserDeleteCall.html) (none)
-///
+/// A user.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct User {
     /// no description provided
@@ -667,6 +1242,7 @@ pub struct User {
 }
 
 impl User {
+    /// Update a user.
     pub fn update(
         mut self,
         user: UserConfig,
@@ -761,7 +1337,7 @@ impl User {
             // at the next login.
             self.change_password_at_next_login = Some(true);
             // Generate a password for the user.
-            let password = password::generate();
+            let password = generate_password();
             self.password = Some(password.to_string());
         }
 
@@ -821,6 +1397,7 @@ impl User {
     }
 }
 
+/// Return a user's public ssh key's from GitHub by their GitHub handle.
 fn get_github_user_public_ssh_keys(handle: String) -> Vec<UserSSHKey> {
     let body = reqwest::blocking::get(
         &format!("https://github.com/{}.keys", handle).to_string(),
@@ -843,6 +1420,7 @@ fn get_github_user_public_ssh_keys(handle: String) -> Vec<UserSSHKey> {
     return keys;
 }
 
+/// A user's email.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserEmail {
     #[serde(skip_serializing_if = "Option::is_none", rename = "type")]
@@ -852,6 +1430,7 @@ pub struct UserEmail {
     pub primary: Option<bool>,
 }
 
+/// A user's phone.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserPhone {
     #[serde(rename = "type")]
@@ -860,10 +1439,7 @@ pub struct UserPhone {
     pub primary: bool,
 }
 
-/// JSON template for name of a user in Directory API.
-///
-/// This type is not used in any activity, and only used as *part* of another schema.
-///
+/// A user's name.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserName {
     /// Full Name
@@ -877,6 +1453,7 @@ pub struct UserName {
     pub family_name: Option<String>,
 }
 
+/// A user's ssh key.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserSSHKey {
     pub key: String,
@@ -887,24 +1464,12 @@ pub struct UserSSHKey {
     pub expiration_time_usec: Option<i128>,
 }
 
-/// JSON template for a set of custom properties (i.e. all fields in a particular schema)
-///
-/// This type is not used in any activity, and only used as *part* of another schema.
-///
+/// Custom properties for a user.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserCustomProperties(pub Option<HashMap<String, String>>);
 
-/// JSON response template for List Users operation in Apps Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [list users](struct.UserListCall.html) (response)
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct Users {
+struct Users {
     /// Token used to access next page of this result.
     #[serde(skip_serializing_if = "Option::is_none", rename = "nextPageToken")]
     pub next_page_token: Option<String>,
@@ -918,6 +1483,7 @@ pub struct Users {
     pub users: Option<Vec<User>>,
 }
 
+/// A user's location.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserLocation {
     #[serde(rename = "type")]
@@ -931,24 +1497,14 @@ pub struct UserLocation {
     pub floor_name: Option<String>,
 }
 
+/// A user's gender.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserGender {
     #[serde(rename = "type")]
     pub typev: String,
 }
 
-/// JSON template for Calendar Resource object in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [calendars insert resources](struct.ResourceCalendarInsertCall.html) (request|response)
-/// * [calendars get resources](struct.ResourceCalendarGetCall.html) (response)
-/// * [calendars patch resources](struct.ResourceCalendarPatchCall.html) (request|response)
-/// * [calendars update resources](struct.ResourceCalendarUpdateCall.html) (request|response)
-///
+/// A calendar resource.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CalendarResource {
     /// The type of the resource. For calendar resources, the value is admin#directory#resources#calendars#CalendarResource.
@@ -1011,6 +1567,7 @@ pub struct CalendarResource {
 }
 
 impl CalendarResource {
+    /// Update a calendar resource.
     pub fn update(
         mut self,
         resource: ResourceConfig,
@@ -1031,17 +1588,8 @@ impl CalendarResource {
     }
 }
 
-/// JSON template for Calendar Resource List Response object in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [calendars list resources](struct.ResourceCalendarListCall.html) (response)
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct CalendarResources {
+struct CalendarResources {
     /// The continuation token, used to page through large result sets. Provide this value in a subsequent request to return the next page of results.
     #[serde(rename = "nextPageToken")]
     pub next_page_token: Option<String>,
@@ -1053,6 +1601,7 @@ pub struct CalendarResources {
     pub etag: Option<String>,
 }
 
+/// A feature of a calendar.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CalendarFeature {
     /// The continuation token, used to page through large result sets. Provide this value in a subsequent request to return the next page of results.
@@ -1063,23 +1612,13 @@ pub struct CalendarFeature {
     pub etags: Option<String>,
 }
 
+/// A calendar's features.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CalendarFeatures {
     pub feature: Option<CalendarFeature>,
 }
 
-/// JSON template for Building object in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [buildings patch resources](struct.ResourceBuildingPatchCall.html) (request|response)
-/// * [buildings insert resources](struct.ResourceBuildingInsertCall.html) (request|response)
-/// * [buildings update resources](struct.ResourceBuildingUpdateCall.html) (request|response)
-/// * [buildings get resources](struct.ResourceBuildingGetCall.html) (response)
-///
+/// A building.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Building {
     /// Kind of resource this is.
@@ -1104,6 +1643,7 @@ pub struct Building {
 }
 
 impl Building {
+    /// Update a building.
     pub fn update(mut self, building: BuildingConfig, id: String) -> Building {
         self.id = id;
         self.name = building.name.to_string();
@@ -1123,17 +1663,8 @@ impl Building {
     }
 }
 
-/// JSON template for Building List Response object in Directory API.
-///
-/// # Activities
-///
-/// This type is used in activities, which are methods you may call on this type or where this type is involved in.
-/// The list links the activity name, along with information about where it is used (one of *request* and *response*).
-///
-/// * [buildings list resources](struct.ResourceBuildingListCall.html) (response)
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct Buildings {
+struct Buildings {
     /// The continuation token, used to page through large result sets. Provide this value in a subsequent request to return the next page of results.
     #[serde(rename = "nextPageToken")]
     pub next_page_token: Option<String>,
@@ -1145,9 +1676,7 @@ pub struct Buildings {
     pub kind: Option<String>,
 }
 
-///
-/// This type is not used in any activity, and only used as *part* of another schema.
-///
+/// A building's coordinates.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct BuildingCoordinates {
     /// Latitude in decimal degrees.
@@ -1156,10 +1685,7 @@ pub struct BuildingCoordinates {
     pub longitude: Option<f64>,
 }
 
-/// JSON template for the postal address of a building in Directory API.
-///
-/// This type is not used in any activity, and only used as *part* of another schema.
-///
+/// A building's address.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct BuildingAddress {
     /// Optional. BCP-47 language code of the contents of this address (if known).

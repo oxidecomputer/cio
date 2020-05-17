@@ -1,5 +1,6 @@
 use std::env;
 
+use cio::LinkConfig;
 use clap::ArgMatches;
 use handlebars::{
     Context, Handlebars, Helper, HelperResult, Output, RenderContext,
@@ -8,7 +9,6 @@ use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions};
 use log::warn;
 use tokio::runtime::Runtime;
 
-use crate::core::LinkConfig;
 use crate::utils::{
     authenticate_github, get_rfds_from_repo, read_config_from_files,
     write_file, TEMPLATE_WARNING,

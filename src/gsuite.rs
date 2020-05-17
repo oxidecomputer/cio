@@ -5,13 +5,11 @@ use std::rc::Rc;
 use clap::{value_t, ArgMatches};
 use log::info;
 
-use crate::core::{
-    BuildingConfig, Config, GroupConfig, ResourceConfig, UserConfig,
-};
-use crate::directory::client::Directory;
-use crate::directory::core::{Building, CalendarResource, Group, User};
-use crate::email::client::SendGrid;
 use crate::utils::{get_gsuite_token, read_config_from_files};
+
+use cio::{BuildingConfig, Config, GroupConfig, ResourceConfig, UserConfig};
+use gsuite::{Building, CalendarResource, GSuite, Group, User};
+use sendgrid::SendGrid;
 
 /**
  * Sync the configuration files with GSuite.
@@ -40,7 +38,7 @@ struct GSuiteClient {
 
     sendgrid: Rc<SendGrid>,
 
-    directory: Rc<Directory>,
+    gsuite: Rc<GSuite>,
     google_groups: BTreeMap<String, Group>,
     google_users: Vec<User>,
     google_resources: Vec<CalendarResource>,
@@ -54,14 +52,14 @@ impl GSuiteClient {
         // Get the GSuite token.
         let token = get_gsuite_token();
 
-        // Initialize thje GSuite directory client.
-        let directory =
-            Directory::new(gsuite_customer, domain.to_string(), token.clone());
+        // Initialize thje GSuite gsuite client.
+        let gsuite =
+            GSuite::new(gsuite_customer, domain.to_string(), token.clone());
 
         // Get the existing google groups.
         info!("[google] getting current groups...");
         let mut google_groups: BTreeMap<String, Group> = BTreeMap::new();
-        let groups = directory.list_groups();
+        let groups = gsuite.list_groups();
         for g in groups {
             // Add the team to our hash map.
             google_groups.insert(g.clone().name.unwrap().to_string(), g);
@@ -69,15 +67,15 @@ impl GSuiteClient {
 
         // Get the existing google users.
         info!("[google] getting current users...");
-        let google_users = directory.list_users();
+        let google_users = gsuite.list_users();
 
         // Get the existing google resources.
-        info!("[google] getting current resources...");
-        let google_resources = directory.list_resources();
+        info!("[google] getting current calendar resources...");
+        let google_resources = gsuite.list_calendar_resources();
 
         // Get the existing google buildings.
         info!("[google] getting current buildings...");
-        let google_buildings = directory.list_buildings();
+        let google_buildings = gsuite.list_buildings();
 
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -88,7 +86,7 @@ impl GSuiteClient {
 
             sendgrid: Rc::new(sendgrid),
 
-            directory: Rc::new(directory),
+            gsuite: Rc::new(gsuite),
             google_groups: google_groups,
             google_users: google_users,
             google_resources: google_resources,
@@ -128,7 +126,7 @@ impl GSuiteClient {
             b = b.clone().update(building.clone(), id.to_string());
 
             // Update the building with the given settings.
-            self.directory.update_building(b.clone());
+            self.gsuite.update_building(b.clone());
 
             // Remove the building from the config map and continue.
             // This allows us to add all the remaining new building after.
@@ -144,7 +142,7 @@ impl GSuiteClient {
 
             b = b.clone().update(building.clone(), id.to_string());
 
-            self.directory.create_building(b);
+            self.gsuite.create_building(b);
 
             info!("[google] created building: {}", id);
         }
@@ -169,7 +167,7 @@ impl GSuiteClient {
             r = r.clone().update(resource.clone(), r.id.to_string());
 
             // Update the resource with the given settings.
-            self.directory.update_resource(r.clone());
+            self.gsuite.update_calendar_resource(r.clone());
 
             // Remove the resource from the config map and continue.
             // This allows us to add all the remaining new resource after.
@@ -185,7 +183,7 @@ impl GSuiteClient {
 
             r = r.clone().update(resource.clone(), id.to_string());
 
-            self.directory.create_resource(r);
+            self.gsuite.create_calendar_resource(r);
 
             info!("[google] created resource: {}", id);
         }
@@ -215,7 +213,7 @@ impl GSuiteClient {
                 .clone()
                 .update(user.clone(), self.domain.to_string(), false);
 
-            self.directory.update_user(u.clone());
+            self.gsuite.update_user(u.clone());
 
             self.update_user_aliases(u.clone());
 
@@ -238,7 +236,7 @@ impl GSuiteClient {
                 .clone()
                 .update(user.clone(), self.domain.to_string(), true);
 
-            self.directory.create_user(u.clone());
+            self.gsuite.create_user(u.clone());
 
             self.update_user_aliases(u.clone());
 
@@ -262,10 +260,16 @@ impl GSuiteClient {
             }
 
             // Send an email to the new user.
-            self.sendgrid.send_new_user(
-                u,
+            let message = user_email_message(
+                u.clone(),
                 password.to_string(),
                 github.to_string(),
+                self.domain.to_string(),
+            );
+            self.sendgrid.send_new_user(
+                u.clone().primary_email.unwrap().to_string(),
+                u.clone().recovery_email.unwrap().to_string(),
+                message,
             );
 
             info!("created new user: {}", username);
@@ -278,7 +282,7 @@ impl GSuiteClient {
             Some(val) => {
                 // Update the user's aliases.
                 let email = u.primary_email.unwrap();
-                self.directory.update_user_aliases(email.clone(), val);
+                self.gsuite.update_user_aliases(email.clone(), val);
                 info!("[google] updated user aliases: {}", email);
             }
             None => (),
@@ -327,11 +331,11 @@ impl GSuiteClient {
 
             // Check if the user is already a member of the group.
             let is_member = self
-                .directory
+                .gsuite
                 .group_has_member(group.clone().id.unwrap(), email.to_string());
             if is_member {
                 // They are a member so we can just update their member status.
-                self.directory.group_update_member(
+                self.gsuite.group_update_member(
                     group.clone().id.unwrap(),
                     email.to_string(),
                     role.to_string(),
@@ -342,7 +346,7 @@ impl GSuiteClient {
             }
 
             // Add the user to the group.
-            self.directory.group_insert_member(
+            self.gsuite.group_insert_member(
                 group.id.unwrap(),
                 email.to_string(),
                 role.to_string(),
@@ -366,7 +370,7 @@ impl GSuiteClient {
             // Now we have a google group. The user should not be a member of it,
             // but we need to make sure they are not a member.
             let is_member = self
-                .directory
+                .gsuite
                 .group_has_member(group.clone().id.unwrap(), email.to_string());
 
             if !is_member {
@@ -376,7 +380,7 @@ impl GSuiteClient {
 
             // They are a member of the group.
             // We need to remove them.
-            self.directory.group_remove_member(
+            self.gsuite.group_remove_member(
                 group.clone().id.unwrap(),
                 email.to_string(),
             );
@@ -416,7 +420,7 @@ impl GSuiteClient {
             }
             updated_group.aliases = Some(aliases);
 
-            self.directory.update_group(updated_group.clone());
+            self.gsuite.update_group(updated_group.clone());
 
             self.update_group_aliases(updated_group);
 
@@ -451,7 +455,7 @@ impl GSuiteClient {
             }
             g.aliases = Some(aliases);
 
-            let new_group: Group = self.directory.create_group(g.clone());
+            let new_group: Group = self.gsuite.create_group(g.clone());
 
             self.update_group_aliases(g);
 
@@ -472,7 +476,7 @@ impl GSuiteClient {
             Some(val) => {
                 // Update the user's aliases.
                 let email = g.email.unwrap();
-                self.directory.update_group_aliases(email.clone(), val);
+                self.gsuite.update_group_aliases(email.clone(), val);
                 info!("[google] updated group aliases: {}", email);
             }
             None => (),
@@ -483,7 +487,7 @@ impl GSuiteClient {
     pub fn update_google_group_settings(&self, group: GroupConfig) {
         // Get the current group settings.
         let email = format!("{}@{}", group.name, self.domain);
-        let mut settings = self.directory.get_group_settings(email.to_string());
+        let mut settings = self.gsuite.get_group_settings(email.to_string());
 
         // Update the groups settings.
         settings.email = Some(email.to_string());
@@ -504,8 +508,69 @@ impl GSuiteClient {
             Some("ALL_IN_DOMAIN_CAN_CONTACT".to_string());
 
         // Update the group with the given settings.
-        self.directory.update_group_settings(settings);
+        self.gsuite.update_group_settings(settings);
 
         info!("[groups]: updated groups settings {}", group.name);
     }
+}
+
+fn user_email_message(
+    user: User,
+    password: String,
+    github: String,
+    domain: String,
+) -> String {
+    // Get the user's aliases if they have one.
+    let mut aliases: Vec<String> = Default::default();
+    match user.clone().aliases {
+        None => (),
+        Some(val) => aliases = val.clone(),
+    }
+
+    return format!(
+                        "Yoyoyo {},
+
+We have set up your account on mail.corp.{}. Details for accessing
+are below. You will be required to reset your password the next time you login.
+
+Website for Login: https://mail.corp.{}
+Email: {}
+Password: {}
+Aliases: {}
+
+Make sure you set up two-factor authentication for your account, or in one week
+you will be locked out.
+
+Your GitHub @{} has been added to our organization (https://github.com/{})
+and various teams within it. GitHub should have sent an email with instructions on
+accepting the invitation to our organization to the email you used
+when you signed up for GitHub. Or you can alternatively accept our invitation
+by going to https://github.com/{}.
+
+You will be invited to create a Zoom account from an email sent to {}. Once
+completed, your personal URL for Zoom calls will be https://oxide.zoom.us/my/{}.
+
+If you have any questions or your email does not work please email your
+administrator, who is cc-ed on this email. Spoiler alert it's Jess...
+jess@{}. If you want other email aliases, let Jess know as well.
+
+Once you login to your email, a great place to start would be taking a look at
+our on-boarding doc:
+https://docs.google.com/document/d/18Nymnd3rU1Nz4woxPfcohFeyouw7FvbYq5fGfQ6ZSGY/edit?usp=sharing.
+
+xoxo,
+  The GSuite/GitHub/Zoom Bot",
+                        user.clone().name.unwrap().given_name.unwrap(),
+                        domain,
+                        domain,
+                        user.clone().primary_email.unwrap(),
+                        password,
+                        aliases.join(", "),
+                        github.clone(),
+                        "oxidecomputer",
+                        "oxidecomputer",
+                        user.clone().primary_email.unwrap(),
+                        github,
+                        domain
+                    );
 }

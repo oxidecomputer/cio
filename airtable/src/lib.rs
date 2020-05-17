@@ -5,12 +5,13 @@ use std::rc::Rc;
 
 use reqwest::blocking::{Client, Request};
 use reqwest::{header, Method, StatusCode, Url};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json;
 
-use crate::airtable::core::{APICall, Record};
-
+/// Endpoint for the Airtable API.
 const ENDPOINT: &str = "https://api.airtable.com/v0/";
 
+/// Entrypoint for interacting with the Airtable API.
 pub struct Airtable {
     key: String,
     base_id: String,
@@ -19,9 +20,9 @@ pub struct Airtable {
 }
 
 impl Airtable {
-    // Create a new Airtable client struct. It takes a type that can convert into
-    // an &str (`String` or `Vec<u8>` for example). As long as the function is
-    // given a valid API Key and Base ID your requests will work.
+    /// Create a new Airtable client struct. It takes a type that can convert into
+    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
+    /// given a valid API Key and Base ID your requests will work.
     pub fn new<K, B>(key: K, base_id: B) -> Self
     where
         K: ToString,
@@ -39,6 +40,10 @@ impl Airtable {
         }
     }
 
+    /// Create a new Airtable client struct from environment variables. It
+    /// takes a type that can convert into
+    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
+    /// given a valid API Key and Base ID your requests will work.
     pub fn new_from_env() -> Self {
         let key = env::var("AIRTABLE_API_KEY").unwrap();
         let base_id = env::var("AIRTABLE_BASE_ID").unwrap();
@@ -46,12 +51,12 @@ impl Airtable {
         return Airtable::new(key, base_id);
     }
 
-    // Get the currently set API key.
+    /// Get the currently set API key.
     pub fn get_key(&self) -> &str {
         &self.key
     }
 
-    pub fn request<B>(
+    fn request<B>(
         &self,
         method: Method,
         path: String,
@@ -97,6 +102,7 @@ impl Airtable {
         return request;
     }
 
+    /// List records in a table for a particular view.
     pub fn list_records(
         &self,
         table: &str,
@@ -130,7 +136,10 @@ impl Airtable {
         return Ok(r.records);
     }
 
-    /// Can only bulk create 10 records at a time.
+    /// Bulk create records in a table.
+    ///
+    /// Due to limitations on the Airtable API, you can only bulk create 10
+    /// records at a time.
     pub fn create_records(
         &self,
         table: &str,
@@ -165,7 +174,10 @@ impl Airtable {
         return Ok(r.records);
     }
 
-    /// Can only bulk update 10 records at a time.
+    /// Bulk update records in a table.
+    ///
+    /// Due to limitations on the Airtable API, you can only bulk update 10
+    /// records at a time.
     pub fn update_records(
         &self,
         table: &str,
@@ -201,6 +213,7 @@ impl Airtable {
     }
 }
 
+/// Error type returned by our library.
 pub struct APIError {
     pub status_code: StatusCode,
     pub body: String,
@@ -234,4 +247,39 @@ impl error::Error for APIError {
         // Generic error, underlying cause isn't tracked.
         None
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct APICall {
+    /// If there are more records, the response will contain an
+    /// offset. To fetch the next page of records, include offset
+    /// in the next request's parameters.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<String>,
+    /// The current page number of returned records.
+    pub records: Vec<Record>,
+    /// The Airtable API will perform best-effort automatic data conversion
+    /// from string values if the typecast parameter is passed in. Automatic
+    /// conversion is disabled by default to ensure data integrity, but it may
+    /// be helpful for integrating with 3rd party data sources.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub typecast: Option<bool>,
+}
+
+/// An Airtable record.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Record {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    pub fields: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_time: Option<String>,
+}
+
+/// An airtable user.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct User {
+    pub id: String,
+    pub email: String,
+    pub name: String,
 }

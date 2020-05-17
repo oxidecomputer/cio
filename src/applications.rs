@@ -7,9 +7,10 @@ use log::info;
 use tokio::runtime::Runtime;
 
 use crate::core::{Applicant, SheetColumns};
-use crate::email::client::SendGrid;
-use crate::sheets::client::Sheets;
 use crate::utils::{authenticate_github, get_gsuite_token};
+
+use sendgrid::SendGrid;
+use sheets::Sheets;
 
 /**
  * Generate GitHub issues for various stages of the application process
@@ -215,7 +216,9 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                 sendgrid_client.send_received_application(&a.email, &a.name);
 
                 // Send us an email notification for the application.
-                sendgrid_client.send_new_applicant_notification(a.clone());
+                let message = applicant_email(a.clone());
+                sendgrid_client
+                    .send_new_applicant_notification(a.clone().name, message);
 
                 // Mark the column as true not false.
                 let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
@@ -367,4 +370,35 @@ fn check_if_github_issue_exists(issues: &Vec<Issue>, search: String) -> bool {
     }
 
     return false;
+}
+
+fn applicant_email(applicant: Applicant) -> String {
+    return format!(
+                        "## Applicant Information
+
+Submitted Date: {}
+Name: {}
+Email: {}
+Phone: {}
+Location: {}
+GitHub: {}
+Resume: {}
+Oxide Candidate Materials: {}
+
+## Reminder
+
+To view the all the candidates refer to the following Google spreadsheets:
+
+- Engineering Applications: https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing
+- Product Engineering and Design Applications: https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing
+",
+                        applicant.clone().submitted_time,
+                        applicant.clone().name,
+                        applicant.clone().email,
+                        applicant.clone().phone,
+                        applicant.clone().location,
+                        applicant.clone().github,
+                        applicant.clone().resume,
+                        applicant.clone().materials,
+                    );
 }
