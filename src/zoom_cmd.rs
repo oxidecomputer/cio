@@ -326,7 +326,23 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
         let drive_url =
             "https://drive.google.com/drive/u/1/folders/11IzpZL9zJB5mZs53e-gYH0IIizVx-Giw";
         // Initialize the SendGrid client.
-        let sendgrid_client = SendGrid::new_from_env();
-        sendgrid_client.send_uploaded_zoom_dump(drive_url);
+        email_send_uploaded_zoom_dump(
+            domain.to_string(),
+            drive_url.to_string(),
+        );
     }
+}
+
+fn email_send_uploaded_zoom_dump(domain: String, drive_url: String) {
+    let sendgrid_client = SendGrid::new_from_env();
+
+    // Send the message.
+    sendgrid_client.send_mail(
+        "New Zoom meeting video upload!".to_string(),
+        format!("Zoom videos have been uploaded to: {}. You might want to sort them!",drive_url),
+    vec![format!("jess@{}", domain)],
+        vec![format!("drive@{}", domain)],
+        vec![],
+        format!("drive@{}", domain),
+    );
 }

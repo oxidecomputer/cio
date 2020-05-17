@@ -36,8 +36,6 @@ struct GSuiteClient {
     config: Config,
     domain: String,
 
-    sendgrid: Rc<SendGrid>,
-
     gsuite: Rc<GSuite>,
     google_groups: BTreeMap<String, Group>,
     google_users: Vec<User>,
@@ -77,14 +75,9 @@ impl GSuiteClient {
         info!("[google] getting current buildings...");
         let google_buildings = gsuite.list_buildings();
 
-        // Initialize the SendGrid client.
-        let sendgrid = SendGrid::new_from_env();
-
         return Self {
             config: config,
             domain: domain,
-
-            sendgrid: Rc::new(sendgrid),
 
             gsuite: Rc::new(gsuite),
             google_groups: google_groups,
@@ -260,16 +253,11 @@ impl GSuiteClient {
             }
 
             // Send an email to the new user.
-            let message = user_email_message(
+            email_send_new_user(
                 u.clone(),
                 password.to_string(),
                 github.to_string(),
                 self.domain.to_string(),
-            );
-            self.sendgrid.send_new_user(
-                u.clone().primary_email.unwrap().to_string(),
-                u.clone().recovery_email.unwrap().to_string(),
-                message,
             );
 
             info!("created new user: {}", username);
@@ -512,6 +500,36 @@ impl GSuiteClient {
 
         info!("[groups]: updated groups settings {}", group.name);
     }
+}
+
+fn email_send_new_user(
+    user: User,
+    password: String,
+    github: String,
+    domain: String,
+) {
+    // Initialize the SendGrid client.
+    let sendgrid = SendGrid::new_from_env();
+
+    // Create the message.
+    let message =
+        user_email_message(user.clone(), password, github, domain.to_string());
+
+    // Send the message.
+    sendgrid.send_mail(
+        format!(
+            "Your New Email Account: {}",
+            user.clone().primary_email.unwrap()
+        ),
+        message,
+        vec![user.clone().recovery_email.unwrap()],
+        vec![
+            user.clone().primary_email.unwrap(),
+            format!("jess@{}", domain.to_string()),
+        ],
+        vec![],
+        format!("admin@{}", domain.to_string()),
+    );
 }
 
 fn user_email_message(

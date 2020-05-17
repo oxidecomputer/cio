@@ -177,11 +177,14 @@ pub fn cmd_product_huddle_run() {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
         // Send the email.
-        sendgrid.send(
-            template,
-            "Reminder Product Huddle Tomorrow",
-            "product@oxide.computer",
-            "jess@oxide.computer",
+        // TODO: pass in the domain like the other tools.
+        sendgrid.send_mail(
+            "Reminder Product Huddle Tomorrow".to_string(),
+            template.to_string(),
+            vec!["jess@oxide.computer".to_string()],
+            vec![],
+            vec![],
+            "product@oxide.computer".to_string(),
         );
 
         info!("successfully sent the email!");

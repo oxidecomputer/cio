@@ -1,7 +1,7 @@
 use std::env;
 
 use chrono::naive::NaiveDate;
-use clap::ArgMatches;
+use clap::{value_t, ArgMatches};
 use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use log::info;
 use tokio::runtime::Runtime;
@@ -58,6 +58,9 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
     if sheets.len() < 1 {
         panic!("must provide IDs of google sheets to update applications from")
     }
+
+    // Get the domain.
+    let domain = value_t!(cli_matches, "domain", String).unwrap();
 
     // Initialize Github and the runtime.
     let github = authenticate_github();
@@ -213,12 +216,18 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                 let sendgrid_client = SendGrid::new_from_env();
 
                 // Send them an email.
-                sendgrid_client.send_received_application(&a.email, &a.name);
+                email_send_received_application(
+                    &sendgrid_client,
+                    a.clone().email,
+                    domain.to_string(),
+                );
 
                 // Send us an email notification for the application.
-                let message = applicant_email(a.clone());
-                sendgrid_client
-                    .send_new_applicant_notification(a.clone().name, message);
+                email_send_new_applicant_notification(
+                    &sendgrid_client,
+                    a.clone(),
+                    domain.to_string(),
+                );
 
                 // Mark the column as true not false.
                 let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
@@ -370,6 +379,46 @@ fn check_if_github_issue_exists(issues: &Vec<Issue>, search: String) -> bool {
     }
 
     return false;
+}
+
+fn email_send_received_application(
+    sendgrid: &SendGrid,
+    email: String,
+    domain: String,
+) {
+    // Send the message.
+    sendgrid.send_mail(
+        "Oxide Computer Company Application Received!".to_string(),
+                "Thank you for submitting your application materials! We really appreciate all
+the time and thought everyone puts into their application. We will be in touch
+within the next couple weeks with more information.
+
+Sincerely,
+  The Oxide Team".to_string(),
+  vec![email.to_string()],
+        vec![format!("careers@{}",domain)],
+        vec![],
+    format!("careers@{}", domain),
+    );
+}
+
+fn email_send_new_applicant_notification(
+    sendgrid: &SendGrid,
+    applicant: Applicant,
+    domain: String,
+) {
+    // Create the message.
+    let message = applicant_email(applicant.clone());
+
+    // Send the message.
+    sendgrid.send_mail(
+        format!("New Application: {}", applicant.name),
+        message,
+        vec![format!("all@{}", domain)],
+        vec![],
+        vec![],
+        format!("applications@{}", domain),
+    );
 }
 
 fn applicant_email(applicant: Applicant) -> String {

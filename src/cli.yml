@@ -50,6 +50,14 @@ subcommands:
             required: true
             use_delimiter: true
             multiple: true
+        - domain:
+            help: |
+              domain for the company
+            short: d
+            long: domain
+            required: true
+            multiple: false
+            takes_value: true
   - gsuite:
       about: |
         Sync the configuration files with GSuite.

@@ -13,7 +13,6 @@ const ENDPOINT: &str = "https://api.sendgrid.com/v3/";
 /// Entrypoint for interacting with the SendGrid API.
 pub struct SendGrid {
     key: String,
-    domain: String,
 
     client: Rc<Client>,
 }
@@ -21,17 +20,15 @@ pub struct SendGrid {
 impl SendGrid {
     /// Create a new SendGrid client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API Key and Secret your requests will work.
-    pub fn new<K, D>(key: K, domain: D) -> Self
+    /// given a valid API Key your requests will work.
+    pub fn new<K>(key: K) -> Self
     where
         K: ToString,
-        D: ToString,
     {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
                 key: key.to_string(),
-                domain: domain.to_string(),
 
                 client: Rc::new(c),
             },
@@ -45,9 +42,8 @@ impl SendGrid {
     /// given a valid API Key your requests will work.
     pub fn new_from_env() -> Self {
         let key = env::var("SENDGRID_API_KEY").unwrap();
-        let domain = env::var("EMAIL_TEMPLATE_DOMAIN").unwrap();
 
-        return SendGrid::new(key, domain);
+        return SendGrid::new(key);
     }
 
     /// Get the currently set API key.
@@ -99,8 +95,8 @@ impl SendGrid {
         return request;
     }
 
-    /// Send an email.
-    pub fn send_mail(&self, message: Message) {
+    /// Create a sendgrid message struct and send it.
+    pub fn send_raw_mail(&self, message: Message) {
         // Build the request.
         let request =
             self.request(Method::POST, "mail/send".to_string(), message, None);
@@ -112,72 +108,30 @@ impl SendGrid {
         };
     }
 
-    pub fn send_new_user(
+    /// Send an email.
+    ///
+    /// This is a nicer experience than using `send_raw_mail`.
+    pub fn send_mail(
         &self,
-        primary_email: String,
-        recovery_email: String,
+        subject: String,
         message: String,
+        to: Vec<String>,
+        cc: Vec<String>,
+        bcc: Vec<String>,
+        from: String,
     ) {
-        // Create the message.
-        let admin_email = format!("admin@{}", self.domain);
+        // Create the personalization.
+        let mut p = Personalization::new();
+        for t in to {
+            p = p.add_to(Email::new().set_email(&t).set_name(&t));
+        }
+        for c in cc {
+            p = p.add_cc(Email::new().set_email(&c).set_name(&c));
+        }
+        for b in bcc {
+            p = p.add_bcc(Email::new().set_email(&b).set_name(&b));
+        }
 
-        let message = Message::new()
-            .set_from(
-                Email::new().set_email(&admin_email).set_name(&admin_email),
-            )
-            .set_subject(&format!("Your New Email Account: {}", primary_email))
-            .add_content(
-                Content::new()
-                    .set_content_type("text/plain")
-                    .set_value(&message),
-            )
-            .add_personalization(
-                Personalization::new()
-                    .add_to(
-                        Email::new()
-                            .set_email(&recovery_email)
-                            .set_name(&recovery_email),
-                    )
-                    .add_cc(
-                        Email::new()
-                            .set_email(&format!("jess@{}", self.domain)),
-                    ),
-            );
-
-        // Send the message.
-        self.send_mail(message);
-    }
-
-    pub fn send_received_application(&self, email: &str, name: &str) {
-        let careers_email = format!("careers@{}", self.domain);
-
-        // Create the message.
-        let message = Message::new()
-            .set_from(
-                Email::new()
-                    .set_email(&careers_email)
-                    .set_name(&careers_email),
-            )
-            .set_subject("Oxide Computer Company Application Received!")
-            .add_content(Content::new().set_content_type("text/plain").set_value(
-                "Thank you for submitting your application materials! We really appreciate all
-the time and thought everyone puts into their application. We will be in touch
-within the next couple weeks with more information.
-
-Sincerely,
-  The Oxide Team",
-            ))
-            .add_personalization(
-                Personalization::new()
-                    .add_to(Email::new().set_email(email).set_name(name))
-                    .add_cc(Email::new().set_email(&careers_email)),
-            );
-
-        // Send the message.
-        self.send_mail(message);
-    }
-
-    pub fn send(&self, body: &str, subject: &str, from: &str, to: &str) {
         // Create the message.
         let message = Message::new()
             .set_from(Email::new().set_email(&from).set_name(&from))
@@ -185,73 +139,12 @@ Sincerely,
             .add_content(
                 Content::new()
                     .set_content_type("text/plain")
-                    .set_value(&body),
-            )
-            .add_personalization(
-                Personalization::new()
-                    .add_to(Email::new().set_email(&to).set_name(&to)),
-            );
-
-        // Send the message.
-        self.send_mail(message);
-    }
-
-    pub fn send_uploaded_zoom_dump(&self, drive_url: &str) {
-        let drive_email = format!("drive@{}", self.domain);
-
-        // Create the message.
-        let message = Message::new()
-            .set_from(Email::new().set_email(&drive_email).set_name(&drive_email))
-            .set_subject("New Zoom meeting video upload!")
-            .add_content(
-                Content::new()
-                    .set_content_type("text/plain")
-                    .set_value(&format!(
-                        "Zoom videos have been uploaded to: {}. You might want to sort them!",
-                        drive_url
-                    )),
-            )
-            .add_personalization(
-                Personalization::new()
-                    .add_to(
-                        Email::new()
-                            .set_email(&format!("jess@{}", self.domain))
-                            .set_name(&format!("jess@{}", self.domain)),
-                    )
-                    .add_cc(Email::new().set_email(&drive_email)),
-            );
-
-        // Send the message.
-        self.send_mail(message);
-    }
-
-    pub fn send_new_applicant_notification(
-        &self,
-        name: String,
-        message: String,
-    ) {
-        let applications_email = format!("applications@{}", self.domain);
-        let all_email = format!("all@{}", self.domain);
-
-        // Create the message.
-        let message = Message::new()
-            .set_from(
-                Email::new()
-                    .set_email(&applications_email)
-                    .set_name(&applications_email),
-            )
-            .set_subject(&format!("New Application: {}", name))
-            .add_content(
-                Content::new()
-                    .set_content_type("text/plain")
                     .set_value(&message),
             )
-            .add_personalization(Personalization::new().add_to(
-                Email::new().set_email(&all_email).set_name(&all_email),
-            ));
+            .add_personalization(p);
 
         // Send the message.
-        self.send_mail(message);
+        self.send_raw_mail(message);
     }
 }
 
