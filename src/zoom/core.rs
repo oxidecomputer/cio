@@ -233,13 +233,21 @@ pub struct UpdateBuildingRequest {
 }
 
 impl Building {
-    pub fn update(mut self, building: BuildingConfig, passcode: String) -> Building {
+    pub fn update(
+        mut self,
+        building: BuildingConfig,
+        passcode: String,
+    ) -> Building {
         self.name = building.name;
         self.description = Some(building.description);
         self.address = Some(format!(
             "{}
 {}, {} {} {}",
-            building.address, building.city, building.state, building.zipcode, building.country
+            building.address,
+            building.city,
+            building.state,
+            building.zipcode,
+            building.country
         ));
         self.room_passcode = Some(passcode);
         self.required_code_to_ext = Some(true);

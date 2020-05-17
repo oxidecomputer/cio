@@ -46,7 +46,8 @@ pub fn cmd_product_huddle_run() {
     for (i, record) in records_ms.clone().iter().enumerate() {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.
-        let meeting: MeetingFields = serde_json::from_value(record.fields.clone()).unwrap();
+        let meeting: MeetingFields =
+            serde_json::from_value(record.fields.clone()).unwrap();
 
         // Check if the meeting is in the future or the past.
         // 18 is 11am Pacific Time in UTC time.
@@ -92,7 +93,9 @@ pub fn cmd_product_huddle_run() {
                     );
 
                     // Try to get the notes from this meeting from the reports repo.
-                    match runtime.block_on(reports_repo.content().file(&notes_path)) {
+                    match runtime
+                        .block_on(reports_repo.content().file(&notes_path))
+                    {
                         Ok(file) => {
                             let decoded = from_utf8(&file.content).unwrap();
                             // Compare the notes and see if we need to update them.
@@ -145,7 +148,8 @@ pub fn cmd_product_huddle_run() {
     for (_i, record) in records_dt.clone().iter().enumerate() {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.
-        let fields: DiscussionFields = serde_json::from_value(record.fields.clone()).unwrap();
+        let fields: DiscussionFields =
+            serde_json::from_value(record.fields.clone()).unwrap();
 
         // Check if this is our next meeting, and add the topics to our email!
         if fields.associated_meetings.contains(&email_data.meeting_id) {

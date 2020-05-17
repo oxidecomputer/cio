@@ -5,7 +5,9 @@ use std::rc::Rc;
 use clap::{value_t, ArgMatches};
 use log::info;
 
-use crate::core::{BuildingConfig, Config, GroupConfig, ResourceConfig, UserConfig};
+use crate::core::{
+    BuildingConfig, Config, GroupConfig, ResourceConfig, UserConfig,
+};
 use crate::directory::client::Directory;
 use crate::directory::core::{Building, CalendarResource, Group, User};
 use crate::email::client::SendGrid;
@@ -46,7 +48,8 @@ impl Client {
         let token = get_gsuite_token();
 
         // Initialize thje GSuite directory client.
-        let directory = Directory::new(gsuite_customer, domain.to_string(), token.clone());
+        let directory =
+            Directory::new(gsuite_customer, domain.to_string(), token.clone());
 
         // Get the existing google groups.
         info!("[google] getting current groups...");
@@ -248,8 +251,11 @@ impl Client {
             }
 
             // Send an email to the new user.
-            self.sendgrid
-                .send_new_user(u, password.to_string(), github.to_string());
+            self.sendgrid.send_new_user(
+                u,
+                password.to_string(),
+                github.to_string(),
+            );
 
             info!("created new user: {}", username);
         }
@@ -356,8 +362,10 @@ impl Client {
 
             // They are a member of the group.
             // We need to remove them.
-            self.directory
-                .group_remove_member(group.clone().id.unwrap(), email.to_string());
+            self.directory.group_remove_member(
+                group.clone().id.unwrap(),
+                email.to_string(),
+            );
 
             info!(
                 "[groups]: removed {} from {}",
@@ -464,16 +472,19 @@ impl Client {
         settings.email = Some(email.to_string());
         settings.name = Some(group.name.to_string());
         settings.description = Some(group.description);
-        settings.allow_external_members = Some(group.allow_external_members.to_string());
+        settings.allow_external_members =
+            Some(group.allow_external_members.to_string());
         settings.allow_web_posting = Some(group.allow_web_posting.to_string());
         settings.is_archived = Some(group.is_archived.to_string());
         settings.who_can_discover_group = Some(group.who_can_discover_group);
         settings.who_can_join = Some(group.who_can_join);
-        settings.who_can_moderate_members = Some(group.who_can_moderate_members);
+        settings.who_can_moderate_members =
+            Some(group.who_can_moderate_members);
         settings.who_can_post_message = Some(group.who_can_post_message);
         settings.who_can_view_group = Some(group.who_can_view_group);
         settings.who_can_view_membership = Some(group.who_can_view_membership);
-        settings.who_can_contact_owner = Some("ALL_IN_DOMAIN_CAN_CONTACT".to_string());
+        settings.who_can_contact_owner =
+            Some("ALL_IN_DOMAIN_CAN_CONTACT".to_string());
 
         // Update the group with the given settings.
         self.directory.update_group_settings(settings);

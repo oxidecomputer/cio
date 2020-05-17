@@ -7,8 +7,8 @@ use serde::Serialize;
 use yup_oauth2::Token;
 
 use crate::directory::core::{
-    Building, Buildings, CalendarResource, CalendarResources, Group, GroupSettings, Groups, Member,
-    MembersHasMember, User, Users,
+    Building, Buildings, CalendarResource, CalendarResources, Group,
+    GroupSettings, Groups, Member, MembersHasMember, User, Users,
 };
 
 const ENDPOINT: &str = "https://www.googleapis.com/admin/directory/v1/";
@@ -196,7 +196,13 @@ impl Directory {
 
     pub fn create_group(&self, group: Group) -> Group {
         // Build the request.
-        let request = self.request(ENDPOINT, Method::POST, "groups".to_string(), group, None);
+        let request = self.request(
+            ENDPOINT,
+            Method::POST,
+            "groups".to_string(),
+            group,
+            None,
+        );
 
         let resp = self.client.execute(request).unwrap();
         match resp.status() {
@@ -212,7 +218,11 @@ impl Directory {
         return resp.json().unwrap();
     }
 
-    pub fn update_group_aliases(&self, group_key: String, aliases: Vec<String>) {
+    pub fn update_group_aliases(
+        &self,
+        group_key: String,
+        aliases: Vec<String>,
+    ) {
         for alias in aliases {
             self.update_group_alias(group_key.to_string(), alias.to_string());
         }
@@ -275,7 +285,12 @@ impl Directory {
         return value.is_member.unwrap();
     }
 
-    pub fn group_update_member(&self, group_id: String, email: String, role: String) {
+    pub fn group_update_member(
+        &self,
+        group_id: String,
+        email: String,
+        role: String,
+    ) {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -301,7 +316,12 @@ impl Directory {
         };
     }
 
-    pub fn group_insert_member(&self, group_id: String, email: String, role: String) {
+    pub fn group_insert_member(
+        &self,
+        group_id: String,
+        email: String,
+        role: String,
+    ) {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -401,7 +421,13 @@ impl Directory {
 
     pub fn create_user(&self, user: User) -> User {
         // Build the request.
-        let request = self.request(ENDPOINT, Method::POST, "users".to_string(), user, None);
+        let request = self.request(
+            ENDPOINT,
+            Method::POST,
+            "users".to_string(),
+            user,
+            None,
+        );
 
         let resp = self.client.execute(request).unwrap();
         match resp.status() {

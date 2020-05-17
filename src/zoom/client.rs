@@ -13,8 +13,8 @@ use serde::Serialize;
 
 use crate::zoom::auth;
 use crate::zoom::core::{
-    APIResponse, Building, CreateUserOpts, LoginType, Meeting, Room, UpdateBuildingRequest,
-    UpdateRoomRequest, UpdateUserOpts, User, UserInfo,
+    APIResponse, Building, CreateUserOpts, LoginType, Meeting, Room,
+    UpdateBuildingRequest, UpdateRoomRequest, UpdateUserOpts, User, UserInfo,
 };
 
 const ENDPOINT: &str = "https://api.zoom.us/v2/";
@@ -320,7 +320,9 @@ impl Zoom {
             s => {
                 let body = resp.text().unwrap();
 
-                if body.contains("This conference room already has a Zoom Room account") {
+                if body.contains(
+                    "This conference room already has a Zoom Room account",
+                ) {
                     // Ignore the duplicate error.
                     return Ok(());
                 }
@@ -337,7 +339,8 @@ impl Zoom {
 
     pub fn create_room(&self, room: Room) -> Result<Room, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, "rooms".to_string(), room, None);
+        let request =
+            self.request(Method::POST, "rooms".to_string(), room, None);
 
         let resp = self.client.execute(request).unwrap();
         match resp.status() {
@@ -383,13 +386,21 @@ impl Zoom {
         return Ok(r.locations.unwrap());
     }
 
-    pub fn create_building(&self, mut building: Building) -> Result<Building, APIError> {
+    pub fn create_building(
+        &self,
+        mut building: Building,
+    ) -> Result<Building, APIError> {
         // Set the parent location to the account id.
         // That is the root.
         building.parent_location_id = Some(self.account_id.to_string());
 
         // Build the request.
-        let request = self.request(Method::POST, "rooms/locations".to_string(), building, None);
+        let request = self.request(
+            Method::POST,
+            "rooms/locations".to_string(),
+            building,
+            None,
+        );
 
         let resp = self.client.execute(request).unwrap();
         match resp.status() {
@@ -406,7 +417,10 @@ impl Zoom {
         return Ok(resp.json().unwrap());
     }
 
-    pub fn update_building(&self, mut building: Building) -> Result<(), APIError> {
+    pub fn update_building(
+        &self,
+        mut building: Building,
+    ) -> Result<(), APIError> {
         let id = building.clone().id.unwrap();
 
         // Set the parent location to the account id.
@@ -501,7 +515,10 @@ impl Zoom {
         Ok(())
     }
 
-    pub fn delete_meeting_recordings(&self, meeting_id: i64) -> Result<(), APIError> {
+    pub fn delete_meeting_recordings(
+        &self,
+        meeting_id: i64,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             Method::DELETE,

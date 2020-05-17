@@ -2,8 +2,8 @@
 extern crate clap;
 use clap::App;
 use simplelog::{
-    CombinedLogger, Config as LogConfig, LevelFilter, SharedLogger, SimpleLogger, TermLogger,
-    TerminalMode,
+    CombinedLogger, Config as LogConfig, LevelFilter, SharedLogger,
+    SimpleLogger, TermLogger, TerminalMode,
 };
 
 use configs::airtable_cmd::cmd_airtable_run;
@@ -22,12 +22,20 @@ fn main() {
         SimpleLogger::new(LevelFilter::Info, LogConfig::default()),
         SimpleLogger::new(LevelFilter::Warn, LogConfig::default()),
     ];
-    match TermLogger::new(LevelFilter::Info, LogConfig::default(), TerminalMode::Mixed) {
+    match TermLogger::new(
+        LevelFilter::Info,
+        LogConfig::default(),
+        TerminalMode::Mixed,
+    ) {
         Some(term_logger) => {
             loggers = vec![
                 term_logger,
-                TermLogger::new(LevelFilter::Warn, LogConfig::default(), TerminalMode::Mixed)
-                    .unwrap(),
+                TermLogger::new(
+                    LevelFilter::Warn,
+                    LogConfig::default(),
+                    TerminalMode::Mixed,
+                )
+                .unwrap(),
             ];
         }
         None => (),

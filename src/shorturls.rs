@@ -1,14 +1,17 @@
 use std::env;
 
 use clap::ArgMatches;
-use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
+use handlebars::{
+    Context, Handlebars, Helper, HelperResult, Output, RenderContext,
+};
 use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions};
 use log::warn;
 use tokio::runtime::Runtime;
 
 use crate::core::LinkConfig;
 use crate::utils::{
-    authenticate_github, get_rfds_from_repo, read_config_from_files, write_file, TEMPLATE_WARNING,
+    authenticate_github, get_rfds_from_repo, read_config_from_files,
+    write_file, TEMPLATE_WARNING,
 };
 
 pub fn cmd_shorturls_run(cli_matches: &ArgMatches) {
@@ -132,7 +135,8 @@ fn terraform_name_helper(
 
     // Check if the first character is a number.
     let first_char = param.chars().next().unwrap();
-    let numbers: Vec<char> = vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    let numbers: Vec<char> =
+        vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
     if numbers.contains(&first_char) {
         out.write(&("_".to_owned() + &param))?;
@@ -165,8 +169,8 @@ fn generate_files_for_links(links: Vec<LinkConfig>) {
     ));
     // Add a warning to the top of the file that it should _never_
     // be edited by hand and generate it.
-    let mut nginx_rendered =
-        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(&TEMPLATE_NGINX, &links).unwrap();
+    let mut nginx_rendered = TEMPLATE_WARNING.to_owned()
+        + &handlebars.render_template(&TEMPLATE_NGINX, &links).unwrap();
     // Add the vim formating string.
     nginx_rendered += "# vi: ft=nginx";
 

@@ -624,7 +624,8 @@ pub struct Permission {
     pub permission_details: Option<Vec<PermissionPermissionDetails>>,
     /// Deprecated - use permissionDetails instead.
     #[serde(rename = "teamDrivePermissionDetails")]
-    pub team_drive_permission_details: Option<Vec<PermissionTeamDrivePermissionDetails>>,
+    pub team_drive_permission_details:
+        Option<Vec<PermissionTeamDrivePermissionDetails>>,
     /// The time at which this permission will expire (RFC 3339 date-time). Expiration times have the following restrictions:
     /// - They can only be set on user and group permissions
     /// - The time must be in the future

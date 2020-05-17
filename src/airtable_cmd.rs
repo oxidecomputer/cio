@@ -25,7 +25,8 @@ pub fn cmd_airtable_run() {
     for (i, record) in records.clone().iter().enumerate() {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.
-        let mut fields: RFDFields = serde_json::from_value(record.fields.clone()).unwrap();
+        let mut fields: RFDFields =
+            serde_json::from_value(record.fields.clone()).unwrap();
 
         // Try to find the matching RFD.
         let rfd: RFD;

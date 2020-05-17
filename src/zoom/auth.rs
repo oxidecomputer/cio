@@ -17,7 +17,11 @@ pub fn token(key: String, secret: String) -> String {
     header.kid = Some("signing_key".to_owned());
     header.alg = Algorithm::HS256;
 
-    let token = match encode(&header, &claims, &EncodingKey::from_secret(secret.as_ref())) {
+    let token = match encode(
+        &header,
+        &claims,
+        &EncodingKey::from_secret(secret.as_ref()),
+    ) {
         Ok(t) => t,
         Err(e) => panic!("creating jwt failed: {}", e), // TODO: return the error.
     };

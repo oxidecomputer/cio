@@ -25,7 +25,10 @@ pub fn cmd_teams_run(cli_matches: &ArgMatches) {
 
     // Generate the members of the org file.
     let rendered = handlebars
-        .render_template(&TEMPLATE_TERRAFORM_GITHUB_ORG_MEMBERSHIP, &config.users)
+        .render_template(
+            &TEMPLATE_TERRAFORM_GITHUB_ORG_MEMBERSHIP,
+            &config.users,
+        )
         .unwrap();
 
     // Join it with the directory to save the files in.
@@ -62,7 +65,8 @@ pub fn cmd_teams_run(cli_matches: &ArgMatches) {
             .unwrap();
 
         // Join it with the directory to save the files in.
-        let file = path.join(format!("generated.team-members-{}.tf", team.to_string()));
+        let file = path
+            .join(format!("generated.team-members-{}.tf", team.to_string()));
 
         write_file(file, rendered);
     }

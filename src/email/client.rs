@@ -101,7 +101,8 @@ impl SendGrid {
 
     pub fn send_mail(&self, message: Message) {
         // Build the request.
-        let request = self.request(Method::POST, "mail/send".to_string(), message, None);
+        let request =
+            self.request(Method::POST, "mail/send".to_string(), message, None);
 
         let resp = self.client.execute(request).unwrap();
         match resp.status() {
@@ -231,7 +232,8 @@ Sincerely,
                     .set_value(&body),
             )
             .add_personalization(
-                Personalization::new().add_to(Email::new().set_email(&to).set_name(&to)),
+                Personalization::new()
+                    .add_to(Email::new().set_email(&to).set_name(&to)),
             );
 
         // Send the message.

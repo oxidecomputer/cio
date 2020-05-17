@@ -68,8 +68,8 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
     // depending on the application status.
     for sheet_id in sheets {
         // Get the values in the sheet.
-        let sheet_values =
-            sheets_client.get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string());
+        let sheet_values = sheets_client
+            .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string());
         let values = sheet_values.values.unwrap();
 
         if values.len() < 1 {
@@ -122,10 +122,9 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                     if col.to_lowercase().contains("status") {
                         columns.status = index;
                     }
-                    if col
-                        .to_lowercase()
-                        .contains("sent email that we received their application")
-                    {
+                    if col.to_lowercase().contains(
+                        "sent email that we received their application",
+                    ) {
                         columns.received_application = index;
                     }
                 }
@@ -139,8 +138,11 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                 break;
             }
             // Parse the time.
-            let time =
-                NaiveDate::parse_from_str(&row[columns.timestamp], "%m/%d/%Y %H:%M:%S").unwrap();
+            let time = NaiveDate::parse_from_str(
+                &row[columns.timestamp],
+                "%m/%d/%Y %H:%M:%S",
+            )
+            .unwrap();
 
             let mut status = "";
             // If the length of the row is greater than the status column
@@ -185,11 +187,18 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                 let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
                 let rng = format!(
                     "{}{}",
-                    colmn.nth(columns.received_application).unwrap().to_string(),
+                    colmn
+                        .nth(columns.received_application)
+                        .unwrap()
+                        .to_string(),
                     i + 1
                 );
 
-                sheets_client.update_values(&sheet_id, &rng, "TRUE".to_string());
+                sheets_client.update_values(
+                    &sheet_id,
+                    &rng,
+                    "TRUE".to_string(),
+                );
 
                 info!(
                     "[sendgrid] sent email to {} that we received their application",
@@ -200,7 +209,8 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
             // Check if their status is next steps.
             if status.to_lowercase().contains("next steps") {
                 // Check if we already have an issue for this user.
-                let exists = check_if_github_issue_exists(&meta_issues, a.name.clone());
+                let exists =
+                    check_if_github_issue_exists(&meta_issues, a.name.clone());
                 if exists {
                     // Return early we don't want to update the issue because it will overwrite
                     // any changes we made.
@@ -241,15 +251,18 @@ cc @jessfraz @sdtuck @bcantrill",
 
                 // Create the issue.
                 runtime
-                    .block_on(github.repo(github_org.to_string(), "meta").issues().create(
-                        &IssueOptions {
-                            title: title,
-                            body: Some(body),
-                            assignee: Some("jessfraz".to_string()),
-                            labels: labels,
-                            milestone: None,
-                        },
-                    ))
+                    .block_on(
+                        github
+                            .repo(github_org.to_string(), "meta")
+                            .issues()
+                            .create(&IssueOptions {
+                                title: title,
+                                body: Some(body),
+                                assignee: Some("jessfraz".to_string()),
+                                labels: labels,
+                                milestone: None,
+                            }),
+                    )
                     .unwrap();
 
                 info!("[github]: created hiring issue for {}", a.email);
@@ -260,7 +273,10 @@ cc @jessfraz @sdtuck @bcantrill",
             // Check if their status is hired.
             if status.to_lowercase().contains("hired") {
                 // Check if we already have an issue for this user.
-                let exists = check_if_github_issue_exists(&configs_issues, a.name.clone());
+                let exists = check_if_github_issue_exists(
+                    &configs_issues,
+                    a.name.clone(),
+                );
                 if exists {
                     // Return early we don't want to update the issue because it will overwrite
                     // any changes we made.

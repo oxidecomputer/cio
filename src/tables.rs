@@ -17,7 +17,8 @@ pub fn cmd_tables_run(cli_matches: &ArgMatches) {
     let curdir_str = curdir.to_str().unwrap();
 
     // Get the directory passed or default to the current directory.
-    let dir = value_t!(cli_matches, "dir", String).unwrap_or(curdir_str.to_string());
+    let dir =
+        value_t!(cli_matches, "dir", String).unwrap_or(curdir_str.to_string());
 
     // Create the PathBuf.
     let output_dir = Path::new(&dir);

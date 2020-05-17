@@ -4,7 +4,9 @@ use std::env;
 use clap::ArgMatches;
 use hubcaps::branches::Protection;
 use hubcaps::labels::{Label, LabelOptions};
-use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, RepoEditOptions};
+use hubcaps::repositories::{
+    OrgRepoType, OrganizationRepoListOptions, RepoEditOptions,
+};
 use hubcaps::teams::{Permission, Team};
 use log::{info, warn};
 use tokio::runtime::Runtime;
@@ -230,7 +232,11 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
                     github
                         .org(github_org.to_string())
                         .teams()
-                        .add_repo_permission(*team_id, r.name.to_string(), perms),
+                        .add_repo_permission(
+                            *team_id,
+                            r.name.to_string(),
+                            perms,
+                        ),
                 )
                 .unwrap();
 

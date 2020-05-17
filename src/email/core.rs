@@ -226,7 +226,10 @@ impl Personalization {
     }
 
     /// Add a headers field.
-    pub fn add_headers(mut self, headers: HashMap<String, String>) -> Personalization {
+    pub fn add_headers(
+        mut self,
+        headers: HashMap<String, String>,
+    ) -> Personalization {
         match self.headers {
             None => {
                 let mut h = HashMap::new();

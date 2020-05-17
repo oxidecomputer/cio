@@ -25,7 +25,10 @@ use crate::password;
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Group {
     /// List of non editable aliases (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "nonEditableAliases")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "nonEditableAliases"
+    )]
     pub non_editable_aliases: Option<Vec<String>>,
     /// Kind of resource this is.
     pub kind: Option<String>,
@@ -35,7 +38,10 @@ pub struct Group {
     #[serde(skip_serializing_if = "Option::is_none", rename = "adminCreated")]
     pub admin_created: Option<bool>,
     /// Group direct members count
-    #[serde(skip_serializing_if = "Option::is_none", rename = "directMembersCount")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "directMembersCount"
+    )]
     pub direct_members_count: Option<String>,
     /// Email of Group
     pub email: Option<String>,
@@ -52,7 +58,10 @@ pub struct Group {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct GroupSettings {
     /// Permission to ban users. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanBanUsers")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanBanUsers"
+    )]
     pub who_can_ban_users: Option<String>,
     /// Permission for content assistants. Possible values are: Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
@@ -112,7 +121,10 @@ pub struct GroupSettings {
     )]
     pub who_can_moderate_content: Option<String>,
     /// Primary language for the group.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "primaryLanguage")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "primaryLanguage"
+    )]
     pub primary_language: Option<String>,
     /// Permission to mark a post for a topic they started as a favorite reply. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
@@ -166,7 +178,10 @@ pub struct GroupSettings {
     #[serde(skip_serializing_if = "Option::is_none", rename = "archiveOnly")]
     pub archive_only: Option<String>,
     /// Permission to delete topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanDeleteTopics")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanDeleteTopics"
+    )]
     pub who_can_delete_topics: Option<String>,
     /// Permission to delete replies to topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
@@ -242,32 +257,53 @@ pub struct GroupSettings {
     )]
     pub enable_collaborative_inbox: Option<String>,
     /// Permission to contact owner of the group via web UI. Possible values are: ANYONE_CAN_CONTACT ALL_IN_DOMAIN_CAN_CONTACT ALL_MEMBERS_CAN_CONTACT ALL_MANAGERS_CAN_CONTACT
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanContactOwner")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanContactOwner"
+    )]
     pub who_can_contact_owner: Option<String>,
     /// Default message display font. Possible values are: DEFAULT_FONT FIXED_WIDTH_FONT
-    #[serde(skip_serializing_if = "Option::is_none", rename = "messageDisplayFont")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "messageDisplayFont"
+    )]
     pub message_display_font: Option<String>,
     /// Permission to leave the group. Possible values are: ALL_MANAGERS_CAN_LEAVE ALL_OWNERS_CAN_LEAVE ALL_MEMBERS_CAN_LEAVE NONE_CAN_LEAVE
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanLeaveGroup")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanLeaveGroup"
+    )]
     pub who_can_leave_group: Option<String>,
     /// Permissions to add members. Possible values are: ALL_MANAGERS_CAN_ADD ALL_OWNERS_CAN_ADD ALL_MEMBERS_CAN_ADD NONE_CAN_ADD
     #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanAdd")]
     pub who_can_add: Option<String>,
     /// Permissions to post messages to the group. Possible values are: NONE_CAN_POST ALL_MANAGERS_CAN_POST ALL_MEMBERS_CAN_POST ALL_OWNERS_CAN_POST ALL_IN_DOMAIN_CAN_POST ANYONE_CAN_POST
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanPostMessage")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanPostMessage"
+    )]
     pub who_can_post_message: Option<String>,
     /// Permission to move topics into the group or forum. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanMoveTopicsIn")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanMoveTopicsIn"
+    )]
     pub who_can_move_topics_in: Option<String>,
     /// Permission to take topics in a forum. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanTakeTopics")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanTakeTopics"
+    )]
     pub who_can_take_topics: Option<String>,
     /// Name of the Group
     pub name: Option<String>,
     /// The type of the resource.
     pub kind: Option<String>,
     /// Maximum message size allowed.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "maxMessageBytes")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "maxMessageBytes"
+    )]
     pub max_message_bytes: Option<i32>,
     /// Permissions to invite members. Possible values are: ALL_MEMBERS_CAN_INVITE ALL_MANAGERS_CAN_INVITE ALL_OWNERS_CAN_INVITE NONE_CAN_INVITE
     #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanInvite")]
@@ -285,7 +321,10 @@ pub struct GroupSettings {
     )]
     pub spam_moderation_level: Option<String>,
     /// If posting from web is allowed.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "allowWebPosting")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "allowWebPosting"
+    )]
     pub allow_web_posting: Option<String>,
     /// Permission for membership moderation. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
@@ -300,7 +339,10 @@ pub struct GroupSettings {
     )]
     pub who_can_add_references: Option<String>,
     /// Permissions to view group. Possible values are: ANYONE_CAN_VIEW ALL_IN_DOMAIN_CAN_VIEW ALL_MEMBERS_CAN_VIEW ALL_MANAGERS_CAN_VIEW ALL_OWNERS_CAN_VIEW
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanViewGroup")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanViewGroup"
+    )]
     pub who_can_view_group: Option<String>,
     /// Is the group listed in groups directory
     #[serde(
@@ -315,13 +357,22 @@ pub struct GroupSettings {
     )]
     pub who_can_post_announcements: Option<String>,
     /// Permission to lock topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanLockTopics")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanLockTopics"
+    )]
     pub who_can_lock_topics: Option<String>,
     /// Permission to assign topics in a forum to another user. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanAssignTopics")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanAssignTopics"
+    )]
     pub who_can_assign_topics: Option<String>,
     /// Custom footer text.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "customFooterText")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "customFooterText"
+    )]
     pub custom_footer_text: Option<String>,
     /// Is google allowed to contact admins.
     #[serde(
@@ -330,7 +381,10 @@ pub struct GroupSettings {
     )]
     pub allow_google_communication: Option<String>,
     /// Permission to hide posts by reporting them as abuse. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanHideAbuse")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "whoCanHideAbuse"
+    )]
     pub who_can_hide_abuse: Option<String>,
 }
 
@@ -471,10 +525,16 @@ pub struct User {
     /// no description provided
     pub locations: Option<Vec<UserLocation>>,
     /// Boolean indicating if the user is delegated admin (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isDelegatedAdmin")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "isDelegatedAdmin"
+    )]
     pub is_delegated_admin: Option<bool>,
     /// ETag of the user's photo (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "thumbnailPhotoEtag")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "thumbnailPhotoEtag"
+    )]
     pub thumbnail_photo_etag: Option<String>,
     /// Indicates if user is suspended.
     pub suspended: Option<bool>,
@@ -487,7 +547,10 @@ pub struct User {
     /// List of aliases (Read-only)
     pub aliases: Option<Vec<String>>,
     /// List of non editable aliases (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "nonEditableAliases")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "nonEditableAliases"
+    )]
     pub non_editable_aliases: Option<Vec<String>>,
     /// Indicates if user is archived.
     pub archived: Option<bool>,
@@ -495,13 +558,22 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none", rename = "deletionTime")]
     pub deletion_time: Option<String>,
     /// Suspension reason if user is suspended (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "suspensionReason")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "suspensionReason"
+    )]
     pub suspension_reason: Option<String>,
     /// Photo Url of the user (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "thumbnailPhotoUrl")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "thumbnailPhotoUrl"
+    )]
     pub thumbnail_photo_url: Option<String>,
     /// Is enrolled in 2-step verification (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isEnrolledIn2Sv")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "isEnrolledIn2Sv"
+    )]
     pub is_enrolled_in2_sv: Option<bool>,
     /// Boolean indicating if user is included in Global Address List
     #[serde(
@@ -540,10 +612,16 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none", rename = "customSchemas")]
     pub custom_schemas: Option<HashMap<String, UserCustomProperties>>,
     /// Is 2-step verification enforced (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isEnforcedIn2Sv")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "isEnforcedIn2Sv"
+    )]
     pub is_enforced_in2_sv: Option<bool>,
     /// Is mailbox setup (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isMailboxSetup")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "isMailboxSetup"
+    )]
     pub is_mailbox_setup: Option<bool>,
     /// User's password
     pub password: Option<String>,
@@ -589,7 +667,12 @@ pub struct User {
 }
 
 impl User {
-    pub fn update(mut self, user: UserConfig, domain: String, change_password: bool) -> User {
+    pub fn update(
+        mut self,
+        user: UserConfig,
+        domain: String,
+        change_password: bool,
+    ) -> User {
         // Set the settings for the user.
         self.name = Some(UserName {
             full_name: Some(format!(
@@ -707,7 +790,10 @@ impl User {
             Some(val) => {
                 let mut gh: HashMap<String, String> = HashMap::new();
                 gh.insert("GitHub_Username".to_string(), val.clone());
-                cs.insert("Contact".to_string(), UserCustomProperties(Some(gh)));
+                cs.insert(
+                    "Contact".to_string(),
+                    UserCustomProperties(Some(gh)),
+                );
 
                 // Set their GitHub SSH Keys to their Google SSH Keys.
                 let ssh_keys = get_github_user_public_ssh_keys(val.clone());
@@ -720,7 +806,10 @@ impl User {
             Some(val) => {
                 let mut chat: HashMap<String, String> = HashMap::new();
                 chat.insert("Matrix_Chat_Username".to_string(), val.clone());
-                cs.insert("Contact".to_string(), UserCustomProperties(Some(chat)));
+                cs.insert(
+                    "Contact".to_string(),
+                    UserCustomProperties(Some(chat)),
+                );
             }
             None => (),
         }
@@ -733,10 +822,12 @@ impl User {
 }
 
 fn get_github_user_public_ssh_keys(handle: String) -> Vec<UserSSHKey> {
-    let body = reqwest::blocking::get(&format!("https://github.com/{}.keys", handle).to_string())
-        .unwrap()
-        .text()
-        .unwrap();
+    let body = reqwest::blocking::get(
+        &format!("https://github.com/{}.keys", handle).to_string(),
+    )
+    .unwrap()
+    .text()
+    .unwrap();
 
     let k: Vec<&str> = body.split("\n").collect();
     let mut keys: Vec<UserSSHKey> = Default::default();
@@ -789,7 +880,10 @@ pub struct UserName {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserSSHKey {
     pub key: String,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "expirationTimeUsec")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "expirationTimeUsec"
+    )]
     pub expiration_time_usec: Option<i128>,
 }
 
@@ -879,7 +973,10 @@ pub struct CalendarResource {
     /// ETag of the resource.
     pub etags: Option<String>,
     /// The category of the calendar resource. Either CONFERENCE_ROOM or OTHER. Legacy data is set to CATEGORY_UNKNOWN.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "resourceCategory")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "resourceCategory"
+    )]
     pub category: Option<String>,
     /// The read-only email for the calendar resource. Generated as part of creating a new calendar resource.
     #[serde(skip_serializing_if = "Option::is_none", rename = "resourceEmail")]
@@ -888,7 +985,10 @@ pub struct CalendarResource {
     #[serde(rename = "resourceName")]
     pub name: String,
     /// no description provided
-    #[serde(skip_serializing_if = "Option::is_none", rename = "featureInstances")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "featureInstances"
+    )]
     pub feature_instances: Option<Vec<CalendarFeatures>>,
     /// Name of the section within a floor a resource is located in.
     #[serde(skip_serializing_if = "Option::is_none", rename = "floorSection")]
@@ -911,7 +1011,11 @@ pub struct CalendarResource {
 }
 
 impl CalendarResource {
-    pub fn update(mut self, resource: ResourceConfig, id: String) -> CalendarResource {
+    pub fn update(
+        mut self,
+        resource: ResourceConfig,
+        id: String,
+    ) -> CalendarResource {
         self.id = id;
         self.typev = Some(resource.typev.to_string());
         self.name = resource.name.to_string();

@@ -195,7 +195,10 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
             Some(_) => (),
             None => {
                 //  The user is pending so warn on that and return early.
-                warn!("[zoom] account has not been activated by user {}", email);
+                warn!(
+                    "[zoom] account has not been activated by user {}",
+                    email
+                );
                 return;
             }
         }
@@ -265,7 +268,8 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
 
         // Download the recording files.
         for recording in meeting.recording_files {
-            let recording_name = format!("{}{}", date_str, recording.file_type.to_extension());
+            let recording_name =
+                format!("{}{}", date_str, recording.file_type.to_extension());
 
             // Create a temporary directory for the file.
             let tmp_dir = env::temp_dir();
@@ -279,8 +283,11 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
                 recording.download_url,
                 download_path.to_str().unwrap()
             );
-            zoom.download_recording_to_file(recording.download_url, download_path.clone())
-                .unwrap();
+            zoom.download_recording_to_file(
+                recording.download_url,
+                download_path.clone(),
+            )
+            .unwrap();
 
             // Get the mime type.
             let mime_type = recording.file_type.get_mime_type();

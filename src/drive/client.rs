@@ -10,7 +10,9 @@ use reqwest::{header, Method, StatusCode, Url};
 use serde::Serialize;
 use yup_oauth2::Token;
 
-use crate::drive::core::{Drive as SharedDrive, DrivesResponse, File, FilesResponse};
+use crate::drive::core::{
+    Drive as SharedDrive, DrivesResponse, File, FilesResponse,
+};
 
 const ENDPOINT: &str = "https://www.googleapis.com/drive/v3/";
 
@@ -25,7 +27,8 @@ impl Drive {
     // an &str (`String` or `Vec<u8>` for example). As long as the function is
     // given a valid API Key and Secret your requests will work.
     pub fn new(token: Token) -> Self {
-        let client = Client::builder().timeout(Duration::from_secs(360)).build();
+        let client =
+            Client::builder().timeout(Duration::from_secs(360)).build();
         match client {
             Ok(c) => Self {
                 token: token,
@@ -80,7 +83,9 @@ impl Drive {
             // Add the default mime type.
             headers.append(
                 header::CONTENT_TYPE,
-                header::HeaderValue::from_static("application/json; charset=UTF-8"),
+                header::HeaderValue::from_static(
+                    "application/json; charset=UTF-8",
+                ),
             );
         } else {
             // Add the mime type that was passed in.
@@ -98,7 +103,10 @@ impl Drive {
             );
             headers.append(
                 header::HeaderName::from_static("X-Upload-Content-Length"),
-                header::HeaderValue::from_bytes(content_length.to_string().as_bytes()).unwrap(),
+                header::HeaderValue::from_bytes(
+                    content_length.to_string().as_bytes(),
+                )
+                .unwrap(),
             );
         }
 
@@ -112,7 +120,10 @@ impl Drive {
         }
 
         // Add the body, this is to ensure our GET and DELETE calls succeed.
-        if method != Method::GET && method != Method::DELETE && content.len() < 1 {
+        if method != Method::GET
+            && method != Method::DELETE
+            && content.len() < 1
+        {
             rb = rb.json(&body);
         }
 
@@ -127,7 +138,11 @@ impl Drive {
         return request;
     }
 
-    pub fn find_file_by_name(&self, drive_id: &str, name: &str) -> Result<Vec<File>, APIError> {
+    pub fn find_file_by_name(
+        &self,
+        drive_id: &str,
+        name: &str,
+    ) -> Result<Vec<File>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -191,7 +206,10 @@ impl Drive {
         return Ok(drives_response.drives);
     }
 
-    pub fn get_drive_by_name(&self, name: String) -> Result<SharedDrive, APIError> {
+    pub fn get_drive_by_name(
+        &self,
+        name: String,
+    ) -> Result<SharedDrive, APIError> {
         let drives = self.list_drives().unwrap();
 
         for drive in drives {
@@ -302,7 +320,8 @@ impl Drive {
         };
 
         // Get the "Location" header.
-        let location = resp.headers().get("Location").unwrap().to_str().unwrap();
+        let location =
+            resp.headers().get("Location").unwrap().to_str().unwrap();
 
         // Read the contents of the file.
         let contents = fs::read_to_string(file).unwrap();
