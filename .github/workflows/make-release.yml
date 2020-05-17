@@ -29,8 +29,8 @@ jobs:
       - name: make release
         uses: docker://rust:latest
         with:
-          entrypoint: cargo
-          args: build --release
+          entrypoint: make
+          args: release
       - name: Create release
         id: create_release
         uses: actions/create-release@v1
