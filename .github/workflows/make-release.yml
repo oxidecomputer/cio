@@ -27,7 +27,7 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.toml') }}
       - name: make release
-        uses: docker://rust:alpine
+        uses: docker://rust:latest
         with:
           entrypoint: cargo
           args: build --release
