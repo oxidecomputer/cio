@@ -19,6 +19,11 @@ pub static MEETING_SCHEDULE_TABLE: &'static str = "Meeting schedule";
 // TODO: make this a cron job
 // TODO: test when there are actually topics
 // TODO: send out last meetings notes in the email as well with the link to the reports repo
+/**
+ * Send an email before the regular product huddle meeting with what will
+ * be covered from the discussion topics as well as reminding everyone to
+ * fill out the form and add their topics.
+ */
 pub fn cmd_product_huddle_run() {
     // Initialize the Airtable client.
     let airtable = Airtable::new_from_env();
@@ -182,6 +187,7 @@ pub fn cmd_product_huddle_run() {
     }
 }
 
+/// Email template for the product huddle reminders.
 pub static EMAIL_TEMPLATE: &'static str = r#"Hello All!!
 
 This is your weekly automated reminder that tomorrow is the regularly scheduled

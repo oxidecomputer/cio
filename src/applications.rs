@@ -11,6 +11,40 @@ use crate::email::client::SendGrid;
 use crate::sheets::client::Sheets;
 use crate::utils::{authenticate_github, get_gsuite_token};
 
+/**
+ * Generate GitHub issues for various stages of the application process
+ * based on their status in a Google Sheet.
+ *
+ * When a new application is submitted by an applicant, it gets added to
+ * the Google sheet with the cell "received application" set to `false`.
+ * This command will automatically send the applicant an email thanking
+ * them for their application and let them know we are reading it over.
+ *
+ * An email is then sent to all@{domain} to notify everyone that there has
+ * been a new application submitted with the applicant's information.
+ *
+ * The command then sets the "received application" cell to `true`, so we
+ * can ensure we only send opurselves and them one email.
+ *
+ * The status for an application can be one of the following:
+ *
+ * - deferred (gray): For folks we want to keep around for a different
+ *  stage of the company. This command ignores a status of "deferred"
+ *  and does nothing.
+ *
+ * - declined (red): For folks who did not have an impressive application
+ *  and we have declined their employment. This command ignores a
+ *  status of "declined" and does nothing.
+ *
+ * - next steps (yellow): For folks we are working through next steps in
+ *  the application process. This command will create a GitHub issue
+ *  for the applicant in the meta repository so we can track their
+ *  interview process.
+ *
+ * - hired (green): For folks we have decided to hire. This command will
+ *  create an issue in the configs repository for tracking their
+ *  on-boarding.
+ */
 pub fn cmd_applications_run(cli_matches: &ArgMatches) {
     let sheets: Vec<String>;
     match cli_matches.values_of("sheet") {
@@ -324,6 +358,7 @@ cc @jessfraz @sdtuck @bcantrill",
     }
 }
 
+/// Check if a GitHub issue already exists.
 fn check_if_github_issue_exists(issues: &Vec<Issue>, search: String) -> bool {
     for i in issues {
         if i.title.contains(&search) {

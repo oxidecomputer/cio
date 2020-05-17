@@ -11,8 +11,19 @@ use crate::utils::{get_gsuite_token, read_config_from_files};
 use crate::zoom::client::Zoom;
 use crate::zoom::core::{Building as ZoomBuilding, Room, User as ZoomUser};
 
+/// The Zoom passcode for overriding the room configuration when you are in a room.
 pub static ZOOM_PASSCODE: &'static str = "6274";
 
+/**
+ * Sync the configuration files with Zoom.
+ *
+ * This command does the following:
+ *
+ * - Create or update user's accounts
+ * - Create or update Zoom buildings
+ * - Create or update Zoom rooms
+ * - Download any Zoom recordings and automatically upload them to Google drive.
+ */
 pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
     let domain = value_t!(cli_matches, "domain", String).unwrap();
 

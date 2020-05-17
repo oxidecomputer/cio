@@ -50,6 +50,32 @@ subcommands:
             required: true
             use_delimiter: true
             multiple: true
+  - gsuite:
+      about: |
+        Sync the configuration files with GSuite.
+
+        This will create or update user's accounts, Google groups, GSuite
+        buildings, and resources.
+
+      args:
+        - file:
+            help: path to a configuration file
+            required: true
+            use_delimiter: true
+            multiple: true
+        - domain:
+            help: |
+              domain for the company
+            short: d
+            long: domain
+            required: true
+            multiple: false
+            takes_value: true
+  - product-huddle:
+      about: |
+        Send an email before the regular product huddle meeting with what will
+        be covered from the discussion topics as well as reminding everyone to
+        fill out the form and add their topics.
   - repos:
       about: |
         Set default configurations for all repos in the GitHub organization.
@@ -85,30 +111,6 @@ subcommands:
             required: true
             use_delimiter: true
             multiple: true
-  - gsuite:
-      about: |
-        Sync the configuration files with GSuite.
-
-        This will create or update user's accounts, Google groups, GSuite
-        buildings, and resources.
-
-      args:
-        - file:
-            help: path to a configuration file
-            required: true
-            use_delimiter: true
-            multiple: true
-        - domain:
-            help: |
-              domain for the company
-            short: d
-            long: domain
-            required: true
-            multiple: false
-            takes_value: true
-  - product-huddle:
-      about: |
-        Send an email before the regular product huddle meeting with what will be covered from the discussion topics as well as reminding everyone to fill out the form and add their topics.
   - tables:
       about: |
         Generate markdown files with tables populated with data from the config

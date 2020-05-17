@@ -14,6 +14,16 @@ use crate::utils::{
     write_file, TEMPLATE_WARNING,
 };
 
+/**
+ * Generate nginx and Cloudflare terraform configs for short url redirects
+ * from the links.toml file, rfd repo, and github repos.
+ *
+ * The URLs that are configured from this subcommand are:
+ *
+ * - {link}.corp.oxide.computer
+ * - {repo}.git.oxide.computer
+ * - {num}.rfd.oxide.computer
+ */
 pub fn cmd_shorturls_run(cli_matches: &ArgMatches) {
     // Initialize the array of links.
     let mut links: Vec<LinkConfig> = Default::default();
@@ -207,6 +217,7 @@ fn generate_files_for_links(links: Vec<LinkConfig>) {
     write_file(terraform_file, terraform_rendered);
 }
 
+/// Template for creating nginx conf files for the subdomain urls.
 static TEMPLATE_NGINX: &'static str = r#"{{#each this}}
 # Redirect {{this.link}} to {{this.name}}.{{this.subdomain}}.oxide.computer
 # Description: {{this.description}}
@@ -241,6 +252,7 @@ server {
 {{/each}}
 "#;
 
+/// Template for creating nginx conf files for the paths urls.
 static TEMPLATE_NGINX_PATHS: &'static str = r#"server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
@@ -277,6 +289,7 @@ static TEMPLATE_NGINX_PATHS: &'static str = r#"server {
 }
 "#;
 
+/// Template for creating DNS records in our Cloudflare terraform configs.
 static TEMPLATE_CLOUDFLARE_TERRAFORM: &'static str = r#"{{#each this}}
 resource "cloudflare_record" "{{terraformize this.name}}_{{this.subdomain}}_oxide_computer" {
   zone_id  = var.zone_id-oxide_computer

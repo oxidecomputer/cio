@@ -13,6 +13,12 @@ use crate::directory::core::{Building, CalendarResource, Group, User};
 use crate::email::client::SendGrid;
 use crate::utils::{get_gsuite_token, read_config_from_files};
 
+/**
+ * Sync the configuration files with GSuite.
+ *
+ * This will create or update user's accounts, Google groups, GSuite
+ * buildings, and resources.
+ */
 pub fn cmd_gsuite_run(cli_matches: &ArgMatches) {
     // Get the config.
     let config = read_config_from_files(cli_matches);
@@ -21,13 +27,14 @@ pub fn cmd_gsuite_run(cli_matches: &ArgMatches) {
     let domain = value_t!(cli_matches, "domain", String).unwrap();
 
     // Initialize the clients for the config.
-    let mut client = Client::new(config, domain);
+    let mut client = GSuiteClient::new(config, domain);
 
     // Run sync.
     client.sync();
 }
 
-struct Client {
+/// The Client for performing operations in GSuite.
+struct GSuiteClient {
     config: Config,
     domain: String,
 
@@ -40,8 +47,8 @@ struct Client {
     google_buildings: Vec<Building>,
 }
 
-impl Client {
-    // Initialize the clients.
+impl GSuiteClient {
+    /// Initialize the various clients for groups, users, resources, and buildings.
     pub fn new(config: Config, domain: String) -> Self {
         let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
         // Get the GSuite token.
@@ -89,6 +96,7 @@ impl Client {
         };
     }
 
+    /// Sync GSuite with our configuration files.
     pub fn sync(&mut self) {
         // Update the GSuite groups.
         self.update_google_groups();
@@ -103,6 +111,7 @@ impl Client {
         self.update_google_buildings();
     }
 
+    /// Update the buildings in GSuite to match our configuration files.
     pub fn update_google_buildings(&mut self) {
         for mut b in self.google_buildings.clone() {
             let id = b.clone().id.to_string();
@@ -141,6 +150,7 @@ impl Client {
         }
     }
 
+    /// Update the resources in GSuite to match our configuration files.
     pub fn update_google_resources(&mut self) {
         for mut r in self.google_resources.clone() {
             // Create a shorthand id for the resource which is the name of the
@@ -181,6 +191,7 @@ impl Client {
         }
     }
 
+    /// Update the users in GSuite to match our configuration files.
     pub fn update_google_users(&mut self) {
         for mut u in self.google_users.clone() {
             // Get the shorthand username and match it against our existing users.
@@ -261,6 +272,7 @@ impl Client {
         }
     }
 
+    /// Update a user's aliases in GSuite to match our configuration files.
     pub fn update_user_aliases(&mut self, u: User) {
         match u.aliases {
             Some(val) => {
@@ -273,10 +285,12 @@ impl Client {
         }
     }
 
+    /// Update a user in GSuite to match our configuration files.
     pub fn update_user(&mut self, user: UserConfig) {
         self.update_user_google_groups(user.clone());
     }
 
+    /// Update a user's groups in GSuite to match our configuration files.
     pub fn update_user_google_groups(&self, user: UserConfig) {
         let email = format!("{}@{}", user.username, self.domain);
         let groups: Vec<String>;
@@ -375,6 +389,7 @@ impl Client {
         }
     }
 
+    /// Update the groups in GSuite to match our configuration files.
     pub fn update_google_groups(&mut self) {
         for (slug, g) in &self.google_groups {
             // Check if we already have this group in our config.
@@ -451,6 +466,7 @@ impl Client {
         }
     }
 
+    /// Update a group's aliases in GSuite to match our configuration files.
     pub fn update_group_aliases(&self, g: Group) {
         match g.aliases {
             Some(val) => {
@@ -463,6 +479,7 @@ impl Client {
         }
     }
 
+    /// Update a group's settings in GSuite to match our configuration files.
     pub fn update_google_group_settings(&self, group: GroupConfig) {
         // Get the current group settings.
         let email = format!("{}@{}", group.name, self.domain);

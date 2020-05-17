@@ -1,3 +1,7 @@
+/*!
+ * configs: A multi-purpose tool made for automating the role of the Chief
+ * Infrastructure Officer. See README for details.
+ */
 #[macro_use]
 extern crate clap;
 use clap::App;

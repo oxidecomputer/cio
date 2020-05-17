@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::airtable::core::User as AirtableUser;
 
+/// The data type for our configuration files.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub users: BTreeMap<String, UserConfig>,
@@ -18,6 +19,7 @@ pub struct Config {
     pub labels: Vec<LabelConfig>,
 }
 
+/// The data type for a user.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct UserConfig {
     pub first_name: String,
@@ -49,6 +51,7 @@ pub struct UserConfig {
     pub building: Option<String>,
 }
 
+/// The data type for a group. This applies to Google Groups.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GroupConfig {
     pub name: String,
@@ -154,6 +157,7 @@ pub struct GroupConfig {
     pub who_can_view_membership: String,
 }
 
+/// The data type for a building.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BuildingConfig {
     pub name: String,
@@ -166,6 +170,8 @@ pub struct BuildingConfig {
     pub floors: Vec<String>,
 }
 
+/// The data type for a resource. These are conference rooms that people can book
+/// through GSuite or Zoom.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ResourceConfig {
     pub name: String,
@@ -181,6 +187,8 @@ pub struct ResourceConfig {
     pub is_zoom_room: Option<bool>,
 }
 
+/// The data type for a link. These get turned into short links like
+/// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LinkConfig {
     /// name will not be used in config files.
@@ -198,6 +206,8 @@ pub struct LinkConfig {
     pub discussion: Option<String>,
 }
 
+/// The data type for a label. These become GitHub labels for all the repositories
+/// in our organization.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LabelConfig {
     pub name: String,
@@ -205,6 +215,8 @@ pub struct LabelConfig {
     pub color: String,
 }
 
+/// The data type for a Google Sheet Column, we use this when updating the
+/// applications spreadsheet to mark that we have emailed someone.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SheetColumns {
     pub timestamp: usize,
@@ -219,6 +231,7 @@ pub struct SheetColumns {
     pub received_application: usize,
 }
 
+/// The data type for an applicant.
 #[derive(Debug, Clone)]
 pub struct Applicant {
     pub submitted_time: NaiveDate,
@@ -232,6 +245,7 @@ pub struct Applicant {
     pub status: String,
 }
 
+/// The data type for an RFD.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RFD {
     pub number: String,
@@ -299,6 +313,7 @@ pub struct MeetingFields {
     pub attendees: Option<Vec<AirtableUser>>,
 }
 
+/// Convert the date format `%Y-%m-%d` to a NaiveDate.
 mod meeting_date_format {
     use chrono::naive::NaiveDate;
     use serde::{self, Deserialize, Deserializer, Serializer};
@@ -340,6 +355,7 @@ mod meeting_date_format {
     }
 }
 
+/// The data type for sending reminders for the product huddle meetings.
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct ProductEmailData {
     pub date: String,

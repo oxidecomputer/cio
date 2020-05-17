@@ -13,6 +13,16 @@ use tokio::runtime::Runtime;
 
 use crate::utils::{authenticate_github, read_config_from_files};
 
+/**
+ * Set default configurations for all repos in the GitHub organization.
+ *
+ * The defaults are as follows:
+ *
+ * - Give the GitHub teams: "eng" and "all", push access to every repository.
+ * - Adds and updates each of the labels from labels.toml.
+ * - Turns off the wiki.
+ * - Adds protection to the default branch to disallow force pushes.
+ */
 pub fn cmd_repos_run(cli_matches: &ArgMatches) {
     // Get the config.
     let config = read_config_from_files(cli_matches);
