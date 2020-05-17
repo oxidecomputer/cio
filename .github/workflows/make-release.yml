@@ -48,8 +48,8 @@ jobs:
 
             # Download and check the sha256sum.
             $ curl -fSL "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/configs" -o "/usr/local/bin/configs" \
-	              && echo "${CONFIGS_SHA256}  /usr/local/bin/configs" | sha256sum -c - \
-	              && chmod a+x "/usr/local/bin/configs"
+                && echo "${CONFIGS_SHA256}  /usr/local/bin/configs" | sha256sum -c - \
+                && chmod a+x "/usr/local/bin/configs"
 
             $ echo "configs installed!"
 
