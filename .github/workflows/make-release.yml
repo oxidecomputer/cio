@@ -58,7 +58,7 @@ jobs:
             ```
           draft: true
           prerelease: false
-      - name: Upload the release assets
+      - name: Upload the release binary
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -67,7 +67,7 @@ jobs:
           asset_path: target/release/configs
           asset_name: configs
           asset_content_type: application/octet-stream
-      - name: Upload the release assets
+      - name: Upload the release md5
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,7 +76,7 @@ jobs:
           asset_path: target/release/configs.md5
           asset_name: configs.md5
           asset_content_type: text/plain
-      - name: Upload the release assets
+      - name: Upload the release sha256
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
