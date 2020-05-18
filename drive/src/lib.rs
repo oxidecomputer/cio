@@ -1,3 +1,8 @@
+/**
+ * A rust library for interacting with the Google Drive v3 API.
+ *
+ * For more information, the Google Drive v3 API is documented at [developers.google.com/drive/api/v3/reference](https://developers.google.com/drive/api/v3/reference).
+ */
 use std::collections::HashMap;
 use std::error;
 use std::fmt;
