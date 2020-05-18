@@ -1,7 +1,10 @@
 /**
  * A rust library for interacting with the GSuite APIs.
  *
- * For more information, the GSuite Directory API is documented at [developers.google.com/admin-sdk/directory/v1/reference](https://developers.google.com/admin-sdk/directory/v1/reference) and the Google Groups settings API is documented at [developers.google.com/admin-sdk/groups-settings/v1/reference/groups](https://developers.google.com/admin-sdk/groups-settings/v1/reference/groups).
+ * For more information, the GSuite Directory API is documented at
+ * [developers.google.com/admin-sdk/directory/v1/reference](https://developers.google.com/admin-sdk/directory/v1/reference)
+ * and the Google Groups settings API is documented at
+ * [developers.google.com/admin-sdk/groups-settings/v1/reference/groups](https://developers.google.com/admin-sdk/groups-settings/v1/reference/groups).
  */
 use std::collections::HashMap;
 use std::rc::Rc;
