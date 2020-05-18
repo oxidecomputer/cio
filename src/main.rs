@@ -2,6 +2,18 @@
  * configs: A multi-purpose tool made for automating the role of the Chief
  * Infrastructure Officer. See README for details.
  */
+pub mod airtable;
+pub mod applications;
+pub mod core;
+pub mod gsuite;
+pub mod product_huddle;
+pub mod repos;
+pub mod shorturls;
+pub mod tables;
+pub mod teams;
+pub mod utils;
+pub mod zoom;
+
 #[macro_use]
 extern crate clap;
 use clap::App;
@@ -10,15 +22,15 @@ use simplelog::{
     SimpleLogger, TermLogger, TerminalMode,
 };
 
-use configs::airtable_cmd::cmd_airtable_run;
-use configs::applications::cmd_applications_run;
-use configs::gsuite::cmd_gsuite_run;
-use configs::product_huddle::cmd_product_huddle_run;
-use configs::repos::cmd_repos_run;
-use configs::shorturls::cmd_shorturls_run;
-use configs::tables::cmd_tables_run;
-use configs::teams::cmd_teams_run;
-use configs::zoom_cmd::cmd_zoom_run;
+use crate::airtable::cmd_airtable_run;
+use crate::applications::cmd_applications_run;
+use crate::gsuite::cmd_gsuite_run;
+use crate::product_huddle::cmd_product_huddle_run;
+use crate::repos::cmd_repos_run;
+use crate::shorturls::cmd_shorturls_run;
+use crate::tables::cmd_tables_run;
+use crate::teams::cmd_teams_run;
+use crate::zoom::cmd_zoom_run;
 
 fn main() {
     // Set up the logger, we can't use TermLogger in GitHub actions.
