@@ -695,6 +695,7 @@ pub struct User {
     pub location: Option<String>,
 }
 
+/// The login type for the user.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LoginType {
     Facebook = 0,
@@ -943,6 +944,7 @@ pub struct Recording {
     pub meeting_id: String,
 }
 
+/// The type of file.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum FileType {
@@ -968,7 +970,7 @@ impl Default for FileType {
 }
 
 impl FileType {
-    // Returns the extension for each file type.
+    /// Returns the extension for each file type.
     pub fn to_extension(&self) -> String {
         match self {
             FileType::MP4 => return "-video.mp4".to_string(),
@@ -980,7 +982,7 @@ impl FileType {
         }
     }
 
-    // Returns the mime type for each file type.
+    /// Returns the mime type for each file type.
     pub fn get_mime_type(&self) -> String {
         match self {
             FileType::MP4 => return "video/mp4".to_string(),
