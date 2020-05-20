@@ -76,6 +76,10 @@ pub fn cmd_product_huddle_run() {
                 "https://github.com/oxidecomputer/reports/blob/master/product/meetings/{}.txt",
                 last_meeting.date.format("%Y%m%d").to_string()
             );
+
+            if dur.num_days() < 2 {
+                email_data.should_send = true
+            }
         }
 
         // Check if we have the meeting notes in the reports repo.
@@ -181,7 +185,7 @@ pub fn cmd_product_huddle_run() {
         sendgrid.send_mail(
             "Reminder Product Huddle Tomorrow".to_string(),
             template.to_string(),
-            vec!["jess@oxide.computer".to_string()],
+            vec!["all@oxide.computer".to_string()],
             vec![],
             vec![],
             "product@oxide.computer".to_string(),
@@ -205,16 +209,15 @@ something you have been nooding on as well.
 # Discussion topics for {{this.date}}
 
 {{#each this.topics}}
-- Topic: {{this.topic}}
-  Submitted by: {{this.submitter.name}}
-  Priority: {{this.priority}}
-  Notes: {{this.notes}}
+- Topic: {{this.Topic}}
+  Submitted by: {{this.Submitter.name}}
+  Priority: {{this.Priority}}
+  Notes: {{this.Notes}}
 
 {{/each}}{{else}} There are no topics
 to discuss yet! If no one submits any before the meeting tomorrow, we will cancel
 the meeting. So get your topics in!!
 {{/if}}
-
 Last meeting's notes are in the reports GitHub repo at:
 {{this.last_meeting_reports_link}}.
 
