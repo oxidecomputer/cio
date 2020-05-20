@@ -185,7 +185,7 @@ pub fn cmd_product_huddle_run() {
         sendgrid.send_mail(
             "Reminder Product Huddle Tomorrow".to_string(),
             template.to_string(),
-            vec!["all@oxide.computer".to_string()],
+            vec!["all@oxidecomputer.com".to_string()],
             vec![],
             vec![],
             "product@oxide.computer".to_string(),
