@@ -69,8 +69,8 @@ pub struct DiscussionFields {
     pub submitter: AirtableUser,
     #[serde(rename = "Priority")]
     pub priority: String,
-    #[serde(rename = "Notes")]
-    pub notes: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Notes")]
+    pub notes: Option<String>,
     // Never modify this, it is a linked record.
     #[serde(rename = "Associated meetings")]
     pub associated_meetings: Vec<String>,

@@ -188,7 +188,7 @@ pub fn cmd_product_huddle_run() {
             vec!["all@oxidecomputer.com".to_string()],
             vec![],
             vec![],
-            "product@oxide.computer".to_string(),
+            "product@oxidecomputer.com".to_string(),
         );
 
         info!("successfully sent the email!");
