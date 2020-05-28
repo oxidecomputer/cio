@@ -128,10 +128,123 @@ static TEMPLATE_TERRAFORM_AWS_ORG_MEMBERSHIP: &'static str = r#"# THIS IS A GENE
 
 # Define the members of the organization.
 {{#each this}}{{#if this.github}}
-# Add @{{this.github}} to the organization.
-resource "aws_organizations_account" "{{this.username}}" {
-  name  = "{{this.first_name}} {{this.last_name}}"
-  email = "{{this.username}}+aws@oxidecomputer.com"
+# Add @{{this.username}} to the organization.
+resource "aws_iam_user" "{{this.username}}" {
+  name = "{{this.username}}"
+  path = "/users/"
+}
+# Add @{{this.username}} to the eng group.
+resource "aws_iam_user_group_membership" "eng-{{this.username}}" {
+  user = aws_iam_user.{{this.username}}.name
+
+  groups = [
+    "eng"
+  ]
+}
+resource "aws_iam_policy" "policy-{{this.username}}" {
+  name        = "policy-{{this.username}}"
+  path        = "/"
+  description = "Allows {{this.username}} to manage their own credentials."
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowViewAccountInfo",
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetAccountPasswordPolicy",
+                "iam:GetAccountSummary",
+                "iam:ListVirtualMFADevices"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AllowManageOwnPasswords",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ChangePassword",
+                "iam:GetUser"
+            ],
+            "Resource": "arn:aws:iam::*:user/users/{{this.username}}"
+        },
+        {
+            "Sid": "AllowManageOwnAccessKeys",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateAccessKey",
+                "iam:DeleteAccessKey",
+                "iam:ListAccessKeys",
+                "iam:UpdateAccessKey"
+            ],
+            "Resource": "arn:aws:iam::*:user/users/{{this.username}}"
+        },
+        {
+            "Sid": "AllowManageOwnSigningCertificates",
+            "Effect": "Allow",
+            "Action": [
+                "iam:DeleteSigningCertificate",
+                "iam:ListSigningCertificates",
+                "iam:UpdateSigningCertificate",
+                "iam:UploadSigningCertificate"
+            ],
+            "Resource": "arn:aws:iam::*:user/users/{{this.username}}"
+        },
+        {
+            "Sid": "AllowManageOwnSSHPublicKeys",
+            "Effect": "Allow",
+            "Action": [
+                "iam:DeleteSSHPublicKey",
+                "iam:GetSSHPublicKey",
+                "iam:ListSSHPublicKeys",
+                "iam:UpdateSSHPublicKey",
+                "iam:UploadSSHPublicKey"
+            ],
+            "Resource": "arn:aws:iam::*:user/users/{{this.username}}"
+        },
+        {
+            "Sid": "AllowManageOwnGitCredentials",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateServiceSpecificCredential",
+                "iam:DeleteServiceSpecificCredential",
+                "iam:ListServiceSpecificCredentials",
+                "iam:ResetServiceSpecificCredential",
+                "iam:UpdateServiceSpecificCredential"
+            ],
+            "Resource": "arn:aws:iam::*:user/users/{{this.username}}"
+        },
+        {
+            "Sid": "AllowManageOwnVirtualMFADevice",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateVirtualMFADevice",
+                "iam:DeleteVirtualMFADevice"
+            ],
+            "Resource": "arn:aws:iam::*:mfa/{{this.username}}"
+        },
+        {
+            "Sid": "AllowManageOwnUserMFA",
+            "Effect": "Allow",
+            "Action": [
+                "iam:DeactivateMFADevice",
+                "iam:EnableMFADevice",
+                "iam:GetUser",
+                "iam:ListMFADevices",
+                "iam:ResyncMFADevice"
+            ],
+            "Resource": "arn:aws:iam::*:user/users/{{this.username}}"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_policy_attachment" "attach-{{this.username}}" {
+  name       = "attachment-{{this.username}}"
+  users      = [aws_iam_user.{{this.username}}.name]
+  policy_arn = aws_iam_policy.policy-{{this.username}}.arn
 }
 {{/if}}{{/each}}
 "#;
