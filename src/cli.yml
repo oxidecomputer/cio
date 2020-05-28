@@ -147,7 +147,7 @@ subcommands:
             takes_value: true
   - teams:
       about: |
-        Generate GitHub terraform configs that configure members of the
+        Generate GitHub and AWS terraform configs that configure members of the
         organization and team membership.
 
         This command uses the users.toml file for information.
