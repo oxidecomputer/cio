@@ -131,7 +131,7 @@ static TEMPLATE_TERRAFORM_AWS_ORG_MEMBERSHIP: &'static str = r#"# THIS IS A GENE
 # Add @{{this.github}} to the organization.
 resource "aws_organizations_account" "{{this.username}}" {
   name  = "{{this.first_name}} {{this.last_name}}"
-  email = "{{this.username}}@oxidecomputer.com"
+  email = "{{this.username}}+aws@oxidecomputer.com"
 
   parent_id = aws_organizations_organization.engineering.id
 }
