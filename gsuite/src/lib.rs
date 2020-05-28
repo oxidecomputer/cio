@@ -1098,14 +1098,13 @@ struct Member {
 /// A user.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct User {
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub addresses: Option<String>,
-    /// no description provided
     #[serde(skip_serializing_if = "Option::is_none", rename = "posixAccounts")]
     pub posix_accounts: Option<String>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phones: Option<Vec<UserPhone>>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub locations: Option<Vec<UserLocation>>,
     /// Boolean indicating if the user is delegated admin (Read-only)
     #[serde(
@@ -1120,14 +1119,18 @@ pub struct User {
     )]
     pub thumbnail_photo_etag: Option<String>,
     /// Indicates if user is suspended.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub suspended: Option<bool>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub keywords: Option<String>,
     /// Kind of resource this is.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
     /// Unique identifier of User (Read-only)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     /// List of aliases (Read-only)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub aliases: Option<Vec<String>>,
     /// List of non editable aliases (Read-only)
     #[serde(
@@ -1136,8 +1139,8 @@ pub struct User {
     )]
     pub non_editable_aliases: Option<Vec<String>>,
     /// Indicates if user is archived.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub archived: Option<bool>,
-    /// no description provided
     #[serde(skip_serializing_if = "Option::is_none", rename = "deletionTime")]
     pub deletion_time: Option<String>,
     /// Suspension reason if user is suspended (Read-only)
@@ -1164,14 +1167,15 @@ pub struct User {
         rename = "includeInGlobalAddressList"
     )]
     pub include_in_global_address_list: Option<bool>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub relations: Option<String>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub languages: Option<String>,
     /// Boolean indicating if the user is admin (Read-only)
     #[serde(skip_serializing_if = "Option::is_none", rename = "isAdmin")]
     pub is_admin: Option<bool>,
     /// ETag of the resource.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub etag: Option<String>,
     /// User's last login time. (Read-only)
     #[serde(skip_serializing_if = "Option::is_none", rename = "lastLoginTime")]
@@ -1182,13 +1186,11 @@ pub struct User {
     /// Indicates if user has agreed to terms (Read-only)
     #[serde(skip_serializing_if = "Option::is_none", rename = "agreedToTerms")]
     pub agreed_to_terms: Option<bool>,
-    /// no description provided
     #[serde(skip_serializing_if = "Option::is_none", rename = "externalIds")]
     pub external_ids: Option<String>,
     /// Boolean indicating if ip is whitelisted
     #[serde(skip_serializing_if = "Option::is_none", rename = "ipWhitelisted")]
     pub ip_whitelisted: Option<bool>,
-    /// no description provided
     #[serde(skip_serializing_if = "Option::is_none", rename = "sshPublicKeys")]
     pub ssh_public_keys: Option<Vec<UserSSHKey>>,
     /// Custom fields of the user.
@@ -1207,11 +1209,11 @@ pub struct User {
     )]
     pub is_mailbox_setup: Option<bool>,
     /// User's password
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
-    /// no description provided
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emails: Option<Vec<UserEmail>>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub organizations: Option<String>,
     /// username of User
     #[serde(skip_serializing_if = "Option::is_none", rename = "primaryEmail")]
@@ -1221,14 +1223,14 @@ pub struct User {
     pub hash_function: Option<String>,
     /// User's name
     pub name: Option<UserName>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gender: Option<UserGender>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     /// User's G Suite account creation time. (Read-only)
     #[serde(skip_serializing_if = "Option::is_none", rename = "creationTime")]
     pub creation_time: Option<String>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub websites: Option<String>,
     /// Boolean indicating if the user should change password in next login
     #[serde(
@@ -1236,7 +1238,7 @@ pub struct User {
         rename = "changePasswordAtNextLogin"
     )]
     pub change_password_at_next_login: Option<bool>,
-    /// no description provided
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ims: Option<String>,
     /// CustomerId of User (Read-only)
     #[serde(skip_serializing_if = "Option::is_none", rename = "customerId")]
@@ -1548,7 +1550,6 @@ pub struct CalendarResource {
     /// The name of the calendar resource. For example, "Training Room 1A".
     #[serde(rename = "resourceName")]
     pub name: String,
-    /// no description provided
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "featureInstances"

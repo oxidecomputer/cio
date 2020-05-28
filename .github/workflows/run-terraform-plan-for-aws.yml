@@ -1,0 +1,20 @@
+on:
+  pull_request:
+    paths:
+      - "terraform/aws/**" # Only run on changes to the terraform directory.
+      - ".github/workflows/run-terraform-plan-for-aws.yml" # Run when this file changes.
+name: Run terraform plan for AWS
+jobs:
+  runTerraformPlanForAWS:
+    name: Run terraform plan for AWS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Download terraform
+        run: make download-terraform
+      - name: Run terraform plan for AWS
+        run: make aws-plan
+        env:
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        shell: bash
