@@ -214,7 +214,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
         // Create the BTreeMap of labelss.
         let mut teams: BTreeMap<u64, Team> = Default::default();
         for t in ts {
-            teams.insert(t.clone().id, t.clone());
+            teams.insert(t.id, t);
         }
 
         // For each team id, add the team to the permissions.
