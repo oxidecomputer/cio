@@ -136,7 +136,7 @@ pub fn cmd_product_huddle_run() {
                                         &notes,
                                         "Creating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
                                         ))
-                                .unwrap();
+                                .unwrap_or("Unwrapping response failed");
 
                             info!(
                                 "Created the notes file in the reports repo at {}",
