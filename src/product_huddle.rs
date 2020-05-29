@@ -115,13 +115,15 @@ pub fn cmd_product_huddle_run() {
                             }
 
                             // We need to update the file.
-                            runtime
+                            match runtime
                                 .block_on(reports_repo.content().update(
                                         &notes_path,
                                         &notes,
                                         "Updating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
-                                        &file.sha))
-                                .unwrap();
+                                        &file.sha)){
+                                    Ok(_)=>(),
+                                    Err(_)=>(),
+                            }
 
                             info!(
                                 "Updated the notes file in the reports repo at {}",
@@ -130,13 +132,15 @@ pub fn cmd_product_huddle_run() {
                         }
                         Err(_) => {
                             // Create the notes file in the repo.
-                            runtime
+                            match runtime
                                 .block_on(reports_repo.content().create(
                                         &notes_path,
                                         &notes,
                                         "Creating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
-                                        ))
-                                .unwrap_or("Unwrapping response failed");
+                                        )){
+                                    Ok(_)=>(),
+                                    Err(_)=>(),
+                            }
 
                             info!(
                                 "Created the notes file in the reports repo at {}",

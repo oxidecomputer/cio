@@ -1,16 +1,15 @@
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "0 8 * * *" # Once a day at 8 am.
   push:
     branches:
       - master # Push events on master branch
     paths:
-      - "configs/**" # Only run on changes to the configs directory.
-      - ".github/workflows/run-airtable.yml" # Run when this file changes.
-name: Run airtable
+      - ".github/workflows/run-product-huddle.yml" # Run when this file changes.
+name: Run product-huddle
 jobs:
-  runAirtable:
-    name: Run airtable
+  runProductHuddle:
+    name: Run product-huddle
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -29,21 +28,21 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Run airtable
-        run: make airtable
+      - name: Run product-huddle
+        run: make product-huddle
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GADMIN_GITHUB_TOKEN }}
           GITHUB_ORG: oxidecomputer
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
-          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+          AIRTABLE_HUDDLE_BASE_ID: ${{ secrets.AIRTABLE_HUDDLE_BASE_ID }}
           RUST_BACKTRACE : 1
       - name: Commit changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add .cache
-          git commit -m "Run 'make airtable' and .cache/github" || echo "Nothing to commit"
+          git commit -m "Run 'make product-huddle' and .cache/github" || echo "Nothing to commit"
       - name: Rebase
         run: |
           git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
