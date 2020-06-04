@@ -36,6 +36,7 @@ jobs:
           GITHUB_ORG: oxidecomputer
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_HUDDLE_BASE_ID: ${{ secrets.AIRTABLE_HUDDLE_BASE_ID }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           RUST_BACKTRACE : 1
       - name: Commit changes
         run: |
