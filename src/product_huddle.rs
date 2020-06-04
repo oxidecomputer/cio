@@ -77,7 +77,7 @@ pub fn cmd_product_huddle_run() {
                 last_meeting.date.format("%Y%m%d").to_string()
             );
 
-            if dur.num_days() < 2 {
+            if dur.num_days() == 1 {
                 email_data.should_send = true
             }
         }
