@@ -438,8 +438,9 @@ Oxide Candidate Materials: {}
 
 To view the all the candidates refer to the following Google spreadsheets:
 
-- Engineering Applications: https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing
-- Product Engineering and Design Applications: https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing
+- Engineering Applications: https://applications-engineering.corp.oxide.computer
+- Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
+- Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
 ",
                         applicant.clone().submitted_time,
                         applicant.clone().name,
