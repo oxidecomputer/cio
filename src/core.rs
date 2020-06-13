@@ -34,7 +34,7 @@ pub struct Applicant {
 }
 
 /// The data type for an RFD.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct RFD {
     pub number: String,
     pub title: String,
