@@ -14,8 +14,8 @@ use crate::utils::authenticate_github;
 use airtable::Airtable;
 use sendgrid::SendGrid;
 
-pub static DISCUSSION_TOPICS_TABLE: &'static str = "Discussion topics";
-pub static MEETING_SCHEDULE_TABLE: &'static str = "Meeting schedule";
+pub static DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
+pub static MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";
 
 // TODO: make this a cron job
 // TODO: test when there are actually topics
@@ -64,7 +64,7 @@ pub fn cmd_product_huddle_run() {
         if dur.num_seconds() > 0 && dur.num_days() < 7 {
             // This is our next meeting!
             email_data.date = meeting.date.format(date_format).to_string();
-            email_data.meeting_id = record.clone().id.unwrap().to_string();
+            email_data.meeting_id = record.id.as_ref().unwrap().clone();
 
             // TODO: Check if we should send the email.
 
@@ -83,70 +83,63 @@ pub fn cmd_product_huddle_run() {
         }
 
         // Check if we have the meeting notes in the reports repo.
-        match &meeting.notes {
-            None => (),
-            Some(raw) => {
-                if raw.len() > 0 {
-                    let notes_path = format!(
-                        "/product/meetings/{}.txt",
-                        meeting.date.format("%Y%m%d").to_string()
-                    );
+        if let Some(raw) = &meeting.notes {
+            if !raw.is_empty() {
+                let notes_path = format!(
+                    "/product/meetings/{}.txt",
+                    meeting.date.format("%Y%m%d")
+                );
 
-                    let notes = format!(
-                        "# Product Huddle on {}\n\n**Meeting Recording:** {}\n\n## Notes\n\n{}\n\n## Action Items\n\n{}",
-                        meeting.clone().date.format(date_format),
-                        meeting.recording.unwrap_or("".to_string()),
-                        raw,
-                        meeting.action_items.unwrap_or(
-                            "There were no action items as a result of this meeting".to_string()
-                        ),
-                    );
+                let notes = format!(
+                    "# Product Huddle on {}\n\n**Meeting Recording:** {}\n\n## Notes\n\n{}\n\n## Action Items\n\n{}",
+                    meeting.date.format(date_format),
+                    meeting.recording.unwrap_or_else(|| "".to_string()),
+                    raw,
+                    meeting.action_items.unwrap_or_else(
+                        || "There were no action items as a result of this meeting".to_string()
+                    ),
+                );
 
-                    // Try to get the notes from this meeting from the reports repo.
-                    match runtime
-                        .block_on(reports_repo.content().file(&notes_path))
-                    {
-                        Ok(file) => {
-                            let decoded = from_utf8(&file.content).unwrap();
-                            // Compare the notes and see if we need to update them.
-                            if notes == decoded {
-                                // They are the same so we can continue through the loop.
-                                continue;
-                            }
-
-                            // We need to update the file.
-                            match runtime
-                                .block_on(reports_repo.content().update(
-                                        &notes_path,
-                                        &notes,
-                                        "Updating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
-                                        &file.sha)){
-                                    Ok(_)=>(),
-                                    Err(_)=>(),
-                            }
-
-                            info!(
-                                "Updated the notes file in the reports repo at {}",
-                                notes_path
-                            );
+                // Try to get the notes from this meeting from the reports repo.
+                match runtime.block_on(reports_repo.content().file(&notes_path))
+                {
+                    Ok(file) => {
+                        let decoded = from_utf8(&file.content).unwrap();
+                        // Compare the notes and see if we need to update them.
+                        if notes == decoded {
+                            // They are the same so we can continue through the loop.
+                            continue;
                         }
-                        Err(_) => {
-                            // Create the notes file in the repo.
-                            match runtime
-                                .block_on(reports_repo.content().create(
-                                        &notes_path,
-                                        &notes,
-                                        "Creating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
-                                        )){
-                                    Ok(_)=>(),
-                                    Err(_)=>(),
-                            }
 
-                            info!(
-                                "Created the notes file in the reports repo at {}",
-                                notes_path
-                            );
-                        }
+                        // We need to update the file. Ignore failure.
+                        runtime
+                            .block_on(reports_repo.content().update(
+                                    &notes_path,
+                                    &notes,
+                                    "Updating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
+                                    &file.sha))
+                            .ok();
+
+                        info!(
+                            "Updated the notes file in the reports repo at {}",
+                            notes_path
+                        );
+                    }
+                    Err(_) => {
+                        // Create the notes file in the repo. Ignore
+                        // failure.
+                        runtime
+                            .block_on(reports_repo.content().create(
+                                    &notes_path,
+                                    &notes,
+                                    "Creating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
+                            ))
+                            .ok();
+
+                        info!(
+                            "Created the notes file in the reports repo at {}",
+                            notes_path
+                        );
                     }
                 }
             }
@@ -159,7 +152,7 @@ pub fn cmd_product_huddle_run() {
         .unwrap();
 
     // Iterate over the airtable records and update the RFD where we have one.
-    for (_i, record) in records_dt.clone().iter().enumerate() {
+    for record in &records_dt {
         // Deserialize the fields.
         // TODO: find a nicer way to do this.
         let fields: DiscussionFields =
@@ -200,7 +193,7 @@ pub fn cmd_product_huddle_run() {
 }
 
 /// Email template for the product huddle reminders.
-pub static EMAIL_TEMPLATE: &'static str = r#"Hello All!!
+pub static EMAIL_TEMPLATE: &str = r#"Hello All!!
 
 This is your weekly automated reminder that tomorrow is the regularly scheduled
 product huddle meeting. As usual, discussion topics are submitted through the

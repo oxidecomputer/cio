@@ -63,7 +63,7 @@ fn main() {
     let cli_yaml = load_yaml!("cli.yml");
     let cli_matches = App::from_yaml(cli_yaml).get_matches();
 
-    if let Some(_) = cli_matches.subcommand_matches("airtable") {
+    if cli_matches.subcommand_matches("airtable").is_some() {
         cmd_airtable_run();
     }
 
@@ -75,7 +75,7 @@ fn main() {
         cmd_gsuite_run(cli_matches);
     }
 
-    if let Some(_) = cli_matches.subcommand_matches("product-huddle") {
+    if cli_matches.subcommand_matches("product-huddle").is_some() {
         cmd_product_huddle_run();
     }
 

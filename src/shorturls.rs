@@ -113,22 +113,19 @@ pub fn cmd_shorturls_run(cli_matches: &ArgMatches) {
         links.push(l.clone());
 
         // Add any aliases.
-        match link.aliases {
-            Some(aliases) => {
-                for alias in aliases {
-                    // Set the name.
-                    l.name = Some(alias);
+        if let Some(aliases) = link.aliases {
+            for alias in aliases {
+                // Set the name.
+                l.name = Some(alias);
 
-                    // Add the link.
-                    links.push(l.clone());
-                }
+                // Add the link.
+                links.push(l.clone());
             }
-            None => (),
         }
     }
 
     // Generate the files for the links.
-    generate_files_for_links(links.clone());
+    generate_files_for_links(links);
 }
 
 // Helper function so the terraform names do not start with a number.
@@ -145,11 +142,8 @@ fn terraform_name_helper(
 
     // Check if the first character is a number.
     let first_char = param.chars().next().unwrap();
-    let numbers: Vec<char> =
-        vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-
-    if numbers.contains(&first_char) {
-        out.write(&("_".to_owned() + &param))?;
+    if first_char.is_digit(10) {
+        out.write(&("_".to_owned() + param))?;
     } else {
         out.write(&param)?;
     }
@@ -157,7 +151,7 @@ fn terraform_name_helper(
 }
 
 fn generate_files_for_links(links: Vec<LinkConfig>) {
-    if links.len() < 1 {
+    if links.is_empty() {
         warn!("no links in array");
         return;
     }
@@ -218,7 +212,7 @@ fn generate_files_for_links(links: Vec<LinkConfig>) {
 }
 
 /// Template for creating nginx conf files for the subdomain urls.
-static TEMPLATE_NGINX: &'static str = r#"{{#each this}}
+static TEMPLATE_NGINX: &str = r#"{{#each this}}
 # Redirect {{this.link}} to {{this.name}}.{{this.subdomain}}.oxide.computer
 # Description: {{this.description}}
 server {
@@ -253,7 +247,7 @@ server {
 "#;
 
 /// Template for creating nginx conf files for the paths urls.
-static TEMPLATE_NGINX_PATHS: &'static str = r#"server {
+static TEMPLATE_NGINX_PATHS: &str = r#"server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
 	server_name {{this.0.subdomain}}.oxide.computer;
@@ -290,7 +284,7 @@ static TEMPLATE_NGINX_PATHS: &'static str = r#"server {
 "#;
 
 /// Template for creating DNS records in our Cloudflare terraform configs.
-static TEMPLATE_CLOUDFLARE_TERRAFORM: &'static str = r#"{{#each this}}
+static TEMPLATE_CLOUDFLARE_TERRAFORM: &str = r#"{{#each this}}
 resource "cloudflare_record" "{{terraformize this.name}}_{{this.subdomain}}_oxide_computer" {
   zone_id  = var.zone_id-oxide_computer
   name     = "{{this.name}}.{{this.subdomain}}.oxide.computer"

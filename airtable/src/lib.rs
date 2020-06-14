@@ -53,7 +53,7 @@ impl Airtable {
         let key = env::var("AIRTABLE_API_KEY").unwrap();
         let base_id = env::var("AIRTABLE_BASE_ID").unwrap();
 
-        return Airtable::new(key, base_id);
+        Airtable::new(key, base_id)
     }
 
     /// Get the currently set API key.
@@ -102,9 +102,7 @@ impl Airtable {
         }
 
         // Build the request.
-        let request = rb.build().unwrap();
-
-        return request;
+        rb.build().unwrap()
     }
 
     /// List records in a table for a particular view.
@@ -117,7 +115,7 @@ impl Airtable {
         let request = self.request(
             Method::GET,
             table.to_string(),
-            {},
+            (),
             Some(vec![
                 ("maxRecords", "100".to_string()),
                 ("view", view.to_string()),
@@ -138,7 +136,7 @@ impl Airtable {
         // Try to deserialize the response.
         let r: APICall = resp.json().unwrap();
 
-        return Ok(r.records);
+        Ok(r.records)
     }
 
     /// Bulk create records in a table.
@@ -155,7 +153,7 @@ impl Airtable {
             Method::POST,
             table.to_string(),
             APICall {
-                records: records,
+                records,
                 offset: None,
                 typecast: Some(true),
             },
@@ -176,7 +174,7 @@ impl Airtable {
         // Try to deserialize the response.
         let r: APICall = resp.json().unwrap();
 
-        return Ok(r.records);
+        Ok(r.records)
     }
 
     /// Bulk update records in a table.
@@ -193,7 +191,7 @@ impl Airtable {
             Method::PATCH,
             table.to_string(),
             APICall {
-                records: records.clone(),
+                records,
                 offset: None,
                 typecast: Some(true),
             },
@@ -214,7 +212,7 @@ impl Airtable {
         // Try to deserialize the response.
         let r: APICall = resp.json().unwrap();
 
-        return Ok(r.records);
+        Ok(r.records)
     }
 }
 

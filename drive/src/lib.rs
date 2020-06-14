@@ -35,7 +35,7 @@ impl GoogleDrive {
             Client::builder().timeout(Duration::from_secs(360)).build();
         match client {
             Ok(c) => Self {
-                token: token,
+                token,
                 client: Rc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
@@ -61,16 +61,15 @@ impl GoogleDrive {
         B: Serialize,
     {
         // Get the url.
-        let url: Url;
-        if !path.starts_with("http") {
+        let url = if !path.starts_with("http") {
             // Build the URL from our endpoint instead since a full URL was not
             // passed.
             let base = Url::parse(ENDPOINT).unwrap();
-            url = base.join(&path).unwrap();
+            base.join(&path).unwrap()
         } else {
             // Parse the full URL.
-            url = Url::parse(&path).unwrap();
-        }
+            Url::parse(&path).unwrap()
+        };
 
         // Check if the token is expired and panic.
         if self.token.expired() {
@@ -83,7 +82,7 @@ impl GoogleDrive {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        if mime_type.len() < 1 {
+        if mime_type.is_empty() {
             // Add the default mime type.
             headers.append(
                 header::CONTENT_TYPE,
@@ -126,7 +125,7 @@ impl GoogleDrive {
         // Add the body, this is to ensure our GET and DELETE calls succeed.
         if method != Method::GET
             && method != Method::DELETE
-            && content.len() < 1
+            && content.is_empty()
         {
             rb = rb.json(&body);
         }
@@ -137,9 +136,7 @@ impl GoogleDrive {
         }
 
         // Build the request.
-        let request = rb.build().unwrap();
-
-        return request;
+        rb.build().unwrap()
     }
 
     /// Get a file by it's name.
@@ -152,7 +149,7 @@ impl GoogleDrive {
         let request = self.request(
             Method::GET,
             "files".to_string(),
-            {},
+            (),
             Some(vec![
                 ("corpora", "drive".to_string()),
                 ("supportsAllDrives", "true".to_string()),
@@ -179,7 +176,7 @@ impl GoogleDrive {
         // Try to deserialize the response.
         let files_response: FilesResponse = resp.json().unwrap();
 
-        return Ok(files_response.files);
+        Ok(files_response.files)
     }
 
     /// List drives.
@@ -188,7 +185,7 @@ impl GoogleDrive {
         let request = self.request(
             Method::GET,
             "drives".to_string(),
-            {},
+            (),
             Some(vec![("useDomainAdminAccess", "true".to_string())]),
             0,
             "".to_string(),
@@ -209,7 +206,7 @@ impl GoogleDrive {
         // Try to deserialize the response.
         let drives_response: DrivesResponse = resp.json().unwrap();
 
-        return Ok(drives_response.drives);
+        Ok(drives_response.drives)
     }
 
     /// Get a drive by it's name.
@@ -222,10 +219,10 @@ impl GoogleDrive {
             }
         }
 
-        return Err(APIError {
+        Err(APIError {
             status_code: StatusCode::NOT_FOUND,
             body: format!("could not find {}", name),
-        });
+        })
     }
 
     /// Create a folder.
@@ -240,7 +237,7 @@ impl GoogleDrive {
         // Set the name,
         file.name = Some(name.to_string());
         file.mime_type = Some(folder_mime_type.to_string());
-        if parent_id.len() > 0 {
+        if !parent_id.is_empty() {
             file.parents = Some(vec![parent_id.to_string()]);
         } else {
             file.parents = Some(vec![drive_id.to_string()]);
@@ -275,7 +272,7 @@ impl GoogleDrive {
         // Try to deserialize the response.
         let response: File = resp.json().unwrap();
 
-        return Ok(response.id.unwrap());
+        Ok(response.id.unwrap())
     }
 
     /// Upload a file.
@@ -293,7 +290,7 @@ impl GoogleDrive {
         // Set the name,
         f.name = Some(file.file_name().unwrap().to_str().unwrap().to_string());
         f.mime_type = Some(mime_type.to_string());
-        if parent_id.len() > 0 {
+        if !parent_id.is_empty() {
             f.parents = Some(vec![parent_id.to_string()]);
         } else {
             f.parents = Some(vec![drive_id.to_string()]);
@@ -336,7 +333,7 @@ impl GoogleDrive {
         let request = self.request(
             Method::PUT,
             location.to_string(),
-            {},
+            (),
             None,
             metadata.len(),
             contents,

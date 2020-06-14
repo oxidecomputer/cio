@@ -106,7 +106,7 @@ mod meeting_date_format {
     use chrono::naive::NaiveDate;
     use serde::{self, Deserialize, Deserializer, Serializer};
 
-    const FORMAT: &'static str = "%Y-%m-%d";
+    const FORMAT: &str = "%Y-%m-%d";
 
     // The signature of a serialize_with function must follow the pattern:
     //

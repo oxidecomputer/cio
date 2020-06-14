@@ -55,7 +55,7 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
         }
     };
 
-    if sheets.len() < 1 {
+    if sheets.is_empty() {
         panic!("must provide IDs of google sheets to update applications from")
     }
 
@@ -110,7 +110,7 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
             .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string());
         let values = sheet_values.values.unwrap();
 
-        if values.len() < 1 {
+        if values.is_empty() {
             panic!("unable to retrieve any data values from Google sheet")
         }
 
@@ -172,7 +172,7 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
             } // End get header information.
 
             // Break the loop early if we reached an empty row.
-            if row[columns.email].len() < 1 {
+            if row[columns.email].is_empty() {
                 break;
             }
             // Parse the time.
@@ -182,12 +182,13 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
             )
             .unwrap();
 
-            let mut status = "";
             // If the length of the row is greater than the status column
             // then we have a status.
-            if row.len() > columns.status {
-                status = &row[columns.status];
-            }
+            let status = if row.len() > columns.status {
+                &row[columns.status]
+            } else {
+                ""
+            };
 
             // Build the applicant information for the row.
             let a = Applicant {
@@ -200,7 +201,7 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                     "@{}",
                     row[columns.github]
                         .trim_start_matches("https://github.com/")
-                        .trim_end_matches("/")
+                        .trim_end_matches('/')
                 ),
                 resume: row[columns.resume].to_string(),
                 materials: row[columns.materials].to_string(),
@@ -256,7 +257,7 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
             if status.to_lowercase().contains("next steps") {
                 // Check if we already have an issue for this user.
                 let exists =
-                    check_if_github_issue_exists(&meta_issues, a.name.clone());
+                    check_if_github_issue_exists(&meta_issues, &a.name);
                 if exists {
                     // Return early we don't want to update the issue because it will overwrite
                     // any changes we made.
@@ -302,10 +303,10 @@ cc @jessfraz @sdtuck @bcantrill",
                             .repo(github_org.to_string(), "meta")
                             .issues()
                             .create(&IssueOptions {
-                                title: title,
+                                title,
                                 body: Some(body),
                                 assignee: Some("jessfraz".to_string()),
-                                labels: labels,
+                                labels,
                                 milestone: None,
                             }),
                     )
@@ -319,10 +320,8 @@ cc @jessfraz @sdtuck @bcantrill",
             // Check if their status is hired.
             if status.to_lowercase().contains("hired") {
                 // Check if we already have an issue for this user.
-                let exists = check_if_github_issue_exists(
-                    &configs_issues,
-                    a.name.clone(),
-                );
+                let exists =
+                    check_if_github_issue_exists(&configs_issues, &a.name);
                 if exists {
                     // Return early we don't want to update the issue because it will overwrite
                     // any changes we made.
@@ -353,10 +352,10 @@ cc @jessfraz @sdtuck @bcantrill",
                             .repo(github_org.to_string(), "configs")
                             .issues()
                             .create(&IssueOptions {
-                                title: title,
+                                title,
                                 body: Some(body),
                                 assignee: Some("jessfraz".to_string()),
-                                labels: labels,
+                                labels,
                                 milestone: None,
                             }),
                     )
@@ -371,14 +370,8 @@ cc @jessfraz @sdtuck @bcantrill",
 }
 
 /// Check if a GitHub issue already exists.
-fn check_if_github_issue_exists(issues: &Vec<Issue>, search: String) -> bool {
-    for i in issues {
-        if i.title.contains(&search) {
-            return true;
-        }
-    }
-
-    return false;
+fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> bool {
+    issues.iter().any(|i| i.title.contains(search))
 }
 
 fn email_send_received_application(
@@ -395,7 +388,7 @@ within the next couple weeks with more information.
 
 Sincerely,
   The Oxide Team".to_string(),
-  vec![email.to_string()],
+  vec![email],
         vec![format!("careers@{}",domain)],
         vec![],
     format!("careers@{}", domain),
@@ -442,13 +435,13 @@ To view the all the candidates refer to the following Google spreadsheets:
 - Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
 - Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
 ",
-                        applicant.clone().submitted_time,
-                        applicant.clone().name,
-                        applicant.clone().email,
-                        applicant.clone().phone,
-                        applicant.clone().location,
-                        applicant.clone().github,
-                        applicant.clone().resume,
-                        applicant.clone().materials,
+                        applicant.submitted_time,
+                        applicant.name,
+                        applicant.email,
+                        applicant.phone,
+                        applicant.location,
+                        applicant.github,
+                        applicant.resume,
+                        applicant.materials,
                     );
 }

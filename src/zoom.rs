@@ -12,7 +12,7 @@ use sendgrid::SendGrid;
 use zoom::{Building as ZoomBuilding, Room, User as ZoomUser, Zoom};
 
 /// The Zoom passcode for overriding the room configuration when you are in a room.
-pub static ZOOM_PASSCODE: &'static str = "6274";
+pub static ZOOM_PASSCODE: &str = "6274";
 
 /**
  * Sync the configuration files with Zoom.
@@ -34,7 +34,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
     let token = get_gsuite_token();
 
     // Get the Google Drive client.
-    let drive = GoogleDrive::new(token.clone());
+    let drive = GoogleDrive::new(token);
 
     // Get the current zoom users.
     info!("[zoom] getting current users...");
@@ -260,7 +260,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
             .get_file_by_name(&drive_id, "Zoom Dumps to be Sorted")
             .unwrap();
 
-        if folders.len() < 1 {
+        if folders.is_empty() {
             panic!("could not find the google drive folder for zoom dumps");
         }
 

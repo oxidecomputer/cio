@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::rc::Rc;
 
-use clap::{value_t, ArgMatches};
+use clap::ArgMatches;
 use log::info;
 
 use crate::utils::{get_gsuite_token, read_config_from_files};
@@ -22,7 +22,7 @@ pub fn cmd_gsuite_run(cli_matches: &ArgMatches) {
     let config = read_config_from_files(cli_matches);
 
     // Get the domain.
-    let domain = value_t!(cli_matches, "domain", String).unwrap();
+    let domain = cli_matches.value_of("domain").unwrap();
 
     // Initialize the clients for the config.
     let mut client = GSuiteClient::new(config, domain);
@@ -45,14 +45,13 @@ struct GSuiteClient {
 
 impl GSuiteClient {
     /// Initialize the various clients for groups, users, resources, and buildings.
-    pub fn new(config: Config, domain: String) -> Self {
+    pub fn new(config: Config, domain: &str) -> Self {
         let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
         // Get the GSuite token.
         let token = get_gsuite_token();
 
         // Initialize thje GSuite gsuite client.
-        let gsuite =
-            GSuite::new(gsuite_customer, domain.to_string(), token.clone());
+        let gsuite = GSuite::new(&gsuite_customer, domain, token);
 
         // Get the existing google groups.
         info!("[google] getting current groups...");
@@ -60,7 +59,7 @@ impl GSuiteClient {
         let groups = gsuite.list_groups();
         for g in groups {
             // Add the team to our hash map.
-            google_groups.insert(g.clone().name.unwrap().to_string(), g);
+            google_groups.insert(g.name.clone().unwrap(), g);
         }
 
         // Get the existing google users.
@@ -75,16 +74,16 @@ impl GSuiteClient {
         info!("[google] getting current buildings...");
         let google_buildings = gsuite.list_buildings();
 
-        return Self {
-            config: config,
-            domain: domain,
+        Self {
+            config,
+            domain: domain.to_string(),
 
             gsuite: Rc::new(gsuite),
-            google_groups: google_groups,
-            google_users: google_users,
-            google_resources: google_resources,
-            google_buildings: google_buildings,
-        };
+            google_groups,
+            google_users,
+            google_resources,
+            google_buildings,
+        }
     }
 
     /// Sync GSuite with our configuration files.
@@ -104,8 +103,11 @@ impl GSuiteClient {
 
     /// Update the buildings in GSuite to match our configuration files.
     pub fn update_google_buildings(&mut self) {
+        // TODO(cbiffle): fix clone here once update doesn't consume self
         for mut b in self.google_buildings.clone() {
-            let id = b.clone().id.to_string();
+            // TODO(cbiffle): we're cloning id here because b is going to
+            // consume itself on update below. I intend to fix this shortly.
+            let id = b.id.clone();
 
             // Check if we have that building already in our settings.
             let building: BuildingConfig;
@@ -116,10 +118,10 @@ impl GSuiteClient {
             }
 
             // Update the building with the settings from the config for the building.
-            b = b.clone().update(building.clone(), id.to_string());
+            b = b.update(&building, &id);
 
             // Update the building with the given settings.
-            self.gsuite.update_building(b.clone());
+            self.gsuite.update_building(&b);
 
             // Remove the building from the config map and continue.
             // This allows us to add all the remaining new building after.
@@ -133,9 +135,9 @@ impl GSuiteClient {
             // Create the building.
             let mut b: Building = Default::default();
 
-            b = b.clone().update(building.clone(), id.to_string());
+            b = b.update(&building, id);
 
-            self.gsuite.create_building(b);
+            self.gsuite.create_building(&b);
 
             info!("[google] created building: {}", id);
         }
@@ -143,9 +145,11 @@ impl GSuiteClient {
 
     /// Update the resources in GSuite to match our configuration files.
     pub fn update_google_resources(&mut self) {
+        // TODO(cbiffle): fix clone here once update doesn't consume self.
         for mut r in self.google_resources.clone() {
             // Create a shorthand id for the resource which is the name of the
             // resource with the spaces removed so it works with toml.
+            // Caution: this is not r.id.
             let id = r.clone().name.replace(" ", "");
 
             // Check if we have that resource already in our settings.
@@ -157,10 +161,12 @@ impl GSuiteClient {
             }
 
             // Update the resource with the settings from the config for the resource.
-            r = r.clone().update(resource.clone(), r.id.to_string());
+            // TODO(cbiffle): cloning r.id because r consumes itself; fix later
+            let rid = r.id.clone();
+            r = r.update(&resource, &rid);
 
             // Update the resource with the given settings.
-            self.gsuite.update_calendar_resource(r.clone());
+            self.gsuite.update_calendar_resource(&r);
 
             // Remove the resource from the config map and continue.
             // This allows us to add all the remaining new resource after.
@@ -174,9 +180,9 @@ impl GSuiteClient {
             // Create the resource.
             let mut r: CalendarResource = Default::default();
 
-            r = r.clone().update(resource.clone(), id.to_string());
+            r = r.update(&resource, id);
 
-            self.gsuite.create_calendar_resource(r);
+            self.gsuite.create_calendar_resource(&r);
 
             info!("[google] created resource: {}", id);
         }
@@ -184,11 +190,12 @@ impl GSuiteClient {
 
     /// Update the users in GSuite to match our configuration files.
     pub fn update_google_users(&mut self) {
+        // TODO(cbiffle): fix clone here once update doesn't consume self.
         for mut u in self.google_users.clone() {
             // Get the shorthand username and match it against our existing users.
             let username = u
                 .primary_email
-                .clone()
+                .as_deref()
                 .unwrap()
                 .trim_end_matches(&format!("@{}", self.domain))
                 .replace(".", "-");
@@ -196,22 +203,22 @@ impl GSuiteClient {
             // Check if we have that user already in our settings.
             let user: UserConfig;
             match self.config.users.get(&username) {
+                // TODO(cbiffle): fix this, too, once update doesn't consume
+                // self.
                 Some(val) => user = val.clone(),
                 // Continue through the loop and we will add the user later.
                 None => continue,
             }
 
             // Update the user with the settings from the config for the user.
-            u = u
-                .clone()
-                .update(user.clone(), self.domain.to_string(), false);
+            u = u.update(&user, &self.domain, false);
 
-            self.gsuite.update_user(u.clone());
+            self.gsuite.update_user(&u);
 
-            self.update_user_aliases(u.clone());
+            self.update_user_aliases(&u);
 
             // Add the user to their teams and groups.
-            self.update_user(user.clone());
+            self.update_user(&user);
 
             // Remove the user from the config map and continue.
             // This allows us to add all the remaining new user after.
@@ -221,85 +228,61 @@ impl GSuiteClient {
         }
 
         // Create any remaining users from the config that we do not have in GSuite.
+        // TODO(cbiffle): same same
         for (username, user) in self.config.users.clone() {
             // Create the user.
             let mut u: User = Default::default();
 
-            u = u
-                .clone()
-                .update(user.clone(), self.domain.to_string(), true);
+            u = u.update(&user, &self.domain, true);
 
-            self.gsuite.create_user(u.clone());
+            self.gsuite.create_user(&u);
 
-            self.update_user_aliases(u.clone());
+            self.update_user_aliases(&u);
 
             // Add the user to their teams and groups.
-            self.update_user(user.clone());
+            self.update_user(&user);
 
-            let mut github: String = "".to_string();
-            match user.clone().github {
-                Some(val) => {
-                    github = val.clone().to_string();
-                }
-                None => (),
-            }
-
-            let mut password: String = "".to_string();
-            match u.clone().password {
-                Some(val) => {
-                    password = val.clone().to_string();
-                }
-                None => (),
-            }
+            let github = user.github.as_deref().unwrap_or_else(|| "");
+            let password = u.password.as_deref().unwrap_or_else(|| "");
 
             // Send an email to the new user.
-            email_send_new_user(
-                u.clone(),
-                password.to_string(),
-                github.to_string(),
-                self.domain.to_string(),
-            );
+            email_send_new_user(&u, password, github, &self.domain);
 
             info!("created new user: {}", username);
         }
     }
 
     /// Update a user's aliases in GSuite to match our configuration files.
-    pub fn update_user_aliases(&mut self, u: User) {
-        match u.aliases {
-            Some(val) => {
-                // Update the user's aliases.
-                let email = u.primary_email.unwrap();
-                self.gsuite.update_user_aliases(email.clone(), val);
-                info!("[google] updated user aliases: {}", email);
-            }
-            None => (),
+    pub fn update_user_aliases(&mut self, u: &User) {
+        if let Some(val) = &u.aliases {
+            // Update the user's aliases.
+            let email = u.primary_email.as_ref().unwrap();
+            self.gsuite.update_user_aliases(email, val);
+            info!("[google] updated user aliases: {}", email);
         }
     }
 
     /// Update a user in GSuite to match our configuration files.
-    pub fn update_user(&mut self, user: UserConfig) {
-        self.update_user_google_groups(user.clone());
+    pub fn update_user(&mut self, user: &UserConfig) {
+        self.update_user_google_groups(user);
     }
 
     /// Update a user's groups in GSuite to match our configuration files.
-    pub fn update_user_google_groups(&self, user: UserConfig) {
+    pub fn update_user_google_groups(&self, user: &UserConfig) {
         let email = format!("{}@{}", user.username, self.domain);
-        let groups: Vec<String>;
-        match user.groups {
-            Some(val) => groups = val,
-            None => {
-                // Return early because they have no groups.
-                return;
-            }
-        }
+        let groups = if let Some(val) = &user.groups {
+            val
+        } else {
+            // Return early because they have no groups.
+            return;
+        };
 
         // Iterate over the groups and add the user as a member to it.
-        for g in groups.clone() {
+        for g in groups {
             // Make sure the group exists.
-            let group: Group;
-            match self.google_groups.get(&g) {
-                Some(val) => group = val.clone(),
+            let group: &Group;
+            match self.google_groups.get(g) {
+                Some(val) => group = val,
                 // Continue through the loop and we will add the user later.
                 None => panic!(
                     "google group {} does not exist so cannot add user {}",
@@ -320,13 +303,13 @@ impl GSuiteClient {
             // Check if the user is already a member of the group.
             let is_member = self
                 .gsuite
-                .group_has_member(group.clone().id.unwrap(), email.to_string());
+                .group_has_member(group.id.as_ref().unwrap(), &email);
             if is_member {
                 // They are a member so we can just update their member status.
                 self.gsuite.group_update_member(
-                    group.clone().id.unwrap(),
-                    email.to_string(),
-                    role.to_string(),
+                    group.id.as_ref().unwrap(),
+                    &email,
+                    &role,
                 );
 
                 // Continue through the other groups.
@@ -335,15 +318,15 @@ impl GSuiteClient {
 
             // Add the user to the group.
             self.gsuite.group_insert_member(
-                group.id.unwrap(),
-                email.to_string(),
-                role.to_string(),
+                group.id.as_ref().unwrap(),
+                &email,
+                &role,
             );
 
             info!(
                 "[groups]: added {} to {} as {}",
                 email,
-                group.name.unwrap(),
+                group.name.as_ref().unwrap(),
                 role
             );
         }
@@ -359,7 +342,7 @@ impl GSuiteClient {
             // but we need to make sure they are not a member.
             let is_member = self
                 .gsuite
-                .group_has_member(group.clone().id.unwrap(), email.to_string());
+                .group_has_member(group.id.as_ref().unwrap(), &email);
 
             if !is_member {
                 // They are not a member so we can continue early.
@@ -368,15 +351,13 @@ impl GSuiteClient {
 
             // They are a member of the group.
             // We need to remove them.
-            self.gsuite.group_remove_member(
-                group.clone().id.unwrap(),
-                email.to_string(),
-            );
+            self.gsuite
+                .group_remove_member(group.id.as_ref().unwrap(), &email);
 
             info!(
                 "[groups]: removed {} from {}",
                 email,
-                group.clone().name.unwrap()
+                group.name.as_ref().unwrap()
             );
         }
     }
@@ -385,12 +366,12 @@ impl GSuiteClient {
     pub fn update_google_groups(&mut self) {
         for (slug, g) in &self.google_groups {
             // Check if we already have this group in our config.
-            let group: GroupConfig;
-            match self.config.groups.get(slug) {
-                Some(val) => group = val.clone(),
+            let group = if let Some(val) = self.config.groups.get(slug) {
+                val
+            } else {
                 // Continue through the loop and we will add the group later.
-                None => continue,
-            }
+                continue;
+            };
 
             // Update the group with the settings from the config for the group.
             let mut updated_group: Group = g.clone();
@@ -398,22 +379,20 @@ impl GSuiteClient {
 
             // Write the group aliases.
             let mut aliases: Vec<String> = Default::default();
-            match group.clone().aliases {
-                Some(val) => {
-                    for alias in val {
-                        aliases.push(format!("{}@{}", alias, self.domain));
-                    }
+            if let Some(val) = &group.aliases {
+                for alias in val {
+                    aliases.push(format!("{}@{}", alias, self.domain));
                 }
-                None => (),
             }
             updated_group.aliases = Some(aliases);
 
-            self.gsuite.update_group(updated_group.clone());
+            self.gsuite.update_group(&updated_group);
 
-            self.update_group_aliases(updated_group);
+            self.update_group_aliases(&updated_group);
 
             // Update the groups settings.
-            self.update_google_group_settings(group);
+            // TODO(cbiffle): uhhh should this be updated_group?
+            self.update_google_group_settings(&group);
 
             // Remove the group from the config map and continue.
             // This allows us to add all the remaining new groups after.
@@ -433,22 +412,19 @@ impl GSuiteClient {
 
             // Write the group aliases.
             let mut aliases: Vec<String> = Default::default();
-            match group.clone().aliases {
-                Some(val) => {
-                    for alias in val {
-                        aliases.push(format!("{}@{}", alias, self.domain));
-                    }
+            if let Some(val) = &group.aliases {
+                for alias in val {
+                    aliases.push(format!("{}@{}", alias, self.domain));
                 }
-                None => (),
             }
             g.aliases = Some(aliases);
 
-            let new_group: Group = self.gsuite.create_group(g.clone());
+            let new_group: Group = self.gsuite.create_group(&g);
 
-            self.update_group_aliases(g);
+            self.update_group_aliases(&g);
 
             // Update the groups settings.
-            self.update_google_group_settings(group.clone());
+            self.update_google_group_settings(&group);
 
             // Add the group to our list of GSuite groups so when we add users to
             // the groups, later in the script, it is there.
@@ -459,91 +435,88 @@ impl GSuiteClient {
     }
 
     /// Update a group's aliases in GSuite to match our configuration files.
-    pub fn update_group_aliases(&self, g: Group) {
-        match g.aliases {
-            Some(val) => {
-                // Update the user's aliases.
-                let email = g.email.unwrap();
-                self.gsuite.update_group_aliases(email.clone(), val);
-                info!("[google] updated group aliases: {}", email);
-            }
-            None => (),
+    pub fn update_group_aliases(&self, g: &Group) {
+        if let Some(val) = &g.aliases {
+            // Update the user's aliases.
+            let email = g.email.as_ref().unwrap();
+            self.gsuite.update_group_aliases(email, val);
+            info!("[google] updated group aliases: {}", email);
         }
     }
 
     /// Update a group's settings in GSuite to match our configuration files.
-    pub fn update_google_group_settings(&self, group: GroupConfig) {
+    pub fn update_google_group_settings(&self, group: &GroupConfig) {
         // Get the current group settings.
         let email = format!("{}@{}", group.name, self.domain);
-        let mut settings = self.gsuite.get_group_settings(email.to_string());
+        let mut settings = self.gsuite.get_group_settings(&email);
 
         // Update the groups settings.
-        settings.email = Some(email.to_string());
-        settings.name = Some(group.name.to_string());
-        settings.description = Some(group.description);
+        settings.email = Some(email);
+        settings.name = Some(group.name.clone());
+        settings.description = Some(group.description.clone());
         settings.allow_external_members =
             Some(group.allow_external_members.to_string());
         settings.allow_web_posting = Some(group.allow_web_posting.to_string());
         settings.is_archived = Some(group.is_archived.to_string());
-        settings.who_can_discover_group = Some(group.who_can_discover_group);
-        settings.who_can_join = Some(group.who_can_join);
+        settings.who_can_discover_group =
+            Some(group.who_can_discover_group.clone());
+        settings.who_can_join = Some(group.who_can_join.clone());
         settings.who_can_moderate_members =
-            Some(group.who_can_moderate_members);
-        settings.who_can_post_message = Some(group.who_can_post_message);
-        settings.who_can_view_group = Some(group.who_can_view_group);
-        settings.who_can_view_membership = Some(group.who_can_view_membership);
+            Some(group.who_can_moderate_members.clone());
+        settings.who_can_post_message =
+            Some(group.who_can_post_message.clone());
+        settings.who_can_view_group = Some(group.who_can_view_group.clone());
+        settings.who_can_view_membership =
+            Some(group.who_can_view_membership.clone());
         settings.who_can_contact_owner =
             Some("ALL_IN_DOMAIN_CAN_CONTACT".to_string());
 
         // Update the group with the given settings.
-        self.gsuite.update_group_settings(settings);
+        // TODO(cbiffle): we did all that cloning and we're going to use this
+        // structure once and toss it? Revisit.
+        self.gsuite.update_group_settings(&settings);
 
         info!("[groups]: updated groups settings {}", group.name);
     }
 }
 
 fn email_send_new_user(
-    user: User,
-    password: String,
-    github: String,
-    domain: String,
+    user: &User,
+    password: &str,
+    github: &str,
+    domain: &str,
 ) {
     // Initialize the SendGrid client.
     let sendgrid = SendGrid::new_from_env();
 
     // Create the message.
-    let message =
-        user_email_message(user.clone(), password, github, domain.to_string());
+    let message = user_email_message(user, password, github, domain);
 
     // Send the message.
     sendgrid.send_mail(
         format!(
             "Your New Email Account: {}",
-            user.clone().primary_email.unwrap()
+            user.primary_email.as_ref().unwrap()
         ),
         message,
-        vec![user.clone().recovery_email.unwrap()],
+        vec![user.recovery_email.clone().unwrap()],
         vec![
-            user.clone().primary_email.unwrap(),
-            format!("jess@{}", domain.to_string()),
+            user.primary_email.clone().unwrap(),
+            format!("jess@{}", domain),
         ],
         vec![],
-        format!("admin@{}", domain.to_string()),
+        format!("admin@{}", domain),
     );
 }
 
 fn user_email_message(
-    user: User,
-    password: String,
-    github: String,
-    domain: String,
+    user: &User,
+    password: &str,
+    github: &str,
+    domain: &str,
 ) -> String {
     // Get the user's aliases if they have one.
-    let mut aliases: Vec<String> = Default::default();
-    match user.clone().aliases {
-        None => (),
-        Some(val) => aliases = val.clone(),
-    }
+    let aliases = user.aliases.as_deref().unwrap_or(&[]).join(", ");
 
     return format!(
                         "Yoyoyo {},
@@ -578,16 +551,16 @@ https://docs.google.com/document/d/18Nymnd3rU1Nz4woxPfcohFeyouw7FvbYq5fGfQ6ZSGY/
 
 xoxo,
   The GSuite/GitHub/Zoom Bot",
-                        user.clone().name.unwrap().given_name.unwrap(),
+                        user.name.as_ref().unwrap().given_name.as_ref().unwrap(),
                         domain,
                         domain,
-                        user.clone().primary_email.unwrap(),
+                        user.primary_email.as_ref().unwrap(),
                         password,
-                        aliases.join(", "),
-                        github.clone(),
+                        aliases,
+                        github,
                         "oxidecomputer",
                         "oxidecomputer",
-                        user.clone().primary_email.unwrap(),
+                        user.primary_email.as_ref().unwrap(),
                         github,
                         domain
                     );

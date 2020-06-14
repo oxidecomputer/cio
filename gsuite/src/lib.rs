@@ -40,16 +40,13 @@ impl GSuite {
     /// Create a new GSuite client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Secret your requests will work.
-    pub fn new(customer: String, domain: String, token: Token) -> Self {
-        let client = Client::builder().build();
-        match client {
-            Ok(c) => Self {
-                customer: customer,
-                domain: domain,
-                token: token,
-                client: Rc::new(c),
-            },
-            Err(e) => panic!("creating client failed: {:?}", e),
+    pub fn new(customer: &str, domain: &str, token: Token) -> Self {
+        let client = Client::builder().build().expect("creating client failed");
+        Self {
+            customer: customer.to_string(),
+            domain: domain.to_string(),
+            token,
+            client: Rc::new(client),
         }
     }
 
@@ -62,15 +59,15 @@ impl GSuite {
         &self,
         endpoint: &str,
         method: Method,
-        path: String,
+        path: &str,
         body: B,
-        query: Option<Vec<(&str, String)>>,
+        query: Option<&[(&str, &str)]>,
     ) -> Request
     where
         B: Serialize,
     {
         let base = Url::parse(endpoint).unwrap();
-        let url = base.join(&path).unwrap();
+        let url = base.join(path).unwrap();
 
         // Check if the token is expired and panic.
         if self.token.expired() {
@@ -94,11 +91,8 @@ impl GSuite {
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
-        match query {
-            None => (),
-            Some(val) => {
-                rb = rb.query(&val);
-            }
+        if let Some(val) = query {
+            rb = rb.query(&val);
         }
 
         // Add the body, this is to ensure our GET and DELETE calls succeed.
@@ -107,9 +101,7 @@ impl GSuite {
         }
 
         // Build the request.
-        let request = rb.build().unwrap();
-
-        return request;
+        rb.build().unwrap()
     }
 
     /// List Google groups.
@@ -118,12 +110,9 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::GET,
-            "groups".to_string(),
-            {},
-            Some(vec![
-                ("customer", self.customer.to_string()),
-                ("domain", self.domain.to_string()),
-            ]),
+            "groups",
+            (),
+            Some(&[("customer", &self.customer), ("domain", &self.domain)]),
         );
 
         let resp = self.client.execute(request).unwrap();
@@ -139,18 +128,18 @@ impl GSuite {
         // Try to deserialize the response.
         let value: Groups = resp.json().unwrap();
 
-        return value.groups.unwrap();
+        value.groups.unwrap()
     }
 
     /// Get the settings for a Google group.
-    pub fn get_group_settings(&self, group_email: String) -> GroupSettings {
+    pub fn get_group_settings(&self, group_email: &str) -> GroupSettings {
         // Build the request.
         let request = self.request(
             GROUPS_SETTINGS_ENDPOINT,
             Method::GET,
             group_email,
-            {},
-            Some(vec![("alt", "json".to_string())]),
+            (),
+            Some(&[("alt", "json")]),
         );
 
         let resp = self.client.execute(request).unwrap();
@@ -164,16 +153,16 @@ impl GSuite {
         };
 
         // Try to deserialize the response.
-        return resp.json().unwrap();
+        resp.json().unwrap()
     }
 
     /// Update a Google group.
-    pub fn update_group(&self, group: Group) {
+    pub fn update_group(&self, group: &Group) {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            format!("groups/{}", group.clone().id.unwrap()),
+            &format!("groups/{}", group.id.as_ref().unwrap()),
             group,
             None,
         );
@@ -190,14 +179,14 @@ impl GSuite {
     }
 
     /// Update a Google group's settings.
-    pub fn update_group_settings(&self, settings: GroupSettings) {
+    pub fn update_group_settings(&self, settings: &GroupSettings) {
         // Build the request.
         let request = self.request(
             GROUPS_SETTINGS_ENDPOINT,
             Method::PUT,
-            settings.clone().email.unwrap(),
+            settings.email.as_ref().unwrap(),
             settings,
-            Some(vec![("alt", "json".to_string())]),
+            Some(&[("alt", "json")]),
         );
 
         let resp = self.client.execute(request).unwrap();
@@ -212,12 +201,12 @@ impl GSuite {
     }
 
     /// Create a google group.
-    pub fn create_group(&self, group: Group) -> Group {
+    pub fn create_group(&self, group: &Group) -> Group {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::POST,
-            "groups".to_string(),
+            "groups",
             group,
             None,
         );
@@ -233,29 +222,29 @@ impl GSuite {
         };
 
         // Try to deserialize the response.
-        return resp.json().unwrap();
+        resp.json().unwrap()
     }
 
     /// Update a Google group's aliases.
-    pub fn update_group_aliases(
-        &self,
-        group_key: String,
-        aliases: Vec<String>,
-    ) {
+    pub fn update_group_aliases<A>(&self, group_key: &str, aliases: A)
+    where
+        A: IntoIterator,
+        A::Item: AsRef<str>,
+    {
         for alias in aliases {
-            self.update_group_alias(group_key.to_string(), alias.to_string());
+            self.update_group_alias(group_key, alias.as_ref());
         }
     }
 
     /// Update an alias for a Google group.
-    pub fn update_group_alias(&self, group_key: String, alias: String) {
-        let mut a: HashMap<String, String> = HashMap::new();
-        a.insert("alias".to_string(), alias);
+    pub fn update_group_alias(&self, group_key: &str, alias: &str) {
+        let mut a: HashMap<&str, &str> = HashMap::new();
+        a.insert("alias", alias);
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::POST,
-            format!("groups/{}/aliases", group_key.to_string()),
+            &format!("groups/{}/aliases", group_key),
             a,
             None,
         );
@@ -280,13 +269,13 @@ impl GSuite {
     }
 
     /// Check if a user is a member of a Google group.
-    pub fn group_has_member(&self, group_id: String, email: String) -> bool {
+    pub fn group_has_member(&self, group_id: &str, email: &str) -> bool {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::GET,
-            format!("groups/{}/hasMember/{}", group_id, email),
-            {},
+            &format!("groups/{}/hasMember/{}", group_id, email),
+            (),
             None,
         );
 
@@ -303,16 +292,11 @@ impl GSuite {
         // Try to deserialize the response.
         let value: MembersHasMember = resp.json().unwrap();
 
-        return value.is_member.unwrap();
+        value.is_member.unwrap()
     }
 
     /// Update a member of a Google group.
-    pub fn group_update_member(
-        &self,
-        group_id: String,
-        email: String,
-        role: String,
-    ) {
+    pub fn group_update_member(&self, group_id: &str, email: &str, role: &str) {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -322,7 +306,7 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            format!("groups/{}/members/{}", group_id, email.to_string()),
+            &format!("groups/{}/members/{}", group_id, email),
             member,
             None,
         );
@@ -339,12 +323,7 @@ impl GSuite {
     }
 
     /// Add a user as a member of a Google group.
-    pub fn group_insert_member(
-        &self,
-        group_id: String,
-        email: String,
-        role: String,
-    ) {
+    pub fn group_insert_member(&self, group_id: &str, email: &str, role: &str) {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -354,7 +333,7 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::POST,
-            format!("groups/{}/members", group_id),
+            &format!("groups/{}/members", group_id),
             member,
             None,
         );
@@ -371,13 +350,13 @@ impl GSuite {
     }
 
     /// Remove a user as a member of a Google group.
-    pub fn group_remove_member(&self, group_id: String, email: String) {
+    pub fn group_remove_member(&self, group_id: &str, email: &str) {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::DELETE,
-            format!("groups/{}/members/{}", group_id, email),
-            {},
+            &format!("groups/{}/members/{}", group_id, email),
+            (),
             None,
         );
 
@@ -398,12 +377,12 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::GET,
-            "users".to_string(),
-            {},
-            Some(vec![
-                ("customer", self.customer.to_string()),
-                ("domain", self.domain.to_string()),
-                ("projection", "full".to_string()),
+            "users",
+            (),
+            Some(&[
+                ("customer", &self.customer),
+                ("domain", &self.domain),
+                ("projection", "full"),
             ]),
         );
 
@@ -420,16 +399,16 @@ impl GSuite {
         // Try to deserialize the response.
         let value: Users = resp.json().unwrap();
 
-        return value.users.unwrap();
+        value.users.unwrap()
     }
 
     /// Update a user.
-    pub fn update_user(&self, user: User) {
+    pub fn update_user(&self, user: &User) {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            format!("users/{}", user.clone().id.unwrap()),
+            &format!("users/{}", user.id.as_ref().unwrap()),
             user,
             None,
         );
@@ -446,15 +425,10 @@ impl GSuite {
     }
 
     /// Create a user.
-    pub fn create_user(&self, user: User) -> User {
+    pub fn create_user(&self, user: &User) -> User {
         // Build the request.
-        let request = self.request(
-            DIRECTORY_ENDPOINT,
-            Method::POST,
-            "users".to_string(),
-            user,
-            None,
-        );
+        let request =
+            self.request(DIRECTORY_ENDPOINT, Method::POST, "users", user, None);
 
         let resp = self.client.execute(request).unwrap();
         match resp.status() {
@@ -467,25 +441,29 @@ impl GSuite {
         };
 
         // Try to deserialize the response.
-        return resp.json().unwrap();
+        resp.json().unwrap()
     }
 
     /// Update a user's aliases.
-    pub fn update_user_aliases(&self, user_id: String, aliases: Vec<String>) {
+    pub fn update_user_aliases<A>(&self, user_id: &str, aliases: A)
+    where
+        A: IntoIterator,
+        A::Item: AsRef<str>,
+    {
         for alias in aliases {
-            self.update_user_alias(user_id.to_string(), alias.to_string());
+            self.update_user_alias(user_id, alias.as_ref());
         }
     }
 
     /// Update an alias for a user.
-    pub fn update_user_alias(&self, user_id: String, alias: String) {
-        let mut a: HashMap<String, String> = HashMap::new();
-        a.insert("alias".to_string(), alias);
+    pub fn update_user_alias(&self, user_id: &str, alias: &str) {
+        let mut a: HashMap<&str, &str> = HashMap::new();
+        a.insert("alias", alias);
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::POST,
-            format!("users/{}/aliases", user_id.to_string()),
+            &format!("users/{}/aliases", user_id),
             a,
             None,
         );
@@ -515,8 +493,8 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::GET,
-            format!("customer/{}/resources/calendars", self.customer),
-            {},
+            &format!("customer/{}/resources/calendars", self.customer),
+            (),
             None,
         );
 
@@ -533,19 +511,18 @@ impl GSuite {
         // Try to deserialize the response.
         let value: CalendarResources = resp.json().unwrap();
 
-        return value.items.unwrap();
+        value.items.unwrap()
     }
 
     /// Update a calendar resource.
-    pub fn update_calendar_resource(&self, resource: CalendarResource) {
+    pub fn update_calendar_resource(&self, resource: &CalendarResource) {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            format!(
+            &format!(
                 "customer/{}/resources/calendars/{}",
-                self.customer,
-                resource.clone().id
+                self.customer, resource.id
             ),
             resource,
             None,
@@ -563,12 +540,12 @@ impl GSuite {
     }
 
     /// Create a calendar resource.
-    pub fn create_calendar_resource(&self, resource: CalendarResource) {
+    pub fn create_calendar_resource(&self, resource: &CalendarResource) {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::POST,
-            format!("customer/{}/resources/calendars", self.customer),
+            &format!("customer/{}/resources/calendars", self.customer),
             resource,
             None,
         );
@@ -590,8 +567,8 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::GET,
-            format!("customer/{}/resources/buildings", self.customer),
-            {},
+            &format!("customer/{}/resources/buildings", self.customer),
+            (),
             None,
         );
 
@@ -608,19 +585,18 @@ impl GSuite {
         // Try to deserialize the response.
         let value: Buildings = resp.json().unwrap();
 
-        return value.buildings.unwrap();
+        value.buildings.unwrap()
     }
 
     /// Update a building.
-    pub fn update_building(&self, building: Building) {
+    pub fn update_building(&self, building: &Building) {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            format!(
+            &format!(
                 "customer/{}/resources/buildings/{}",
-                self.customer,
-                building.clone().id
+                self.customer, building.id
             ),
             building,
             None,
@@ -638,12 +614,12 @@ impl GSuite {
     }
 
     /// Create a building.
-    pub fn create_building(&self, building: Building) {
+    pub fn create_building(&self, building: &Building) {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::POST,
-            format!("customer/{}/resources/buildings", self.customer),
+            &format!("customer/{}/resources/buildings", self.customer),
             building,
             None,
         );
@@ -663,10 +639,7 @@ impl GSuite {
 /// Generate a random string that we can use as a temporary password for new users
 /// when we set up their account.
 pub fn generate_password() -> String {
-    let rand_string: String =
-        thread_rng().sample_iter(&Alphanumeric).take(30).collect();
-
-    return rand_string;
+    thread_rng().sample_iter(&Alphanumeric).take(30).collect()
 }
 
 /// A Google group.
@@ -1255,89 +1228,84 @@ impl User {
     /// Update a user.
     pub fn update(
         mut self,
-        user: UserConfig,
-        domain: String,
+        user: &UserConfig,
+        domain: &str,
         change_password: bool,
     ) -> User {
+        // TODO(cbiffle): use &mut self instead of consume-and-return
         // Set the settings for the user.
         self.name = Some(UserName {
-            full_name: Some(format!(
-                "{} {}",
-                user.first_name.to_string(),
-                user.last_name.to_string()
-            )),
-            given_name: Some(user.first_name.to_string()),
-            family_name: Some(user.last_name.to_string()),
+            full_name: Some(format!("{} {}", user.first_name, user.last_name)),
+            given_name: Some(user.first_name.clone()),
+            family_name: Some(user.last_name.clone()),
         });
 
-        match user.clone().recovery_email {
-            Some(val) => {
-                // Set the recovery email for the user.
-                self.recovery_email = Some(val.clone());
+        if let Some(val) = &user.recovery_email {
+            // Set the recovery email for the user.
+            self.recovery_email = Some(val.clone());
 
-                // Check if we have a home email set for the user and update it.
-                let mut has_home_email = false;
-                match self.emails {
-                    Some(mut emails) => {
-                        for (index, email) in emails.iter().enumerate() {
-                            match &email.typev {
-                                Some(typev) => {
-                                    if typev == "home" {
-                                        // Update the set home email.
-                                        emails[index].address = val.clone();
-                                        // Break the loop early.
-                                        has_home_email = true;
-                                        break;
-                                    }
+            // Check if we have a home email set for the user and update it.
+            let mut has_home_email = false;
+            match self.emails {
+                Some(mut emails) => {
+                    for (index, email) in emails.iter().enumerate() {
+                        match &email.typev {
+                            Some(typev) => {
+                                if typev == "home" {
+                                    // Update the set home email.
+                                    emails[index].address = val.clone();
+                                    // Break the loop early.
+                                    has_home_email = true;
+                                    break;
                                 }
-                                None => (),
-                            };
-                        }
-
-                        if !has_home_email {
-                            // Set the home email for the user.
-                            emails.push(UserEmail {
-                                typev: Some("home".to_string()),
-                                address: val.clone(),
-                                primary: Some(false),
-                            });
-                        }
-
-                        // Set the emails.
-                        self.emails = Some(emails);
+                            }
+                            None => (),
+                        };
                     }
-                    None => {
-                        self.emails = Some(vec![UserEmail {
+
+                    if !has_home_email {
+                        // Set the home email for the user.
+                        emails.push(UserEmail {
                             typev: Some("home".to_string()),
-                            address: val.clone(),
+                            address: val.to_string(),
                             primary: Some(false),
-                        }]);
+                        });
                     }
+
+                    // Set the emails.
+                    self.emails = Some(emails);
+                }
+                None => {
+                    self.emails = Some(vec![UserEmail {
+                        typev: Some("home".to_string()),
+                        address: val.to_string(),
+                        primary: Some(false),
+                    }]);
                 }
             }
-            None => self.recovery_email = None,
+        } else {
+            self.recovery_email = None;
         }
 
-        match user.clone().recovery_phone {
-            Some(val) => {
-                // Set the recovery phone for the user.
-                self.recovery_phone = Some(val.clone());
+        if let Some(val) = &user.recovery_phone {
+            // Set the recovery phone for the user.
+            self.recovery_phone = Some(val.to_string());
 
-                // Set the home phone for the user.
-                self.phones = Some(vec![UserPhone {
-                    typev: "home".to_string(),
-                    value: val.clone(),
-                    primary: true,
-                }])
-            }
-            None => self.recovery_phone = None,
+            // Set the home phone for the user.
+            self.phones = Some(vec![UserPhone {
+                typev: "home".to_string(),
+                value: val.to_string(),
+                primary: true,
+            }]);
+        } else {
+            self.recovery_phone = None;
         }
 
         self.primary_email = Some(format!("{}@{}", user.username, domain));
 
         // Write the user aliases.
         let mut aliases: Vec<String> = Default::default();
-        for alias in user.clone().aliases.unwrap() {
+        for alias in user.aliases.as_ref().unwrap() {
             aliases.push(format!("{}@{}", alias, domain));
         }
         self.aliases = Some(aliases);
@@ -1348,86 +1316,72 @@ impl User {
             self.change_password_at_next_login = Some(true);
             // Generate a password for the user.
             let password = generate_password();
-            self.password = Some(password.to_string());
+            self.password = Some(password);
         }
 
-        match user.clone().gender {
-            Some(val) => {
-                let mut gender: UserGender = Default::default();
-                gender.typev = val;
-                self.gender = Some(gender);
-            }
-            None => self.gender = None,
-        }
+        self.gender = if let Some(val) = &user.gender {
+            let mut gender: UserGender = Default::default();
+            gender.typev = val.to_string();
+            Some(gender)
+        } else {
+            None
+        };
 
-        match user.clone().building {
-            Some(val) => {
-                let mut location: UserLocation = Default::default();
-                location.typev = "desk".to_string();
-                location.building_id = Some(val);
-                location.floor_name = Some("1".to_string());
-                self.locations = Some(vec![location]);
-            }
-            None => self.locations = None,
-        }
+        self.locations = if let Some(val) = &user.building {
+            let mut location: UserLocation = Default::default();
+            location.typev = "desk".to_string();
+            location.building_id = Some(val.to_string());
+            location.floor_name = Some("1".to_string());
+            Some(vec![location])
+        } else {
+            None
+        };
 
         let mut cs: HashMap<String, UserCustomProperties> = HashMap::new();
-        match user.clone().github {
-            Some(val) => {
-                let mut gh: HashMap<String, String> = HashMap::new();
-                gh.insert("GitHub_Username".to_string(), val.clone());
-                cs.insert(
-                    "Contact".to_string(),
-                    UserCustomProperties(Some(gh)),
-                );
+        if let Some(val) = &user.github {
+            let mut gh: HashMap<String, String> = HashMap::new();
+            gh.insert("GitHub_Username".to_string(), val.clone());
+            cs.insert("Contact".to_string(), UserCustomProperties(Some(gh)));
 
-                // Set their GitHub SSH Keys to their Google SSH Keys.
-                let ssh_keys = get_github_user_public_ssh_keys(val.clone());
-                self.ssh_public_keys = Some(ssh_keys);
-            }
-            None => (),
+            // Set their GitHub SSH Keys to their Google SSH Keys.
+            let ssh_keys = get_github_user_public_ssh_keys(val);
+            self.ssh_public_keys = Some(ssh_keys);
         }
 
-        match user.clone().chat {
-            Some(val) => {
-                let mut chat: HashMap<String, String> = HashMap::new();
-                chat.insert("Matrix_Chat_Username".to_string(), val.clone());
-                cs.insert(
-                    "Contact".to_string(),
-                    UserCustomProperties(Some(chat)),
-                );
-            }
-            None => (),
+        if let Some(val) = &user.chat {
+            let mut chat: HashMap<String, String> = HashMap::new();
+            chat.insert("Matrix_Chat_Username".to_string(), val.clone());
+            cs.insert("Contact".to_string(), UserCustomProperties(Some(chat)));
         }
 
         // Set the custom schemas.
         self.custom_schemas = Some(cs);
 
-        return self;
+        self
     }
 }
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
-fn get_github_user_public_ssh_keys(handle: String) -> Vec<UserSSHKey> {
-    let body = reqwest::blocking::get(
-        &format!("https://github.com/{}.keys", handle).to_string(),
-    )
-    .unwrap()
-    .text()
-    .unwrap();
+fn get_github_user_public_ssh_keys(handle: &str) -> Vec<UserSSHKey> {
+    let body =
+        reqwest::blocking::get(&format!("https://github.com/{}.keys", handle))
+            .unwrap()
+            .text()
+            .unwrap();
 
-    let k: Vec<&str> = body.split("\n").collect();
-    let mut keys: Vec<UserSSHKey> = Default::default();
-    for key in k {
-        if key.trim().len() > 0 {
-            keys.push(UserSSHKey {
-                key: key.trim().to_string(),
-                expiration_time_usec: None,
-            });
-        }
-    }
-
-    return keys;
+    body.lines()
+        .filter_map(|key| {
+            let kt = key.trim();
+            if !kt.is_empty() {
+                Some(UserSSHKey {
+                    key: kt.to_string(),
+                    expiration_time_usec: None,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// A user's email.
@@ -1579,21 +1533,23 @@ impl CalendarResource {
     /// Update a calendar resource.
     pub fn update(
         mut self,
-        resource: ResourceConfig,
-        id: String,
+        resource: &ResourceConfig,
+        id: &str,
     ) -> CalendarResource {
-        self.id = id;
-        self.typev = Some(resource.typev.to_string());
-        self.name = resource.name.to_string();
-        self.building_id = Some(resource.building.to_string());
-        self.description = Some(resource.description.to_string());
-        self.user_visible_description = Some(resource.description.to_string());
+        // TODO(cbiffle): the consume-and-return self pattern here complicates
+        // things; use &mut self
+        self.id = id.to_string();
+        self.typev = Some(resource.typev.clone());
+        self.name = resource.name.clone();
+        self.building_id = Some(resource.building.clone());
+        self.description = Some(resource.description.clone());
+        self.user_visible_description = Some(resource.description.clone());
         self.capacity = Some(resource.capacity);
-        self.floor_name = Some(resource.floor.to_string());
-        self.floor_section = Some(resource.section.to_string());
+        self.floor_name = Some(resource.floor.clone());
+        self.floor_section = Some(resource.section.clone());
         self.category = Some("CONFERENCE_ROOM".to_string());
 
-        return self;
+        self
     }
 }
 
@@ -1653,22 +1609,23 @@ pub struct Building {
 
 impl Building {
     /// Update a building.
-    pub fn update(mut self, building: BuildingConfig, id: String) -> Building {
-        self.id = id;
-        self.name = building.name.to_string();
-        self.description = Some(building.description.to_string());
+    pub fn update(mut self, building: &BuildingConfig, id: &str) -> Building {
+        // TOOD(cbiffle): use &mut self instead of consume-and-return
+        self.id = id.to_string();
+        self.name = building.name.clone();
+        self.description = Some(building.description.clone());
         self.address = Some(BuildingAddress {
-            address_lines: Some(vec![building.address.to_string()]),
-            locality: Some(building.city.to_string()),
-            administrative_area: Some(building.state.to_string()),
-            postal_code: Some(building.zipcode.to_string()),
-            region_code: Some(building.country.to_string()),
+            address_lines: Some(vec![building.address.clone()]),
+            locality: Some(building.city.clone()),
+            administrative_area: Some(building.state.clone()),
+            postal_code: Some(building.zipcode.clone()),
+            region_code: Some(building.country.clone()),
             language_code: Some("en".to_string()),
             sublocality: None,
         });
-        self.floor_names = Some(building.clone().floors);
+        self.floor_names = Some(building.floors.clone());
 
-        return self;
+        self
     }
 }
 

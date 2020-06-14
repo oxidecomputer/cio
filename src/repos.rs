@@ -94,15 +94,7 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
 
         // Add branch protection to disallow force pushing to the default branch.
         // Only do this if it is not already protected.
-        let mut is_protected = false;
-        match default_branch.protected {
-            Some(val) => {
-                if val {
-                    is_protected = true
-                }
-            }
-            None => (),
-        }
+        let is_protected = default_branch.protected.unwrap_or(false);
         if !is_protected {
             runtime
                 .block_on(repo.branches().protection(
@@ -127,29 +119,17 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
 
         // For each label, add the label to the repo.
         for label in &config.labels {
-            // Check if we already have this label.
-            match labels.clone().get(&label.name) {
-                Some(val) => {
-                    // Remove this label from our map so that when we are all finished we can
-                    // delete any labels that exist in repos and should not be there.
-                    labels.remove(&label.name);
-
-                    // Check if the description and color are the same.
-                    let mut description = "";
-                    match &val.description {
-                        Some(d) => {
-                            description = d;
-                        }
-                        None => (),
-                    }
-                    if description == &label.description.to_string()
-                        && val.color == label.color.to_string()
-                    {
-                        // We already have the label so continue through our loop.
-                        continue;
-                    }
+            // Check if we already have this label, and remove it if so,
+            // so that when we are all finished we can delete any labels that
+            // exist in repos and should not be there.
+            if let Some(val) = labels.remove(&label.name) {
+                // Check if the description and color are the same.
+                if val.description.as_ref() == Some(&label.description)
+                    && val.color == label.color
+                {
+                    // We already have the label so continue through our loop.
+                    continue;
                 }
-                None => (),
             }
 
             // Try to update the label, otherwise create the label.
@@ -222,19 +202,16 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
             let perms = Permission::Push;
 
             // Check if the team already has the permission.
-            match teams.get(team_id) {
-                Some(val) => {
-                    if val.permission == perms.to_string() {
-                        // Continue since they already have permission.
-                        info!(
-                            "team {} already has push access to {}/{}",
-                            team_name, github_org, r.name
-                        );
+            if let Some(val) = teams.get(team_id) {
+                if val.permission == perms.to_string() {
+                    // Continue since they already have permission.
+                    info!(
+                        "team {} already has push access to {}/{}",
+                        team_name, github_org, r.name
+                    );
 
-                        continue;
-                    }
+                    continue;
                 }
-                None => (),
             }
 
             runtime

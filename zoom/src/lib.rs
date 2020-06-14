@@ -52,7 +52,7 @@ impl Zoom {
                 key: key.to_string(),
                 secret: secret.to_string(),
                 account_id: account_id.to_string(),
-                token: token.to_string(),
+                token,
                 client: Rc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
@@ -68,7 +68,7 @@ impl Zoom {
         let secret = env::var("ZOOM_API_SECRET").unwrap();
         let account_id = env::var("ZOOM_ACCOUNT_ID").unwrap();
 
-        return Zoom::new(key, secret, account_id);
+        Zoom::new(key, secret, account_id)
     }
 
     /// Get the currently set API key.
@@ -97,16 +97,15 @@ impl Zoom {
         B: Serialize,
     {
         // Get the url.
-        let url: Url;
-        if !path.starts_with("http") {
+        let url = if !path.starts_with("http") {
             // Build the URL from our endpoint instead since a full URL was not
             // passed.
             let base = Url::parse(ENDPOINT).unwrap();
-            url = base.join(&path).unwrap();
+            base.join(&path).unwrap()
         } else {
             // Parse the full URL.
-            url = Url::parse(&path).unwrap();
-        }
+            Url::parse(&path).unwrap()
+        };
 
         let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
@@ -134,9 +133,7 @@ impl Zoom {
         }
 
         // Build the request.
-        let request = rb.build().unwrap();
-
-        return request;
+        rb.build().unwrap()
     }
 
     /// List users.
@@ -145,7 +142,7 @@ impl Zoom {
         let request = self.request(
             Method::GET,
             "users".to_string(),
-            {},
+            (),
             Some(vec![
                 ("page_size", "100".to_string()),
                 ("page_number", "1".to_string()),
@@ -166,7 +163,7 @@ impl Zoom {
         // Try to deserialize the response.
         let r: APIResponse = resp.json().unwrap();
 
-        return Ok(r.users.unwrap());
+        Ok(r.users.unwrap())
     }
 
     fn get_user_with_login(
@@ -178,7 +175,7 @@ impl Zoom {
         let request = self.request(
             Method::GET,
             format!("users/{}", email),
-            {},
+            (),
             Some(vec![("login_type", login_type.to_string())]),
         );
 
@@ -195,7 +192,7 @@ impl Zoom {
 
                 return Err(APIError {
                     status_code: s,
-                    body: body,
+                    body,
                 });
             }
         };
@@ -203,13 +200,13 @@ impl Zoom {
         // Try to deserialize the response.
         let user: User = resp.json().unwrap();
 
-        return Ok(user);
+        Ok(user)
     }
 
     /// Get a user.
     pub fn get_user(&self, email: String) -> Result<User, APIError> {
         // By default try the Zoom login type.
-        return self.get_user_with_login(email, LoginType::Zoom);
+        self.get_user_with_login(email, LoginType::Zoom)
     }
 
     /// Create a user.
@@ -226,9 +223,9 @@ impl Zoom {
             CreateUserOpts {
                 action: "create".to_string(),
                 user_info: UserInfo {
-                    first_name: first_name,
-                    last_name: last_name,
-                    email: email,
+                    first_name,
+                    last_name,
+                    email,
                     // Type Pro.
                     typev: 2,
                 },
@@ -250,7 +247,7 @@ impl Zoom {
         // Try to deserialize the response.
         let user: User = resp.json().unwrap();
 
-        return Ok(user);
+        Ok(user)
     }
 
     /// Update a user.
@@ -267,10 +264,10 @@ impl Zoom {
             Method::PATCH,
             format!("users/{}", email),
             UpdateUserOpts {
-                first_name: first_name,
-                last_name: last_name,
-                use_pmi: use_pmi,
-                vanity_name: vanity_name,
+                first_name,
+                last_name,
+                use_pmi,
+                vanity_name,
             },
             Some(vec![("login_type", "100".to_string())]),
         );
@@ -295,7 +292,7 @@ impl Zoom {
         let request = self.request(
             Method::GET,
             "rooms".to_string(),
-            {},
+            (),
             Some(vec![("page_size", "100".to_string())]),
         );
 
@@ -313,7 +310,7 @@ impl Zoom {
         // Try to deserialize the response.
         let r: APIResponse = resp.json().unwrap();
 
-        return Ok(r.rooms.unwrap());
+        Ok(r.rooms.unwrap())
     }
 
     /// Update a room.
@@ -343,7 +340,7 @@ impl Zoom {
 
                 return Err(APIError {
                     status_code: s,
-                    body: body,
+                    body,
                 });
             }
         };
@@ -369,7 +366,7 @@ impl Zoom {
         };
 
         // Try to deserialize the response.
-        return Ok(resp.json().unwrap());
+        Ok(resp.json().unwrap())
     }
 
     /// List buildings.
@@ -378,7 +375,7 @@ impl Zoom {
         let request = self.request(
             Method::GET,
             "rooms/locations".to_string(),
-            {},
+            (),
             Some(vec![
                 ("page_size", "100".to_string()),
                 ("type", "building".to_string()),
@@ -399,7 +396,7 @@ impl Zoom {
         // Try to deserialize the response.
         let r: APIResponse = resp.json().unwrap();
 
-        return Ok(r.locations.unwrap());
+        Ok(r.locations.unwrap())
     }
 
     /// Create a building.
@@ -431,7 +428,7 @@ impl Zoom {
         };
 
         // Try to deserialize the response.
-        return Ok(resp.json().unwrap());
+        Ok(resp.json().unwrap())
     }
 
     /// Update a building.
@@ -478,7 +475,7 @@ impl Zoom {
         let request = self.request(
             Method::GET,
             "accounts/me/recordings".to_string(),
-            {},
+            (),
             Some(vec![
                 ("page_size", "100".to_string()),
                 ("from", now.checked_sub_signed(weeks).unwrap().to_rfc3339()),
@@ -500,7 +497,7 @@ impl Zoom {
         // Try to deserialize the response.
         let r: APIResponse = resp.json().unwrap();
 
-        return Ok(r.meetings.unwrap());
+        Ok(r.meetings.unwrap())
     }
 
     /// Download a recording to a file.
@@ -529,7 +526,7 @@ impl Zoom {
         fs::create_dir_all(file.parent().unwrap()).unwrap();
 
         // Write to the file.
-        let mut f = fs::File::create(file.clone()).unwrap();
+        let mut f = fs::File::create(file).unwrap();
         f.write_all(resp.text().unwrap().as_bytes()).unwrap();
         Ok(())
     }
@@ -543,7 +540,7 @@ impl Zoom {
         let request = self.request(
             Method::DELETE,
             format!("meetings/{}/recordings", meeting_id),
-            {},
+            (),
             None,
         );
 
@@ -607,23 +604,17 @@ struct Claims {
 fn token(key: String, secret: String) -> String {
     let claims = Claims {
         iss: key,
-        exp: 10000000000, // TODO: make this a value in seconds.
+        exp: 10_000_000_000, // TODO: make this a value in seconds.
     };
 
     let mut header = Header::default();
     header.kid = Some("signing_key".to_owned());
     header.alg = Algorithm::HS256;
 
-    let token = match encode(
-        &header,
-        &claims,
-        &EncodingKey::from_secret(secret.as_ref()),
-    ) {
+    match encode(&header, &claims, &EncodingKey::from_secret(secret.as_ref())) {
         Ok(t) => t,
         Err(e) => panic!("creating jwt failed: {}", e), // TODO: return the error.
-    };
-
-    return token;
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -804,7 +795,7 @@ impl Room {
         self.location_id = Some(location_id);
         self.hide_in_room_contacts = Some(false);
 
-        return self;
+        self
     }
 }
 
@@ -884,7 +875,7 @@ impl Building {
         self.required_code_to_ext = Some(true);
         self.typev = Some("building".to_string());
 
-        return self;
+        self
     }
 }
 
@@ -973,24 +964,24 @@ impl FileType {
     /// Returns the extension for each file type.
     pub fn to_extension(&self) -> String {
         match self {
-            FileType::MP4 => return "-video.mp4".to_string(),
-            FileType::M4A => return "-audio.m4a".to_string(),
-            FileType::Timeline => return "-timeline.txt".to_string(),
-            FileType::Transcript => return "-transcription.txt".to_string(),
-            FileType::Chat => return "-chat.txt".to_string(),
-            FileType::CC => return "-closed-captions.txt".to_string(),
+            FileType::MP4 => "-video.mp4".to_string(),
+            FileType::M4A => "-audio.m4a".to_string(),
+            FileType::Timeline => "-timeline.txt".to_string(),
+            FileType::Transcript => "-transcription.txt".to_string(),
+            FileType::Chat => "-chat.txt".to_string(),
+            FileType::CC => "-closed-captions.txt".to_string(),
         }
     }
 
     /// Returns the mime type for each file type.
     pub fn get_mime_type(&self) -> String {
         match self {
-            FileType::MP4 => return "video/mp4".to_string(),
-            FileType::M4A => return "audio/m4a".to_string(),
-            FileType::Timeline => return "text/plain".to_string(),
-            FileType::Transcript => return "text/plain".to_string(),
-            FileType::Chat => return "text/plain".to_string(),
-            FileType::CC => return "text/plain".to_string(),
+            FileType::MP4 => "video/mp4".to_string(),
+            FileType::M4A => "audio/m4a".to_string(),
+            FileType::Timeline => "text/plain".to_string(),
+            FileType::Transcript => "text/plain".to_string(),
+            FileType::Chat => "text/plain".to_string(),
+            FileType::CC => "text/plain".to_string(),
         }
     }
 }

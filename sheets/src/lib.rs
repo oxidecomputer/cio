@@ -28,7 +28,7 @@ impl Sheets {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
-                token: token,
+                token,
                 client: Rc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
@@ -84,9 +84,7 @@ impl Sheets {
         }
 
         // Build the request.
-        let request = rb.build().unwrap();
-
-        return request;
+        rb.build().unwrap()
     }
 
     /// Get values.
@@ -95,7 +93,7 @@ impl Sheets {
         let request = self.request(
             Method::GET,
             format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range),
-            {},
+            (),
             Some(vec![
                 ("valueRenderOption", "FORMATTED_VALUE".to_string()),
                 ("dateTimeRenderOption", "FORMATTED_STRING".to_string()),
@@ -114,9 +112,7 @@ impl Sheets {
         };
 
         // Try to deserialize the response.
-        let value_range: ValueRange = resp.json().unwrap();
-
-        return value_range;
+        resp.json().unwrap()
     }
 
     /// Update values.
@@ -160,9 +156,7 @@ impl Sheets {
         };
 
         // Try to deserialize the response.
-        let r: UpdateValuesResponse = resp.json().unwrap();
-
-        return r;
+        resp.json().unwrap()
     }
 }
 

@@ -6,7 +6,7 @@ use airtable::{Airtable, Record};
 use crate::core::{RFDFields, RFD};
 use crate::utils::{authenticate_github, get_rfds_from_repo};
 
-pub static RFD_TABLE: &'static str = "RFDs";
+pub static RFD_TABLE: &str = "RFDs";
 
 /// Sync airtable with our RFDs in GitHub.
 pub fn cmd_airtable_run() {

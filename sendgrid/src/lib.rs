@@ -48,7 +48,7 @@ impl SendGrid {
     pub fn new_from_env() -> Self {
         let key = env::var("SENDGRID_API_KEY").unwrap();
 
-        return SendGrid::new(key);
+        SendGrid::new(key)
     }
 
     /// Get the currently set API key.
@@ -95,9 +95,7 @@ impl SendGrid {
         }
 
         // Build the request.
-        let request = rb.build().unwrap();
-
-        return request;
+        rb.build().unwrap()
     }
 
     /// Create a sendgrid message struct and send it.
