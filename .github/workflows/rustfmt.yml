@@ -3,10 +3,6 @@ on:
     paths:
       - "src/**" # Only run on changes to the src directory.
       - ".github/workflows/rustfmt.yml" # Run when this file changes.
-  pull_request:
-    paths:
-      - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/rustfmt.yml" # Run when this file changes.
 name: rustfmt
 jobs:
   rustfmt:

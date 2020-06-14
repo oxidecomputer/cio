@@ -4,11 +4,6 @@ on:
     - 'scripts/**'
     - '.github/workflows/shellcheck.yml'
     - 'Makefile'
-  pull_request:
-    paths:
-    - 'scripts/**'
-    - '.github/workflows/shellcheck.yml'
-    - 'Makefile'
 name: make shellcheck
 jobs:
   shellcheck:
