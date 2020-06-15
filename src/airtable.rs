@@ -16,7 +16,7 @@ pub async fn cmd_airtable_run() {
     let github = authenticate_github();
 
     // Get the rfds from our the repo.
-    let mut rfds = get_rfds_from_repo(github).await;
+    let mut rfds = get_rfds_from_repo(&github).await;
 
     // Get the current RFD list from airtable.
     let mut records =

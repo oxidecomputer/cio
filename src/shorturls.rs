@@ -73,7 +73,7 @@ pub async fn cmd_shorturls_run(cli_matches: &ArgMatches<'_>) {
     links = Default::default();
 
     // Get the rfds from our the repo.
-    let rfds = get_rfds_from_repo(github).await;
+    let rfds = get_rfds_from_repo(&github).await;
     for (_, rfd) in rfds {
         let link = LinkConfig {
             name: Some(rfd.number.to_string()),

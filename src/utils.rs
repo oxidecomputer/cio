@@ -110,7 +110,7 @@ pub fn authenticate_github() -> Github {
 }
 
 /// Get the RFDs from the rfd GitHub repo.
-pub async fn get_rfds_from_repo(github: Github) -> BTreeMap<i32, RFD> {
+pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, RFD> {
     let github_org = env::var("GITHUB_ORG").unwrap();
 
     // Get the contents of the .helpers/rfd.csv file.
