@@ -11,17 +11,16 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 
-use reqwest::blocking::{Client, Request};
-use reqwest::{header, Method, StatusCode, Url};
+use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
-use yup_oauth2::Token;
+use yup_oauth2::AccessToken;
 
 /// The endpoint for the Google Drive API.
 const ENDPOINT: &str = "https://www.googleapis.com/drive/v3/";
 
 /// Entrypoint for interacting with the Google Drive API.
 pub struct GoogleDrive {
-    token: Token,
+    token: AccessToken,
 
     client: Rc<Client>,
 }
@@ -30,7 +29,7 @@ impl GoogleDrive {
     /// Create a new Drive client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Secret your requests will work.
-    pub fn new(token: Token) -> Self {
+    pub fn new(token: AccessToken) -> Self {
         let client =
             Client::builder().timeout(Duration::from_secs(360)).build();
         match client {
@@ -43,7 +42,7 @@ impl GoogleDrive {
     }
 
     /// Get the currently set authorization token.
-    pub fn get_token(&self) -> &Token {
+    pub fn get_token(&self) -> &AccessToken {
         &self.token
     }
 
@@ -72,11 +71,11 @@ impl GoogleDrive {
         };
 
         // Check if the token is expired and panic.
-        if self.token.expired() {
+        if self.token.is_expired() {
             panic!("token is expired");
         }
 
-        let bt = format!("Bearer {}", self.token.access_token);
+        let bt = format!("Bearer {}", self.token.as_str());
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -140,7 +139,7 @@ impl GoogleDrive {
     }
 
     /// Get a file by it's name.
-    pub fn get_file_by_name(
+    pub async fn get_file_by_name(
         &self,
         drive_id: &str,
         name: &str,
@@ -162,25 +161,25 @@ impl GoogleDrive {
             "",
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
 
         // Try to deserialize the response.
-        let files_response: FilesResponse = resp.json().unwrap();
+        let files_response: FilesResponse = resp.json().await.unwrap();
 
         Ok(files_response.files)
     }
 
     /// List drives.
-    pub fn list_drives(&self) -> Result<Vec<Drive>, APIError> {
+    pub async fn list_drives(&self) -> Result<Vec<Drive>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -192,26 +191,26 @@ impl GoogleDrive {
             "",
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
 
         // Try to deserialize the response.
-        let drives_response: DrivesResponse = resp.json().unwrap();
+        let drives_response: DrivesResponse = resp.json().await.unwrap();
 
         Ok(drives_response.drives)
     }
 
     /// Get a drive by it's name.
-    pub fn get_drive_by_name(&self, name: String) -> Result<Drive, APIError> {
-        let drives = self.list_drives().unwrap();
+    pub async fn get_drive_by_name(&self, name: String) -> Result<Drive, APIError> {
+        let drives = self.list_drives().await.unwrap();
 
         for drive in drives {
             if drive.clone().name.unwrap() == name {
@@ -226,7 +225,7 @@ impl GoogleDrive {
     }
 
     /// Create a folder.
-    pub fn create_folder(
+    pub async fn create_folder(
         &self,
         drive_id: &str,
         parent_id: &str,
@@ -257,26 +256,26 @@ impl GoogleDrive {
             folder_mime_type,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
 
         // Try to deserialize the response.
-        let response: File = resp.json().unwrap();
+        let response: File = resp.json().await.unwrap();
 
         Ok(response.id.unwrap())
     }
 
     /// Upload a file.
-    pub fn upload_file(
+    pub async fn upload_file(
         &self,
         drive_id: &str,
         file: PathBuf,
@@ -311,13 +310,13 @@ impl GoogleDrive {
             "",
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
@@ -340,14 +339,14 @@ impl GoogleDrive {
             mime_type,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };

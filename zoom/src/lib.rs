@@ -13,8 +13,7 @@ use std::rc::Rc;
 
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
-use reqwest::blocking::{get, Client, Request};
-use reqwest::{header, Method, StatusCode, Url};
+use reqwest::{get, header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
 use cio::{BuildingConfig, ResourceConfig};
@@ -137,7 +136,7 @@ impl Zoom {
     }
 
     /// List users.
-    pub fn list_users(&self) -> Result<Vec<User>, APIError> {
+    pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -149,24 +148,24 @@ impl Zoom {
             ]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
 
         // Try to deserialize the response.
-        let r: APIResponse = resp.json().unwrap();
+        let r: APIResponse = resp.json().await.unwrap();
 
         Ok(r.users.unwrap())
     }
 
-    fn get_user_with_login(
+    async fn get_user_with_login(
         &self,
         email: String,
         login_type: LoginType,
@@ -179,38 +178,37 @@ impl Zoom {
             Some(vec![("login_type", login_type.to_string())]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                let body = resp.text().unwrap();
-
-                if body.contains("1001") && login_type != LoginType::Google {
-                    // Try this request again with Google login type.
-                    return self.get_user_with_login(email, LoginType::Google);
-                }
-
                 return Err(APIError {
                     status_code: s,
-                    body,
-                });
+                    body: resp.text().await.unwrap(),
+                })
             }
         };
 
         // Try to deserialize the response.
-        let user: User = resp.json().unwrap();
+        let user: User = resp.json().await.unwrap();
 
         Ok(user)
     }
 
     /// Get a user.
-    pub fn get_user(&self, email: String) -> Result<User, APIError> {
+    pub async fn get_user(&self, email: String) -> Result<User, APIError> {
         // By default try the Zoom login type.
-        self.get_user_with_login(email, LoginType::Zoom)
+        match self.get_user_with_login(email.to_string(), LoginType::Zoom).await {
+            Ok(user)=> Ok(user),
+            Err(_) => {
+                // Try this request again with Google login type.
+                return self.get_user_with_login(email.to_string(), LoginType::Google).await;
+            }
+        }
     }
 
     /// Create a user.
-    pub fn create_user(
+    pub async fn create_user(
         &self,
         first_name: String,
         last_name: String,
@@ -233,25 +231,25 @@ impl Zoom {
             None,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
 
         // Try to deserialize the response.
-        let user: User = resp.json().unwrap();
+        let user: User = resp.json().await.unwrap();
 
         Ok(user)
     }
 
     /// Update a user.
-    pub fn update_user(
+    pub async fn update_user(
         &self,
         first_name: String,
         last_name: String,
@@ -272,13 +270,13 @@ impl Zoom {
             Some(vec![("login_type", "100".to_string())]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::NO_CONTENT => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
@@ -287,7 +285,7 @@ impl Zoom {
     }
 
     /// List rooms.
-    pub fn list_rooms(&self) -> Result<Vec<Room>, APIError> {
+    pub async fn list_rooms(&self) -> Result<Vec<Room>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -296,25 +294,25 @@ impl Zoom {
             Some(vec![("page_size", "100".to_string())]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
 
         // Try to deserialize the response.
-        let r: APIResponse = resp.json().unwrap();
+        let r: APIResponse = resp.json().await.unwrap();
 
         Ok(r.rooms.unwrap())
     }
 
     /// Update a room.
-    pub fn update_room(&self, room: Room) -> Result<(), APIError> {
+    pub async fn update_room(&self, room: Room) -> Result<(), APIError> {
         let id = room.clone().id.unwrap();
 
         // Build the request.
@@ -325,11 +323,11 @@ impl Zoom {
             None,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::NO_CONTENT => (),
             s => {
-                let body = resp.text().unwrap();
+                let body = resp.text().await.unwrap();
 
                 if body.contains(
                     "This conference room already has a Zoom Room account",
@@ -349,28 +347,28 @@ impl Zoom {
     }
 
     /// Create a room.
-    pub fn create_room(&self, room: Room) -> Result<Room, APIError> {
+    pub async fn create_room(&self, room: Room) -> Result<Room, APIError> {
         // Build the request.
         let request =
             self.request(Method::POST, "rooms".to_string(), room, None);
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
 
         // Try to deserialize the response.
-        Ok(resp.json().unwrap())
+        Ok(resp.json().await.unwrap())
     }
 
     /// List buildings.
-    pub fn list_buildings(&self) -> Result<Vec<Building>, APIError> {
+    pub async fn list_buildings(&self) -> Result<Vec<Building>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -382,25 +380,25 @@ impl Zoom {
             ]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
 
         // Try to deserialize the response.
-        let r: APIResponse = resp.json().unwrap();
+        let r: APIResponse = resp.json().await.unwrap();
 
         Ok(r.locations.unwrap())
     }
 
     /// Create a building.
-    pub fn create_building(
+    pub async fn create_building(
         &self,
         mut building: Building,
     ) -> Result<Building, APIError> {
@@ -416,23 +414,23 @@ impl Zoom {
             None,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
 
         // Try to deserialize the response.
-        Ok(resp.json().unwrap())
+        Ok(resp.json().await.unwrap())
     }
 
     /// Update a building.
-    pub fn update_building(
+    pub async fn update_building(
         &self,
         mut building: Building,
     ) -> Result<(), APIError> {
@@ -450,13 +448,13 @@ impl Zoom {
             None,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::NO_CONTENT => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
@@ -467,7 +465,7 @@ impl Zoom {
     /// List cloud recordings available on an account.
     /// From: https://marketplace.zoom.us/docs/api-reference/zoom-api/cloud-recording/getaccountcloudrecording
     /// This assumes the caller is an admin.
-    pub fn list_recordings_as_admin(&self) -> Result<Vec<Meeting>, APIError> {
+    pub async fn list_recordings_as_admin(&self) -> Result<Vec<Meeting>, APIError> {
         let now = Utc::now();
         let weeks = Duration::weeks(3);
 
@@ -483,25 +481,25 @@ impl Zoom {
             ]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
 
         // Try to deserialize the response.
-        let r: APIResponse = resp.json().unwrap();
+        let r: APIResponse = resp.json().await.unwrap();
 
         Ok(r.meetings.unwrap())
     }
 
     /// Download a recording to a file.
-    pub fn download_recording_to_file(
+    pub async fn download_recording_to_file(
         &self,
         download_url: String,
         file: PathBuf,
@@ -510,14 +508,14 @@ impl Zoom {
         // TODO: add this back in if Zoom add auth to recordings... WOW.
         // let request = self.request(Method::GET, download_url, {}, None);
 
-        // let resp = self.client.execute(request).unwrap();
-        let resp = get(&download_url).unwrap();
+        // let resp = self.client.execute(request).await.unwrap();
+        let resp = get(&download_url).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
@@ -527,12 +525,12 @@ impl Zoom {
 
         // Write to the file.
         let mut f = fs::File::create(file).unwrap();
-        f.write_all(resp.text().unwrap().as_bytes()).unwrap();
+        f.write_all(resp.text().await.unwrap().as_bytes()).unwrap();
         Ok(())
     }
 
     /// Delete all the recordings for a meeting.
-    pub fn delete_meeting_recordings(
+    pub async fn delete_meeting_recordings(
         &self,
         meeting_id: i64,
     ) -> Result<(), APIError> {
@@ -544,13 +542,13 @@ impl Zoom {
             None,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::NO_CONTENT => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };

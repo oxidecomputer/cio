@@ -4,18 +4,19 @@
  * For more information, the Google Sheets v4 API is documented at [developers.google.com/sheets/api/reference/rest](https://developers.google.com/sheets/api/reference/rest).
  */
 use std::rc::Rc;
+use std::error;
+use std::fmt;
 
-use reqwest::blocking::{Client, Request};
-use reqwest::{header, Method, StatusCode, Url};
+use reqwest::{Client, Request, header, Method, StatusCode, Url};
 use serde::{Deserialize, Serialize};
-use yup_oauth2::Token;
+use yup_oauth2::AccessToken;
 
 /// Endpoint for the Google Sheets API.
 const ENDPOINT: &str = "https://sheets.googleapis.com/v4/";
 
 /// Entrypoint for interacting with the Google Sheets API.
 pub struct Sheets {
-    token: Token,
+    token: AccessToken,
 
     client: Rc<Client>,
 }
@@ -24,7 +25,7 @@ impl Sheets {
     /// Create a new Sheets client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Secret your requests will work.
-    pub fn new(token: Token) -> Self {
+    pub fn new(token: AccessToken) -> Self {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
@@ -36,7 +37,7 @@ impl Sheets {
     }
 
     /// Get the currently set authorization token.
-    pub fn get_token(&self) -> &Token {
+    pub fn get_token(&self) -> &AccessToken {
         &self.token
     }
 
@@ -54,11 +55,11 @@ impl Sheets {
         let url = base.join(&path).unwrap();
 
         // Check if the token is expired and panic.
-        if self.token.expired() {
+        if self.token.is_expired() {
             panic!("token is expired");
         }
 
-        let bt = format!("Bearer {}", self.token.access_token);
+        let bt = format!("Bearer {}", self.token.as_str());
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -88,7 +89,7 @@ impl Sheets {
     }
 
     /// Get values.
-    pub fn get_values(&self, sheet_id: &str, range: String) -> ValueRange {
+    pub async fn get_values(&self, sheet_id: &str, range: String) -> Result<ValueRange, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -101,27 +102,28 @@ impl Sheets {
             ]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
         };
 
         // Try to deserialize the response.
-        resp.json().unwrap()
+        Ok(resp.json().await.unwrap())
     }
 
     /// Update values.
-    pub fn update_values(
+    pub async fn update_values(
         &self,
         sheet_id: &str,
         range: &str,
         value: String,
-    ) -> UpdateValuesResponse {
+    ) -> Result<UpdateValuesResponse, APIError> {
         // Build the request.
         let request = self.request(
             Method::PUT,
@@ -145,18 +147,55 @@ impl Sheets {
             ]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
         };
 
         // Try to deserialize the response.
-        resp.json().unwrap()
+        Ok(resp.json().await.unwrap())
+    }
+}
+
+/// Error type returned by our library.
+pub struct APIError {
+    pub status_code: StatusCode,
+    pub body: String,
+}
+
+impl fmt::Display for APIError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
+    }
+}
+
+impl fmt::Debug for APIError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
+    }
+}
+
+// This is important for other errors to wrap this one.
+impl error::Error for APIError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        // Generic error, underlying cause isn't tracked.
+        None
     }
 }
 

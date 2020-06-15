@@ -24,21 +24,21 @@ pub static ZOOM_PASSCODE: &str = "6274";
  * - Create or update Zoom rooms
  * - Download any Zoom recordings and automatically upload them to Google drive.
  */
-pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
+pub async fn cmd_zoom_run(cli_matches: &ArgMatches<'_>) {
     let domain = value_t!(cli_matches, "domain", String).unwrap();
 
     // Initialize the Zoom client.
     let zoom = Zoom::new_from_env();
 
     // Get the GSuite token.
-    let token = get_gsuite_token();
+    let token = get_gsuite_token().await;
 
     // Get the Google Drive client.
     let drive = GoogleDrive::new(token);
 
     // Get the current zoom users.
     info!("[zoom] getting current users...");
-    let zu = zoom.list_users().unwrap();
+    let zu = zoom.list_users().await.unwrap();
     let mut zoom_users: BTreeMap<String, ZoomUser> = BTreeMap::new();
     for z in zu {
         zoom_users.insert(z.email.to_string(), z);
@@ -46,7 +46,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
 
     // Get the current zoom rooms.
     info!("[zoom] getting current rooms...");
-    let zr = zoom.list_rooms().unwrap();
+    let zr = zoom.list_rooms().await.unwrap();
     let mut zoom_rooms: BTreeMap<String, Room> = BTreeMap::new();
     for z in zr {
         zoom_rooms.insert(z.name.replace(" ", "").to_string(), z);
@@ -54,7 +54,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
 
     // Get the current zoom buildings.
     info!("[zoom] getting current buildings...");
-    let zb = zoom.list_buildings().unwrap();
+    let zb = zoom.list_buildings().await.unwrap();
     let mut zoom_buildings: BTreeMap<String, ZoomBuilding> = BTreeMap::new();
     for z in zb {
         zoom_buildings.insert(z.name.replace(" ", "").to_string(), z);
@@ -76,7 +76,8 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
                     .clone()
                     .update(building.clone(), ZOOM_PASSCODE.to_string());
 
-                zoom_building = zoom.create_building(zoom_building).unwrap();
+                zoom_building =
+                    zoom.create_building(zoom_building).await.unwrap();
 
                 info!("[zoom] created building: {}", id);
             }
@@ -87,7 +88,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
             .clone()
             .update(building.clone(), ZOOM_PASSCODE.to_string());
 
-        zoom.update_building(zoom_building).unwrap();
+        zoom.update_building(zoom_building).await.unwrap();
 
         info!("[zoom] updated building: {}", id);
     }
@@ -127,7 +128,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
                     location_id.to_string(),
                 );
 
-                zoom_room = zoom.create_room(zoom_room).unwrap();
+                zoom_room = zoom.create_room(zoom_room).await.unwrap();
 
                 info!("[zoom] created room: {}", id);
             }
@@ -140,7 +141,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
             location_id.to_string(),
         );
 
-        zoom.update_room(zoom_room).unwrap();
+        zoom.update_room(zoom_room).await.unwrap();
 
         info!("[zoom] updated room: {}", id);
     }
@@ -169,6 +170,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
                     user.last_name.to_string(),
                     email.to_string(),
                 )
+                .await
                 .unwrap();
 
                 info!("[zoom]: created user for {}", email);
@@ -191,7 +193,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
         }
 
         // Get the user to check their vanity URL.
-        let current_zoom_user = zoom.get_user(email.to_string()).unwrap();
+        let current_zoom_user = zoom.get_user(email.to_string()).await.unwrap();
         match current_zoom_user.vanity_url {
             None => (),
             Some(val) => {
@@ -222,6 +224,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
             true,
             vanity.to_string(),
         )
+        .await
         .unwrap();
 
         info!(
@@ -232,7 +235,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
 
     // Get all the recordings for the Zoom account to move them to Google Drive
     // to be sorted.
-    let meetings = zoom.list_recordings_as_admin().unwrap();
+    let meetings = zoom.list_recordings_as_admin().await.unwrap();
     for meeting in meetings {
         // Get the date of the meeting.
         let date = DateTime::parse_from_rfc3339(&meeting.start_time).unwrap();
@@ -252,12 +255,14 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
         // Get the path to the shared drive so we can upload to it.
         let d = drive
             .get_drive_by_name("Video Call Recordings".to_string())
+            .await
             .unwrap();
         let drive_id = d.id.unwrap();
 
         // Get the correct parent folder for the uploads as the top-level parent.
         let folders = drive
             .get_file_by_name(&drive_id, "Zoom Dumps to be Sorted")
+            .await
             .unwrap();
 
         if folders.is_empty() {
@@ -275,6 +280,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
                 folders[0].id.as_ref().unwrap(),
                 &drive_folder_name,
             )
+            .await
             .unwrap();
 
         // Download the recording files.
@@ -298,6 +304,7 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
                 recording.download_url,
                 download_path.clone(),
             )
+            .await
             .unwrap();
 
             // Get the mime type.
@@ -312,11 +319,12 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
             );
             drive
                 .upload_file(&drive_id, download_path, &parent_id, &mime_type)
+                .await
                 .unwrap();
         }
 
         // Delete the recording in Zoom so that we do not upload it again.
-        zoom.delete_meeting_recordings(meeting.id).unwrap();
+        zoom.delete_meeting_recordings(meeting.id).await.unwrap();
         info!(
             "[zoom] deleted meeting records in Zoom since they are now in Google drive at {}",
             drive_folder_name
@@ -329,11 +337,12 @@ pub fn cmd_zoom_run(cli_matches: &ArgMatches) {
         email_send_uploaded_zoom_dump(
             domain.to_string(),
             drive_url.to_string(),
-        );
+        )
+        .await;
     }
 }
 
-fn email_send_uploaded_zoom_dump(domain: String, drive_url: String) {
+async fn email_send_uploaded_zoom_dump(domain: String, drive_url: String) {
     let sendgrid_client = SendGrid::new_from_env();
 
     // Send the message.
@@ -344,5 +353,5 @@ fn email_send_uploaded_zoom_dump(domain: String, drive_url: String) {
         vec![format!("drive@{}", domain)],
         vec![],
         format!("drive@{}", domain),
-    );
+    ).await;
 }

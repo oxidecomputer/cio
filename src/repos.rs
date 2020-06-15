@@ -9,7 +9,6 @@ use hubcaps::repositories::{
 };
 use hubcaps::teams::{Permission, Team};
 use log::{info, warn};
-use tokio::runtime::Runtime;
 
 use crate::utils::{authenticate_github, read_config_from_files};
 
@@ -23,25 +22,24 @@ use crate::utils::{authenticate_github, read_config_from_files};
  * - Turns off the wiki.
  * - Adds protection to the default branch to disallow force pushes.
  */
-pub fn cmd_repos_run(cli_matches: &ArgMatches) {
+pub async fn cmd_repos_run(cli_matches: &ArgMatches<'_>) {
     // Get the config.
     let config = read_config_from_files(cli_matches);
 
-    // Initialize Github and the runtime.
+    // Initialize Github.
     let github = authenticate_github();
     let github_org = env::var("GITHUB_ORG").unwrap();
-    let mut runtime = Runtime::new().unwrap();
 
     // Get the github repos for the organization.
-    let repos = runtime
-        .block_on(
-            github.org_repos(github_org.to_string()).list(
-                &OrganizationRepoListOptions::builder()
-                    .repo_type(OrgRepoType::All)
-                    .per_page(100)
-                    .build(),
-            ),
+    let repos = github
+        .org_repos(github_org.to_string())
+        .list(
+            &OrganizationRepoListOptions::builder()
+                .repo_type(OrgRepoType::All)
+                .per_page(100)
+                .build(),
         )
+        .await
         .unwrap();
 
     // Set the array of default teams to add to the repo.
@@ -50,8 +48,11 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
     let mut default_team_ids: BTreeMap<u64, String> = Default::default();
 
     // Get the ids for the teams.
-    let teams = runtime
-        .block_on(github.org(github_org.to_string()).teams().list())
+    let teams = github
+        .org(github_org.to_string())
+        .teams()
+        .list()
+        .await
         .unwrap();
     // Add the team to the ids if it is a match.
     for team in teams {
@@ -71,33 +72,35 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
         let repo = github.repo(github_org.to_string(), r.name.to_string());
 
         // Update the repository settings.
-        runtime
-            .block_on(repo.edit(&RepoEditOptions {
-                name: r.name.to_string(),
-                description: r.description,
-                homepage: r.homepage,
-                private: Some(r.private),
-                has_issues: Some(r.has_issues),
-                has_projects: None,
-                has_wiki: Some(false),
-                default_branch: Some(r.default_branch.to_string()),
-                allow_squash_merge: Some(true),
-                allow_merge_commit: Some(false),
-                allow_rebase_merge: Some(true),
-            }))
-            .unwrap();
+        repo.edit(&RepoEditOptions {
+            name: r.name.to_string(),
+            description: r.description,
+            homepage: r.homepage,
+            private: Some(r.private),
+            has_issues: Some(r.has_issues),
+            has_projects: None,
+            has_wiki: Some(false),
+            default_branch: Some(r.default_branch.to_string()),
+            allow_squash_merge: Some(true),
+            allow_merge_commit: Some(false),
+            allow_rebase_merge: Some(true),
+        })
+        .await
+        .unwrap();
 
         // Get the branch protection for the repo.
-        let default_branch = runtime
-            .block_on(repo.branches().get(r.default_branch.to_string()))
+        let default_branch = repo
+            .branches()
+            .get(r.default_branch.to_string())
+            .await
             .unwrap();
 
         // Add branch protection to disallow force pushing to the default branch.
         // Only do this if it is not already protected.
         let is_protected = default_branch.protected.unwrap_or(false);
         if !is_protected {
-            runtime
-                .block_on(repo.branches().protection(
+            repo.branches()
+                .protection(
                     r.default_branch.to_string(),
                     &Protection {
                         required_status_checks: None,
@@ -105,12 +108,13 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
                         required_pull_request_reviews: None,
                         restrictions: None,
                     },
-                ))
+                )
+                .await
                 .unwrap();
         }
 
         // Get the current labels for the repo.
-        let ls = runtime.block_on(repo.labels().list()).unwrap();
+        let ls = repo.labels().list().await.unwrap();
         // Create the BTreeMap of labelss.
         let mut labels: BTreeMap<String, Label> = Default::default();
         for l in ls {
@@ -133,14 +137,18 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
             }
 
             // Try to update the label, otherwise create the label.
-            match runtime.block_on(repo.labels().update(
-                &label.name,
-                &LabelOptions {
-                    description: label.description.to_string(),
-                    color: label.color.to_string(),
-                    name: label.name.to_string(),
-                },
-            )) {
+            match repo
+                .labels()
+                .update(
+                    &label.name,
+                    &LabelOptions {
+                        description: label.description.to_string(),
+                        color: label.color.to_string(),
+                        name: label.name.to_string(),
+                    },
+                )
+                .await
+            {
                 // Continue early since we do not need to create a label now.
                 Ok(_) => continue,
                 Err(e) => {
@@ -157,16 +165,16 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
                 }
             }
 
-            match runtime.block_on(
-                github
-                    .repo(github_org.to_string(), r.name.to_string())
-                    .labels()
-                    .create(&LabelOptions {
-                        name: label.name.to_string(),
-                        description: label.description.to_string(),
-                        color: label.color.to_string(),
-                    }),
-            ) {
+            match github
+                .repo(github_org.to_string(), r.name.to_string())
+                .labels()
+                .create(&LabelOptions {
+                    name: label.name.to_string(),
+                    description: label.description.to_string(),
+                    color: label.color.to_string(),
+                })
+                .await
+            {
                 Ok(_) => (),
                 Err(e) => warn!(
                     "creating label {} in repo {} failed: {}",
@@ -184,13 +192,13 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
             );
 
             // Delete the label.
-            runtime.block_on(repo.labels().delete(&name)).unwrap();
+            repo.labels().delete(&name).await.unwrap();
         }
 
         info!("updated labels for repo {}", r.name);
 
         // Get this repository's teams.
-        let ts = runtime.block_on(repo.teams().list()).unwrap();
+        let ts = repo.teams().list().await.unwrap();
         // Create the BTreeMap of labelss.
         let mut teams: BTreeMap<u64, Team> = Default::default();
         for t in ts {
@@ -214,17 +222,11 @@ pub fn cmd_repos_run(cli_matches: &ArgMatches) {
                 }
             }
 
-            runtime
-                .block_on(
-                    github
-                        .org(github_org.to_string())
-                        .teams()
-                        .add_repo_permission(
-                            *team_id,
-                            r.name.to_string(),
-                            perms,
-                        ),
-                )
+            github
+                .org(github_org.to_string())
+                .teams()
+                .add_repo_permission(*team_id, r.name.to_string(), perms)
+                .await
                 .unwrap();
 
             info!(

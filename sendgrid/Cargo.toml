@@ -8,5 +8,5 @@ edition = "2018"
 chrono = "0.4"
 data-encoding = "2"
 gsuite = { path = "../gsuite" }
-reqwest = { version = "0.10", features = ["blocking", "json"] }
+reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }

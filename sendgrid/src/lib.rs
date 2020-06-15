@@ -8,8 +8,7 @@ use std::env;
 use std::rc::Rc;
 
 use data_encoding::BASE64;
-use reqwest::blocking::{Client, Request};
-use reqwest::{header, Method, StatusCode, Url};
+use reqwest::{header, Method, StatusCode, Url, Client, Request};
 use serde::Serialize;
 
 /// Endpoint for the Sendgrid API.
@@ -99,12 +98,12 @@ impl SendGrid {
     }
 
     /// Create a sendgrid message struct and send it.
-    pub fn send_raw_mail(&self, message: Message) {
+    pub async fn send_raw_mail(&self, message: Message) {
         // Build the request.
         let request =
             self.request(Method::POST, "mail/send".to_string(), message, None);
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::ACCEPTED => (),
             s => panic!("received response status: {:?}", s),
@@ -114,7 +113,7 @@ impl SendGrid {
     /// Send an email.
     ///
     /// This is a nicer experience than using `send_raw_mail`.
-    pub fn send_mail(
+    pub async fn send_mail(
         &self,
         subject: String,
         message: String,
@@ -147,7 +146,7 @@ impl SendGrid {
             .add_personalization(p);
 
         // Send the message.
-        self.send_raw_mail(message);
+        self.send_raw_mail(message).await;
     }
 }
 

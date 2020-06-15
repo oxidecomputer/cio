@@ -4,7 +4,6 @@ use chrono::naive::NaiveDate;
 use clap::{value_t, ArgMatches};
 use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use log::info;
-use tokio::runtime::Runtime;
 
 use crate::core::{Applicant, SheetColumns};
 use crate::utils::{authenticate_github, get_gsuite_token};
@@ -46,7 +45,7 @@ use sheets::Sheets;
  *  create an issue in the configs repository for tracking their
  *  on-boarding.
  */
-pub fn cmd_applications_run(cli_matches: &ArgMatches) {
+pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
     let sheets: Vec<String>;
     match cli_matches.values_of("sheet") {
         None => panic!("no Google sheets IDs specified"),
@@ -62,42 +61,40 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
     // Get the domain.
     let domain = value_t!(cli_matches, "domain", String).unwrap();
 
-    // Initialize Github and the runtime.
+    // Initialize Github.
     let github = authenticate_github();
     let github_org = env::var("GITHUB_ORG").unwrap();
-    let mut runtime = Runtime::new().unwrap();
 
     // Get all the hiring issues on the meta repository.
-    let meta_issues = runtime
-        .block_on(
-            github.repo(github_org.to_string(), "meta").issues().list(
-                &IssueListOptions::builder()
-                    .per_page(100)
-                    .state(State::All)
-                    .labels(vec!["hiring"])
-                    .build(),
-            ),
+    let meta_issues = github
+        .repo(github_org.to_string(), "meta")
+        .issues()
+        .list(
+            &IssueListOptions::builder()
+                .per_page(100)
+                .state(State::All)
+                .labels(vec!["hiring"])
+                .build(),
         )
+        .await
         .unwrap();
 
     // Get all the hiring issues on the configs repository.
-    let configs_issues = runtime
-        .block_on(
-            github
-                .repo(github_org.to_string(), "configs")
-                .issues()
-                .list(
-                    &IssueListOptions::builder()
-                        .per_page(100)
-                        .state(State::All)
-                        .labels(vec!["hiring"])
-                        .build(),
-                ),
+    let configs_issues = github
+        .repo(github_org.to_string(), "configs")
+        .issues()
+        .list(
+            &IssueListOptions::builder()
+                .per_page(100)
+                .state(State::All)
+                .labels(vec!["hiring"])
+                .build(),
         )
+        .await
         .unwrap();
 
     // Get the GSuite token.
-    let token = get_gsuite_token();
+    let token = get_gsuite_token().await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token);
@@ -107,7 +104,9 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
     for sheet_id in sheets {
         // Get the values in the sheet.
         let sheet_values = sheets_client
-            .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string());
+            .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string())
+            .await
+            .unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
@@ -221,14 +220,16 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                     &sendgrid_client,
                     a.clone().email,
                     domain.to_string(),
-                );
+                )
+                .await;
 
                 // Send us an email notification for the application.
                 email_send_new_applicant_notification(
                     &sendgrid_client,
                     a.clone(),
                     domain.to_string(),
-                );
+                )
+                .await;
 
                 // Mark the column as true not false.
                 let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
@@ -241,11 +242,10 @@ pub fn cmd_applications_run(cli_matches: &ArgMatches) {
                     i + 1
                 );
 
-                sheets_client.update_values(
-                    &sheet_id,
-                    &rng,
-                    "TRUE".to_string(),
-                );
+                sheets_client
+                    .update_values(&sheet_id, &rng, "TRUE".to_string())
+                    .await
+                    .unwrap();
 
                 info!(
                     "[sendgrid] sent email to {} that we received their application",
@@ -297,19 +297,17 @@ cc @jessfraz @sdtuck @bcantrill",
 		a.materials);
 
                 // Create the issue.
-                runtime
-                    .block_on(
-                        github
-                            .repo(github_org.to_string(), "meta")
-                            .issues()
-                            .create(&IssueOptions {
-                                title,
-                                body: Some(body),
-                                assignee: Some("jessfraz".to_string()),
-                                labels,
-                                milestone: None,
-                            }),
-                    )
+                github
+                    .repo(github_org.to_string(), "meta")
+                    .issues()
+                    .create(&IssueOptions {
+                        title,
+                        body: Some(body),
+                        assignee: Some("jessfraz".to_string()),
+                        labels,
+                        milestone: None,
+                    })
+                    .await
                     .unwrap();
 
                 info!("[github]: created hiring issue for {}", a.email);
@@ -346,19 +344,17 @@ cc @jessfraz @sdtuck @bcantrill",
                 );
 
                 // Create the issue.
-                runtime
-                    .block_on(
-                        github
-                            .repo(github_org.to_string(), "configs")
-                            .issues()
-                            .create(&IssueOptions {
-                                title,
-                                body: Some(body),
-                                assignee: Some("jessfraz".to_string()),
-                                labels,
-                                milestone: None,
-                            }),
-                    )
+                github
+                    .repo(github_org.to_string(), "configs")
+                    .issues()
+                    .create(&IssueOptions {
+                        title,
+                        body: Some(body),
+                        assignee: Some("jessfraz".to_string()),
+                        labels,
+                        milestone: None,
+                    })
+                    .await
                     .unwrap();
 
                 info!("[github]: created on-boarding issue for {}", a.email);
@@ -374,7 +370,7 @@ fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> bool {
     issues.iter().any(|i| i.title.contains(search))
 }
 
-fn email_send_received_application(
+async fn email_send_received_application(
     sendgrid: &SendGrid,
     email: String,
     domain: String,
@@ -392,10 +388,10 @@ Sincerely,
         vec![format!("careers@{}",domain)],
         vec![],
     format!("careers@{}", domain),
-    );
+    ).await;
 }
 
-fn email_send_new_applicant_notification(
+async fn email_send_new_applicant_notification(
     sendgrid: &SendGrid,
     applicant: Applicant,
     domain: String,
@@ -404,14 +400,16 @@ fn email_send_new_applicant_notification(
     let message = applicant_email(applicant.clone());
 
     // Send the message.
-    sendgrid.send_mail(
-        format!("New Application: {}", applicant.name),
-        message,
-        vec![format!("all@{}", domain)],
-        vec![],
-        vec![],
-        format!("applications@{}", domain),
-    );
+    sendgrid
+        .send_mail(
+            format!("New Application: {}", applicant.name),
+            message,
+            vec![format!("all@{}", domain)],
+            vec![],
+            vec![],
+            format!("applications@{}", domain),
+        )
+        .await;
 }
 
 fn applicant_email(applicant: Applicant) -> String {

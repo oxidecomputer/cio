@@ -7,6 +7,6 @@ edition = "2018"
 [dependencies]
 cio = { path = "../cio" }
 rand = "0.7"
-reqwest = { version = "0.10", features = ["blocking", "json"] }
+reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
-yup-oauth2 = "3.1"
+yup-oauth2 = "4.1"

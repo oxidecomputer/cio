@@ -8,8 +8,7 @@ use std::error;
 use std::fmt;
 use std::rc::Rc;
 
-use reqwest::blocking::{Client, Request};
-use reqwest::{header, Method, StatusCode, Url};
+use reqwest::{header, Method, StatusCode, Url, Client, Request};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
@@ -106,7 +105,7 @@ impl Airtable {
     }
 
     /// List records in a table for a particular view.
-    pub fn list_records(
+    pub async fn list_records(
         &self,
         table: &str,
         view: &str,
@@ -122,19 +121,19 @@ impl Airtable {
             ]),
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
 
         // Try to deserialize the response.
-        let r: APICall = resp.json().unwrap();
+        let r: APICall = resp.json().await.unwrap();
 
         Ok(r.records)
     }
@@ -143,7 +142,7 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk create 10
     /// records at a time.
-    pub fn create_records(
+    pub async fn create_records(
         &self,
         table: &str,
         records: Vec<Record>,
@@ -160,19 +159,19 @@ impl Airtable {
             None,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
 
         // Try to deserialize the response.
-        let r: APICall = resp.json().unwrap();
+        let r: APICall = resp.json().await.unwrap();
 
         Ok(r.records)
     }
@@ -181,7 +180,7 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk update 10
     /// records at a time.
-    pub fn update_records(
+    pub async fn update_records(
         &self,
         table: &str,
         records: Vec<Record>,
@@ -198,19 +197,19 @@ impl Airtable {
             None,
         );
 
-        let resp = self.client.execute(request).unwrap();
+        let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
-                    body: resp.text().unwrap(),
+                    body: resp.text().await.unwrap(),
                 })
             }
         };
 
         // Try to deserialize the response.
-        let r: APICall = resp.json().unwrap();
+        let r: APICall = resp.json().await.unwrap();
 
         Ok(r.records)
     }

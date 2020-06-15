@@ -7,7 +7,6 @@ use handlebars::{
 };
 use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions};
 use log::warn;
-use tokio::runtime::Runtime;
 
 use crate::utils::{
     authenticate_github, get_rfds_from_repo, read_config_from_files,
@@ -24,27 +23,26 @@ use crate::utils::{
  * - {repo}.git.oxide.computer
  * - {num}.rfd.oxide.computer
  */
-pub fn cmd_shorturls_run(cli_matches: &ArgMatches) {
+pub async fn cmd_shorturls_run(cli_matches: &ArgMatches<'_>) {
     // Initialize the array of links.
     let mut links: Vec<LinkConfig> = Default::default();
 
-    // Initialize Github and the runtime.
+    // Initialize Github.
     let github = authenticate_github();
     let github_org = env::var("GITHUB_ORG").unwrap();
-    let mut runtime = Runtime::new().unwrap();
 
     /* REPO LINKS GENERATION */
     let mut subdomain = "git";
     // Get the github repos for the organization.
-    let repos = runtime
-        .block_on(
-            github.org_repos(github_org.to_string()).list(
-                &OrganizationRepoListOptions::builder()
-                    .repo_type(OrgRepoType::All)
-                    .per_page(100)
-                    .build(),
-            ),
+    let repos = github
+        .org_repos(github_org.to_string())
+        .list(
+            &OrganizationRepoListOptions::builder()
+                .repo_type(OrgRepoType::All)
+                .per_page(100)
+                .build(),
         )
+        .await
         .unwrap();
 
     // Create the array of links.
@@ -75,7 +73,7 @@ pub fn cmd_shorturls_run(cli_matches: &ArgMatches) {
     links = Default::default();
 
     // Get the rfds from our the repo.
-    let rfds = get_rfds_from_repo(github);
+    let rfds = get_rfds_from_repo(github).await;
     for (_, rfd) in rfds {
         let link = LinkConfig {
             name: Some(rfd.number.to_string()),

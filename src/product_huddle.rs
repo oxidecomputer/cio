@@ -5,8 +5,6 @@ use chrono::naive::NaiveTime;
 use chrono::Utc;
 use handlebars::Handlebars;
 use log::info;
-use serde_json;
-use tokio::runtime::Runtime;
 
 use crate::core::{DiscussionFields, MeetingFields, ProductEmailData};
 use crate::utils::authenticate_github;
@@ -25,12 +23,11 @@ pub static MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";
  * be covered from the discussion topics as well as reminding everyone to
  * fill out the form and add their topics.
  */
-pub fn cmd_product_huddle_run() {
+pub async fn cmd_product_huddle_run() {
     // Initialize the Airtable client.
     let airtable = Airtable::new_from_env();
 
-    // Initialize Github and the runtime.
-    let mut runtime = Runtime::new().unwrap();
+    // Initialize Github.
     let github_org = env::var("GITHUB_ORG").unwrap();
     let github = authenticate_github();
     // Get the reports repo client.
@@ -39,6 +36,7 @@ pub fn cmd_product_huddle_run() {
     // Get the meeting schedule table from airtable.
     let records_ms = airtable
         .list_records(MEETING_SCHEDULE_TABLE, "All Meetings")
+        .await
         .unwrap();
 
     // Get the time now.
@@ -101,8 +99,7 @@ pub fn cmd_product_huddle_run() {
                 );
 
                 // Try to get the notes from this meeting from the reports repo.
-                match runtime.block_on(reports_repo.content().file(&notes_path))
-                {
+                match reports_repo.content().file(&notes_path).await {
                     Ok(file) => {
                         let decoded = from_utf8(&file.content).unwrap();
                         // Compare the notes and see if we need to update them.
@@ -112,12 +109,11 @@ pub fn cmd_product_huddle_run() {
                         }
 
                         // We need to update the file. Ignore failure.
-                        runtime
-                            .block_on(reports_repo.content().update(
+                        reports_repo.content().update(
                                     &notes_path,
                                     &notes,
                                     "Updating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
-                                    &file.sha))
+                                    &file.sha).await
                             .ok();
 
                         info!(
@@ -128,13 +124,11 @@ pub fn cmd_product_huddle_run() {
                     Err(_) => {
                         // Create the notes file in the repo. Ignore
                         // failure.
-                        runtime
-                            .block_on(reports_repo.content().create(
+                        reports_repo.content().create(
                                     &notes_path,
                                     &notes,
                                     "Creating product huddle meeting notes\n\nThis is done automatically from the product-huddle command in the configs repo.",
-                            ))
-                            .ok();
+                            ).await.ok();
 
                         info!(
                             "Created the notes file in the reports repo at {}",
@@ -149,6 +143,7 @@ pub fn cmd_product_huddle_run() {
     // Get the current discussion list from airtable.
     let records_dt = airtable
         .list_records(DISCUSSION_TOPICS_TABLE, "Proposed Topics")
+        .await
         .unwrap();
 
     // Iterate over the airtable records and update the RFD where we have one.
@@ -179,14 +174,16 @@ pub fn cmd_product_huddle_run() {
         let sendgrid = SendGrid::new_from_env();
         // Send the email.
         // TODO: pass in the domain like the other tools.
-        sendgrid.send_mail(
-            "Reminder Product Huddle Tomorrow".to_string(),
-            template.to_string(),
-            vec!["all@oxidecomputer.com".to_string()],
-            vec![],
-            vec![],
-            "product@oxidecomputer.com".to_string(),
-        );
+        sendgrid
+            .send_mail(
+                "Reminder Product Huddle Tomorrow".to_string(),
+                template.to_string(),
+                vec!["all@oxidecomputer.com".to_string()],
+                vec![],
+                vec![],
+                "product@oxidecomputer.com".to_string(),
+            )
+            .await;
 
         info!("successfully sent the email!");
     }

@@ -10,10 +10,9 @@ use csv::ReaderBuilder;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::{Credentials, Github};
 use log::info;
-use reqwest::blocking::Client;
-use tokio::runtime::Runtime;
+use reqwest::Client;
 use yup_oauth2::{
-    service_account_key_from_file, GetToken, ServiceAccountAccess, Token,
+    read_service_account_key, AccessToken, ServiceAccountAuthenticator,
 };
 
 use crate::core::RFD;
@@ -60,30 +59,32 @@ pub fn read_config_from_files(cli_matches: &ArgMatches) -> Config {
 }
 
 /// Get a GSuite token.
-pub fn get_gsuite_token() -> Token {
+pub async fn get_gsuite_token() -> AccessToken {
     // Get the GSuite credentials file.
     let gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap();
     let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
-    let gsuite_secret =
-        service_account_key_from_file(gsuite_credential_file).unwrap();
-    let mut auth = ServiceAccountAccess::new(gsuite_secret)
-        .sub(gsuite_subject)
-        .build();
+    let gsuite_secret = read_service_account_key(gsuite_credential_file)
+        .await
+        .expect("failed to read gsuite credential file");
+    let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
+        .subject(gsuite_subject)
+        .build()
+        .await
+        .expect("failed to create authenticator");
 
-    // Add the scopes to the secret and get the token.
-    let mut runtime = Runtime::new().unwrap();
-    let t = auth.token(vec![
+    let scopes = &vec![
         "https://www.googleapis.com/auth/admin.directory.group",
         "https://www.googleapis.com/auth/admin.directory.resource.calendar",
         "https://www.googleapis.com/auth/admin.directory.user",
         "https://www.googleapis.com/auth/apps.groups.settings",
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
-    ]);
+    ];
 
-    let token = runtime.block_on(t).unwrap();
+    // Add the scopes to the secret and get the token.
+    let token = auth.token(scopes).await.expect("failed to get token");
 
-    if token.access_token.is_empty() {
+    if token.as_str().is_empty() {
         panic!("empty token is not valid");
     }
 
@@ -109,19 +110,16 @@ pub fn authenticate_github() -> Github {
 }
 
 /// Get the RFDs from the rfd GitHub repo.
-pub fn get_rfds_from_repo(github: Github) -> BTreeMap<i32, RFD> {
+pub async fn get_rfds_from_repo(github: Github) -> BTreeMap<i32, RFD> {
     let github_org = env::var("GITHUB_ORG").unwrap();
-    let mut runtime = Runtime::new().unwrap();
 
     // Get the contents of the .helpers/rfd.csv file.
-    let rfd_csv_content = runtime
-        .block_on(
-            github
-                .repo(github_org, "rfd")
-                .content()
-                .file(".helpers/rfd.csv"),
-        )
-        .unwrap()
+    let rfd_csv_content = github
+        .repo(github_org, "rfd")
+        .content()
+        .file(".helpers/rfd.csv")
+        .await
+        .expect("failed to get rfd csv content")
         .content;
     let rfd_csv_string = from_utf8(&rfd_csv_content).unwrap();
 

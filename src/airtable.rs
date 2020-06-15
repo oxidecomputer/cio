@@ -1,5 +1,4 @@
 use log::{info, warn};
-use serde_json;
 
 use airtable::{Airtable, Record};
 
@@ -9,18 +8,19 @@ use crate::utils::{authenticate_github, get_rfds_from_repo};
 pub static RFD_TABLE: &str = "RFDs";
 
 /// Sync airtable with our RFDs in GitHub.
-pub fn cmd_airtable_run() {
+pub async fn cmd_airtable_run() {
     // Initialize the Airtable client.
     let airtable = Airtable::new_from_env();
 
-    // Initialize Github and the runtime.
+    // Initialize Github.
     let github = authenticate_github();
 
     // Get the rfds from our the repo.
-    let mut rfds = get_rfds_from_repo(github);
+    let mut rfds = get_rfds_from_repo(github).await;
 
     // Get the current RFD list from airtable.
-    let mut records = airtable.list_records(RFD_TABLE, "Grid view").unwrap();
+    let mut records =
+        airtable.list_records(RFD_TABLE, "Grid view").await.unwrap();
 
     // Iterate over the airtable records and update the RFD where we have one.
     for (i, record) in records.clone().iter().enumerate() {
@@ -55,6 +55,7 @@ pub fn cmd_airtable_run() {
         // TODO: find a way to make this more efficient by doing 10 at a time.
         airtable
             .update_records(RFD_TABLE, vec![records[i].clone()])
+            .await
             .unwrap();
 
         // Remove the rfd from our rfds BTreeMap so we all we are left with are
@@ -84,7 +85,10 @@ pub fn cmd_airtable_run() {
 
         // Send the record to airtable.
         // TODO: do this in bulk
-        airtable.create_records(RFD_TABLE, vec![record]).unwrap();
+        airtable
+            .create_records(RFD_TABLE, vec![record])
+            .await
+            .unwrap();
 
         info!("created record for RFD {}", fields.number);
     }

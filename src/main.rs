@@ -32,29 +32,27 @@ use crate::tables::cmd_tables_run;
 use crate::teams::cmd_teams_run;
 use crate::zoom::cmd_zoom_run;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Set up the logger, we can't use TermLogger in GitHub actions.
     let mut loggers: Vec<Box<dyn SharedLogger>> = vec![
         SimpleLogger::new(LevelFilter::Info, LogConfig::default()),
         SimpleLogger::new(LevelFilter::Warn, LogConfig::default()),
     ];
-    match TermLogger::new(
+    if let Some(term_logger) = TermLogger::new(
         LevelFilter::Info,
         LogConfig::default(),
         TerminalMode::Mixed,
     ) {
-        Some(term_logger) => {
-            loggers = vec![
-                term_logger,
-                TermLogger::new(
-                    LevelFilter::Warn,
-                    LogConfig::default(),
-                    TerminalMode::Mixed,
-                )
-                .unwrap(),
-            ];
-        }
-        None => (),
+        loggers = vec![
+            term_logger,
+            TermLogger::new(
+                LevelFilter::Warn,
+                LogConfig::default(),
+                TerminalMode::Mixed,
+            )
+            .unwrap(),
+        ];
     };
     let _ = CombinedLogger::init(loggers);
 
@@ -64,27 +62,27 @@ fn main() {
     let cli_matches = App::from_yaml(cli_yaml).get_matches();
 
     if cli_matches.subcommand_matches("airtable").is_some() {
-        cmd_airtable_run();
+        cmd_airtable_run().await;
     }
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("applications") {
-        cmd_applications_run(cli_matches);
+        cmd_applications_run(cli_matches).await;
     }
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("gsuite") {
-        cmd_gsuite_run(cli_matches);
+        cmd_gsuite_run(cli_matches).await;
     }
 
     if cli_matches.subcommand_matches("product-huddle").is_some() {
-        cmd_product_huddle_run();
+        cmd_product_huddle_run().await;
     }
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("repos") {
-        cmd_repos_run(cli_matches);
+        cmd_repos_run(cli_matches).await;
     }
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("shorturls") {
-        cmd_shorturls_run(cli_matches);
+        cmd_shorturls_run(cli_matches).await;
     }
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("tables") {
@@ -96,6 +94,6 @@ fn main() {
     }
 
     if let Some(cli_matches) = cli_matches.subcommand_matches("zoom") {
-        cmd_zoom_run(cli_matches);
+        cmd_zoom_run(cli_matches).await;
     }
 }
