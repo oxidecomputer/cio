@@ -1,13 +1,13 @@
+use std::error;
+use std::fmt;
 /**
  * A rust library for interacting with the Google Sheets v4 API.
  *
  * For more information, the Google Sheets v4 API is documented at [developers.google.com/sheets/api/reference/rest](https://developers.google.com/sheets/api/reference/rest).
  */
 use std::rc::Rc;
-use std::error;
-use std::fmt;
 
-use reqwest::{Client, Request, header, Method, StatusCode, Url};
+use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use yup_oauth2::AccessToken;
 
@@ -89,7 +89,11 @@ impl Sheets {
     }
 
     /// Get values.
-    pub async fn get_values(&self, sheet_id: &str, range: String) -> Result<ValueRange, APIError> {
+    pub async fn get_values(
+        &self,
+        sheet_id: &str,
+        range: String,
+    ) -> Result<ValueRange, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,

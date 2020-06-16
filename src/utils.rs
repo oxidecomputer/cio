@@ -67,22 +67,23 @@ pub async fn get_gsuite_token() -> AccessToken {
         .await
         .expect("failed to read gsuite credential file");
     let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
-        .subject(gsuite_subject)
+        .subject(gsuite_subject.to_string())
         .build()
         .await
         .expect("failed to create authenticator");
 
-    let scopes = &vec![
-        "https://www.googleapis.com/auth/admin.directory.group",
-        "https://www.googleapis.com/auth/admin.directory.resource.calendar",
-        "https://www.googleapis.com/auth/admin.directory.user",
-        "https://www.googleapis.com/auth/apps.groups.settings",
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ];
-
     // Add the scopes to the secret and get the token.
-    let token = auth.token(scopes).await.expect("failed to get token");
+    let token = auth
+        .token(&[
+            "https://www.googleapis.com/auth/admin.directory.group",
+            "https://www.googleapis.com/auth/admin.directory.resource.calendar",
+            "https://www.googleapis.com/auth/admin.directory.user",
+            "https://www.googleapis.com/auth/apps.groups.settings",
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ])
+        .await
+        .expect("failed to get token");
 
     if token.as_str().is_empty() {
         panic!("empty token is not valid");
