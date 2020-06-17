@@ -1,6 +1,6 @@
 on:
   schedule:
-    - cron: "0 8 * * *" # Once a day at 8 am.
+    - cron: "0 20 * * *" # Once a day at 8 am.
   push:
     branches:
       - master # Push events on master branch
