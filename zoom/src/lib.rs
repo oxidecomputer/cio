@@ -205,9 +205,8 @@ impl Zoom {
             Ok(user) => Ok(user),
             Err(_) => {
                 // Try this request again with Google login type.
-                return self
-                    .get_user_with_login(email.to_string(), LoginType::Google)
-                    .await;
+                self.get_user_with_login(email.to_string(), LoginType::Google)
+                    .await
             }
         }
     }
