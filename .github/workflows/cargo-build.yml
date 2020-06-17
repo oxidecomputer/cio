@@ -10,6 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+        with:
+          submodules: true
+          token: ${{ secrets.GLOBAL_GITHUB_TOKEN }}
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            components: rustfmt, clippy
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
@@ -25,8 +34,7 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: make build
-        uses: docker://rust:latest
-        with:
-          entrypoint: make
-          args: build
+      - name: Run cargo build
+        run: |
+          cargo build
+        shell: bash

@@ -21,6 +21,12 @@ jobs:
           # the terraform cloudflare action.
           # See: https://github.community/t5/GitHub-Actions/Action-does-not-trigger-another-on-push-tag-action/td-p/40692
           token: ${{ secrets.GADMIN_GITHUB_TOKEN }}
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            components: rustfmt, clippy
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:

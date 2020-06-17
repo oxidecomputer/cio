@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            components: rustfmt, clippy
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
@@ -25,8 +31,7 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: rustfmt
-        uses: docker://rust:latest
-        with:
-          entrypoint: bash
-          args: -c "rustup component add rustfmt && rustfmt --check **/*.rs"
+      - name: Run cargo fmt --check
+        run: |
+            rustfmt src/**/*.rs --check
+        shell: bash
