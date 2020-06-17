@@ -192,33 +192,28 @@ pub async fn cmd_product_huddle_run() {
 /// Email template for the product huddle reminders.
 pub static EMAIL_TEMPLATE: &str = r#"Hello All!!
 
-This is your weekly automated reminder that tomorrow is the regularly scheduled
-product huddle meeting. As usual, discussion topics are submitted through the
-Airtable form: https://product-huddle-form.corp.oxide.computer.
+This is your weekly (automated) reminder that our regularly scheduled product huddle is happening tomorrow morning at 11 AM PT. You can submit discussion topics using this form: https://product-huddle-form.corp.oxide.computer. Please submit topics before 12 PM PT today (Wednesday) so people can do any pre-reading and come prepared tomorrow.
 
-Get your discussion topics into the form before tomorrow!{{#if this.topics}} The following
-dicussion topics have already been proposed, but it is not too late to add
-something you have been nooding on as well.
+{{#if this.topics}} The following topics have already been proposed, but it is not too late to add something you have been working on or thinking about as well.
 
 # Discussion topics for {{this.date}}
-
 {{#each this.topics}}
 - Topic: {{this.Topic}}
   Submitted by: {{this.Submitter.name}}
   Priority: {{this.Priority}}
   Notes: {{this.Notes}}
-
-{{/each}}{{else}} There are no topics
-to discuss yet! If no one submits any before the meeting tomorrow, we will cancel
-the meeting. So get your topics in!!
+{{/each}}{{else}}
+There are no topics on the agenda yet! If there aren't topics on the agenda before the meeting tomorrow, we'll convene anyway to see if there are any "left field" items to talk about. But please submit topics today if you want people to come prepared!!
 {{/if}}
-Last meeting's notes are in the reports GitHub repo at:
-{{this.last_meeting_reports_link}}.
 
-As a friendly reminder, the product huddle meetings are stored in Airtable at:
-https://airtable-product-huddle.corp.oxide.computer.
+Past meeting notes are archived in GitHub:
+{{this.last_meeting_reports_link}}
 
-The product roadmap is also in Airtable at: https://airtable-roadmap.corp.oxide.computer.
+You can also view the Airtable base for agenda, notes, action items here:
+https://airtable-product-huddle.corp.oxide.computer
+
+You can also view the product roadmap in Airtable here:
+https://airtable-roadmap.corp.oxide.computer.
 
 See you soon,
 
