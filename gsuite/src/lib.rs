@@ -11,7 +11,7 @@ use std::rc::Rc;
 
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
-use reqwest::{header,get, Client, Method, Request, StatusCode, Url};
+use reqwest::{get, header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use yup_oauth2::AccessToken;
 
@@ -295,7 +295,12 @@ impl GSuite {
     }
 
     /// Update a member of a Google group.
-    pub async fn group_update_member(&self, group_id: &str, email: &str, role: &str) {
+    pub async fn group_update_member(
+        &self,
+        group_id: &str,
+        email: &str,
+        role: &str,
+    ) {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -322,7 +327,12 @@ impl GSuite {
     }
 
     /// Add a user as a member of a Google group.
-    pub async fn group_insert_member(&self, group_id: &str, email: &str, role: &str) {
+    pub async fn group_insert_member(
+        &self,
+        group_id: &str,
+        email: &str,
+        role: &str,
+    ) {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -1362,11 +1372,12 @@ impl User {
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
 async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<UserSSHKey> {
-    let body =
-        get(&format!("https://github.com/{}.keys", handle))
-            .await.unwrap()
-            .text().await
-            .unwrap();
+    let body = get(&format!("https://github.com/{}.keys", handle))
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
 
     body.lines()
         .filter_map(|key| {

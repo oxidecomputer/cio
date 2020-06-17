@@ -8,7 +8,7 @@ use std::env;
 use std::rc::Rc;
 
 use data_encoding::BASE64;
-use reqwest::{header, Method, StatusCode, Url, Client, Request};
+use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::Serialize;
 
 /// Endpoint for the Sendgrid API.

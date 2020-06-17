@@ -209,7 +209,10 @@ impl GoogleDrive {
     }
 
     /// Get a drive by it's name.
-    pub async fn get_drive_by_name(&self, name: String) -> Result<Drive, APIError> {
+    pub async fn get_drive_by_name(
+        &self,
+        name: String,
+    ) -> Result<Drive, APIError> {
         let drives = self.list_drives().await.unwrap();
 
         for drive in drives {

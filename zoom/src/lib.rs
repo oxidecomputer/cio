@@ -198,11 +198,16 @@ impl Zoom {
     /// Get a user.
     pub async fn get_user(&self, email: String) -> Result<User, APIError> {
         // By default try the Zoom login type.
-        match self.get_user_with_login(email.to_string(), LoginType::Zoom).await {
-            Ok(user)=> Ok(user),
+        match self
+            .get_user_with_login(email.to_string(), LoginType::Zoom)
+            .await
+        {
+            Ok(user) => Ok(user),
             Err(_) => {
                 // Try this request again with Google login type.
-                return self.get_user_with_login(email.to_string(), LoginType::Google).await;
+                return self
+                    .get_user_with_login(email.to_string(), LoginType::Google)
+                    .await;
             }
         }
     }
@@ -465,7 +470,9 @@ impl Zoom {
     /// List cloud recordings available on an account.
     /// From: https://marketplace.zoom.us/docs/api-reference/zoom-api/cloud-recording/getaccountcloudrecording
     /// This assumes the caller is an admin.
-    pub async fn list_recordings_as_admin(&self) -> Result<Vec<Meeting>, APIError> {
+    pub async fn list_recordings_as_admin(
+        &self,
+    ) -> Result<Vec<Meeting>, APIError> {
         let now = Utc::now();
         let weeks = Duration::weeks(3);
 

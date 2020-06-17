@@ -8,7 +8,7 @@ use std::error;
 use std::fmt;
 use std::rc::Rc;
 
-use reqwest::{header, Method, StatusCode, Url, Client, Request};
+use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
