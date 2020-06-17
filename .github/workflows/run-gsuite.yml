@@ -6,6 +6,7 @@ on:
       - "configs/**" # Only run on changes to the configs directory.
       - "src/**" # Only run on changes to the src directory.
       - ".github/workflows/run-gsuite.yml" # Run when this file changes.
+      - Cargo.toml
 name: Run gsuite
 jobs:
   runGSuite:
