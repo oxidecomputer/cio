@@ -6,6 +6,7 @@ use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use log::info;
 
 use crate::core::{Applicant, SheetColumns};
+use crate::slack::post_to_applications;
 use crate::utils::{authenticate_github, get_gsuite_token};
 
 use sendgrid::SendGrid;
@@ -229,6 +230,29 @@ pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
                     a.clone(),
                     domain.to_string(),
                 )
+                .await;
+
+                // Send a message to the applications slack channel.
+                post_to_applications(&format!(
+                    r#"## New Application Received: {}
+
+Email: {}
+Phone: {}
+Location: {}
+GitHub: {}
+Resume: {}
+Oxide Candidate Materials: {}
+
+
+                        "#,
+                    a.name,
+                    a.email,
+                    a.phone,
+                    a.location,
+                    a.github,
+                    a.resume,
+                    a.materials,
+                ))
                 .await;
 
                 // Mark the column as true not false.

@@ -9,6 +9,7 @@ pub mod gsuite;
 pub mod product_huddle;
 pub mod repos;
 pub mod shorturls;
+pub mod slack;
 pub mod tables;
 pub mod teams;
 pub mod utils;
