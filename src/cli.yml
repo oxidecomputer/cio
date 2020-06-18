@@ -45,11 +45,6 @@ subcommands:
               on-boarding.
 
       args:
-        - sheet:
-            help: Google sheet ID
-            required: true
-            use_delimiter: true
-            multiple: true
         - domain:
             help: |
               domain for the company

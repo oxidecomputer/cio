@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::env;
 
 use chrono::naive::NaiveDate;
@@ -47,17 +48,19 @@ use sheets::Sheets;
  *  on-boarding.
  */
 pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
-    let sheets: Vec<String>;
-    match cli_matches.values_of("sheet") {
-        None => panic!("no Google sheets IDs specified"),
-        Some(val) => {
-            sheets = val.map(|s| s.to_string()).collect();
-        }
-    };
-
-    if sheets.is_empty() {
-        panic!("must provide IDs of google sheets to update applications from")
-    }
+    let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
+    sheets.insert(
+        "Systems Engineering",
+        "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA",
+    );
+    sheets.insert(
+        "Product Engineering and Design",
+        "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI",
+    );
+    sheets.insert(
+        "Technical Program Management",
+        "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU",
+    );
 
     // Get the domain.
     let domain = value_t!(cli_matches, "domain", String).unwrap();
@@ -102,7 +105,7 @@ pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
-    for sheet_id in sheets {
+    for (sheet_name, sheet_id) in sheets {
         // Get the values in the sheet.
         let sheet_values = sheets_client
             .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string())
@@ -229,12 +232,13 @@ pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
                     &sendgrid_client,
                     a.clone(),
                     domain.to_string(),
+                    sheet_name,
                 )
                 .await;
 
                 // Send a message to the applications slack channel.
                 post_to_applications(&format!(
-                    r#"## New Application Received: {}
+                    r#"## New Application Received for {}: {}
 
 Email: {}
 Phone: {}
@@ -245,6 +249,7 @@ Oxide Candidate Materials: {}
 
 
                         "#,
+                    sheet_name,
                     a.name,
                     a.email,
                     a.phone,
@@ -419,9 +424,10 @@ async fn email_send_new_applicant_notification(
     sendgrid: &SendGrid,
     applicant: Applicant,
     domain: String,
+    sheet_name: &str,
 ) {
     // Create the message.
-    let message = applicant_email(applicant.clone());
+    let message = applicant_email(applicant.clone(), sheet_name);
 
     // Send the message.
     sendgrid
@@ -436,9 +442,9 @@ async fn email_send_new_applicant_notification(
         .await;
 }
 
-fn applicant_email(applicant: Applicant) -> String {
+fn applicant_email(applicant: Applicant, sheet_name: &str) -> String {
     return format!(
-                        "## Applicant Information
+                        "## Applicant Information for {}
 
 Submitted Date: {}
 Name: {}
@@ -457,6 +463,7 @@ To view the all the candidates refer to the following Google spreadsheets:
 - Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
 - Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
 ",
+sheet_name,
                         applicant.submitted_time,
                         applicant.name,
                         applicant.email,

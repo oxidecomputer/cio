@@ -25,7 +25,6 @@ pub async fn post_to_applications(text: &str) {
                 s,
                 resp.text().await.unwrap()
             );
-            return;
         }
     };
 }
