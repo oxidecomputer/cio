@@ -50,7 +50,7 @@ use sheets::Sheets;
 pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
     sheets.insert(
-        "Systems Engineering",
+        "Engineering",
         "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA",
     );
     sheets.insert(
