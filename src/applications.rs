@@ -383,12 +383,11 @@ pub async fn iterate_over_applications(
                 break;
             }
             // Parse the time.
-            let time = DateTime::parse_from_str(
-                &row[columns.timestamp],
-                "%m/%d/%Y %H:%M:%S",
-            )
-            .unwrap()
-            .with_timezone(&Utc);
+            let time_str = row[columns.timestamp].to_string() + " −08:00";
+            let time =
+                DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %z")
+                    .unwrap()
+                    .with_timezone(&Utc);
 
             // If the length of the row is greater than the status column
             // then we have a status.
