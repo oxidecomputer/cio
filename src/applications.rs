@@ -406,6 +406,17 @@ pub async fn iterate_over_applications(
                 received_application = false;
             }
 
+            let mut github = "".to_string();
+            if !row[columns.github].trim().is_empty() {
+                github = format!(
+                    "@{}",
+                    row[columns.github]
+                        .trim_start_matches("https://github.com/")
+                        .trim_start_matches('@')
+                        .trim_end_matches('/')
+                );
+            }
+
             // Build the applicant information for the row.
             let a = Applicant {
                 submitted_time: time,
@@ -413,13 +424,7 @@ pub async fn iterate_over_applications(
                 email: row[columns.email].to_string(),
                 location: row[columns.location].to_string(),
                 phone: row[columns.phone].to_string(),
-                github: format!(
-                    "@{}",
-                    row[columns.github]
-                        .trim_start_matches("https://github.com/")
-                        .trim_start_matches('@')
-                        .trim_end_matches('/')
-                ),
+                github,
                 resume: row[columns.resume].to_string(),
                 materials: row[columns.materials].to_string(),
                 status: status.to_string().to_lowercase(),
