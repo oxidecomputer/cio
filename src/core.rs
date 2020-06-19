@@ -102,6 +102,25 @@ impl Applicant {
     }
 }
 
+/// The data type for a Journal Club Meeting.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct JournalClubMeeting {
+    pub title: String,
+    pub issue: String,
+    pub papers: Vec<Paper>,
+    pub date: NaiveDate,
+    pub coordinator: String,
+    pub state: String,
+    pub recording: String,
+}
+
+/// The data type for a paper.
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct Paper {
+    pub title: String,
+    pub link: String,
+}
+
 /// The data type for an RFD.
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct RFD {
