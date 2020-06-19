@@ -249,7 +249,7 @@ pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
                 }
                 if !a.github.is_empty() {
                     msg += &format!(
-                        " | github <{}|https://github.com/{}",
+                        " | github <{}|https://github.com/{}>",
                         a.github,
                         a.github.trim_start_matches('@'),
                     );
