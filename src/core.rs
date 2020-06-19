@@ -134,7 +134,7 @@ impl JournalClubMeeting {
         }
 
         for p in self.papers.clone() {
-            msg += &format!("\n- :page_facing_up: <{}|{}>", p.link, p.title,);
+            msg += &format!("\n\t• :page_facing_up: <{}|{}>", p.link, p.title,);
         }
 
         msg
