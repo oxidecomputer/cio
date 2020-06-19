@@ -48,10 +48,10 @@ pub struct Applicant {
 
 impl Applicant {
     pub fn as_slack_msg(&self, include_time: bool) -> String {
-        let mut emoji = ":microscope:";
+        let mut emoji = ":floppy_disk:";
         match self.role.as_str() {
-            "Product Engineering and Design" => emoji = ":art:",
-            "Technical Program Manager" => emoji = ":card_index:",
+            "Product Engineering and Design" => emoji = ":iphone:",
+            "Technical Program Manager" => emoji = ":pager:",
             _ => (),
         }
 
