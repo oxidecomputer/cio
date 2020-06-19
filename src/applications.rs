@@ -347,8 +347,11 @@ pub async fn iterate_over_applications(
                     if col.to_lowercase().contains("github") {
                         columns.github = index;
                     }
-                    if col.to_lowercase().contains("portfolio") {
+                    if col.to_lowercase().contains("portfolio url") {
                         columns.portfolio = index;
+                    }
+                    if col.to_lowercase().contains("website") {
+                        columns.website = index;
                     }
                     if col.to_lowercase().contains("linkedin") {
                         columns.linkedin = index;
@@ -409,6 +412,15 @@ pub async fn iterate_over_applications(
                 } else {
                     "".to_lowercase()
                 };
+
+            // If the length of the row is greater than the website column
+            // then we have a website.
+            let website = if row.len() > columns.website && columns.website != 0
+            {
+                row[columns.website].trim().to_lowercase()
+            } else {
+                "".to_lowercase()
+            };
 
             // Check if we sent them an email that we received their application.
             let mut received_application = true;
@@ -522,6 +534,7 @@ pub async fn iterate_over_applications(
                 github,
                 linkedin,
                 portfolio,
+                website,
                 resume: row[columns.resume].to_string(),
                 materials: row[columns.materials].to_string(),
                 status,
@@ -573,22 +586,8 @@ fn do_applicant(
         ));
 
         // Form the Slack message.
-        let mut msg = format!(":card_index: new applicant for {}: {} <mailto:{}|{}>\n<{}|resume> <{}|materials>",
-                    a.role, a.name, a.email, a.email, a.resume, a.materials,
-                );
-        if !a.location.is_empty() {
-            msg += &format!("\n{}", a.location);
-        }
-        if !a.phone.is_empty() {
-            msg += &format!(" {}", a.phone);
-        }
-        if !a.github.is_empty() {
-            msg += &format!(
-                " | github <{}|https://github.com/{}>",
-                a.github,
-                a.github.trim_start_matches('@'),
-            );
-        }
+        let msg = format!("*NEW* :loudspeaker: {}", a.as_slack_msg(false));
+
         // Send a message to the applications slack channel.
         futures::executor::block_on(post_to_channel(
             HIRING_CHANNEL_POST_URL,

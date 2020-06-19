@@ -1,6 +1,7 @@
 use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use chrono_humanize::HumanTime;
 use serde::{Deserialize, Serialize};
 
 use airtable::User as AirtableUser;
@@ -16,6 +17,7 @@ pub struct SheetColumns {
     pub phone: usize,
     pub github: usize,
     pub portfolio: usize,
+    pub website: usize,
     pub linkedin: usize,
     pub resume: usize,
     pub materials: usize,
@@ -33,6 +35,7 @@ pub struct Applicant {
     pub phone: String,
     pub github: String,
     pub portfolio: String,
+    pub website: String,
     pub linkedin: String,
     pub resume: String,
     pub materials: String,
@@ -40,6 +43,59 @@ pub struct Applicant {
     pub received_application: bool,
     pub role: String,
     pub sheet_id: String,
+}
+
+impl Applicant {
+    pub fn as_slack_msg(&self, include_time: bool) -> String {
+        let mut emoji = ":microscope:";
+        match self.role.as_str() {
+            "Product Engineering and Design" => emoji = ":art:",
+            "Technical Program Manager" => emoji = ":card_index:",
+            _ => (),
+        }
+
+        let dur = self.submitted_time - Utc::now();
+        let time = HumanTime::from(dur);
+
+        let mut msg = format!(
+            "{} {}: *{}* <mailto:{}|{}>",
+            emoji, self.role, self.name, self.email, self.email
+        );
+
+        if include_time {
+            msg += &format!(" _*{}*_", time);
+        }
+
+        msg += &format!(
+            "\n\t<{}|resume> | <{}|materials>",
+            self.resume, self.materials,
+        );
+
+        if !self.location.is_empty() {
+            msg += &format!(" | {}", self.location);
+        }
+        if !self.phone.is_empty() {
+            msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
+        }
+        if !self.github.is_empty() {
+            msg += &format!(
+                " | <https://github.com/{}|github:{}>",
+                self.github.trim_start_matches('@'),
+                self.github,
+            );
+        }
+        if !self.linkedin.is_empty() {
+            msg += &format!(" | <{}|linkedin>", self.linkedin,);
+        }
+        if !self.portfolio.is_empty() {
+            msg += &format!(" | <{}|portfolio>", self.portfolio,);
+        }
+        if !self.website.is_empty() {
+            msg += &format!(" | <{}|website>", self.website,);
+        }
+
+        msg
+    }
 }
 
 /// The data type for an RFD.
