@@ -114,6 +114,33 @@ pub struct JournalClubMeeting {
     pub recording: String,
 }
 
+impl JournalClubMeeting {
+    pub fn as_slack_msg(&self) -> String {
+        let emoji = ":blue_book:";
+
+        let mut msg = format!(
+            "{} <{}|*{}*> ({}) _{}_ <https://github.com/{}|@{}>",
+            emoji,
+            self.issue,
+            self.title,
+            self.state,
+            self.coordinator,
+            self.coordinator,
+            self.date.format("%m/%d/%Y"),
+        );
+
+        if !self.recording.is_empty() {
+            msg += &format!(" <{}|:vhs: recording>", self.recording);
+        }
+
+        for p in self.papers.clone() {
+            msg += &format!("\n\t:page_facing_up: <{}|{}>", p.link, p.title,);
+        }
+
+        msg
+    }
+}
+
 /// The data type for a paper.
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct Paper {
