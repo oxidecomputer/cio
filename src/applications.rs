@@ -411,9 +411,90 @@ pub async fn iterate_over_applications(
                 github = format!(
                     "@{}",
                     row[columns.github]
+                        .trim()
                         .trim_start_matches("https://github.com/")
                         .trim_start_matches('@')
                         .trim_end_matches('/')
+                );
+            }
+
+            let location = row[columns.location].trim().to_string();
+
+            let mut phone = row[columns.phone]
+                .trim()
+                .replace(" ", "")
+                .replace("-", "")
+                .replace("+", "")
+                .replace("(", "")
+                .replace(")", "")
+                .to_string();
+
+            let mut country = phonenumber::country::US;
+            if (location.to_lowercase().contains("uk")
+                || location.to_lowercase().contains("london")
+                || location.to_lowercase().contains("ipswich"))
+                && phone.starts_with("44")
+            {
+                country = phonenumber::country::GB;
+            } else if location.to_lowercase().contains("czech republic")
+                || location.to_lowercase().contains("prague")
+            {
+                country = phonenumber::country::CZ;
+            } else if (location.to_lowercase().contains("mumbai")
+                || location.to_lowercase().contains("india")
+                || location.to_lowercase().contains("bangalore"))
+                && phone.starts_with("91")
+            {
+                country = phonenumber::country::IN;
+            } else if location.to_lowercase().contains("brazil") {
+                country = phonenumber::country::BR;
+            } else if location.to_lowercase().contains("belgium") {
+                country = phonenumber::country::BE;
+            } else if location.to_lowercase().contains("romania") {
+                country = phonenumber::country::RO;
+            } else if location.to_lowercase().contains("nigeria") {
+                country = phonenumber::country::NG;
+            } else if location.to_lowercase().contains("austria") {
+                country = phonenumber::country::AT;
+            } else if location.to_lowercase().contains("taiwan") {
+                country = phonenumber::country::TW;
+            } else if location.to_lowercase().contains("new zealand") {
+                country = phonenumber::country::NZ;
+            } else if location.to_lowercase().contains("maragno")
+                || location.to_lowercase().contains("italy")
+            {
+                country = phonenumber::country::IT;
+            } else if location.to_lowercase().contains("nairobi")
+                || location.to_lowercase().contains("kenya")
+            {
+                country = phonenumber::country::KE;
+            } else if location.to_lowercase().contains("dubai") {
+                country = phonenumber::country::AE;
+            } else if location.to_lowercase().contains("poland") {
+                country = phonenumber::country::PL;
+            } else if location.to_lowercase().contains("portugal") {
+                country = phonenumber::country::PT;
+            } else if location.to_lowercase().contains("berlin")
+                || location.to_lowercase().contains("germany")
+            {
+                country = phonenumber::country::DE;
+            } else if location.to_lowercase().contains("benin") {
+                country = phonenumber::country::BJ;
+            } else if location.to_lowercase().contains("israel") {
+                country = phonenumber::country::IL;
+            } else if location.to_lowercase().contains("spain") {
+                country = phonenumber::country::ES;
+            }
+
+            // Get the last ten character of the string.
+            if let Ok(phone_number) =
+                phonenumber::parse(Some(country), phone.to_string())
+            {
+                phone = format!(
+                    "{}",
+                    phone_number
+                        .format()
+                        .mode(phonenumber::Mode::International)
                 );
             }
 
@@ -422,8 +503,8 @@ pub async fn iterate_over_applications(
                 submitted_time: time,
                 name: row[columns.name].to_string(),
                 email: row[columns.email].to_string(),
-                location: row[columns.location].to_string(),
-                phone: row[columns.phone].to_string(),
+                location,
+                phone,
                 github,
                 resume: row[columns.resume].to_string(),
                 materials: row[columns.materials].to_string(),
