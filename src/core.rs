@@ -59,8 +59,8 @@ impl Applicant {
         let time = HumanTime::from(dur);
 
         let mut msg = format!(
-            "{} {}: *{}* <mailto:{}|{}>",
-            emoji, self.role, self.name, self.email, self.email
+            "{} <https://docs.google.com/spreadsheets/d/{}|{}>: *{}* <mailto:{}|{}>",
+            emoji, self.sheet_id, self.role, self.name, self.email, self.email
         );
 
         if include_time {
