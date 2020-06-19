@@ -130,11 +130,15 @@ impl JournalClubMeeting {
         );
 
         if !self.recording.is_empty() {
-            msg += &format!(" <{}|:vhs: recording>", self.recording);
+            msg += &format!(" <{}|:vhs>", self.recording);
         }
 
-        for p in self.papers.clone() {
-            msg += &format!("\n\t:page_facing_up: <{}|{}>", p.link, p.title,);
+        for (i, p) in self.papers.clone().iter().enumerate() {
+            msg += "\n";
+            if i == 0 {
+                msg += ">";
+            }
+            msg += &format!(":page_facing_up: <{}|{}>", p.link, p.title,);
         }
 
         msg
