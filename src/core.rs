@@ -158,7 +158,7 @@ impl JournalClubMeeting {
         );
 
         if !self.recording.is_empty() {
-            msg += &format!(" <{}|:vhs:>", self.recording);
+            msg += &format!("\n\t• :<{}|:vhs:> recording", self.recording);
         }
 
         for p in self.papers.clone() {
