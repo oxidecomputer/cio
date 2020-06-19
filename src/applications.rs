@@ -586,7 +586,7 @@ fn do_applicant(
         ));
 
         // Form the Slack message.
-        let msg = format!("*NEW* :loudspeaker: {}", a.as_slack_msg(false));
+        let msg = format!("*NEW* :inbox_tray: {}", a.as_slack_msg(false));
 
         // Send a message to the applications slack channel.
         futures::executor::block_on(post_to_channel(
