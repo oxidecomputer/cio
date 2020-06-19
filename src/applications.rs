@@ -5,7 +5,7 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use clap::{value_t, ArgMatches};
 use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
-use log::info;
+use log::{info, warn};
 
 use crate::core::{Applicant, SheetColumns};
 use crate::slack::{post_to_channel, HIRING_CHANNEL_POST_URL};
@@ -512,10 +512,18 @@ pub async fn iterate_over_applications(
                 country = phonenumber::country::ES;
             }
 
+            let db = &phonenumber::metadata::DATABASE;
+            let metadata = db.by_id(country.as_ref()).unwrap();
+            let country_code = metadata.id().to_string().to_lowercase();
+
             // Get the last ten character of the string.
             if let Ok(phone_number) =
                 phonenumber::parse(Some(country), phone.to_string())
             {
+                if !phone_number.is_valid() {
+                    warn!("{} is not a valid phone number", phone);
+                }
+
                 phone = format!(
                     "{}",
                     phone_number
@@ -531,6 +539,7 @@ pub async fn iterate_over_applications(
                 email: row[columns.email].to_string(),
                 location,
                 phone,
+                country_code,
                 github,
                 linkedin,
                 portfolio,

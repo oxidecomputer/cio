@@ -33,6 +33,7 @@ pub struct Applicant {
     pub email: String,
     pub location: String,
     pub phone: String,
+    pub country_code: String,
     pub github: String,
     pub portfolio: String,
     pub website: String,
@@ -75,7 +76,10 @@ impl Applicant {
             msg += &format!(" | {}", self.location);
         }
         if !self.phone.is_empty() {
-            msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
+            msg += &format!(
+                " | <tel:{}|:{}: {}>",
+                self.phone, self.country_code, self.phone
+            );
         }
         if !self.github.is_empty() {
             msg += &format!(
