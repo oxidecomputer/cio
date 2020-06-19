@@ -143,16 +143,22 @@ pub async fn get_journal_club_meetings_from_repo(
 
         // Parse the papers.
         let mut papers: Vec<Paper> = Default::default();
-        let papers_parts = record[2].trim().split(' ');
+        let papers_parts = record[2].trim().split(") [");
         for p in papers_parts {
             // Parse the markdown for the papers.
             let start_title = p.find('[').unwrap_or(0);
             let end_title = p.find(']').unwrap_or_else(|| p.len());
-            let title = p[start_title..end_title].to_string();
+            let title = p[start_title..end_title]
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .to_string();
 
             let start_link = p.find('(').unwrap_or(0);
             let end_link = p.find(')').unwrap_or_else(|| p.len());
-            let link = p[start_link..end_link].to_string();
+            let link = p[start_link..end_link]
+                .trim_start_matches('(')
+                .trim_end_matches(')')
+                .to_string();
 
             papers.push(Paper { title, link });
         }

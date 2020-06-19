@@ -124,9 +124,9 @@ impl JournalClubMeeting {
             self.issue,
             self.title,
             self.state,
-            self.coordinator,
-            self.coordinator,
             self.date.format("%m/%d/%Y"),
+            self.coordinator,
+            self.coordinator,
         );
 
         if !self.recording.is_empty() {
