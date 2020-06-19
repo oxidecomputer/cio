@@ -321,18 +321,7 @@ pub async fn iterate_over_applications(
             panic!("unable to retrieve any data values from Google sheet")
         }
 
-        let mut columns = SheetColumns {
-            timestamp: 0,
-            name: 0,
-            email: 0,
-            location: 0,
-            phone: 0,
-            github: 0,
-            resume: 0,
-            materials: 0,
-            status: 0,
-            received_application: 0,
-        };
+        let mut columns: SheetColumns = Default::default();
         // Iterate over the rows.
         for (row_index, row) in values.iter().enumerate() {
             if row_index == 0 {
@@ -357,6 +346,12 @@ pub async fn iterate_over_applications(
                     }
                     if col.to_lowercase().contains("github") {
                         columns.github = index;
+                    }
+                    if col.to_lowercase().contains("portfolio") {
+                        columns.portfolio = index;
+                    }
+                    if col.to_lowercase().contains("linkedin") {
+                        columns.linkedin = index;
                     }
                     if col.to_lowercase().contains("resume") {
                         columns.resume = index;
@@ -392,10 +387,28 @@ pub async fn iterate_over_applications(
             // If the length of the row is greater than the status column
             // then we have a status.
             let status = if row.len() > columns.status {
-                &row[columns.status]
+                row[columns.status].trim().to_lowercase()
             } else {
-                ""
+                "".to_string()
             };
+
+            // If the length of the row is greater than the linkedin column
+            // then we have a linkedin.
+            let linkedin =
+                if row.len() > columns.linkedin && columns.linkedin != 0 {
+                    row[columns.linkedin].trim().to_lowercase()
+                } else {
+                    "".to_string()
+                };
+
+            // If the length of the row is greater than the portfolio column
+            // then we have a portfolio.
+            let portfolio =
+                if row.len() > columns.portfolio && columns.portfolio != 0 {
+                    row[columns.portfolio].trim().to_lowercase()
+                } else {
+                    "".to_lowercase()
+                };
 
             // Check if we sent them an email that we received their application.
             let mut received_application = true;
@@ -412,6 +425,7 @@ pub async fn iterate_over_applications(
                     "@{}",
                     row[columns.github]
                         .trim()
+                        .to_lowercase()
                         .trim_start_matches("https://github.com/")
                         .trim_start_matches('@')
                         .trim_end_matches('/')
@@ -506,9 +520,11 @@ pub async fn iterate_over_applications(
                 location,
                 phone,
                 github,
+                linkedin,
+                portfolio,
                 resume: row[columns.resume].to_string(),
                 materials: row[columns.materials].to_string(),
-                status: status.to_string().to_lowercase(),
+                status,
                 received_application,
                 role: sheet_name.to_string(),
                 sheet_id: sheet_id.to_string(),

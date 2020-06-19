@@ -7,7 +7,7 @@ use airtable::User as AirtableUser;
 
 /// The data type for a Google Sheet Column, we use this when updating the
 /// applications spreadsheet to mark that we have emailed someone.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct SheetColumns {
     pub timestamp: usize,
     pub name: usize,
@@ -15,6 +15,8 @@ pub struct SheetColumns {
     pub location: usize,
     pub phone: usize,
     pub github: usize,
+    pub portfolio: usize,
+    pub linkedin: usize,
     pub resume: usize,
     pub materials: usize,
     pub status: usize,
@@ -30,6 +32,8 @@ pub struct Applicant {
     pub location: String,
     pub phone: String,
     pub github: String,
+    pub portfolio: String,
+    pub linkedin: String,
     pub resume: String,
     pub materials: String,
     pub status: String,
