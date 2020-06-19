@@ -365,6 +365,18 @@ pub async fn iterate_over_applications(
                     if col.to_lowercase().contains("status") {
                         columns.status = index;
                     }
+                    if col.to_lowercase().contains("value reflected") {
+                        columns.value_reflected = index;
+                    }
+                    if col.to_lowercase().contains("value violated") {
+                        columns.value_violated = index;
+                    }
+                    if col.to_lowercase().contains("value in tension [1]") {
+                        columns.value_in_tension_1 = index;
+                    }
+                    if col.to_lowercase().contains("value in tension [2]") {
+                        columns.value_in_tension_2 = index;
+                    }
                     if col.to_lowercase().contains(
                         "sent email that we received their application",
                     ) {
@@ -421,6 +433,46 @@ pub async fn iterate_over_applications(
             } else {
                 "".to_lowercase()
             };
+
+            // If the length of the row is greater than the value_reflected column
+            // then we have a value_reflected.
+            let value_reflected = if row.len() > columns.value_reflected
+                && columns.value_reflected != 0
+            {
+                row[columns.value_reflected].trim().to_lowercase()
+            } else {
+                "".to_lowercase()
+            };
+
+            // If the length of the row is greater than the value_violated column
+            // then we have a value_violated.
+            let value_violated = if row.len() > columns.value_violated
+                && columns.value_violated != 0
+            {
+                row[columns.value_violated].trim().to_lowercase()
+            } else {
+                "".to_lowercase()
+            };
+
+            let mut values_in_tension: Vec<String> = Default::default();
+            // If the length of the row is greater than the value_in_tension1 column
+            // then we have a value_in_tension1.
+            if row.len() > columns.value_in_tension_1
+                && columns.value_in_tension_1 != 0
+            {
+                values_in_tension.push(
+                    row[columns.value_in_tension_1].trim().to_lowercase(),
+                );
+            }
+            // If the length of the row is greater than the value_in_tension2 column
+            // then we have a value_in_tension2.
+            if row.len() > columns.value_in_tension_2
+                && columns.value_in_tension_2 != 0
+            {
+                values_in_tension.push(
+                    row[columns.value_in_tension_2].trim().to_lowercase(),
+                );
+            }
 
             // Check if we sent them an email that we received their application.
             let mut received_application = true;
@@ -550,6 +602,9 @@ pub async fn iterate_over_applications(
                 received_application,
                 role: sheet_name.to_string(),
                 sheet_id: sheet_id.to_string(),
+                value_reflected,
+                value_violated,
+                values_in_tension,
             };
 
             info!("{:?}", a);

@@ -23,6 +23,10 @@ pub struct SheetColumns {
     pub materials: usize,
     pub status: usize,
     pub received_application: usize,
+    pub value_reflected: usize,
+    pub value_violated: usize,
+    pub value_in_tension_1: usize,
+    pub value_in_tension_2: usize,
 }
 
 /// The data type for an applicant.
@@ -44,6 +48,9 @@ pub struct Applicant {
     pub received_application: bool,
     pub role: String,
     pub sheet_id: String,
+    pub value_reflected: String,
+    pub value_violated: String,
+    pub values_in_tension: Vec<String>,
 }
 
 impl Applicant {
@@ -62,6 +69,10 @@ impl Applicant {
             "{} <https://docs.google.com/spreadsheets/d/{}|{}>: *{}* <mailto:{}|{}>",
             emoji, self.sheet_id, self.role, self.name, self.email, self.email
         );
+
+        if !self.status.is_empty() {
+            msg += &format!(" (_*{}*_)", self.status);
+        }
 
         if include_time {
             msg += &format!(" _*{}*_", time);
@@ -98,6 +109,23 @@ impl Applicant {
             msg += &format!(" | <{}|website>", self.website,);
         }
 
+        if !self.value_reflected.is_empty() {
+            msg += &format!(
+                "\n\t*values*: _refected_ -> {}",
+                self.value_reflected
+            );
+        }
+        if !self.value_violated.is_empty() {
+            msg += &format!(" | _violated_ -> {}", self.value_violated);
+        }
+        for (k, tension) in self.values_in_tension.iter().enumerate() {
+            if k == 0 {
+                msg += &format!(" | _tension_ -> {}", tension);
+            } else {
+                msg += &format!(" & {}", tension);
+            }
+        }
+
         msg
     }
 }
@@ -130,7 +158,7 @@ impl JournalClubMeeting {
         );
 
         if !self.recording.is_empty() {
-            msg += &format!(" <{}|:vhs>", self.recording);
+            msg += &format!(" <{}|:vhs:>", self.recording);
         }
 
         for p in self.papers.clone() {
