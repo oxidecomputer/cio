@@ -383,9 +383,9 @@ pub async fn iterate_over_applications(
                 break;
             }
             // Parse the time.
-            let time_str = row[columns.timestamp].to_string() + " −08:00";
+            let time_str = row[columns.timestamp].to_string() + " -08:00";
             let time =
-                DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %z")
+                DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z")
                     .unwrap()
                     .with_timezone(&Utc);
 
