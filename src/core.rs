@@ -111,7 +111,7 @@ impl Applicant {
 
         if !self.value_reflected.is_empty() {
             msg += &format!(
-                "\n\t*values*: _refected_ -> {}",
+                "\n\t*values*: _reflected_ -> {}",
                 self.value_reflected
             );
         }
