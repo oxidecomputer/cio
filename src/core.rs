@@ -1,4 +1,6 @@
 use chrono::naive::NaiveDate;
+use chrono::offset::Utc;
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
 use airtable::User as AirtableUser;
@@ -22,7 +24,7 @@ pub struct SheetColumns {
 /// The data type for an applicant.
 #[derive(Debug, Clone)]
 pub struct Applicant {
-    pub submitted_time: NaiveDate,
+    pub submitted_time: DateTime<Utc>,
     pub name: String,
     pub email: String,
     pub location: String,

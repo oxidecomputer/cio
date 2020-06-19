@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use std::env;
 
-use chrono::naive::NaiveDate;
+use chrono::offset::Utc;
+use chrono::DateTime;
 use clap::{value_t, ArgMatches};
 use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use log::info;
@@ -382,11 +383,12 @@ pub async fn iterate_over_applications(
                 break;
             }
             // Parse the time.
-            let time = NaiveDate::parse_from_str(
+            let time = DateTime::parse_from_str(
                 &row[columns.timestamp],
                 "%m/%d/%Y %H:%M:%S",
             )
-            .unwrap();
+            .unwrap()
+            .with_timezone(&Utc);
 
             // If the length of the row is greater than the status column
             // then we have a status.
