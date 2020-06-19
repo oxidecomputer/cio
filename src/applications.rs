@@ -204,6 +204,7 @@ pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
                     "@{}",
                     row[columns.github]
                         .trim_start_matches("https://github.com/")
+                        .trim_start_matches('@')
                         .trim_end_matches('/')
                 ),
                 resume: row[columns.resume].to_string(),
@@ -236,32 +237,25 @@ pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
                 )
                 .await;
 
-                // Send a message to the applications slack channel.
-                post_to_channel(
-                    HIRING_CHANNEL_POST_URL,
-                    &format!(
-                        r#"## New Application Received for {}: {}
-
-Email: {}
-Phone: {}
-Location: {}
-GitHub: {}
-Resume: {}
-Oxide Candidate Materials: {}
-
-
-                        "#,
-                        sheet_name,
-                        a.name,
-                        a.email,
-                        a.phone,
-                        a.location,
+                // Form the Slack message.
+                let mut msg = format!(":card_index: new applicant for {}: {} <mailto:{}|{}>\n<{}|resume> <{}|materials>",
+                    sheet_name, a.name, a.email, a.email, a.resume, a.materials,
+                );
+                if !a.location.is_empty() {
+                    msg += &format!("\n{}", a.location);
+                }
+                if !a.phone.is_empty() {
+                    msg += &format!(" {}", a.phone);
+                }
+                if !a.github.is_empty() {
+                    msg += &format!(
+                        " | github <{}|https://github.com/{}",
                         a.github,
-                        a.resume,
-                        a.materials,
-                    ),
-                )
-                .await;
+                        a.github.trim_start_matches('@'),
+                    );
+                }
+                // Send a message to the applications slack channel.
+                post_to_channel(HIRING_CHANNEL_POST_URL, &msg).await;
 
                 // Mark the column as true not false.
                 let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
