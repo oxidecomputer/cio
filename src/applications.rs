@@ -51,7 +51,148 @@ pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
     // Get the domain.
     let domain = value_t!(cli_matches, "domain", String).unwrap();
 
-    iterate_over_applications(domain, &do_applicant).await;
+    // Initialize Github.
+    let github = authenticate_github();
+    let github_org = env::var("GITHUB_ORG").unwrap();
+
+    // Get all the hiring issues on the meta repository.
+    let meta_issues = github
+        .repo(github_org.to_string(), "meta")
+        .issues()
+        .list(
+            &IssueListOptions::builder()
+                .per_page(100)
+                .state(State::All)
+                .labels(vec!["hiring"])
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    // Get all the hiring issues on the configs repository.
+    let configs_issues = github
+        .repo(github_org.to_string(), "configs")
+        .issues()
+        .list(
+            &IssueListOptions::builder()
+                .per_page(100)
+                .state(State::All)
+                .labels(vec!["hiring"])
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    let applicants = iterate_over_applications(domain, &do_applicant).await;
+
+    for a in applicants {
+        // Check if their status is next steps.
+        if a.status.contains("next steps") {
+            // Check if we already have an issue for this user.
+            let exists = check_if_github_issue_exists(&meta_issues, &a.name);
+            if exists {
+                // Return early we don't want to update the issue because it will overwrite
+                // any changes we made.
+                continue;
+            }
+
+            // Create an issue for the applicant.
+            let title = format!("Hiring: {}", a.name);
+            let labels = vec!["hiring".to_string()];
+            let body = format!("- [ ] Schedule follow up meetings
+- [ ] Schedule sync to discuss
+
+## Candidate Information
+
+Submitted Date: {}
+Email: {}
+Phone: {}
+Location: {}
+GitHub: {}
+Resume: {}
+Oxide Candidate Materials: {}
+
+## Reminder
+
+To view the all the candidates refer to the following Google
+spreadsheets:
+- [Engineering Applications](https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing)
+- [Product Engineering and Design Applications](https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing)
+
+cc @jessfraz @sdtuck @bcantrill",
+		a.submitted_time,
+		a.email,
+		a.phone,
+		a.location,
+		a.github,
+		a.resume,
+		a.materials);
+
+            // Create the issue.
+            github
+                .repo(github_org.to_string(), "meta")
+                .issues()
+                .create(&IssueOptions {
+                    title,
+                    body: Some(body),
+                    assignee: Some("jessfraz".to_string()),
+                    labels,
+                    milestone: None,
+                })
+                .await
+                .unwrap();
+
+            info!("[github]: created hiring issue for {}", a.email);
+
+            continue;
+        }
+
+        // Check if their status is hired.
+        if a.status.contains("hired") {
+            // Check if we already have an issue for this user.
+            let exists = check_if_github_issue_exists(&configs_issues, &a.name);
+            if exists {
+                // Return early we don't want to update the issue because it will overwrite
+                // any changes we made.
+                continue;
+            }
+
+            // Create an issue for the applicant.
+            let title = format!("On-boarding: {}", a.name);
+            let labels = vec!["hiring".to_string()];
+            let body = format!(
+                "- [ ] Add to users.toml
+- [ ] Add to matrix chat
+
+Start Date: [START DATE (ex. Monday, January 20th, 2020)]
+Personal Email: {}
+Twitter: [TWITTER HANDLE]
+GitHub: {}
+Phone: {}
+
+cc @jessfraz @sdtuck @bcantrill",
+                a.email, a.github, a.phone,
+            );
+
+            // Create the issue.
+            github
+                .repo(github_org.to_string(), "configs")
+                .issues()
+                .create(&IssueOptions {
+                    title,
+                    body: Some(body),
+                    assignee: Some("jessfraz".to_string()),
+                    labels,
+                    milestone: None,
+                })
+                .await
+                .unwrap();
+
+            info!("[github]: created on-boarding issue for {}", a.email);
+
+            continue;
+        }
+    }
 }
 
 /// Check if a GitHub issue already exists.
@@ -84,10 +225,9 @@ async fn email_send_new_applicant_notification(
     sendgrid: &SendGrid,
     applicant: Applicant,
     domain: String,
-    sheet_name: &str,
 ) {
     // Create the message.
-    let message = applicant_email(applicant.clone(), sheet_name);
+    let message = applicant_email(applicant.clone());
 
     // Send the message.
     sendgrid
@@ -102,7 +242,7 @@ async fn email_send_new_applicant_notification(
         .await;
 }
 
-fn applicant_email(applicant: Applicant, sheet_name: &str) -> String {
+fn applicant_email(applicant: Applicant) -> String {
     return format!(
                         "## Applicant Information for {}
 
@@ -123,7 +263,7 @@ To view the all the candidates refer to the following Google spreadsheets:
 - Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
 - Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
 ",
-sheet_name,
+applicant.role,
                         applicant.submitted_time,
                         applicant.name,
                         applicant.email,
@@ -140,14 +280,12 @@ pub async fn iterate_over_applications(
     f: &dyn Fn(
         &Sheets,
         String,
-        &str,
-        &str,
         Applicant,
         usize,
-        Vec<String>,
         &SheetColumns,
-    ),
-) {
+    ) -> Option<Applicant>,
+) -> Vec<Applicant> {
+    let mut applicants: Vec<Applicant> = Default::default();
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
     sheets.insert(
         "Engineering",
@@ -258,6 +396,15 @@ pub async fn iterate_over_applications(
                 ""
             };
 
+            // Check if we sent them an email that we received their application.
+            let mut received_application = true;
+            if row[columns.received_application]
+                .to_lowercase()
+                .contains("false")
+            {
+                received_application = false;
+            }
+
             // Build the applicant information for the row.
             let a = Applicant {
                 submitted_time: time,
@@ -275,74 +422,36 @@ pub async fn iterate_over_applications(
                 resume: row[columns.resume].to_string(),
                 materials: row[columns.materials].to_string(),
                 status: status.to_string().to_lowercase(),
+                received_application,
+                role: sheet_name.to_string(),
+                sheet_id: sheet_id.to_string(),
             };
 
             info!("{:?}", a);
 
             // Run the function passed on the applicant.
             // TODO: make domain global so we don't need to pass it.
-            f(
-                &sheets_client,
-                domain.to_string(),
-                sheet_name,
-                sheet_id,
-                a,
-                row_index,
-                row.to_vec(),
-                &columns,
-            );
+            if let Some(applicant) =
+                f(&sheets_client, domain.to_string(), a, row_index, &columns)
+            {
+                applicants.push(applicant);
+            }
         }
     }
+
+    applicants
 }
 
 // TODO: make this function async.
 fn do_applicant(
     sheets_client: &Sheets,
     domain: String,
-    sheet_name: &str,
-    sheet_id: &str,
     a: Applicant,
     row_index: usize,
-    row: Vec<String>,
     columns: &SheetColumns,
-) {
-    // TODO: make this global.
-    // Initialize Github.
-    let github = authenticate_github();
-    let github_org = env::var("GITHUB_ORG").unwrap();
-
-    // Get all the hiring issues on the meta repository.
-    let meta_issues = futures::executor::block_on(
-        github.repo(github_org.to_string(), "meta").issues().list(
-            &IssueListOptions::builder()
-                .per_page(100)
-                .state(State::All)
-                .labels(vec!["hiring"])
-                .build(),
-        ),
-    )
-    .unwrap();
-
-    // Get all the hiring issues on the configs repository.
-    let configs_issues = futures::executor::block_on(
-        github
-            .repo(github_org.to_string(), "configs")
-            .issues()
-            .list(
-                &IssueListOptions::builder()
-                    .per_page(100)
-                    .state(State::All)
-                    .labels(vec!["hiring"])
-                    .build(),
-            ),
-    )
-    .unwrap();
-
+) -> Option<Applicant> {
     // Check if we have sent them an email that we received their application.
-    if row[columns.received_application]
-        .to_lowercase()
-        .contains("false")
-    {
+    if !a.received_application {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -357,13 +466,12 @@ fn do_applicant(
         futures::executor::block_on(email_send_new_applicant_notification(
             &sendgrid_client,
             a.clone(),
-            domain.to_string(),
-            sheet_name,
+            domain,
         ));
 
         // Form the Slack message.
         let mut msg = format!(":card_index: new applicant for {}: {} <mailto:{}|{}>\n<{}|resume> <{}|materials>",
-                    sheet_name, a.name, a.email, a.email, a.resume, a.materials,
+                    a.role, a.name, a.email, a.email, a.resume, a.materials,
                 );
         if !a.location.is_empty() {
             msg += &format!("\n{}", a.location);
@@ -393,7 +501,7 @@ fn do_applicant(
         );
 
         futures::executor::block_on(sheets_client.update_values(
-            &sheet_id,
+            &a.sheet_id,
             &rng,
             "TRUE".to_string(),
         ))
@@ -405,109 +513,10 @@ fn do_applicant(
         );
     }
 
-    // Check if their status is next steps.
-    if a.status.contains("next steps") {
-        // Check if we already have an issue for this user.
-        let exists = check_if_github_issue_exists(&meta_issues, &a.name);
-        if exists {
-            // Return early we don't want to update the issue because it will overwrite
-            // any changes we made.
-            return;
-        }
-
-        // Create an issue for the applicant.
-        let title = format!("Hiring: {}", a.name);
-        let labels = vec!["hiring".to_string()];
-        let body = format!("- [ ] Schedule follow up meetings
-- [ ] Schedule sync to discuss
-
-## Candidate Information
-
-Submitted Date: {}
-Email: {}
-Phone: {}
-Location: {}
-GitHub: {}
-Resume: {}
-Oxide Candidate Materials: {}
-
-## Reminder
-
-To view the all the candidates refer to the following Google
-spreadsheets:
-- [Engineering Applications](https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing)
-- [Product Engineering and Design Applications](https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing)
-
-cc @jessfraz @sdtuck @bcantrill",
-		a.submitted_time,
-		a.email,
-		a.phone,
-		a.location,
-		a.github,
-		a.resume,
-		a.materials);
-
-        // Create the issue.
-        futures::executor::block_on(
-            github.repo(github_org.to_string(), "meta").issues().create(
-                &IssueOptions {
-                    title,
-                    body: Some(body),
-                    assignee: Some("jessfraz".to_string()),
-                    labels,
-                    milestone: None,
-                },
-            ),
-        )
-        .unwrap();
-
-        info!("[github]: created hiring issue for {}", a.email);
-
-        return;
+    if a.status.contains("hired") || a.status.contains("next steps") {
+        // Return the applicant so we can iterate over them after.
+        return Some(a);
     }
 
-    // Check if their status is hired.
-    if a.status.contains("hired") {
-        // Check if we already have an issue for this user.
-        let exists = check_if_github_issue_exists(&configs_issues, &a.name);
-        if exists {
-            // Return early we don't want to update the issue because it will overwrite
-            // any changes we made.
-            return;
-        }
-
-        // Create an issue for the applicant.
-        let title = format!("On-boarding: {}", a.name);
-        let labels = vec!["hiring".to_string()];
-        let body = format!(
-            "- [ ] Add to users.toml
-- [ ] Add to matrix chat
-
-Start Date: [START DATE (ex. Monday, January 20th, 2020)]
-Personal Email: {}
-Twitter: [TWITTER HANDLE]
-GitHub: {}
-Phone: {}
-
-cc @jessfraz @sdtuck @bcantrill",
-            a.email, a.github, a.phone,
-        );
-
-        // Create the issue.
-        futures::executor::block_on(
-            github
-                .repo(github_org.to_string(), "configs")
-                .issues()
-                .create(&IssueOptions {
-                    title,
-                    body: Some(body),
-                    assignee: Some("jessfraz".to_string()),
-                    labels,
-                    milestone: None,
-                }),
-        )
-        .unwrap();
-
-        info!("[github]: created on-boarding issue for {}", a.email);
-    }
+    None
 }

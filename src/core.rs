@@ -31,6 +31,9 @@ pub struct Applicant {
     pub resume: String,
     pub materials: String,
     pub status: String,
+    pub received_application: bool,
+    pub role: String,
+    pub sheet_id: String,
 }
 
 /// The data type for an RFD.
