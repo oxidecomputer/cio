@@ -114,7 +114,7 @@ pub fn authenticate_github() -> Github {
 /// Get the Journal Club meetings from the papers GitHub repo.
 pub async fn get_journal_club_meetings_from_repo(
     github: &Github,
-) -> BTreeMap<usize, JournalClubMeeting> {
+) -> Vec<JournalClubMeeting> {
     let github_org = env::var("GITHUB_ORG").unwrap();
 
     // Get the contents of the .helpers/meetings.csv file.
@@ -134,8 +134,8 @@ pub async fn get_journal_club_meetings_from_repo(
         .from_reader(meetings_csv_string.as_bytes());
 
     // Create the BTreeMap of Meetings.
-    let mut meetings: BTreeMap<usize, JournalClubMeeting> = Default::default();
-    for (i, r) in csv_reader.records().enumerate() {
+    let mut meetings: Vec<JournalClubMeeting> = Default::default();
+    for r in csv_reader.records() {
         let record = r.unwrap();
 
         // Parse the date.
@@ -143,15 +143,15 @@ pub async fn get_journal_club_meetings_from_repo(
 
         // Parse the papers.
         let mut papers: Vec<Paper> = Default::default();
-        let papers_parts = record[2].trim().split(" ");
+        let papers_parts = record[2].trim().split(' ');
         for p in papers_parts {
             // Parse the markdown for the papers.
             let start_title = p.find('[').unwrap_or(0);
-            let end_title = p.find(']').unwrap_or(p.len());
+            let end_title = p.find(']').unwrap_or_else(|| p.len());
             let title = p[start_title..end_title].to_string();
 
             let start_link = p.find('(').unwrap_or(0);
-            let end_link = p.find(')').unwrap_or(p.len());
+            let end_link = p.find(')').unwrap_or_else(|| p.len());
             let link = p[start_link..end_link].to_string();
 
             papers.push(Paper { title, link });
@@ -167,8 +167,8 @@ pub async fn get_journal_club_meetings_from_repo(
             recording: record[6].to_string(),
         };
 
-        // Add this to our BTreeMap.
-        meetings.insert(i, meeting);
+        // Add this to our Vec.
+        meetings.push(meeting);
     }
 
     meetings
