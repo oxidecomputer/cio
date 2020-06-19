@@ -312,7 +312,7 @@ pub async fn iterate_over_applications(
     for (sheet_name, sheet_id) in sheets {
         // Get the values in the sheet.
         let sheet_values = sheets_client
-            .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string())
+            .get_values(&sheet_id, "Form Responses 1!A1:P1000".to_string())
             .await
             .unwrap();
         let values = sheet_values.values.unwrap();
