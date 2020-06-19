@@ -162,7 +162,11 @@ impl JournalClubMeeting {
         }
 
         for p in self.papers.clone() {
-            msg += &format!("\n\t• :page_facing_up: <{}|{}>", p.link, p.title,);
+            let mut title = p.title.to_string();
+            if p.title == self.title {
+                title = "paper".to_string();
+            }
+            msg += &format!("\n\t• :page_facing_up: <{}|{}>", p.link, title,);
         }
 
         msg
