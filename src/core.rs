@@ -75,7 +75,7 @@ impl Applicant {
         }
 
         if include_time {
-            msg += &format!(" _*{}*_", time);
+            msg += &format!(" _{}_", time);
         }
 
         msg += &format!(
