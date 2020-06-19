@@ -158,6 +158,18 @@ pub struct RFD {
     pub discussion: String,
 }
 
+impl RFD {
+    pub fn as_slack_msg(&self, num: i32) -> String {
+        let mut msg = format!("RFD {} {} ({}) <https://{}.rfd.oxide.computer|github> <https://rfd.shared.oxide.computer/rfd/{}|rendered>", num, self.title, self.state, num, self.number);
+
+        if !self.discussion.is_empty() {
+            msg += &format!(" <{}|discussion>", self.discussion);
+        }
+
+        msg
+    }
+}
+
 /// The Airtable fields type for RFDs.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RFDFields {
