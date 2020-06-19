@@ -48,347 +48,10 @@ use sheets::Sheets;
  *  on-boarding.
  */
 pub async fn cmd_applications_run(cli_matches: &ArgMatches<'_>) {
-    let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
-    sheets.insert(
-        "Engineering",
-        "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA",
-    );
-    sheets.insert(
-        "Product Engineering and Design",
-        "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI",
-    );
-    sheets.insert(
-        "Technical Program Management",
-        "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU",
-    );
-
     // Get the domain.
     let domain = value_t!(cli_matches, "domain", String).unwrap();
 
-    // Initialize Github.
-    let github = authenticate_github();
-    let github_org = env::var("GITHUB_ORG").unwrap();
-
-    // Get all the hiring issues on the meta repository.
-    let meta_issues = github
-        .repo(github_org.to_string(), "meta")
-        .issues()
-        .list(
-            &IssueListOptions::builder()
-                .per_page(100)
-                .state(State::All)
-                .labels(vec!["hiring"])
-                .build(),
-        )
-        .await
-        .unwrap();
-
-    // Get all the hiring issues on the configs repository.
-    let configs_issues = github
-        .repo(github_org.to_string(), "configs")
-        .issues()
-        .list(
-            &IssueListOptions::builder()
-                .per_page(100)
-                .state(State::All)
-                .labels(vec!["hiring"])
-                .build(),
-        )
-        .await
-        .unwrap();
-
-    // Get the GSuite token.
-    let token = get_gsuite_token().await;
-
-    // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token);
-
-    // Iterate over the Google sheets and create or update GitHub issues
-    // depending on the application status.
-    for (sheet_name, sheet_id) in sheets {
-        // Get the values in the sheet.
-        let sheet_values = sheets_client
-            .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string())
-            .await
-            .unwrap();
-        let values = sheet_values.values.unwrap();
-
-        if values.is_empty() {
-            panic!("unable to retrieve any data values from Google sheet")
-        }
-
-        let mut columns = SheetColumns {
-            timestamp: 0,
-            name: 0,
-            email: 0,
-            location: 0,
-            phone: 0,
-            github: 0,
-            resume: 0,
-            materials: 0,
-            status: 0,
-            received_application: 0,
-        };
-        // Iterate over the rows.
-        for (i, row) in values.iter().enumerate() {
-            if i == 0 {
-                // Get the header information.
-                // Iterate over the columns.
-                // TODO: make this less horrible
-                for (index, col) in row.iter().enumerate() {
-                    if col.to_lowercase().contains("timestamp") {
-                        columns.timestamp = index;
-                    }
-                    if col.to_lowercase().contains("name") {
-                        columns.name = index;
-                    }
-                    if col.to_lowercase().contains("email address") {
-                        columns.email = index;
-                    }
-                    if col.to_lowercase().contains("location") {
-                        columns.location = index;
-                    }
-                    if col.to_lowercase().contains("phone") {
-                        columns.phone = index;
-                    }
-                    if col.to_lowercase().contains("github") {
-                        columns.github = index;
-                    }
-                    if col.to_lowercase().contains("resume") {
-                        columns.resume = index;
-                    }
-                    if col.to_lowercase().contains("materials") {
-                        columns.materials = index;
-                    }
-                    if col.to_lowercase().contains("status") {
-                        columns.status = index;
-                    }
-                    if col.to_lowercase().contains(
-                        "sent email that we received their application",
-                    ) {
-                        columns.received_application = index;
-                    }
-                }
-
-                // Continue the loop since we were on the header row.
-                continue;
-            } // End get header information.
-
-            // Break the loop early if we reached an empty row.
-            if row[columns.email].is_empty() {
-                break;
-            }
-            // Parse the time.
-            let time = NaiveDate::parse_from_str(
-                &row[columns.timestamp],
-                "%m/%d/%Y %H:%M:%S",
-            )
-            .unwrap();
-
-            // If the length of the row is greater than the status column
-            // then we have a status.
-            let status = if row.len() > columns.status {
-                &row[columns.status]
-            } else {
-                ""
-            };
-
-            // Build the applicant information for the row.
-            let a = Applicant {
-                submitted_time: time,
-                name: row[columns.name].to_string(),
-                email: row[columns.email].to_string(),
-                location: row[columns.location].to_string(),
-                phone: row[columns.phone].to_string(),
-                github: format!(
-                    "@{}",
-                    row[columns.github]
-                        .trim_start_matches("https://github.com/")
-                        .trim_start_matches('@')
-                        .trim_end_matches('/')
-                ),
-                resume: row[columns.resume].to_string(),
-                materials: row[columns.materials].to_string(),
-                status: status.to_string(),
-            };
-
-            // Check if we have sent them an email that we received their application.
-            if row[columns.received_application]
-                .to_lowercase()
-                .contains("false")
-            {
-                // Initialize the SendGrid client.
-                let sendgrid_client = SendGrid::new_from_env();
-
-                // Send them an email.
-                email_send_received_application(
-                    &sendgrid_client,
-                    a.clone().email,
-                    domain.to_string(),
-                )
-                .await;
-
-                // Send us an email notification for the application.
-                email_send_new_applicant_notification(
-                    &sendgrid_client,
-                    a.clone(),
-                    domain.to_string(),
-                    sheet_name,
-                )
-                .await;
-
-                // Form the Slack message.
-                let mut msg = format!(":card_index: new applicant for {}: {} <mailto:{}|{}>\n<{}|resume> <{}|materials>",
-                    sheet_name, a.name, a.email, a.email, a.resume, a.materials,
-                );
-                if !a.location.is_empty() {
-                    msg += &format!("\n{}", a.location);
-                }
-                if !a.phone.is_empty() {
-                    msg += &format!(" {}", a.phone);
-                }
-                if !a.github.is_empty() {
-                    msg += &format!(
-                        " | github <{}|https://github.com/{}>",
-                        a.github,
-                        a.github.trim_start_matches('@'),
-                    );
-                }
-                // Send a message to the applications slack channel.
-                post_to_channel(HIRING_CHANNEL_POST_URL, &msg).await;
-
-                // Mark the column as true not false.
-                let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-                let rng = format!(
-                    "{}{}",
-                    colmn
-                        .nth(columns.received_application)
-                        .unwrap()
-                        .to_string(),
-                    i + 1
-                );
-
-                sheets_client
-                    .update_values(&sheet_id, &rng, "TRUE".to_string())
-                    .await
-                    .unwrap();
-
-                info!(
-                    "[sendgrid] sent email to {} that we received their application",
-                    a.email
-                );
-            }
-
-            // Check if their status is next steps.
-            if status.to_lowercase().contains("next steps") {
-                // Check if we already have an issue for this user.
-                let exists =
-                    check_if_github_issue_exists(&meta_issues, &a.name);
-                if exists {
-                    // Return early we don't want to update the issue because it will overwrite
-                    // any changes we made.
-                    continue;
-                }
-
-                // Create an issue for the applicant.
-                let title = format!("Hiring: {}", a.name);
-                let labels = vec!["hiring".to_string()];
-                let body = format!("- [ ] Schedule follow up meetings
-- [ ] Schedule sync to discuss
-
-## Candidate Information
-
-Submitted Date: {}
-Email: {}
-Phone: {}
-Location: {}
-GitHub: {}
-Resume: {}
-Oxide Candidate Materials: {}
-
-## Reminder
-
-To view the all the candidates refer to the following Google
-spreadsheets:
-- [Engineering Applications](https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing)
-- [Product Engineering and Design Applications](https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing)
-
-cc @jessfraz @sdtuck @bcantrill",
-		a.submitted_time,
-		a.email,
-		a.phone,
-		a.location,
-		a.github,
-		a.resume,
-		a.materials);
-
-                // Create the issue.
-                github
-                    .repo(github_org.to_string(), "meta")
-                    .issues()
-                    .create(&IssueOptions {
-                        title,
-                        body: Some(body),
-                        assignee: Some("jessfraz".to_string()),
-                        labels,
-                        milestone: None,
-                    })
-                    .await
-                    .unwrap();
-
-                info!("[github]: created hiring issue for {}", a.email);
-
-                continue;
-            }
-
-            // Check if their status is hired.
-            if status.to_lowercase().contains("hired") {
-                // Check if we already have an issue for this user.
-                let exists =
-                    check_if_github_issue_exists(&configs_issues, &a.name);
-                if exists {
-                    // Return early we don't want to update the issue because it will overwrite
-                    // any changes we made.
-                    continue;
-                }
-
-                // Create an issue for the applicant.
-                let title = format!("On-boarding: {}", a.name);
-                let labels = vec!["hiring".to_string()];
-                let body = format!(
-                    "- [ ] Add to users.toml
-- [ ] Add to matrix chat
-
-Start Date: [START DATE (ex. Monday, January 20th, 2020)]
-Personal Email: {}
-Twitter: [TWITTER HANDLE]
-GitHub: {}
-Phone: {}
-
-cc @jessfraz @sdtuck @bcantrill",
-                    a.email, a.github, a.phone,
-                );
-
-                // Create the issue.
-                github
-                    .repo(github_org.to_string(), "configs")
-                    .issues()
-                    .create(&IssueOptions {
-                        title,
-                        body: Some(body),
-                        assignee: Some("jessfraz".to_string()),
-                        labels,
-                        milestone: None,
-                    })
-                    .await
-                    .unwrap();
-
-                info!("[github]: created on-boarding issue for {}", a.email);
-
-                continue;
-            }
-        }
-    }
+    iterate_over_applications(domain, &do_applicant).await;
 }
 
 /// Check if a GitHub issue already exists.
@@ -470,4 +133,381 @@ sheet_name,
                         applicant.resume,
                         applicant.materials,
                     );
+}
+
+pub async fn iterate_over_applications(
+    domain: String,
+    f: &dyn Fn(
+        &Sheets,
+        String,
+        &str,
+        &str,
+        Applicant,
+        usize,
+        Vec<String>,
+        &SheetColumns,
+    ),
+) {
+    let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
+    sheets.insert(
+        "Engineering",
+        "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA",
+    );
+    sheets.insert(
+        "Product Engineering and Design",
+        "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI",
+    );
+    sheets.insert(
+        "Technical Program Management",
+        "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU",
+    );
+
+    // Get the GSuite token.
+    let token = get_gsuite_token().await;
+
+    // Initialize the GSuite sheets client.
+    let sheets_client = Sheets::new(token);
+
+    // Iterate over the Google sheets and create or update GitHub issues
+    // depending on the application status.
+    for (sheet_name, sheet_id) in sheets {
+        // Get the values in the sheet.
+        let sheet_values = sheets_client
+            .get_values(&sheet_id, "Form Responses 1!A1:N1000".to_string())
+            .await
+            .unwrap();
+        let values = sheet_values.values.unwrap();
+
+        if values.is_empty() {
+            panic!("unable to retrieve any data values from Google sheet")
+        }
+
+        let mut columns = SheetColumns {
+            timestamp: 0,
+            name: 0,
+            email: 0,
+            location: 0,
+            phone: 0,
+            github: 0,
+            resume: 0,
+            materials: 0,
+            status: 0,
+            received_application: 0,
+        };
+        // Iterate over the rows.
+        for (row_index, row) in values.iter().enumerate() {
+            if row_index == 0 {
+                // Get the header information.
+                // Iterate over the columns.
+                // TODO: make this less horrible
+                for (index, col) in row.iter().enumerate() {
+                    if col.to_lowercase().contains("timestamp") {
+                        columns.timestamp = index;
+                    }
+                    if col.to_lowercase().contains("name") {
+                        columns.name = index;
+                    }
+                    if col.to_lowercase().contains("email address") {
+                        columns.email = index;
+                    }
+                    if col.to_lowercase().contains("location") {
+                        columns.location = index;
+                    }
+                    if col.to_lowercase().contains("phone") {
+                        columns.phone = index;
+                    }
+                    if col.to_lowercase().contains("github") {
+                        columns.github = index;
+                    }
+                    if col.to_lowercase().contains("resume") {
+                        columns.resume = index;
+                    }
+                    if col.to_lowercase().contains("materials") {
+                        columns.materials = index;
+                    }
+                    if col.to_lowercase().contains("status") {
+                        columns.status = index;
+                    }
+                    if col.to_lowercase().contains(
+                        "sent email that we received their application",
+                    ) {
+                        columns.received_application = index;
+                    }
+                }
+
+                // Continue the loop since we were on the header row.
+                continue;
+            } // End get header information.
+
+            // Break the loop early if we reached an empty row.
+            if row[columns.email].is_empty() {
+                break;
+            }
+            // Parse the time.
+            let time = NaiveDate::parse_from_str(
+                &row[columns.timestamp],
+                "%m/%d/%Y %H:%M:%S",
+            )
+            .unwrap();
+
+            // If the length of the row is greater than the status column
+            // then we have a status.
+            let status = if row.len() > columns.status {
+                &row[columns.status]
+            } else {
+                ""
+            };
+
+            // Build the applicant information for the row.
+            let a = Applicant {
+                submitted_time: time,
+                name: row[columns.name].to_string(),
+                email: row[columns.email].to_string(),
+                location: row[columns.location].to_string(),
+                phone: row[columns.phone].to_string(),
+                github: format!(
+                    "@{}",
+                    row[columns.github]
+                        .trim_start_matches("https://github.com/")
+                        .trim_start_matches('@')
+                        .trim_end_matches('/')
+                ),
+                resume: row[columns.resume].to_string(),
+                materials: row[columns.materials].to_string(),
+                status: status.to_string().to_lowercase(),
+            };
+
+            info!("{:?}", a);
+
+            // Run the function passed on the applicant.
+            // TODO: make domain global so we don't need to pass it.
+            f(
+                &sheets_client,
+                domain.to_string(),
+                sheet_name,
+                sheet_id,
+                a,
+                row_index,
+                row.to_vec(),
+                &columns,
+            );
+        }
+    }
+}
+
+// TODO: make this function async.
+fn do_applicant(
+    sheets_client: &Sheets,
+    domain: String,
+    sheet_name: &str,
+    sheet_id: &str,
+    a: Applicant,
+    row_index: usize,
+    row: Vec<String>,
+    columns: &SheetColumns,
+) {
+    // TODO: make this global.
+    // Initialize Github.
+    let github = authenticate_github();
+    let github_org = env::var("GITHUB_ORG").unwrap();
+
+    // Get all the hiring issues on the meta repository.
+    let meta_issues = futures::executor::block_on(
+        github.repo(github_org.to_string(), "meta").issues().list(
+            &IssueListOptions::builder()
+                .per_page(100)
+                .state(State::All)
+                .labels(vec!["hiring"])
+                .build(),
+        ),
+    )
+    .unwrap();
+
+    // Get all the hiring issues on the configs repository.
+    let configs_issues = futures::executor::block_on(
+        github
+            .repo(github_org.to_string(), "configs")
+            .issues()
+            .list(
+                &IssueListOptions::builder()
+                    .per_page(100)
+                    .state(State::All)
+                    .labels(vec!["hiring"])
+                    .build(),
+            ),
+    )
+    .unwrap();
+
+    // Check if we have sent them an email that we received their application.
+    if row[columns.received_application]
+        .to_lowercase()
+        .contains("false")
+    {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send them an email.
+        futures::executor::block_on(email_send_received_application(
+            &sendgrid_client,
+            a.clone().email,
+            domain.to_string(),
+        ));
+
+        // Send us an email notification for the application.
+        futures::executor::block_on(email_send_new_applicant_notification(
+            &sendgrid_client,
+            a.clone(),
+            domain.to_string(),
+            sheet_name,
+        ));
+
+        // Form the Slack message.
+        let mut msg = format!(":card_index: new applicant for {}: {} <mailto:{}|{}>\n<{}|resume> <{}|materials>",
+                    sheet_name, a.name, a.email, a.email, a.resume, a.materials,
+                );
+        if !a.location.is_empty() {
+            msg += &format!("\n{}", a.location);
+        }
+        if !a.phone.is_empty() {
+            msg += &format!(" {}", a.phone);
+        }
+        if !a.github.is_empty() {
+            msg += &format!(
+                " | github <{}|https://github.com/{}>",
+                a.github,
+                a.github.trim_start_matches('@'),
+            );
+        }
+        // Send a message to the applications slack channel.
+        futures::executor::block_on(post_to_channel(
+            HIRING_CHANNEL_POST_URL,
+            &msg,
+        ));
+
+        // Mark the column as true not false.
+        let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+        let rng = format!(
+            "{}{}",
+            colmn.nth(columns.received_application).unwrap().to_string(),
+            row_index + 1
+        );
+
+        futures::executor::block_on(sheets_client.update_values(
+            &sheet_id,
+            &rng,
+            "TRUE".to_string(),
+        ))
+        .unwrap();
+
+        info!(
+            "[sendgrid] sent email to {} that we received their application",
+            a.email
+        );
+    }
+
+    // Check if their status is next steps.
+    if a.status.contains("next steps") {
+        // Check if we already have an issue for this user.
+        let exists = check_if_github_issue_exists(&meta_issues, &a.name);
+        if exists {
+            // Return early we don't want to update the issue because it will overwrite
+            // any changes we made.
+            return;
+        }
+
+        // Create an issue for the applicant.
+        let title = format!("Hiring: {}", a.name);
+        let labels = vec!["hiring".to_string()];
+        let body = format!("- [ ] Schedule follow up meetings
+- [ ] Schedule sync to discuss
+
+## Candidate Information
+
+Submitted Date: {}
+Email: {}
+Phone: {}
+Location: {}
+GitHub: {}
+Resume: {}
+Oxide Candidate Materials: {}
+
+## Reminder
+
+To view the all the candidates refer to the following Google
+spreadsheets:
+- [Engineering Applications](https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing)
+- [Product Engineering and Design Applications](https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing)
+
+cc @jessfraz @sdtuck @bcantrill",
+		a.submitted_time,
+		a.email,
+		a.phone,
+		a.location,
+		a.github,
+		a.resume,
+		a.materials);
+
+        // Create the issue.
+        futures::executor::block_on(
+            github.repo(github_org.to_string(), "meta").issues().create(
+                &IssueOptions {
+                    title,
+                    body: Some(body),
+                    assignee: Some("jessfraz".to_string()),
+                    labels,
+                    milestone: None,
+                },
+            ),
+        )
+        .unwrap();
+
+        info!("[github]: created hiring issue for {}", a.email);
+
+        return;
+    }
+
+    // Check if their status is hired.
+    if a.status.contains("hired") {
+        // Check if we already have an issue for this user.
+        let exists = check_if_github_issue_exists(&configs_issues, &a.name);
+        if exists {
+            // Return early we don't want to update the issue because it will overwrite
+            // any changes we made.
+            return;
+        }
+
+        // Create an issue for the applicant.
+        let title = format!("On-boarding: {}", a.name);
+        let labels = vec!["hiring".to_string()];
+        let body = format!(
+            "- [ ] Add to users.toml
+- [ ] Add to matrix chat
+
+Start Date: [START DATE (ex. Monday, January 20th, 2020)]
+Personal Email: {}
+Twitter: [TWITTER HANDLE]
+GitHub: {}
+Phone: {}
+
+cc @jessfraz @sdtuck @bcantrill",
+            a.email, a.github, a.phone,
+        );
+
+        // Create the issue.
+        futures::executor::block_on(
+            github
+                .repo(github_org.to_string(), "configs")
+                .issues()
+                .create(&IssueOptions {
+                    title,
+                    body: Some(body),
+                    assignee: Some("jessfraz".to_string()),
+                    labels,
+                    milestone: None,
+                }),
+        )
+        .unwrap();
+
+        info!("[github]: created on-boarding issue for {}", a.email);
+    }
 }
