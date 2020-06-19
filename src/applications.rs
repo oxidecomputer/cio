@@ -371,10 +371,10 @@ pub async fn iterate_over_applications(
                     if col.to_lowercase().contains("value violated") {
                         columns.value_violated = index;
                     }
-                    if col.to_lowercase().contains("value in tension [1]") {
+                    if col.to_lowercase().contains("value in tension [1") {
                         columns.value_in_tension_1 = index;
                     }
-                    if col.to_lowercase().contains("value in tension [2]") {
+                    if col.to_lowercase().contains("value in tension [2") {
                         columns.value_in_tension_2 = index;
                     }
                     if col.to_lowercase().contains(
