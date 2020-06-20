@@ -1,6 +1,7 @@
 use log::warn;
-use reqwest::{Client, StatusCode};
+use reqwest::{Body, Client, StatusCode};
 use serde::Serialize;
+use serde_json::Value;
 
 /// The Slack app webhook URL for our app to post to the #hiring channel.
 pub static HIRING_CHANNEL_POST_URL: &str = "https://hooks.slack.com/services/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ok";
@@ -8,13 +9,11 @@ pub static HIRING_CHANNEL_POST_URL: &str = "https://hooks.slack.com/services/T01
 pub static PUBLIC_RELATIONS_CHANNEL_POST_URL: &str = "https://hooks.slack.com/services/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";
 
 /// Post text to a channel.
-pub async fn post_to_channel(url: &str, text: &str) {
+pub async fn post_to_channel(url: &str, v: Value) {
     let client = Client::new();
     let resp = client
         .post(url)
-        .json(&Message {
-            text: text.to_string(),
-        })
+        .body(Body::from(v.to_string()))
         .send()
         .await
         .unwrap();

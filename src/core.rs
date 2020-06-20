@@ -3,6 +3,7 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use airtable::User as AirtableUser;
 
@@ -54,79 +55,111 @@ pub struct Applicant {
 }
 
 impl Applicant {
-    pub fn as_slack_msg(&self, include_time: bool) -> String {
-        let mut emoji = ":floppy_disk:";
+    pub fn as_slack_msg(&self) -> Value {
+        let mut color = "#805AD5";
         match self.role.as_str() {
-            "Product Engineering and Design" => emoji = ":iphone:",
-            "Technical Program Manager" => emoji = ":pager:",
+            "Product Engineering and Design" => color = "#48D597",
+            "Technical Program Manager" => color = "#667EEA",
             _ => (),
         }
 
         let dur = self.submitted_time - Utc::now();
         let time = HumanTime::from(dur);
 
-        let mut msg = format!(
-            "{} <https://docs.google.com/spreadsheets/d/{}|{}>: *{}* <mailto:{}|{}>",
-            emoji, self.sheet_id, self.role, self.name, self.email, self.email
-        );
-
+        let mut status_msg = format!("<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}", self.sheet_id, self.role, time);
         if !self.status.is_empty() {
-            msg += &format!(" (_*{}*_)", self.status);
+            status_msg += &format!(" | status: *{}*", self.status);
         }
 
-        if include_time {
-            msg += &format!(" _{}_", time);
+        let mut values_msg = "".to_string();
+        if !self.value_reflected.is_empty() {
+            values_msg +=
+                &format!("values reflected: *{}*", self.value_reflected);
+        }
+        if !self.value_violated.is_empty() {
+            values_msg += &format!(" | violated: *{}*", self.value_violated);
+        }
+        for (k, tension) in self.values_in_tension.iter().enumerate() {
+            if k == 0 {
+                values_msg += &format!(" | in tension: *{}*", tension);
+            } else {
+                values_msg += &format!("* & {}*", tension);
+            }
         }
 
-        msg += &format!(
-            "\n\t<{}|resume> | <{}|materials>",
+        let mut intro_msg =
+            format!("*{}*  <mailto:{}|{}>", self.name, self.email, self.email,);
+        if !self.location.is_empty() {
+            intro_msg += &format!("  {}", self.location);
+        }
+
+        let mut info_msg = format!(
+            "<{}|resume> | <{}|materials>",
             self.resume, self.materials,
         );
-
-        if !self.location.is_empty() {
-            msg += &format!(" | {}", self.location);
-        }
         if !self.phone.is_empty() {
-            msg += &format!(
-                " | <tel:{}|:{}: {}>",
-                self.phone, self.country_code, self.phone
-            );
+            info_msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
         }
         if !self.github.is_empty() {
-            msg += &format!(
+            info_msg += &format!(
                 " | <https://github.com/{}|github:{}>",
                 self.github.trim_start_matches('@'),
                 self.github,
             );
         }
         if !self.linkedin.is_empty() {
-            msg += &format!(" | <{}|linkedin>", self.linkedin,);
+            info_msg += &format!(" | <{}|linkedin>", self.linkedin,);
         }
         if !self.portfolio.is_empty() {
-            msg += &format!(" | <{}|portfolio>", self.portfolio,);
+            info_msg += &format!(" | <{}|portfolio>", self.portfolio,);
         }
         if !self.website.is_empty() {
-            msg += &format!(" | <{}|website>", self.website,);
+            info_msg += &format!(" | <{}|website>", self.website,);
         }
 
-        if !self.value_reflected.is_empty() {
-            msg += &format!(
-                "\n\t*values*: _reflected_ -> {}",
-                self.value_reflected
-            );
-        }
-        if !self.value_violated.is_empty() {
-            msg += &format!(" | _violated_ -> {}", self.value_violated);
-        }
-        for (k, tension) in self.values_in_tension.iter().enumerate() {
-            if k == 0 {
-                msg += &format!(" | _tension_ -> {}", tension);
-            } else {
-                msg += &format!(" & {}", tension);
-            }
-        }
-
-        msg
+        json!({
+            "attachments": [
+                {
+                    "color": color,
+                    "blocks": [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": intro_msg
+                            }
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": info_msg
+                                }
+                            ]
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": values_msg
+                                }
+                            ]
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": status_msg
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        })
     }
 }
 

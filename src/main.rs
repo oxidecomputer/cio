@@ -16,6 +16,9 @@ pub mod utils;
 pub mod zoom;
 
 #[macro_use]
+extern crate serde_json;
+
+#[macro_use]
 extern crate clap;
 use clap::App;
 use simplelog::{

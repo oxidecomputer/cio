@@ -649,13 +649,10 @@ fn do_applicant(
             domain,
         ));
 
-        // Form the Slack message.
-        let msg = format!("*NEW* :inbox_tray: {}", a.as_slack_msg(false));
-
         // Send a message to the applications slack channel.
         futures::executor::block_on(post_to_channel(
             HIRING_CHANNEL_POST_URL,
-            &msg,
+            a.as_slack_msg(),
         ));
 
         // Mark the column as true not false.
