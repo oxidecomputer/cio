@@ -59,7 +59,7 @@ impl Applicant {
         let mut color = "#805AD5";
         match self.role.as_str() {
             "Product Engineering and Design" => color = "#48D597",
-            "Technical Program Manager" => color = "#667EEA",
+            "Technical Program Management" => color = "#667EEA",
             _ => (),
         }
 
@@ -176,33 +176,64 @@ pub struct JournalClubMeeting {
 }
 
 impl JournalClubMeeting {
-    pub fn as_slack_msg(&self) -> String {
-        let emoji = ":blue_book:";
+    pub fn as_slack_msg(&self) -> Value {
+        let mut color = "#ED64A6";
+        if self.state == "closed" {
+            color = "#ED8936";
+        }
 
-        let mut msg = format!(
-            "{} <{}|*{}*> (_*{}*_) _{}_ <https://github.com/{}|@{}>",
-            emoji,
-            self.issue,
-            self.title,
-            self.state,
-            self.date.format("%m/%d/%Y"),
-            self.coordinator,
-            self.coordinator,
-        );
+        let mut objects: Vec<Value> = Default::default();
 
         if !self.recording.is_empty() {
-            msg += &format!("\n\t• :<{}|:vhs:> recording", self.recording);
+            objects.push(json!({
+                "elements": [{
+                    "text": format!("<{}|Meeting recording>", self.recording),
+                    "type": "mrkdwn"
+                }],
+                "type": "context"
+            }));
         }
 
         for p in self.papers.clone() {
             let mut title = p.title.to_string();
             if p.title == self.title {
-                title = "paper".to_string();
+                title = "Paper".to_string();
             }
-            msg += &format!("\n\t• :page_facing_up: <{}|{}>", p.link, title,);
+            objects.push(json!({
+                "elements": [{
+                    "text": format!("<{}|{}>", p.link, title),
+                    "type": "mrkdwn"
+                }],
+                "type": "context"
+            }));
         }
 
-        msg
+        json!({
+             "attachments": [{
+                    "blocks": [{
+                    "text": {
+                        "text": format!("<{}|*{}*>", self.issue, self.title),
+                        "type": "mrkdwn"
+                    },
+                    "type": "section"
+                },
+                {
+                    "elements": [{
+                        "text": "<https://github.com/oxidecomputer/papers/blob/master/os/countering-ipc-threats-minix3.pdf|Countering IPC Threats in Multiserver Operating Systems>",
+                        "type": "mrkdwn"
+                    }],
+                    "type": "context"
+                },
+                {
+                    "elements": [{
+                        "text": format!("<https://github.com/{}|@{}> | {} | status: *{}*",self.coordinator,self.coordinator,self.date.format("%m/%d/%Y"),self.state),
+                        "type": "mrkdwn"
+                    }],
+                    "type": "context"
+                }],
+                "color": color
+            }]
+        })
     }
 }
 
