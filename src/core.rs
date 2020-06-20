@@ -118,6 +118,7 @@ impl Applicant {
         }
 
         json!({
+            "response_type": "in_channel",
             "attachments": [
                 {
                     "color": color,
@@ -209,6 +210,7 @@ impl JournalClubMeeting {
         }
 
         json!({
+            "response_type": "in_channel",
              "attachments": [{
                     "blocks": [{
                     "text": {
