@@ -83,7 +83,7 @@ impl Applicant {
             if k == 0 {
                 values_msg += &format!(" | in tension: *{}*", tension);
             } else {
-                values_msg += &format!("* & {}*", tension);
+                values_msg += &format!(" *& {}*", tension);
             }
         }
 
