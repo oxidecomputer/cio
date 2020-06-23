@@ -86,6 +86,9 @@ impl Applicant {
                 values_msg += &format!(" *& {}*", tension);
             }
         }
+        if values_msg.is_empty() {
+            values_msg = "values not yet populated".to_string();
+        }
 
         let mut intro_msg =
             format!("*{}*  <mailto:{}|{}>", self.name, self.email, self.email,);
