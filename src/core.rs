@@ -173,6 +173,68 @@ impl Applicant {
             ]
         })
     }
+
+    pub fn as_company_notification_email(&self) -> String {
+        let dur = self.submitted_time - Utc::now();
+        let time = HumanTime::from(dur);
+
+        let mut msg = format!(
+            "## Applicant Information for {}
+
+Submitted {}
+Name: {}
+Email: {}",
+            self.role, time, self.name, self.email
+        );
+
+        if !self.location.is_empty() {
+            msg += &format!("\nLocation: {}", self.location);
+        }
+        if !self.phone.is_empty() {
+            msg += &format!("\nPhone: {}", self.phone);
+        }
+
+        if !self.github.is_empty() {
+            msg += &format!(
+                "\nGitHub: {} (https://github.com/{})",
+                self.github,
+                self.github.trim_start_matches('@')
+            );
+        }
+        if !self.gitlab.is_empty() {
+            msg += &format!(
+                "\nGitLab: {} (https://gitlab.com/{})",
+                self.gitlab,
+                self.gitlab.trim_start_matches('@')
+            );
+        }
+        if !self.linkedin.is_empty() {
+            msg += &format!("\nLinkedIn: {}", self.linkedin);
+        }
+        if !self.portfolio.is_empty() {
+            msg += &format!("\nPortfolio: {}", self.portfolio);
+        }
+        if !self.website.is_empty() {
+            msg += &format!("\nWebsite: {}", self.website);
+        }
+
+        msg+=&format!("\nResume: {}
+Oxide Candidate Materials: {}
+
+## Reminder
+
+To view the all the candidates refer to the following Google spreadsheets:
+
+- Engineering Applications: https://applications-engineering.corp.oxide.computer
+- Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
+- Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
+",
+                        self.resume,
+                        self.materials,
+                    );
+
+        msg
+    }
 }
 
 /// The data type for a Journal Club Meeting.

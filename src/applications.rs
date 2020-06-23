@@ -228,7 +228,7 @@ async fn email_send_new_applicant_notification(
     domain: String,
 ) {
     // Create the message.
-    let message = applicant_email(applicant.clone());
+    let message = applicant.clone().as_company_notification_email();
 
     // Send the message.
     sendgrid
@@ -241,39 +241,6 @@ async fn email_send_new_applicant_notification(
             format!("applications@{}", domain),
         )
         .await;
-}
-
-fn applicant_email(applicant: Applicant) -> String {
-    return format!(
-                        "## Applicant Information for {}
-
-Submitted Date: {}
-Name: {}
-Email: {}
-Phone: {}
-Location: {}
-GitHub: {}
-Resume: {}
-Oxide Candidate Materials: {}
-
-## Reminder
-
-To view the all the candidates refer to the following Google spreadsheets:
-
-- Engineering Applications: https://applications-engineering.corp.oxide.computer
-- Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
-- Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
-",
-applicant.role,
-                        applicant.submitted_time,
-                        applicant.name,
-                        applicant.email,
-                        applicant.phone,
-                        applicant.location,
-                        applicant.github,
-                        applicant.resume,
-                        applicant.materials,
-                    );
 }
 
 pub async fn iterate_over_applications(
