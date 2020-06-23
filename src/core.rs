@@ -40,6 +40,7 @@ pub struct Applicant {
     pub phone: String,
     pub country_code: String,
     pub github: String,
+    pub gitlab: String,
     pub portfolio: String,
     pub website: String,
     pub linkedin: String,
@@ -108,6 +109,13 @@ impl Applicant {
                 " | <https://github.com/{}|github:{}>",
                 self.github.trim_start_matches('@'),
                 self.github,
+            );
+        }
+        if !self.gitlab.is_empty() {
+            info_msg += &format!(
+                " | <https://gitlab.com/{}|gitlab:{}>",
+                self.gitlab.trim_start_matches('@'),
+                self.gitlab,
             );
         }
         if !self.linkedin.is_empty() {

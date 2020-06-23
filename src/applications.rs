@@ -484,6 +484,7 @@ pub async fn iterate_over_applications(
             }
 
             let mut github = "".to_string();
+            let mut gitlab = "".to_string();
             if !row[columns.github].trim().is_empty() {
                 github = format!(
                     "@{}",
@@ -494,6 +495,21 @@ pub async fn iterate_over_applications(
                         .trim_start_matches('@')
                         .trim_end_matches('/')
                 );
+                // Some people put a gitlab URL in the github form input,
+                // parse those accordingly.
+                if github.contains("https://gitlab.com") {
+                    github = "".to_string();
+
+                    gitlab = format!(
+                        "@{}",
+                        row[columns.github]
+                            .trim()
+                            .to_lowercase()
+                            .trim_start_matches("https://gitlab.com/")
+                            .trim_start_matches('@')
+                            .trim_end_matches('/')
+                    );
+                }
             }
 
             let location = row[columns.location].trim().to_string();
@@ -593,6 +609,7 @@ pub async fn iterate_over_applications(
                 phone,
                 country_code,
                 github,
+                gitlab,
                 linkedin,
                 portfolio,
                 website,
