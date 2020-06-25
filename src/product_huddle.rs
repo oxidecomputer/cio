@@ -192,7 +192,7 @@ pub async fn cmd_product_huddle_run() {
 /// Email template for the product huddle reminders.
 pub static EMAIL_TEMPLATE: &str = r#"Hello All!!
 
-This is your weekly (automated) reminder that our regularly scheduled product huddle is happening tomorrow morning at 11 AM PT. You can submit discussion topics using this form: https://product-huddle-form.corp.oxide.computer. Please submit topics before 12 PM PT today (Wednesday) so people can do any pre-reading and come prepared tomorrow.
+This is your weekly (automated) reminder that our regularly scheduled product huddle is happening tomorrow morning at 11 AM PT. You can submit discussion topics using this form: https://product-huddle-form.corp.oxide.computer. Please submit topics before 12 PM PT today so people can do any pre-reading and come prepared tomorrow.
 
 {{#if this.topics}} The following topics have already been proposed, but it is not too late to add something you have been working on or thinking about as well.
 
