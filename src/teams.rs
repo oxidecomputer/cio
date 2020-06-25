@@ -225,6 +225,14 @@ resource "aws_iam_policy" "policy-{{this.username}}" {
             "Resource": "arn:aws:iam::*:mfa/{{this.username}}"
         },
         {
+            "Sid": "AllowListUsers",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ListUsers"
+            ],
+            "Resource": "arn:aws:iam::*:user/"
+        },
+        {
             "Sid": "AllowManageOwnUserMFA",
             "Effect": "Allow",
             "Action": [
