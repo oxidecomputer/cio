@@ -15,13 +15,13 @@ use sendgrid::SendGrid;
 pub static DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
 pub static MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";
 
-// TODO: make this a cron job
-// TODO: test when there are actually topics
-// TODO: send out last meetings notes in the email as well with the link to the reports repo
 /**
  * Send an email before the regular product huddle meeting with what will
  * be covered from the discussion topics as well as reminding everyone to
  * fill out the form and add their topics.
+ *
+ * This runs based off a cron via a github action. This code checks the date/time to
+ * make sure it should send the email on that day.
  */
 pub async fn cmd_product_huddle_run() {
     // Initialize the Airtable client.
