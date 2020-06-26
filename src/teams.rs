@@ -245,14 +245,6 @@ resource "aws_iam_policy" "policy-{{terraformize this.username}}" {
             "Resource": "arn:aws:iam::*:mfa/{{terraformize this.username}}"
         },
         {
-            "Sid": "AllowListUsers",
-            "Effect": "Allow",
-            "Action": [
-                "iam:ListUsers"
-            ],
-            "Resource": "arn:aws:iam::*:user/"
-        },
-        {
             "Sid": "AllowManageOwnUserMFA",
             "Effect": "Allow",
             "Action": [
@@ -263,6 +255,22 @@ resource "aws_iam_policy" "policy-{{terraformize this.username}}" {
                 "iam:ResyncMFADevice"
             ],
             "Resource": "arn:aws:iam::*:user/users/{{terraformize this.username}}"
+        },
+        {
+            "Sid": "AllowListUsers",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ListUsers"
+            ],
+            "Resource": "arn:aws:iam::*:user/"
+        },
+        {
+            "Sid": "AllowListAccountAliases",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ListAccountAliases"
+            ],
+            "Resource": "*"
         }
     ]
 }
