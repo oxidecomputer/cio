@@ -175,7 +175,10 @@ impl Applicant {
     }
 
     pub fn as_company_notification_email(&self) -> String {
-        let dur = self.submitted_time - Utc::now();
+        let mut dur = self.submitted_time - Utc::now();
+        if dur.num_seconds() > 0 {
+            dur = -dur;
+        }
         let time = HumanTime::from(dur);
 
         let mut msg = format!(
