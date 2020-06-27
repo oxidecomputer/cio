@@ -72,34 +72,55 @@ pub async fn cmd_repos_run(cli_matches: &ArgMatches<'_>) {
         let repo = github.repo(github_org.to_string(), r.name.to_string());
 
         // Update the repository settings.
-        repo.edit(&RepoEditOptions {
-            name: r.name.to_string(),
-            description: r.description,
-            homepage: r.homepage,
-            private: Some(r.private),
-            has_issues: Some(r.has_issues),
-            has_projects: None,
-            has_wiki: Some(false),
-            default_branch: Some(r.default_branch.to_string()),
-            allow_squash_merge: Some(true),
-            allow_merge_commit: Some(false),
-            allow_rebase_merge: Some(true),
-        })
-        .await
-        .unwrap();
+        match repo
+            .edit(&RepoEditOptions {
+                name: r.name.to_string(),
+                description: r.description,
+                homepage: r.homepage,
+                private: Some(r.private),
+                has_issues: Some(r.has_issues),
+                has_projects: None,
+                has_wiki: Some(false),
+                default_branch: Some(r.default_branch.to_string()),
+                allow_squash_merge: Some(true),
+                allow_merge_commit: Some(false),
+                allow_rebase_merge: Some(true),
+            })
+            .await
+        {
+            Ok(_) => (),
+            Err(e) => {
+                if e.to_string().contains("empty repository") {
+                    continue;
+                }
+                warn!("could not update repo {}: {}", r.name, e);
+            }
+        }
 
         // Get the branch protection for the repo.
-        let default_branch = repo
-            .branches()
-            .get(r.default_branch.to_string())
-            .await
-            .unwrap();
+        let mut default_branch = hubcaps::branches::Branch {
+            name: "".to_string(),
+            protected: None,
+            protection_url: None,
+        };
+        match repo.branches().get(r.default_branch.to_string()).await {
+            Ok(d) => default_branch = d,
+            Err(e) => {
+                if !e.to_string().contains("empty repository") {
+                    warn!(
+                        "could not default branch for repo {}: {}",
+                        r.name, e
+                    );
+                }
+            }
+        }
 
         // Add branch protection to disallow force pushing to the default branch.
         // Only do this if it is not already protected.
         let is_protected = default_branch.protected.unwrap_or(false);
         if !is_protected {
-            repo.branches()
+            match repo
+                .branches()
                 .protection(
                     r.default_branch.to_string(),
                     &Protection {
@@ -110,7 +131,17 @@ pub async fn cmd_repos_run(cli_matches: &ArgMatches<'_>) {
                     },
                 )
                 .await
-                .unwrap();
+            {
+                Ok(_) => (),
+                Err(e) => {
+                    if !e.to_string().contains("empty repository") {
+                        warn!(
+                            "could not update protection for repo {}: {}",
+                            r.name, e
+                        );
+                    }
+                }
+            }
         }
 
         // Get the current labels for the repo.
