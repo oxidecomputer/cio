@@ -1,4 +1,4 @@
-/**
+/*!
  * A rust library for interacting with the GSuite APIs.
  *
  * For more information, the GSuite Directory API is documented at
