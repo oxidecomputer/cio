@@ -16,7 +16,7 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use reqwest::{get, header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
-use cio::{BuildingConfig, ResourceConfig};
+use cio_api::{BuildingConfig, ResourceConfig};
 
 /// Endpoint for the Zoom API.
 const ENDPOINT: &str = "https://api.zoom.us/v2/";

@@ -55,7 +55,7 @@ use reqwest::{get, header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use yup_oauth2::AccessToken;
 
-use cio::{BuildingConfig, ResourceConfig, UserConfig};
+use cio_api::{BuildingConfig, ResourceConfig, UserConfig};
 
 /// The endpoint for the GSuite Directory API.
 const DIRECTORY_ENDPOINT: &str =
