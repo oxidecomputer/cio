@@ -14,7 +14,7 @@
  * use gsuite_api::GSuite;
  * use yup_oauth2::{read_service_account_key, ServiceAccountAuthenticator};
  *
- * async fn get_drives() {
+ * async fn get_users() {
  *  // Get the GSuite credentials file.
  *  let gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap();
  *  let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();

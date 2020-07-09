@@ -6,7 +6,7 @@
  * Example:
  *
  * ```
- * use sendgrid::SendGrid;
+ * use sendgrid_api::SendGrid;
  *
  * async fn send_email(){
  *  // Initialize the SendGrid client.

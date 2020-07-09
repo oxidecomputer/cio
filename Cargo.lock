@@ -310,7 +310,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "cio-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand",
@@ -1003,7 +1003,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
-name = "sendgrid"
+name = "sendgrid-api"
 version = "0.1.0"
 dependencies = [
  "chrono",

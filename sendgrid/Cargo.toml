@@ -1,5 +1,5 @@
 [package]
-name = "sendgrid"
+name = "sendgrid-api"
 description = "An API client for sending emails with SendGrid"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]

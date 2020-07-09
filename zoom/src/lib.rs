@@ -2,6 +2,25 @@
  * A rust library for interacting with the Zoom v2 API.
  *
  * For more information, the Zoom v2 API is documented at [marketplace.zoom.us/docs/api-reference/zoom-api](https://marketplace.zoom.us/docs/api-reference/zoom-api).
+ *
+ * Example:
+ *
+ * ```
+ * use zoom::Zoom;
+ *
+ * async fn get_zoom_rooms(){
+ *  // Initialize the Zoom client.
+ *  let zoom_client = Zoom::new_from_env();
+ *
+ *  // List the rooms.
+ *  let rooms = zoom_client.list_rooms().await.unwrap();
+ *
+ *  // Iterate over the rooms.
+ *  for room in rooms {
+ *      println!("{:?}", room);
+ *  }
+ * }
+ * ```
  */
 use std::env;
 use std::error;
