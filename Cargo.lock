@@ -296,7 +296,7 @@ version = "0.1.0"
 dependencies = [
  "reqwest",
  "serde",
- "yup-oauth2",
+ "yup-oauth2 4.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -307,7 +307,7 @@ dependencies = [
  "rand",
  "reqwest",
  "serde",
- "yup-oauth2",
+ "yup-oauth2 4.1.2 (git+https://github.com/dermesser/yup-oauth2?rev=3d84ddd1782e1f1218427498c47069095915c4a8)",
 ]
 
 [[package]]
@@ -1053,7 +1053,7 @@ version = "0.1.0"
 dependencies = [
  "reqwest",
  "serde",
- "yup-oauth2",
+ "yup-oauth2 4.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1441,6 +1441,28 @@ dependencies = [
 name = "yup-oauth2"
 version = "4.1.2"
 source = "git+https://github.com/dermesser/yup-oauth2?rev=3d84ddd1782e1f1218427498c47069095915c4a8#3d84ddd1782e1f1218427498c47069095915c4a8"
+dependencies = [
+ "base64 0.12.3",
+ "chrono",
+ "futures",
+ "http",
+ "hyper",
+ "hyper-rustls",
+ "log",
+ "percent-encoding",
+ "rustls",
+ "seahash",
+ "serde",
+ "serde_json",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "yup-oauth2"
+version = "4.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "749192b9464694a95dbaf0586e845c835b315e38d491aa2766a8477aaadb48ec"
 dependencies = [
  "base64 0.12.3",
  "chrono",

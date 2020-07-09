@@ -10,4 +10,4 @@ repository = "https://github.com/oxidecomputer/cio"
 [dependencies]
 reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
-yup-oauth2 = { git = "https://github.com/dermesser/yup-oauth2", rev = "3d84ddd1782e1f1218427498c47069095915c4a8" }
+yup-oauth2 = "^4.1.2"

@@ -1,10 +1,53 @@
 use std::error;
 use std::fmt;
 /**
- * A rust library for interacting with the Google Sheets v4 API.
- *
- * For more information, the Google Sheets v4 API is documented at [developers.google.com/sheets/api/reference/rest](https://developers.google.com/sheets/api/reference/rest).
- */
+* A rust library for interacting with the Google Sheets v4 API.
+*
+* For more information, the Google Sheets v4 API is documented at [developers.google.com/sheets/api/reference/rest](https://developers.google.com/sheets/api/reference/rest).
+*
+* Example:
+*
+* ```
+* use std::env;
+*
+* use sheets::Sheets;
+* use yup_oauth2::{read_service_account_key, ServiceAccountAuthenticator};
+*
+* async fn get_sheet_values() {
+*  // Get the GSuite credentials file.
+*  let gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap();
+*  let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
+*  let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
+*  let auth = ServiceAccountAuthenticator::builder(gsuite_secret).subject(gsuite_subject.to_string()).build().await.expect("failed to create authenticator");
+*
+*  // Add the scopes to the secret and get the token.
+*  let token = auth.token(&[
+*      "https://www.googleapis.com/auth/spreadsheets",
+*      "https://www.googleapis.com/auth/drive",
+*  ]).await.expect("failed to get token");
+*
+*  if token.as_str().is_empty() {
+*      panic!("empty token is not valid");
+*  }
+*
+*  // Initialize the GSuite sheets client.
+*  let sheets_client = Sheets::new(token);
+*
+*  // Get the values in the sheet.
+*  let sheet_values = sheets_client.get_values("sheet_id", "Form Responses 1!A1:S1000".to_string()).await.unwrap();
+*  let values = sheet_values.values.unwrap();
+*
+*  if values.is_empty() {
+*      panic!("unable to retrieve any data values from Google sheet")
+*  }
+*
+*  // Iterate over the rows.
+*  for (row_index, row) in values.iter().enumerate() {
+*     println!("{}: {:?}", row_index, row);
+*  }
+* }
+* ```
+*/
 use std::rc::Rc;
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
