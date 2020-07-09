@@ -6,14 +6,19 @@
  * Example:
  *
  * ```
- * // Initialize the Airtable client.
- * let airtable = Airtable::new_from_env();
+ * use airtable_api::Airtable;
  *
- * // Get the current records from a table.
- * let mut records = airtable.list_records("Table Name", "Grid view").await.unwrap();
+ * async fn get_records(){
+ *  // Initialize the Airtable client.
+ *  let airtable = Airtable::new_from_env();
  *
- * // Iterate over the records.
- * for (i, record) in records.clone().iter().enumerate() {
+ *  // Get the current records from a table.
+ *  let mut records = airtable.list_records("Table Name", "Grid view").await.unwrap();
+ *
+ *  // Iterate over the records.
+ *  for (i, record) in records.clone().iter().enumerate() {
+ *      println!("{} - {:?}", i, record);
+ *  }
  * }
  * ```
  */
