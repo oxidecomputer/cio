@@ -1,8 +1,4 @@
-on:
-  push:
-    paths:
-      - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/rustfmt.yml" # Run when this file changes.
+on: push
 name: rustfmt
 jobs:
   rustfmt:

@@ -1,8 +1,4 @@
-on:
-  push:
-    paths:
-      - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/cargo-test.yml" # Run when this file changes.
+on: push
 name: cargo test
 jobs:
   cargotest:

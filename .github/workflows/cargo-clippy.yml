@@ -1,8 +1,4 @@
-on:
-  push:
-    paths:
-      - "src/**" # Only run on changes to the src directory.
-      - ".github/workflows/cargo-clippy.yml" # Run when this file changes.
+on: push
 name: cargo clippy
 jobs:
   cargoclippy:
