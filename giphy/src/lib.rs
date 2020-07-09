@@ -1,4 +1,4 @@
-/**
+/*!
  * A rust library for interacting with the Giphy API.
  *
  * For more information, the Giphy API is documented at

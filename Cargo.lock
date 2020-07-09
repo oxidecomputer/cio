@@ -301,7 +301,7 @@ dependencies = [
 
 [[package]]
 name = "giphy-api"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "reqwest",
  "serde",
@@ -309,7 +309,7 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "reqwest",
  "serde",
