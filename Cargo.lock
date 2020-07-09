@@ -300,6 +300,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "giphy"
+version = "0.1.1"
+dependencies = [
+ "reqwest",
+ "serde",
+]
+
+[[package]]
 name = "google-drive"
 version = "0.1.0"
 dependencies = [

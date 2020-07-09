@@ -3,6 +3,7 @@ members = [
 	"airtable",
 	"cio",
 	"drive",
+	"giphy",
 	"gsuite",
 	"sendgrid",
 	"sheets",
