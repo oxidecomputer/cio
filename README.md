@@ -13,6 +13,7 @@ A set of Rust libraries for accessing various APIs for doing CIO jobs.
 
 - [`airtable-api`](#airtable-api)
 - [`cio-api`](#cio-api)
+- [`giphy-api`](#giphy-api)
 - [`google-drive`](#google-drive)
 - [`gsuite-api`](#gsuite-api)
 - [`sendgrid-api`](#sendgrid-api)
