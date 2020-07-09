@@ -7,7 +7,7 @@
  * Example:
  *
  * ```
- * use giphy::Giphy;
+ * use giphy_api::Giphy;
  *
  * async fn get_gif(){
  *  // Initialize the Giphy client.

@@ -1,12 +1,12 @@
 [package]
-name = "giphy"
+name = "giphy-api"
 description = "An API client for Giphy"
 version = "0.1.1"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
-documentation = "https://docs.rs/giphy"
+documentation = "https://docs.rs/giphy-api"
 
 [dependencies]
 reqwest = { version = "0.10", features = ["json"] }
