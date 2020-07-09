@@ -9,6 +9,16 @@ A set of Rust libraries for accessing various APIs for doing CIO jobs.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [`airtable-api`](#airtable-api)
+- [`cio-api`](#cio-api)
+- [`google-drive`](#google-drive)
+- [`gsuite-api`](#gsuite-api)
+- [`sendgrid-api`](#sendgrid-api)
+- [`sheets`](#sheets)
+- [`zoom-api`](#zoom-api)
+
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 
