@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "airtable"
+name = "airtable-api"
 version = "0.1.0"
 dependencies = [
  "reqwest",
@@ -118,15 +118,6 @@ name = "data-encoding"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72aa14c04dfae8dd7d8a2b1cb7ca2152618cd01336dbfe704b8dcbf8d41dbd69"
-
-[[package]]
-name = "drive"
-version = "0.1.0"
-dependencies = [
- "reqwest",
- "serde",
- "yup-oauth2",
-]
 
 [[package]]
 name = "dtoa"
@@ -297,6 +288,15 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi",
+]
+
+[[package]]
+name = "google-drive"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "yup-oauth2",
 ]
 
 [[package]]

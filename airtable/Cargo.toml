@@ -1,5 +1,5 @@
 [package]
-name = "airtable"
+name = "airtable-api"
 description = "An API client for Airtable"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]

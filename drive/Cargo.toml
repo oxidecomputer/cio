@@ -1,5 +1,5 @@
 [package]
-name = "drive"
+name = "google-drive"
 description = "An API client for Google Drive"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]

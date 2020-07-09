@@ -2,6 +2,20 @@
  * A rust library for interacting with the Airtable API.
  *
  * For more information, the Airtable API is documented at [airtable.com/api](https://airtable.com/api).
+ *
+ * Example:
+ *
+ * ```
+ * // Initialize the Airtable client.
+ * let airtable = Airtable::new_from_env();
+ *
+ * // Get the current records from a table.
+ * let mut records = airtable.list_records("Table Name", "Grid view").await.unwrap();
+ *
+ * // Iterate over the records.
+ * for (i, record) in records.clone().iter().enumerate() {
+ * }
+ * ```
  */
 use std::env;
 use std::error;
