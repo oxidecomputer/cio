@@ -1,4 +1,4 @@
-/**
+/*!
  * A rust library for interacting with the Airtable API.
  *
  * For more information, the Airtable API is documented at [airtable.com/api](https://airtable.com/api).
