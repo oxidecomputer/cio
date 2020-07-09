@@ -6,3 +6,48 @@
 [![rustfmt](https://github.com/oxidecomputer/cio/workflows/rustfmt/badge.svg)](https://github.com/oxidecomputer/cio/actions?query=workflow%3A%22rustfmt%22)
 
 A set of Rust libraries for accessing various APIs for doing CIO jobs.
+
+<!-- start tocdoc -->
+<!-- end tocdoc -->
+
+## `airtable-api`
+
+[![docs.rs](https://docs.rs/airtable-api/badge.svg)](https://docs.rs/airtable-api)
+
+An API client for Airtable.
+
+## `cio-api`
+
+[![docs.rs](https://docs.rs/cio-api/badge.svg)](https://docs.rs/cio-api)
+
+Helper functions and types for doing the activities of a CIO.
+
+## `google-drive`
+
+[![docs.rs](https://docs.rs/google-drive/badge.svg)](https://docs.rs/google-drive)
+
+An API client for Google Drive.
+
+## `gsuite-api`
+
+[![docs.rs](https://docs.rs/gsuite-api/badge.svg)](https://docs.rs/gsuite-api)
+
+An API client for GSuite APIs: directory, resources, groups.
+
+## `sendgrid-api`
+
+[![docs.rs](https://docs.rs/sendgrid-api/badge.svg)](https://docs.rs/sendgrid-api)
+
+An API client for sending emails with SendGrid.
+
+## `sheets`
+
+[![docs.rs](https://docs.rs/sheets/badge.svg)](https://docs.rs/sheets)
+
+An API client for Google Sheets.
+
+## `zoom-api`
+
+[![docs.rs](https://docs.rs/zoom-api/badge.svg)](https://docs.rs/zoom-api)
+
+An API client for Zoom.
