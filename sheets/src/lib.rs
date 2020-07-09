@@ -21,16 +21,13 @@ use std::fmt;
 *  let auth = ServiceAccountAuthenticator::builder(gsuite_secret).subject(gsuite_subject.to_string()).build().await.expect("failed to create authenticator");
 *
 *  // Add the scopes to the secret and get the token.
-*  let token = auth.token(&[
-*      "https://www.googleapis.com/auth/spreadsheets",
-*      "https://www.googleapis.com/auth/drive",
-*  ]).await.expect("failed to get token");
+*  let token = auth.token(&["https://www.googleapis.com/auth/spreadsheets"]).await.expect("failed to get token");
 *
 *  if token.as_str().is_empty() {
 *      panic!("empty token is not valid");
 *  }
 *
-*  // Initialize the GSuite sheets client.
+*  // Initialize the Google Sheets client.
 *  let sheets_client = Sheets::new(token);
 *
 *  // Get the values in the sheet.

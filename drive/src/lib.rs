@@ -2,6 +2,41 @@
  * A rust library for interacting with the Google Drive v3 API.
  *
  * For more information, the Google Drive v3 API is documented at [developers.google.com/drive/api/v3/reference](https://developers.google.com/drive/api/v3/reference).
+ *
+ * Example:
+ *
+ * ```
+ * use std::env;
+ *
+ * use google_drive::GoogleDrive;
+ * use yup_oauth2::{read_service_account_key, ServiceAccountAuthenticator};
+ *
+ * async fn get_drives() {
+ *  // Get the GSuite credentials file.
+ *  let gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap();
+ *  let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
+ *  let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
+ *  let auth = ServiceAccountAuthenticator::builder(gsuite_secret).subject(gsuite_subject.to_string()).build().await.expect("failed to create authenticator");
+ *
+ *  // Add the scopes to the secret and get the token.
+ *  let token = auth.token(&["https://www.googleapis.com/auth/drive"]).await.expect("failed to get token");
+ *
+ *  if token.as_str().is_empty() {
+ *      panic!("empty token is not valid");
+ *  }
+ *
+ *  // Initialize the Google Drive client.
+ *  let drive_client = GoogleDrive::new(token);
+ *
+ *  // List drives.
+ *  let drives = drive_client.list_drives().await.unwrap();
+ *
+ *  // Iterate over the drives.
+ *  for drive in drives {
+ *     println!("{:?}", drive);
+ *  }
+ * }
+ * ```
  */
 use std::collections::HashMap;
 use std::error;
