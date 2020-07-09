@@ -1,0 +1,10 @@
+[workspace]
+members = [
+	"airtable",
+	"cio",
+	"drive",
+	"gsuite",
+	"sendgrid",
+	"sheets",
+	"zoom",
+]
