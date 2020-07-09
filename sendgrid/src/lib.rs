@@ -2,6 +2,29 @@
  * A rust library for interacting with the SendGrid v3 API.
  *
  * For more information, the SendGrid v3 API is documented at [sendgrid.com/docs/API_Reference/api_v3.html](https://sendgrid.com/docs/API_Reference/api_v3.html).
+ *
+ * Example:
+ *
+ * ```
+ * use sendgrid::SendGrid;
+ *
+ * async fn send_email(){
+ *  // Initialize the SendGrid client.
+ *  let sendgrid = SendGrid::new_from_env();
+ *
+ *  // Send the email.
+ *  sendgrid.send_mail(
+ *      "email subject".to_string(),
+ *      "body of email".to_string(),
+ *      vec!["to_address@domain.com".to_string()],
+ *      vec!["cc_address@domain.com".to_string()],
+ *      vec!["bcc_address@domain.com".to_string()],
+ *      "from_address@domain.com".to_string(),
+ *  ).await;
+ *
+ *  println!("successfully sent the email!");
+ * }
+ * ```
  */
 use std::collections::HashMap;
 use std::env;
