@@ -34,6 +34,12 @@ An API client for Airtable.
 
 Helper functions and types for doing the activities of a CIO.
 
+### `giphy-api`
+
+[![docs.rs](https://docs.rs/giphy-api/badge.svg)](https://docs.rs/giphy-api)
+
+An API client for Giphy.
+
 ### `google-drive`
 
 [![docs.rs](https://docs.rs/google-drive/badge.svg)](https://docs.rs/google-drive)
