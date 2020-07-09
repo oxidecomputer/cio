@@ -1,29 +1,3 @@
-# terraform ignores
-.terraform/
-terraform.tfstate.backup
-.terraform.tfstate.lock.info
-
-# ignore the meta repo when we clone it within this directory to generate
-# the tables
-meta
-# Generated tables directories
-directory/
-links/
-
 # files added by cargo
 /target
 **/*.rs.bk
-
-# nginx ignores
-nginx/.htpasswd
-
-# lets encrypt
-letsencrypt
-
-# Ignore files that cannot be cached and cause a lot of conflicts.
-# This is the rfd repo since we update it so frequently.
-.cache/github/v1/https/api.github.com/orgs/oxidecomputer/repos
-.cache/github/v1/https/api.github.com/repos/oxidecomputer/*.etag
-.cache/github/v1/https/api.github.com/repos/oxidecomputer/*.json
-.cache/github/v1/https/api.github.com/repos/oxidecomputer/*/branches/*.etag
-.cache/github/v1/https/api.github.com/repos/oxidecomputer/*/branches/*.json

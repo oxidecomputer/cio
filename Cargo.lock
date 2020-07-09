@@ -296,18 +296,18 @@ version = "0.1.0"
 dependencies = [
  "reqwest",
  "serde",
- "yup-oauth2 4.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "yup-oauth2",
 ]
 
 [[package]]
-name = "gsuite"
+name = "gsuite-api"
 version = "0.1.0"
 dependencies = [
  "cio",
  "rand",
  "reqwest",
  "serde",
- "yup-oauth2 4.1.2 (git+https://github.com/dermesser/yup-oauth2?rev=3d84ddd1782e1f1218427498c47069095915c4a8)",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -999,7 +999,6 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "data-encoding",
- "gsuite",
  "reqwest",
  "serde",
 ]
@@ -1053,7 +1052,7 @@ version = "0.1.0"
 dependencies = [
  "reqwest",
  "serde",
- "yup-oauth2 4.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -1435,27 +1434,6 @@ checksum = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
 dependencies = [
  "winapi 0.2.8",
  "winapi-build",
-]
-
-[[package]]
-name = "yup-oauth2"
-version = "4.1.2"
-source = "git+https://github.com/dermesser/yup-oauth2?rev=3d84ddd1782e1f1218427498c47069095915c4a8#3d84ddd1782e1f1218427498c47069095915c4a8"
-dependencies = [
- "base64 0.12.3",
- "chrono",
- "futures",
- "http",
- "hyper",
- "hyper-rustls",
- "log",
- "percent-encoding",
- "rustls",
- "seahash",
- "serde",
- "serde_json",
- "tokio",
- "url",
 ]
 
 [[package]]
