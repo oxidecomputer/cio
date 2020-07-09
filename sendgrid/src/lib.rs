@@ -1,4 +1,4 @@
-/**
+/*!
  * A rust library for interacting with the SendGrid v3 API.
  *
  * For more information, the SendGrid v3 API is documented at [sendgrid.com/docs/API_Reference/api_v3.html](https://sendgrid.com/docs/API_Reference/api_v3.html).
