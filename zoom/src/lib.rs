@@ -1,4 +1,4 @@
-/**
+/*!
  * A rust library for interacting with the Zoom v2 API.
  *
  * For more information, the Zoom v2 API is documented at [marketplace.zoom.us/docs/api-reference/zoom-api](https://marketplace.zoom.us/docs/api-reference/zoom-api).

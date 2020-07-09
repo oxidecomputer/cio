@@ -1,6 +1,4 @@
-use std::error;
-use std::fmt;
-/**
+/*!
 * A rust library for interacting with the Google Sheets v4 API.
 *
 * For more information, the Google Sheets v4 API is documented at [developers.google.com/sheets/api/reference/rest](https://developers.google.com/sheets/api/reference/rest).
@@ -45,6 +43,8 @@ use std::fmt;
 * }
 * ```
 */
+use std::error;
+use std::fmt;
 use std::rc::Rc;
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
