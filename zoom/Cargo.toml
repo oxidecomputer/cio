@@ -1,11 +1,12 @@
 [package]
-name = "zoom"
+name = "zoom-api"
 description = "An API client for Zoom"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
+documentation = "https://docs.rs/zoom-api"
 
 [dependencies]
 chrono = "0.4"

@@ -6,7 +6,7 @@
  * Example:
  *
  * ```
- * use zoom::Zoom;
+ * use zoom_api::Zoom;
  *
  * async fn get_zoom_rooms(){
  *  // Initialize the Zoom client.
