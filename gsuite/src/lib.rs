@@ -34,10 +34,10 @@
  *  }
  *
  *  // Initialize the GSuite client.
- *  let gsuite_client = GSuite::new(token);
+ *  let gsuite_client = GSuite::new("customer_id", "domain", token);
  *
  *  // List users.
- *  let users = gsuite_client.list_users().await.unwrap();
+ *  let users = gsuite_client.list_users().await;
  *
  *  // Iterate over the users.
  *  for user in users {

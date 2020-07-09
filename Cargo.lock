@@ -89,6 +89,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cio-api"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcc051d712b31b897bebba40184fad6b6c264a0fd057d145a45ff37555456628"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -303,7 +312,7 @@ dependencies = [
 name = "gsuite-api"
 version = "0.1.0"
 dependencies = [
- "cio-api",
+ "cio-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand",
  "reqwest",
  "serde",
@@ -1463,7 +1472,7 @@ name = "zoom"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "cio-api",
+ "cio-api 0.1.0",
  "jsonwebtoken",
  "reqwest",
  "serde",
