@@ -1,5 +1,5 @@
 [package]
-name = "cio"
+name = "cio-api"
 description = "Helper functions and types for doing the activities of a CIO"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]

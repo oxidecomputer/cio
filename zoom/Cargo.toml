@@ -9,7 +9,7 @@ repository = "https://github.com/oxidecomputer/cio"
 
 [dependencies]
 chrono = "0.4"
-cio = { path = "../cio" }
+cio-api = { path = "../cio" }
 jsonwebtoken = "7"
 reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }

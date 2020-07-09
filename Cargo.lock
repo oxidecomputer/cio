@@ -82,7 +82,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cio"
+name = "cio-api"
 version = "0.1.0"
 dependencies = [
  "serde",
@@ -303,7 +303,7 @@ dependencies = [
 name = "gsuite-api"
 version = "0.1.0"
 dependencies = [
- "cio",
+ "cio-api",
  "rand",
  "reqwest",
  "serde",
@@ -1463,7 +1463,7 @@ name = "zoom"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "cio",
+ "cio-api",
  "jsonwebtoken",
  "reqwest",
  "serde",
