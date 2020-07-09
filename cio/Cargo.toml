@@ -1,8 +1,11 @@
 [package]
 name = "cio"
+description = "Helper functions and types for doing the activities of a CIO"
 version = "0.1.0"
-authors = ["Jess Frazelle <acidburn@jessfraz.com>"]
+authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
+license = "Apache-2.0"
+repository = "https://github.com/oxidecomputer/cio"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
