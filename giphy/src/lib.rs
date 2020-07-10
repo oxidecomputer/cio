@@ -9,16 +9,19 @@
  * ```
  * use giphy_api::Giphy;
  *
- * async fn get_gif(){
- *  // Initialize the Giphy client.
- *  let giphy_client = Giphy::new_from_env();
+ * async fn get_gif() {
+ *     // Initialize the Giphy client.
+ *     let giphy_client = Giphy::new_from_env();
  *
- *  // Get a list of gifs based on a search.
- *  let gifs = giphy_client.search_gifs("toddlers and tiaras", 5, "pg-13").await.unwrap();
+ *     // Get a list of gifs based on a search.
+ *     let gifs = giphy_client
+ *         .search_gifs("toddlers and tiaras", 5, "pg-13")
+ *         .await
+ *         .unwrap();
  *
- *  for gif in gifs {
- *      println!("{:?}", gif);
- *  }
+ *     for gif in gifs {
+ *         println!("{:?}", gif);
+ *     }
  * }
  * ```
  */

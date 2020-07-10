@@ -8,17 +8,17 @@
  * ```
  * use zoom_api::Zoom;
  *
- * async fn get_zoom_rooms(){
- *  // Initialize the Zoom client.
- *  let zoom_client = Zoom::new_from_env();
+ * async fn get_zoom_rooms() {
+ *     // Initialize the Zoom client.
+ *     let zoom_client = Zoom::new_from_env();
  *
- *  // List the rooms.
- *  let rooms = zoom_client.list_rooms().await.unwrap();
+ *     // List the rooms.
+ *     let rooms = zoom_client.list_rooms().await.unwrap();
  *
- *  // Iterate over the rooms.
- *  for room in rooms {
- *      println!("{:?}", room);
- *  }
+ *     // Iterate over the rooms.
+ *     for room in rooms {
+ *         println!("{:?}", room);
+ *     }
  * }
  * ```
  */
@@ -636,7 +636,7 @@ fn token(key: String, secret: String) -> String {
 
     match encode(&header, &claims, &EncodingKey::from_secret(secret.as_ref())) {
         Ok(t) => t,
-        Err(e) => panic!("creating jwt failed: {}", e), // TODO: return the error.
+        Err(e) => panic!("creating jwt failed: {}", e), /* TODO: return the error. */
     }
 }
 

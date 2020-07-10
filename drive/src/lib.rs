@@ -12,29 +12,39 @@
  * use yup_oauth2::{read_service_account_key, ServiceAccountAuthenticator};
  *
  * async fn get_drives() {
- *  // Get the GSuite credentials file.
- *  let gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap();
- *  let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
- *  let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
- *  let auth = ServiceAccountAuthenticator::builder(gsuite_secret).subject(gsuite_subject.to_string()).build().await.expect("failed to create authenticator");
+ *     // Get the GSuite credentials file.
+ *     let gsuite_credential_file =
+ *         env::var("GADMIN_CREDENTIAL_FILE").unwrap();
+ *     let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
+ *     let gsuite_secret = read_service_account_key(gsuite_credential_file)
+ *         .await
+ *         .expect("failed to read gsuite credential file");
+ *     let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
+ *         .subject(gsuite_subject.to_string())
+ *         .build()
+ *         .await
+ *         .expect("failed to create authenticator");
  *
- *  // Add the scopes to the secret and get the token.
- *  let token = auth.token(&["https://www.googleapis.com/auth/drive"]).await.expect("failed to get token");
+ *     // Add the scopes to the secret and get the token.
+ *     let token = auth
+ *         .token(&["https://www.googleapis.com/auth/drive"])
+ *         .await
+ *         .expect("failed to get token");
  *
- *  if token.as_str().is_empty() {
- *      panic!("empty token is not valid");
- *  }
+ *     if token.as_str().is_empty() {
+ *         panic!("empty token is not valid");
+ *     }
  *
- *  // Initialize the Google Drive client.
- *  let drive_client = GoogleDrive::new(token);
+ *     // Initialize the Google Drive client.
+ *     let drive_client = GoogleDrive::new(token);
  *
- *  // List drives.
- *  let drives = drive_client.list_drives().await.unwrap();
+ *     // List drives.
+ *     let drives = drive_client.list_drives().await.unwrap();
  *
- *  // Iterate over the drives.
- *  for drive in drives {
- *     println!("{:?}", drive);
- *  }
+ *     // Iterate over the drives.
+ *     for drive in drives {
+ *         println!("{:?}", drive);
+ *     }
  * }
  * ```
  */
@@ -459,7 +469,6 @@ struct DrivesResponse {
 /// An image file and cropping parameters from which a background image for this shared drive is set. This is a write only field; it can only be set on drive.drives.update requests that don't set themeId. When specified, all fields of the backgroundImageFile must be set.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct DriveBackgroundImageFile {
     /// The width of the cropped image in the closed range of 0 to 1. This value represents the width of the cropped image divided by the width of the entire image. The height is computed by applying a width to height aspect ratio of 80 to 9. The resulting image must be at least 1280 pixels wide and 144 pixels high.
@@ -509,7 +518,6 @@ pub struct Drive {
 /// A set of restrictions that apply to this shared drive or items inside this shared drive.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct DriveRestrictions {
     /// Whether administrative privileges on this shared drive are required to modify restrictions.
@@ -529,7 +537,6 @@ pub struct DriveRestrictions {
 /// Capabilities the current user has on this Team Drive.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct TeamDriveCapabilities {
     /// Whether the current user can read the revisions resource of files in this Team Drive.
@@ -594,7 +601,6 @@ pub struct TeamDriveCapabilities {
 /// An image file and cropping parameters from which a background image for this Team Drive is set. This is a write only field; it can only be set on drive.teamdrives.update requests that don't set themeId. When specified, all fields of the backgroundImageFile must be set.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct TeamDriveBackgroundImageFile {
     /// The width of the cropped image in the closed range of 0 to 1. This value represents the width of the cropped image divided by the width of the entire image. The height is computed by applying a width to height aspect ratio of 80 to 9. The resulting image must be at least 1280 pixels wide and 144 pixels high.
@@ -612,7 +618,6 @@ pub struct TeamDriveBackgroundImageFile {
 /// Capabilities the current user has on this shared drive.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct DriveCapabilities {
     /// Whether the current user can read the revisions resource of files in this shared drive.
@@ -839,7 +844,6 @@ pub struct File {
 /// Capabilities the current user has on this file. Each capability corresponds to a fine-grained action that a user may take.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FileCapabilities {
     /// Whether the current user can move this item outside of this drive by changing its parent. Note that a request to change the parent of the item may still fail depending on the new parent that is being added.
@@ -934,7 +938,6 @@ pub struct FileCapabilities {
 /// Additional metadata about video media. This may not be available immediately upon upload.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FileVideoMediaMetadata {
     /// The width of the video in pixels.
@@ -949,7 +952,6 @@ pub struct FileVideoMediaMetadata {
 /// Additional metadata about image media, if available.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FileImageMediaMetadata {
     /// The exposure bias of the photo (APEX value).
@@ -1012,7 +1014,6 @@ pub struct FileImageMediaMetadata {
 /// Geographic location information stored in the image.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FileImageMediaMetadataLocation {
     /// The latitude stored in the image.
@@ -1026,7 +1027,6 @@ pub struct FileImageMediaMetadataLocation {
 /// A permission for a file. A permission grants a user, group, domain or the world access to a file or a folder hierarchy.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Permission {
     /// The domain to which this permission refers.
@@ -1082,7 +1082,6 @@ pub struct Permission {
 /// Deprecated - use permissionDetails instead.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct PermissionTeamDrivePermissionDetails {
     /// Deprecated - use permissionDetails/inherited instead.
@@ -1100,7 +1099,6 @@ pub struct PermissionTeamDrivePermissionDetails {
 /// Details of whether the permissions on this shared drive item are inherited or directly on this item. This is an output-only field which is present only for shared drive items.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct PermissionPermissionDetails {
     /// Whether this permission is inherited. This field is always populated. This is an output-only field.
@@ -1125,7 +1123,6 @@ pub struct PermissionPermissionDetails {
 /// Additional information about the content of the file. These fields are never populated in responses.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FileContentHints {
     /// Text to be indexed for the file to improve fullText queries. This is limited to 128KB in length and may contain HTML elements.
@@ -1138,7 +1135,6 @@ pub struct FileContentHints {
 /// A thumbnail for the file. This will only be used if Google Drive cannot generate a standard thumbnail.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FileContentHintsThumbnail {
     /// The MIME type of the thumbnail.
@@ -1151,7 +1147,6 @@ pub struct FileContentHintsThumbnail {
 /// Information about a Drive user.
 ///
 /// This type is not used in any activity, and only used as *part* of another schema.
-///
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct User {
     /// Whether this user is the requesting user.

@@ -8,21 +8,23 @@
  * ```
  * use sendgrid_api::SendGrid;
  *
- * async fn send_email(){
- *  // Initialize the SendGrid client.
- *  let sendgrid = SendGrid::new_from_env();
+ * async fn send_email() {
+ *     // Initialize the SendGrid client.
+ *     let sendgrid = SendGrid::new_from_env();
  *
- *  // Send the email.
- *  sendgrid.send_mail(
- *      "email subject".to_string(),
- *      "body of email".to_string(),
- *      vec!["to_address@domain.com".to_string()],
- *      vec!["cc_address@domain.com".to_string()],
- *      vec!["bcc_address@domain.com".to_string()],
- *      "from_address@domain.com".to_string(),
- *  ).await;
+ *     // Send the email.
+ *     sendgrid
+ *         .send_mail(
+ *             "email subject".to_string(),
+ *             "body of email".to_string(),
+ *             vec!["to_address@domain.com".to_string()],
+ *             vec!["cc_address@domain.com".to_string()],
+ *             vec!["bcc_address@domain.com".to_string()],
+ *             "from_address@domain.com".to_string(),
+ *         )
+ *         .await;
  *
- *  println!("successfully sent the email!");
+ *     println!("successfully sent the email!");
  * }
  * ```
  */
