@@ -1,7 +1,7 @@
 [package]
 name = "sendgrid-api"
 description = "An API client for sending emails with SendGrid"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
