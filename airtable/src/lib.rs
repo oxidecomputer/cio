@@ -137,7 +137,7 @@ impl Airtable {
             table.to_string(),
             (),
             Some(vec![
-                ("maxRecords", "100".to_string()),
+                ("pageSize", "100".to_string()),
                 ("view", view.to_string()),
             ]),
         );
@@ -172,7 +172,7 @@ impl Airtable {
                 table.to_string(),
                 (),
                 Some(vec![
-                    ("maxRecords", "100".to_string()),
+                    ("pageSize", "100".to_string()),
                     ("view", view.to_string()),
                     ("offset", offset),
                 ]),
