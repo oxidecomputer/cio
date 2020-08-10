@@ -132,7 +132,7 @@ impl Airtable {
         view: &str,
     ) -> Result<Vec<Record>, APIError> {
         // Build the request.
-        let request = self.request(
+        let mut request = self.request(
             Method::GET,
             table.to_string(),
             (),
@@ -142,7 +142,7 @@ impl Airtable {
             ]),
         );
 
-        let resp = self.client.execute(request).await.unwrap();
+        let mut resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -154,9 +154,54 @@ impl Airtable {
         };
 
         // Try to deserialize the response.
-        let r: APICall = resp.json().await.unwrap();
+        let mut r: APICall = resp.json().await.unwrap();
 
-        Ok(r.records)
+        let mut records = r.records;
+
+        let mut offset = if let Some(o) = r.offset {
+            o
+        } else {
+            "".to_string()
+        };
+
+        // Paginate if we should.
+        // TODO: make this more DRY
+        while !offset.is_empty() {
+            request = self.request(
+                Method::GET,
+                table.to_string(),
+                (),
+                Some(vec![
+                    ("maxRecords", "100".to_string()),
+                    ("view", view.to_string()),
+                    ("offset", offset),
+                ]),
+            );
+
+            resp = self.client.execute(request).await.unwrap();
+            match resp.status() {
+                StatusCode::OK => (),
+                s => {
+                    return Err(APIError {
+                        status_code: s,
+                        body: resp.text().await.unwrap(),
+                    })
+                }
+            };
+
+            // Try to deserialize the response.
+            r = resp.json().await.unwrap();
+
+            records.append(&mut r.records);
+
+            offset = if let Some(o) = r.offset {
+                o
+            } else {
+                "".to_string()
+            };
+        }
+
+        Ok(records)
     }
 
     /// Bulk create records in a table.
