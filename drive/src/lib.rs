@@ -56,6 +56,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 
+use bytes::Bytes;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use yup_oauth2::AccessToken;
@@ -187,7 +188,7 @@ impl GoogleDrive {
     pub async fn download_file_by_id(
         &self,
         id: &str,
-    ) -> Result<String, APIError> {
+    ) -> Result<Bytes, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -213,8 +214,7 @@ impl GoogleDrive {
             }
         };
 
-        // Try to deserialize the response.
-        Ok(resp.text().await.unwrap())
+        Ok(resp.bytes().await.unwrap())
     }
 
     /// Get a file's contents by it's ID. Only works for Google Docs.
