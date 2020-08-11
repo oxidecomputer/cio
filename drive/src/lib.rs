@@ -228,14 +228,12 @@ impl GoogleDrive {
         &self,
         id: &str,
     ) -> Result<Bytes, APIError> {
-        let file = self.get_file_by_id(id).await.unwrap();
-
         // Build the request.
         let request = self.request(
             Method::GET,
             format!("files/{}/export", id),
             (),
-            Some(vec![("mimeType", file.mime_type.unwrap())]),
+            Some(vec![("mimeType", "application/pdf".to_string())]),
             0,
             "".to_string(),
             "",
