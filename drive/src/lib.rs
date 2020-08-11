@@ -207,15 +207,9 @@ impl GoogleDrive {
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                let text = resp.text().await.unwrap();
-
-                if text.contains("Use Export with Google Docs files") {
-                    return self.get_file_contents_by_id(id).await;
-                }
-
                 return Err(APIError {
                     status_code: s,
-                    body: text,
+                    body: resp.text().await.unwrap(),
                 });
             }
         };
@@ -227,13 +221,13 @@ impl GoogleDrive {
     pub async fn get_file_contents_by_id(
         &self,
         id: &str,
-    ) -> Result<Bytes, APIError> {
+    ) -> Result<String, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
             format!("files/{}/export", id),
             (),
-            Some(vec![("mimeType", "application/pdf".to_string())]),
+            Some(vec![("mimeType", "text/plain".to_string())]),
             0,
             "".to_string(),
             "",
@@ -251,7 +245,7 @@ impl GoogleDrive {
         };
 
         // Try to deserialize the response.
-        Ok(resp.bytes().await.unwrap())
+        Ok(resp.text().await.unwrap())
     }
 
     /// Get a file by it's ID.
