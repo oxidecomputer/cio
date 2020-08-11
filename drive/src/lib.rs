@@ -183,6 +183,34 @@ impl GoogleDrive {
         rb.build().unwrap()
     }
 
+    /// Get a file by it's ID.
+    pub async fn get_file_by_id(&self, id: &str) -> Result<File, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            format!("files/{}", id),
+            (),
+            Some(vec![("supportsAllDrives", "true".to_string())]),
+            0,
+            "".to_string(),
+            "",
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
     /// Get a file by it's name.
     pub async fn get_file_by_name(
         &self,
