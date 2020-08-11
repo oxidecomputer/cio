@@ -1,7 +1,7 @@
 [package]
 name = "google-drive"
 description = "An API client for Google Drive"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
