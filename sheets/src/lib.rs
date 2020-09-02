@@ -58,7 +58,7 @@
  */
 use std::error;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
@@ -71,7 +71,7 @@ const ENDPOINT: &str = "https://sheets.googleapis.com/v4/";
 pub struct Sheets {
     token: AccessToken,
 
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl Sheets {
@@ -83,7 +83,7 @@ impl Sheets {
         match client {
             Ok(c) => Self {
                 token,
-                client: Rc::new(c),
+                client: Arc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
         }

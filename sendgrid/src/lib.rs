@@ -30,7 +30,7 @@
  */
 use std::collections::HashMap;
 use std::env;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use data_encoding::BASE64;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
@@ -43,7 +43,7 @@ const ENDPOINT: &str = "https://api.sendgrid.com/v3/";
 pub struct SendGrid {
     key: String,
 
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl SendGrid {
@@ -59,7 +59,7 @@ impl SendGrid {
             Ok(c) => Self {
                 key: key.to_string(),
 
-                client: Rc::new(c),
+                client: Arc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
         }

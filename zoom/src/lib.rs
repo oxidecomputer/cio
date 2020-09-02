@@ -28,7 +28,7 @@ use std::fmt;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
@@ -48,7 +48,7 @@ pub struct Zoom {
 
     token: String,
 
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl Zoom {
@@ -71,7 +71,7 @@ impl Zoom {
                 secret: secret.to_string(),
                 account_id: account_id.to_string(),
                 token,
-                client: Rc::new(c),
+                client: Arc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
         }

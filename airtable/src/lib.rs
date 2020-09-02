@@ -28,7 +28,7 @@
 use std::env;
 use std::error;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
@@ -41,7 +41,7 @@ pub struct Airtable {
     key: String,
     base_id: String,
 
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl Airtable {
@@ -59,7 +59,7 @@ impl Airtable {
                 key: key.to_string(),
                 base_id: base_id.to_string(),
 
-                client: Rc::new(c),
+                client: Arc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
         }

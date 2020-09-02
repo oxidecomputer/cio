@@ -28,7 +28,7 @@
 use std::env;
 use std::error;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
@@ -40,7 +40,7 @@ const ENDPOINT: &str = "https://api.giphy.com/v1/";
 pub struct Giphy {
     key: String,
 
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl Giphy {
@@ -56,7 +56,7 @@ impl Giphy {
             Ok(c) => Self {
                 key: key.to_string(),
 
-                client: Rc::new(c),
+                client: Arc::new(c),
             },
             Err(e) => panic!("creating client failed: {:?}", e),
         }

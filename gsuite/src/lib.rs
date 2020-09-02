@@ -54,7 +54,7 @@
  * ```
  */
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -79,7 +79,7 @@ pub struct GSuite {
 
     token: AccessToken,
 
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl GSuite {
@@ -92,7 +92,7 @@ impl GSuite {
             customer: customer.to_string(),
             domain: domain.to_string(),
             token,
-            client: Rc::new(client),
+            client: Arc::new(client),
         }
     }
 
