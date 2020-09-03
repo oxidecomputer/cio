@@ -54,7 +54,7 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, RFD> {
     let rfd_csv_content = github
         .repo(github_org, "rfd")
         .content()
-        .file(".helpers/rfd.csv")
+        .file("/.helpers/rfd.csv")
         .await
         .expect("failed to get rfd csv content")
         .content;
