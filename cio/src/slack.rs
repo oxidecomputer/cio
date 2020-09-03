@@ -126,6 +126,8 @@ pub enum MessageBlockType {
     Section,
     #[serde(rename = "context")]
     Context,
+    #[serde(rename = "divider")]
+    Divider,
 }
 
 impl Default for MessageBlockType {
