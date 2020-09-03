@@ -16,6 +16,7 @@ clap = {version = "2", features = ["yaml"]}
 csv = "1.1"
 google-drive = "^0.1.0"
 html2text = "0.1"
+#hubcaps = { version = "0.6.0", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/softprops/hubcaps", rev = "2385b8e957bb921f61c1146f075ae132dac5e95d" , features = ["httpcache"] }
 pandoc = "0.8"
 phonenumber = "0.2"
@@ -25,4 +26,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sheets = "^0.1.0"
 toml = "0.5"
-yup-oauth2 = { git = "https://github.com/dermesser/yup-oauth2", rev = "3d84ddd1782e1f1218427498c47069095915c4a8" }
+yup-oauth2 = "^4.1.2"
