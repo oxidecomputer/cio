@@ -144,7 +144,7 @@ pub struct MessageBlockText {
 /// Message type in Slack.
 #[derive(Debug, Deserialize, Serialize)]
 pub enum MessageType {
-    #[serde(rename = "mkdwn")]
+    #[serde(rename = "mrkdwn")]
     Markdown,
     #[serde(rename = "image")]
     Image,
