@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
+use std::fs;
 
+use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 /// The data type for our configuration files.
@@ -14,6 +16,36 @@ pub struct Config {
     pub links: BTreeMap<String, LinkConfig>,
 
     pub labels: Vec<LabelConfig>,
+}
+
+impl Config {
+    /// Read and decode the config from the files that are passed on the command line.
+    pub fn read(cli_matches: &ArgMatches) -> Self {
+        let files: Vec<String>;
+        match cli_matches.values_of("file") {
+            None => panic!("no configuration files specified"),
+            Some(val) => {
+                files = val.map(|s| s.to_string()).collect();
+            }
+        };
+
+        let mut contents = String::from("");
+        for file in files.iter() {
+            println!("decoding {}", file);
+
+            // Read the file.
+            let body =
+                fs::read_to_string(file).expect("reading the file failed");
+
+            // Append the body of the file to the rest of the contents.
+            contents.push_str(&body);
+        }
+
+        // Decode the contents.
+        let config: Config = toml::from_str(&contents).unwrap();
+
+        config
+    }
 }
 
 /// The data type for a user.
