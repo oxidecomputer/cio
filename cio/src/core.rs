@@ -9,7 +9,7 @@ use chrono_humanize::HumanTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-static BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
+pub static BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
 static MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 
 /// The data type for a Journal Club Meeting.
