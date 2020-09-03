@@ -83,10 +83,11 @@ impl Signup {
         if !self.interest.is_empty() {
             interest = MessageBlock {
                 block_type: MessageBlockType::Section,
-                text: MessageBlockText {
+                text: Some(MessageBlockText {
                     text_type: MessageType::Markdown,
                     text: format!("\n>{}", self.interest.trim()),
-                },
+                }),
+                elements: None,
                 accessory: None,
                 block_id: None,
                 fields: None,
@@ -115,10 +116,11 @@ impl Signup {
                 blocks: Some(vec![
                     MessageBlock {
                         block_type: MessageBlockType::Section,
-                        text: MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: msg,
-                        },
+                        }),
+                        elements: None,
                         accessory: None,
                         block_id: None,
                         fields: None,
@@ -126,20 +128,22 @@ impl Signup {
                     interest,
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: MessageBlockText {
+                        elements: Some(vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: updates,
-                        },
+                        }]),
+                        text: None,
                         accessory: None,
                         block_id: None,
                         fields: None,
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: MessageBlockText {
+                        elements: Some(vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: context,
-                        },
+                        }]),
+                        text: None,
                         accessory: None,
                         block_id: None,
                         fields: None,

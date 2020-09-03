@@ -110,7 +110,10 @@ pub struct FormattedMessage {
 pub struct MessageBlock {
     #[serde(rename = "type")]
     pub block_type: MessageBlockType,
-    pub text: MessageBlockText,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<MessageBlockText>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub elements: Option<Vec<MessageBlockText>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

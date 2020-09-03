@@ -618,40 +618,44 @@ impl Applicant {
                 blocks: Some(vec![
                     MessageBlock {
                         block_type: MessageBlockType::Section,
-                        text: MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: intro_msg,
-                        },
+                        }),
+                        elements: None,
                         accessory: None,
                         block_id: None,
                         fields: None,
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: MessageBlockText {
+                        elements: Some(vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: info_msg,
-                        },
+                        }]),
+                        text: None,
                         accessory: None,
                         block_id: None,
                         fields: None,
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: MessageBlockText {
+                        elements: Some(vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: values_msg,
-                        },
+                        }]),
+                        text: None,
                         accessory: None,
                         block_id: None,
                         fields: None,
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: MessageBlockText {
+                        elements: Some(vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: status_msg,
-                        },
+                        }]),
+                        text: None,
                         accessory: None,
                         block_id: None,
                         fields: None,

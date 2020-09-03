@@ -36,12 +36,16 @@ impl Meeting {
         let mut objects: Vec<Value> = Default::default();
 
         if !self.recording.is_empty() {
-            objects.push(json!({
-                "elements": [{
-                    "text": format!("<{}|Meeting recording>", self.recording),
-                    "type": "mrkdwn"
-                }],
-                "type": "context"
+            objects.push(json!(MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: Some(vec![MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("<{}|Meeting recording>", self.recording),
+                }]),
+                text: None,
+                accessory: None,
+                block_id: None,
+                fields: None,
             }));
         }
 
@@ -50,12 +54,16 @@ impl Meeting {
             if p.title == self.title {
                 title = "Paper".to_string();
             }
-            objects.push(json!({
-                "elements": [{
-                    "text": format!("<{}|{}>", p.link, title),
-                    "type": "mrkdwn"
-                }],
-                "type": "context"
+            objects.push(json!(MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: Some(vec![MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("<{}|{}>", p.link, title),
+                }]),
+                text: None,
+                accessory: None,
+                block_id: None,
+                fields: None,
             }));
         }
 
@@ -68,20 +76,22 @@ impl Meeting {
                 blocks: Some(vec![
                     MessageBlock {
                         block_type: MessageBlockType::Section,
-                        text: MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: format!("<{}|*{}*>", self.issue, self.title),
-                        },
+                        }),
+                        elements: None,
                         accessory: None,
                         block_id: None,
                         fields: None,
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: MessageBlockText {
+                        elements: Some(vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: format!("<https://github.com/{}|@{}> | {} | status: *{}*",self.coordinator,self.coordinator,self.date.format("%m/%d/%Y"),self.state),
-                        },
+                        }]),
+                        text: None,
                         accessory: None,
                         block_id: None,
                         fields: None,
