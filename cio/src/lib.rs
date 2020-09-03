@@ -1,4 +1,5 @@
 pub mod applicants;
+pub mod auth0;
 pub mod configs;
 pub mod core;
 pub mod journal_clubs;
