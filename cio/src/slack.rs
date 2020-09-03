@@ -1,8 +1,5 @@
 use std::env;
 
-use chrono::offset::Utc;
-use chrono::serde::ts_seconds;
-use chrono::DateTime;
 use reqwest::{Body, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -203,8 +200,6 @@ pub struct MessageAttachment {
     pub title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title_link: Option<String>,
-    #[serde(with = "ts_seconds")]
-    pub ts: DateTime<Utc>,
 }
 
 /// A message attachment field in Slack.
