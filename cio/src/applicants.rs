@@ -50,7 +50,7 @@ pub struct ApplicantSheetColumns {
 }
 
 impl ApplicantSheetColumns {
-    pub fn parse(values: &Vec<Vec<String>>) -> Self {
+    pub fn parse(values: &[Vec<String>]) -> Self {
         // Iterate over the columns.
         // TODO: make this less horrible
         let mut columns: ApplicantSheetColumns = Default::default();
@@ -147,7 +147,7 @@ impl Applicant {
         sheet_name: &str,
         sheet_id: &str,
         columns: &ApplicantSheetColumns,
-        row: &Vec<String>,
+        row: &[String],
     ) -> Self {
         // Parse the time.
         let time_str = row[columns.timestamp].to_string() + " -08:00";
@@ -276,8 +276,7 @@ impl Applicant {
             .replace("-", "")
             .replace("+", "")
             .replace("(", "")
-            .replace(")", "")
-            .to_string();
+            .replace(")", "");
 
         let mut country = phonenumber::country::US;
         if (location.to_lowercase().contains("uk")
