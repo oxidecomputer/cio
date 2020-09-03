@@ -8,6 +8,11 @@ use chrono_humanize::HumanTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::slack::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText,
+    MessageBlockType, MessageType,
+};
+
 pub static AIRTABLE_BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
 static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 
@@ -69,12 +74,23 @@ impl Signup {
         let dur = self.date_added - Utc::now();
         let time = HumanTime::from(dur);
 
-        let mut msg = format!(
+        let msg = format!(
             "*{} {}* <mailto:{}|{}>",
             self.first_name, self.last_name, self.email, self.email
         );
+
+        let mut interest: MessageBlock = Default::default();
         if !self.interest.is_empty() {
-            msg += &format!("\n>{}", self.interest.trim());
+            interest = MessageBlock {
+                block_type: MessageBlockType::Section,
+                text: MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("\n>{}", self.interest.trim()),
+                },
+                accessory: None,
+                block_id: None,
+                fields: None,
+            };
         }
 
         let updates = format!(
@@ -90,35 +106,60 @@ impl Signup {
         }
         context += &format!("subscribed to mailing list {}", time);
 
-        json!({
-            "attachments": [
-                {
-                    "color": "#F6E05E",
-                    "blocks": [
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": msg
-                            }
+        json!(FormattedMessage {
+            response_type: None,
+            channel: None,
+            blocks: None,
+            attachments: Some(vec![MessageAttachment {
+                color: Some("#F6E05E".to_string()),
+                blocks: Some(vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: msg,
                         },
-                        {
-                            "type": "context",
-                            "elements": [{
-                                "type": "mrkdwn",
-                                "text": updates
-                            }]
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    },
+                    interest,
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: updates,
                         },
-                        {
-                            "type": "context",
-                            "elements": [{
-                                "type": "mrkdwn",
-                                "text": context
-                            }]
-                        }
-                    ]
-                }
-            ]
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: context,
+                        },
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    }
+                ]),
+                author_icon: None,
+                author_link: None,
+                author_name: None,
+                fallback: None,
+                fields: None,
+                footer: None,
+                footer_icon: None,
+                image_url: None,
+                pretext: None,
+                text: None,
+                thumb_url: None,
+                title: None,
+                title_link: None,
+                ts: Utc::now(),
+            }])
         })
     }
 }

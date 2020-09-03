@@ -2,10 +2,16 @@ use std::env;
 use std::str::from_utf8;
 
 use chrono::naive::NaiveDate;
+use chrono::offset::Utc;
 use csv::ReaderBuilder;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::slack::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText,
+    MessageBlockType, MessageResponseType, MessageType,
+};
 
 /// The data type for a journal club meeting.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -53,32 +59,49 @@ impl Meeting {
             }));
         }
 
-        json!({
-            "response_type": "in_channel",
-             "attachments": [{
-                    "blocks": [{
-                    "text": {
-                        "text": format!("<{}|*{}*>", self.issue, self.title),
-                        "type": "mrkdwn"
+        json!(FormattedMessage {
+            response_type: Some(MessageResponseType::InChannel),
+            channel: None,
+            blocks: None,
+            attachments: Some(vec![MessageAttachment {
+                color: Some(color.to_string()),
+                blocks: Some(vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: format!("<{}|*{}*>", self.issue, self.title),
+                        },
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
                     },
-                    "type": "section"
-                },
-                {
-                    "elements": [{
-                        "text": "<https://github.com/oxidecomputer/papers/blob/master/os/countering-ipc-threats-minix3.pdf|Countering IPC Threats in Multiserver Operating Systems>",
-                        "type": "mrkdwn"
-                    }],
-                    "type": "context"
-                },
-                {
-                    "elements": [{
-                        "text": format!("<https://github.com/{}|@{}> | {} | status: *{}*",self.coordinator,self.coordinator,self.date.format("%m/%d/%Y"),self.state),
-                        "type": "mrkdwn"
-                    }],
-                    "type": "context"
-                }],
-                "color": color
-            }]
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: format!("<https://github.com/{}|@{}> | {} | status: *{}*",self.coordinator,self.coordinator,self.date.format("%m/%d/%Y"),self.state),
+                        },
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    }
+                ]),
+                author_icon: None,
+                author_link: None,
+                author_name: None,
+                fallback: None,
+                fields: None,
+                footer: None,
+                footer_icon: None,
+                image_url: None,
+                pretext: None,
+                text: None,
+                thumb_url: None,
+                title: None,
+                title_link: None,
+                ts: Utc::now(),
+            }])
         })
     }
 }

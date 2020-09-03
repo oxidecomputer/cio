@@ -16,6 +16,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
 
+use crate::slack::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText,
+    MessageBlockType, MessageResponseType, MessageType,
+};
+
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
 static QUESTION_WORK_PROUD_OF: &str = r"W(?s:.*)at work(?s:.*)ave you done that you(?s:.*)particularl(?s:.*)proud o(?s:.*)and why\?";
@@ -604,49 +609,69 @@ impl Applicant {
             info_msg += &format!(" | <{}|website>", self.website,);
         }
 
-        json!({
-            "response_type": "in_channel",
-            "attachments": [
-                {
-                    "color": color,
-                    "blocks": [
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": intro_msg
-                            }
+        json!(FormattedMessage {
+            response_type: Some(MessageResponseType::InChannel),
+            channel: None,
+            blocks: None,
+            attachments: Some(vec![MessageAttachment {
+                color: Some(color.to_string()),
+                blocks: Some(vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: intro_msg,
                         },
-                        {
-                            "type": "context",
-                            "elements": [
-                                {
-                                    "type": "mrkdwn",
-                                    "text": info_msg
-                                }
-                            ]
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: info_msg,
                         },
-                        {
-                            "type": "context",
-                            "elements": [
-                                {
-                                    "type": "mrkdwn",
-                                    "text": values_msg
-                                }
-                            ]
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: values_msg,
                         },
-                        {
-                            "type": "context",
-                            "elements": [
-                                {
-                                    "type": "mrkdwn",
-                                    "text": status_msg
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        text: MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: status_msg,
+                        },
+                        accessory: None,
+                        block_id: None,
+                        fields: None,
+                    }
+                ]),
+                author_icon: None,
+                author_link: None,
+                author_name: None,
+                fallback: None,
+                fields: None,
+                footer: None,
+                footer_icon: None,
+                image_url: None,
+                pretext: None,
+                text: None,
+                thumb_url: None,
+                title: None,
+                title_link: None,
+                ts: Utc::now(),
+            }])
         })
     }
 
