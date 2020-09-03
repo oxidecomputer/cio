@@ -10,7 +10,7 @@ use serde_json::Value;
 
 use crate::slack::{
     FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText,
-    MessageBlockType, MessageResponseType, MessageType,
+    MessageBlockType, MessageType,
 };
 
 /// The data type for a journal club meeting.
@@ -68,7 +68,6 @@ impl Meeting {
         }
 
         json!(FormattedMessage {
-            response_type: Some(MessageResponseType::InChannel),
             channel: None,
             blocks: None,
             attachments: Some(vec![MessageAttachment {

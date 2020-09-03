@@ -94,8 +94,6 @@ pub struct BotCommand {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FormattedMessage {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub response_type: Option<MessageResponseType>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub channel: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub blocks: Option<Vec<MessageBlock>>,

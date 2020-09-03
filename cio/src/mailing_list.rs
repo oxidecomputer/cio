@@ -108,7 +108,6 @@ impl Signup {
         context += &format!("subscribed to mailing list {}", time);
 
         json!(FormattedMessage {
-            response_type: None,
             channel: None,
             blocks: None,
             attachments: Some(vec![MessageAttachment {

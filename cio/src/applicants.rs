@@ -18,7 +18,7 @@ use sheets::Sheets;
 
 use crate::slack::{
     FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText,
-    MessageBlockType, MessageResponseType, MessageType,
+    MessageBlockType, MessageType,
 };
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
@@ -610,7 +610,6 @@ impl Applicant {
         }
 
         json!(FormattedMessage {
-            response_type: Some(MessageResponseType::InChannel),
             channel: None,
             blocks: None,
             attachments: Some(vec![MessageAttachment {
