@@ -1,0 +1,810 @@
+use std::env;
+use std::fs;
+use std::io::{stderr, stdout, Write};
+use std::process::Command;
+
+use chrono::offset::Utc;
+use chrono::DateTime;
+use chrono_humanize::HumanTime;
+use google_drive::GoogleDrive;
+use html2text::from_read;
+use pandoc::OutputKind;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+// The line breaks that get parsed are weird thats why we have the random asterisks here.
+static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
+static QUESTION_WORK_PROUD_OF: &str = r"W(?s:.*)at work(?s:.*)ave you done that you(?s:.*)particularl(?s:.*)proud o(?s:.*)and why\?";
+static QUESTION_HAPPIEST_CAREER: &str = r"W(?s:.*)en have you been happiest in your professiona(?s:.*)caree(?s:.*)and why\?";
+static QUESTION_UNHAPPIEST_CAREER: &str = r"W(?s:.*)en have you been unhappiest in your professiona(?s:.*)caree(?s:.*)and why\?";
+static QUESTION_VALUE_REFLECTED: &str = r"F(?s:.*)r one of Oxide(?s:.*)s values(?s:.*)describe an example of ho(?s:.*)it wa(?s:.*)reflected(?s:.*)particula(?s:.*)body(?s:.*)you(?s:.*)work\.";
+static QUESTION_VALUE_VIOLATED: &str = r"F(?s:.*)r one of Oxide(?s:.*)s values(?s:.*)describe an example of ho(?s:.*)it wa(?s:.*)violated(?s:.*)you(?s:.*)organization o(?s:.*)work\.";
+static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
+static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
+
+/// The data type for a Google Sheet Applicant Columns, we use this when updating the
+/// applications spreadsheet to mark that we have emailed someone.
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct ApplicantSheetColumns {
+    pub timestamp: usize,
+    pub name: usize,
+    pub email: usize,
+    pub location: usize,
+    pub phone: usize,
+    pub github: usize,
+    pub portfolio: usize,
+    pub website: usize,
+    pub linkedin: usize,
+    pub resume: usize,
+    pub materials: usize,
+    pub status: usize,
+    pub received_application: usize,
+    pub value_reflected: usize,
+    pub value_violated: usize,
+    pub value_in_tension_1: usize,
+    pub value_in_tension_2: usize,
+}
+
+/// The data type for an applicant.
+#[derive(Debug, Clone)]
+pub struct Applicant {
+    pub submitted_time: DateTime<Utc>,
+    pub name: String,
+    pub email: String,
+    pub location: String,
+    pub phone: String,
+    pub country_code: String,
+    pub github: String,
+    pub gitlab: String,
+    pub portfolio: String,
+    pub website: String,
+    pub linkedin: String,
+    pub resume: String,
+    pub materials: String,
+    pub status: String,
+    pub received_application: bool,
+    pub role: String,
+    pub sheet_id: String,
+    pub value_reflected: String,
+    pub value_violated: String,
+    pub values_in_tension: Vec<String>,
+}
+
+impl Applicant {
+    pub async fn to_airtable(
+        &self,
+        drive_client: &GoogleDrive,
+    ) -> ApplicantFields {
+        let mut status = "Needs to be triaged";
+
+        if self.status.to_lowercase().contains("next steps") {
+            status = "Next steps";
+        } else if self.status.to_lowercase().contains("deferred") {
+            status = "Deferred";
+        } else if self.status.to_lowercase().contains("declined") {
+            status = "Declined";
+        } else if self.status.to_lowercase().contains("hired") {
+            status = "Hired";
+        }
+
+        let mut location = None;
+        if !self.location.is_empty() {
+            location = Some(self.location.to_string());
+        }
+
+        let mut github = None;
+        if !self.github.is_empty() {
+            github = Some(
+                "https://github.com/".to_owned()
+                    + &self.github.replace("@", ""),
+            );
+        }
+
+        let mut linkedin = None;
+        if !self.linkedin.is_empty() {
+            linkedin = Some(self.linkedin.to_string());
+        }
+
+        let mut portfolio = None;
+        if !self.portfolio.is_empty() {
+            portfolio = Some(self.portfolio.to_string());
+        }
+
+        let mut website = None;
+        if !self.website.is_empty() {
+            website = Some(self.website.to_string());
+        }
+
+        let mut value_reflected = None;
+        if !self.value_reflected.is_empty() {
+            value_reflected = Some(self.value_reflected.to_string());
+        }
+
+        let mut value_violated = None;
+        if !self.value_violated.is_empty() {
+            value_violated = Some(self.value_violated.to_string());
+        }
+
+        let mut values_in_tension = None;
+        if !self.values_in_tension.is_empty() {
+            values_in_tension = Some(self.values_in_tension.clone());
+        }
+
+        // Read the file contents.
+        let rc = get_file_contents(drive_client, self.resume.to_string()).await;
+        let mc =
+            get_file_contents(drive_client, self.materials.to_string()).await;
+
+        let mut resume_contents = None;
+        if !rc.is_empty() {
+            resume_contents = Some(rc);
+        }
+
+        let mut materials_contents = None;
+        if !mc.is_empty() {
+            materials_contents = Some(mc);
+        }
+
+        let mut applicant = ApplicantFields {
+            name: self.name.to_string(),
+            position: self.role.to_string(),
+            status: status.to_string(),
+            timestamp: self.submitted_time,
+            email: self.email.to_string(),
+            phone: self.phone.to_string(),
+            location,
+            github,
+            linkedin,
+            portfolio,
+            website,
+            resume: self.resume.to_string(),
+            materials: self.materials.to_string(),
+            value_reflected,
+            value_violated,
+            values_in_tension,
+            resume_contents,
+            materials_contents,
+            work_samples: None,
+            writing_samples: None,
+            analysis_samples: None,
+            presentation_samples: None,
+            exploratory_samples: None,
+            question_technically_challenging: None,
+            question_proud_of: None,
+            question_happiest: None,
+            question_unhappiest: None,
+            question_value_reflected: None,
+            question_value_violated: None,
+            question_values_in_tension: None,
+            question_why_oxide: None,
+        };
+
+        // Parse the materials.
+        applicant.parse_materials();
+
+        applicant
+    }
+
+    pub fn human_duration(&self) -> HumanTime {
+        let mut dur = self.submitted_time - Utc::now();
+        if dur.num_seconds() > 0 {
+            dur = -dur;
+        }
+
+        HumanTime::from(dur)
+    }
+
+    pub fn as_slack_msg(&self) -> Value {
+        let mut color = "#805AD5";
+        match self.role.as_str() {
+            "Product Engineering and Design" => color = "#48D597",
+            "Technical Program Management" => color = "#667EEA",
+            _ => (),
+        }
+
+        let time = self.human_duration();
+
+        let mut status_msg = format!("<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}", self.sheet_id, self.role, time);
+        if !self.status.is_empty() {
+            status_msg += &format!(" | status: *{}*", self.status);
+        }
+
+        let mut values_msg = "".to_string();
+        if !self.value_reflected.is_empty() {
+            values_msg +=
+                &format!("values reflected: *{}*", self.value_reflected);
+        }
+        if !self.value_violated.is_empty() {
+            values_msg += &format!(" | violated: *{}*", self.value_violated);
+        }
+        for (k, tension) in self.values_in_tension.iter().enumerate() {
+            if k == 0 {
+                values_msg += &format!(" | in tension: *{}*", tension);
+            } else {
+                values_msg += &format!(" *& {}*", tension);
+            }
+        }
+        if values_msg.is_empty() {
+            values_msg = "values not yet populated".to_string();
+        }
+
+        let mut intro_msg =
+            format!("*{}*  <mailto:{}|{}>", self.name, self.email, self.email,);
+        if !self.location.is_empty() {
+            intro_msg += &format!("  {}", self.location);
+        }
+
+        let mut info_msg = format!(
+            "<{}|resume> | <{}|materials>",
+            self.resume, self.materials,
+        );
+        if !self.phone.is_empty() {
+            info_msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
+        }
+        if !self.github.is_empty() {
+            info_msg += &format!(
+                " | <https://github.com/{}|github:{}>",
+                self.github.trim_start_matches('@'),
+                self.github,
+            );
+        }
+        if !self.gitlab.is_empty() {
+            info_msg += &format!(
+                " | <https://gitlab.com/{}|gitlab:{}>",
+                self.gitlab.trim_start_matches('@'),
+                self.gitlab,
+            );
+        }
+        if !self.linkedin.is_empty() {
+            info_msg += &format!(" | <{}|linkedin>", self.linkedin,);
+        }
+        if !self.portfolio.is_empty() {
+            info_msg += &format!(" | <{}|portfolio>", self.portfolio,);
+        }
+        if !self.website.is_empty() {
+            info_msg += &format!(" | <{}|website>", self.website,);
+        }
+
+        json!({
+            "response_type": "in_channel",
+            "attachments": [
+                {
+                    "color": color,
+                    "blocks": [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": intro_msg
+                            }
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": info_msg
+                                }
+                            ]
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": values_msg
+                                }
+                            ]
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": status_msg
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        })
+    }
+
+    pub fn as_company_notification_email(&self) -> String {
+        let time = self.human_duration();
+
+        let mut msg = format!(
+            "## Applicant Information for {}
+
+Submitted {}
+Name: {}
+Email: {}",
+            self.role, time, self.name, self.email
+        );
+
+        if !self.location.is_empty() {
+            msg += &format!("\nLocation: {}", self.location);
+        }
+        if !self.phone.is_empty() {
+            msg += &format!("\nPhone: {}", self.phone);
+        }
+
+        if !self.github.is_empty() {
+            msg += &format!(
+                "\nGitHub: {} (https://github.com/{})",
+                self.github,
+                self.github.trim_start_matches('@')
+            );
+        }
+        if !self.gitlab.is_empty() {
+            msg += &format!(
+                "\nGitLab: {} (https://gitlab.com/{})",
+                self.gitlab,
+                self.gitlab.trim_start_matches('@')
+            );
+        }
+        if !self.linkedin.is_empty() {
+            msg += &format!("\nLinkedIn: {}", self.linkedin);
+        }
+        if !self.portfolio.is_empty() {
+            msg += &format!("\nPortfolio: {}", self.portfolio);
+        }
+        if !self.website.is_empty() {
+            msg += &format!("\nWebsite: {}", self.website);
+        }
+
+        msg+=&format!("\nResume: {}
+Oxide Candidate Materials: {}
+
+## Reminder
+
+To view the all the candidates refer to the following Google spreadsheets:
+
+- Engineering Applications: https://applications-engineering.corp.oxide.computer
+- Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
+- Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
+",
+                        self.resume,
+                        self.materials,
+                    );
+
+        msg
+    }
+}
+
+/// The Airtable fields type for Applicants.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ApplicantFields {
+    #[serde(rename = "Name")]
+    pub name: String,
+    #[serde(rename = "Position")]
+    pub position: String,
+    #[serde(rename = "Status")]
+    pub status: String,
+    #[serde(rename = "Timestamp")]
+    pub timestamp: DateTime<Utc>,
+    #[serde(rename = "Email Address")]
+    pub email: String,
+    #[serde(rename = "Phone Number")]
+    pub phone: String,
+    #[serde(rename = "Location")]
+    pub location: Option<String>,
+    #[serde(rename = "GitHub")]
+    pub github: Option<String>,
+    #[serde(rename = "LinkedIn")]
+    pub linkedin: Option<String>,
+    #[serde(rename = "Portfolio")]
+    pub portfolio: Option<String>,
+    #[serde(rename = "Website")]
+    pub website: Option<String>,
+    #[serde(rename = "Resume")]
+    pub resume: String,
+    #[serde(rename = "Oxide Materials")]
+    pub materials: String,
+    #[serde(rename = "Value Reflected")]
+    pub value_reflected: Option<String>,
+    #[serde(rename = "Value Violated")]
+    pub value_violated: Option<String>,
+    #[serde(rename = "Values in Tension")]
+    pub values_in_tension: Option<Vec<String>>,
+    #[serde(rename = "Resume Contents")]
+    pub resume_contents: Option<String>,
+    #[serde(rename = "Oxide Materials Contents")]
+    pub materials_contents: Option<String>,
+    #[serde(rename = "Work samples")]
+    pub work_samples: Option<String>,
+    #[serde(rename = "Writing samples")]
+    pub writing_samples: Option<String>,
+    #[serde(rename = "Analysis samples")]
+    pub analysis_samples: Option<String>,
+    #[serde(rename = "Presentation samples")]
+    pub presentation_samples: Option<String>,
+    #[serde(rename = "Exploratory samples")]
+    pub exploratory_samples: Option<String>,
+    #[serde(
+        rename = "What work have you found most technically challenging in your career and why?"
+    )]
+    pub question_technically_challenging: Option<String>,
+    #[serde(
+        rename = "What work have you done that you were particularly proud of and why?"
+    )]
+    pub question_proud_of: Option<String>,
+    #[serde(
+        rename = "When have you been happiest in your professional career and why?"
+    )]
+    pub question_happiest: Option<String>,
+    #[serde(
+        rename = "When have you been unhappiest in your professional career and why?"
+    )]
+    pub question_unhappiest: Option<String>,
+    #[serde(
+        rename = "For one of Oxide's values, describe an example of how it was reflected in a particular body of your work."
+    )]
+    pub question_value_reflected: Option<String>,
+    #[serde(
+        rename = "For one of Oxide's values, describe an example of how it was violated in your organization or work."
+    )]
+    pub question_value_violated: Option<String>,
+    #[serde(
+        rename = "For a pair of Oxide's values, describe a time in which the two values came into tension for you or your work, and how you resolved it."
+    )]
+    pub question_values_in_tension: Option<String>,
+    #[serde(rename = "Why do you want to work for Oxide?")]
+    pub question_why_oxide: Option<String>,
+}
+
+impl PartialEq for ApplicantFields {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.position == other.position
+            && self.status == other.status
+            && self.timestamp == other.timestamp
+            && self.email == other.email
+            && self.phone == other.phone
+            && self.location == other.location
+            && self.github == other.github
+            && self.linkedin == other.linkedin
+            && self.portfolio == other.portfolio
+            && self.website == other.website
+            && self.resume == other.resume
+            && self.materials == other.materials
+            && self.value_reflected == other.value_reflected
+            && self.value_violated == other.value_violated
+            && self.values_in_tension == other.values_in_tension
+            && self.resume_contents == other.resume_contents
+            && self.materials_contents == other.materials_contents
+            && self.work_samples == other.work_samples
+            && self.writing_samples == other.writing_samples
+            && self.analysis_samples == other.analysis_samples
+            && self.presentation_samples == other.presentation_samples
+            && self.exploratory_samples == other.exploratory_samples
+            && self.question_technically_challenging
+                == other.question_technically_challenging
+            && self.question_proud_of == other.question_proud_of
+            && self.question_happiest == other.question_happiest
+            && self.question_unhappiest == other.question_unhappiest
+            && self.question_value_reflected == other.question_value_reflected
+            && self.question_value_violated == other.question_value_violated
+            && self.question_values_in_tension
+                == other.question_values_in_tension
+            && self.question_why_oxide == other.question_why_oxide
+    }
+}
+
+impl ApplicantFields {
+    // TODO: probably a better way to do regexes here, but hey it works.
+    fn parse_materials(&mut self) {
+        let materials_contents;
+        match &self.materials_contents {
+            Some(m) => materials_contents = m,
+            None => return,
+        }
+
+        let mut work_samples = parse_question(
+            r"Work sample\(s\)",
+            "Writing samples",
+            materials_contents,
+        );
+        if work_samples == None {
+            work_samples = parse_question(
+                r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
+                "Writing samples",
+                materials_contents,
+            );
+            if work_samples == None {
+                // Try to parse work samples for TPM role.
+                work_samples = parse_question(
+                    r"What would you have done differently\?",
+                    "Exploratory samples",
+                    materials_contents,
+                );
+
+                if work_samples == None {
+                    work_samples = parse_question(
+                        r"Some questions(?s:.*)o have in mind as you describe them:",
+                        "Exploratory samples",
+                        materials_contents,
+                    );
+
+                    if work_samples == None {
+                        work_samples = parse_question(
+                            r"Work samples",
+                            "Exploratory samples",
+                            materials_contents,
+                        );
+                    }
+                }
+            }
+        }
+        self.work_samples = work_samples;
+
+        let mut writing_samples = parse_question(
+            r"Writing sample\(s\)",
+            "Analysis samples",
+            materials_contents,
+        );
+        if writing_samples == None {
+            writing_samples = parse_question(
+                r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
+                "Analysis samples",
+                materials_contents,
+            );
+            if writing_samples == None {
+                writing_samples = parse_question(
+                    r"Writing samples",
+                    "Analysis samples",
+                    materials_contents,
+                );
+            }
+        }
+        self.writing_samples = writing_samples;
+
+        let mut analysis_samples = parse_question(
+            r"Analysis sample\(s\)$",
+            "Presentation samples",
+            materials_contents,
+        );
+        if analysis_samples == None {
+            analysis_samples = parse_question(
+                r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
+                "Presentation samples",
+                materials_contents,
+            );
+            if analysis_samples == None {
+                analysis_samples = parse_question(
+                    r"Analysis samples",
+                    "Presentation samples",
+                    materials_contents,
+                );
+            }
+        }
+        self.analysis_samples = analysis_samples;
+
+        let mut presentation_samples = parse_question(
+            r"Presentation sample\(s\)",
+            "Questionnaire",
+            materials_contents,
+        );
+        if presentation_samples == None {
+            presentation_samples = parse_question(
+                r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
+                "Questionnaire",
+                materials_contents,
+            );
+            if presentation_samples == None {
+                presentation_samples = parse_question(
+                    r"Presentation samples",
+                    "Questionnaire",
+                    materials_contents,
+                );
+            }
+        }
+        self.presentation_samples = presentation_samples;
+
+        let mut exploratory_samples = parse_question(
+            r"Exploratory sample\(s\)",
+            "Questionnaire",
+            materials_contents,
+        );
+        if exploratory_samples == None {
+            exploratory_samples = parse_question(
+                r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
+                "Questionnaire",
+                materials_contents,
+            );
+            if exploratory_samples == None {
+                exploratory_samples = parse_question(
+                    r"Exploratory samples",
+                    "Questionnaire",
+                    materials_contents,
+                );
+            }
+        }
+        self.exploratory_samples = exploratory_samples;
+
+        let question_technically_challenging = parse_question(
+            QUESTION_TECHNICALLY_CHALLENGING,
+            QUESTION_WORK_PROUD_OF,
+            materials_contents,
+        );
+        self.question_technically_challenging =
+            question_technically_challenging;
+
+        let question_proud_of = parse_question(
+            QUESTION_WORK_PROUD_OF,
+            QUESTION_HAPPIEST_CAREER,
+            materials_contents,
+        );
+        self.question_proud_of = question_proud_of;
+
+        let question_happiest = parse_question(
+            QUESTION_HAPPIEST_CAREER,
+            QUESTION_UNHAPPIEST_CAREER,
+            materials_contents,
+        );
+        self.question_happiest = question_happiest;
+
+        let question_unhappiest = parse_question(
+            QUESTION_UNHAPPIEST_CAREER,
+            QUESTION_VALUE_REFLECTED,
+            materials_contents,
+        );
+        self.question_unhappiest = question_unhappiest;
+
+        let question_value_reflected = parse_question(
+            QUESTION_VALUE_REFLECTED,
+            QUESTION_VALUE_VIOLATED,
+            materials_contents,
+        );
+        self.question_value_reflected = question_value_reflected;
+
+        let question_value_violated = parse_question(
+            QUESTION_VALUE_VIOLATED,
+            QUESTION_VALUES_IN_TENSION,
+            materials_contents,
+        );
+        self.question_value_violated = question_value_violated;
+
+        let question_values_in_tension = parse_question(
+            QUESTION_VALUES_IN_TENSION,
+            QUESTION_WHY_OXIDE,
+            materials_contents,
+        );
+        self.question_values_in_tension = question_values_in_tension;
+
+        let question_why_oxide =
+            parse_question(QUESTION_WHY_OXIDE, "", materials_contents);
+        self.question_why_oxide = question_why_oxide;
+    }
+}
+
+fn parse_question(
+    q1: &str,
+    q2: &str,
+    materials_contents: &str,
+) -> Option<String> {
+    let re = Regex::new(&(q1.to_owned() + r"(?s)(.*)" + q2)).unwrap();
+    let result: Option<String> = if let Some(q) =
+        re.captures(materials_contents)
+    {
+        let val = q.get(1).unwrap();
+        let s = val
+            .as_str()
+            .replace("________________", "")
+            .replace("Oxide Candidate Materials: Technical Program Manager", "")
+            .replace("Oxide Candidate Materials", "")
+            .replace("Work sample(s)", "")
+            .trim_start_matches(':')
+            .trim()
+            .to_string();
+
+        if s.is_empty() {
+            return None;
+        }
+
+        Some(s)
+    } else {
+        None
+    };
+
+    result
+}
+
+/// Get the contexts of a file in Google Drive by it's URL as a text string.
+async fn get_file_contents(drive_client: &GoogleDrive, url: String) -> String {
+    let id = url.replace("https://drive.google.com/open?id=", "");
+
+    // Get information about the file.
+    let drive_file = drive_client.get_file_by_id(&id).await.unwrap();
+    let mime_type = drive_file.mime_type.unwrap();
+    let name = drive_file.name.unwrap();
+
+    let mut path = env::temp_dir();
+    let mut output = env::temp_dir();
+
+    let mut result: String = Default::default();
+
+    if mime_type == "application/pdf" {
+        // Get the PDF contents from Drive.
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        path.push(format!("{}.pdf", id));
+
+        let mut file = fs::File::create(path.clone()).unwrap();
+        file.write_all(&contents).unwrap();
+
+        output.push(format!("{}.txt", id));
+
+        // Extract the text from the PDF
+        let cmd_output = Command::new("pdftotext")
+            .args(&[
+                "-enc",
+                "UTF-8",
+                path.to_str().unwrap(),
+                output.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+
+        result = match fs::read_to_string(output.clone()) {
+            Ok(r) => r,
+            Err(e) => {
+                println!(
+                    "running pdf2text failed: {} | name: {}, path: {}",
+                    e,
+                    name,
+                    path.to_str().unwrap()
+                );
+                stdout().write_all(&cmd_output.stdout).unwrap();
+                stderr().write_all(&cmd_output.stderr).unwrap();
+
+                "".to_string()
+            }
+        };
+    } else if mime_type == "text/html" {
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        // Wrap lines at 80 characters.
+        result = from_read(&contents[..], 80);
+    } else if mime_type == "application/vnd.google-apps.document" {
+        result = drive_client.get_file_contents_by_id(&id).await.unwrap();
+    } else if name.ends_with(".doc")
+        || name.ends_with(".pptx")
+        || name.ends_with(".jpg")
+        || name.ends_with(".zip")
+    // TODO: handle these formats
+    {
+        println!(
+            "unsupported doc format -- mime type: {}, name: {}, path: {}",
+            mime_type,
+            name,
+            path.to_str().unwrap()
+        );
+    } else {
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        path.push(name.to_string());
+
+        let mut file = fs::File::create(path.clone()).unwrap();
+        file.write_all(&contents).unwrap();
+
+        output.push(format!("{}.txt", id));
+
+        let mut pandoc = pandoc::new();
+        pandoc.add_input(&path);
+        pandoc.set_output(OutputKind::File(output.clone()));
+        pandoc.execute().unwrap();
+
+        result = fs::read_to_string(output.clone()).unwrap();
+    }
+
+    // Delete the temporary file, if it exists.
+    for p in vec![path, output] {
+        if p.exists() && !p.is_dir() {
+            fs::remove_file(p).unwrap();
+        }
+    }
+
+    result.trim().to_string()
+}
