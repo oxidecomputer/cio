@@ -37,7 +37,7 @@ pub async fn post_to_channel(url: String, v: Value) {
     };
 }
 
-/// A Message to be sent in Slack.
+/// A message to be sent in Slack.
 #[derive(Debug, Serialize)]
 pub struct Message {
     text: String,

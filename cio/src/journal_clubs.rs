@@ -7,7 +7,7 @@ use hubcaps::Github;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// The data type for a Journal Club Meeting.
+/// The data type for a journal club meeting.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Meeting {
     pub title: String,
@@ -20,6 +20,7 @@ pub struct Meeting {
 }
 
 impl Meeting {
+    /// Convert the journal club meeting into JSON as Slack message.
     pub fn as_slack_msg(&self) -> Value {
         let mut color = "#ED64A6";
         if self.state == "closed" {
@@ -89,7 +90,7 @@ pub struct Paper {
     pub link: String,
 }
 
-/// Get the Journal Club meetings from the papers GitHub repo.
+/// Get the journal club meetings from the papers GitHub repo.
 pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
     let github_org = env::var("GITHUB_ORG").unwrap();
 

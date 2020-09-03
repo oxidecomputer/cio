@@ -17,6 +17,7 @@ pub struct RFD {
 }
 
 impl RFD {
+    /// Convert an RFD into JSON as Slack message.
     pub fn as_slack_msg(&self, num: i32) -> String {
         let mut msg = format!("RFD {} {} (_*{}*_) <https://{}.rfd.oxide.computer|github> <https://rfd.shared.oxide.computer/rfd/{}|rendered>", num, self.title, self.state, num, self.number);
 
