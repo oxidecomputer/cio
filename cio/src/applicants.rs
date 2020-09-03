@@ -670,6 +670,7 @@ impl Applicant {
                 thumb_url: None,
                 title: None,
                 title_link: None,
+                ts: Utc::now(),
             }])
         })
     }

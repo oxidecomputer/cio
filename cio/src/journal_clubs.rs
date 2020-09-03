@@ -2,6 +2,7 @@ use std::env;
 use std::str::from_utf8;
 
 use chrono::naive::NaiveDate;
+use chrono::offset::Utc;
 use csv::ReaderBuilder;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
@@ -99,6 +100,7 @@ impl Meeting {
                 thumb_url: None,
                 title: None,
                 title_link: None,
+                ts: Utc::now(),
             }])
         })
     }
