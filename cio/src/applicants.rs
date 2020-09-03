@@ -26,8 +26,8 @@ static QUESTION_VALUE_VIOLATED: &str = r"F(?s:.*)r one of Oxide(?s:.*)s values(?
 static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
-/// The data type for a Google Sheet Applicant Columns, we use this when updating the
-/// applications spreadsheet to mark that we have emailed someone.
+/// The data type for a Google Sheet applicant columns, we use this when
+/// parsing the Google Sheets for applicants.
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct ApplicantSheetColumns {
     pub timestamp: usize,
@@ -50,6 +50,7 @@ pub struct ApplicantSheetColumns {
 }
 
 impl ApplicantSheetColumns {
+    /// Parse the sheet columns from Google Sheets values.
     pub fn parse(values: &[Vec<String>]) -> Self {
         // Iterate over the columns.
         // TODO: make this less horrible
@@ -143,6 +144,7 @@ pub struct Applicant {
 }
 
 impl Applicant {
+    /// Parse the applicant from a Google Sheets row.
     pub fn parse(
         sheet_name: &str,
         sheet_id: &str,
@@ -405,7 +407,8 @@ impl Applicant {
         }
     }
 
-    pub async fn to_airtable(
+    /// Convert an applicant into the format for Airtable.
+    pub async fn to_airtable_fields(
         &self,
         drive_client: &GoogleDrive,
     ) -> ApplicantFields {
@@ -519,6 +522,7 @@ impl Applicant {
         applicant
     }
 
+    /// Get the human duration of time since the application was submitted.
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
         if dur.num_seconds() > 0 {
@@ -528,6 +532,7 @@ impl Applicant {
         HumanTime::from(dur)
     }
 
+    /// Convert the applicant into JSON for a Slack message.
     pub fn as_slack_msg(&self) -> Value {
         let mut color = "#805AD5";
         match self.role.as_str() {
@@ -645,6 +650,8 @@ impl Applicant {
         })
     }
 
+    /// Get the applicant's information in the form of the body of an email for a
+    /// company wide notification that we received a new application.
     pub fn as_company_notification_email(&self) -> String {
         let time = self.human_duration();
 
@@ -707,7 +714,7 @@ To view the all the candidates refer to the following Google spreadsheets:
     }
 }
 
-/// The Airtable fields type for Applicants.
+/// The Airtable fields type for an applicant.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ApplicantFields {
     #[serde(rename = "Name")]
@@ -828,6 +835,7 @@ impl PartialEq for ApplicantFields {
 
 impl ApplicantFields {
     // TODO: probably a better way to do regexes here, but hey it works.
+    /// Parse the materials as text for the applicant fields.
     fn parse_materials(&mut self) {
         let materials_contents;
         match &self.materials_contents {

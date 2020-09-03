@@ -9,12 +9,13 @@ use chrono_humanize::HumanTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub static BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
-static MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
+pub static AIRTABLE_BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
+static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 
-/// The Airtable fields type for Customer Interactions.
+/// The data type for customer interactions.
+/// This is inline with our Airtable workspace.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct CustomerInteractionFields {
+pub struct CustomerInteraction {
     #[serde(rename = "Name")]
     pub name: String,
     #[serde(rename = "Company")]
@@ -35,9 +36,10 @@ pub struct CustomerInteractionFields {
     pub notes: Option<String>,
 }
 
-/// The Airtable fields type for discussion topics.
+/// The data type for discussion topics.
+/// This is inline with our Airtable workspace.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct DiscussionFields {
+pub struct DiscussionTopic {
     #[serde(rename = "Topic")]
     pub topic: String,
     #[serde(rename = "Submitter")]
@@ -51,9 +53,10 @@ pub struct DiscussionFields {
     pub associated_meetings: Vec<String>,
 }
 
-/// The Airtable fields type for a mailing list signup.
+/// The data type for a mailing list signup.
+/// This is inline with our Airtable workspace.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct MailingListSignupFields {
+pub struct MailingListSignup {
     #[serde(rename = "Email Address")]
     pub email: String,
     #[serde(rename = "First Name")]
@@ -78,7 +81,9 @@ pub struct MailingListSignupFields {
     pub last_changed: DateTime<Utc>,
 }
 
-impl MailingListSignupFields {
+impl MailingListSignup {
+    /// Create the data type for a mailing signup from the hashmap given in a Mailchimp
+    /// webhook.
     pub fn new(params: HashMap<String, String>) -> Self {
         let email = if let Some(e) = params.get("data[email]") {
             e.trim().to_string()
@@ -128,7 +133,7 @@ impl MailingListSignupFields {
             Utc::now()
         };
 
-        MailingListSignupFields {
+        MailingListSignup {
             email,
             first_name,
             last_name,
@@ -143,11 +148,12 @@ impl MailingListSignupFields {
         }
     }
 
+    /// Push the mailing list signup to our Airtable workspace.
     pub async fn push_to_airtable(&self) {
-        let api_key = env::var("AIRTABLE_API_KEY").unwrap();
+        let api_key = env::var("Airtable_API_KEY").unwrap();
         // Initialize the Airtable client.
         let airtable =
-            Airtable::new(api_key.to_string(), BASE_ID_CUSTOMER_LEADS);
+            Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
         // Create the record.
         let record = Record {
@@ -156,16 +162,17 @@ impl MailingListSignupFields {
             fields: serde_json::to_value(self).unwrap(),
         };
 
-        // Send the new record to the airtable client.
+        // Send the new record to the Airtable client.
         // Batch can only handle 10 at a time.
         airtable
-            .create_records(MAILING_LIST_SIGNUPS_TABLE, vec![record])
+            .create_records(AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, vec![record])
             .await
             .unwrap();
 
-        println!("created mailing list record in airtable: {:?}", self);
+        println!("created mailing list record in Airtable: {:?}", self);
     }
 
+    /// Convert the mailing list signup into JSON as Slack message.
     pub fn as_slack_msg(&self) -> Value {
         let dur = self.date_added - Utc::now();
         let time = HumanTime::from(dur);
@@ -224,9 +231,11 @@ impl MailingListSignupFields {
     }
 }
 
-/// The Airtable fields type for meetings.
+/// The data type for a meeting.
+/// This is inline with our Airtable workspace for product huddle meetings, hardware
+/// huddle meetings, etc.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct MeetingFields {
+pub struct Meeting {
     #[serde(rename = "Name")]
     pub name: String,
     #[serde(with = "meeting_date_format", rename = "Date")]
@@ -291,11 +300,11 @@ mod meeting_date_format {
     }
 }
 
-/// The data type for sending reminders for the product huddle meetings.
+/// The data type for sending reminders for meetings.
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
-pub struct ProductEmailData {
+pub struct MeetingReminderEmailData {
     pub date: String,
-    pub topics: Vec<DiscussionFields>,
+    pub topics: Vec<DiscussionTopic>,
     pub last_meeting_reports_link: String,
     pub meeting_id: String,
     pub should_send: bool,
