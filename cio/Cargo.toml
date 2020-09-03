@@ -16,7 +16,7 @@ clap = {version = "2", features = ["yaml"]}
 csv = "1.1"
 google-drive = "^0.1.0"
 html2text = "0.1"
-#hubcaps = { version = "0.6.0", features = ["httpcache"] }
+#hubcaps = { version = "0.6", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/softprops/hubcaps", rev = "2385b8e957bb921f61c1146f075ae132dac5e95d" , features = ["httpcache"] }
 pandoc = "0.8"
 phonenumber = "0.2"

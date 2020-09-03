@@ -49,6 +49,74 @@ pub struct ApplicantSheetColumns {
     pub value_in_tension_2: usize,
 }
 
+impl ApplicantSheetColumns {
+    pub fn parse(values: &Vec<Vec<String>>) -> Self {
+        // Iterate over the columns.
+        // TODO: make this less horrible
+        let mut columns: ApplicantSheetColumns = Default::default();
+
+        // Get the first row.
+        let row = values.get(0).unwrap();
+
+        for (index, col) in row.iter().enumerate() {
+            let c = col.to_lowercase();
+
+            if c.contains("timestamp") {
+                columns.timestamp = index;
+            }
+            if c.contains("name") {
+                columns.name = index;
+            }
+            if c.contains("email address") {
+                columns.email = index;
+            }
+            if c.contains("location") {
+                columns.location = index;
+            }
+            if c.contains("phone") {
+                columns.phone = index;
+            }
+            if c.contains("github") {
+                columns.github = index;
+            }
+            if c.contains("portfolio url") {
+                columns.portfolio = index;
+            }
+            if c.contains("website") {
+                columns.website = index;
+            }
+            if c.contains("linkedin") {
+                columns.linkedin = index;
+            }
+            if c.contains("resume") {
+                columns.resume = index;
+            }
+            if c.contains("materials") {
+                columns.materials = index;
+            }
+            if c.contains("status") {
+                columns.status = index;
+            }
+            if c.contains("value reflected") {
+                columns.value_reflected = index;
+            }
+            if c.contains("value violated") {
+                columns.value_violated = index;
+            }
+            if c.contains("value in tension [1") {
+                columns.value_in_tension_1 = index;
+            }
+            if c.contains("value in tension [2") {
+                columns.value_in_tension_2 = index;
+            }
+            if c.contains("sent email that we received their application") {
+                columns.received_application = index;
+            }
+        }
+        columns
+    }
+}
+
 /// The data type for an applicant.
 #[derive(Debug, Clone)]
 pub struct Applicant {
@@ -75,6 +143,269 @@ pub struct Applicant {
 }
 
 impl Applicant {
+    pub fn parse(
+        sheet_name: &str,
+        sheet_id: &str,
+        columns: &ApplicantSheetColumns,
+        row: &Vec<String>,
+    ) -> Self {
+        // Parse the time.
+        let time_str = row[columns.timestamp].to_string() + " -08:00";
+        let time =
+            DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z")
+                .unwrap()
+                .with_timezone(&Utc);
+
+        // If the length of the row is greater than the status column
+        // then we have a status.
+        let status = if row.len() > columns.status {
+            row[columns.status].trim().to_lowercase()
+        } else {
+            "".to_string()
+        };
+
+        // If the length of the row is greater than the linkedin column
+        // then we have a linkedin.
+        let linkedin = if row.len() > columns.linkedin && columns.linkedin != 0
+        {
+            row[columns.linkedin].trim().to_lowercase()
+        } else {
+            "".to_string()
+        };
+
+        // If the length of the row is greater than the portfolio column
+        // then we have a portfolio.
+        let portfolio =
+            if row.len() > columns.portfolio && columns.portfolio != 0 {
+                row[columns.portfolio].trim().to_lowercase()
+            } else {
+                "".to_lowercase()
+            };
+
+        // If the length of the row is greater than the website column
+        // then we have a website.
+        let website = if row.len() > columns.website && columns.website != 0 {
+            row[columns.website].trim().to_lowercase()
+        } else {
+            "".to_lowercase()
+        };
+
+        // If the length of the row is greater than the value_reflected column
+        // then we have a value_reflected.
+        let value_reflected = if row.len() > columns.value_reflected
+            && columns.value_reflected != 0
+        {
+            row[columns.value_reflected].trim().to_lowercase()
+        } else {
+            "".to_lowercase()
+        };
+
+        // If the length of the row is greater than the value_violated column
+        // then we have a value_violated.
+        let value_violated = if row.len() > columns.value_violated
+            && columns.value_violated != 0
+        {
+            row[columns.value_violated].trim().to_lowercase()
+        } else {
+            "".to_lowercase()
+        };
+
+        let mut values_in_tension: Vec<String> = Default::default();
+        // If the length of the row is greater than the value_in_tension1 column
+        // then we have a value_in_tension1.
+        if row.len() > columns.value_in_tension_1
+            && columns.value_in_tension_1 != 0
+        {
+            values_in_tension
+                .push(row[columns.value_in_tension_1].trim().to_lowercase());
+        }
+        // If the length of the row is greater than the value_in_tension2 column
+        // then we have a value_in_tension2.
+        if row.len() > columns.value_in_tension_2
+            && columns.value_in_tension_2 != 0
+        {
+            values_in_tension
+                .push(row[columns.value_in_tension_2].trim().to_lowercase());
+        }
+
+        // Check if we sent them an email that we received their application.
+        let mut received_application = true;
+        if row[columns.received_application]
+            .to_lowercase()
+            .contains("false")
+        {
+            received_application = false;
+        }
+
+        let mut github = "".to_string();
+        let mut gitlab = "".to_string();
+        if !row[columns.github].trim().is_empty() {
+            github = format!(
+                "@{}",
+                row[columns.github]
+                    .trim()
+                    .to_lowercase()
+                    .trim_start_matches("https://github.com/")
+                    .trim_start_matches("http://github.com/")
+                    .trim_start_matches("https://www.github.com/")
+                    .trim_start_matches('@')
+                    .trim_end_matches('/')
+            );
+            // Some people put a gitlab URL in the github form input,
+            // parse those accordingly.
+            if github.contains("https://gitlab.com") {
+                github = "".to_string();
+
+                gitlab = format!(
+                    "@{}",
+                    row[columns.github]
+                        .trim()
+                        .to_lowercase()
+                        .trim_start_matches("https://gitlab.com/")
+                        .trim_start_matches('@')
+                        .trim_end_matches('/')
+                );
+            }
+        }
+
+        let location = row[columns.location].trim().to_string();
+
+        let mut phone = row[columns.phone]
+            .trim()
+            .replace(" ", "")
+            .replace("-", "")
+            .replace("+", "")
+            .replace("(", "")
+            .replace(")", "")
+            .to_string();
+
+        let mut country = phonenumber::country::US;
+        if (location.to_lowercase().contains("uk")
+            || location.to_lowercase().contains("london")
+            || location.to_lowercase().contains("ipswich")
+            || location.to_lowercase().contains("united kingdom")
+            || location.to_lowercase().contains("england"))
+            && phone.starts_with("44")
+        {
+            country = phonenumber::country::GB;
+        } else if (location.to_lowercase().contains("czech republic")
+            || location.to_lowercase().contains("prague"))
+            && phone.starts_with("420")
+        {
+            country = phonenumber::country::CZ;
+        } else if (location.to_lowercase().contains("mumbai")
+            || location.to_lowercase().contains("india")
+            || location.to_lowercase().contains("bangalore"))
+            && phone.starts_with("91")
+        {
+            country = phonenumber::country::IN;
+        } else if location.to_lowercase().contains("brazil") {
+            country = phonenumber::country::BR;
+        } else if location.to_lowercase().contains("belgium") {
+            country = phonenumber::country::BE;
+        } else if location.to_lowercase().contains("romania")
+            && phone.starts_with("40")
+        {
+            country = phonenumber::country::RO;
+        } else if location.to_lowercase().contains("nigeria") {
+            country = phonenumber::country::NG;
+        } else if location.to_lowercase().contains("austria") {
+            country = phonenumber::country::AT;
+        } else if location.to_lowercase().contains("australia")
+            && phone.starts_with("61")
+        {
+            country = phonenumber::country::AU;
+        } else if location.to_lowercase().contains("sri lanka")
+            && phone.starts_with("94")
+        {
+            country = phonenumber::country::LK;
+        } else if location.to_lowercase().contains("slovenia")
+            && phone.starts_with("386")
+        {
+            country = phonenumber::country::SI;
+        } else if location.to_lowercase().contains("france")
+            && phone.starts_with("33")
+        {
+            country = phonenumber::country::FR;
+        } else if location.to_lowercase().contains("netherlands")
+            && phone.starts_with("31")
+        {
+            country = phonenumber::country::NL;
+        } else if location.to_lowercase().contains("taiwan") {
+            country = phonenumber::country::TW;
+        } else if location.to_lowercase().contains("new zealand") {
+            country = phonenumber::country::NZ;
+        } else if location.to_lowercase().contains("maragno")
+            || location.to_lowercase().contains("italy")
+        {
+            country = phonenumber::country::IT;
+        } else if location.to_lowercase().contains("nairobi")
+            || location.to_lowercase().contains("kenya")
+        {
+            country = phonenumber::country::KE;
+        } else if location.to_lowercase().contains("dubai") {
+            country = phonenumber::country::AE;
+        } else if location.to_lowercase().contains("poland") {
+            country = phonenumber::country::PL;
+        } else if location.to_lowercase().contains("portugal") {
+            country = phonenumber::country::PT;
+        } else if location.to_lowercase().contains("berlin")
+            || location.to_lowercase().contains("germany")
+        {
+            country = phonenumber::country::DE;
+        } else if location.to_lowercase().contains("benin")
+            && phone.starts_with("229")
+        {
+            country = phonenumber::country::BJ;
+        } else if location.to_lowercase().contains("israel") {
+            country = phonenumber::country::IL;
+        } else if location.to_lowercase().contains("spain") {
+            country = phonenumber::country::ES;
+        }
+
+        let db = &phonenumber::metadata::DATABASE;
+        let metadata = db.by_id(country.as_ref()).unwrap();
+        let country_code = metadata.id().to_string().to_lowercase();
+
+        // Get the last ten character of the string.
+        if let Ok(phone_number) =
+            phonenumber::parse(Some(country), phone.to_string())
+        {
+            if !phone_number.is_valid() {
+                println!("phone number is invalid: {}", phone);
+            }
+
+            phone = format!(
+                "{}",
+                phone_number.format().mode(phonenumber::Mode::International)
+            );
+        }
+
+        // Build and return the applicant information for the row.
+        Applicant {
+            submitted_time: time,
+            name: row[columns.name].to_string(),
+            email: row[columns.email].to_string(),
+            location,
+            phone,
+            country_code,
+            github,
+            gitlab,
+            linkedin,
+            portfolio,
+            website,
+            resume: row[columns.resume].to_string(),
+            materials: row[columns.materials].to_string(),
+            status,
+            received_application,
+            role: sheet_name.to_string(),
+            sheet_id: sheet_id.to_string(),
+            value_reflected,
+            value_violated,
+            values_in_tension,
+        }
+    }
+
     pub async fn to_airtable(
         &self,
         drive_client: &GoogleDrive,
@@ -812,17 +1143,7 @@ async fn get_file_contents(drive_client: &GoogleDrive, url: String) -> String {
     result.trim().to_string()
 }
 
-pub async fn iterate_over_applications(
-    domain: String,
-    f: &dyn Fn(
-        &Sheets,
-        String,
-        Applicant,
-        usize,
-        &ApplicantSheetColumns,
-    ) -> Option<Applicant>,
-) -> Vec<Applicant> {
-    let mut applicants: Vec<Applicant> = Default::default();
+fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
     sheets.insert(
         "Engineering",
@@ -836,6 +1157,14 @@ pub async fn iterate_over_applications(
         "Technical Program Management",
         "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU",
     );
+
+    sheets
+}
+
+/// Return a vector of all the applicants.
+pub async fn get_all_applicants() -> Vec<Applicant> {
+    let mut applicants: Vec<Applicant> = Default::default();
+    let sheets = get_sheets_map();
 
     // Get the GSuite token.
     let token = get_gsuite_token().await;
@@ -854,72 +1183,18 @@ pub async fn iterate_over_applications(
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
-            panic!("unable to retrieve any data values from Google sheet")
+            panic!(
+                "unable to retrieve any data values from Google sheet {} {}",
+                sheet_id, sheet_name
+            );
         }
 
-        let mut columns: ApplicantSheetColumns = Default::default();
+        // Parse the sheet columns.
+        let columns = ApplicantSheetColumns::parse(&values);
+
         // Iterate over the rows.
         for (row_index, row) in values.iter().enumerate() {
             if row_index == 0 {
-                // Get the header information.
-                // Iterate over the columns.
-                // TODO: make this less horrible
-                for (index, col) in row.iter().enumerate() {
-                    if col.to_lowercase().contains("timestamp") {
-                        columns.timestamp = index;
-                    }
-                    if col.to_lowercase().contains("name") {
-                        columns.name = index;
-                    }
-                    if col.to_lowercase().contains("email address") {
-                        columns.email = index;
-                    }
-                    if col.to_lowercase().contains("location") {
-                        columns.location = index;
-                    }
-                    if col.to_lowercase().contains("phone") {
-                        columns.phone = index;
-                    }
-                    if col.to_lowercase().contains("github") {
-                        columns.github = index;
-                    }
-                    if col.to_lowercase().contains("portfolio url") {
-                        columns.portfolio = index;
-                    }
-                    if col.to_lowercase().contains("website") {
-                        columns.website = index;
-                    }
-                    if col.to_lowercase().contains("linkedin") {
-                        columns.linkedin = index;
-                    }
-                    if col.to_lowercase().contains("resume") {
-                        columns.resume = index;
-                    }
-                    if col.to_lowercase().contains("materials") {
-                        columns.materials = index;
-                    }
-                    if col.to_lowercase().contains("status") {
-                        columns.status = index;
-                    }
-                    if col.to_lowercase().contains("value reflected") {
-                        columns.value_reflected = index;
-                    }
-                    if col.to_lowercase().contains("value violated") {
-                        columns.value_violated = index;
-                    }
-                    if col.to_lowercase().contains("value in tension [1") {
-                        columns.value_in_tension_1 = index;
-                    }
-                    if col.to_lowercase().contains("value in tension [2") {
-                        columns.value_in_tension_2 = index;
-                    }
-                    if col.to_lowercase().contains(
-                        "sent email that we received their application",
-                    ) {
-                        columns.received_application = index;
-                    }
-                }
-
                 // Continue the loop since we were on the header row.
                 continue;
             } // End get header information.
@@ -928,291 +1203,14 @@ pub async fn iterate_over_applications(
             if row[columns.email].is_empty() {
                 break;
             }
-            // Parse the time.
-            let time_str = row[columns.timestamp].to_string() + " -08:00";
-            let time =
-                DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z")
-                    .unwrap()
-                    .with_timezone(&Utc);
 
-            // If the length of the row is greater than the status column
-            // then we have a status.
-            let status = if row.len() > columns.status {
-                row[columns.status].trim().to_lowercase()
-            } else {
-                "".to_string()
-            };
+            // Parse the applicant out of the row information.
+            let applicant =
+                Applicant::parse(sheet_name, sheet_id, &columns, &row);
 
-            // If the length of the row is greater than the linkedin column
-            // then we have a linkedin.
-            let linkedin =
-                if row.len() > columns.linkedin && columns.linkedin != 0 {
-                    row[columns.linkedin].trim().to_lowercase()
-                } else {
-                    "".to_string()
-                };
-
-            // If the length of the row is greater than the portfolio column
-            // then we have a portfolio.
-            let portfolio =
-                if row.len() > columns.portfolio && columns.portfolio != 0 {
-                    row[columns.portfolio].trim().to_lowercase()
-                } else {
-                    "".to_lowercase()
-                };
-
-            // If the length of the row is greater than the website column
-            // then we have a website.
-            let website = if row.len() > columns.website && columns.website != 0
-            {
-                row[columns.website].trim().to_lowercase()
-            } else {
-                "".to_lowercase()
-            };
-
-            // If the length of the row is greater than the value_reflected column
-            // then we have a value_reflected.
-            let value_reflected = if row.len() > columns.value_reflected
-                && columns.value_reflected != 0
-            {
-                row[columns.value_reflected].trim().to_lowercase()
-            } else {
-                "".to_lowercase()
-            };
-
-            // If the length of the row is greater than the value_violated column
-            // then we have a value_violated.
-            let value_violated = if row.len() > columns.value_violated
-                && columns.value_violated != 0
-            {
-                row[columns.value_violated].trim().to_lowercase()
-            } else {
-                "".to_lowercase()
-            };
-
-            let mut values_in_tension: Vec<String> = Default::default();
-            // If the length of the row is greater than the value_in_tension1 column
-            // then we have a value_in_tension1.
-            if row.len() > columns.value_in_tension_1
-                && columns.value_in_tension_1 != 0
-            {
-                values_in_tension.push(
-                    row[columns.value_in_tension_1].trim().to_lowercase(),
-                );
-            }
-            // If the length of the row is greater than the value_in_tension2 column
-            // then we have a value_in_tension2.
-            if row.len() > columns.value_in_tension_2
-                && columns.value_in_tension_2 != 0
-            {
-                values_in_tension.push(
-                    row[columns.value_in_tension_2].trim().to_lowercase(),
-                );
-            }
-
-            // Check if we sent them an email that we received their application.
-            let mut received_application = true;
-            if row[columns.received_application]
-                .to_lowercase()
-                .contains("false")
-            {
-                received_application = false;
-            }
-
-            let mut github = "".to_string();
-            let mut gitlab = "".to_string();
-            if !row[columns.github].trim().is_empty() {
-                github = format!(
-                    "@{}",
-                    row[columns.github]
-                        .trim()
-                        .to_lowercase()
-                        .trim_start_matches("https://github.com/")
-                        .trim_start_matches("http://github.com/")
-                        .trim_start_matches("https://www.github.com/")
-                        .trim_start_matches('@')
-                        .trim_end_matches('/')
-                );
-                // Some people put a gitlab URL in the github form input,
-                // parse those accordingly.
-                if github.contains("https://gitlab.com") {
-                    github = "".to_string();
-
-                    gitlab = format!(
-                        "@{}",
-                        row[columns.github]
-                            .trim()
-                            .to_lowercase()
-                            .trim_start_matches("https://gitlab.com/")
-                            .trim_start_matches('@')
-                            .trim_end_matches('/')
-                    );
-                }
-            }
-
-            let location = row[columns.location].trim().to_string();
-
-            let mut phone = row[columns.phone]
-                .trim()
-                .replace(" ", "")
-                .replace("-", "")
-                .replace("+", "")
-                .replace("(", "")
-                .replace(")", "")
-                .to_string();
-
-            let mut country = phonenumber::country::US;
-            if (location.to_lowercase().contains("uk")
-                || location.to_lowercase().contains("london")
-                || location.to_lowercase().contains("ipswich")
-                || location.to_lowercase().contains("united kingdom")
-                || location.to_lowercase().contains("england"))
-                && phone.starts_with("44")
-            {
-                country = phonenumber::country::GB;
-            } else if (location.to_lowercase().contains("czech republic")
-                || location.to_lowercase().contains("prague"))
-                && phone.starts_with("420")
-            {
-                country = phonenumber::country::CZ;
-            } else if (location.to_lowercase().contains("mumbai")
-                || location.to_lowercase().contains("india")
-                || location.to_lowercase().contains("bangalore"))
-                && phone.starts_with("91")
-            {
-                country = phonenumber::country::IN;
-            } else if location.to_lowercase().contains("brazil") {
-                country = phonenumber::country::BR;
-            } else if location.to_lowercase().contains("belgium") {
-                country = phonenumber::country::BE;
-            } else if location.to_lowercase().contains("romania")
-                && phone.starts_with("40")
-            {
-                country = phonenumber::country::RO;
-            } else if location.to_lowercase().contains("nigeria") {
-                country = phonenumber::country::NG;
-            } else if location.to_lowercase().contains("austria") {
-                country = phonenumber::country::AT;
-            } else if location.to_lowercase().contains("australia")
-                && phone.starts_with("61")
-            {
-                country = phonenumber::country::AU;
-            } else if location.to_lowercase().contains("sri lanka")
-                && phone.starts_with("94")
-            {
-                country = phonenumber::country::LK;
-            } else if location.to_lowercase().contains("slovenia")
-                && phone.starts_with("386")
-            {
-                country = phonenumber::country::SI;
-            } else if location.to_lowercase().contains("france")
-                && phone.starts_with("33")
-            {
-                country = phonenumber::country::FR;
-            } else if location.to_lowercase().contains("netherlands")
-                && phone.starts_with("31")
-            {
-                country = phonenumber::country::NL;
-            } else if location.to_lowercase().contains("taiwan") {
-                country = phonenumber::country::TW;
-            } else if location.to_lowercase().contains("new zealand") {
-                country = phonenumber::country::NZ;
-            } else if location.to_lowercase().contains("maragno")
-                || location.to_lowercase().contains("italy")
-            {
-                country = phonenumber::country::IT;
-            } else if location.to_lowercase().contains("nairobi")
-                || location.to_lowercase().contains("kenya")
-            {
-                country = phonenumber::country::KE;
-            } else if location.to_lowercase().contains("dubai") {
-                country = phonenumber::country::AE;
-            } else if location.to_lowercase().contains("poland") {
-                country = phonenumber::country::PL;
-            } else if location.to_lowercase().contains("portugal") {
-                country = phonenumber::country::PT;
-            } else if location.to_lowercase().contains("berlin")
-                || location.to_lowercase().contains("germany")
-            {
-                country = phonenumber::country::DE;
-            } else if location.to_lowercase().contains("benin")
-                && phone.starts_with("229")
-            {
-                country = phonenumber::country::BJ;
-            } else if location.to_lowercase().contains("israel") {
-                country = phonenumber::country::IL;
-            } else if location.to_lowercase().contains("spain") {
-                country = phonenumber::country::ES;
-            }
-
-            let db = &phonenumber::metadata::DATABASE;
-            let metadata = db.by_id(country.as_ref()).unwrap();
-            let country_code = metadata.id().to_string().to_lowercase();
-
-            // Get the last ten character of the string.
-            if let Ok(phone_number) =
-                phonenumber::parse(Some(country), phone.to_string())
-            {
-                if !phone_number.is_valid() {
-                    println!("phone number is invalid: {}", phone);
-                }
-
-                phone = format!(
-                    "{}",
-                    phone_number
-                        .format()
-                        .mode(phonenumber::Mode::International)
-                );
-            }
-
-            // Build the applicant information for the row.
-            let a = Applicant {
-                submitted_time: time,
-                name: row[columns.name].to_string(),
-                email: row[columns.email].to_string(),
-                location,
-                phone,
-                country_code,
-                github,
-                gitlab,
-                linkedin,
-                portfolio,
-                website,
-                resume: row[columns.resume].to_string(),
-                materials: row[columns.materials].to_string(),
-                status,
-                received_application,
-                role: sheet_name.to_string(),
-                sheet_id: sheet_id.to_string(),
-                value_reflected,
-                value_violated,
-                values_in_tension,
-            };
-
-            // Run the function passed on the applicant.
-            // TODO: make domain global so we don't need to pass it.
-            if let Some(applicant) =
-                f(&sheets_client, domain.to_string(), a, row_index, &columns)
-            {
-                applicants.push(applicant);
-            }
+            applicants.push(applicant);
         }
     }
 
     applicants
-}
-
-fn do_all_applicants(
-    _sheets_client: &Sheets,
-    _domain: String,
-    a: Applicant,
-    _row_index: usize,
-    _columns: &ApplicantSheetColumns,
-) -> Option<Applicant> {
-    Some(a)
-}
-
-/// Return a vector of all the applicants.
-pub async fn get_all() -> Vec<Applicant> {
-    iterate_over_applications("".to_string(), &do_all_applicants).await
 }
