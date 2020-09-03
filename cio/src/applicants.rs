@@ -17,8 +17,8 @@ use serde_json::Value;
 use sheets::Sheets;
 
 use crate::slack::{
-    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText,
-    MessageBlockType, MessageType,
+    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
+    MessageType,
 };
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
@@ -539,13 +539,6 @@ impl Applicant {
 
     /// Convert the applicant into JSON for a Slack message.
     pub fn as_slack_msg(&self) -> Value {
-        let mut color = "#805AD5";
-        match self.role.as_str() {
-            "Product Engineering and Design" => color = "#48D597",
-            "Technical Program Management" => color = "#667EEA",
-            _ => (),
-        }
-
         let time = self.human_duration();
 
         let mut status_msg = format!("<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}", self.sheet_id, self.role, time);
@@ -611,70 +604,53 @@ impl Applicant {
 
         json!(FormattedMessage {
             channel: None,
-            blocks: None,
-            attachments: Some(vec![MessageAttachment {
-                color: Some(color.to_string()),
-                blocks: Some(vec![
-                    MessageBlock {
-                        block_type: MessageBlockType::Section,
-                        text: Some(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: intro_msg,
-                        }),
-                        elements: None,
-                        accessory: None,
-                        block_id: None,
-                        fields: None,
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: Some(vec![MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: info_msg,
-                        }]),
-                        text: None,
-                        accessory: None,
-                        block_id: None,
-                        fields: None,
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: Some(vec![MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: values_msg,
-                        }]),
-                        text: None,
-                        accessory: None,
-                        block_id: None,
-                        fields: None,
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: Some(vec![MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: status_msg,
-                        }]),
-                        text: None,
-                        accessory: None,
-                        block_id: None,
-                        fields: None,
-                    }
-                ]),
-                author_icon: None,
-                author_link: None,
-                author_name: None,
-                fallback: None,
-                fields: None,
-                footer: None,
-                footer_icon: None,
-                image_url: None,
-                pretext: None,
-                text: None,
-                thumb_url: None,
-                title: None,
-                title_link: None,
-                ts: Utc::now(),
-            }])
+            attachments: None,
+            blocks: Some(vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: intro_msg,
+                    }),
+                    elements: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: info_msg,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: values_msg,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: status_msg,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                }
+            ])
         })
     }
 

@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::slack::{
-    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText,
-    MessageBlockType, MessageType,
+    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
+    MessageType,
 };
 
 pub static AIRTABLE_BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
@@ -109,60 +109,43 @@ impl Signup {
 
         json!(FormattedMessage {
             channel: None,
-            blocks: None,
-            attachments: Some(vec![MessageAttachment {
-                color: Some("#F6E05E".to_string()),
-                blocks: Some(vec![
-                    MessageBlock {
-                        block_type: MessageBlockType::Section,
-                        text: Some(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: msg,
-                        }),
-                        elements: None,
-                        accessory: None,
-                        block_id: None,
-                        fields: None,
-                    },
-                    interest,
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: Some(vec![MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: updates,
-                        }]),
-                        text: None,
-                        accessory: None,
-                        block_id: None,
-                        fields: None,
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: Some(vec![MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: context,
-                        }]),
-                        text: None,
-                        accessory: None,
-                        block_id: None,
-                        fields: None,
-                    }
-                ]),
-                author_icon: None,
-                author_link: None,
-                author_name: None,
-                fallback: None,
-                fields: None,
-                footer: None,
-                footer_icon: None,
-                image_url: None,
-                pretext: None,
-                text: None,
-                thumb_url: None,
-                title: None,
-                title_link: None,
-                ts: Utc::now(),
-            }])
+            attachments: None,
+            blocks: Some(vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: msg,
+                    }),
+                    elements: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                interest,
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: updates,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: context,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                }
+            ]),
         })
     }
 }
