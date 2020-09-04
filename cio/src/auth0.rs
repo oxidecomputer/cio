@@ -116,13 +116,33 @@ pub struct Identity {
 
 /// List users.
 pub async fn list_users(domain: String) -> Vec<User> {
+    let mut users: Vec<User> = Default::default();
+
+    let mut i: i32 = 1;
+    let mut has_records = true;
+    while has_records {
+        let mut u = list_users_raw(domain.to_string(), &i.to_string()).await;
+
+        has_records = u.len() > 0;
+        i += 1;
+
+        users.append(&mut u);
+    }
+
+    users
+}
+
+async fn list_users_raw(domain: String, page: &str) -> Vec<User> {
     let client = Client::new();
     let resp = client
         .get(&format!("https://{}.auth0.com/api/v2/users", domain))
         .bearer_auth(env::var("AUTH0_TOKEN").unwrap())
+        .query(&[("per_page", "50"), ("page", page)])
         .send()
         .await
         .unwrap();
+
+    println!("headers: {:?}", resp.headers());
 
     match resp.status() {
         StatusCode::OK => (),
