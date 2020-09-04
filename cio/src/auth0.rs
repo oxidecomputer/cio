@@ -5,6 +5,7 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::mailing_list::AIRTABLE_BASE_ID_CUSTOMER_LEADS;
 
@@ -45,49 +46,45 @@ impl User {
     /// Convert an auth0 user into the format for Airtable.
     pub fn to_airtable_fields(&self) -> UserFields {
         let username = if let Some(u) = &self.username {
-            u.to_string()
+            Some(u.to_string())
         } else {
-            "".to_string()
-        };
-        let picture = if let Some(u) = &self.picture {
-            u.to_string()
-        } else {
-            "".to_string()
+            None
         };
         let company = if let Some(u) = &self.company {
-            u.to_string()
+            Some(u.to_string())
         } else {
-            "".to_string()
+            None
         };
         let blog = if let Some(u) = &self.blog {
-            u.to_string()
+            Some(u.to_string())
         } else {
-            "".to_string()
+            None
         };
         let locale = if let Some(u) = &self.locale {
-            u.to_string()
+            Some(u.to_string())
         } else {
-            "".to_string()
+            None
         };
         let phone_number = if let Some(u) = &self.phone_number {
-            u.to_string()
+            Some(u.to_string())
         } else {
-            "".to_string()
+            None
         };
         let phone_verified = if let Some(u) = &self.phone_verified {
-            *u
+            Some(*u)
         } else {
-            false
+            None
         };
 
         UserFields {
             user_id: self.user_id.to_string(),
             name: self.name.to_string(),
+            link_to_people: None,
             nickname: self.nickname.to_string(),
             username,
             email: self.email.to_string(),
             email_verified: self.email_verified,
-            picture,
+            picture: json!(&self.picture),
             company,
             blog,
             phone_number,
@@ -167,26 +164,28 @@ pub struct UserFields {
     pub user_id: String,
     #[serde(rename = "Name")]
     pub name: String,
+    #[serde(rename = "Link to People")]
+    pub link_to_people: Option<Vec<String>>,
     #[serde(rename = "Nickname")]
     pub nickname: String,
     #[serde(rename = "Username")]
-    pub username: String,
+    pub username: Option<String>,
     #[serde(rename = "Email")]
     pub email: String,
     #[serde(rename = "Email verified?")]
     pub email_verified: bool,
     #[serde(rename = "Picture")]
-    pub picture: String,
+    pub picture: Value,
     #[serde(rename = "Company")]
-    pub company: String,
+    pub company: Option<String>,
     #[serde(rename = "Blog")]
-    pub blog: String,
+    pub blog: Option<String>,
     #[serde(rename = "Phone number")]
-    pub phone_number: String,
+    pub phone_number: Option<String>,
     #[serde(rename = "Phone verified?")]
-    pub phone_verified: bool,
+    pub phone_verified: Option<bool>,
     #[serde(rename = "Locale")]
-    pub locale: String,
+    pub locale: Option<String>,
     #[serde(rename = "Login provider")]
     pub login_provider: String,
     #[serde(rename = "Created at")]
@@ -229,14 +228,65 @@ impl UserFields {
 
 /*#[cfg(test)]
 mod tests {
-    use crate::auth0::list_users;
+    use std::collections::BTreeMap;
+    use std::env;
+
+    use airtable_api::{Airtable, Record};
+
+    use crate::auth0::{list_users, UserFields, AIRTABLE_AUTH0_LOGINS_TABLE};
+    use crate::mailing_list::AIRTABLE_BASE_ID_CUSTOMER_LEADS;
 
     #[tokio::test(threaded_scheduler)]
     async fn update_users_in_airtable() {
+        let api_key = env::var("AIRTABLE_API_KEY").unwrap();
+        // Initialize the Airtable client.
+        let airtable =
+            Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+
+        let records = airtable
+            .list_records(AIRTABLE_AUTH0_LOGINS_TABLE, "Grid view")
+            .await
+            .unwrap();
+
+        let mut logins: BTreeMap<String, Record> = Default::default();
+        for record in records {
+            let fields: UserFields =
+                serde_json::from_value(record.fields.clone()).unwrap();
+
+            logins.insert(fields.user_id, record);
+        }
+
         let users = list_users("oxide".to_string()).await;
 
         for user in users {
-            user.to_airtable_fields().push_to_airtable().await;
+            // See if we have it in our fields.
+            match logins.get(&user.user_id) {
+                Some(val) => {
+                    // Update the record.
+                    let mut record = val.clone();
+                    let mut fields = user.to_airtable_fields();
+
+                    // Set the Link to People from the original so it stays intact.
+                    // TODO: do this without all the extra conversions.
+                    let old_fields: UserFields =
+                        serde_json::from_value(val.fields.clone()).unwrap();
+                    fields.link_to_people = old_fields.link_to_people;
+
+                    record.fields = json!(fields);
+
+                    airtable
+                        .update_records(
+                            AIRTABLE_AUTH0_LOGINS_TABLE,
+                            vec![record.clone()],
+                        )
+                        .await
+                        .unwrap();
+                }
+                None => {
+                    // Create the record.
+                    user.to_airtable_fields().push_to_airtable().await;
+                }
+            }
         }
     }
 }*/
