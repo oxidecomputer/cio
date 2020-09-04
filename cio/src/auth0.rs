@@ -56,7 +56,11 @@ impl User {
             None
         };
         let blog = if let Some(u) = &self.blog {
-            Some(u.to_string())
+            if u.trim().is_empty() {
+                None
+            } else {
+                Some(u.to_string())
+            }
         } else {
             None
         };
@@ -291,6 +295,7 @@ mod tests {
 
         let users = list_users("oxide".to_string()).await;
 
+        let mut updated = 0;
         for user in users {
             // See if we have it in our fields.
             match logins.get(&user.user_id) {
@@ -317,6 +322,8 @@ mod tests {
                         )
                         .await
                         .unwrap();
+
+                    updated += 1;
                 }
                 None => {
                     // Create the record.
@@ -324,5 +331,7 @@ mod tests {
                 }
             }
         }
+
+        println!("updated {} users", updated);
     }
 }
