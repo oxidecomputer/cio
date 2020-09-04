@@ -1,7 +1,9 @@
 on:
   schedule:
     - cron: "*/10 * * * *"
-  push
+  push:
+    branches:
+      - *
 name: cargo test
 jobs:
   cargotest:
