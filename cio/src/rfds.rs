@@ -4,10 +4,11 @@ use std::str::from_utf8;
 
 use csv::ReaderBuilder;
 use hubcaps::Github;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// The data type for an RFD.
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct RFD {
     pub number: String,
     pub title: String,

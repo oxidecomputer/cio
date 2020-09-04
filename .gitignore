@@ -1,3 +1,6 @@
 # files added by cargo
 /target
 **/*.rs.bk
+
+# github cache
+.cache

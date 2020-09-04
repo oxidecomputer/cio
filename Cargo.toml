@@ -9,3 +9,6 @@ members = [
 	"sheets",
 	"zoom",
 ]
+
+[patch.crates-io]
+yup-oauth2 = { git = "https://github.com/dermesser/yup-oauth2", rev = "3d84ddd1782e1f1218427498c47069095915c4a8" }

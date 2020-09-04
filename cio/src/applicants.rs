@@ -12,6 +12,7 @@ use google_drive::GoogleDrive;
 use html2text::from_read;
 use pandoc::OutputKind;
 use regex::Regex;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
@@ -124,7 +125,7 @@ impl ApplicantSheetColumns {
 }
 
 /// The data type for an applicant.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct Applicant {
     pub submitted_time: DateTime<Utc>,
     pub name: String,
@@ -378,7 +379,7 @@ impl Applicant {
             phonenumber::parse(Some(country), phone.to_string())
         {
             if !phone_number.is_valid() {
-                println!("phone number is invalid: {}", phone);
+                println!("[applicants] phone number is invalid: {}", phone);
             }
 
             phone = format!(
@@ -719,7 +720,7 @@ To view the all the candidates refer to the following Google spreadsheets:
 }
 
 /// The Airtable fields type for an applicant.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct ApplicantFields {
     #[serde(rename = "Name")]
     pub name: String,
@@ -1134,7 +1135,7 @@ async fn get_file_contents(drive_client: &GoogleDrive, url: String) -> String {
             Ok(r) => r,
             Err(e) => {
                 println!(
-                    "running pdf2text failed: {} | name: {}, path: {}",
+                    "[applicants] running pdf2text failed: {} | name: {}, path: {}",
                     e,
                     name,
                     path.to_str().unwrap()
@@ -1159,7 +1160,7 @@ async fn get_file_contents(drive_client: &GoogleDrive, url: String) -> String {
     // TODO: handle these formats
     {
         println!(
-            "unsupported doc format -- mime type: {}, name: {}, path: {}",
+            "[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}",
             mime_type,
             name,
             path.to_str().unwrap()
@@ -1210,15 +1211,18 @@ fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
 }
 
 /// Return a vector of all the applicants.
-pub async fn get_all_applicants() -> Vec<Applicant> {
-    let mut applicants: Vec<Applicant> = Default::default();
+pub async fn get_all_applicants() -> Vec<ApplicantFields> {
+    let mut applicants: Vec<ApplicantFields> = Default::default();
     let sheets = get_sheets_map();
 
     // Get the GSuite token.
     let token = get_gsuite_token().await;
 
     // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token);
+    let sheets_client = Sheets::new(token.clone());
+
+    // Initialize the Google Drive client.
+    let drive_client = GoogleDrive::new(token);
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
@@ -1256,7 +1260,9 @@ pub async fn get_all_applicants() -> Vec<Applicant> {
             let applicant =
                 Applicant::parse(sheet_name, sheet_id, &columns, &row);
 
-            applicants.push(applicant);
+            let a = applicant.to_airtable_fields(&drive_client).await;
+
+            applicants.push(a);
         }
     }
 
