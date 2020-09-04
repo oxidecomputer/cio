@@ -200,6 +200,28 @@ pub struct UserFields {
     pub logins_count: i32,
 }
 
+impl PartialEq for UserFields {
+    fn eq(&self, other: &Self) -> bool {
+        self.user_id == other.user_id
+            && self.name == other.name
+            && self.nickname == other.nickname
+            && self.username == other.username
+            && self.email == other.email
+            && self.email_verified == other.email_verified
+            && self.company == other.company
+            && self.blog == other.blog
+            && self.phone_number == other.phone_number
+            && self.phone_verified == other.phone_verified
+            && self.locale == other.locale
+            && self.login_provider == other.login_provider
+            && self.created_at == other.created_at
+            && self.updated_at == other.updated_at
+            && self.last_login == other.last_login
+            && self.last_ip == other.last_ip
+            && self.logins_count == other.logins_count
+    }
+}
+
 impl UserFields {
     /// Push the auth0 login to our Airtable workspace.
     pub async fn push_to_airtable(&self) {
@@ -248,12 +270,13 @@ mod tests {
             .await
             .unwrap();
 
-        let mut logins: BTreeMap<String, Record> = Default::default();
+        let mut logins: BTreeMap<String, (Record, UserFields)> =
+            Default::default();
         for record in records {
             let fields: UserFields =
                 serde_json::from_value(record.fields.clone()).unwrap();
 
-            logins.insert(fields.user_id, record);
+            logins.insert(fields.user_id.to_string(), (record, fields));
         }
 
         let users = list_users("oxide".to_string()).await;
@@ -261,16 +284,19 @@ mod tests {
         for user in users {
             // See if we have it in our fields.
             match logins.get(&user.user_id) {
-                Some(val) => {
-                    // Update the record.
-                    let mut record = val.clone();
+                Some((r, in_airtable_fields)) => {
+                    let mut record = r.clone();
                     let mut fields = user.to_airtable_fields();
 
+                    // Check if we even need to update.
+                    if fields == *in_airtable_fields {
+                        // They are the same, don't update.
+                        continue;
+                    }
+
                     // Set the Link to People from the original so it stays intact.
-                    // TODO: do this without all the extra conversions.
-                    let old_fields: UserFields =
-                        serde_json::from_value(val.fields.clone()).unwrap();
-                    fields.link_to_people = old_fields.link_to_people;
+                    fields.link_to_people =
+                        in_airtable_fields.link_to_people.clone();
 
                     record.fields = json!(fields);
 
