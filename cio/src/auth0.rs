@@ -1,9 +1,14 @@
 use std::env;
 
+use airtable_api::{Airtable, Record};
 use chrono::offset::Utc;
 use chrono::DateTime;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+
+use crate::mailing_list::AIRTABLE_BASE_ID_CUSTOMER_LEADS;
+
+static AIRTABLE_AUTH0_LOGINS_TABLE: &str = "Auth0 Logins to RFD Site";
 
 /// The data type for an Auth0 user.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -168,4 +173,30 @@ pub struct UserFields {
     pub last_ip: String,
     #[serde(rename = "Logins count")]
     pub logins_count: i32,
+}
+
+impl UserFields {
+    /// Push the auth0 login to our Airtable workspace.
+    pub async fn push_to_airtable(&self) {
+        let api_key = env::var("Airtable_API_KEY").unwrap();
+        // Initialize the Airtable client.
+        let airtable =
+            Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+
+        // Create the record.
+        let record = Record {
+            id: None,
+            created_time: None,
+            fields: serde_json::to_value(self).unwrap(),
+        };
+
+        // Send the new record to the Airtable client.
+        // Batch can only handle 10 at a time.
+        airtable
+            .create_records(AIRTABLE_AUTH0_LOGINS_TABLE, vec![record])
+            .await
+            .unwrap();
+
+        println!("created auth0 login in Airtable: {:?}", self);
+    }
 }
