@@ -222,7 +222,8 @@ impl PartialEq for UserFields {
             && self.username == other.username
             && self.email == other.email
             && self.email_verified == other.email_verified
-            && self.company == other.company
+            //&& self.company == other.company // Ignore this field since we will modify it
+            // remotely.
             && self.blog == other.blog
             && self.phone_number == other.phone_number
             && self.phone_verified == other.phone_verified
@@ -312,6 +313,8 @@ mod tests {
                     // Set the Link to People from the original so it stays intact.
                     fields.link_to_people =
                         in_airtable_fields.link_to_people.clone();
+                    // Set the company so it stays intact.
+                    fields.company = in_airtable_fields.company.clone();
 
                     record.fields = json!(fields);
 
