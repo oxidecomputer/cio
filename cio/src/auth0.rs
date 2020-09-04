@@ -118,7 +118,7 @@ pub struct Identity {
 pub async fn list_users(domain: String) -> Vec<User> {
     let mut users: Vec<User> = Default::default();
 
-    let mut i: i32 = 1;
+    let mut i: i32 = 0;
     let mut has_records = true;
     while has_records {
         let mut u = list_users_raw(domain.to_string(), &i.to_string()).await;
@@ -137,7 +137,7 @@ async fn list_users_raw(domain: String, page: &str) -> Vec<User> {
     let resp = client
         .get(&format!("https://{}.auth0.com/api/v2/users", domain))
         .bearer_auth(env::var("AUTH0_TOKEN").unwrap())
-        .query(&[("per_page", "50"), ("page", page)])
+        .query(&[("per_page", "20"), ("page", page), ("last_login", "-1")])
         .send()
         .await
         .unwrap();
