@@ -226,7 +226,7 @@ impl UserFields {
     }
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
     use std::env;
@@ -289,4 +289,4 @@ mod tests {
             }
         }
     }
-}*/
+}

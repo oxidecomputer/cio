@@ -1,4 +1,7 @@
-on: push
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  push
 name: cargo test
 jobs:
   cargotest:
@@ -31,3 +34,6 @@ jobs:
         run: |
           cargo test
         shell: bash
+        env:
+          AUTH0_TOKEN: ${{ secrets.AUTH0_TOKEN }}
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
