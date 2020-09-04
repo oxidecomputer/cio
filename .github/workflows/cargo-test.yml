@@ -3,7 +3,7 @@ on:
     - cron: "*/10 * * * *"
   push:
     branches:
-      - *
+      - '**'
 name: cargo test
 jobs:
   cargotest:
