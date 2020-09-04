@@ -234,6 +234,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sheets 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
  "toml",
  "yup-oauth2",
 ]
@@ -1102,6 +1103,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_cpus"
+version = "1.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05499f3756671c15885fee9034446956fff3f243d6077b91e5767df161f766b3"
+dependencies = [
+ "hermit-abi",
+ "libc",
+]
+
+[[package]]
 name = "object"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1837,6 +1848,7 @@ dependencies = [
  "lazy_static",
  "memchr",
  "mio",
+ "num_cpus",
  "pin-project-lite",
  "slab",
  "tokio-macros",

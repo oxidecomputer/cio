@@ -47,7 +47,7 @@ pub struct Signup {
 impl Signup {
     /// Push the mailing list signup to our Airtable workspace.
     pub async fn push_to_airtable(&self) {
-        let api_key = env::var("Airtable_API_KEY").unwrap();
+        let api_key = env::var("AIRTABLE_API_KEY").unwrap();
         // Initialize the Airtable client.
         let airtable =
             Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);

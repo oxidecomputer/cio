@@ -30,8 +30,8 @@ pub struct User {
     pub phone_number: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone_verified: Option<bool>,
-    pub locale: String,
-    pub identites: Vec<Identity>,
+    pub locale: Option<String>,
+    pub identities: Vec<Identity>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_login: DateTime<Utc>,
@@ -43,7 +43,7 @@ pub struct User {
 
 impl User {
     /// Convert an auth0 user into the format for Airtable.
-    pub async fn to_airtable_fields(&self) -> UserFields {
+    pub fn to_airtable_fields(&self) -> UserFields {
         let username = if let Some(u) = &self.username {
             u.to_string()
         } else {
@@ -60,6 +60,11 @@ impl User {
             "".to_string()
         };
         let blog = if let Some(u) = &self.blog {
+            u.to_string()
+        } else {
+            "".to_string()
+        };
+        let locale = if let Some(u) = &self.locale {
             u.to_string()
         } else {
             "".to_string()
@@ -87,8 +92,8 @@ impl User {
             blog,
             phone_number,
             phone_verified,
-            locale: self.locale.to_string(),
-            login_provider: self.identites[0].provider.to_string(),
+            locale,
+            login_provider: self.identities[0].provider.to_string(),
             created_at: self.created_at,
             updated_at: self.updated_at,
             last_login: self.last_login,
@@ -105,6 +110,7 @@ pub struct Identity {
     pub provider: String,
     pub user_id: String,
     pub connection: String,
+    #[serde(rename = "isSocial")]
     pub is_social: bool,
 }
 
@@ -178,7 +184,7 @@ pub struct UserFields {
 impl UserFields {
     /// Push the auth0 login to our Airtable workspace.
     pub async fn push_to_airtable(&self) {
-        let api_key = env::var("Airtable_API_KEY").unwrap();
+        let api_key = env::var("AIRTABLE_API_KEY").unwrap();
         // Initialize the Airtable client.
         let airtable =
             Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
@@ -200,3 +206,17 @@ impl UserFields {
         println!("created auth0 login in Airtable: {:?}", self);
     }
 }
+
+/*#[cfg(test)]
+mod tests {
+    use crate::auth0::list_users;
+
+    #[tokio::test(threaded_scheduler)]
+    async fn update_users_in_airtable() {
+        let users = list_users("oxide".to_string()).await;
+
+        for user in users {
+            user.to_airtable_fields().push_to_airtable().await;
+        }
+    }
+}*/
