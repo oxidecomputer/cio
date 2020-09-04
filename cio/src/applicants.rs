@@ -733,69 +733,106 @@ pub struct ApplicantFields {
     pub email: String,
     #[serde(rename = "Phone Number")]
     pub phone: String,
-    #[serde(rename = "Location")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Location")]
     pub location: Option<String>,
-    #[serde(rename = "GitHub")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "GitHub")]
     pub github: Option<String>,
-    #[serde(rename = "LinkedIn")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "LinkedIn")]
     pub linkedin: Option<String>,
-    #[serde(rename = "Portfolio")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Portfolio")]
     pub portfolio: Option<String>,
-    #[serde(rename = "Website")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Website")]
     pub website: Option<String>,
     #[serde(rename = "Resume")]
     pub resume: String,
     #[serde(rename = "Oxide Materials")]
     pub materials: String,
-    #[serde(rename = "Value Reflected")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Value Reflected"
+    )]
     pub value_reflected: Option<String>,
-    #[serde(rename = "Value Violated")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Value Violated"
+    )]
     pub value_violated: Option<String>,
-    #[serde(rename = "Values in Tension")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Values in Tension"
+    )]
     pub values_in_tension: Option<Vec<String>>,
-    #[serde(rename = "Resume Contents")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Resume Contents"
+    )]
     pub resume_contents: Option<String>,
-    #[serde(rename = "Oxide Materials Contents")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Oxide Materials Contents"
+    )]
     pub materials_contents: Option<String>,
-    #[serde(rename = "Work samples")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Work samples")]
     pub work_samples: Option<String>,
-    #[serde(rename = "Writing samples")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Writing samples"
+    )]
     pub writing_samples: Option<String>,
-    #[serde(rename = "Analysis samples")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Analysis samples"
+    )]
     pub analysis_samples: Option<String>,
-    #[serde(rename = "Presentation samples")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Presentation samples"
+    )]
     pub presentation_samples: Option<String>,
-    #[serde(rename = "Exploratory samples")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Exploratory samples"
+    )]
     pub exploratory_samples: Option<String>,
     #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "What work have you found most technically challenging in your career and why?"
     )]
     pub question_technically_challenging: Option<String>,
     #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "What work have you done that you were particularly proud of and why?"
     )]
     pub question_proud_of: Option<String>,
     #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "When have you been happiest in your professional career and why?"
     )]
     pub question_happiest: Option<String>,
     #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "When have you been unhappiest in your professional career and why?"
     )]
     pub question_unhappiest: Option<String>,
     #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "For one of Oxide's values, describe an example of how it was reflected in a particular body of your work."
     )]
     pub question_value_reflected: Option<String>,
     #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "For one of Oxide's values, describe an example of how it was violated in your organization or work."
     )]
     pub question_value_violated: Option<String>,
     #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "For a pair of Oxide's values, describe a time in which the two values came into tension for you or your work, and how you resolved it."
     )]
     pub question_values_in_tension: Option<String>,
-    #[serde(rename = "Why do you want to work for Oxide?")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Why do you want to work for Oxide?"
+    )]
     pub question_why_oxide: Option<String>,
 }
 

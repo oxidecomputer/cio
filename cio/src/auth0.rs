@@ -96,6 +96,7 @@ impl User {
             last_login: self.last_login,
             last_ip: self.last_ip.to_string(),
             logins_count: self.logins_count,
+            potential_custmoer: None,
         }
     }
 }
@@ -139,8 +140,6 @@ async fn list_users_raw(domain: String, page: &str) -> Vec<User> {
         .await
         .unwrap();
 
-    println!("headers: {:?}", resp.headers());
-
     match resp.status() {
         StatusCode::OK => (),
         s => {
@@ -164,11 +163,14 @@ pub struct UserFields {
     pub user_id: String,
     #[serde(rename = "Name")]
     pub name: String,
-    #[serde(rename = "Link to People")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Link to People"
+    )]
     pub link_to_people: Option<Vec<String>>,
     #[serde(rename = "Nickname")]
     pub nickname: String,
-    #[serde(rename = "Username")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Username")]
     pub username: Option<String>,
     #[serde(rename = "Email")]
     pub email: String,
@@ -176,15 +178,18 @@ pub struct UserFields {
     pub email_verified: bool,
     #[serde(rename = "Picture")]
     pub picture: Value,
-    #[serde(rename = "Company")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Company")]
     pub company: Option<String>,
-    #[serde(rename = "Blog")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Blog")]
     pub blog: Option<String>,
-    #[serde(rename = "Phone number")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Phone number")]
     pub phone_number: Option<String>,
-    #[serde(rename = "Phone verified?")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Phone verified?"
+    )]
     pub phone_verified: Option<bool>,
-    #[serde(rename = "Locale")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Locale")]
     pub locale: Option<String>,
     #[serde(rename = "Login provider")]
     pub login_provider: String,
@@ -198,6 +203,11 @@ pub struct UserFields {
     pub last_ip: String,
     #[serde(rename = "Logins count")]
     pub logins_count: i32,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Potential customer?"
+    )]
+    pub potential_custmoer: Option<String>,
 }
 
 impl PartialEq for UserFields {
