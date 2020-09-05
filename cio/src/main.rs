@@ -11,6 +11,7 @@ extern crate serde_json;
 
 use std::any::Any;
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::sync::Arc;
 
 use dropshot::endpoint;
@@ -64,6 +65,23 @@ async fn main() -> Result<(), String> {
     api.register(api_get_repos).unwrap();
     // TODO: actually parse the RFD like we do in the shared website javascript.
     api.register(api_get_rfds).unwrap();
+
+    // Print the OpenAPI Spec to stdout.
+    println!("Writing OpenAPI spec to openapi-cio.json...");
+    let mut buffer = File::create("openapi-cio.json").unwrap();
+    api.print_openapi(
+        &mut buffer,
+        &"CIO API",
+        Some(&"API for interacting with the data our CIO bot handles"),
+        None,
+        Some(&"Jess Frazelle"),
+        Some(&"https://oxide.computer"),
+        Some(&"cio@oxide.computer"),
+        None,
+        None,
+        &"0.0.1",
+    )
+    .unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
