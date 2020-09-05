@@ -39,7 +39,7 @@ async fn main() -> Result<(), String> {
      * port.
      */
     let config_dropshot = ConfigDropshot {
-        bind_address: "127.0.0.1:0".parse().unwrap(),
+        bind_address: "127.0.0.1:8888".parse().unwrap(),
     };
 
     /*
@@ -59,6 +59,8 @@ async fn main() -> Result<(), String> {
      */
     let mut api = ApiDescription::new();
     api.register(api_get_applicants).unwrap();
+    api.register(api_get_journal_club_meetings).unwrap();
+    api.register(api_get_mailing_list_subscribers).unwrap();
     api.register(api_get_repos).unwrap();
     // TODO: actually parse the RFD like we do in the shared website javascript.
     api.register(api_get_rfds).unwrap();
