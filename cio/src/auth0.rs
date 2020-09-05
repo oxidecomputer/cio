@@ -125,7 +125,7 @@ pub async fn list_users(domain: String) -> Vec<User> {
     while has_records {
         let mut u = list_users_raw(domain.to_string(), &i.to_string()).await;
 
-        has_records = u.len() > 0;
+        has_records = !u.is_empty();
         i += 1;
 
         users.append(&mut u);

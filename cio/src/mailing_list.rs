@@ -23,10 +23,10 @@ static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 pub struct Signup {
     #[serde(rename = "Email Address")]
     pub email: String,
-    #[serde(rename = "First Name")]
-    pub first_name: String,
-    #[serde(rename = "Last Name")]
-    pub last_name: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "First Name")]
+    pub first_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Last Name")]
+    pub last_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "Company")]
     pub company: Option<String>,
     #[serde(
@@ -78,10 +78,16 @@ impl Signup {
         let dur = self.date_added - Utc::now();
         let time = HumanTime::from(dur);
 
-        let msg = format!(
-            "*{} {}* <mailto:{}|{}>",
-            self.first_name, self.last_name, self.email, self.email
-        );
+        let mut name = String::new();
+        if self.first_name.is_some() {
+            name += self.first_name.as_ref().unwrap();
+            if self.last_name.is_some() {
+                name += &(" ".to_string() + &self.last_name.as_ref().unwrap());
+            }
+        } else if self.last_name.is_some() {
+            name += self.last_name.as_ref().unwrap();
+        }
+        let msg = format!("*{}* <mailto:{}|{}>", name, self.email, self.email);
 
         let mut interest: MessageBlock = Default::default();
         if self.interest.is_some() {
@@ -197,8 +203,8 @@ impl MailchimpWebhook {
     pub fn as_signup(&self) -> Signup {
         let mut signup: Signup = Signup {
             email: "".to_string(),
-            first_name: "".to_string(),
-            last_name: "".to_string(),
+            first_name: None,
+            last_name: None,
             company: None,
             interest: None,
             wants_podcast_updates: false,
@@ -218,14 +224,14 @@ impl MailchimpWebhook {
                 "".to_string()
             };
             signup.first_name = if let Some(f) = &merges.first_name {
-                f.trim().to_string()
+                Some(f.trim().to_string())
             } else {
-                "".to_string()
+                None
             };
             signup.last_name = if let Some(l) = &merges.last_name {
-                l.trim().to_string()
+                Some(l.trim().to_string())
             } else {
-                "".to_string()
+                None
             };
             signup.company = if let Some(c) = &merges.company {
                 Some(c.trim().to_string())
