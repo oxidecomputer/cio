@@ -1,0 +1,721 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CIO API",
+    "description": "API for interacting with the data our CIO bot handles",
+    "contact": {
+      "name": "Jess Frazelle",
+      "url": "https://oxide.computer",
+      "email": "cio@oxide.computer"
+    },
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/applicants": {
+      "get": {
+        "description": "\n * Fetch all applicants.\n ",
+        "operationId": "api_get_applicants",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicantFields"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/journalClubMeetings": {
+      "get": {
+        "description": "\n * Fetch a list of journal club meetings.\n ",
+        "operationId": "api_get_journal_club_meetings",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Meeting"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mailingListSubscribers": {
+      "get": {
+        "description": "\n * Fetch a list of mailing list subscribers.\n ",
+        "operationId": "api_get_mailing_list_subscribers",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Signup"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repos": {
+      "get": {
+        "description": "\n * Fetch a list of our GitHub repositories.\n ",
+        "operationId": "api_get_repos",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Repo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rfds": {
+      "get": {
+        "description": "\n * Fetch all RFDs.\n ",
+        "operationId": "api_get_rfds",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/RFD"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApplicantFields": {
+        "description": "The Airtable fields type for an applicant.",
+        "type": "object",
+        "properties": {
+          "Analysis samples": {
+            "type": "string"
+          },
+          "Email Address": {
+            "type": "string"
+          },
+          "Exploratory samples": {
+            "type": "string"
+          },
+          "For a pair of Oxide's values, describe a time in which the two values came into tension for you or your work, and how you resolved it.": {
+            "type": "string"
+          },
+          "For one of Oxide's values, describe an example of how it was reflected in a particular body of your work.": {
+            "type": "string"
+          },
+          "For one of Oxide's values, describe an example of how it was violated in your organization or work.": {
+            "type": "string"
+          },
+          "GitHub": {
+            "type": "string"
+          },
+          "LinkedIn": {
+            "type": "string"
+          },
+          "Location": {
+            "type": "string"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "Oxide Materials": {
+            "type": "string"
+          },
+          "Oxide Materials Contents": {
+            "type": "string"
+          },
+          "Phone Number": {
+            "type": "string"
+          },
+          "Portfolio": {
+            "type": "string"
+          },
+          "Position": {
+            "type": "string"
+          },
+          "Presentation samples": {
+            "type": "string"
+          },
+          "Resume": {
+            "type": "string"
+          },
+          "Resume Contents": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "Timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "Value Reflected": {
+            "type": "string"
+          },
+          "Value Violated": {
+            "type": "string"
+          },
+          "Values in Tension": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Website": {
+            "type": "string"
+          },
+          "What work have you done that you were particularly proud of and why?": {
+            "type": "string"
+          },
+          "What work have you found most technically challenging in your career and why?": {
+            "type": "string"
+          },
+          "When have you been happiest in your professional career and why?": {
+            "type": "string"
+          },
+          "When have you been unhappiest in your professional career and why?": {
+            "type": "string"
+          },
+          "Why do you want to work for Oxide?": {
+            "type": "string"
+          },
+          "Work samples": {
+            "type": "string"
+          },
+          "Writing samples": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Email Address",
+          "Name",
+          "Oxide Materials",
+          "Phone Number",
+          "Position",
+          "Resume",
+          "Status",
+          "Timestamp"
+        ]
+      },
+      "Meeting": {
+        "description": "The data type for a journal club meeting.",
+        "type": "object",
+        "properties": {
+          "coordinator": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "issue": {
+            "type": "string"
+          },
+          "papers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          "recording": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "coordinator",
+          "date",
+          "issue",
+          "papers",
+          "recording",
+          "state",
+          "title"
+        ]
+      },
+      "Paper": {
+        "description": "The data type for a paper.",
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "link",
+          "title"
+        ]
+      },
+      "RFD": {
+        "description": "The data type for an RFD.",
+        "type": "object",
+        "properties": {
+          "discussion": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "discussion",
+          "link",
+          "number",
+          "state",
+          "title"
+        ]
+      },
+      "Repo": {
+        "type": "object",
+        "properties": {
+          "archive_url": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "assignees_url": {
+            "type": "string"
+          },
+          "blobs_url": {
+            "type": "string"
+          },
+          "branches_url": {
+            "type": "string"
+          },
+          "clone_url": {
+            "type": "string"
+          },
+          "collaborators_url": {
+            "type": "string"
+          },
+          "comments_url": {
+            "type": "string"
+          },
+          "commits_url": {
+            "type": "string"
+          },
+          "compare_url": {
+            "type": "string"
+          },
+          "contents_url": {
+            "type": "string"
+          },
+          "contributors_url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "default_branch": {
+            "type": "string"
+          },
+          "deployments_url": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "downloads_url": {
+            "type": "string"
+          },
+          "events_url": {
+            "type": "string"
+          },
+          "fork": {
+            "type": "boolean"
+          },
+          "forks_count": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "forks_url": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "git_commits_url": {
+            "type": "string"
+          },
+          "git_refs_url": {
+            "type": "string"
+          },
+          "git_tags_url": {
+            "type": "string"
+          },
+          "git_url": {
+            "type": "string"
+          },
+          "has_downloads": {
+            "type": "boolean"
+          },
+          "has_issues": {
+            "type": "boolean"
+          },
+          "has_pages": {
+            "type": "boolean"
+          },
+          "has_wiki": {
+            "type": "boolean"
+          },
+          "homepage": {
+            "type": "string"
+          },
+          "hooks_url": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "issue_comment_url": {
+            "type": "string"
+          },
+          "issue_events_url": {
+            "type": "string"
+          },
+          "issues_url": {
+            "type": "string"
+          },
+          "keys_url": {
+            "type": "string"
+          },
+          "labels_url": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "languages_url": {
+            "type": "string"
+          },
+          "merges_url": {
+            "type": "string"
+          },
+          "milestones_url": {
+            "type": "string"
+          },
+          "mirror_url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notifications_url": {
+            "type": "string"
+          },
+          "open_issues_count": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "owner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "pulls_url": {
+            "type": "string"
+          },
+          "pushed_at": {
+            "type": "string"
+          },
+          "releases_url": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "ssh_url": {
+            "type": "string"
+          },
+          "stargazers_count": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "stargazers_url": {
+            "type": "string"
+          },
+          "statuses_url": {
+            "type": "string"
+          },
+          "subscribers_url": {
+            "type": "string"
+          },
+          "subscription_url": {
+            "type": "string"
+          },
+          "svn_url": {
+            "type": "string"
+          },
+          "tags_url": {
+            "type": "string"
+          },
+          "teams_url": {
+            "type": "string"
+          },
+          "trees_url": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "watchers_count": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "archive_url",
+          "archived",
+          "assignees_url",
+          "blobs_url",
+          "branches_url",
+          "clone_url",
+          "collaborators_url",
+          "comments_url",
+          "commits_url",
+          "compare_url",
+          "contents_url",
+          "contributors_url",
+          "created_at",
+          "default_branch",
+          "deployments_url",
+          "downloads_url",
+          "events_url",
+          "fork",
+          "forks_count",
+          "forks_url",
+          "full_name",
+          "git_commits_url",
+          "git_refs_url",
+          "git_tags_url",
+          "git_url",
+          "has_downloads",
+          "has_issues",
+          "has_pages",
+          "has_wiki",
+          "hooks_url",
+          "html_url",
+          "id",
+          "issue_comment_url",
+          "issue_events_url",
+          "issues_url",
+          "keys_url",
+          "labels_url",
+          "languages_url",
+          "merges_url",
+          "milestones_url",
+          "name",
+          "notifications_url",
+          "open_issues_count",
+          "owner",
+          "private",
+          "pulls_url",
+          "pushed_at",
+          "releases_url",
+          "size",
+          "ssh_url",
+          "stargazers_count",
+          "stargazers_url",
+          "statuses_url",
+          "subscribers_url",
+          "subscription_url",
+          "svn_url",
+          "tags_url",
+          "teams_url",
+          "trees_url",
+          "updated_at",
+          "url",
+          "watchers_count"
+        ]
+      },
+      "Signup": {
+        "description": "The data type for a mailing list signup. This is inline with our Airtable workspace.",
+        "type": "object",
+        "properties": {
+          "Company": {
+            "type": "string"
+          },
+          "Date Added": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "Email Address": {
+            "type": "string"
+          },
+          "First Name": {
+            "type": "string"
+          },
+          "Interested in On the Metal podcast updates?": {
+            "type": "boolean"
+          },
+          "Interested in product updates?": {
+            "type": "boolean"
+          },
+          "Interested in the Oxide newsletter?": {
+            "type": "boolean"
+          },
+          "Last Changed": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "Last Name": {
+            "type": "string"
+          },
+          "Opt-in Date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "What is your interest in Oxide Computer Company?": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Date Added",
+          "Email Address",
+          "Last Changed",
+          "Opt-in Date"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "events_url": {
+            "type": "string"
+          },
+          "followers_url": {
+            "type": "string"
+          },
+          "following_url": {
+            "type": "string"
+          },
+          "gists_url": {
+            "type": "string"
+          },
+          "gravatar_id": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "login": {
+            "type": "string"
+          },
+          "organizations_url": {
+            "type": "string"
+          },
+          "received_events_url": {
+            "type": "string"
+          },
+          "repos_url": {
+            "type": "string"
+          },
+          "site_admin": {
+            "type": "boolean"
+          },
+          "starred_url": {
+            "type": "string"
+          },
+          "subscriptions_url": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "avatar_url",
+          "events_url",
+          "followers_url",
+          "following_url",
+          "gists_url",
+          "gravatar_id",
+          "html_url",
+          "id",
+          "login",
+          "organizations_url",
+          "received_events_url",
+          "repos_url",
+          "site_admin",
+          "starred_url",
+          "subscriptions_url",
+          "url"
+        ]
+      }
+    }
+  }
+}
