@@ -34,12 +34,21 @@ pub struct Signup {
         rename = "What is your interest in Oxide Computer Company?"
     )]
     pub interest: Option<String>,
-    #[serde(rename = "Interested in On the Metal podcast updates?")]
-    pub wants_podcast_updates: bool,
-    #[serde(rename = "Interested in the Oxide newsletter?")]
-    pub wants_newsletter: bool,
-    #[serde(rename = "Interested in product updates?")]
-    pub wants_product_updates: bool,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Interested in On the Metal podcast updates?"
+    )]
+    pub wants_podcast_updates: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Interested in the Oxide newsletter?"
+    )]
+    pub wants_newsletter: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "Interested in product updates?"
+    )]
+    pub wants_product_updates: Option<bool>,
     #[serde(rename = "Date Added")]
     pub date_added: DateTime<Utc>,
     #[serde(rename = "Opt-in Date")]
@@ -109,9 +118,9 @@ impl Signup {
 
         let updates = format!(
             "podcast updates: _{}_ | newsletter: _{}_ | product updates: _{}_",
-            self.wants_podcast_updates,
-            self.wants_newsletter,
-            self.wants_product_updates
+            self.wants_podcast_updates.unwrap_or(false),
+            self.wants_newsletter.unwrap_or(false),
+            self.wants_product_updates.unwrap_or(false),
         );
 
         let mut context = "".to_string();
@@ -207,9 +216,9 @@ impl MailchimpWebhook {
             last_name: None,
             company: None,
             interest: None,
-            wants_podcast_updates: false,
-            wants_newsletter: false,
-            wants_product_updates: false,
+            wants_podcast_updates: None,
+            wants_newsletter: None,
+            wants_product_updates: None,
             date_added: Utc::now(),
             optin_date: Utc::now(),
             last_changed: Utc::now(),
@@ -248,11 +257,11 @@ impl MailchimpWebhook {
                 let groupings = merges.groupings.as_ref().unwrap();
 
                 signup.wants_podcast_updates =
-                    groupings.get(&0).unwrap().groups.is_some();
+                    Some(groupings.get(&0).unwrap().groups.is_some());
                 signup.wants_newsletter =
-                    groupings.get(&1).unwrap().groups.is_some();
+                    Some(groupings.get(&1).unwrap().groups.is_some());
                 signup.wants_product_updates =
-                    groupings.get(&2).unwrap().groups.is_some();
+                    Some(groupings.get(&2).unwrap().groups.is_some());
             }
         }
 
