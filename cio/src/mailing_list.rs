@@ -5,6 +5,7 @@ use airtable_api::{Airtable, Record};
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -18,7 +19,7 @@ static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 
 /// The data type for a mailing list signup.
 /// This is inline with our Airtable workspace.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Signup {
     #[serde(rename = "Email Address")]
     pub email: String,
@@ -26,10 +27,13 @@ pub struct Signup {
     pub first_name: String,
     #[serde(rename = "Last Name")]
     pub last_name: String,
-    #[serde(rename = "Company")]
-    pub company: String,
-    #[serde(rename = "What is your interest in Oxide Computer Company?")]
-    pub interest: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "Company")]
+    pub company: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "What is your interest in Oxide Computer Company?"
+    )]
+    pub interest: Option<String>,
     #[serde(rename = "Interested in On the Metal podcast updates?")]
     pub wants_podcast_updates: bool,
     #[serde(rename = "Interested in the Oxide newsletter?")]
@@ -80,12 +84,15 @@ impl Signup {
         );
 
         let mut interest: MessageBlock = Default::default();
-        if !self.interest.is_empty() {
+        if self.interest.is_some() {
             interest = MessageBlock {
                 block_type: MessageBlockType::Section,
                 text: Some(MessageBlockText {
                     text_type: MessageType::Markdown,
-                    text: format!("\n>{}", self.interest.trim()),
+                    text: format!(
+                        "\n>{}",
+                        self.interest.as_ref().unwrap().trim()
+                    ),
                 }),
                 elements: None,
                 accessory: None,
@@ -102,8 +109,9 @@ impl Signup {
         );
 
         let mut context = "".to_string();
-        if !self.company.is_empty() {
-            context += &format!("works at {} | ", self.company);
+        if self.company.is_some() {
+            context +=
+                &format!("works at {} | ", self.company.as_ref().unwrap());
         }
         context += &format!("subscribed to mailing list {}", time);
 
@@ -150,6 +158,28 @@ impl Signup {
     }
 }
 
+/// Get all the mailing list subscribers from Airtable.
+pub async fn get_all_subscribers() -> Vec<Signup> {
+    let api_key = env::var("AIRTABLE_API_KEY").unwrap();
+    // Initialize the Airtable client.
+    let airtable =
+        Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+
+    let records = airtable
+        .list_records(AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, "Grid view")
+        .await
+        .unwrap();
+
+    let mut subscribers: Vec<Signup> = Default::default();
+    for record in records {
+        let fields: Signup =
+            serde_json::from_value(record.fields.clone()).unwrap();
+
+        subscribers.push(fields);
+    }
+    subscribers
+}
+
 /// The data type for the webhook from Mailchimp.
 ///
 /// Docs:
@@ -169,8 +199,8 @@ impl MailchimpWebhook {
             email: "".to_string(),
             first_name: "".to_string(),
             last_name: "".to_string(),
-            company: "".to_string(),
-            interest: "".to_string(),
+            company: None,
+            interest: None,
             wants_podcast_updates: false,
             wants_newsletter: false,
             wants_product_updates: false,
@@ -198,14 +228,14 @@ impl MailchimpWebhook {
                 "".to_string()
             };
             signup.company = if let Some(c) = &merges.company {
-                c.trim().to_string()
+                Some(c.trim().to_string())
             } else {
-                "".to_string()
+                None
             };
             signup.interest = if let Some(i) = &merges.interest {
-                i.trim().to_string()
+                Some(i.trim().to_string())
             } else {
-                "".to_string()
+                None
             };
 
             if merges.groupings.is_some() {

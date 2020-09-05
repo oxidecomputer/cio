@@ -4,6 +4,7 @@ use std::str::from_utf8;
 use chrono::naive::NaiveDate;
 use csv::ReaderBuilder;
 use hubcaps::Github;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -13,7 +14,7 @@ use crate::slack::{
 };
 
 /// The data type for a journal club meeting.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Meeting {
     pub title: String,
     pub issue: String,
@@ -99,7 +100,7 @@ impl Meeting {
 }
 
 /// The data type for a paper.
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Paper {
     pub title: String,
     pub link: String,

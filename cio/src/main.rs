@@ -1,5 +1,7 @@
 /* TODO: make these all private once we use this API for everything */
 pub mod applicants;
+pub mod journal_clubs;
+pub mod mailing_list;
 pub mod rfds;
 pub mod slack;
 pub mod utils;
@@ -22,7 +24,9 @@ use dropshot::HttpServer;
 use dropshot::RequestContext;
 use hubcaps::Github;
 
-use crate::applicants::{get_all_applicants, ApplicantFields};
+use crate::applicants::{get_all_applicants_from_cache, ApplicantFields};
+use crate::journal_clubs::{get_meetings_from_repo, Meeting};
+use crate::mailing_list::{get_all_subscribers, Signup};
 use crate::rfds::{get_rfds_from_repo, RFD};
 use crate::utils::{authenticate_github, list_all_github_repos, Repo};
 
@@ -62,9 +66,7 @@ async fn main() -> Result<(), String> {
     /*
      * The functions that implement our API endpoints will share this context.
      */
-    // Authenticate GitHub.
     let github = authenticate_github();
-
     let api_context = Context::new(github).await;
 
     /*
@@ -90,6 +92,10 @@ struct Context {
 
     // A cache of our applicants that we will continuously update.
     applicants: Vec<ApplicantFields>,
+    // A cache of journal club meetings that we will continuously update.
+    journal_club_meetings: Vec<Meeting>,
+    // A cache of mailing list subscribers that we will continuously update.
+    mailing_list_subscribers: Vec<Signup>,
     // A cache of our repos that we will continuously update.
     repos: Vec<Repo>,
     // A cache of our RFDs that we will continuously update.
@@ -101,21 +107,41 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(github: Github) -> Arc<Context> {
-        println!("Fetching initial cache of applicants...");
-        let applicants = get_all_applicants().await;
-
-        println!("Fetching initial cache of GitHub repos...");
-        let repos = list_all_github_repos(&github).await;
-
-        println!("Fetching initial cache of RFDs...");
-        let rfds = get_rfds_from_repo(&github).await;
-
-        Arc::new(Context {
+        let mut api_context = Context {
             github,
-            applicants,
-            repos,
-            rfds,
-        })
+            applicants: Default::default(),
+            journal_club_meetings: Default::default(),
+            mailing_list_subscribers: Default::default(),
+            repos: Default::default(),
+            rfds: Default::default(),
+        };
+
+        // Refresh our context.
+        api_context.refresh().await;
+
+        Arc::new(api_context)
+    }
+
+    pub async fn refresh(&mut self) {
+        println!("Refreshing cache of applicants...");
+        let applicants = get_all_applicants_from_cache().await;
+        self.applicants = applicants;
+
+        println!("Refreshing cache of journal club meetings...");
+        let journal_club_meetings = get_meetings_from_repo(&self.github).await;
+        self.journal_club_meetings = journal_club_meetings;
+
+        println!("Refreshing cache of mailing list subscribers...");
+        let mailing_list_subscribers = get_all_subscribers().await;
+        self.mailing_list_subscribers = mailing_list_subscribers;
+
+        println!("Refreshing cache of GitHub repos...");
+        let repos = list_all_github_repos(&self.github).await;
+        self.repos = repos;
+
+        println!("Refreshing cache of RFDs...");
+        let rfds = get_rfds_from_repo(&self.github).await;
+        self.rfds = rfds;
     }
 
     /**
@@ -147,6 +173,36 @@ async fn api_get_applicants(
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(HttpResponseOk(api_context.applicants.clone()))
+}
+
+/**
+ * Fetch a list of journal club meetings.
+ */
+#[endpoint {
+    method = GET,
+    path = "/journalClubMeetings",
+}]
+async fn api_get_journal_club_meetings(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<Meeting>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.journal_club_meetings.clone()))
+}
+
+/**
+ * Fetch a list of mailing list subscribers.
+ */
+#[endpoint {
+    method = GET,
+    path = "/mailingListSubscribers",
+}]
+async fn api_get_mailing_list_subscribers(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<Signup>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.mailing_list_subscribers.clone()))
 }
 
 /**

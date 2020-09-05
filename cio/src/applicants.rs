@@ -4,7 +4,7 @@ use std::fs;
 use std::io::{stderr, stdout, Write};
 use std::process::Command;
 
-use crate::utils::get_gsuite_token;
+use airtable_api::Airtable;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
@@ -21,6 +21,10 @@ use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
 };
+use crate::utils::get_gsuite_token;
+
+static AIRTABLE_BASE_ID_RECURITING_APPLICATIONS: &str = "appIw5FNBqWTXFTeV";
+static AIRTABLE_APPLICATIONS_TABLE: &str = "Applicants";
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -1211,8 +1215,8 @@ fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
 }
 
 /// Return a vector of all the applicants.
-pub async fn get_all_applicants() -> Vec<ApplicantFields> {
-    let mut applicants: Vec<ApplicantFields> = Default::default();
+pub async fn get_all_applicants() -> Vec<Applicant> {
+    let mut applicants: Vec<Applicant> = Default::default();
     let sheets = get_sheets_map();
 
     // Get the GSuite token.
@@ -1220,9 +1224,6 @@ pub async fn get_all_applicants() -> Vec<ApplicantFields> {
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
-
-    // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
@@ -1260,11 +1261,34 @@ pub async fn get_all_applicants() -> Vec<ApplicantFields> {
             let applicant =
                 Applicant::parse(sheet_name, sheet_id, &columns, &row);
 
-            let a = applicant.to_airtable_fields(&drive_client).await;
-
-            applicants.push(a);
+            applicants.push(applicant);
         }
     }
 
+    applicants
+}
+
+/// Return a vector of all the applicants from the cache in Airtable.
+/// This is much faster than parsing all the text again.
+pub async fn get_all_applicants_from_cache() -> Vec<ApplicantFields> {
+    let api_key = env::var("AIRTABLE_API_KEY").unwrap();
+    // Initialize the Airtable client.
+    let airtable = Airtable::new(
+        api_key.to_string(),
+        AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
+    );
+
+    let records = airtable
+        .list_records(AIRTABLE_APPLICATIONS_TABLE, "Grid view")
+        .await
+        .unwrap();
+
+    let mut applicants: Vec<ApplicantFields> = Default::default();
+    for record in records {
+        let fields: ApplicantFields =
+            serde_json::from_value(record.fields.clone()).unwrap();
+
+        applicants.push(fields);
+    }
     applicants
 }
