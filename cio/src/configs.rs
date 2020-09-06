@@ -8,6 +8,8 @@ use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::db::Database;
+use crate::schema::github_labels;
 use crate::utils::github_org;
 
 /// The data type for our configuration files.
@@ -278,9 +280,37 @@ pub struct LinkConfig {
 /// The data type for a label. These become GitHub labels for all the repositories
 /// in our organization.
 #[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+    Debug,
+    Insertable,
+    AsChangeset,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
 )]
+#[table_name = "github_labels"]
 pub struct LabelConfig {
+    pub name: String,
+    pub description: String,
+    pub color: String,
+}
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+pub struct GithubLabel {
+    pub id: i32,
     pub name: String,
     pub description: String,
     pub color: String,
@@ -317,15 +347,26 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
     config
 }
 
+pub async fn refresh_db_configs(github: &Github) {
+    let configs = get_configs_from_repo(&github).await;
+
+    // Initialize our database.
+    let db = Database::new();
+
+    // Sync labels.
+    for label in configs.labels {
+        db.upsert_github_label(&label);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::configs::get_configs_from_repo;
+    use crate::configs::refresh_db_configs;
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_configs() {
         let github = authenticate_github();
-        let configs = get_configs_from_repo(&github).await;
-        println!("{:?}", configs);
+        refresh_db_configs(&github).await;
     }
 }

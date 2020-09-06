@@ -3,7 +3,6 @@ use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
-use diesel::prelude::*;
 use google_drive::GoogleDrive;
 use hubcaps::repositories::Repo as GithubRepo;
 use regex::Regex;
@@ -20,8 +19,6 @@ use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
 };
-
-//use crate::schema::applicants;
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
