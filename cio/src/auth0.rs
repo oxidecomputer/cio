@@ -329,7 +329,6 @@ pub async fn update_users_in_airtable() {
 #[cfg(test)]
 mod tests {
     use crate::auth0::update_users_in_airtable;
-    use crate::mailing_list::AIRTABLE_BASE_ID_CUSTOMER_LEADS;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_update_users_in_airtable() {
