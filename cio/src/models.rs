@@ -3,6 +3,7 @@ use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
+use diesel::prelude::*;
 use google_drive::GoogleDrive;
 use hubcaps::repositories::Repo as GithubRepo;
 use regex::Regex;
@@ -20,6 +21,8 @@ use crate::slack::{
     MessageType,
 };
 
+use crate::schema::applicants;
+
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
 static QUESTION_WORK_PROUD_OF: &str = r"W(?s:.*)at work(?s:.*)ave you done that you(?s:.*)particularl(?s:.*)proud o(?s:.*)and why\?";
@@ -31,9 +34,12 @@ static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s va
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
 /// The data type for an Applicant.
-#[serde(rename_all = "camelCase")]
-#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(
+    Debug, Insertable, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
+#[table_name = "applicants"]
 pub struct Applicant {
+    pub id: i32,
     pub name: String,
     pub role: String,
     pub sheet_id: String,
@@ -98,7 +104,77 @@ pub struct Applicant {
     pub question_why_oxide: String,
 }
 
-impl Applicant {
+/// The data type for a NewApplicant.
+#[derive(
+    Debug, Insertable, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
+#[table_name = "applicants"]
+pub struct NewApplicant {
+    pub name: String,
+    pub role: String,
+    pub sheet_id: String,
+    pub status: String,
+    pub submitted_time: DateTime<Utc>,
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub country_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub location: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub github: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub gitlab: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub linkedin: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub portfolio: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub website: String,
+    pub resume: String,
+    pub materials: String,
+    #[serde(default)]
+    pub sent_email_received: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value_reflected: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value_violated: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub values_in_tension: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub resume_contents: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub materials_contents: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub writing_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub analysis_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub presentation_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub exploratory_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_technically_challenging: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_proud_of: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_happiest: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_unhappiest: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_value_reflected: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_value_violated: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_values_in_tension: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_why_oxide: String,
+}
+
+impl NewApplicant {
     /// Parse the applicant from a Google Sheets row.
     pub async fn parse(
         drive_client: &GoogleDrive,
