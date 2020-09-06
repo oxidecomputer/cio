@@ -35,6 +35,24 @@ table! {
 }
 
 table! {
+    groups (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        aliases -> Array<Text>,
+        allow_external_members -> Bool,
+        allow_web_posting -> Bool,
+        is_archived -> Bool,
+        who_can_discover_group -> Varchar,
+        who_can_join -> Varchar,
+        who_can_moderate_members -> Varchar,
+        who_can_post_message -> Varchar,
+        who_can_view_group -> Varchar,
+        who_can_view_membership -> Varchar,
+    }
+}
+
+table! {
     links (id) {
         id -> Int4,
         name -> Varchar,
@@ -67,6 +85,7 @@ allow_tables_to_appear_in_same_query!(
     buildings,
     conference_rooms,
     github_labels,
+    groups,
     links,
     users,
 );

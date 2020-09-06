@@ -6,12 +6,15 @@ use diesel::prelude::*;
 /*use crate::models::Applicant;
 use crate::schema::applicants;*/
 use crate::code_that_should_be_generated::{
-    Building, ConferenceRoom, GithubLabel, Link, User,
+    Building, ConferenceRoom, GithubLabel, Group, Link, User,
 };
 use crate::configs::{
-    BuildingConfig, LabelConfig, LinkConfig, ResourceConfig, UserConfig,
+    BuildingConfig, GroupConfig, LabelConfig, LinkConfig, ResourceConfig,
+    UserConfig,
 };
-use crate::schema::{buildings, conference_rooms, github_labels, links, users};
+use crate::schema::{
+    buildings, conference_rooms, github_labels, groups, links, users,
+};
 
 pub struct Database {
     conn: PgConnection,
@@ -192,6 +195,40 @@ impl Database {
             .values(github_label)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating github_label failed: {}", e))
+    }
+
+    pub fn upsert_group(&self, group: &GroupConfig) -> Group {
+        // See if we already have the group in the database.
+        match groups::dsl::groups
+            .filter(groups::dsl::name.eq(group.name.to_string()))
+            .limit(1)
+            .load::<Group>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the group in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let g = r.get(0).unwrap();
+
+                    // Update the group.
+                    return diesel::update(g)
+                        .set(group)
+                        .get_result::<Group>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!("unable to update group {}: {}", g.id, e)
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the group in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(groups::table)
+            .values(group)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating group failed: {}", e))
     }
 
     pub fn upsert_link(&self, link: &LinkConfig) -> Link {

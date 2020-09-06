@@ -1,7 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::{buildings, conference_rooms, github_labels, links, users};
+use crate::schema::{
+    buildings, conference_rooms, github_labels, groups, links, users,
+};
 
 #[derive(
     Debug,
@@ -68,6 +70,35 @@ pub struct GithubLabel {
     pub name: String,
     pub description: String,
     pub color: String,
+}
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+pub struct Group {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
+    pub allow_external_members: bool,
+    pub allow_web_posting: bool,
+    pub is_archived: bool,
+    pub who_can_discover_group: String,
+    pub who_can_join: String,
+    pub who_can_moderate_members: String,
+    pub who_can_post_message: String,
+    pub who_can_view_group: String,
+    pub who_can_view_membership: String,
 }
 
 #[derive(
