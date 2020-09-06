@@ -13,6 +13,19 @@ table! {
 }
 
 table! {
+    conference_rooms (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        typev -> Varchar,
+        building -> Varchar,
+        capacity -> Int4,
+        floor -> Varchar,
+        section -> Varchar,
+    }
+}
+
+table! {
     github_labels (id) {
         id -> Int4,
         name -> Varchar,
@@ -52,6 +65,7 @@ table! {
 
 allow_tables_to_appear_in_same_query!(
     buildings,
+    conference_rooms,
     github_labels,
     links,
     users,

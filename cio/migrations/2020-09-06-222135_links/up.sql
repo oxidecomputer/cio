@@ -1,6 +1,6 @@
 CREATE TABLE links (
     id SERIAL PRIMARY KEY,
-    name VARCHAR NOT NULL,
+    name VARCHAR NOT NULL UNIQUE,
     description VARCHAR NOT NULL,
     link VARCHAR NOT NULL UNIQUE,
     aliases TEXT [] NOT NULL

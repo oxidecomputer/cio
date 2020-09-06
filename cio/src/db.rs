@@ -5,9 +5,13 @@ use diesel::prelude::*;
 
 /*use crate::models::Applicant;
 use crate::schema::applicants;*/
-use crate::code_that_should_be_generated::{Building, GithubLabel, Link, User};
-use crate::configs::{BuildingConfig, LabelConfig, LinkConfig, UserConfig};
-use crate::schema::{buildings, github_labels, links, users};
+use crate::code_that_should_be_generated::{
+    Building, ConferenceRoom, GithubLabel, Link, User,
+};
+use crate::configs::{
+    BuildingConfig, LabelConfig, LinkConfig, ResourceConfig, UserConfig,
+};
+use crate::schema::{buildings, conference_rooms, github_labels, links, users};
 
 pub struct Database {
     conn: PgConnection,
@@ -103,6 +107,51 @@ impl Database {
             .values(building)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating building failed: {}", e))
+    }
+
+    pub fn upsert_conference_room(
+        &self,
+        conference_room: &ResourceConfig,
+    ) -> ConferenceRoom {
+        // See if we already have the conference_room in the database.
+        match conference_rooms::dsl::conference_rooms
+            .filter(
+                conference_rooms::dsl::name
+                    .eq(conference_room.name.to_string()),
+            )
+            .limit(1)
+            .load::<ConferenceRoom>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the conference_room in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let c = r.get(0).unwrap();
+
+                    // Update the conference_room.
+                    return diesel::update(c)
+                        .set(conference_room)
+                        .get_result::<ConferenceRoom>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "unable to update conference_room {}: {}",
+                                c.id, e
+                            )
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the conference_room in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(conference_rooms::table)
+            .values(conference_room)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| {
+                panic!("creating conference_room failed: {}", e)
+            })
     }
 
     pub fn upsert_github_label(
