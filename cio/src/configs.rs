@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 
 use clap::ArgMatches;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// The data type for our configuration files.
@@ -49,7 +50,7 @@ impl Config {
 }
 
 /// The data type for a user.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
 pub struct UserConfig {
     pub first_name: String,
     pub last_name: String,
@@ -81,7 +82,7 @@ pub struct UserConfig {
 }
 
 /// The data type for a group. This applies to Google Groups.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
 pub struct GroupConfig {
     pub name: String,
     pub description: String,
@@ -187,7 +188,7 @@ pub struct GroupConfig {
 }
 
 /// The data type for a building.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
 pub struct BuildingConfig {
     pub name: String,
     pub description: String,
@@ -201,7 +202,7 @@ pub struct BuildingConfig {
 
 /// The data type for a resource. These are conference rooms that people can book
 /// through GSuite or Zoom.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
 pub struct ResourceConfig {
     pub name: String,
     pub description: String,
@@ -218,7 +219,7 @@ pub struct ResourceConfig {
 
 /// The data type for a link. These get turned into short links like
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
 pub struct LinkConfig {
     /// name will not be used in config files.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -237,7 +238,7 @@ pub struct LinkConfig {
 
 /// The data type for a label. These become GitHub labels for all the repositories
 /// in our organization.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
 pub struct LabelConfig {
     pub name: String,
     pub description: String,

@@ -799,10 +799,40 @@ pub struct JournalClubMeeting {
 impl JournalClubMeeting {
     /// Convert the journal club meeting into JSON as Slack message.
     pub fn as_slack_msg(&self) -> Value {
-        let mut objects: Vec<Value> = Default::default();
+        let mut objects: Vec<MessageBlock> = Default::default();
+
+        objects.push(MessageBlock {
+            block_type: MessageBlockType::Section,
+            text: Some(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!("<{}|*{}*>", self.issue, self.title),
+            }),
+            elements: None,
+            accessory: None,
+            block_id: None,
+            fields: None,
+        });
+
+        objects.push(MessageBlock {
+            block_type: MessageBlockType::Context,
+            elements: Some(vec![MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!(
+                    "<https://github.com/{}|@{}> | {} | status: *{}*",
+                    self.coordinator,
+                    self.coordinator,
+                    self.date.format("%m/%d/%Y"),
+                    self.state
+                ),
+            }]),
+            text: None,
+            accessory: None,
+            block_id: None,
+            fields: None,
+        });
 
         if !self.recording.is_empty() {
-            objects.push(json!(MessageBlock {
+            objects.push(MessageBlock {
                 block_type: MessageBlockType::Context,
                 elements: Some(vec![MessageBlockText {
                     text_type: MessageType::Markdown,
@@ -812,7 +842,7 @@ impl JournalClubMeeting {
                 accessory: None,
                 block_id: None,
                 fields: None,
-            }));
+            });
         }
 
         for p in self.papers.clone() {
@@ -820,7 +850,7 @@ impl JournalClubMeeting {
             if p.title == self.title {
                 title = "Paper".to_string();
             }
-            objects.push(json!(MessageBlock {
+            objects.push(MessageBlock {
                 block_type: MessageBlockType::Context,
                 elements: Some(vec![MessageBlockText {
                     text_type: MessageType::Markdown,
@@ -830,42 +860,13 @@ impl JournalClubMeeting {
                 accessory: None,
                 block_id: None,
                 fields: None,
-            }));
+            });
         }
 
         json!(FormattedMessage {
             channel: None,
             attachments: None,
-            blocks: Some(vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: format!("<{}|*{}*>", self.issue, self.title),
-                    }),
-                    elements: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: format!(
-                            "<https://github.com/{}|@{}> | {} | status: *{}*",
-                            self.coordinator,
-                            self.coordinator,
-                            self.date.format("%m/%d/%Y"),
-                            self.state
-                        ),
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
-                }
-            ]),
+            blocks: Some(objects),
         })
     }
 }

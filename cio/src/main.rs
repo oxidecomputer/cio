@@ -222,7 +222,7 @@ async fn api_get_mailing_list_subscribers(
  */
 #[endpoint {
     method = GET,
-    path = "/repos",
+    path = "/github/repos",
 }]
 async fn api_get_repos(
     rqctx: Arc<RequestContext>,
