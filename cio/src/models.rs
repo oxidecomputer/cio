@@ -1,4 +1,5 @@
 use airtable_api::{Airtable, Record};
+use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
@@ -776,6 +777,107 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     }
 
     Default::default()
+}
+
+/// The data type for a JournalClubMeeting.
+#[serde(rename_all = "camelCase")]
+#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct JournalClubMeeting {
+    pub title: String,
+    pub issue: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub papers: Vec<JournalClubPaper>,
+    pub date: NaiveDate,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub coordinator: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub recording: String,
+}
+
+impl JournalClubMeeting {
+    /// Convert the journal club meeting into JSON as Slack message.
+    pub fn as_slack_msg(&self) -> Value {
+        let mut objects: Vec<Value> = Default::default();
+
+        if !self.recording.is_empty() {
+            objects.push(json!(MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: Some(vec![MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("<{}|Meeting recording>", self.recording),
+                }]),
+                text: None,
+                accessory: None,
+                block_id: None,
+                fields: None,
+            }));
+        }
+
+        for p in self.papers.clone() {
+            let mut title = p.title.to_string();
+            if p.title == self.title {
+                title = "Paper".to_string();
+            }
+            objects.push(json!(MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: Some(vec![MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("<{}|{}>", p.link, title),
+                }]),
+                text: None,
+                accessory: None,
+                block_id: None,
+                fields: None,
+            }));
+        }
+
+        json!(FormattedMessage {
+            channel: None,
+            attachments: None,
+            blocks: Some(vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: format!("<{}|*{}*>", self.issue, self.title),
+                    }),
+                    elements: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: format!(
+                            "<https://github.com/{}|@{}> | {} | status: *{}*",
+                            self.coordinator,
+                            self.coordinator,
+                            self.date.format("%m/%d/%Y"),
+                            self.state
+                        ),
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                }
+            ]),
+        })
+    }
+}
+
+/// The data type for a JournalClubPaper.
+#[serde(rename_all = "camelCase")]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
+pub struct JournalClubPaper {
+    pub title: String,
+    pub link: String,
 }
 
 /// The data type for a MailingListSignup.

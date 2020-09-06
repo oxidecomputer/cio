@@ -1,113 +1,16 @@
 use std::str::from_utf8;
 
-use chrono::naive::NaiveDate;
+use chrono::NaiveDate;
 use csv::ReaderBuilder;
 use hubcaps::Github;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use crate::slack::{
-    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
-    MessageType,
-};
+use crate::models::{JournalClubMeeting, JournalClubPaper};
 use crate::utils::github_org;
 
-/// The data type for a journal club meeting.
-#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct Meeting {
-    pub title: String,
-    pub issue: String,
-    pub papers: Vec<Paper>,
-    pub date: NaiveDate,
-    pub coordinator: String,
-    pub state: String,
-    pub recording: String,
-}
-
-impl Meeting {
-    /// Convert the journal club meeting into JSON as Slack message.
-    pub fn as_slack_msg(&self) -> Value {
-        let mut objects: Vec<Value> = Default::default();
-
-        if !self.recording.is_empty() {
-            objects.push(json!(MessageBlock {
-                block_type: MessageBlockType::Context,
-                elements: Some(vec![MessageBlockText {
-                    text_type: MessageType::Markdown,
-                    text: format!("<{}|Meeting recording>", self.recording),
-                }]),
-                text: None,
-                accessory: None,
-                block_id: None,
-                fields: None,
-            }));
-        }
-
-        for p in self.papers.clone() {
-            let mut title = p.title.to_string();
-            if p.title == self.title {
-                title = "Paper".to_string();
-            }
-            objects.push(json!(MessageBlock {
-                block_type: MessageBlockType::Context,
-                elements: Some(vec![MessageBlockText {
-                    text_type: MessageType::Markdown,
-                    text: format!("<{}|{}>", p.link, title),
-                }]),
-                text: None,
-                accessory: None,
-                block_id: None,
-                fields: None,
-            }));
-        }
-
-        json!(FormattedMessage {
-            channel: None,
-            attachments: None,
-            blocks: Some(vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: format!("<{}|*{}*>", self.issue, self.title),
-                    }),
-                    elements: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: format!(
-                            "<https://github.com/{}|@{}> | {} | status: *{}*",
-                            self.coordinator,
-                            self.coordinator,
-                            self.date.format("%m/%d/%Y"),
-                            self.state
-                        ),
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
-                }
-            ]),
-        })
-    }
-}
-
-/// The data type for a paper.
-#[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct Paper {
-    pub title: String,
-    pub link: String,
-}
-
 /// Get the journal club meetings from the papers GitHub repo.
-pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
+pub async fn get_meetings_from_repo(
+    github: &Github,
+) -> Vec<JournalClubMeeting> {
     // Get the contents of the .helpers/meetings.csv file.
     let meetings_csv_content = github
         .repo(github_org(), "papers")
@@ -125,7 +28,8 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
         .from_reader(meetings_csv_string.as_bytes());
 
     // Create the BTreeMap of Meetings.
-    let mut meetings: Vec<Meeting> = Default::default();
+    let mut meetings: Vec<JournalClubMeeting> = Default::default();
+    // TODO: deserialize this in a real way.
     for r in csv_reader.records() {
         let record = r.unwrap();
 
@@ -133,7 +37,7 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
         let date = NaiveDate::parse_from_str(&record[5], "%m/%d/%Y").unwrap();
 
         // Parse the papers.
-        let mut papers: Vec<Paper> = Default::default();
+        let mut papers: Vec<JournalClubPaper> = Default::default();
         let papers_parts = record[2].trim().split(") [");
         for p in papers_parts {
             // Parse the markdown for the papers.
@@ -151,10 +55,10 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
                 .trim_end_matches(')')
                 .to_string();
 
-            papers.push(Paper { title, link });
+            papers.push(JournalClubPaper { title, link });
         }
 
-        let meeting = Meeting {
+        let meeting = JournalClubMeeting {
             title: record[0].to_string(),
             issue: record[1].to_string(),
             papers,
@@ -169,4 +73,17 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
     }
 
     meetings
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::journal_clubs::get_meetings_from_repo;
+    use crate::utils::authenticate_github;
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_meetings() {
+        let github = authenticate_github();
+        let meetings = get_meetings_from_repo(&github).await;
+        println!("{:?}", meetings);
+    }
 }

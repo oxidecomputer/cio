@@ -15,9 +15,11 @@ use dropshot::RequestContext;
 use hubcaps::Github;
 
 use cio_api::applicants::get_all_applicants;
-use cio_api::journal_clubs::{get_meetings_from_repo, Meeting};
+use cio_api::journal_clubs::get_meetings_from_repo;
 use cio_api::mailing_list::get_all_subscribers;
-use cio_api::models::{Applicant, MailingListSignup, Repo, RFD};
+use cio_api::models::{
+    Applicant, JournalClubMeeting, MailingListSignup, Repo, RFD,
+};
 use cio_api::rfds::get_rfds_from_repo;
 use cio_api::utils::{authenticate_github, list_all_github_repos};
 
@@ -103,7 +105,7 @@ struct Context {
     // A cache of our applicants that we will continuously update.
     applicants: Vec<Applicant>,
     // A cache of journal club meetings that we will continuously update.
-    journal_club_meetings: Vec<Meeting>,
+    journal_club_meetings: Vec<JournalClubMeeting>,
     // A cache of mailing list subscribers that we will continuously update.
     mailing_list_subscribers: Vec<MailingListSignup>,
     // A cache of our repos that we will continuously update.
@@ -194,7 +196,7 @@ async fn api_get_applicants(
 }]
 async fn api_get_journal_club_meetings(
     rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Meeting>>, HttpError> {
+) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(HttpResponseOk(api_context.journal_club_meetings.clone()))
