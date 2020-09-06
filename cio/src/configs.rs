@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::db::Database;
-use crate::schema::{buildings, github_labels, users};
+use crate::schema::{buildings, github_labels, links, users};
 use crate::utils::github_org;
 
 /// The data type for our configuration files.
@@ -273,8 +273,17 @@ pub struct ResourceConfig {
 /// The data type for a link. These get turned into short links like
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
 #[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+    Debug,
+    Insertable,
+    AsChangeset,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
 )]
+#[table_name = "links"]
 pub struct LinkConfig {
     /// name will not be used in config files.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -283,12 +292,6 @@ pub struct LinkConfig {
     pub link: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
-    /// subdomain will not be used in config files.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub subdomain: String,
-    /// discussion will not be used in config files.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub discussion: String,
 }
 
 /// The data type for a label. These become GitHub labels for all the repositories
@@ -356,6 +359,11 @@ pub async fn refresh_db_configs(github: &Github) {
     // Sync GitHub labels.
     for label in configs.labels {
         db.upsert_github_label(&label);
+    }
+
+    // Sync links.
+    for (_, link) in configs.links {
+        db.upsert_link(&link);
     }
 
     // Sync users.

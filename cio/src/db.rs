@@ -5,9 +5,9 @@ use diesel::prelude::*;
 
 /*use crate::models::Applicant;
 use crate::schema::applicants;*/
-use crate::code_that_should_be_generated::{Building, GithubLabel, User};
-use crate::configs::{BuildingConfig, LabelConfig, UserConfig};
-use crate::schema::{buildings, github_labels, users};
+use crate::code_that_should_be_generated::{Building, GithubLabel, Link, User};
+use crate::configs::{BuildingConfig, LabelConfig, LinkConfig, UserConfig};
+use crate::schema::{buildings, github_labels, links, users};
 
 pub struct Database {
     conn: PgConnection,
@@ -143,6 +143,40 @@ impl Database {
             .values(github_label)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating github_label failed: {}", e))
+    }
+
+    pub fn upsert_link(&self, link: &LinkConfig) -> Link {
+        // See if we already have the link in the database.
+        match links::dsl::links
+            .filter(links::dsl::name.eq(link.name.to_string()))
+            .limit(1)
+            .load::<Link>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the link in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let l = r.get(0).unwrap();
+
+                    // Update the link.
+                    return diesel::update(l)
+                        .set(link)
+                        .get_result::<Link>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!("unable to update link {}: {}", l.id, e)
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the link in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(links::table)
+            .values(link)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating link failed: {}", e))
     }
 
     pub fn upsert_user(&self, user: &UserConfig) -> User {

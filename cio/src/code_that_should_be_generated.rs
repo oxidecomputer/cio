@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::{buildings, github_labels, users};
+use crate::schema::{buildings, conference_rooms, github_labels, links, users};
 
 #[derive(
     Debug,
@@ -39,11 +39,57 @@ pub struct Building {
     Deserialize,
     Serialize,
 )]
+pub struct ConferenceRoom {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+    #[serde(rename = "type")]
+    pub typev: String,
+    pub building: String,
+    pub capacity: i32,
+    pub floor: String,
+    pub section: String,
+}
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
 pub struct GithubLabel {
     pub id: i32,
     pub name: String,
     pub description: String,
     pub color: String,
+}
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+pub struct Link {
+    pub id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    pub description: String,
+    pub link: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
 }
 
 #[derive(

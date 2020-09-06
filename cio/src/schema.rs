@@ -22,6 +22,16 @@ table! {
 }
 
 table! {
+    links (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        link -> Varchar,
+        aliases -> Array<Text>,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         first_name -> Varchar,
@@ -43,5 +53,6 @@ table! {
 allow_tables_to_appear_in_same_query!(
     buildings,
     github_labels,
+    links,
     users,
 );
