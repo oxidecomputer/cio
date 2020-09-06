@@ -15,6 +15,10 @@ use dropshot::RequestContext;
 use hubcaps::Github;
 
 use cio_api::applicants::get_all_applicants;
+use cio_api::configs::{
+    get_configs_from_repo, BuildingConfig, Config, GroupConfig, LabelConfig,
+    LinkConfig, ResourceConfig, UserConfig,
+};
 use cio_api::journal_clubs::get_meetings_from_repo;
 use cio_api::mailing_list::get_all_subscribers;
 use cio_api::models::{
@@ -52,11 +56,16 @@ async fn main() -> Result<(), String> {
      */
     let mut api = ApiDescription::new();
     api.register(api_get_applicants).unwrap();
+    api.register(api_get_buildings).unwrap();
+    api.register(api_get_conference_rooms).unwrap();
+    api.register(api_get_github_labels).unwrap();
+    api.register(api_get_github_repos).unwrap();
+    api.register(api_get_groups).unwrap();
     api.register(api_get_journal_club_meetings).unwrap();
+    api.register(api_get_links).unwrap();
     api.register(api_get_mailing_list_subscribers).unwrap();
-    api.register(api_get_repos).unwrap();
-    // TODO: actually parse the RFD like we do in the shared website javascript.
     api.register(api_get_rfds).unwrap();
+    api.register(api_get_users).unwrap();
 
     // Print the OpenAPI Spec to stdout.
     println!("Writing OpenAPI spec to openapi-cio.json...");
@@ -104,6 +113,8 @@ struct Context {
 
     // A cache of our applicants that we will continuously update.
     applicants: Vec<Applicant>,
+    // A cache of our configs that we will continuously update.
+    configs: Config,
     // A cache of journal club meetings that we will continuously update.
     journal_club_meetings: Vec<JournalClubMeeting>,
     // A cache of mailing list subscribers that we will continuously update.
@@ -121,6 +132,7 @@ impl Context {
     pub async fn new(github: Github) -> Arc<Context> {
         let mut api_context = Context {
             github,
+            configs: Default::default(),
             applicants: Default::default(),
             journal_club_meetings: Default::default(),
             mailing_list_subscribers: Default::default(),
@@ -138,6 +150,10 @@ impl Context {
         println!("Refreshing cache of applicants...");
         let applicants = get_all_applicants().await;
         self.applicants = applicants;
+
+        println!("Refreshing cache of configs...");
+        let configs = get_configs_from_repo(&self.github).await;
+        self.configs = configs;
 
         println!("Refreshing cache of journal club meetings...");
         let journal_club_meetings = get_meetings_from_repo(&self.github).await;
@@ -188,6 +204,81 @@ async fn api_get_applicants(
 }
 
 /**
+ * Fetch a list of office buildings.
+ */
+#[endpoint {
+    method = GET,
+    path = "/buildings",
+}]
+async fn api_get_buildings(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<BTreeMap<String, BuildingConfig>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.configs.buildings.clone()))
+}
+
+/**
+ * Fetch a list of conference rooms.
+ */
+#[endpoint {
+    method = GET,
+    path = "/conferenceRooms",
+}]
+async fn api_get_conference_rooms(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<BTreeMap<String, ResourceConfig>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.configs.resources.clone()))
+}
+
+/**
+ * Fetch a list of our GitHub labels that get added to all repositories.
+ */
+#[endpoint {
+    method = GET,
+    path = "/github/labels",
+}]
+async fn api_get_github_labels(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<LabelConfig>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.configs.labels.clone()))
+}
+
+/**
+ * Fetch a list of our GitHub repositories.
+ */
+#[endpoint {
+    method = GET,
+    path = "/github/repos",
+}]
+async fn api_get_github_repos(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<Repo>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.repos.clone()))
+}
+
+/**
+ * Fetch a list of Google groups.
+ */
+#[endpoint {
+    method = GET,
+    path = "/groups",
+}]
+async fn api_get_groups(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<BTreeMap<String, GroupConfig>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.configs.groups.clone()))
+}
+
+/**
  * Fetch a list of journal club meetings.
  */
 #[endpoint {
@@ -200,6 +291,21 @@ async fn api_get_journal_club_meetings(
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(HttpResponseOk(api_context.journal_club_meetings.clone()))
+}
+
+/**
+ * Fetch a list of internal links.
+ */
+#[endpoint {
+    method = GET,
+    path = "/links",
+}]
+async fn api_get_links(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<BTreeMap<String, LinkConfig>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.configs.links.clone()))
 }
 
 /**
@@ -218,21 +324,6 @@ async fn api_get_mailing_list_subscribers(
 }
 
 /**
- * Fetch a list of our GitHub repositories.
- */
-#[endpoint {
-    method = GET,
-    path = "/github/repos",
-}]
-async fn api_get_repos(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Repo>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
-
-    Ok(HttpResponseOk(api_context.repos.clone()))
-}
-
-/**
  * Fetch all RFDs.
  */
 #[endpoint {
@@ -245,4 +336,19 @@ async fn api_get_rfds(
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(HttpResponseOk(api_context.rfds.clone()))
+}
+
+/**
+ * Fetch a list of employees.
+ */
+#[endpoint {
+    method = GET,
+    path = "/users",
+}]
+async fn api_get_users(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<BTreeMap<String, UserConfig>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(api_context.configs.users.clone()))
 }

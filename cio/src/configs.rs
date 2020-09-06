@@ -312,7 +312,6 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
         file_contents.push_str(&decoded);
     }
 
-    println!("{}", file_contents);
     let config: Config = toml::from_str(&file_contents).unwrap();
 
     config

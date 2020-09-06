@@ -32,6 +32,12 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Set up environment
+        shell: bash
+        run: |
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
+        env:
+          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
       - name: Run cargo test
         run: |
           cargo test
@@ -39,3 +45,8 @@ jobs:
         env:
           AUTH0_TOKEN: ${{ secrets.AUTH0_TOKEN }}
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          GITHUB_ORG: oxidecomputer
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
+          GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
+          GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
