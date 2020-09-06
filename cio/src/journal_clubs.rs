@@ -29,7 +29,7 @@ pub async fn get_meetings_from_repo(
 
     // Create the BTreeMap of Meetings.
     let mut meetings: Vec<JournalClubMeeting> = Default::default();
-    // TODO: deserialize this in a real way.
+    // TODO: deserialize this in a real way like RFDs.
     for r in csv_reader.records() {
         let record = r.unwrap();
 

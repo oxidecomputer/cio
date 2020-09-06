@@ -1,12 +1,20 @@
 use std::collections::BTreeMap;
 use std::fs;
+use std::str::from_utf8;
 
 use clap::ArgMatches;
+use futures_util::stream::TryStreamExt;
+use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::utils::github_org;
+
+// TODO: figure out camelcase
 /// The data type for our configuration files.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct Config {
     pub users: BTreeMap<String, UserConfig>,
     pub groups: BTreeMap<String, GroupConfig>,
@@ -30,7 +38,7 @@ impl Config {
             }
         };
 
-        let mut contents = String::from("");
+        let mut contents = String::new();
         for file in files.iter() {
             println!("decoding {}", file);
 
@@ -50,45 +58,49 @@ impl Config {
 }
 
 /// The data type for a user.
-#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct UserConfig {
     pub first_name: String,
     pub last_name: String,
     pub username: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub aliases: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub recovery_email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub recovery_phone: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub gender: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub recovery_email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub recovery_phone: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub gender: String,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub chat: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub github: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub twitter: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub chat: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub github: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub twitter: String,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub groups: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub groups: Vec<String>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_super_admin: Option<bool>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub building: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub building: String,
 }
 
 /// The data type for a group. This applies to Google Groups.
-#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct GroupConfig {
     pub name: String,
     pub description: String,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub aliases: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
 
     /// allow_external_members: Identifies whether members external to your
     /// organization can join the group. Possible values are:
@@ -188,7 +200,9 @@ pub struct GroupConfig {
 }
 
 /// The data type for a building.
-#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct BuildingConfig {
     pub name: String,
     pub description: String,
@@ -202,7 +216,9 @@ pub struct BuildingConfig {
 
 /// The data type for a resource. These are conference rooms that people can book
 /// through GSuite or Zoom.
-#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct ResourceConfig {
     pub name: String,
     pub description: String,
@@ -212,35 +228,81 @@ pub struct ResourceConfig {
     pub capacity: i32,
     pub floor: String,
     pub section: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_zoom_room: Option<bool>,
 }
 
 /// The data type for a link. These get turned into short links like
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
-#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct LinkConfig {
     /// name will not be used in config files.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
     pub description: String,
     pub link: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub aliases: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
     /// subdomain will not be used in config files.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub subdomain: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub subdomain: String,
     /// discussion will not be used in config files.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub discussion: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub discussion: String,
 }
 
 /// The data type for a label. These become GitHub labels for all the repositories
 /// in our organization.
-#[derive(Debug, JsonSchema, Clone, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct LabelConfig {
     pub name: String,
     pub description: String,
     pub color: String,
+}
+
+/// Get the configs from the GitHub repository and parse them.
+pub async fn get_configs_from_repo(github: &Github) -> Config {
+    let repo_contents = github.repo(github_org(), "configs").content();
+
+    let files = repo_contents
+        .iter("/configs/")
+        .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
+        .await
+        .unwrap();
+
+    let mut file_contents = String::new();
+    for file in files {
+        println!("decoding {}", file.name);
+        // Get the contents of the file.
+        let contents = repo_contents
+            .file(&format!("/{}", file.path))
+            .await
+            .unwrap();
+
+        let decoded = from_utf8(&contents.content).unwrap().trim().to_string();
+
+        // Append the body of the file to the rest of the contents.
+        file_contents.push_str(&"\n");
+        file_contents.push_str(&decoded);
+    }
+
+    println!("{}", file_contents);
+    let config: Config = toml::from_str(&file_contents).unwrap();
+
+    config
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::configs::get_configs_from_repo;
+    use crate::utils::authenticate_github;
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_configs() {
+        let github = authenticate_github();
+        let configs = get_configs_from_repo(&github).await;
+        println!("{:?}", configs);
+    }
 }

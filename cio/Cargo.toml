@@ -15,6 +15,7 @@ chrono-humanize = "0.0.11"
 clap = {version = "2", features = ["yaml"]}
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 csv = "1.1"
+futures-util = "0.3"
 google-drive = "^0.1.0"
 html2text = "0.1"
 # TODO: waiting on hubcaps to publish a new version so we can publish this.
@@ -33,4 +34,3 @@ tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
 toml = "0.5"
 #yup-oauth2 = "^4.1.2"
 yup-oauth2 = { git = "https://github.com/dermesser/yup-oauth2", rev = "3d84ddd1782e1f1218427498c47069095915c4a8" }
-
