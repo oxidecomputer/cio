@@ -3,17 +3,17 @@ use std::env;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
-/*use crate::models::Applicant;
-use crate::schema::applicants;*/
 use crate::code_that_should_be_generated::{
-    Building, ConferenceRoom, GithubLabel, Group, Link, User,
+    Applicant, Building, ConferenceRoom, GithubLabel, Group, Link, User,
 };
 use crate::configs::{
     BuildingConfig, GroupConfig, LabelConfig, LinkConfig, ResourceConfig,
     UserConfig,
 };
+use crate::models::NewApplicant;
 use crate::schema::{
-    buildings, conference_rooms, github_labels, groups, links, users,
+    applicants, buildings, conference_rooms, github_labels, groups, links,
+    users,
 };
 
 pub struct Database {
@@ -42,41 +42,42 @@ impl Database {
         Default::default()
     }
 
-    /* pub fn upsert_applicant(&self, applicant: &Applicant) -> Applicant {
-        /*use crate::schema::applicants::dsl::*;
+    pub fn upsert_applicant(&self, applicant: &NewApplicant) -> Applicant {
         // See if we already have the applicant in the database.
-        let results = applicants
-            .filter(email.eq(applicant.email), sheet_id.eq(applicant.sheet_id))
+        match applicants::dsl::applicants
+            .filter(
+                applicants::dsl::email.eq(applicant.email.to_string()),
+                applicants::dsl::sheet_id.eq(applicant.sheet_id.to_string()),
+            )
             .limit(1)
-            .load::<Applicant>(&self.conn);
+            .load::<Applicant>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the applicant in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let a = r.get(0).unwrap();
 
-        if results.is_err() {
-            println!("[db] on err: we don't have the applicant in the database, adding them")
-        }
-
-        if results.is_ok() {
-            let r = results.unwrap();
-            if r.is_empty() {
-                println!(
-                    "[db] on empty: we don't have the applicant in the database, adding them"
-                )
-            } else {
-                let a = r.get(0).unwrap();
-
-
-                // Update the applicant.
-                return diesel::update(a)
-                    .set(applicant)
-                    .get_result::<Applicant>(&self.conn)
-                    .expect(&format!("unable to update applicant {}", a.id));
+                    // Update the applicant.
+                    return diesel::update(a)
+                        .set(applicant)
+                        .get_result::<Applicant>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!("unable to update applicant {}: {}", a.id, e)
+                        });
+                }
             }
-        }*/
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the applicant in the database, adding it", e);
+            }
+        }
 
         diesel::insert_into(applicants::table)
             .values(applicant)
             .get_result(&self.conn)
-            .expect("creating applicant failed")
-    }*/
+            .unwrap_or_else(|e| panic!("creating applicant failed: {}", e))
+    }
 
     pub fn upsert_building(&self, building: &BuildingConfig) -> Building {
         // See if we already have the building in the database.

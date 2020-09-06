@@ -2,8 +2,87 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::{
-    buildings, conference_rooms, github_labels, groups, links, users,
+    applicants, buildings, conference_rooms, github_labels, groups, links,
+    users,
 };
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+pub struct Applicant {
+    pub id: i32,
+    pub name: String,
+    pub role: String,
+    pub sheet_id: String,
+    pub status: String,
+    pub submitted_time: DateTime<Utc>,
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub country_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub location: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub github: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub gitlab: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub linkedin: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub portfolio: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub website: String,
+    pub resume: String,
+    pub materials: String,
+    #[serde(default)]
+    pub sent_email_received: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value_reflected: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value_violated: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub values_in_tension: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub resume_contents: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub materials_contents: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub writing_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub analysis_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub presentation_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub exploratory_samples: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_technically_challenging: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_proud_of: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_happiest: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_unhappiest: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_value_reflected: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_value_violated: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_values_in_tension: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub question_why_oxide: String,
+}
 
 #[derive(
     Debug,

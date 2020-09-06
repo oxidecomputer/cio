@@ -1,4 +1,45 @@
 table! {
+    applicants (id) {
+        id -> Int4,
+        name -> Varchar,
+        role -> Varchar,
+        sheet_id -> Varchar,
+        status -> Varchar,
+        submitted_time -> Timestamptz,
+        email -> Varchar,
+        phone -> Varchar,
+        country_code -> Varchar,
+        location -> Varchar,
+        github -> Varchar,
+        gitlab -> Varchar,
+        linkedin -> Varchar,
+        portfolio -> Varchar,
+        website -> Varchar,
+        resume -> Varchar,
+        materials -> Varchar,
+        sent_email_received -> Bool,
+        value_reflected -> Varchar,
+        value_violated -> Varchar,
+        values_in_tension -> Array<Text>,
+        resume_contents -> Text,
+        materials_contents -> Text,
+        work_samples -> Text,
+        writing_samples -> Text,
+        analysis_samples -> Text,
+        presentation_samples -> Text,
+        exploratory_samples -> Text,
+        question_technically_challenging -> Text,
+        question_proud_of -> Text,
+        question_happiest -> Text,
+        question_unhappiest -> Text,
+        question_value_reflected -> Text,
+        question_value_violated -> Text,
+        question_values_in_tension -> Text,
+        question_why_oxide -> Text,
+    }
+}
+
+table! {
     buildings (id) {
         id -> Int4,
         name -> Varchar,
@@ -82,6 +123,7 @@ table! {
 }
 
 allow_tables_to_appear_in_same_query!(
+    applicants,
     buildings,
     conference_rooms,
     github_labels,

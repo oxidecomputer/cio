@@ -19,6 +19,7 @@ use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
 };
+use create::schema::applicants;
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -30,9 +31,19 @@ static QUESTION_VALUE_VIOLATED: &str = r"F(?s:.*)r one of Oxide(?s:.*)s values(?
 static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
-/// The data type for an Applicant.
-#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct Applicant {
+/// The data type for a NewApplicant.
+#[derive(
+    Debug,
+    Insertable,
+    AsChangeset,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+#[table_name = "applicants"]
+pub struct NewApplicant {
     pub name: String,
     pub role: String,
     pub sheet_id: String,
@@ -97,7 +108,7 @@ pub struct Applicant {
     pub question_why_oxide: String,
 }
 
-impl Applicant {
+impl NewApplicant {
     /// Parse the applicant from a Google Sheets row.
     pub async fn parse(
         drive_client: &GoogleDrive,
@@ -520,7 +531,7 @@ impl Applicant {
             parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
 
         // Build and return the applicant information for the row.
-        Applicant {
+        NewApplicant {
             submitted_time: time,
             name: row[columns.name].to_string(),
             email: row[columns.email].to_string(),
