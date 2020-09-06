@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::github_org;
 
-// TODO: figure out camelcase
 /// The data type for our configuration files.
 #[derive(
     Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
@@ -58,18 +57,29 @@ impl Config {
 }
 
 /// The data type for a user.
+#[serde(rename_all = "camelCase")]
 #[derive(
     Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
 )]
 pub struct UserConfig {
+    #[serde(alias = "first_name")]
     pub first_name: String,
+    #[serde(alias = "last_name")]
     pub last_name: String,
     pub username: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        alias = "recovery_email",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub recovery_email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        alias = "recovery_phone",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub recovery_phone: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gender: String,
@@ -84,7 +94,11 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub groups: Vec<String>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        alias = "is_super_admin",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub is_super_admin: Option<bool>,
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -92,6 +106,7 @@ pub struct UserConfig {
 }
 
 /// The data type for a group. This applies to Google Groups.
+#[serde(rename_all = "camelCase")]
 #[derive(
     Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
 )]
@@ -108,11 +123,13 @@ pub struct GroupConfig {
     /// members of this group.
     /// - false: Users not belonging to the organization are not allowed to
     /// become members of this group.
+    #[serde(alias = "allow_external_members")]
     pub allow_external_members: bool,
 
     /// allow_web_posting: Allows posting from web. Possible values are:
     /// - true: Allows any member to post to the group forum.
     /// - false: Members only use Gmail to communicate with the group.
+    #[serde(alias = "allow_web_posting")]
     pub allow_web_posting: bool,
 
     /// is_archived: Allows the Group contents to be archived. Possible values
@@ -120,6 +137,7 @@ pub struct GroupConfig {
     /// - true: Archive messages sent to the group.
     /// - false: Do not keep an archive of messages sent to this group. If
     /// false, previously archived messages remain in the archive.
+    #[serde(alias = "is_archived")]
     pub is_archived: bool,
 
     /// who_can_discover_group: Specifies the set of users for whom this group
@@ -127,6 +145,7 @@ pub struct GroupConfig {
     /// - ANYONE_CAN_DISCOVER
     /// - ALL_IN_DOMAIN_CAN_DISCOVER
     /// - ALL_MEMBERS_CAN_DISCOVER
+    #[serde(alias = "who_can_discover_group")]
     pub who_can_discover_group: String,
 
     /// who_can_join: Permission to join group. Possible values are:
@@ -142,6 +161,7 @@ pub struct GroupConfig {
     /// - INVITED_CAN_JOIN: Candidates for membership can be invited to join.
     ///
     /// - CAN_REQUEST_TO_JOIN: Non members can request an invitation to join.
+    #[serde(alias = "who_can_join")]
     pub who_can_join: String,
 
     /// who_can_moderate_members: Specifies who can manage members. Possible
@@ -150,6 +170,7 @@ pub struct GroupConfig {
     /// - OWNERS_AND_MANAGERS
     /// - OWNERS_ONLY
     /// - NONE
+    #[serde(alias = "who_can_moderate_members")]
     pub who_can_moderate_members: String,
 
     /// who_can_post_message: Permissions to post messages. Possible values are:
@@ -171,6 +192,7 @@ pub struct GroupConfig {
     /// who_can_post_message is set to ANYONE_CAN_POST, we recommend the
     /// messageModerationLevel be set to MODERATE_NON_MEMBERS to protect the
     /// group from possible spam.
+    #[serde(alias = "who_can_post_message")]
     pub who_can_post_message: String,
 
     /// who_can_view_group: Permissions to view group messages. Possible values
@@ -183,6 +205,7 @@ pub struct GroupConfig {
     /// messages.
     /// - ALL_MANAGERS_CAN_VIEW: Any group manager can view this group's
     /// messages.
+    #[serde(alias = "who_can_view_group")]
     pub who_can_view_group: String,
 
     /// who_can_view_membership: Permissions to view membership. Possible values
@@ -196,6 +219,7 @@ pub struct GroupConfig {
     /// list.
     /// - ALL_MANAGERS_CAN_VIEW: The group managers can view group members
     /// list.
+    #[serde(alias = "who_can_view_membership")]
     pub who_can_view_membership: String,
 }
 
