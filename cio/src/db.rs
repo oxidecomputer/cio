@@ -5,8 +5,9 @@ use diesel::prelude::*;
 
 /*use crate::models::Applicant;
 use crate::schema::applicants;*/
-use crate::configs::{GithubLabel, LabelConfig};
-use crate::schema::github_labels;
+use crate::code_that_should_be_generated::{Building, GithubLabel, User};
+use crate::configs::{BuildingConfig, LabelConfig, UserConfig};
+use crate::schema::{buildings, github_labels, users};
 
 pub struct Database {
     conn: PgConnection,
@@ -27,6 +28,7 @@ impl Default for Database {
 
 // TODO: more gracefully handle errors
 // TODO: possibly generate all this boilerplate as well.
+// TODO: generate all the diesal duplicates as well.
 impl Database {
     /// Establish a connection to the database.
     pub fn new() -> Database {
@@ -69,6 +71,40 @@ impl Database {
             .expect("creating applicant failed")
     }*/
 
+    pub fn upsert_building(&self, building: &BuildingConfig) -> Building {
+        // See if we already have the building in the database.
+        match buildings::dsl::buildings
+            .filter(buildings::dsl::name.eq(building.name.to_string()))
+            .limit(1)
+            .load::<Building>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the building in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let b = r.get(0).unwrap();
+
+                    // Update the building.
+                    return diesel::update(b)
+                        .set(building)
+                        .get_result::<Building>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!("unable to update building {}: {}", b.id, e)
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the building in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(buildings::table)
+            .values(building)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating building failed: {}", e))
+    }
+
     pub fn upsert_github_label(
         &self,
         github_label: &LabelConfig,
@@ -107,5 +143,39 @@ impl Database {
             .values(github_label)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating github_label failed: {}", e))
+    }
+
+    pub fn upsert_user(&self, user: &UserConfig) -> User {
+        // See if we already have the user in the database.
+        match users::dsl::users
+            .filter(users::dsl::username.eq(user.username.to_string()))
+            .limit(1)
+            .load::<User>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the user in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let u = r.get(0).unwrap();
+
+                    // Update the user.
+                    return diesel::update(u)
+                        .set(user)
+                        .get_result::<User>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!("unable to update user {}: {}", u.id, e)
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the user in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(users::table)
+            .values(user)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating user failed: {}", e))
     }
 }

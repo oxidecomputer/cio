@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::db::Database;
-use crate::schema::github_labels;
+use crate::schema::{buildings, github_labels, users};
 use crate::utils::github_org;
 
 /// The data type for our configuration files.
@@ -61,8 +61,17 @@ impl Config {
 /// The data type for a user.
 #[serde(rename_all = "camelCase")]
 #[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+    Debug,
+    Insertable,
+    AsChangeset,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
 )]
+#[table_name = "users"]
 pub struct UserConfig {
     #[serde(alias = "first_name")]
     pub first_name: String,
@@ -96,12 +105,8 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub groups: Vec<String>,
 
-    #[serde(
-        default,
-        alias = "is_super_admin",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub is_super_admin: Option<bool>,
+    #[serde(default, alias = "is_super_admin")]
+    pub is_super_admin: bool,
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub building: String,
@@ -227,8 +232,17 @@ pub struct GroupConfig {
 
 /// The data type for a building.
 #[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+    Debug,
+    Insertable,
+    AsChangeset,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
 )]
+#[table_name = "buildings"]
 pub struct BuildingConfig {
     pub name: String,
     pub description: String,
@@ -297,25 +311,6 @@ pub struct LabelConfig {
     pub color: String,
 }
 
-#[derive(
-    Debug,
-    Queryable,
-    Identifiable,
-    Associations,
-    Default,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
-pub struct GithubLabel {
-    pub id: i32,
-    pub name: String,
-    pub description: String,
-    pub color: String,
-}
-
 /// Get the configs from the GitHub repository and parse them.
 pub async fn get_configs_from_repo(github: &Github) -> Config {
     let repo_contents = github.repo(github_org(), "configs").content();
@@ -353,9 +348,19 @@ pub async fn refresh_db_configs(github: &Github) {
     // Initialize our database.
     let db = Database::new();
 
-    // Sync labels.
+    // Sync buildings.
+    for (_, building) in configs.buildings {
+        db.upsert_building(&building);
+    }
+
+    // Sync GitHub labels.
     for label in configs.labels {
         db.upsert_github_label(&label);
+    }
+
+    // Sync users.
+    for (_, user) in configs.users {
+        db.upsert_user(&user);
     }
 }
 

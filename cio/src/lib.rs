@@ -1,6 +1,7 @@
 pub mod airtable;
 pub mod applicants;
 pub mod auth0;
+pub mod code_that_should_be_generated;
 pub mod configs;
 pub mod core;
 pub mod db;
