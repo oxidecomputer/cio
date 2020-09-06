@@ -1,4 +1,3 @@
-use std::env;
 use std::str::from_utf8;
 
 use chrono::naive::NaiveDate;
@@ -12,6 +11,7 @@ use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
 };
+use crate::utils::github_org;
 
 /// The data type for a journal club meeting.
 #[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
@@ -108,11 +108,9 @@ pub struct Paper {
 
 /// Get the journal club meetings from the papers GitHub repo.
 pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
-    let github_org = env::var("GITHUB_ORG").unwrap();
-
     // Get the contents of the .helpers/meetings.csv file.
     let meetings_csv_content = github
-        .repo(github_org, "papers")
+        .repo(github_org(), "papers")
         .content()
         .file("/.helpers/meetings.csv")
         .await

@@ -1,9 +1,11 @@
+pub mod airtable;
 pub mod applicants;
 pub mod auth0;
 pub mod configs;
 pub mod core;
 pub mod journal_clubs;
 pub mod mailing_list;
+pub mod models;
 pub mod rfds;
 pub mod slack;
 pub mod utils;

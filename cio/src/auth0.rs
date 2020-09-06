@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::env;
 
 use airtable_api::{Airtable, Record};
@@ -7,9 +8,10 @@ use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::mailing_list::AIRTABLE_BASE_ID_CUSTOMER_LEADS;
-
-static AIRTABLE_AUTH0_LOGINS_TABLE: &str = "Auth0 Logins to RFD Site";
+use crate::airtable::{
+    airtable_api_key, AIRTABLE_AUTH0_LOGINS_TABLE,
+    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
+};
 
 /// The data type for an Auth0 user.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -240,10 +242,9 @@ impl PartialEq for UserFields {
 impl UserFields {
     /// Push the auth0 login to our Airtable workspace.
     pub async fn push_to_airtable(&self) {
-        let api_key = env::var("AIRTABLE_API_KEY").unwrap();
         // Initialize the Airtable client.
         let airtable =
-            Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+            Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
         // Create the record.
         let record = Record {
@@ -263,78 +264,75 @@ impl UserFields {
     }
 }
 
+pub async fn update_users_in_airtable() {
+    // Initialize the Airtable client.
+    let airtable =
+        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+
+    let records = airtable
+        .list_records(AIRTABLE_AUTH0_LOGINS_TABLE, AIRTABLE_GRID_VIEW)
+        .await
+        .unwrap();
+
+    let mut logins: BTreeMap<String, (Record, UserFields)> = Default::default();
+    for record in records {
+        let fields: UserFields =
+            serde_json::from_value(record.fields.clone()).unwrap();
+
+        logins.insert(fields.user_id.to_string(), (record, fields));
+    }
+
+    let users = list_users("oxide".to_string()).await;
+
+    let mut updated: i32 = 0;
+    for user in users {
+        // See if we have it in our fields.
+        match logins.get(&user.user_id) {
+            Some((r, in_airtable_fields)) => {
+                let mut record = r.clone();
+                let mut fields = user.to_airtable_fields();
+
+                // Check if we even need to update.
+                if fields == *in_airtable_fields {
+                    // They are the same, don't update.
+                    continue;
+                }
+
+                // Set the Link to People from the original so it stays intact.
+                fields.link_to_people =
+                    in_airtable_fields.link_to_people.clone();
+                // Set the company so it stays intact.
+                fields.company = in_airtable_fields.company.clone();
+
+                record.fields = json!(fields);
+
+                airtable
+                    .update_records(
+                        AIRTABLE_AUTH0_LOGINS_TABLE,
+                        vec![record.clone()],
+                    )
+                    .await
+                    .unwrap();
+
+                updated += 1;
+            }
+            None => {
+                // Create the record.
+                user.to_airtable_fields().push_to_airtable().await;
+            }
+        }
+    }
+
+    println!("updated {} users", updated);
+}
+
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-    use std::env;
-
-    use airtable_api::{Airtable, Record};
-
-    use crate::auth0::{list_users, UserFields, AIRTABLE_AUTH0_LOGINS_TABLE};
+    use crate::auth0::update_users_in_airtable;
     use crate::mailing_list::AIRTABLE_BASE_ID_CUSTOMER_LEADS;
 
     #[tokio::test(threaded_scheduler)]
-    async fn update_users_in_airtable() {
-        let api_key = env::var("AIRTABLE_API_KEY").unwrap();
-        // Initialize the Airtable client.
-        let airtable =
-            Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
-
-        let records = airtable
-            .list_records(AIRTABLE_AUTH0_LOGINS_TABLE, "Grid view")
-            .await
-            .unwrap();
-
-        let mut logins: BTreeMap<String, (Record, UserFields)> =
-            Default::default();
-        for record in records {
-            let fields: UserFields =
-                serde_json::from_value(record.fields.clone()).unwrap();
-
-            logins.insert(fields.user_id.to_string(), (record, fields));
-        }
-
-        let users = list_users("oxide".to_string()).await;
-
-        let mut updated = 0;
-        for user in users {
-            // See if we have it in our fields.
-            match logins.get(&user.user_id) {
-                Some((r, in_airtable_fields)) => {
-                    let mut record = r.clone();
-                    let mut fields = user.to_airtable_fields();
-
-                    // Check if we even need to update.
-                    if fields == *in_airtable_fields {
-                        // They are the same, don't update.
-                        continue;
-                    }
-
-                    // Set the Link to People from the original so it stays intact.
-                    fields.link_to_people =
-                        in_airtable_fields.link_to_people.clone();
-                    // Set the company so it stays intact.
-                    fields.company = in_airtable_fields.company.clone();
-
-                    record.fields = json!(fields);
-
-                    airtable
-                        .update_records(
-                            AIRTABLE_AUTH0_LOGINS_TABLE,
-                            vec![record.clone()],
-                        )
-                        .await
-                        .unwrap();
-
-                    updated += 1;
-                }
-                None => {
-                    // Create the record.
-                    user.to_airtable_fields().push_to_airtable().await;
-                }
-            }
-        }
-
-        println!("updated {} users", updated);
+    async fn test_update_users_in_airtable() {
+        update_users_in_airtable().await;
     }
 }

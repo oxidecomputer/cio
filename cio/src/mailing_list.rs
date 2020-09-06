@@ -1,193 +1,30 @@
 use std::collections::HashMap;
-use std::env;
 
-use airtable_api::{Airtable, Record};
+use airtable_api::Airtable;
 use chrono::offset::Utc;
 use chrono::DateTime;
-use chrono_humanize::HumanTime;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use crate::slack::{
-    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
-    MessageType,
+use crate::airtable::{
+    airtable_api_key, AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
+    AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
-
-pub static AIRTABLE_BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
-static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
-
-/// The data type for a mailing list signup.
-/// This is inline with our Airtable workspace.
-#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct Signup {
-    #[serde(rename = "Email Address")]
-    pub email: String,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "First Name")]
-    pub first_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "Last Name")]
-    pub last_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "Company")]
-    pub company: Option<String>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "What is your interest in Oxide Computer Company?"
-    )]
-    pub interest: Option<String>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "Interested in On the Metal podcast updates?"
-    )]
-    pub wants_podcast_updates: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "Interested in the Oxide newsletter?"
-    )]
-    pub wants_newsletter: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "Interested in product updates?"
-    )]
-    pub wants_product_updates: Option<bool>,
-    #[serde(rename = "Date Added")]
-    pub date_added: DateTime<Utc>,
-    #[serde(rename = "Opt-in Date")]
-    pub optin_date: DateTime<Utc>,
-    #[serde(rename = "Last Changed")]
-    pub last_changed: DateTime<Utc>,
-}
-
-impl Signup {
-    /// Push the mailing list signup to our Airtable workspace.
-    pub async fn push_to_airtable(&self) {
-        let api_key = env::var("AIRTABLE_API_KEY").unwrap();
-        // Initialize the Airtable client.
-        let airtable =
-            Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
-
-        // Create the record.
-        let record = Record {
-            id: None,
-            created_time: None,
-            fields: serde_json::to_value(self).unwrap(),
-        };
-
-        // Send the new record to the Airtable client.
-        // Batch can only handle 10 at a time.
-        airtable
-            .create_records(AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, vec![record])
-            .await
-            .unwrap();
-
-        println!("created mailing list record in Airtable: {:?}", self);
-    }
-
-    /// Convert the mailing list signup into JSON as Slack message.
-    pub fn as_slack_msg(&self) -> Value {
-        let dur = self.date_added - Utc::now();
-        let time = HumanTime::from(dur);
-
-        let mut name = String::new();
-        if self.first_name.is_some() {
-            name += self.first_name.as_ref().unwrap();
-            if self.last_name.is_some() {
-                name += &(" ".to_string() + &self.last_name.as_ref().unwrap());
-            }
-        } else if self.last_name.is_some() {
-            name += self.last_name.as_ref().unwrap();
-        }
-        let msg = format!("*{}* <mailto:{}|{}>", name, self.email, self.email);
-
-        let mut interest: MessageBlock = Default::default();
-        if self.interest.is_some() {
-            interest = MessageBlock {
-                block_type: MessageBlockType::Section,
-                text: Some(MessageBlockText {
-                    text_type: MessageType::Markdown,
-                    text: format!(
-                        "\n>{}",
-                        self.interest.as_ref().unwrap().trim()
-                    ),
-                }),
-                elements: None,
-                accessory: None,
-                block_id: None,
-                fields: None,
-            };
-        }
-
-        let updates = format!(
-            "podcast updates: _{}_ | newsletter: _{}_ | product updates: _{}_",
-            self.wants_podcast_updates.unwrap_or(false),
-            self.wants_newsletter.unwrap_or(false),
-            self.wants_product_updates.unwrap_or(false),
-        );
-
-        let mut context = "".to_string();
-        if self.company.is_some() {
-            context +=
-                &format!("works at {} | ", self.company.as_ref().unwrap());
-        }
-        context += &format!("subscribed to mailing list {}", time);
-
-        json!(FormattedMessage {
-            channel: None,
-            attachments: None,
-            blocks: Some(vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: msg,
-                    }),
-                    elements: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
-                },
-                interest,
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: updates,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: context,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
-                }
-            ]),
-        })
-    }
-}
+use crate::models::MailingListSignup;
 
 /// Get all the mailing list subscribers from Airtable.
-pub async fn get_all_subscribers() -> Vec<Signup> {
-    let api_key = env::var("AIRTABLE_API_KEY").unwrap();
+pub async fn get_all_subscribers() -> Vec<MailingListSignup> {
     // Initialize the Airtable client.
     let airtable =
-        Airtable::new(api_key.to_string(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
     let records = airtable
-        .list_records(AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, "Grid view")
+        .list_records(AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_GRID_VIEW)
         .await
         .unwrap();
 
-    let mut subscribers: Vec<Signup> = Default::default();
+    let mut subscribers: Vec<MailingListSignup> = Default::default();
     for record in records {
-        let fields: Signup =
+        let fields: MailingListSignup =
             serde_json::from_value(record.fields.clone()).unwrap();
 
         subscribers.push(fields);
@@ -209,65 +46,44 @@ pub struct MailchimpWebhook {
 
 impl MailchimpWebhook {
     /// Convert to a signup data type.
-    pub fn as_signup(&self) -> Signup {
-        let mut signup: Signup = Signup {
-            email: "".to_string(),
-            first_name: None,
-            last_name: None,
-            company: None,
-            interest: None,
-            wants_podcast_updates: None,
-            wants_newsletter: None,
-            wants_product_updates: None,
-            date_added: Utc::now(),
-            optin_date: Utc::now(),
-            last_changed: Utc::now(),
-        };
+    pub fn as_signup(&self) -> MailingListSignup {
+        let mut signup: MailingListSignup = Default::default();
 
         if self.data.merges.is_some() {
             let merges = self.data.merges.as_ref().unwrap();
 
-            signup.email = if let Some(e) = &merges.email {
-                e.trim().to_string()
-            } else {
-                "".to_string()
-            };
-            signup.first_name = if let Some(f) = &merges.first_name {
-                Some(f.trim().to_string())
-            } else {
-                None
-            };
-            signup.last_name = if let Some(l) = &merges.last_name {
-                Some(l.trim().to_string())
-            } else {
-                None
-            };
-            signup.company = if let Some(c) = &merges.company {
-                Some(c.trim().to_string())
-            } else {
-                None
-            };
-            signup.interest = if let Some(i) = &merges.interest {
-                Some(i.trim().to_string())
-            } else {
-                None
-            };
+            if let Some(e) = &merges.email {
+                signup.email = e.trim().to_string();
+            }
+            if let Some(f) = &merges.first_name {
+                signup.first_name = f.trim().to_string();
+            }
+            if let Some(l) = &merges.last_name {
+                signup.last_name = l.trim().to_string();
+            }
+            if let Some(c) = &merges.company {
+                signup.company = c.trim().to_string();
+            }
+            if let Some(i) = &merges.interest {
+                signup.interest = i.trim().to_string();
+            }
 
             if merges.groupings.is_some() {
                 let groupings = merges.groupings.as_ref().unwrap();
 
                 signup.wants_podcast_updates =
-                    Some(groupings.get(&0).unwrap().groups.is_some());
+                    groupings.get(&0).unwrap().groups.is_some();
                 signup.wants_newsletter =
-                    Some(groupings.get(&1).unwrap().groups.is_some());
+                    groupings.get(&1).unwrap().groups.is_some();
                 signup.wants_product_updates =
-                    Some(groupings.get(&2).unwrap().groups.is_some());
+                    groupings.get(&2).unwrap().groups.is_some();
             }
         }
 
         signup.date_added = self.fired_at;
-        signup.optin_date = self.fired_at;
-        signup.last_changed = self.fired_at;
+        signup.date_optin = self.fired_at;
+        signup.date_last_changed = self.fired_at;
+        signup.name = format!("{} {}", signup.first_name, signup.last_name);
 
         signup
     }

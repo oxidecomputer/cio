@@ -1,14 +1,3 @@
-/* TODO: make these all private once we use this API for everything */
-pub mod applicants;
-pub mod journal_clubs;
-pub mod mailing_list;
-pub mod rfds;
-pub mod slack;
-pub mod utils;
-
-#[macro_use]
-extern crate serde_json;
-
 use std::any::Any;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -25,11 +14,12 @@ use dropshot::HttpServer;
 use dropshot::RequestContext;
 use hubcaps::Github;
 
-use crate::applicants::{get_all_applicants_from_cache, ApplicantFields};
-use crate::journal_clubs::{get_meetings_from_repo, Meeting};
-use crate::mailing_list::{get_all_subscribers, Signup};
-use crate::rfds::{get_rfds_from_repo, RFD};
-use crate::utils::{authenticate_github, list_all_github_repos, Repo};
+use cio_api::applicants::get_all_applicants;
+use cio_api::journal_clubs::{get_meetings_from_repo, Meeting};
+use cio_api::mailing_list::get_all_subscribers;
+use cio_api::models::{Applicant, MailingListSignup, Repo, RFD};
+use cio_api::rfds::get_rfds_from_repo;
+use cio_api::utils::{authenticate_github, list_all_github_repos};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -111,11 +101,11 @@ struct Context {
     github: Github,
 
     // A cache of our applicants that we will continuously update.
-    applicants: Vec<ApplicantFields>,
+    applicants: Vec<Applicant>,
     // A cache of journal club meetings that we will continuously update.
     journal_club_meetings: Vec<Meeting>,
     // A cache of mailing list subscribers that we will continuously update.
-    mailing_list_subscribers: Vec<Signup>,
+    mailing_list_subscribers: Vec<MailingListSignup>,
     // A cache of our repos that we will continuously update.
     repos: Vec<Repo>,
     // A cache of our RFDs that we will continuously update.
@@ -144,7 +134,7 @@ impl Context {
 
     pub async fn refresh(&mut self) {
         println!("Refreshing cache of applicants...");
-        let applicants = get_all_applicants_from_cache().await;
+        let applicants = get_all_applicants().await;
         self.applicants = applicants;
 
         println!("Refreshing cache of journal club meetings...");
@@ -189,7 +179,7 @@ impl Context {
 }]
 async fn api_get_applicants(
     rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<ApplicantFields>>, HttpError> {
+) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(HttpResponseOk(api_context.applicants.clone()))
@@ -219,7 +209,7 @@ async fn api_get_journal_club_meetings(
 }]
 async fn api_get_mailing_list_subscribers(
     rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Signup>>, HttpError> {
+) -> Result<HttpResponseOk<Vec<MailingListSignup>>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(HttpResponseOk(api_context.mailing_list_subscribers.clone()))
