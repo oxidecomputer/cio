@@ -10,7 +10,7 @@ use pandoc::OutputKind;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 
-use crate::models::NewApplicant;
+use crate::models::Applicant;
 use crate::utils::get_gsuite_token;
 
 /// The data type for a Google Sheet applicant columns, we use this when
@@ -224,8 +224,8 @@ fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
 }
 
 /// Return a vector of all the applicants.
-pub async fn get_all_applicants() -> Vec<NewApplicant> {
-    let mut applicants: Vec<NewApplicant> = Default::default();
+pub async fn get_all_applicants() -> Vec<Applicant> {
+    let mut applicants: Vec<Applicant> = Default::default();
     let sheets = get_sheets_map();
 
     // Get the GSuite token.
@@ -270,7 +270,7 @@ pub async fn get_all_applicants() -> Vec<NewApplicant> {
             }
 
             // Parse the applicant out of the row information.
-            let applicant = NewApplicant::parse(
+            let applicant = Applicant::parse(
                 &drive_client,
                 sheet_name,
                 sheet_id,

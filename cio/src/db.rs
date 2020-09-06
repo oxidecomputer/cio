@@ -6,8 +6,8 @@ use diesel::debug_query;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
-use crate::models::{Applicant, NewApplicant};
-use crate::schema::applicants;
+/*use crate::models::Applicant;
+use crate::schema::applicants;*/
 
 pub struct Database {
     conn: PgConnection,
@@ -25,7 +25,7 @@ impl Database {
         }
     }
 
-    pub fn upsert_applicant(&self, applicant: &NewApplicant) -> Applicant {
+    /* pub fn upsert_applicant(&self, applicant: &Applicant) -> Applicant {
         /*use crate::schema::applicants::dsl::*;
         // See if we already have the applicant in the database.
         let results = applicants
@@ -60,5 +60,5 @@ impl Database {
             .values(&applicant)
             .get_result(&self.conn)
             .expect("creating applicant failed")
-    }
+    }*/
 }
