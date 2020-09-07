@@ -18,9 +18,11 @@ use cio_api::configs::{
 };
 use cio_api::db::Database;
 use cio_api::journal_clubs::get_meetings_from_repo;
-use cio_api::models::{Applicant, AuthLogin, MailingListSubscriber, RFD};
-use cio_api::models::{JournalClubMeeting, Repo};
-use cio_api::utils::{authenticate_github, list_all_github_repos};
+use cio_api::models::{
+    Applicant, AuthLogin, GithubRepo, JournalClubMeeting,
+    MailingListSubscriber, RFD,
+};
+use cio_api::utils::authenticate_github;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -109,8 +111,6 @@ struct Context {
 
     // A cache of journal club meetings that we will continuously update.
     journal_club_meetings: Vec<JournalClubMeeting>,
-    // A cache of our repos that we will continuously update.
-    repos: Vec<Repo>,
 }
 
 impl Context {
@@ -121,7 +121,6 @@ impl Context {
         let mut api_context = Context {
             github,
             journal_club_meetings: Default::default(),
-            repos: Default::default(),
         };
 
         // Refresh our context.
@@ -134,10 +133,6 @@ impl Context {
         println!("Refreshing cache of journal club meetings...");
         let journal_club_meetings = get_meetings_from_repo(&self.github).await;
         self.journal_club_meetings = journal_club_meetings;
-
-        println!("Refreshing cache of GitHub repos...");
-        let repos = list_all_github_repos(&self.github).await;
-        self.repos = repos;
     }
 
     /**
@@ -240,11 +235,11 @@ async fn api_get_github_labels(
     path = "/github/repos",
 }]
 async fn api_get_github_repos(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Repo>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.repos.clone()))
+    Ok(HttpResponseOk(db.get_github_repos()))
 }
 
 /**
