@@ -4,6 +4,7 @@ use std::str::from_utf8;
 use csv::ReaderBuilder;
 use hubcaps::Github;
 
+use crate::db::Database;
 use crate::models::NewRFD;
 use crate::utils::github_org;
 
@@ -40,15 +41,27 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     rfds
 }
 
+// Sync the rfds with our database.
+pub async fn refresh_db_rfds(github: &Github) {
+    let rfds = get_rfds_from_repo(github).await;
+
+    // Initialize our database.
+    let db = Database::new();
+
+    // Sync rfds.
+    for (_, rfd) in rfds {
+        db.upsert_rfd(&rfd);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::rfds::get_rfds_from_repo;
+    use crate::applicants::refresh_db_rfds;
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_rfds() {
         let github = authenticate_github();
-        let rfds = get_rfds_from_repo(&github).await;
-        println!("{:?}", rfds);
+        refresh_db_rfds(&github).await;
     }
 }
