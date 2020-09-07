@@ -14,7 +14,6 @@ use dropshot::HttpServer;
 use dropshot::RequestContext;
 use hubcaps::Github;
 
-use cio_api::applicants::get_all_applicants;
 use cio_api::configs::{
     get_configs_from_repo, BuildingConfig, Config, GroupConfig, LabelConfig,
     LinkConfig, ResourceConfig, UserConfig,
@@ -148,7 +147,8 @@ impl Context {
 
     pub async fn refresh(&mut self) {
         println!("Refreshing cache of applicants...");
-        let applicants = get_all_applicants().await;
+        // TODO: make this real
+        let applicants = Default::default();
         self.applicants = applicants;
 
         println!("Refreshing cache of configs...");

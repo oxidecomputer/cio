@@ -10,6 +10,7 @@ use pandoc::OutputKind;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 
+use crate::db::Database;
 use crate::models::NewApplicant;
 use crate::utils::get_gsuite_token;
 
@@ -284,4 +285,28 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     }
 
     applicants
+}
+
+// Sync the applicants with our database.
+pub async fn refresh_db_applicants() {
+    let applicants = get_raw_applicants().await;
+
+    // Initialize our database.
+    let db = Database::new();
+
+    // Sync applicants.
+    for applicant in applicants {
+        db.upsert_applicant(&applicant);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::applicants::refresh_db_applicants;
+    use crate::utils::authenticate_github;
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_applicants() {
+        refresh_db_applicants().await;
+    }
 }

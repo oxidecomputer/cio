@@ -1,3 +1,5 @@
+use chrono::offset::Utc;
+use chrono::DateTime;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +13,6 @@ use crate::schema::{
     Queryable,
     Identifiable,
     Associations,
-    Default,
     PartialEq,
     Clone,
     JsonSchema,

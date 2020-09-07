@@ -15,11 +15,11 @@ use crate::airtable::{
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
+use crate::schema::applicants;
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
 };
-use create::schema::applicants;
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";

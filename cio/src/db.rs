@@ -45,8 +45,8 @@ impl Database {
     pub fn upsert_applicant(&self, applicant: &NewApplicant) -> Applicant {
         // See if we already have the applicant in the database.
         match applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(applicant.email.to_string()))
             .filter(
-                applicants::dsl::email.eq(applicant.email.to_string()),
                 applicants::dsl::sheet_id.eq(applicant.sheet_id.to_string()),
             )
             .limit(1)
