@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::env;
 
 use airtable_api::{Airtable, Record};
@@ -97,16 +98,45 @@ pub struct Identity {
     pub is_social: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Token {
+    pub access_token: String,
+    pub token_type: String,
+}
+
 /// List users.
-// TODO actually auth auth0 in a sane way.
 pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
+    let client = Client::new();
+    // Get our token.
+    let client_id = env::var("CIO_AUTH0_CLIENT_ID").unwrap();
+    let client_secret = env::var("CIO_AUTH0_CLIENT_SECRET").unwrap();
+
+    let mut map = HashMap::new();
+    map.insert("client_id", client_id);
+    map.insert("client_secret", client_secret);
+    map.insert("audience", format!("https://{}.auth0.com/api/v2/", domain));
+    map.insert("grant_type", "client_credentials".to_string());
+
+    let resp = client
+        .post(&format!("https://{}.auth0.com/oauth/token", domain))
+        .json(&map)
+        .send()
+        .await
+        .unwrap();
+
+    let token: Token = resp.json().await.unwrap();
+
     let mut users: Vec<User> = Default::default();
 
     let mut i: i32 = 0;
     let mut has_records = true;
     while has_records {
-        let mut u =
-            get_auth_logins_page(domain.to_string(), &i.to_string()).await;
+        let mut u = get_auth_logins_page(
+            token.access_token.to_string(),
+            domain.to_string(),
+            &i.to_string(),
+        )
+        .await;
 
         has_records = !u.is_empty();
         i += 1;
@@ -122,11 +152,15 @@ pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
     auth_logins
 }
 
-async fn get_auth_logins_page(domain: String, page: &str) -> Vec<User> {
+async fn get_auth_logins_page(
+    token: String,
+    domain: String,
+    page: &str,
+) -> Vec<User> {
     let client = Client::new();
     let resp = client
         .get(&format!("https://{}.auth0.com/api/v2/users", domain))
-        .bearer_auth(env::var("AUTH0_TOKEN").unwrap())
+        .bearer_auth(token)
         .query(&[("per_page", "20"), ("page", page), ("last_login", "-1")])
         .send()
         .await
