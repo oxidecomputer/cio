@@ -26,6 +26,11 @@ jobs:
             toolchain: nightly
             override: true
             components: rustfmt, clippy
+      - name: Cache github etags
+        uses: actions/cache@v1
+        with:
+          path: ${{ github.workspace }}/.cache
+          key: github-cache
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
