@@ -13,9 +13,10 @@ airtable-api = "^0.1.0"
 chrono = "0.4"
 chrono-humanize = "0.0.11"
 clap = {version = "2", features = ["yaml"]}
+csv = "1.1"
+comrak = "0.8"
 diesel = { version = "1.4.5", features = ["serde_json", "postgres", "chrono", "128-column-tables"] }
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
-csv = "1.1"
 futures-util = "0.3"
 google-drive = "^0.1.0"
 html2text = "0.1"

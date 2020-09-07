@@ -22,7 +22,9 @@ use crate::airtable::{
     AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
-use crate::rfds::get_rfd_contents_from_repo;
+use crate::rfds::{
+    clean_rfd_html_links, get_rfd_contents_from_repo, parse_markdown,
+};
 use crate::schema::{
     applicants, auth_logins, github_repos, mailing_list_subscribers,
     rfds as r_f_ds, rfds,
@@ -1501,12 +1503,25 @@ impl NewRFD {
             branch = "master".to_string();
         }
 
+        // Get the RFD contents from the branch.
         let rfd_dir = format!("/rfd/{}", self.number_string);
-
-        let (rfd_contents, is_markdown) =
+        let (rfd_content, is_markdown, sha) =
             get_rfd_contents_from_repo(github, &branch, &rfd_dir).await;
+        self.content = rfd_content;
+        self.sha = sha;
 
-        println!("{} {} {}", self.number_string, is_markdown, rfd_contents);
+        // TODO: figure out how to get the commit date, hubcaps doesn't seem to have it
+        // probably need to send a patch
+
+        // Parse the markdown.
+        if is_markdown {
+            self.html = parse_markdown(&self.content);
+        } else {
+            // Parse the acsiidoc.
+        }
+        self.html = clean_rfd_html_links(&self.html, &self.number_string);
+
+        // TODO: parse the author
     }
 
     /// Convert an RFD into JSON as Slack message.

@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
 use std::str::from_utf8;
 
+use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
 use hubcaps::Github;
+use regex::Regex;
 
 use crate::db::Database;
 use crate::models::NewRFD;
@@ -46,19 +48,21 @@ pub async fn get_rfd_contents_from_repo(
     github: &Github,
     branch: &str,
     dir: &str,
-) -> (String, bool) {
+) -> (String, bool, String) {
     let repo_contents = github.repo(github_org(), "rfd").content();
     let mut is_markdown = false;
-    let mut decoded: String = Default::default();
+    let decoded: String;
+    let sha: String;
 
     // Get the contents of the file.
     let path = format!("{}/README.adoc", dir);
     match repo_contents.file(&path, branch).await {
         Ok(contents) => {
             decoded = from_utf8(&contents.content).unwrap().trim().to_string();
+            sha = contents.sha;
         }
         Err(e) => {
-            println!("[rfd] getting file contents for {} failed: {}", path, e);
+            println!("[rfd] getting file contents for {} failed: {}, trying markdown instead...", path, e);
 
             // Try to get the markdown instead.
             is_markdown = true;
@@ -66,11 +70,53 @@ pub async fn get_rfd_contents_from_repo(
                 .file(&format!("{}/README.md", dir), branch)
                 .await
                 .unwrap();
+
             decoded = from_utf8(&contents.content).unwrap().trim().to_string();
+            sha = contents.sha;
         }
     }
 
-    (decoded, is_markdown)
+    (decoded, is_markdown, sha)
+}
+
+pub fn parse_markdown(content: &str) -> String {
+    markdown_to_html(content, &ComrakOptions::default())
+}
+
+pub fn parse_asciidoc(content: &str) -> String {
+    content.to_string()
+}
+
+pub fn clean_rfd_html_links(content: &str, branch: &str) -> String {
+    let mut cleaned = content
+        .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, branch))
+        .replace(
+            r#"img src=""#,
+            &format!(r#"img src="/static/images/{}/"#, branch),
+        );
+
+    let mut re =
+        Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer").unwrap();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/000$num")
+        .to_string();
+    re = Regex::new(r"https://(?P<num>[0-9][0-9]).rfd.oxide.computer").unwrap();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/00$num")
+        .to_string();
+    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer")
+        .unwrap();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/0$num")
+        .to_string();
+    re =
+        Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer")
+            .unwrap();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/$num")
+        .to_string();
+
+    cleaned
 }
 
 // Sync the rfds with our database.
@@ -88,12 +134,35 @@ pub async fn refresh_db_rfds(github: &Github) {
 
 #[cfg(test)]
 mod tests {
-    use crate::rfds::refresh_db_rfds;
+    use crate::rfds::{clean_rfd_html_links, refresh_db_rfds};
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_rfds() {
         let github = authenticate_github();
         refresh_db_rfds(&github).await;
+    }
+
+    #[test]
+    fn test_clean_rfd_html_links() {
+        let content = r#"https://3.rfd.oxide.computer
+        https://41.rfd.oxide.computer
+        https://543.rfd.oxide.computer#-some-link
+        https://3245.rfd.oxide.computer/things
+        https://3265.rfd.oxide.computer/things
+        <img src="things.png" \>
+        <a href="\#things" \>"#;
+
+        let cleaned = clean_rfd_html_links(&content, "0032");
+
+        let expected = r#"https://rfd.shared.oxide.computer/rfd/0003
+        https://rfd.shared.oxide.computer/rfd/0041
+        https://rfd.shared.oxide.computer/rfd/0543#-some-link
+        https://rfd.shared.oxide.computer/rfd/3245/things
+        https://rfd.shared.oxide.computer/rfd/3265/things
+        <img src="/static/images/0032/things.png" \>
+        <a href="/rfd/0032#things" \>"#;
+
+        assert_eq!(expected, cleaned);
     }
 }
