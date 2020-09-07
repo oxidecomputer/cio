@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use airtable_api::Airtable;
 use chrono::offset::Utc;
 use chrono::DateTime;
@@ -40,8 +38,52 @@ pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
 pub struct MailchimpWebhook {
     #[serde(rename = "type")]
     pub webhook_type: String,
+    #[serde(with = "mailchimp_date_format")]
     fired_at: DateTime<Utc>,
     data: MailchimpWebhookData,
+}
+
+mod mailchimp_date_format {
+    use chrono::{DateTime, TimeZone, Utc};
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(
+        date: &DateTime<Utc>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = format!("{}", date.format(FORMAT));
+        serializer.serialize_str(&s)
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> Result<DateTime<Utc>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap();
+        Utc.datetime_from_str(&s, FORMAT)
+            .map_err(serde::de::Error::custom)
+    }
 }
 
 impl MailchimpWebhook {
@@ -71,12 +113,9 @@ impl MailchimpWebhook {
             if merges.groupings.is_some() {
                 let groupings = merges.groupings.as_ref().unwrap();
 
-                signup.wants_podcast_updates =
-                    groupings.get(&0).unwrap().groups.is_some();
-                signup.wants_newsletter =
-                    groupings.get(&1).unwrap().groups.is_some();
-                signup.wants_product_updates =
-                    groupings.get(&2).unwrap().groups.is_some();
+                signup.wants_podcast_updates = groupings[0].groups.is_some();
+                signup.wants_newsletter = groupings[1].groups.is_some();
+                signup.wants_product_updates = groupings[2].groups.is_some();
             }
         }
 
@@ -132,7 +171,7 @@ pub struct MailchimpWebhookMerges {
     #[serde(skip_serializing_if = "Option::is_none", rename = "BIRTHDAY")]
     pub birthday: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "GROUPINGS")]
-    pub groupings: Option<HashMap<i32, MailchimpWebhookGrouping>>,
+    pub groupings: Option<Vec<MailchimpWebhookGrouping>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
