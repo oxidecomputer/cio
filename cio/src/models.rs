@@ -15,7 +15,7 @@ use crate::airtable::{
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
-use crate::schema::applicants;
+use crate::schema::{applicants, rfds};
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
@@ -1255,8 +1255,18 @@ impl Repo {
 
 /// The data type for an RFD.
 #[serde(rename_all = "camelCase")]
-#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct RFD {
+#[derive(
+    Debug,
+    Insertable,
+    AsChangeset,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+#[table_name = "rfds"]
+pub struct NewRFD {
     // TODO: remove this alias when we update https://github.com/oxidecomputer/rfd/blob/master/.helpers/rfd.csv
     #[serde(alias = "num")]
     pub number: i32,
@@ -1293,7 +1303,7 @@ pub struct RFD {
     pub commit_date: DateTime<Utc>,
 }
 
-impl RFD {
+impl NewRFD {
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
     pub fn expand(&mut self) {

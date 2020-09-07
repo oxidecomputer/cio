@@ -4,16 +4,16 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
 use crate::code_that_should_be_generated::{
-    Applicant, Building, ConferenceRoom, GithubLabel, Group, Link, User,
+    Applicant, Building, ConferenceRoom, GithubLabel, Group, Link, User, RFD,
 };
 use crate::configs::{
     BuildingConfig, GroupConfig, LabelConfig, LinkConfig, ResourceConfig,
     UserConfig,
 };
-use crate::models::NewApplicant;
+use crate::models::{NewApplicant, NewRFD};
 use crate::schema::{
     applicants, buildings, conference_rooms, github_labels, groups, links,
-    users,
+    rfds, users,
 };
 
 pub struct Database {
@@ -264,6 +264,40 @@ impl Database {
             .values(link)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating link failed: {}", e))
+    }
+
+    pub fn upsert_rfd(&self, rfd: &NewRFD) -> RFD {
+        // See if we already have the rfd in the database.
+        match rfds::dsl::rfds
+            .filter(rfds::dsl::number.eq(rfd.number))
+            .limit(1)
+            .load::<RFD>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the rfd in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let a = r.get(0).unwrap();
+
+                    // Update the rfd.
+                    return diesel::update(a)
+                        .set(rfd)
+                        .get_result::<RFD>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!("unable to update rfd {}: {}", a.id, e)
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the rfd in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(rfds::table)
+            .values(rfd)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating rfd failed: {}", e))
     }
 
     pub fn upsert_user(&self, user: &UserConfig) -> User {

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::schema::{
     applicants, buildings, conference_rooms, github_labels, groups, links,
-    users,
+    rfds as r_f_ds, users,
 };
 
 #[derive(
@@ -201,6 +201,45 @@ pub struct Link {
     pub link: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
+}
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+pub struct RFD {
+    pub id: i32,
+    pub number: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub number_string: String,
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    pub state: String,
+    pub link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub short_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub rendered_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub discussion: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub authors: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub html: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sha: String,
+    #[serde(default = "Utc::now")]
+    pub commit_date: DateTime<Utc>,
 }
 
 #[derive(

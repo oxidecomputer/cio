@@ -104,6 +104,26 @@ table! {
 }
 
 table! {
+    rfds (id) {
+        id -> Int4,
+        number -> Int4,
+        number_string -> Varchar,
+        title -> Varchar,
+        name -> Varchar,
+        state -> Varchar,
+        link -> Varchar,
+        short_link -> Varchar,
+        rendered_link -> Varchar,
+        discussion -> Varchar,
+        authors -> Varchar,
+        html -> Text,
+        content -> Text,
+        sha -> Varchar,
+        commit_date -> Timestamptz,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         first_name -> Varchar,
@@ -129,5 +149,6 @@ allow_tables_to_appear_in_same_query!(
     github_labels,
     groups,
     links,
+    rfds,
     users,
 );

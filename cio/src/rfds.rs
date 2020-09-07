@@ -4,11 +4,11 @@ use std::str::from_utf8;
 use csv::ReaderBuilder;
 use hubcaps::Github;
 
-use crate::models::RFD;
+use crate::models::NewRFD;
 use crate::utils::github_org;
 
 /// Get the RFDs from the rfd GitHub repo.
-pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, RFD> {
+pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     // Get the contents of the .helpers/rfd.csv file.
     let rfd_csv_content = github
         .repo(github_org(), "rfd")
@@ -26,9 +26,9 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, RFD> {
         .from_reader(rfd_csv_string.as_bytes());
 
     // Create the BTreeMap of RFDs.
-    let mut rfds: BTreeMap<i32, RFD> = Default::default();
+    let mut rfds: BTreeMap<i32, NewRFD> = Default::default();
     for r in csv_reader.deserialize() {
-        let mut rfd: RFD = r.unwrap();
+        let mut rfd: NewRFD = r.unwrap();
 
         // Expand the fields in the RFD.
         rfd.expand();

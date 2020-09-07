@@ -303,7 +303,6 @@ pub async fn refresh_db_applicants() {
 #[cfg(test)]
 mod tests {
     use crate::applicants::refresh_db_applicants;
-    use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
