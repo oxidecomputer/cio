@@ -100,71 +100,9 @@ table! {
 }
 
 table! {
-    groups (id) {
+    github_repos (id) {
         id -> Int4,
-        name -> Varchar,
-        description -> Varchar,
-        aliases -> Array<Text>,
-        allow_external_members -> Bool,
-        allow_web_posting -> Bool,
-        is_archived -> Bool,
-        who_can_discover_group -> Varchar,
-        who_can_join -> Varchar,
-        who_can_moderate_members -> Varchar,
-        who_can_post_message -> Varchar,
-        who_can_view_group -> Varchar,
-        who_can_view_membership -> Varchar,
-    }
-}
-
-table! {
-    journal_club_meetings (id) {
-        id -> Int4,
-        issue -> Varchar,
-        title -> Varchar,
-        date -> Date,
-        coordinator -> Varchar,
-        state -> Varchar,
-        recording -> Varchar,
-        papers -> Json,
-    }
-}
-
-table! {
-    links (id) {
-        id -> Int4,
-        name -> Varchar,
-        description -> Varchar,
-        link -> Varchar,
-        aliases -> Array<Text>,
-    }
-}
-
-table! {
-    mailing_list_subscribers (id) {
-        id -> Int4,
-        email -> Varchar,
-        first_name -> Varchar,
-        last_name -> Varchar,
-        name -> Varchar,
-        company -> Varchar,
-        interest -> Text,
-        wants_podcast_updates -> Bool,
-        wants_newsletter -> Bool,
-        wants_product_updates -> Bool,
-        date_added -> Timestamptz,
-        date_optin -> Timestamptz,
-        date_last_changed -> Timestamptz,
-        notes -> Text,
-        tags -> Array<Text>,
-        link_to_people -> Array<Text>,
-    }
-}
-
-table! {
-    repos (id) {
-        id -> Int4,
-        github_id -> Int4,
+        github_id -> Varchar,
         owner -> Jsonb,
         name -> Varchar,
         full_name -> Varchar,
@@ -234,6 +172,68 @@ table! {
 }
 
 table! {
+    groups (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        aliases -> Array<Text>,
+        allow_external_members -> Bool,
+        allow_web_posting -> Bool,
+        is_archived -> Bool,
+        who_can_discover_group -> Varchar,
+        who_can_join -> Varchar,
+        who_can_moderate_members -> Varchar,
+        who_can_post_message -> Varchar,
+        who_can_view_group -> Varchar,
+        who_can_view_membership -> Varchar,
+    }
+}
+
+table! {
+    journal_club_meetings (id) {
+        id -> Int4,
+        issue -> Varchar,
+        title -> Varchar,
+        date -> Date,
+        coordinator -> Varchar,
+        state -> Varchar,
+        recording -> Varchar,
+        papers -> Json,
+    }
+}
+
+table! {
+    links (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        link -> Varchar,
+        aliases -> Array<Text>,
+    }
+}
+
+table! {
+    mailing_list_subscribers (id) {
+        id -> Int4,
+        email -> Varchar,
+        first_name -> Varchar,
+        last_name -> Varchar,
+        name -> Varchar,
+        company -> Varchar,
+        interest -> Text,
+        wants_podcast_updates -> Bool,
+        wants_newsletter -> Bool,
+        wants_product_updates -> Bool,
+        date_added -> Timestamptz,
+        date_optin -> Timestamptz,
+        date_last_changed -> Timestamptz,
+        notes -> Text,
+        tags -> Array<Text>,
+        link_to_people -> Array<Text>,
+    }
+}
+
+table! {
     rfds (id) {
         id -> Int4,
         number -> Int4,
@@ -278,11 +278,11 @@ allow_tables_to_appear_in_same_query!(
     buildings,
     conference_rooms,
     github_labels,
+    github_repos,
     groups,
     journal_club_meetings,
     links,
     mailing_list_subscribers,
-    repos,
     rfds,
     users,
 );

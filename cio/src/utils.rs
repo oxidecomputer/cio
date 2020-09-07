@@ -3,7 +3,6 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::models::Repo;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::repositories::OrgRepoType;
 use hubcaps::repositories::OrganizationRepoListOptions;
@@ -12,6 +11,9 @@ use reqwest::Client;
 use yup_oauth2::{
     read_service_account_key, AccessToken, ServiceAccountAuthenticator,
 };
+
+use crate::db::Database;
+use crate::models::NewRepo;
 
 /// Write a file.
 pub fn write_file(file: PathBuf, contents: String) {
@@ -82,7 +84,7 @@ pub fn github_org() -> String {
 }
 
 /// List all the GitHub repositories for our org.
-pub async fn list_all_github_repos(github: &Github) -> Vec<Repo> {
+pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
     // TODO: paginate.
     let github_repos = github
         .org_repos(github_org())
@@ -95,10 +97,35 @@ pub async fn list_all_github_repos(github: &Github) -> Vec<Repo> {
         .await
         .unwrap();
 
-    let mut repos: Vec<Repo> = Default::default();
+    let mut repos: Vec<NewRepo> = Default::default();
     for r in github_repos {
-        repos.push(Repo::new(r).await);
+        repos.push(NewRepo::new(r).await);
     }
 
     repos
+}
+
+// Sync the repos with our database.
+pub async fn refresh_db_github_repos(github: &Github) {
+    let github_repos = list_all_github_repos(github).await;
+
+    // Initialize our database.
+    let db = Database::new();
+
+    // Sync github_repos.
+    for github_repo in github_repos {
+        db.upsert_github_repo(&github_repo);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::authenticate_github;
+    use crate::utils::refresh_db_github_repos;
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_github_repos() {
+        let github = authenticate_github();
+        refresh_db_github_repos(&github).await;
+    }
 }

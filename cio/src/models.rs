@@ -3,13 +3,18 @@ use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
+use diesel::deserialize::{self, FromSql};
+use diesel::pg::Pg;
+use diesel::serialize::{self, Output, ToSql};
+use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
-use hubcaps::repositories::Repo as GithubRepo;
+use hubcaps::repositories::Repo;
 use macros::db_setup;
 use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::io::Write;
 
 use crate::airtable::{
     airtable_api_key, AIRTABLE_AUTH0_LOGINS_TABLE,
@@ -17,8 +22,8 @@ use crate::airtable::{
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
 use crate::schema::{
-    applicants, auth_logins, mailing_list_subscribers, repos, rfds as r_f_ds,
-    rfds,
+    applicants, auth_logins, github_repos, mailing_list_subscribers,
+    rfds as r_f_ds, rfds,
 };
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
@@ -1151,8 +1156,17 @@ impl Default for NewMailingListSubscriber {
 /// The data type for a GitHub user.
 #[serde(rename_all = "camelCase")]
 #[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+    Debug,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    FromSqlRow,
+    AsExpression,
+    Serialize,
+    Deserialize,
 )]
+#[sql_type = "Jsonb"]
 pub struct GitHubUser {
     pub login: String,
     pub id: u64,
@@ -1172,18 +1186,43 @@ pub struct GitHubUser {
     pub site_admin: bool,
 }
 
+impl FromSql<Jsonb, Pg> for GitHubUser {
+    fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
+        let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
+        Ok(serde_json::from_value(value).unwrap())
+    }
+}
+
+impl ToSql<Jsonb, Pg> for GitHubUser {
+    fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+        let value = serde_json::to_value(self).unwrap();
+        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&value, out)
+    }
+}
+
 /// The data type for a GitHub repository.
 #[db_setup {
-    new_name = "Repo",
+    new_name = "GithubRepo",
 }]
 #[serde(rename_all = "camelCase")]
-#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(
+    Debug,
+    Insertable,
+    AsChangeset,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+#[table_name = "github_repos"]
 pub struct NewRepo {
-    pub github_id: i32,
+    pub github_id: String,
     pub owner: GitHubUser,
     pub name: String,
     pub full_name: String,
-    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
     pub private: bool,
     pub fork: bool,
     pub url: String,
@@ -1229,8 +1268,10 @@ pub struct NewRepo {
     pub tags_url: String,
     pub teams_url: String,
     pub trees_url: String,
-    pub homepage: Option<String>,
-    pub language: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub homepage: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub language: String,
     pub forks_count: i32,
     pub stargazers_count: i32,
     pub watchers_count: i32,
@@ -1247,12 +1288,28 @@ pub struct NewRepo {
     pub updated_at: DateTime<Utc>,
 }
 
-impl Repo {
-    pub async fn new(r: GithubRepo) -> Self {
+impl NewRepo {
+    pub async fn new(r: Repo) -> Self {
         // TODO: get the languages as well
         // https://docs.rs/hubcaps/0.6.1/hubcaps/repositories/struct.Repo.html
-        Repo {
-            id: r.id,
+
+        let mut homepage = String::new();
+        if r.homepage.is_some() {
+            homepage = r.homepage.unwrap();
+        }
+
+        let mut description = String::new();
+        if r.description.is_some() {
+            description = r.description.unwrap();
+        }
+
+        let mut language = String::new();
+        if r.language.is_some() {
+            language = r.language.unwrap();
+        }
+
+        NewRepo {
+            github_id: r.id.to_string(),
             owner: GitHubUser {
                 login: r.owner.login,
                 id: r.owner.id,
@@ -1273,7 +1330,7 @@ impl Repo {
             },
             name: r.name,
             full_name: r.full_name,
-            description: r.description,
+            description,
             private: r.private,
             fork: r.fork,
             url: r.url,
@@ -1319,14 +1376,26 @@ impl Repo {
             tags_url: r.tags_url,
             teams_url: r.teams_url,
             trees_url: r.trees_url,
-            homepage: r.homepage,
-            language: r.language,
-            forks_count: r.forks_count,
-            stargazers_count: r.stargazers_count,
-            watchers_count: r.watchers_count,
-            size: r.size,
+            homepage,
+            language,
+            forks_count: r.forks_count.to_string().parse::<i32>().unwrap(),
+            stargazers_count: r
+                .stargazers_count
+                .to_string()
+                .parse::<i32>()
+                .unwrap(),
+            watchers_count: r
+                .watchers_count
+                .to_string()
+                .parse::<i32>()
+                .unwrap(),
+            size: r.size.to_string().parse::<i32>().unwrap(),
             default_branch: r.default_branch,
-            open_issues_count: r.open_issues_count,
+            open_issues_count: r
+                .open_issues_count
+                .to_string()
+                .parse::<i32>()
+                .unwrap(),
             has_issues: r.has_issues,
             has_wiki: r.has_wiki,
             has_pages: r.has_pages,

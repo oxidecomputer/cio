@@ -8,12 +8,12 @@ use crate::configs::{
     LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig,
 };
 use crate::models::{
-    Applicant, AuthLogin, MailingListSubscriber, NewApplicant, NewAuthLogin,
-    NewMailingListSubscriber, NewRFD, RFD,
+    Applicant, AuthLogin, GithubRepo, MailingListSubscriber, NewApplicant,
+    NewAuthLogin, NewMailingListSubscriber, NewRFD, NewRepo, RFD,
 };
 use crate::schema::{
     applicants, auth_logins, buildings, conference_rooms, github_labels,
-    groups, links, mailing_list_subscribers, rfds, users,
+    github_repos, groups, links, mailing_list_subscribers, rfds, users,
 };
 
 pub struct Database {
@@ -270,6 +270,53 @@ impl Database {
             .values(github_label)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating github_label failed: {}", e))
+    }
+
+    pub fn get_github_repos(&self) -> Vec<GithubRepo> {
+        github_repos::dsl::github_repos
+            .order_by(github_repos::dsl::id.desc())
+            .load::<GithubRepo>(&self.conn)
+            .unwrap()
+    }
+
+    pub fn upsert_github_repo(&self, github_repo: &NewRepo) -> GithubRepo {
+        // See if we already have the github_repo in the database.
+        match github_repos::dsl::github_repos
+            .filter(
+                github_repos::dsl::full_name
+                    .eq(github_repo.full_name.to_string()),
+            )
+            .limit(1)
+            .load::<GithubRepo>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the github_repo in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let a = r.get(0).unwrap();
+
+                    // Update the github_repo.
+                    return diesel::update(a)
+                        .set(github_repo)
+                        .get_result::<GithubRepo>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "unable to update github_repo {}: {}",
+                                a.id, e
+                            )
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the github_repo in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(github_repos::table)
+            .values(github_repo)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating github_repo failed: {}", e))
     }
 
     pub fn get_groups(&self) -> Vec<Group> {

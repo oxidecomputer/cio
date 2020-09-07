@@ -1,6 +1,6 @@
- CREATE TABLE repos (
+ CREATE TABLE github_repos (
     id SERIAL PRIMARY KEY,
-    github_id INTEGER NOT NULL UNIQUE,
+    github_id VARCHAR NOT NULL UNIQUE,
     owner JSONB NOT NULL,
     name VARCHAR NOT NULL UNIQUE,
     full_name VARCHAR NOT NULL UNIQUE,

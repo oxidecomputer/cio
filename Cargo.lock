@@ -378,6 +378,7 @@ dependencies = [
  "chrono 0.4.15",
  "diesel_derives",
  "pq-sys",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 pub mod airtable;
 pub mod applicants;
 pub mod auth_logins;
