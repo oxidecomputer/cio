@@ -20,7 +20,7 @@ jobs:
         run: |
           wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy \
           && chmod +x cloud_sql_proxy \
-          mv cloud_sql_proxy /usr/local/bin/
+          && mv cloud_sql_proxy /usr/local/bin/
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
