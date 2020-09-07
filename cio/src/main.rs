@@ -21,7 +21,7 @@ use cio_api::configs::{
 use cio_api::journal_clubs::get_meetings_from_repo;
 use cio_api::mailing_list::get_all_subscribers;
 use cio_api::models::{
-    Applicant, JournalClubMeeting, MailingListSignup, Repo, RFD,
+    JournalClubMeeting, MailingListSignup, NewApplicant as Applicant, Repo, RFD,
 };
 use cio_api::rfds::get_rfds_from_repo;
 use cio_api::utils::{authenticate_github, list_all_github_repos};
