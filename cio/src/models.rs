@@ -1255,7 +1255,8 @@ pub struct NewRepo {
     pub languages_url: String,
     pub merges_url: String,
     pub milestones_url: String,
-    pub mirror_url: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub mirror_url: String,
     pub notifications_url: String,
     pub pulls_url: String,
     pub releases_url: String,
@@ -1306,6 +1307,11 @@ impl NewRepo {
         let mut language = String::new();
         if r.language.is_some() {
             language = r.language.unwrap();
+        }
+
+        let mut mirror_url = String::new();
+        if r.mirror_url.is_some() {
+            mirror_url = r.mirror_url.unwrap();
         }
 
         NewRepo {
@@ -1363,7 +1369,7 @@ impl NewRepo {
             languages_url: r.languages_url,
             merges_url: r.merges_url,
             milestones_url: r.milestones_url,
-            mirror_url: r.mirror_url,
+            mirror_url,
             notifications_url: r.notifications_url,
             pulls_url: r.pulls_url,
             releases_url: r.releases_url,
