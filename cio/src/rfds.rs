@@ -56,7 +56,7 @@ pub async fn refresh_db_rfds(github: &Github) {
 
 #[cfg(test)]
 mod tests {
-    use crate::applicants::refresh_db_rfds;
+    use crate::rfds::refresh_db_rfds;
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
