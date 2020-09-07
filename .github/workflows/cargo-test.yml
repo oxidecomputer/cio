@@ -15,6 +15,12 @@ jobs:
         shell: bash
         run: |
           sudo apt update -y && sudo apt install -y pandoc poppler-utils
+      - name: Install SQL proxy
+        shell: bash
+        run: |
+          wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy \
+          && chmod +x cloud_sql_proxy \
+          mv cloud_sql_proxy /usr/local/bin/
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
@@ -39,9 +45,16 @@ jobs:
       - name: Set up environment
         shell: bash
         run: |
-          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key \
+          && echo "$SQL_PROXY_KEY" > ${{ github.workspace }}/sql_proxy_key
         env:
           GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
+          SQL_PROXY_KEY: ${{ secrets.SQL_PROXY_KEY }}
+      - name: Start the sql_proxy
+        shell: bash
+        run: |
+          cloud_sql_proxy -instances=${{ secrets.INSTANCE_CONNECTION_NAME }}=tcp:5432 \
+                  -credential_file=${{ github.workspace }}/sql_proxy_key &
       - name: Run cargo test
         run: |
           cargo test
