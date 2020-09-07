@@ -1,4 +1,5 @@
 extern crate proc_macro;
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use serde::Deserialize;
@@ -37,12 +38,13 @@ fn do_macro(
     }
 
     let new_struct = quote!(
+        #item
+
         #[derive(
             Debug,
             Queryable,
             Identifiable,
             Associations,
-            Default,
             PartialEq,
             Clone,
             JsonSchema,
@@ -77,12 +79,16 @@ mod tests {
             .into(),
         );
         let expected = quote! {
+            pub struct Item {
+                pub foo: String,
+                pub bar: String
+            }
+
             #[derive(
                 Debug,
                 Queryable,
                 Identifiable,
                 Associations,
-                Default,
                 PartialEq,
                 Clone,
                 JsonSchema,

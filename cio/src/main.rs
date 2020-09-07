@@ -13,12 +13,12 @@ use dropshot::HttpServer;
 use dropshot::RequestContext;
 use hubcaps::Github;
 
-use cio_api::code_that_should_be_generated::{
-    Applicant, AuthLogin, Building, ConferenceRoom, GithubLabel, Group, Link,
-    MailingListSubscriber, User, RFD,
+use cio_api::configs::{
+    Building, ConferenceRoom, GithubLabel, Group, Link, User,
 };
 use cio_api::db::Database;
 use cio_api::journal_clubs::get_meetings_from_repo;
+use cio_api::models::{Applicant, AuthLogin, MailingListSubscriber, RFD};
 use cio_api::models::{JournalClubMeeting, Repo};
 use cio_api::utils::{authenticate_github, list_all_github_repos};
 

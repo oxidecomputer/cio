@@ -3,16 +3,13 @@ use std::env;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
-use crate::code_that_should_be_generated::{
-    Applicant, AuthLogin, Building, ConferenceRoom, GithubLabel, Group, Link,
-    MailingListSubscriber, User, RFD,
-};
 use crate::configs::{
-    BuildingConfig, GroupConfig, LabelConfig, LinkConfig, ResourceConfig,
-    UserConfig,
+    Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig,
+    LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig,
 };
 use crate::models::{
-    NewApplicant, NewAuthLogin, NewMailingListSubscriber, NewRFD,
+    Applicant, AuthLogin, MailingListSubscriber, NewApplicant, NewAuthLogin,
+    NewMailingListSubscriber, NewRFD, RFD,
 };
 use crate::schema::{
     applicants, auth_logins, buildings, conference_rooms, github_labels,

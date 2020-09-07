@@ -257,6 +257,7 @@ dependencies = [
  "google-drive 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "html2text",
  "hubcaps",
+ "macros",
  "pandoc",
  "phonenumber",
  "regex",

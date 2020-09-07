@@ -5,6 +5,7 @@ use chrono::DateTime;
 use chrono_humanize::HumanTime;
 use google_drive::GoogleDrive;
 use hubcaps::repositories::Repo as GithubRepo;
+use macros::db_setup;
 use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,7 +16,9 @@ use crate::airtable::{
     AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
-use crate::schema::{applicants, auth_logins, mailing_list_subscribers, rfds};
+use crate::schema::{
+    applicants, auth_logins, mailing_list_subscribers, rfds as r_f_ds, rfds,
+};
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
@@ -32,6 +35,9 @@ static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s va
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
 /// The data type for a NewApplicant.
+#[db_setup {
+    new_name = "Applicant",
+}]
 #[derive(
     Debug,
     Insertable,
@@ -790,6 +796,9 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 }
 
 /// The data type for an NewAuthLogin.
+#[db_setup {
+    new_name = "AuthLogin",
+}]
 #[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
@@ -957,7 +966,10 @@ pub struct JournalClubPaper {
     pub link: String,
 }
 
-/// The data type for a MailingListSignup.
+/// The data type for a MailingListSubscriber.
+#[db_setup {
+    new_name = "MailingListSubscriber",
+}]
 #[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
@@ -1330,6 +1342,9 @@ impl Repo {
 }
 
 /// The data type for an RFD.
+#[db_setup {
+    new_name = "RFD",
+}]
 #[serde(rename_all = "camelCase")]
 #[derive(
     Debug,

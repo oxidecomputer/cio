@@ -23,6 +23,7 @@ html2text = "0.1"
 # https://github.com/softprops/hubcaps/issues/269
 #hubcaps = { version = "0.6", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/softprops/hubcaps", rev = "2385b8e957bb921f61c1146f075ae132dac5e95d" , features = ["httpcache"] }
+macros = { path = "../macros" }
 pandoc = "0.8"
 phonenumber = "0.2"
 regex = "1"
