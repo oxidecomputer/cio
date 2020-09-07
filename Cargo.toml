@@ -5,6 +5,7 @@ members = [
 	"drive",
 	"giphy",
 	"gsuite",
+	"macros",
 	"sendgrid",
 	"sheets",
 	"zoom",

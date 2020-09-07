@@ -1,0 +1,17 @@
+[package]
+name = "macros"
+description = "Macros for our CIO functions"
+version = "0.1.0"
+authors = ["Jess Frazelle <jess@oxide.computer>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+schemars = "0.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_tokenstream = "0.1.0"
+syn = { version = "1.0", features = [ "derive", "parsing", "printing" ] }
