@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::{
-    applicants, buildings, conference_rooms, github_labels, groups, links,
-    mailing_list_subscribers, rfds as r_f_ds, users,
+    applicants, auth_logins, buildings, conference_rooms, github_labels,
+    groups, links, mailing_list_subscribers, rfds as r_f_ds, users,
 };
 
 #[derive(
@@ -83,6 +83,46 @@ pub struct Applicant {
     pub question_values_in_tension: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub question_why_oxide: String,
+}
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+pub struct AuthLogin {
+    pub id: i32,
+    pub user_id: String,
+    pub name: String,
+    pub nickname: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub username: String,
+    pub email: String,
+    pub email_verified: bool,
+    pub picture: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub company: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub blog: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
+    #[serde(default)]
+    pub phone_verified: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub locale: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub login_provider: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub last_login: DateTime<Utc>,
+    pub last_ip: String,
+    pub logins_count: i32,
 }
 
 #[derive(

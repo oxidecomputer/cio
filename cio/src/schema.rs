@@ -40,6 +40,30 @@ table! {
 }
 
 table! {
+    auth_logins (id) {
+        id -> Int4,
+        user_id -> Varchar,
+        name -> Varchar,
+        nickname -> Varchar,
+        username -> Varchar,
+        email -> Varchar,
+        email_verified -> Bool,
+        picture -> Varchar,
+        company -> Varchar,
+        blog -> Varchar,
+        phone -> Varchar,
+        phone_verified -> Bool,
+        locale -> Varchar,
+        login_provider -> Varchar,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        last_login -> Timestamptz,
+        last_ip -> Varchar,
+        logins_count -> Int4,
+    }
+}
+
+table! {
     buildings (id) {
         id -> Int4,
         name -> Varchar,
@@ -90,6 +114,19 @@ table! {
         who_can_post_message -> Varchar,
         who_can_view_group -> Varchar,
         who_can_view_membership -> Varchar,
+    }
+}
+
+table! {
+    journal_club_meetings (id) {
+        id -> Int4,
+        issue -> Varchar,
+        title -> Varchar,
+        date -> Date,
+        coordinator -> Varchar,
+        state -> Varchar,
+        recording -> Varchar,
+        papers -> Json,
     }
 }
 
@@ -165,10 +202,12 @@ table! {
 
 allow_tables_to_appear_in_same_query!(
     applicants,
+    auth_logins,
     buildings,
     conference_rooms,
     github_labels,
     groups,
+    journal_club_meetings,
     links,
     mailing_list_subscribers,
     rfds,

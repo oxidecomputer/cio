@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
-    AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
+    airtable_api_key, AIRTABLE_AUTH0_LOGINS_TABLE,
+    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
-use crate::schema::{applicants, mailing_list_subscribers, rfds};
+use crate::schema::{applicants, auth_logins, mailing_list_subscribers, rfds};
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
@@ -787,6 +787,72 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     }
 
     Default::default()
+}
+
+/// The data type for an NewAuthLogin.
+#[serde(rename_all = "camelCase")]
+#[derive(
+    Debug,
+    Insertable,
+    AsChangeset,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+#[table_name = "auth_logins"]
+pub struct NewAuthLogin {
+    pub user_id: String,
+    pub name: String,
+    pub nickname: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub username: String,
+    pub email: String,
+    pub email_verified: bool,
+    pub picture: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub company: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub blog: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
+    #[serde(default)]
+    pub phone_verified: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub locale: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub login_provider: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub last_login: DateTime<Utc>,
+    pub last_ip: String,
+    pub logins_count: i32,
+}
+
+impl NewAuthLogin {
+    /// Push the auth0 login to our Airtable workspace.
+    pub async fn push_to_airtable(&self) {
+        // Initialize the Airtable client.
+        let airtable =
+            Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+
+        // Create the record.
+        let record = Record {
+            id: None,
+            created_time: None,
+            fields: serde_json::to_value(self).unwrap(),
+        };
+
+        // Send the new record to the Airtable client.
+        // Batch can only handle 10 at a time.
+        airtable
+            .create_records(AIRTABLE_AUTH0_LOGINS_TABLE, vec![record])
+            .await
+            .unwrap();
+
+        println!("created auth0 login in Airtable: {:?}", self);
+    }
 }
 
 /// The data type for a JournalClubMeeting.

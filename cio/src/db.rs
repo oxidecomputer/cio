@@ -4,17 +4,19 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
 use crate::code_that_should_be_generated::{
-    Applicant, Building, ConferenceRoom, GithubLabel, Group, Link,
+    Applicant, AuthLogin, Building, ConferenceRoom, GithubLabel, Group, Link,
     MailingListSubscriber, User, RFD,
 };
 use crate::configs::{
     BuildingConfig, GroupConfig, LabelConfig, LinkConfig, ResourceConfig,
     UserConfig,
 };
-use crate::models::{NewApplicant, NewMailingListSubscriber, NewRFD};
+use crate::models::{
+    NewApplicant, NewAuthLogin, NewMailingListSubscriber, NewRFD,
+};
 use crate::schema::{
-    applicants, buildings, conference_rooms, github_labels, groups, links,
-    mailing_list_subscribers, rfds, users,
+    applicants, auth_logins, buildings, conference_rooms, github_labels,
+    groups, links, mailing_list_subscribers, rfds, users,
 };
 
 pub struct Database {
@@ -157,6 +159,45 @@ impl Database {
             .unwrap_or_else(|e| {
                 panic!("creating conference_room failed: {}", e)
             })
+    }
+
+    pub fn upsert_auth_login(&self, auth_login: &NewAuthLogin) -> AuthLogin {
+        // See if we already have the auth_login in the database.
+        match auth_logins::dsl::auth_logins
+            .filter(
+                auth_logins::dsl::user_id.eq(auth_login.user_id.to_string()),
+            )
+            .limit(1)
+            .load::<AuthLogin>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the auth_login in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let a = r.get(0).unwrap();
+
+                    // Update the auth_login.
+                    return diesel::update(a)
+                        .set(auth_login)
+                        .get_result::<AuthLogin>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "unable to update auth_login {}: {}",
+                                a.id, e
+                            )
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the auth_login in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(auth_logins::table)
+            .values(auth_login)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating auth_login failed: {}", e))
     }
 
     pub fn upsert_github_label(
