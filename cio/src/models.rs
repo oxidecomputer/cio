@@ -23,7 +23,8 @@ use crate::airtable::{
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
 use crate::rfds::{
-    clean_rfd_html_links, get_rfd_contents_from_repo, parse_markdown,
+    clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc,
+    parse_markdown,
 };
 use crate::schema::{
     applicants, auth_logins, github_repos, mailing_list_subscribers,
@@ -1513,11 +1514,12 @@ impl NewRFD {
         // TODO: figure out how to get the commit date, hubcaps doesn't seem to have it
         // probably need to send a patch
 
-        // Parse the markdown.
         if is_markdown {
+            // Parse the markdown.
             self.html = parse_markdown(&self.content);
         } else {
             // Parse the acsiidoc.
+            self.html = parse_asciidoc(&self.content);
         }
         self.html = clean_rfd_html_links(&self.html, &self.number_string);
 

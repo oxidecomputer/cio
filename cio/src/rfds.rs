@@ -1,4 +1,8 @@
 use std::collections::BTreeMap;
+use std::env;
+use std::fs;
+use std::io::{stderr, stdout, Write};
+use std::process::Command;
 use std::str::from_utf8;
 
 use comrak::{markdown_to_html, ComrakOptions};
@@ -84,15 +88,43 @@ pub fn parse_markdown(content: &str) -> String {
 }
 
 pub fn parse_asciidoc(content: &str) -> String {
-    content.to_string()
+    // TODO: do code highlighting
+    let mut path = env::temp_dir();
+    path.push("contents.adoc");
+
+    // Write the contents to a temporary file.
+    let mut file = fs::File::create(path.clone()).unwrap();
+    file.write_all(content.as_bytes()).unwrap();
+
+    let cmd_output = Command::new("asciidoctor")
+        .args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let result = if cmd_output.status.success() {
+        from_utf8(&cmd_output.stdout).unwrap()
+    } else {
+        println!("[rfds] running asciidoctor failed:");
+        stdout().write_all(&cmd_output.stdout).unwrap();
+        stderr().write_all(&cmd_output.stderr).unwrap();
+
+        Default::default()
+    };
+
+    // Delete our temporary file.
+    if path.exists() && !path.is_dir() {
+        fs::remove_file(path).unwrap();
+    }
+
+    result.to_string()
 }
 
-pub fn clean_rfd_html_links(content: &str, branch: &str) -> String {
+pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     let mut cleaned = content
-        .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, branch))
+        .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
         .replace(
             r#"img src=""#,
-            &format!(r#"img src="/static/images/{}/"#, branch),
+            &format!(r#"img src="/static/images/{}/"#, num),
         );
 
     let mut re =

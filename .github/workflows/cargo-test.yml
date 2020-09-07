@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - name: Install pandoc and pdftotext
+      - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
-          sudo apt update -y && sudo apt install -y pandoc poppler-utils
+          sudo apt update -y && sudo apt install -y asciidoctor pandoc poppler-utils
       - name: Install SQL proxy
         shell: bash
         run: |
