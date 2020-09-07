@@ -1,5 +1,4 @@
 use std::any::Any;
-use std::collections::BTreeMap;
 use std::fs::File;
 use std::sync::Arc;
 
@@ -14,15 +13,13 @@ use dropshot::HttpServer;
 use dropshot::RequestContext;
 use hubcaps::Github;
 
-use cio_api::configs::{
-    get_configs_from_repo, BuildingConfig, Config, GroupConfig, LabelConfig,
-    LinkConfig, ResourceConfig, UserConfig,
+use cio_api::code_that_should_be_generated::{
+    Applicant, AuthLogin, Building, ConferenceRoom, GithubLabel, Group, Link,
+    MailingListSubscriber, User, RFD,
 };
+use cio_api::db::Database;
 use cio_api::journal_clubs::get_meetings_from_repo;
-use cio_api::models::{
-    JournalClubMeeting, NewApplicant as Applicant,
-    NewMailingListSubscriber as MailingListSubscriber, NewRFD as RFD, Repo,
-};
+use cio_api::models::{JournalClubMeeting, Repo};
 use cio_api::utils::{authenticate_github, list_all_github_repos};
 
 #[tokio::main]
@@ -54,6 +51,7 @@ async fn main() -> Result<(), String> {
      */
     let mut api = ApiDescription::new();
     api.register(api_get_applicants).unwrap();
+    api.register(api_get_auth_logins).unwrap();
     api.register(api_get_buildings).unwrap();
     api.register(api_get_conference_rooms).unwrap();
     api.register(api_get_github_labels).unwrap();
@@ -109,18 +107,10 @@ struct Context {
     // A GitHub client.
     github: Github,
 
-    // A cache of our applicants that we will continuously update.
-    applicants: Vec<Applicant>,
-    // A cache of our configs that we will continuously update.
-    configs: Config,
     // A cache of journal club meetings that we will continuously update.
     journal_club_meetings: Vec<JournalClubMeeting>,
-    // A cache of mailing list subscribers that we will continuously update.
-    mailing_list_subscribers: Vec<MailingListSubscriber>,
     // A cache of our repos that we will continuously update.
     repos: Vec<Repo>,
-    // A cache of our RFDs that we will continuously update.
-    rfds: BTreeMap<i32, RFD>,
 }
 
 impl Context {
@@ -130,12 +120,8 @@ impl Context {
     pub async fn new(github: Github) -> Arc<Context> {
         let mut api_context = Context {
             github,
-            configs: Default::default(),
-            applicants: Default::default(),
             journal_club_meetings: Default::default(),
-            mailing_list_subscribers: Default::default(),
             repos: Default::default(),
-            rfds: Default::default(),
         };
 
         // Refresh our context.
@@ -145,32 +131,13 @@ impl Context {
     }
 
     pub async fn refresh(&mut self) {
-        println!("Refreshing cache of applicants...");
-        // TODO: make this real
-        let applicants = Default::default();
-        self.applicants = applicants;
-
-        println!("Refreshing cache of configs...");
-        let configs = get_configs_from_repo(&self.github).await;
-        self.configs = configs;
-
         println!("Refreshing cache of journal club meetings...");
         let journal_club_meetings = get_meetings_from_repo(&self.github).await;
         self.journal_club_meetings = journal_club_meetings;
 
-        println!("Refreshing cache of mailing list subscribers...");
-        // TODO: make this real
-        let mailing_list_subscribers = Default::default();
-        self.mailing_list_subscribers = mailing_list_subscribers;
-
         println!("Refreshing cache of GitHub repos...");
         let repos = list_all_github_repos(&self.github).await;
         self.repos = repos;
-
-        println!("Refreshing cache of RFDs...");
-        // TODO: make this real
-        let rfds = Default::default();
-        self.rfds = rfds;
     }
 
     /**
@@ -190,6 +157,22 @@ impl Context {
  */
 
 /**
+ * Fetch all auth logins.
+ */
+#[endpoint {
+    method = GET,
+    path = "/authLogins",
+}]
+async fn api_get_auth_logins(
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<AuthLogin>>, HttpError> {
+    // TODO: figure out how to share this between threads.
+    let db = Database::new();
+
+    Ok(HttpResponseOk(db.get_auth_logins()))
+}
+
+/**
  * Fetch all applicants.
  */
 #[endpoint {
@@ -197,11 +180,11 @@ impl Context {
     path = "/applicants",
 }]
 async fn api_get_applicants(
-    rqctx: Arc<RequestContext>,
+    _rqctx: Arc<RequestContext>,
 ) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.applicants.clone()))
+    Ok(HttpResponseOk(db.get_applicants()))
 }
 
 /**
@@ -212,11 +195,11 @@ async fn api_get_applicants(
     path = "/buildings",
 }]
 async fn api_get_buildings(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<BTreeMap<String, BuildingConfig>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.configs.buildings.clone()))
+    Ok(HttpResponseOk(db.get_buildings()))
 }
 
 /**
@@ -227,11 +210,11 @@ async fn api_get_buildings(
     path = "/conferenceRooms",
 }]
 async fn api_get_conference_rooms(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<BTreeMap<String, ResourceConfig>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<ConferenceRoom>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.configs.resources.clone()))
+    Ok(HttpResponseOk(db.get_conference_rooms()))
 }
 
 /**
@@ -242,11 +225,11 @@ async fn api_get_conference_rooms(
     path = "/github/labels",
 }]
 async fn api_get_github_labels(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<LabelConfig>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<GithubLabel>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.configs.labels.clone()))
+    Ok(HttpResponseOk(db.get_github_labels()))
 }
 
 /**
@@ -272,11 +255,11 @@ async fn api_get_github_repos(
     path = "/groups",
 }]
 async fn api_get_groups(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<BTreeMap<String, GroupConfig>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.configs.groups.clone()))
+    Ok(HttpResponseOk(db.get_groups()))
 }
 
 /**
@@ -302,11 +285,11 @@ async fn api_get_journal_club_meetings(
     path = "/links",
 }]
 async fn api_get_links(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<BTreeMap<String, LinkConfig>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.configs.links.clone()))
+    Ok(HttpResponseOk(db.get_links()))
 }
 
 /**
@@ -317,11 +300,11 @@ async fn api_get_links(
     path = "/mailingListSubscribers",
 }]
 async fn api_get_mailing_list_subscribers(
-    rqctx: Arc<RequestContext>,
+    _rqctx: Arc<RequestContext>,
 ) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.mailing_list_subscribers.clone()))
+    Ok(HttpResponseOk(db.get_mailing_list_subscribers()))
 }
 
 /**
@@ -332,11 +315,11 @@ async fn api_get_mailing_list_subscribers(
     path = "/rfds",
 }]
 async fn api_get_rfds(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<BTreeMap<i32, RFD>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.rfds.clone()))
+    Ok(HttpResponseOk(db.get_rfds()))
 }
 
 /**
@@ -347,9 +330,9 @@ async fn api_get_rfds(
     path = "/users",
 }]
 async fn api_get_users(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<BTreeMap<String, UserConfig>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.configs.users.clone()))
+    Ok(HttpResponseOk(db.get_users()))
 }

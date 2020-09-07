@@ -98,6 +98,7 @@ pub struct Identity {
 }
 
 /// List users.
+// TODO actually auth auth0 in a sane way.
 pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
     let mut users: Vec<User> = Default::default();
 

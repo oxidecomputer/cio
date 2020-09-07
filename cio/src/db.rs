@@ -45,6 +45,13 @@ impl Database {
         Default::default()
     }
 
+    pub fn get_applicants(&self) -> Vec<Applicant> {
+        applicants::dsl::applicants
+            .order_by(applicants::dsl::id.asc())
+            .load::<Applicant>(&self.conn)
+            .unwrap()
+    }
+
     pub fn upsert_applicant(&self, applicant: &NewApplicant) -> Applicant {
         // See if we already have the applicant in the database.
         match applicants::dsl::applicants
@@ -82,6 +89,13 @@ impl Database {
             .unwrap_or_else(|e| panic!("creating applicant failed: {}", e))
     }
 
+    pub fn get_buildings(&self) -> Vec<Building> {
+        buildings::dsl::buildings
+            .order_by(buildings::dsl::id.asc())
+            .load::<Building>(&self.conn)
+            .unwrap()
+    }
+
     pub fn upsert_building(&self, building: &BuildingConfig) -> Building {
         // See if we already have the building in the database.
         match buildings::dsl::buildings
@@ -114,6 +128,13 @@ impl Database {
             .values(building)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating building failed: {}", e))
+    }
+
+    pub fn get_conference_rooms(&self) -> Vec<ConferenceRoom> {
+        conference_rooms::dsl::conference_rooms
+            .order_by(conference_rooms::dsl::id.asc())
+            .load::<ConferenceRoom>(&self.conn)
+            .unwrap()
     }
 
     pub fn upsert_conference_room(
@@ -161,6 +182,13 @@ impl Database {
             })
     }
 
+    pub fn get_auth_logins(&self) -> Vec<AuthLogin> {
+        auth_logins::dsl::auth_logins
+            .order_by(auth_logins::dsl::id.asc())
+            .load::<AuthLogin>(&self.conn)
+            .unwrap()
+    }
+
     pub fn upsert_auth_login(&self, auth_login: &NewAuthLogin) -> AuthLogin {
         // See if we already have the auth_login in the database.
         match auth_logins::dsl::auth_logins
@@ -198,6 +226,13 @@ impl Database {
             .values(auth_login)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating auth_login failed: {}", e))
+    }
+
+    pub fn get_github_labels(&self) -> Vec<GithubLabel> {
+        github_labels::dsl::github_labels
+            .order_by(github_labels::dsl::id.asc())
+            .load::<GithubLabel>(&self.conn)
+            .unwrap()
     }
 
     pub fn upsert_github_label(
@@ -240,6 +275,13 @@ impl Database {
             .unwrap_or_else(|e| panic!("creating github_label failed: {}", e))
     }
 
+    pub fn get_groups(&self) -> Vec<Group> {
+        groups::dsl::groups
+            .order_by(groups::dsl::id.asc())
+            .load::<Group>(&self.conn)
+            .unwrap()
+    }
+
     pub fn upsert_group(&self, group: &GroupConfig) -> Group {
         // See if we already have the group in the database.
         match groups::dsl::groups
@@ -274,6 +316,13 @@ impl Database {
             .unwrap_or_else(|e| panic!("creating group failed: {}", e))
     }
 
+    pub fn get_links(&self) -> Vec<Link> {
+        links::dsl::links
+            .order_by(links::dsl::id.asc())
+            .load::<Link>(&self.conn)
+            .unwrap()
+    }
+
     pub fn upsert_link(&self, link: &LinkConfig) -> Link {
         // See if we already have the link in the database.
         match links::dsl::links
@@ -306,6 +355,13 @@ impl Database {
             .values(link)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating link failed: {}", e))
+    }
+
+    pub fn get_mailing_list_subscribers(&self) -> Vec<MailingListSubscriber> {
+        mailing_list_subscribers::dsl::mailing_list_subscribers
+            .order_by(mailing_list_subscribers::dsl::id.asc())
+            .load::<MailingListSubscriber>(&self.conn)
+            .unwrap()
     }
 
     pub fn upsert_mailing_list_subscriber(
@@ -350,6 +406,13 @@ impl Database {
             })
     }
 
+    pub fn get_rfds(&self) -> Vec<RFD> {
+        rfds::dsl::rfds
+            .order_by(rfds::dsl::id.asc())
+            .load::<RFD>(&self.conn)
+            .unwrap()
+    }
+
     pub fn upsert_rfd(&self, rfd: &NewRFD) -> RFD {
         // See if we already have the rfd in the database.
         match rfds::dsl::rfds
@@ -382,6 +445,13 @@ impl Database {
             .values(rfd)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating rfd failed: {}", e))
+    }
+
+    pub fn get_users(&self) -> Vec<User> {
+        users::dsl::users
+            .order_by(users::dsl::id.asc())
+            .load::<User>(&self.conn)
+            .unwrap()
     }
 
     pub fn upsert_user(&self, user: &UserConfig) -> User {

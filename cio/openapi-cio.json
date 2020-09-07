@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.2",
+  "openapi": "3.0.3",
   "info": {
     "title": "CIO API",
     "description": "API for interacting with the data our CIO bot handles",
@@ -32,10 +32,94 @@
         }
       }
     },
+    "/authLogins": {
+      "get": {
+        "description": "\n * Fetch all auth logins.\n ",
+        "operationId": "api_get_auth_logins",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuthLogin"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/buildings": {
+      "get": {
+        "description": "\n * Fetch a list of office buildings.\n ",
+        "operationId": "api_get_buildings",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Building"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conferenceRooms": {
+      "get": {
+        "description": "\n * Fetch a list of conference rooms.\n ",
+        "operationId": "api_get_conference_rooms",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConferenceRoom"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/github/labels": {
+      "get": {
+        "description": "\n * Fetch a list of our GitHub labels that get added to all repositories.\n ",
+        "operationId": "api_get_github_labels",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GithubLabel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/github/repos": {
       "get": {
         "description": "\n * Fetch a list of our GitHub repositories.\n ",
-        "operationId": "api_get_repos",
+        "operationId": "api_get_github_repos",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -45,6 +129,27 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Repo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/groups": {
+      "get": {
+        "description": "\n * Fetch a list of Google groups.\n ",
+        "operationId": "api_get_groups",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Group"
                   }
                 }
               }
@@ -74,6 +179,27 @@
         }
       }
     },
+    "/links": {
+      "get": {
+        "description": "\n * Fetch a list of internal links.\n ",
+        "operationId": "api_get_links",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Link"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/mailingListSubscribers": {
       "get": {
         "description": "\n * Fetch a list of mailing list subscribers.\n ",
@@ -86,7 +212,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MailingListSignup"
+                    "$ref": "#/components/schemas/MailingListSubscriber"
                   }
                 }
               }
@@ -105,9 +231,30 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
+                  "type": "array",
+                  "items": {
                     "$ref": "#/components/schemas/RFD"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "description": "\n * Fetch a list of employees.\n ",
+        "operationId": "api_get_users",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
                   }
                 }
               }
@@ -120,19 +267,18 @@
   "components": {
     "schemas": {
       "Applicant": {
-        "description": "The data type for an Applicant.",
         "type": "object",
         "properties": {
-          "analysisSamples": {
+          "analysis_samples": {
             "type": "string"
           },
-          "countryCode": {
+          "country_code": {
             "type": "string"
           },
           "email": {
             "type": "string"
           },
-          "exploratorySamples": {
+          "exploratory_samples": {
             "type": "string"
           },
           "github": {
@@ -140,6 +286,10 @@
           },
           "gitlab": {
             "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
           },
           "linkedin": {
             "type": "string"
@@ -150,7 +300,7 @@
           "materials": {
             "type": "string"
           },
-          "materialsContents": {
+          "materials_contents": {
             "type": "string"
           },
           "name": {
@@ -162,62 +312,62 @@
           "portfolio": {
             "type": "string"
           },
-          "presentationSamples": {
+          "presentation_samples": {
             "type": "string"
           },
-          "questionHappiest": {
+          "question_happiest": {
             "type": "string"
           },
-          "questionProudOf": {
+          "question_proud_of": {
             "type": "string"
           },
-          "questionTechnicallyChallenging": {
+          "question_technically_challenging": {
             "type": "string"
           },
-          "questionUnhappiest": {
+          "question_unhappiest": {
             "type": "string"
           },
-          "questionValueReflected": {
+          "question_value_reflected": {
             "type": "string"
           },
-          "questionValueViolated": {
+          "question_value_violated": {
             "type": "string"
           },
-          "questionValuesInTension": {
+          "question_values_in_tension": {
             "type": "string"
           },
-          "questionWhyOxide": {
+          "question_why_oxide": {
             "type": "string"
           },
           "resume": {
             "type": "string"
           },
-          "resumeContents": {
+          "resume_contents": {
             "type": "string"
           },
           "role": {
             "type": "string"
           },
-          "sentEmailReceived": {
+          "sent_email_received": {
             "type": "boolean"
           },
-          "sheetId": {
+          "sheet_id": {
             "type": "string"
           },
           "status": {
             "type": "string"
           },
-          "submittedTime": {
+          "submitted_time": {
             "type": "string",
             "format": "date-time"
           },
-          "valueReflected": {
+          "value_reflected": {
             "type": "string"
           },
-          "valueViolated": {
+          "value_violated": {
             "type": "string"
           },
-          "valuesInTension": {
+          "values_in_tension": {
             "type": "array",
             "items": {
               "type": "string"
@@ -226,22 +376,192 @@
           "website": {
             "type": "string"
           },
-          "workSamples": {
+          "work_samples": {
             "type": "string"
           },
-          "writingSamples": {
+          "writing_samples": {
             "type": "string"
           }
         },
         "required": [
           "email",
+          "id",
           "materials",
           "name",
           "resume",
           "role",
-          "sheetId",
+          "sheet_id",
           "status",
-          "submittedTime"
+          "submitted_time"
+        ]
+      },
+      "AuthLogin": {
+        "type": "object",
+        "properties": {
+          "blog": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": "string"
+          },
+          "email_verified": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "last_ip": {
+            "type": "string"
+          },
+          "last_login": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "login_provider": {
+            "type": "string"
+          },
+          "logins_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "phone_verified": {
+            "type": "boolean"
+          },
+          "picture": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "email",
+          "email_verified",
+          "id",
+          "last_ip",
+          "last_login",
+          "logins_count",
+          "name",
+          "nickname",
+          "picture",
+          "updated_at",
+          "user_id"
+        ]
+      },
+      "Building": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "floors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zipcode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "city",
+          "country",
+          "description",
+          "floors",
+          "id",
+          "name",
+          "state",
+          "zipcode"
+        ]
+      },
+      "ConferenceRoom": {
+        "type": "object",
+        "properties": {
+          "building": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": {
+            "type": "string"
+          },
+          "floor": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "building",
+          "capacity",
+          "description",
+          "floor",
+          "id",
+          "name",
+          "section",
+          "type"
         ]
       },
       "GitHubUser": {
@@ -318,6 +638,92 @@
           "url"
         ]
       },
+      "GithubLabel": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "color",
+          "description",
+          "id",
+          "name"
+        ]
+      },
+      "Group": {
+        "type": "object",
+        "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allow_external_members": {
+            "type": "boolean"
+          },
+          "allow_web_posting": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "is_archived": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "who_can_discover_group": {
+            "type": "string"
+          },
+          "who_can_join": {
+            "type": "string"
+          },
+          "who_can_moderate_members": {
+            "type": "string"
+          },
+          "who_can_post_message": {
+            "type": "string"
+          },
+          "who_can_view_group": {
+            "type": "string"
+          },
+          "who_can_view_membership": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "allow_external_members",
+          "allow_web_posting",
+          "description",
+          "id",
+          "is_archived",
+          "name",
+          "who_can_discover_group",
+          "who_can_join",
+          "who_can_moderate_members",
+          "who_can_post_message",
+          "who_can_view_group",
+          "who_can_view_membership"
+        ]
+      },
       "JournalClubMeeting": {
         "description": "The data type for a JournalClubMeeting.",
         "type": "object",
@@ -370,46 +776,76 @@
           "title"
         ]
       },
-      "MailingListSignup": {
-        "description": "The data type for a MailingListSignup.",
+      "Link": {
+        "type": "object",
+        "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "link": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "id",
+          "link"
+        ]
+      },
+      "MailingListSubscriber": {
         "type": "object",
         "properties": {
           "company": {
             "type": "string"
           },
-          "dateAdded": {
+          "date_added": {
             "type": "string",
             "format": "date-time"
           },
-          "dateLastChanged": {
+          "date_last_changed": {
             "type": "string",
             "format": "date-time"
           },
-          "dateOptin": {
+          "date_optin": {
             "type": "string",
             "format": "date-time"
           },
           "email": {
             "type": "string"
           },
-          "firstName": {
+          "first_name": {
             "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
           },
           "interest": {
             "type": "string"
           },
-          "lastName": {
+          "last_name": {
             "type": "string"
           },
-          "linkToPeople": {
-            "description": "link to another table in Airtable",
+          "link_to_people": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "name": {
-            "description": "(generated) name is a combination of first_name and last_name.",
             "type": "string"
           },
           "notes": {
@@ -421,32 +857,31 @@
               "type": "string"
             }
           },
-          "wantsNewsletter": {
+          "wants_newsletter": {
             "type": "boolean"
           },
-          "wantsPodcastUpdates": {
+          "wants_podcast_updates": {
             "type": "boolean"
           },
-          "wantsProductUpdates": {
+          "wants_product_updates": {
             "type": "boolean"
           }
         },
         "required": [
-          "dateAdded",
-          "dateLastChanged",
-          "dateOptin",
-          "email"
+          "date_added",
+          "date_last_changed",
+          "date_optin",
+          "email",
+          "id"
         ]
       },
       "RFD": {
-        "description": "The data type for an RFD.",
         "type": "object",
         "properties": {
           "authors": {
             "type": "string"
           },
-          "commitDate": {
-            "description": "commit_date is the date of the last commit that modified the file",
+          "commit_date": {
             "type": "string",
             "format": "date-time"
           },
@@ -459,32 +894,30 @@
           "html": {
             "type": "string"
           },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
           "link": {
-            "description": "link is the canonical link to the source.",
             "type": "string"
           },
           "name": {
-            "description": "(generated) name is a combination of number and title.",
             "type": "string"
           },
           "number": {
             "type": "integer",
             "format": "int32"
           },
-          "numberString": {
-            "description": "(generated) number_string is the long version of the number with leading zeros",
+          "number_string": {
             "type": "string"
           },
-          "renderedLink": {
-            "description": "(generated) rendered_link is the link to the rfd in the rendered html website in the form of https://rfd.shared.oxide.computer/rfd/{{number_string}}",
+          "rendered_link": {
             "type": "string"
           },
           "sha": {
-            "description": "sha is the SHA of the last commit that modified the file",
             "type": "string"
           },
-          "shortLink": {
-            "description": "(generated) short_link is the generated link in the form of https://{number}.rfd.oxide.computer",
+          "short_link": {
             "type": "string"
           },
           "state": {
@@ -495,6 +928,7 @@
           }
         },
         "required": [
+          "id",
           "link",
           "number",
           "state",
@@ -782,6 +1216,66 @@
           "updatedAt",
           "url",
           "watchersCount"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "building": {
+            "type": "string"
+          },
+          "chat": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "github": {
+            "type": "string"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "is_super_admin": {
+            "type": "boolean"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "recovery_email": {
+            "type": "string"
+          },
+          "recovery_phone": {
+            "type": "string"
+          },
+          "twitter": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "id",
+          "last_name",
+          "username"
         ]
       }
     }
