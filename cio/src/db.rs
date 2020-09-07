@@ -47,7 +47,7 @@ impl Database {
 
     pub fn get_applicants(&self) -> Vec<Applicant> {
         applicants::dsl::applicants
-            .order_by(applicants::dsl::id.asc())
+            .order_by(applicants::dsl::id.desc())
             .load::<Applicant>(&self.conn)
             .unwrap()
     }
@@ -91,7 +91,7 @@ impl Database {
 
     pub fn get_buildings(&self) -> Vec<Building> {
         buildings::dsl::buildings
-            .order_by(buildings::dsl::id.asc())
+            .order_by(buildings::dsl::id.desc())
             .load::<Building>(&self.conn)
             .unwrap()
     }
@@ -132,7 +132,7 @@ impl Database {
 
     pub fn get_conference_rooms(&self) -> Vec<ConferenceRoom> {
         conference_rooms::dsl::conference_rooms
-            .order_by(conference_rooms::dsl::id.asc())
+            .order_by(conference_rooms::dsl::id.desc())
             .load::<ConferenceRoom>(&self.conn)
             .unwrap()
     }
@@ -184,7 +184,7 @@ impl Database {
 
     pub fn get_auth_logins(&self) -> Vec<AuthLogin> {
         auth_logins::dsl::auth_logins
-            .order_by(auth_logins::dsl::id.asc())
+            .order_by(auth_logins::dsl::id.desc())
             .load::<AuthLogin>(&self.conn)
             .unwrap()
     }
@@ -230,7 +230,7 @@ impl Database {
 
     pub fn get_github_labels(&self) -> Vec<GithubLabel> {
         github_labels::dsl::github_labels
-            .order_by(github_labels::dsl::id.asc())
+            .order_by(github_labels::dsl::id.desc())
             .load::<GithubLabel>(&self.conn)
             .unwrap()
     }
@@ -277,7 +277,7 @@ impl Database {
 
     pub fn get_groups(&self) -> Vec<Group> {
         groups::dsl::groups
-            .order_by(groups::dsl::id.asc())
+            .order_by(groups::dsl::id.desc())
             .load::<Group>(&self.conn)
             .unwrap()
     }
@@ -318,7 +318,7 @@ impl Database {
 
     pub fn get_links(&self) -> Vec<Link> {
         links::dsl::links
-            .order_by(links::dsl::id.asc())
+            .order_by(links::dsl::id.desc())
             .load::<Link>(&self.conn)
             .unwrap()
     }
@@ -359,7 +359,7 @@ impl Database {
 
     pub fn get_mailing_list_subscribers(&self) -> Vec<MailingListSubscriber> {
         mailing_list_subscribers::dsl::mailing_list_subscribers
-            .order_by(mailing_list_subscribers::dsl::id.asc())
+            .order_by(mailing_list_subscribers::dsl::id.desc())
             .load::<MailingListSubscriber>(&self.conn)
             .unwrap()
     }
@@ -408,7 +408,7 @@ impl Database {
 
     pub fn get_rfds(&self) -> Vec<RFD> {
         rfds::dsl::rfds
-            .order_by(rfds::dsl::id.asc())
+            .order_by(rfds::dsl::id.desc())
             .load::<RFD>(&self.conn)
             .unwrap()
     }
@@ -449,7 +449,7 @@ impl Database {
 
     pub fn get_users(&self) -> Vec<User> {
         users::dsl::users
-            .order_by(users::dsl::id.asc())
+            .order_by(users::dsl::id.desc())
             .load::<User>(&self.conn)
             .unwrap()
     }
