@@ -17,7 +17,8 @@ use crate::airtable::{
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
 use crate::schema::{
-    applicants, auth_logins, mailing_list_subscribers, rfds as r_f_ds, rfds,
+    applicants, auth_logins, mailing_list_subscribers, repos, rfds as r_f_ds,
+    rfds,
 };
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
@@ -1172,10 +1173,13 @@ pub struct GitHubUser {
 }
 
 /// The data type for a GitHub repository.
+#[db_setup {
+    new_name = "Repo",
+}]
 #[serde(rename_all = "camelCase")]
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct Repo {
-    pub id: u64,
+pub struct NewRepo {
+    pub github_id: i32,
     pub owner: GitHubUser,
     pub name: String,
     pub full_name: String,
@@ -1227,12 +1231,12 @@ pub struct Repo {
     pub trees_url: String,
     pub homepage: Option<String>,
     pub language: Option<String>,
-    pub forks_count: u64,
-    pub stargazers_count: u64,
-    pub watchers_count: u64,
-    pub size: u64,
+    pub forks_count: i32,
+    pub stargazers_count: i32,
+    pub watchers_count: i32,
+    pub size: i32,
     pub default_branch: String,
-    pub open_issues_count: u64,
+    pub open_issues_count: i32,
     pub has_issues: bool,
     pub has_wiki: bool,
     pub has_pages: bool,
