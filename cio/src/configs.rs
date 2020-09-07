@@ -358,7 +358,7 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
     let repo_contents = github.repo(github_org(), "configs").content();
 
     let files = repo_contents
-        .iter("/configs/")
+        .iter("/configs/", "master")
         .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
         .await
         .unwrap();
@@ -368,7 +368,7 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
         println!("decoding {}", file.name);
         // Get the contents of the file.
         let contents = repo_contents
-            .file(&format!("/{}", file.path))
+            .file(&format!("/{}", file.path), "master")
             .await
             .unwrap();
 

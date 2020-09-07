@@ -19,10 +19,8 @@ csv = "1.1"
 futures-util = "0.3"
 google-drive = "^0.1.0"
 html2text = "0.1"
-# TODO: waiting on hubcaps to publish a new version so we can publish this.
-# https://github.com/softprops/hubcaps/issues/269
 #hubcaps = { version = "0.6", features = ["httpcache"] }
-hubcaps = { git = "https://github.com/softprops/hubcaps", rev = "2385b8e957bb921f61c1146f075ae132dac5e95d" , features = ["httpcache"] }
+hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "ref-for-files", features = ["httpcache"] }
 macros = { path = "../macros" }
 pandoc = "0.8"
 phonenumber = "0.2"

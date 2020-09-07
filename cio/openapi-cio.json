@@ -128,7 +128,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Repo"
+                    "$ref": "#/components/schemas/GithubRepo"
                   }
                 }
               }
@@ -662,6 +662,286 @@
           "name"
         ]
       },
+      "GithubRepo": {
+        "type": "object",
+        "properties": {
+          "archive_url": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "assignees_url": {
+            "type": "string"
+          },
+          "blobs_url": {
+            "type": "string"
+          },
+          "branches_url": {
+            "type": "string"
+          },
+          "clone_url": {
+            "type": "string"
+          },
+          "collaborators_url": {
+            "type": "string"
+          },
+          "comments_url": {
+            "type": "string"
+          },
+          "commits_url": {
+            "type": "string"
+          },
+          "compare_url": {
+            "type": "string"
+          },
+          "contents_url": {
+            "type": "string"
+          },
+          "contributors_url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "default_branch": {
+            "type": "string"
+          },
+          "deployments_url": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "downloads_url": {
+            "type": "string"
+          },
+          "events_url": {
+            "type": "string"
+          },
+          "fork": {
+            "type": "boolean"
+          },
+          "forks_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "forks_url": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "git_commits_url": {
+            "type": "string"
+          },
+          "git_refs_url": {
+            "type": "string"
+          },
+          "git_tags_url": {
+            "type": "string"
+          },
+          "git_url": {
+            "type": "string"
+          },
+          "github_id": {
+            "type": "string"
+          },
+          "has_downloads": {
+            "type": "boolean"
+          },
+          "has_issues": {
+            "type": "boolean"
+          },
+          "has_pages": {
+            "type": "boolean"
+          },
+          "has_wiki": {
+            "type": "boolean"
+          },
+          "homepage": {
+            "type": "string"
+          },
+          "hooks_url": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "issue_comment_url": {
+            "type": "string"
+          },
+          "issue_events_url": {
+            "type": "string"
+          },
+          "issues_url": {
+            "type": "string"
+          },
+          "keys_url": {
+            "type": "string"
+          },
+          "labels_url": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "languages_url": {
+            "type": "string"
+          },
+          "merges_url": {
+            "type": "string"
+          },
+          "milestones_url": {
+            "type": "string"
+          },
+          "mirror_url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notifications_url": {
+            "type": "string"
+          },
+          "open_issues_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/GitHubUser"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "pulls_url": {
+            "type": "string"
+          },
+          "pushed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "releases_url": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ssh_url": {
+            "type": "string"
+          },
+          "stargazers_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stargazers_url": {
+            "type": "string"
+          },
+          "statuses_url": {
+            "type": "string"
+          },
+          "subscribers_url": {
+            "type": "string"
+          },
+          "subscription_url": {
+            "type": "string"
+          },
+          "svn_url": {
+            "type": "string"
+          },
+          "tags_url": {
+            "type": "string"
+          },
+          "teams_url": {
+            "type": "string"
+          },
+          "trees_url": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url": {
+            "type": "string"
+          },
+          "watchers_count": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "archive_url",
+          "archived",
+          "assignees_url",
+          "blobs_url",
+          "branches_url",
+          "clone_url",
+          "collaborators_url",
+          "comments_url",
+          "commits_url",
+          "compare_url",
+          "contents_url",
+          "contributors_url",
+          "created_at",
+          "default_branch",
+          "deployments_url",
+          "downloads_url",
+          "events_url",
+          "fork",
+          "forks_count",
+          "forks_url",
+          "full_name",
+          "git_commits_url",
+          "git_refs_url",
+          "git_tags_url",
+          "git_url",
+          "github_id",
+          "has_downloads",
+          "has_issues",
+          "has_pages",
+          "has_wiki",
+          "hooks_url",
+          "html_url",
+          "id",
+          "issue_comment_url",
+          "issue_events_url",
+          "issues_url",
+          "keys_url",
+          "labels_url",
+          "languages_url",
+          "merges_url",
+          "milestones_url",
+          "name",
+          "notifications_url",
+          "open_issues_count",
+          "owner",
+          "private",
+          "pulls_url",
+          "pushed_at",
+          "releases_url",
+          "size",
+          "ssh_url",
+          "stargazers_count",
+          "stargazers_url",
+          "statuses_url",
+          "subscribers_url",
+          "subscription_url",
+          "svn_url",
+          "tags_url",
+          "teams_url",
+          "trees_url",
+          "updated_at",
+          "url",
+          "watchers_count"
+        ]
+      },
       "Group": {
         "type": "object",
         "properties": {
@@ -672,9 +952,11 @@
             }
           },
           "allow_external_members": {
+            "description": "allow_external_members: Identifies whether members external to your organization can join the group. Possible values are: - true: G Suite users external to your organization can become members of this group. - false: Users not belonging to the organization are not allowed to become members of this group.",
             "type": "boolean"
           },
           "allow_web_posting": {
+            "description": "allow_web_posting: Allows posting from web. Possible values are: - true: Allows any member to post to the group forum. - false: Members only use Gmail to communicate with the group.",
             "type": "boolean"
           },
           "description": {
@@ -685,27 +967,34 @@
             "format": "int32"
           },
           "is_archived": {
+            "description": "is_archived: Allows the Group contents to be archived. Possible values are: - true: Archive messages sent to the group. - false: Do not keep an archive of messages sent to this group. If false, previously archived messages remain in the archive.",
             "type": "boolean"
           },
           "name": {
             "type": "string"
           },
           "who_can_discover_group": {
+            "description": "who_can_discover_group: Specifies the set of users for whom this group is discoverable. Possible values are: - ANYONE_CAN_DISCOVER - ALL_IN_DOMAIN_CAN_DISCOVER - ALL_MEMBERS_CAN_DISCOVER",
             "type": "string"
           },
           "who_can_join": {
+            "description": "who_can_join: Permission to join group. Possible values are: - ANYONE_CAN_JOIN: Anyone in the account domain can join. This includes accounts with multiple domains. - ALL_IN_DOMAIN_CAN_JOIN: Any Internet user who is outside your domain can access your Google Groups service and view the list of groups in your Groups directory. Warning: Group owners can add external addresses, outside of the domain to their groups. They can also allow people outside your domain to join their groups. If you later disable this option, any external addresses already added to users' groups remain in those groups. - INVITED_CAN_JOIN: Candidates for membership can be invited to join.\n\n- CAN_REQUEST_TO_JOIN: Non members can request an invitation to join.",
             "type": "string"
           },
           "who_can_moderate_members": {
+            "description": "who_can_moderate_members: Specifies who can manage members. Possible values are: - ALL_MEMBERS - OWNERS_AND_MANAGERS - OWNERS_ONLY - NONE",
             "type": "string"
           },
           "who_can_post_message": {
+            "description": "who_can_post_message: Permissions to post messages. Possible values are:\n\n- NONE_CAN_POST: The group is disabled and archived. No one can post a message to this group. - When archiveOnly is false, updating who_can_post_message to NONE_CAN_POST, results in an error. - If archiveOnly is reverted from true to false, who_can_post_messages is set to ALL_MANAGERS_CAN_POST. - ALL_MANAGERS_CAN_POST: Managers, including group owners, can post messages. - ALL_MEMBERS_CAN_POST: Any group member can post a message. - ALL_OWNERS_CAN_POST: Only group owners can post a message. - ALL_IN_DOMAIN_CAN_POST: Anyone in the account can post a message.\n\n- ANYONE_CAN_POST: Any Internet user who outside your account can access your Google Groups service and post a message. Note: When who_can_post_message is set to ANYONE_CAN_POST, we recommend the messageModerationLevel be set to MODERATE_NON_MEMBERS to protect the group from possible spam.",
             "type": "string"
           },
           "who_can_view_group": {
+            "description": "who_can_view_group: Permissions to view group messages. Possible values are: - ANYONE_CAN_VIEW: Any Internet user can view the group's messages.\n\n- ALL_IN_DOMAIN_CAN_VIEW: Anyone in your account can view this group's messages. - ALL_MEMBERS_CAN_VIEW: All group members can view the group's messages. - ALL_MANAGERS_CAN_VIEW: Any group manager can view this group's messages.",
             "type": "string"
           },
           "who_can_view_membership": {
+            "description": "who_can_view_membership: Permissions to view membership. Possible values are: - ALL_IN_DOMAIN_CAN_VIEW: Anyone in the account can view the group members list. If a group already has external members, those members can still send email to this group.\n\n- ALL_MEMBERS_CAN_VIEW: The group members can view the group members list. - ALL_MANAGERS_CAN_VIEW: The group managers can view group members list.",
             "type": "string"
           }
         },
@@ -796,6 +1085,7 @@
             "type": "string"
           },
           "name": {
+            "description": "name will not be used in config files.",
             "type": "string"
           }
         },
@@ -840,12 +1130,14 @@
             "type": "string"
           },
           "link_to_people": {
+            "description": "link to another table in Airtable",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "name": {
+            "description": "(generated) name is a combination of first_name and last_name.",
             "type": "string"
           },
           "notes": {
@@ -882,6 +1174,7 @@
             "type": "string"
           },
           "commit_date": {
+            "description": "commit_date is the date of the last commit that modified the file",
             "type": "string",
             "format": "date-time"
           },
@@ -899,9 +1192,11 @@
             "format": "int32"
           },
           "link": {
+            "description": "link is the canonical link to the source.",
             "type": "string"
           },
           "name": {
+            "description": "(generated) name is a combination of number and title.",
             "type": "string"
           },
           "number": {
@@ -909,15 +1204,19 @@
             "format": "int32"
           },
           "number_string": {
+            "description": "(generated) number_string is the long version of the number with leading zeros",
             "type": "string"
           },
           "rendered_link": {
+            "description": "(generated) rendered_link is the link to the rfd in the rendered html website in the form of https://rfd.shared.oxide.computer/rfd/{{number_string}}",
             "type": "string"
           },
           "sha": {
+            "description": "sha is the SHA of the last commit that modified the file",
             "type": "string"
           },
           "short_link": {
+            "description": "(generated) short_link is the generated link in the form of https://{number}.rfd.oxide.computer",
             "type": "string"
           },
           "state": {
@@ -933,289 +1232,6 @@
           "number",
           "state",
           "title"
-        ]
-      },
-      "Repo": {
-        "description": "The data type for a GitHub repository.",
-        "type": "object",
-        "properties": {
-          "archiveUrl": {
-            "type": "string"
-          },
-          "archived": {
-            "type": "boolean"
-          },
-          "assigneesUrl": {
-            "type": "string"
-          },
-          "blobsUrl": {
-            "type": "string"
-          },
-          "branchesUrl": {
-            "type": "string"
-          },
-          "cloneUrl": {
-            "type": "string"
-          },
-          "collaboratorsUrl": {
-            "type": "string"
-          },
-          "commentsUrl": {
-            "type": "string"
-          },
-          "commitsUrl": {
-            "type": "string"
-          },
-          "compareUrl": {
-            "type": "string"
-          },
-          "contentsUrl": {
-            "type": "string"
-          },
-          "contributorsUrl": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "defaultBranch": {
-            "type": "string"
-          },
-          "deploymentsUrl": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "downloadsUrl": {
-            "type": "string"
-          },
-          "eventsUrl": {
-            "type": "string"
-          },
-          "fork": {
-            "type": "boolean"
-          },
-          "forksCount": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "forksUrl": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "gitCommitsUrl": {
-            "type": "string"
-          },
-          "gitRefsUrl": {
-            "type": "string"
-          },
-          "gitTagsUrl": {
-            "type": "string"
-          },
-          "gitUrl": {
-            "type": "string"
-          },
-          "hasDownloads": {
-            "type": "boolean"
-          },
-          "hasIssues": {
-            "type": "boolean"
-          },
-          "hasPages": {
-            "type": "boolean"
-          },
-          "hasWiki": {
-            "type": "boolean"
-          },
-          "homepage": {
-            "type": "string"
-          },
-          "hooksUrl": {
-            "type": "string"
-          },
-          "htmlUrl": {
-            "type": "string"
-          },
-          "id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "issueCommentUrl": {
-            "type": "string"
-          },
-          "issueEventsUrl": {
-            "type": "string"
-          },
-          "issuesUrl": {
-            "type": "string"
-          },
-          "keysUrl": {
-            "type": "string"
-          },
-          "labelsUrl": {
-            "type": "string"
-          },
-          "language": {
-            "type": "string"
-          },
-          "languagesUrl": {
-            "type": "string"
-          },
-          "mergesUrl": {
-            "type": "string"
-          },
-          "milestonesUrl": {
-            "type": "string"
-          },
-          "mirrorUrl": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "notificationsUrl": {
-            "type": "string"
-          },
-          "openIssuesCount": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "owner": {
-            "$ref": "#/components/schemas/GitHubUser"
-          },
-          "private": {
-            "type": "boolean"
-          },
-          "pullsUrl": {
-            "type": "string"
-          },
-          "pushedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "releasesUrl": {
-            "type": "string"
-          },
-          "size": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "sshUrl": {
-            "type": "string"
-          },
-          "stargazersCount": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "stargazersUrl": {
-            "type": "string"
-          },
-          "statusesUrl": {
-            "type": "string"
-          },
-          "subscribersUrl": {
-            "type": "string"
-          },
-          "subscriptionUrl": {
-            "type": "string"
-          },
-          "svnUrl": {
-            "type": "string"
-          },
-          "tagsUrl": {
-            "type": "string"
-          },
-          "teamsUrl": {
-            "type": "string"
-          },
-          "treesUrl": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "url": {
-            "type": "string"
-          },
-          "watchersCount": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "archiveUrl",
-          "archived",
-          "assigneesUrl",
-          "blobsUrl",
-          "branchesUrl",
-          "cloneUrl",
-          "collaboratorsUrl",
-          "commentsUrl",
-          "commitsUrl",
-          "compareUrl",
-          "contentsUrl",
-          "contributorsUrl",
-          "createdAt",
-          "defaultBranch",
-          "deploymentsUrl",
-          "downloadsUrl",
-          "eventsUrl",
-          "fork",
-          "forksCount",
-          "forksUrl",
-          "fullName",
-          "gitCommitsUrl",
-          "gitRefsUrl",
-          "gitTagsUrl",
-          "gitUrl",
-          "hasDownloads",
-          "hasIssues",
-          "hasPages",
-          "hasWiki",
-          "hooksUrl",
-          "htmlUrl",
-          "id",
-          "issueCommentUrl",
-          "issueEventsUrl",
-          "issuesUrl",
-          "keysUrl",
-          "labelsUrl",
-          "languagesUrl",
-          "mergesUrl",
-          "milestonesUrl",
-          "name",
-          "notificationsUrl",
-          "openIssuesCount",
-          "owner",
-          "private",
-          "pullsUrl",
-          "pushedAt",
-          "releasesUrl",
-          "size",
-          "sshUrl",
-          "stargazersCount",
-          "stargazersUrl",
-          "statusesUrl",
-          "subscribersUrl",
-          "subscriptionUrl",
-          "svnUrl",
-          "tagsUrl",
-          "teamsUrl",
-          "treesUrl",
-          "updatedAt",
-          "url",
-          "watchersCount"
         ]
       },
       "User": {

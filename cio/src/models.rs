@@ -9,6 +9,7 @@ use diesel::serialize::{self, Output, ToSql};
 use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
 use hubcaps::repositories::Repo;
+use hubcaps::Github;
 use macros::db_setup;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -21,6 +22,7 @@ use crate::airtable::{
     AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
+use crate::rfds::get_rfd_contents_from_repo;
 use crate::schema::{
     applicants, auth_logins, github_repos, mailing_list_subscribers,
     rfds as r_f_ds, rfds,
@@ -1476,7 +1478,7 @@ pub struct NewRFD {
 impl NewRFD {
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    pub fn expand(&mut self) {
+    pub async fn expand(&mut self, github: &Github) {
         // Add leading zeros to the number for the number_string.
         self.number_string = self.number.to_string();
         while self.number_string.len() < 4 {
@@ -1494,7 +1496,17 @@ impl NewRFD {
             self.number_string
         );
 
-        // TODO: Get the content, html, sha, and commit_date from GitHub.
+        let mut branch = self.number_string.to_string();
+        if self.link.contains("/master/") {
+            branch = "master".to_string();
+        }
+
+        let rfd_dir = format!("/rfd/{}", self.number_string);
+
+        let (rfd_contents, is_markdown) =
+            get_rfd_contents_from_repo(github, &branch, &rfd_dir).await;
+
+        println!("{} {} {}", self.number_string, is_markdown, rfd_contents);
     }
 
     /// Convert an RFD into JSON as Slack message.

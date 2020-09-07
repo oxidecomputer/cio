@@ -15,7 +15,7 @@ pub async fn get_meetings_from_repo(
     let meetings_csv_content = github
         .repo(github_org(), "papers")
         .content()
-        .file("/.helpers/meetings.csv")
+        .file("/.helpers/meetings.csv", "master")
         .await
         .expect("failed to get meetings csv content")
         .content;

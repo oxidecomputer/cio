@@ -14,7 +14,7 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     let rfd_csv_content = github
         .repo(github_org(), "rfd")
         .content()
-        .file("/.helpers/rfd.csv")
+        .file("/.helpers/rfd.csv", "master")
         .await
         .expect("failed to get rfd csv content")
         .content;
@@ -32,13 +32,45 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
         let mut rfd: NewRFD = r.unwrap();
 
         // Expand the fields in the RFD.
-        rfd.expand();
+        rfd.expand(github).await;
 
         // Add this to our BTreeMap.
         rfds.insert(rfd.number, rfd);
     }
 
     rfds
+}
+
+/// Try to get the markdown or asciidoc contents from the repo.
+pub async fn get_rfd_contents_from_repo(
+    github: &Github,
+    branch: &str,
+    dir: &str,
+) -> (String, bool) {
+    let repo_contents = github.repo(github_org(), "rfd").content();
+    let mut is_markdown = false;
+    let mut decoded: String = Default::default();
+
+    // Get the contents of the file.
+    let path = format!("{}/README.adoc", dir);
+    match repo_contents.file(&path, branch).await {
+        Ok(contents) => {
+            decoded = from_utf8(&contents.content).unwrap().trim().to_string();
+        }
+        Err(e) => {
+            println!("[rfd] getting file contents for {} failed: {}", path, e);
+
+            // Try to get the markdown instead.
+            is_markdown = true;
+            let contents = repo_contents
+                .file(&format!("{}/README.md", dir), branch)
+                .await
+                .unwrap();
+            decoded = from_utf8(&contents.content).unwrap().trim().to_string();
+        }
+    }
+
+    (decoded, is_markdown)
 }
 
 // Sync the rfds with our database.
