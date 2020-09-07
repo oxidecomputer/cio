@@ -104,6 +104,27 @@ table! {
 }
 
 table! {
+    mailing_list_subscribers (id) {
+        id -> Int4,
+        email -> Varchar,
+        first_name -> Varchar,
+        last_name -> Varchar,
+        name -> Varchar,
+        company -> Varchar,
+        interest -> Text,
+        wants_podcast_updates -> Bool,
+        wants_newsletter -> Bool,
+        wants_product_updates -> Bool,
+        date_added -> Timestamptz,
+        date_optin -> Timestamptz,
+        date_last_changed -> Timestamptz,
+        notes -> Text,
+        tags -> Array<Text>,
+        link_to_people -> Array<Text>,
+    }
+}
+
+table! {
     rfds (id) {
         id -> Int4,
         number -> Int4,
@@ -149,6 +170,7 @@ allow_tables_to_appear_in_same_query!(
     github_labels,
     groups,
     links,
+    mailing_list_subscribers,
     rfds,
     users,
 );

@@ -9,10 +9,10 @@ use crate::airtable::{
     airtable_api_key, AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
-use crate::models::MailingListSignup;
+use crate::models::NewMailingListSubscriber;
 
 /// Get all the mailing list subscribers from Airtable.
-pub async fn get_all_subscribers() -> Vec<MailingListSignup> {
+pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
     // Initialize the Airtable client.
     let airtable =
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
@@ -22,9 +22,9 @@ pub async fn get_all_subscribers() -> Vec<MailingListSignup> {
         .await
         .unwrap();
 
-    let mut subscribers: Vec<MailingListSignup> = Default::default();
+    let mut subscribers: Vec<NewMailingListSubscriber> = Default::default();
     for record in records {
-        let fields: MailingListSignup =
+        let fields: NewMailingListSubscriber =
             serde_json::from_value(record.fields.clone()).unwrap();
 
         subscribers.push(fields);
@@ -46,8 +46,8 @@ pub struct MailchimpWebhook {
 
 impl MailchimpWebhook {
     /// Convert to a signup data type.
-    pub fn as_signup(&self) -> MailingListSignup {
-        let mut signup: MailingListSignup = Default::default();
+    pub fn as_signup(&self) -> NewMailingListSubscriber {
+        let mut signup: NewMailingListSubscriber = Default::default();
 
         if self.data.merges.is_some() {
             let merges = self.data.merges.as_ref().unwrap();

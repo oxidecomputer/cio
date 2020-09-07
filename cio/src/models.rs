@@ -15,7 +15,7 @@ use crate::airtable::{
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
-use crate::schema::{applicants, rfds};
+use crate::schema::{applicants, mailing_list_subscribers, rfds};
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
@@ -893,8 +893,18 @@ pub struct JournalClubPaper {
 
 /// The data type for a MailingListSignup.
 #[serde(rename_all = "camelCase")]
-#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct MailingListSignup {
+#[derive(
+    Debug,
+    Insertable,
+    AsChangeset,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+#[table_name = "mailing_list_subscribers"]
+pub struct NewMailingListSubscriber {
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub first_name: String,
@@ -925,7 +935,7 @@ pub struct MailingListSignup {
     pub link_to_people: Vec<String>,
 }
 
-impl MailingListSignup {
+impl NewMailingListSubscriber {
     /// Push the mailing list signup to our Airtable workspace.
     pub async fn push_to_airtable(&self) {
         // Initialize the Airtable client.
@@ -1037,9 +1047,9 @@ impl MailingListSignup {
     }
 }
 
-impl Default for MailingListSignup {
+impl Default for NewMailingListSubscriber {
     fn default() -> Self {
-        MailingListSignup {
+        NewMailingListSubscriber {
             email: String::new(),
             first_name: String::new(),
             last_name: String::new(),

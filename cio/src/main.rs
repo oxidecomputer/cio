@@ -19,10 +19,9 @@ use cio_api::configs::{
     LinkConfig, ResourceConfig, UserConfig,
 };
 use cio_api::journal_clubs::get_meetings_from_repo;
-use cio_api::mailing_list::get_all_subscribers;
 use cio_api::models::{
-    JournalClubMeeting, MailingListSignup, NewApplicant as Applicant,
-    NewRFD as RFD, Repo,
+    JournalClubMeeting, NewApplicant as Applicant,
+    NewMailingListSubscriber as MailingListSubscriber, NewRFD as RFD, Repo,
 };
 use cio_api::utils::{authenticate_github, list_all_github_repos};
 
@@ -117,7 +116,7 @@ struct Context {
     // A cache of journal club meetings that we will continuously update.
     journal_club_meetings: Vec<JournalClubMeeting>,
     // A cache of mailing list subscribers that we will continuously update.
-    mailing_list_subscribers: Vec<MailingListSignup>,
+    mailing_list_subscribers: Vec<MailingListSubscriber>,
     // A cache of our repos that we will continuously update.
     repos: Vec<Repo>,
     // A cache of our RFDs that we will continuously update.
@@ -160,7 +159,8 @@ impl Context {
         self.journal_club_meetings = journal_club_meetings;
 
         println!("Refreshing cache of mailing list subscribers...");
-        let mailing_list_subscribers = get_all_subscribers().await;
+        // TODO: make this real
+        let mailing_list_subscribers = Default::default();
         self.mailing_list_subscribers = mailing_list_subscribers;
 
         println!("Refreshing cache of GitHub repos...");
@@ -318,7 +318,7 @@ async fn api_get_links(
 }]
 async fn api_get_mailing_list_subscribers(
     rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<MailingListSignup>>, HttpError> {
+) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(HttpResponseOk(api_context.mailing_list_subscribers.clone()))

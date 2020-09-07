@@ -4,16 +4,17 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
 use crate::code_that_should_be_generated::{
-    Applicant, Building, ConferenceRoom, GithubLabel, Group, Link, User, RFD,
+    Applicant, Building, ConferenceRoom, GithubLabel, Group, Link,
+    MailingListSubscriber, User, RFD,
 };
 use crate::configs::{
     BuildingConfig, GroupConfig, LabelConfig, LinkConfig, ResourceConfig,
     UserConfig,
 };
-use crate::models::{NewApplicant, NewRFD};
+use crate::models::{NewApplicant, NewMailingListSubscriber, NewRFD};
 use crate::schema::{
     applicants, buildings, conference_rooms, github_labels, groups, links,
-    rfds, users,
+    mailing_list_subscribers, rfds, users,
 };
 
 pub struct Database {
@@ -264,6 +265,48 @@ impl Database {
             .values(link)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating link failed: {}", e))
+    }
+
+    pub fn upsert_mailing_list_subscriber(
+        &self,
+        mailing_list_subscriber: &NewMailingListSubscriber,
+    ) -> MailingListSubscriber {
+        // See if we already have the mailing_list_subscriber in the database.
+        match mailing_list_subscribers::dsl::mailing_list_subscribers
+            .filter(
+                mailing_list_subscribers::dsl::email
+                    .eq(mailing_list_subscriber.email.to_string()),
+            )
+            .limit(1)
+            .load::<MailingListSubscriber>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the mailing_list_subscriber in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let m = r.get(0).unwrap();
+
+                    // Update the mailing_list_subscriber.
+                    return diesel::update(m)
+                        .set(mailing_list_subscriber)
+                        .get_result::<MailingListSubscriber>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!("unable to update mailing_list_subscriber {}: {}", m.id, e)
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the mailing_list_subscriber in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(mailing_list_subscribers::table)
+            .values(mailing_list_subscriber)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| {
+                panic!("creating mailing_list_subscriber failed: {}", e)
+            })
     }
 
     pub fn upsert_rfd(&self, rfd: &NewRFD) -> RFD {

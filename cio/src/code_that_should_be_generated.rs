@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::schema::{
     applicants, buildings, conference_rooms, github_labels, groups, links,
-    rfds as r_f_ds, users,
+    mailing_list_subscribers, rfds as r_f_ds, users,
 };
 
 #[derive(
@@ -201,6 +201,47 @@ pub struct Link {
     pub link: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
+}
+
+#[derive(
+    Debug,
+    Queryable,
+    Identifiable,
+    Associations,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+pub struct MailingListSubscriber {
+    pub id: i32,
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub first_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub company: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub interest: String,
+    #[serde(default)]
+    pub wants_podcast_updates: bool,
+    #[serde(default)]
+    pub wants_newsletter: bool,
+    #[serde(default)]
+    pub wants_product_updates: bool,
+    pub date_added: DateTime<Utc>,
+    pub date_optin: DateTime<Utc>,
+    pub date_last_changed: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_people: Vec<String>,
 }
 
 #[derive(
