@@ -35,6 +35,10 @@ An API client for Airtable.
 
 Helper functions and types for doing the activities of a CIO.
 
+The architecture for this application server and all it's surroundings is:
+
+![architecture.png](architecture.png)
+
 ### `giphy-api`
 
 [![docs.rs](https://docs.rs/giphy-api/badge.svg)](https://docs.rs/giphy-api)
