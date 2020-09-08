@@ -14,7 +14,11 @@
  *
  *     // Get the current records from a table.
  *     let mut records = airtable
- *         .list_records("Table Name", "Grid view")
+ *         .list_records(
+ *             "Table Name",
+ *             "Grid view",
+ *             vec!["the", "fields", "you", "want", "to", "return"],
+ *         )
  *         .await
  *         .unwrap();
  *
