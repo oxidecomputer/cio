@@ -10,7 +10,7 @@ use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
 use hubcaps::repositories::Repo;
 use hubcaps::Github;
-use macros::db_setup;
+use macros::db_struct;
 use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -48,7 +48,7 @@ static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s va
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
 /// The data type for a NewApplicant.
-#[db_setup {
+#[db_struct {
     new_name = "Applicant",
     base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
     table = "AIRTABLE_APPLICATIONS_TABLE",
@@ -813,7 +813,7 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 }
 
 /// The data type for an NewAuthLogin.
-#[db_setup {
+#[db_struct {
     new_name = "AuthLogin",
     base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
     table = "AIRTABLE_AUTH_LOGINS_TABLE",
@@ -969,7 +969,7 @@ pub struct JournalClubPaper {
 }
 
 /// The data type for a MailingListSubscriber.
-#[db_setup {
+#[db_struct {
     new_name = "MailingListSubscriber",
     base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
     table = "AIRTABLE_MAILING_LIST_SIGNUPS_TABLE",
@@ -1199,7 +1199,7 @@ impl ToSql<Jsonb, Pg> for GitHubUser {
 }
 
 /// The data type for a GitHub repository.
-#[db_setup {
+#[db_struct {
     new_name = "GithubRepo",
 }]
 #[serde(rename_all = "camelCase")]
@@ -1419,7 +1419,7 @@ impl NewRepo {
 }
 
 /// The data type for an RFD.
-#[db_setup {
+#[db_struct {
     new_name = "RFD",
     base_id = "AIRTABLE_BASE_ID_RACK_ROADMAP",
     table = "AIRTABLE_RFD_TABLE",

@@ -5,7 +5,7 @@ use std::str::from_utf8;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
 use hubcaps::Github;
-use macros::db_setup;
+use macros::db_struct;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -62,7 +62,7 @@ impl Config {
 }
 
 /// The data type for a user.
-#[db_setup {
+#[db_struct {
     new_name = "User",
 }]
 #[serde(rename_all = "camelCase")]
@@ -119,7 +119,7 @@ pub struct UserConfig {
 }
 
 /// The data type for a group. This applies to Google Groups.
-#[db_setup {
+#[db_struct {
     new_name = "Group",
 }]
 #[serde(rename_all = "camelCase")]
@@ -249,7 +249,7 @@ pub struct GroupConfig {
 }
 
 /// The data type for a building.
-#[db_setup {
+#[db_struct {
     new_name = "Building",
 }]
 #[derive(
@@ -277,7 +277,7 @@ pub struct BuildingConfig {
 
 /// The data type for a resource. These are conference rooms that people can book
 /// through GSuite or Zoom.
-#[db_setup {
+#[db_struct {
     new_name = "ConferenceRoom",
 }]
 #[derive(
@@ -305,7 +305,7 @@ pub struct ResourceConfig {
 
 /// The data type for a link. These get turned into short links like
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
-#[db_setup {
+#[db_struct {
     new_name = "Link",
 }]
 #[derive(
@@ -332,7 +332,7 @@ pub struct LinkConfig {
 
 /// The data type for a label. These become GitHub labels for all the repositories
 /// in our organization.
-#[db_setup {
+#[db_struct {
     new_name = "GithubLabel",
 }]
 #[derive(

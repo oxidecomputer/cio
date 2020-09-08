@@ -15,17 +15,17 @@ struct Metadata {
 }
 
 #[proc_macro_attribute]
-pub fn db_setup(
+pub fn db_struct(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    match do_macro(attr.into(), item.into()) {
+    match do_db_struct(attr.into(), item.into()) {
         Ok(result) => result.into(),
         Err(err) => err.to_compile_error().into(),
     }
 }
 
-fn do_macro(
+fn do_db_struct(
     attr: TokenStream,
     item: TokenStream,
 ) -> Result<TokenStream, Error> {
@@ -100,8 +100,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_db_setup() {
-        let ret = do_macro(
+    fn test_db_struct() {
+        let ret = do_db_struct(
             quote! {
                 new_name = DuplicatedItem,
                 base_id = AIRTABLE_BASE_ID_CUSTOMER_LEADS,
