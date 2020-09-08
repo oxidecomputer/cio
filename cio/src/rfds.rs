@@ -189,8 +189,10 @@ pub async fn refresh_airtable_rfds() {
                 rfd.milestones = in_airtable_fields.milestones.clone();
                 rfd.relevant_components =
                     in_airtable_fields.relevant_components.clone();
-                rfd.content = "".to_string();
-                rfd.html = "".to_string();
+                // Airtable can only hold 100,000 chars. IDK which one is that long but LOL
+                // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
+                rfd.content = truncate(&rfd.content, 100000);
+                rfd.html = truncate(&rfd.html, 100000);
 
                 record.fields = json!(rfd);
 
@@ -209,6 +211,13 @@ pub async fn refresh_airtable_rfds() {
     }
 
     println!("updated {} rfds", updated);
+}
+
+fn truncate(s: &str, max_chars: usize) -> String {
+    match s.char_indices().nth(max_chars) {
+        None => s.to_string(),
+        Some((idx, _)) => s[..idx].to_string(),
+    }
 }
 
 // Sync the rfds with our database.
