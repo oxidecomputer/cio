@@ -8,14 +8,19 @@ use diesel::pg::Pg;
 use diesel::serialize::{self, Output, ToSql};
 use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
+use hubcaps::issues::{Issue, IssueOptions};
 use hubcaps::repositories::Repo;
 use hubcaps::Github;
 use macros::db_struct;
 use regex::Regex;
 use schemars::JsonSchema;
+use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sheets::Sheets;
 use std::io::Write;
+
+use crate::utils::{check_if_github_issue_exists, github_org};
 
 use crate::airtable::{
     airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_LOGINS_TABLE,
@@ -23,7 +28,9 @@ use crate::airtable::{
     AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
 };
-use crate::applicants::{get_file_contents, ApplicantSheetColumns};
+use crate::applicants::{
+    email_send_received_application, get_file_contents, ApplicantSheetColumns,
+};
 use crate::rfds::{
     clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc,
     parse_markdown,
@@ -134,11 +141,13 @@ impl NewApplicant {
     /// Parse the applicant from a Google Sheets row.
     pub async fn parse(
         drive_client: &GoogleDrive,
+        sheets_client: &Sheets,
         sheet_name: &str,
         sheet_id: &str,
         columns: &ApplicantSheetColumns,
         row: &[String],
-    ) -> Self {
+        row_index: usize,
+    ) -> (Self, bool) {
         // Parse the time.
         let time_str = row[columns.timestamp].to_string() + " -08:00";
         let time =
@@ -239,6 +248,44 @@ impl NewApplicant {
             .contains("false")
         {
             sent_email_received = false;
+        }
+
+        let email = row[columns.email].to_string();
+
+        let mut is_new_applicant = false;
+
+        // Check if we have sent them an email that we received their application.
+        if !sent_email_received {
+            is_new_applicant = true;
+
+            // Initialize the SendGrid client.
+            let sendgrid_client = SendGrid::new_from_env();
+
+            // Send them an email.
+            email_send_received_application(
+                &sendgrid_client,
+                &email,
+                "oxide.computer",
+            )
+            .await;
+
+            // Mark the column as true not false.
+            let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+            let rng = format!(
+                "{}{}",
+                colmn.nth(columns.sent_email_received).unwrap().to_string(),
+                row_index + 1
+            );
+
+            sheets_client
+                .update_values(sheet_id, &rng, "TRUE".to_string())
+                .await
+                .unwrap();
+
+            println!(
+            "[applicant] sent email to {} that we received their application",
+            email
+        );
         }
 
         let mut github = "".to_string();
@@ -555,47 +602,159 @@ impl NewApplicant {
             parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
 
         // Build and return the applicant information for the row.
-        NewApplicant {
-            submitted_time: time,
-            name: row[columns.name].to_string(),
-            email: row[columns.email].to_string(),
-            location,
-            phone,
-            country_code,
-            github,
-            gitlab,
-            linkedin,
-            portfolio,
-            website,
-            resume,
-            materials,
-            status,
-            sent_email_received,
-            role: sheet_name.to_string(),
-            sheet_id: sheet_id.to_string(),
-            value_reflected,
-            value_violated,
-            values_in_tension,
-            resume_contents,
-            materials_contents,
-            work_samples,
-            writing_samples,
-            analysis_samples,
-            presentation_samples,
-            exploratory_samples,
-            question_technically_challenging,
-            question_proud_of,
-            question_happiest,
-            question_unhappiest,
-            question_value_reflected,
-            question_value_violated,
-            question_values_in_tension,
-            question_why_oxide,
-        }
+        (
+            NewApplicant {
+                submitted_time: time,
+                name: row[columns.name].to_string(),
+                email,
+                location,
+                phone,
+                country_code,
+                github,
+                gitlab,
+                linkedin,
+                portfolio,
+                website,
+                resume,
+                materials,
+                status,
+                sent_email_received,
+                role: sheet_name.to_string(),
+                sheet_id: sheet_id.to_string(),
+                value_reflected,
+                value_violated,
+                values_in_tension,
+                resume_contents,
+                materials_contents,
+                work_samples,
+                writing_samples,
+                analysis_samples,
+                presentation_samples,
+                exploratory_samples,
+                question_technically_challenging,
+                question_proud_of,
+                question_happiest,
+                question_unhappiest,
+                question_value_reflected,
+                question_value_violated,
+                question_values_in_tension,
+                question_why_oxide,
+            },
+            is_new_applicant,
+        )
     }
-}
 
-impl Applicant {
+    pub async fn create_github_next_steps_issue(
+        &self,
+        github: &Github,
+        meta_issues: &[Issue],
+    ) {
+        // Check if their status is next steps, we only care about folks in the next steps.
+        if !self.status.contains("Next steps") {
+            return;
+        }
+
+        // Check if we already have an issue for this user.
+        let exists = check_if_github_issue_exists(&meta_issues, &self.name);
+        if exists {
+            // Return early we don't want to update the issue because it will overwrite
+            // any changes we made.
+            return;
+        }
+
+        // Create an issue for the applicant.
+        let title = format!("Hiring: {}", self.name);
+        let labels = vec!["hiring".to_string()];
+        let body = format!("- [ ] Schedule follow up meetings
+- [ ] Schedule sync to discuss
+## Candidate Information
+Submitted Date: {}
+Email: {}
+Phone: {}
+Location: {}
+GitHub: {}
+Resume: {}
+Oxide Candidate Materials: {}
+## Reminder
+To view the all the candidates refer to the following Google
+spreadsheets:
+- [Engineering Applications](https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing)
+- [Product Engineering and Design Applications](https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing)
+cc @jessfraz @sdtuck @bcantrill",
+		self.submitted_time,
+		self.email,
+		self.phone,
+		self.location,
+		self.github,
+		self.resume,
+		self.materials);
+
+        // Create the issue.
+        github
+            .repo(github_org(), "meta")
+            .issues()
+            .create(&IssueOptions {
+                title,
+                body: Some(body),
+                assignee: Some("jessfraz".to_string()),
+                labels,
+                milestone: None,
+            })
+            .await
+            .unwrap();
+
+        println!("[applicant]: created hiring issue for {}", self.email);
+    }
+
+    pub async fn create_github_onboarding_issue(
+        &self,
+        github: &Github,
+        configs_issues: &[Issue],
+    ) {
+        // Check if their status is not hired, we only care about hired applicants.
+        if !self.status.contains("Hired") {
+            return;
+        }
+        // Check if we already have an issue for this user.
+        let exists = check_if_github_issue_exists(&configs_issues, &self.name);
+        if exists {
+            // Return early we don't want to update the issue because it will overwrite
+            // any changes we made.
+            return;
+        }
+
+        // Create an issue for the applicant.
+        let title = format!("Onboarding: {}", self.name);
+        let labels = vec!["hiring".to_string()];
+        let body = format!(
+            "- [ ] Add to users.toml
+- [ ] Add to matrix chat
+Start Date: [START DATE (ex. Monday, January 20th, 2020)]
+Personal Email: {}
+Twitter: [TWITTER HANDLE]
+GitHub: {}
+Phone: {}
+cc @jessfraz @sdtuck @bcantrill",
+            self.email, self.github, self.phone,
+        );
+
+        // Create the issue.
+        github
+            .repo(github_org(), "configs")
+            .issues()
+            .create(&IssueOptions {
+                title,
+                body: Some(body),
+                assignee: Some("jessfraz".to_string()),
+                labels,
+                milestone: None,
+            })
+            .await
+            .unwrap();
+
+        println!("[applicant]: created onboarding issue for {}", self.email);
+    }
+
     /// Get the human duration of time since the application was submitted.
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
@@ -784,6 +943,135 @@ To view the all the candidates refer to the following Google spreadsheets:
                     );
 
         msg
+    }
+}
+
+impl Applicant {
+    /// Get the human duration of time since the application was submitted.
+    pub fn human_duration(&self) -> HumanTime {
+        let mut dur = self.submitted_time - Utc::now();
+        if dur.num_seconds() > 0 {
+            dur = -dur;
+        }
+
+        HumanTime::from(dur)
+    }
+
+    /// Convert the applicant into JSON for a Slack message.
+    pub fn as_slack_msg(&self) -> Value {
+        let time = self.human_duration();
+
+        let mut status_msg = format!("<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}", self.sheet_id, self.role, time);
+        if !self.status.is_empty() {
+            status_msg += &format!(" | status: *{}*", self.status);
+        }
+
+        let mut values_msg = "".to_string();
+        if !self.value_reflected.is_empty() {
+            values_msg +=
+                &format!("values reflected: *{}*", self.value_reflected);
+        }
+        if !self.value_violated.is_empty() {
+            values_msg += &format!(" | violated: *{}*", self.value_violated);
+        }
+        for (k, tension) in self.values_in_tension.iter().enumerate() {
+            if k == 0 {
+                values_msg += &format!(" | in tension: *{}*", tension);
+            } else {
+                values_msg += &format!(" *& {}*", tension);
+            }
+        }
+        if values_msg.is_empty() {
+            values_msg = "values not yet populated".to_string();
+        }
+
+        let mut intro_msg =
+            format!("*{}*  <mailto:{}|{}>", self.name, self.email, self.email,);
+        if !self.location.is_empty() {
+            intro_msg += &format!("  {}", self.location);
+        }
+
+        let mut info_msg = format!(
+            "<{}|resume> | <{}|materials>",
+            self.resume, self.materials,
+        );
+        if !self.phone.is_empty() {
+            info_msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
+        }
+        if !self.github.is_empty() {
+            info_msg += &format!(
+                " | <https://github.com/{}|github:{}>",
+                self.github.trim_start_matches('@'),
+                self.github,
+            );
+        }
+        if !self.gitlab.is_empty() {
+            info_msg += &format!(
+                " | <https://gitlab.com/{}|gitlab:{}>",
+                self.gitlab.trim_start_matches('@'),
+                self.gitlab,
+            );
+        }
+        if !self.linkedin.is_empty() {
+            info_msg += &format!(" | <{}|linkedin>", self.linkedin,);
+        }
+        if !self.portfolio.is_empty() {
+            info_msg += &format!(" | <{}|portfolio>", self.portfolio,);
+        }
+        if !self.website.is_empty() {
+            info_msg += &format!(" | <{}|website>", self.website,);
+        }
+
+        json!(FormattedMessage {
+            channel: None,
+            attachments: None,
+            blocks: Some(vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: intro_msg,
+                    }),
+                    elements: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: info_msg,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: values_msg,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: Some(vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: status_msg,
+                    }]),
+                    text: None,
+                    accessory: None,
+                    block_id: None,
+                    fields: None,
+                }
+            ])
+        })
     }
 }
 

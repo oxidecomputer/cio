@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use hubcaps::http_cache::FileBasedCache;
+use hubcaps::issues::Issue;
 use hubcaps::repositories::OrgRepoType;
 use hubcaps::repositories::OrganizationRepoListOptions;
 use hubcaps::{Credentials, Github};
@@ -60,6 +61,11 @@ pub async fn get_gsuite_token() -> AccessToken {
     }
 
     token
+}
+
+/// Check if a GitHub issue already exists.
+pub fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> bool {
+    issues.iter().any(|i| i.title.contains(search))
 }
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.

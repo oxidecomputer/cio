@@ -7,7 +7,9 @@ use std::process::Command;
 use airtable_api::{Airtable, Record};
 use google_drive::GoogleDrive;
 use html2text::from_read;
+use hubcaps::issues::{IssueListOptions, State};
 use pandoc::OutputKind;
+use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 
@@ -17,7 +19,8 @@ use crate::airtable::{
 };
 use crate::db::Database;
 use crate::models::{Applicant, NewApplicant};
-use crate::utils::get_gsuite_token;
+use crate::slack::{get_hiring_channel_post_url, post_to_channel};
+use crate::utils::{authenticate_github, get_gsuite_token, github_org};
 
 /// The data type for a Google Sheet applicant columns, we use this when
 /// parsing the Google Sheets for applicants.
@@ -243,6 +246,38 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     // Initialize the GSuite sheets client.
     let drive_client = GoogleDrive::new(token.clone());
 
+    let github = authenticate_github();
+
+    // Get all the hiring issues on the meta repository.
+    let meta_issues = github
+        .repo(github_org(), "meta")
+        .issues()
+        .list(
+            &IssueListOptions::builder()
+                .per_page(100)
+                .state(State::All)
+                .labels(vec!["hiring"])
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    // Get all the hiring issues on the configs repository.
+    let configs_issues = github
+        .repo(github_org(), "configs")
+        .issues()
+        .list(
+            &IssueListOptions::builder()
+                .per_page(100)
+                .state(State::All)
+                .labels(vec!["hiring"])
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    let sendgrid_client = SendGrid::new_from_env();
+
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
     for (sheet_name, sheet_id) in sheets {
@@ -276,20 +311,87 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
             }
 
             // Parse the applicant out of the row information.
-            let applicant = NewApplicant::parse(
+            let (applicant, is_new_applicant) = NewApplicant::parse(
                 &drive_client,
+                &sheets_client,
                 sheet_name,
                 sheet_id,
                 &columns,
                 &row,
+                row_index,
             )
             .await;
+
+            applicant
+                .create_github_next_steps_issue(&github, &meta_issues)
+                .await;
+            applicant
+                .create_github_onboarding_issue(&github, &configs_issues)
+                .await;
+
+            if is_new_applicant {
+                // Post to Slack.
+                post_to_channel(
+                    get_hiring_channel_post_url(),
+                    applicant.as_slack_msg(),
+                )
+                .await;
+
+                // Send a company-wide email.
+                email_send_new_applicant_notification(
+                    &sendgrid_client,
+                    applicant.clone(),
+                    "oxide.computer",
+                )
+                .await;
+            }
 
             applicants.push(applicant);
         }
     }
 
     applicants
+}
+
+pub async fn email_send_received_application(
+    sendgrid: &SendGrid,
+    email: &str,
+    domain: &str,
+) {
+    // Send the message.
+    sendgrid.send_mail(
+        "Oxide Computer Company Application Received!".to_string(),
+                "Thank you for submitting your application materials! We really appreciate all
+the time and thought everyone puts into their application. We will be in touch
+within the next couple weeks with more information.
+Sincerely,
+  The Oxide Team".to_string(),
+  vec![email.to_string()],
+        vec![format!("careers@{}",domain)],
+        vec![],
+    format!("careers@{}", domain),
+    ).await;
+}
+
+pub async fn email_send_new_applicant_notification(
+    sendgrid: &SendGrid,
+    applicant: NewApplicant,
+    domain: &str,
+) {
+    // Create the message.
+    let message = applicant.clone().as_company_notification_email();
+
+    // Send the message.
+    sendgrid
+        .send_mail(
+            format!("New Application: {}", applicant.name),
+            message,
+            vec![format!("all@{}", domain)],
+            vec![],
+            vec![],
+            format!("applications@{}", domain),
+        )
+        .await;
 }
 
 pub async fn refresh_airtable_applicants() {
