@@ -586,7 +586,9 @@ impl NewApplicant {
             question_why_oxide,
         }
     }
+}
 
+impl Applicant {
     /// Get the human duration of time since the application was submitted.
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
@@ -1533,7 +1535,9 @@ impl NewRFD {
 
         // TODO: parse the author
     }
+}
 
+impl RFD {
     /// Convert an RFD into JSON as Slack message.
     // TODO: make this include more fields
     pub fn as_slack_msg(&self) -> String {
