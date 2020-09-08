@@ -1469,7 +1469,7 @@ pub struct NewRFD {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sha: String,
     /// commit_date is the date of the last commit that modified the file
-    #[serde(default = "Utc::now")]
+    #[serde(default = "Utc::now", alias = "commit_date")]
     pub commit_date: DateTime<Utc>,
     /// milestones only exist in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
