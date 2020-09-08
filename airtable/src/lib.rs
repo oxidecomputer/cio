@@ -130,17 +130,17 @@ impl Airtable {
         &self,
         table: &str,
         view: &str,
+        fields: Vec<&str>,
     ) -> Result<Vec<Record>, APIError> {
+        let mut params =
+            vec![("pageSize", "100".to_string()), ("view", view.to_string())];
+        for field in fields {
+            params.push(("fields", field.to_string()));
+        }
+
         // Build the request.
-        let mut request = self.request(
-            Method::GET,
-            table.to_string(),
-            (),
-            Some(vec![
-                ("pageSize", "100".to_string()),
-                ("view", view.to_string()),
-            ]),
-        );
+        let mut request =
+            self.request(Method::GET, table.to_string(), (), Some(params));
 
         let mut resp = self.client.execute(request).await.unwrap();
         match resp.status() {
