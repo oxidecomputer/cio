@@ -189,7 +189,20 @@ pub async fn refresh_airtable_auth_logins() {
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
     let records = airtable
-        .list_records(AIRTABLE_AUTH0_LOGINS_TABLE, AIRTABLE_GRID_VIEW)
+        .list_records(
+            AIRTABLE_AUTH0_LOGINS_TABLE,
+            AIRTABLE_GRID_VIEW,
+            vec![
+                "id",
+                "link_to_people",
+                "logins_count",
+                "updated_at",
+                "created_at",
+                "user_id",
+                "email_verified",
+                "last_login",
+            ],
+        )
         .await
         .unwrap();
 
@@ -211,6 +224,15 @@ pub async fn refresh_airtable_auth_logins() {
         match logins.get(&auth_login.id) {
             Some((r, in_airtable_fields)) => {
                 let mut record = r.clone();
+
+                if in_airtable_fields.user_id == auth_login.user_id
+                    && in_airtable_fields.last_login == auth_login.last_login
+                    && in_airtable_fields.logins_count
+                        == auth_login.logins_count
+                {
+                    // We do not need to update the record.
+                    continue;
+                }
 
                 // Set the Link to People from the original so it stays intact.
                 auth_login.link_to_people =

@@ -824,10 +824,13 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 #[table_name = "auth_logins"]
 pub struct NewAuthLogin {
     pub user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub nickname: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub username: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     pub email_verified: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -847,6 +850,7 @@ pub struct NewAuthLogin {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_login: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_ip: String,
     pub logins_count: i32,
     /// link to another table in Airtable

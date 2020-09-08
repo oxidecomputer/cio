@@ -26,7 +26,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "reqwest",
  "serde",
@@ -35,9 +35,9 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0d5fd710ae051c7055badc9e683ce2e93ec6646f83114846c6c58be76a87616"
+checksum = "bcdc898acb4f9e6b07ea422ae20121b8efd1d0bb945a627b79db976ad65b83dc"
 dependencies = [
  "reqwest",
  "serde",
@@ -256,7 +256,7 @@ dependencies = [
 name = "cio-api"
 version = "0.1.2"
 dependencies = [
- "airtable-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.15",
  "chrono-humanize",
  "clap",
@@ -288,7 +288,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e9773cf75245f9adf4a26b7d0c0e6b9ca171892d4ca48e3bf3aeaf80e788bfc"
 dependencies = [
- "airtable-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.15",
  "chrono-humanize",
  "google-drive 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",

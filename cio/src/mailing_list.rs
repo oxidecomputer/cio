@@ -17,7 +17,11 @@ pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
     let records = airtable
-        .list_records(AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_GRID_VIEW)
+        .list_records(
+            AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
+            AIRTABLE_GRID_VIEW,
+            vec![],
+        )
         .await
         .unwrap();
 
