@@ -58,11 +58,12 @@ use std::sync::Arc;
 
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
-use reqwest::{get, header, Client, Method, Request, StatusCode, Url};
+use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use yup_oauth2::AccessToken;
 
 use cio_api::configs::{BuildingConfig, ResourceConfig, UserConfig};
+use cio_api::utils::get_github_user_public_ssh_keys;
 
 /// The endpoint for the GSuite Directory API.
 const DIRECTORY_ENDPOINT: &str =
@@ -1296,9 +1297,9 @@ impl User {
             family_name: Some(user.last_name.clone()),
         });
 
-        if let Some(val) = &user.recovery_email {
+        if !user.recovery_email.is_empty() {
             // Set the recovery email for the user.
-            self.recovery_email = Some(val.clone());
+            self.recovery_email = Some(user.recovery_email.clone());
 
             // Check if we have a home email set for the user and update it.
             let mut has_home_email = false;
@@ -1309,7 +1310,8 @@ impl User {
                             Some(typev) => {
                                 if typev == "home" {
                                     // Update the set home email.
-                                    emails[index].address = val.clone();
+                                    emails[index].address =
+                                        user.recovery_email.clone();
                                     // Break the loop early.
                                     has_home_email = true;
                                     break;
@@ -1323,7 +1325,7 @@ impl User {
                         // Set the home email for the user.
                         emails.push(UserEmail {
                             typev: Some("home".to_string()),
-                            address: val.to_string(),
+                            address: user.recovery_email.to_string(),
                             primary: Some(false),
                         });
                     }
@@ -1334,34 +1336,30 @@ impl User {
                 None => {
                     self.emails = Some(vec![UserEmail {
                         typev: Some("home".to_string()),
-                        address: val.to_string(),
+                        address: user.recovery_email.to_string(),
                         primary: Some(false),
                     }]);
                 }
             }
-        } else {
-            self.recovery_email = None;
         }
 
-        if let Some(val) = &user.recovery_phone {
+        if !user.recovery_phone.is_empty() {
             // Set the recovery phone for the user.
-            self.recovery_phone = Some(val.to_string());
+            self.recovery_phone = Some(user.recovery_phone.to_string());
 
             // Set the home phone for the user.
             self.phones = Some(vec![UserPhone {
                 typev: "home".to_string(),
-                value: val.to_string(),
+                value: user.recovery_phone.to_string(),
                 primary: true,
             }]);
-        } else {
-            self.recovery_phone = None;
         }
 
         self.primary_email = Some(format!("{}@{}", user.username, domain));
 
         // Write the user aliases.
         let mut aliases: Vec<String> = Default::default();
-        for alias in user.aliases.as_ref().unwrap() {
+        for alias in &user.aliases {
             aliases.push(format!("{}@{}", alias, domain));
         }
         self.aliases = Some(aliases);
@@ -1375,38 +1373,41 @@ impl User {
             self.password = Some(password);
         }
 
-        self.gender = if let Some(val) = &user.gender {
+        if !user.gender.is_empty() {
             let mut gender: UserGender = Default::default();
-            gender.typev = val.to_string();
-            Some(gender)
-        } else {
-            None
-        };
+            gender.typev = user.gender.to_string();
+            self.gender = Some(gender);
+        }
 
-        self.locations = if let Some(val) = &user.building {
+        if !user.building.is_empty() {
             let mut location: UserLocation = Default::default();
             location.typev = "desk".to_string();
-            location.building_id = Some(val.to_string());
+            location.building_id = Some(user.building.to_string());
             location.floor_name = Some("1".to_string());
-            Some(vec![location])
-        } else {
-            None
-        };
+            self.locations = Some(vec![location]);
+        }
 
         let mut cs: HashMap<String, UserCustomProperties> = HashMap::new();
-        if let Some(val) = &user.github {
+        if !user.github.is_empty() {
             let mut gh: HashMap<String, String> = HashMap::new();
-            gh.insert("GitHub_Username".to_string(), val.clone());
+            gh.insert("GitHub_Username".to_string(), user.github.clone());
             cs.insert("Contact".to_string(), UserCustomProperties(Some(gh)));
 
             // Set their GitHub SSH Keys to their Google SSH Keys.
-            let ssh_keys = get_github_user_public_ssh_keys(val).await;
-            self.ssh_public_keys = Some(ssh_keys);
+            let ssh_keys = get_github_user_public_ssh_keys(&user.github).await;
+            let mut keys: Vec<UserSSHKey> = Default::default();
+            for k in ssh_keys {
+                keys.push(UserSSHKey {
+                    key: k.to_string(),
+                    expiration_time_usec: None,
+                });
+            }
+            self.ssh_public_keys = Some(keys);
         }
 
-        if let Some(val) = &user.chat {
+        if !user.chat.is_empty() {
             let mut chat: HashMap<String, String> = HashMap::new();
-            chat.insert("Matrix_Chat_Username".to_string(), val.clone());
+            chat.insert("Matrix_Chat_Username".to_string(), user.chat.clone());
             cs.insert("Contact".to_string(), UserCustomProperties(Some(chat)));
         }
 
@@ -1415,30 +1416,6 @@ impl User {
 
         self
     }
-}
-
-/// Return a user's public ssh key's from GitHub by their GitHub handle.
-async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<UserSSHKey> {
-    let body = get(&format!("https://github.com/{}.keys", handle))
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-
-    body.lines()
-        .filter_map(|key| {
-            let kt = key.trim();
-            if !kt.is_empty() {
-                Some(UserSSHKey {
-                    key: kt.to_string(),
-                    expiration_time_usec: None,
-                })
-            } else {
-                None
-            }
-        })
-        .collect()
 }
 
 /// A user's email.

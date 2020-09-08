@@ -7,6 +7,7 @@ use hubcaps::http_cache::FileBasedCache;
 use hubcaps::repositories::OrgRepoType;
 use hubcaps::repositories::OrganizationRepoListOptions;
 use hubcaps::{Credentials, Github};
+use reqwest::get;
 use reqwest::Client;
 use yup_oauth2::{
     read_service_account_key, AccessToken, ServiceAccountAuthenticator,
@@ -59,6 +60,27 @@ pub async fn get_gsuite_token() -> AccessToken {
     }
 
     token
+}
+
+/// Return a user's public ssh key's from GitHub by their GitHub handle.
+pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
+    let body = get(&format!("https://github.com/{}.keys", handle))
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    body.lines()
+        .filter_map(|key| {
+            let kt = key.trim();
+            if !kt.is_empty() {
+                Some(kt.to_string())
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// Authenticate with GitHub.

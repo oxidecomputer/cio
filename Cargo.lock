@@ -779,7 +779,7 @@ dependencies = [
 name = "gsuite-api"
 version = "0.1.6"
 dependencies = [
- "cio-api 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cio-api 0.1.2",
  "rand",
  "reqwest",
  "serde",
