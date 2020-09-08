@@ -67,6 +67,7 @@ static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 pub struct NewApplicant {
     pub name: String,
     pub role: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sheet_id: String,
     pub status: String,
     pub submitted_time: DateTime<Utc>,
@@ -158,6 +159,8 @@ impl NewApplicant {
                 s = "Declined".to_string();
             } else if s.contains("hired") {
                 s = "Hired".to_string();
+            } else {
+                s = "Needs to be triaged".to_string();
             }
 
             s

@@ -189,6 +189,8 @@ pub async fn refresh_airtable_rfds() {
                 rfd.milestones = in_airtable_fields.milestones.clone();
                 rfd.relevant_components =
                     in_airtable_fields.relevant_components.clone();
+                rfd.content = "".to_string();
+                rfd.html = "".to_string();
 
                 record.fields = json!(rfd);
 
