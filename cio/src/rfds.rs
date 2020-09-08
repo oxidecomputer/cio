@@ -1,3 +1,4 @@
+use airtable_api::{Airtable, Record};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -10,8 +11,12 @@ use csv::ReaderBuilder;
 use hubcaps::Github;
 use regex::Regex;
 
+use crate::airtable::{
+    airtable_api_key, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GRID_VIEW,
+    AIRTABLE_RFD_TABLE,
+};
 use crate::db::Database;
-use crate::models::NewRFD;
+use crate::models::{NewRFD, RFD};
 use crate::utils::github_org;
 
 /// Get the RFDs from the rfd GitHub repo.
@@ -151,6 +156,59 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     cleaned
 }
 
+pub async fn refresh_airtable_rfds() {
+    // Initialize the Airtable client.
+    let airtable =
+        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_RACK_ROADMAP);
+
+    let records = airtable
+        .list_records(AIRTABLE_RFD_TABLE, AIRTABLE_GRID_VIEW, vec![])
+        .await
+        .unwrap();
+
+    let mut airtable_rfds: BTreeMap<i32, (Record, RFD)> = Default::default();
+    for record in records {
+        let fields: RFD =
+            serde_json::from_value(record.fields.clone()).unwrap();
+
+        airtable_rfds.insert(fields.id, (record, fields));
+    }
+
+    // Initialize our database.
+    let db = Database::new();
+    let rfds = db.get_rfds();
+
+    let mut updated: i32 = 0;
+    for mut rfd in rfds {
+        // See if we have it in our fields.
+        match airtable_rfds.get(&rfd.id) {
+            Some((r, in_airtable_fields)) => {
+                let mut record = r.clone();
+
+                // Set the Link to People from the original so it stays intact.
+                rfd.milestones = in_airtable_fields.milestones.clone();
+                rfd.relevant_components =
+                    in_airtable_fields.relevant_components.clone();
+
+                record.fields = json!(rfd);
+
+                airtable
+                    .update_records(AIRTABLE_RFD_TABLE, vec![record.clone()])
+                    .await
+                    .unwrap();
+
+                updated += 1;
+            }
+            None => {
+                // Create the record.
+                rfd.push_to_airtable().await;
+            }
+        }
+    }
+
+    println!("updated {} rfds", updated);
+}
+
 // Sync the rfds with our database.
 pub async fn refresh_db_rfds(github: &Github) {
     let rfds = get_rfds_from_repo(github).await;
@@ -166,7 +224,9 @@ pub async fn refresh_db_rfds(github: &Github) {
 
 #[cfg(test)]
 mod tests {
-    use crate::rfds::{clean_rfd_html_links, refresh_db_rfds};
+    use crate::rfds::{
+        clean_rfd_html_links, refresh_airtable_rfds, refresh_db_rfds,
+    };
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
@@ -196,5 +256,10 @@ mod tests {
         <a href="/rfd/0032#things" \>"#;
 
         assert_eq!(expected, cleaned);
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_rfds_airtable() {
+        refresh_airtable_rfds().await;
     }
 }

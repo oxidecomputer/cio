@@ -18,8 +18,10 @@ use serde_json::Value;
 use std::io::Write;
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_AUTH0_LOGINS_TABLE,
-    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
+    airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_LOGINS_TABLE,
+    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_BASE_ID_RACK_ROADMAP,
+    AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
+    AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
 };
 use crate::applicants::{get_file_contents, ApplicantSheetColumns};
 use crate::rfds::{
@@ -48,6 +50,8 @@ static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 /// The data type for a NewApplicant.
 #[db_setup {
     new_name = "Applicant",
+    base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
+    table = "AIRTABLE_APPLICATIONS_TABLE",
 }]
 #[derive(
     Debug,
@@ -811,6 +815,8 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 /// The data type for an NewAuthLogin.
 #[db_setup {
     new_name = "AuthLogin",
+    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    table = "AIRTABLE_AUTH_LOGINS_TABLE",
 }]
 #[serde(rename_all = "camelCase")]
 #[derive(
@@ -858,31 +864,6 @@ pub struct NewAuthLogin {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_people: Vec<String>,
-}
-
-impl AuthLogin {
-    /// Push the auth0 login to our Airtable workspace.
-    pub async fn push_to_airtable(&self) {
-        // Initialize the Airtable client.
-        let airtable =
-            Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
-
-        // Create the record.
-        let record = Record {
-            id: None,
-            created_time: None,
-            fields: serde_json::to_value(self).unwrap(),
-        };
-
-        // Send the new record to the Airtable client.
-        // Batch can only handle 10 at a time.
-        airtable
-            .create_records(AIRTABLE_AUTH0_LOGINS_TABLE, vec![record])
-            .await
-            .unwrap();
-
-        println!("created new row in airtable: {:?}", self);
-    }
 }
 
 /// The data type for a JournalClubMeeting.
@@ -990,6 +971,8 @@ pub struct JournalClubPaper {
 /// The data type for a MailingListSubscriber.
 #[db_setup {
     new_name = "MailingListSubscriber",
+    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    table = "AIRTABLE_MAILING_LIST_SIGNUPS_TABLE",
 }]
 #[serde(rename_all = "camelCase")]
 #[derive(
@@ -1438,6 +1421,8 @@ impl NewRepo {
 /// The data type for an RFD.
 #[db_setup {
     new_name = "RFD",
+    base_id = "AIRTABLE_BASE_ID_RACK_ROADMAP",
+    table = "AIRTABLE_RFD_TABLE",
 }]
 #[serde(rename_all = "camelCase")]
 #[derive(
@@ -1486,6 +1471,12 @@ pub struct NewRFD {
     /// commit_date is the date of the last commit that modified the file
     #[serde(default = "Utc::now")]
     pub commit_date: DateTime<Utc>,
+    /// milestones only exist in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub milestones: Vec<String>,
+    /// relevant_components only exist in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relevant_components: Vec<String>,
 }
 
 impl NewRFD {

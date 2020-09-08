@@ -13,5 +13,7 @@ CREATE TABLE rfds (
     html TEXT NOT NULL,
     content TEXT NOT NULL,
     sha VARCHAR NOT NULL,
-    commit_date TIMESTAMPTZ NOT NULL
+    commit_date TIMESTAMPTZ NOT NULL,
+    milestones TEXT [] NOT NULL,
+    relevant_complaints TEXT [] NOT NULL
 )

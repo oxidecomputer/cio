@@ -251,6 +251,8 @@ table! {
         content -> Text,
         sha -> Varchar,
         commit_date -> Timestamptz,
+        milestones -> Array<Text>,
+        relevant_components -> Array<Text>,
     }
 }
 

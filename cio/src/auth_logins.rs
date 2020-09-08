@@ -9,7 +9,7 @@ use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_AUTH0_LOGINS_TABLE,
+    airtable_api_key, AIRTABLE_AUTH_LOGINS_TABLE,
     AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
 };
 use crate::db::Database;
@@ -190,7 +190,7 @@ pub async fn refresh_airtable_auth_logins() {
 
     let records = airtable
         .list_records(
-            AIRTABLE_AUTH0_LOGINS_TABLE,
+            AIRTABLE_AUTH_LOGINS_TABLE,
             AIRTABLE_GRID_VIEW,
             vec![
                 "id",
@@ -206,12 +206,13 @@ pub async fn refresh_airtable_auth_logins() {
         .await
         .unwrap();
 
-    let mut logins: BTreeMap<i32, (Record, AuthLogin)> = Default::default();
+    let mut airtable_auth_logins: BTreeMap<i32, (Record, AuthLogin)> =
+        Default::default();
     for record in records {
         let fields: AuthLogin =
             serde_json::from_value(record.fields.clone()).unwrap();
 
-        logins.insert(fields.id, (record, fields));
+        airtable_auth_logins.insert(fields.id, (record, fields));
     }
 
     // Initialize our database.
@@ -221,7 +222,7 @@ pub async fn refresh_airtable_auth_logins() {
     let mut updated: i32 = 0;
     for mut auth_login in auth_logins {
         // See if we have it in our fields.
-        match logins.get(&auth_login.id) {
+        match airtable_auth_logins.get(&auth_login.id) {
             Some((r, in_airtable_fields)) => {
                 let mut record = r.clone();
 
@@ -242,7 +243,7 @@ pub async fn refresh_airtable_auth_logins() {
 
                 airtable
                     .update_records(
-                        AIRTABLE_AUTH0_LOGINS_TABLE,
+                        AIRTABLE_AUTH_LOGINS_TABLE,
                         vec![record.clone()],
                     )
                     .await
@@ -257,7 +258,7 @@ pub async fn refresh_airtable_auth_logins() {
         }
     }
 
-    println!("updated {} users", updated);
+    println!("updated {} auth_logins", updated);
 }
 
 // Sync the auth_logins with our database.
