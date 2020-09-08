@@ -138,8 +138,6 @@ mod tests {
                 pub foo: String,
                 pub bar: String
             }
-            use airtable_api::Record;
-            use crate::airtable::{AIRTABLE_RFD_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS};
 
             impl DuplicatedItem {
                 /// Push the row to our Airtable workspace.
