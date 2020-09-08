@@ -830,6 +830,7 @@ pub struct NewAuthLogin {
     pub username: String,
     pub email: String,
     pub email_verified: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub picture: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub company: String,
@@ -848,9 +849,12 @@ pub struct NewAuthLogin {
     pub last_login: DateTime<Utc>,
     pub last_ip: String,
     pub logins_count: i32,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_people: Vec<String>,
 }
 
-impl NewAuthLogin {
+impl AuthLogin {
     /// Push the auth0 login to our Airtable workspace.
     pub async fn push_to_airtable(&self) {
         // Initialize the Airtable client.
@@ -871,7 +875,7 @@ impl NewAuthLogin {
             .await
             .unwrap();
 
-        println!("created auth0 login in Airtable: {:?}", self);
+        println!("created new row in airtable: {:?}", self);
     }
 }
 

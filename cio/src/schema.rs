@@ -60,6 +60,7 @@ table! {
         last_login -> Timestamptz,
         last_ip -> Varchar,
         logins_count -> Int4,
+        link_to_people -> Array<Text>,
     }
 }
 

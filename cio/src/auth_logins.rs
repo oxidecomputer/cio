@@ -13,7 +13,7 @@ use crate::airtable::{
     AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
 };
 use crate::db::Database;
-use crate::models::NewAuthLogin;
+use crate::models::{AuthLogin, NewAuthLogin};
 
 /// The data type for an Auth0 user.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -83,6 +83,7 @@ impl User {
             last_login: self.last_login,
             last_ip: self.last_ip.to_string(),
             logins_count: self.logins_count,
+            link_to_people: Default::default(),
         }
     }
 }
@@ -182,7 +183,7 @@ async fn get_auth_logins_page(
     resp.json::<Vec<User>>().await.unwrap()
 }
 
-pub async fn update_users_in_airtable() {
+pub async fn refresh_airtable_auth_logins() {
     // Initialize the Airtable client.
     let airtable =
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
@@ -192,36 +193,30 @@ pub async fn update_users_in_airtable() {
         .await
         .unwrap();
 
-    let mut logins: BTreeMap<String, (Record, NewAuthLogin)> =
-        Default::default();
+    let mut logins: BTreeMap<i32, (Record, AuthLogin)> = Default::default();
     for record in records {
-        let fields: NewAuthLogin =
+        let fields: AuthLogin =
             serde_json::from_value(record.fields.clone()).unwrap();
 
-        logins.insert(fields.user_id.to_string(), (record, fields));
+        logins.insert(fields.id, (record, fields));
     }
 
-    let users = get_auth_logins("oxide".to_string()).await;
+    // Initialize our database.
+    let db = Database::new();
+    let auth_logins = db.get_auth_logins();
 
     let mut updated: i32 = 0;
-    for user in users {
+    for mut auth_login in auth_logins {
         // See if we have it in our fields.
-        match logins.get(&user.user_id) {
+        match logins.get(&auth_login.id) {
             Some((r, in_airtable_fields)) => {
                 let mut record = r.clone();
 
-                // Check if we even need to update.
-                if user == *in_airtable_fields {
-                    // They are the same, don't update.
-                    continue;
-                }
-
                 // Set the Link to People from the original so it stays intact.
-                //fields.link_to_people = in_airtable_fields.link_to_people.clone();
-                // Set the company so it stays intact.
-                //fields.company = in_airtable_fields.company.clone();
+                auth_login.link_to_people =
+                    in_airtable_fields.link_to_people.clone();
 
-                record.fields = json!(user);
+                record.fields = json!(auth_login);
 
                 airtable
                     .update_records(
@@ -235,7 +230,7 @@ pub async fn update_users_in_airtable() {
             }
             None => {
                 // Create the record.
-                user.push_to_airtable().await;
+                auth_login.push_to_airtable().await;
             }
         }
     }
@@ -258,10 +253,17 @@ pub async fn refresh_db_auth_logins() {
 
 #[cfg(test)]
 mod tests {
-    use crate::auth_logins::refresh_db_auth_logins;
+    use crate::auth_logins::{
+        refresh_airtable_auth_logins, refresh_db_auth_logins,
+    };
 
     #[tokio::test(threaded_scheduler)]
     async fn test_auth_logins() {
         refresh_db_auth_logins().await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_auth_logins_airtable() {
+        refresh_airtable_auth_logins().await;
     }
 }

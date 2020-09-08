@@ -17,5 +17,6 @@ CREATE TABLE auth_logins (
     updated_at TIMESTAMPTZ NOT NULL,
     last_login TIMESTAMPTZ NOT NULL,
     last_ip VARCHAR NOT NULL,
-    logins_count INTEGER NOT NULL
+    logins_count INTEGER NOT NULL,
+    link_to_people TEXT [] NOT NULL
 )
