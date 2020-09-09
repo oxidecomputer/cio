@@ -35,7 +35,6 @@ impl Default for Database {
 
 // TODO: more gracefully handle errors
 // TODO: possibly generate all this boilerplate as well.
-// TODO: generate all the diesal duplicates as well.
 impl Database {
     /// Establish a connection to the database.
     pub fn new() -> Database {
