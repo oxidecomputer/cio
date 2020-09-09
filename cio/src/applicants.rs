@@ -163,7 +163,9 @@ pub async fn get_file_contents(
         let mut archive = zip::ZipArchive::new(file).unwrap();
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
+            output = env::temp_dir();
             output.push("zip/");
+            output.push(file.name());
 
             {
                 let comment = file.comment();
