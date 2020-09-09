@@ -1729,6 +1729,8 @@ impl NewRepo {
 #[table_name = "rfds"]
 pub struct NewRFD {
     // TODO: remove this alias when we update https://github.com/oxidecomputer/rfd/blob/master/.helpers/rfd.csv
+    // When you do this you need to update src/components/images.js in the rfd repo as well.
+    // those are the only two things remaining that parse the CSV directly.
     #[serde(alias = "num")]
     pub number: i32,
     /// (generated) number_string is the long version of the number with leading zeros
