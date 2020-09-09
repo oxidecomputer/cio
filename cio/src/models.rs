@@ -1806,7 +1806,7 @@ impl NewRFD {
         let repo = github.repo(github_org(), "rfd");
         if branch == "master" {
             // Get the commit date.
-            let commits = repo.commits().list().await.unwrap();
+            let commits = repo.commits().list(&rfd_dir).await.unwrap();
             let commit = commits.get(0).unwrap();
             let commit_date = format!("{}-00:00", commit.commit.author.date);
             self.commit_date =
