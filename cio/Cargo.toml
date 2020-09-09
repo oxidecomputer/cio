@@ -36,3 +36,4 @@ tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
 toml = "0.5"
 #yup-oauth2 = "^4.1.2"
 yup-oauth2 = { git = "https://github.com/dermesser/yup-oauth2", rev = "3d84ddd1782e1f1218427498c47069095915c4a8" }
+zip = "0.5"

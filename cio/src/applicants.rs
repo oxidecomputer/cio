@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
-use std::io::{stderr, stdout, Write};
+use std::io::{copy, stderr, stdout, Write};
 use std::process::Command;
 
 use airtable_api::{Airtable, Record};
@@ -137,37 +137,10 @@ pub async fn get_file_contents(
 
         path.push(format!("{}.pdf", id));
 
-        let mut file = fs::File::create(path.clone()).unwrap();
+        let mut file = fs::File::create(&path).unwrap();
         file.write_all(&contents).unwrap();
 
-        output.push(format!("{}.txt", id));
-
-        // Extract the text from the PDF
-        let cmd_output = Command::new("pdftotext")
-            .args(&[
-                "-enc",
-                "UTF-8",
-                path.to_str().unwrap(),
-                output.to_str().unwrap(),
-            ])
-            .output()
-            .unwrap();
-
-        result = match fs::read_to_string(output.clone()) {
-            Ok(r) => r,
-            Err(e) => {
-                println!(
-                    "[applicants] running pdf2text failed: {} | name: {}, path: {}",
-                    e,
-                    name,
-                    path.to_str().unwrap()
-                );
-                stdout().write_all(&cmd_output.stdout).unwrap();
-                stderr().write_all(&cmd_output.stderr).unwrap();
-
-                "".to_string()
-            }
-        };
+        result = read_pdf(&name, path.clone());
     } else if mime_type == "text/html" {
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
 
@@ -175,10 +148,78 @@ pub async fn get_file_contents(
         result = from_read(&contents[..], 80);
     } else if mime_type == "application/vnd.google-apps.document" {
         result = drive_client.get_file_contents_by_id(&id).await.unwrap();
+    } else if name.ends_with(".zip") {
+        // This is patrick :)
+        // Get the ip contents from Drive.
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        path.push(format!("{}.zip", id));
+
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(&contents).unwrap();
+        file = fs::File::open(&path).unwrap();
+
+        // Unzip the file.
+        let mut archive = zip::ZipArchive::new(file).unwrap();
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).unwrap();
+            output.push("zip/");
+
+            {
+                let comment = file.comment();
+                if !comment.is_empty() {
+                    println!(
+                        "[applicants] zip file {} comment: {}",
+                        i, comment
+                    );
+                }
+            }
+
+            if (&*file.name()).ends_with('/') {
+                println!(
+                    "[applicants] zip file {} extracted to \"{}\"",
+                    i,
+                    output.as_path().display()
+                );
+                fs::create_dir_all(&output).unwrap();
+            } else {
+                println!(
+                    "[applicants] zip file {} extracted to \"{}\" ({} bytes)",
+                    i,
+                    output.as_path().display(),
+                    file.size()
+                );
+
+                if let Some(p) = output.parent() {
+                    if !p.exists() {
+                        fs::create_dir_all(&p).unwrap();
+                    }
+                }
+                let mut outfile = fs::File::create(&output).unwrap();
+                copy(&mut file, &mut outfile).unwrap();
+
+                if output.as_path().ends_with(".pdf") {
+                    result += &read_pdf(&name, output.clone());
+                }
+            }
+
+            // Get and Set permissions
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+
+                if let Some(mode) = file.unix_mode() {
+                    fs::set_permissions(
+                        &output,
+                        fs::Permissions::from_mode(mode),
+                    )
+                    .unwrap();
+                }
+            }
+        }
     } else if name.ends_with(".doc")
         || name.ends_with(".pptx")
         || name.ends_with(".jpg")
-        || name.ends_with(".zip")
     // TODO: handle these formats
     {
         println!(
@@ -191,7 +232,7 @@ pub async fn get_file_contents(
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
         path.push(name.to_string());
 
-        let mut file = fs::File::create(path.clone()).unwrap();
+        let mut file = fs::File::create(&path).unwrap();
         file.write_all(&contents).unwrap();
 
         output.push(format!("{}.txt", id));
@@ -207,11 +248,51 @@ pub async fn get_file_contents(
     // Delete the temporary file, if it exists.
     for p in vec![path, output] {
         if p.exists() && !p.is_dir() {
-            fs::remove_file(p).unwrap();
+            //fs::remove_file(p).unwrap();
         }
     }
 
     result.trim().to_string()
+}
+
+fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
+    let output = env::temp_dir();
+
+    // Extract the text from the PDF
+    let cmd_output = Command::new("pdftotext")
+        .args(&[
+            "-enc",
+            "UTF-8",
+            path.to_str().unwrap(),
+            output.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let result = match fs::read_to_string(output.clone()) {
+        Ok(r) => r,
+        Err(e) => {
+            println!(
+                "[applicants] running pdf2text failed: {} | name: {}, path: {}",
+                e,
+                name,
+                path.to_str().unwrap()
+            );
+            stdout().write_all(&cmd_output.stdout).unwrap();
+            stderr().write_all(&cmd_output.stderr).unwrap();
+
+            "".to_string()
+        }
+    };
+
+    // Delete the temporary file, if it exists.
+    for p in vec![path, output] {
+        if p.exists() && !p.is_dir() {
+            fs::remove_file(p).unwrap();
+        }
+    }
+
+    result
 }
 
 fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
