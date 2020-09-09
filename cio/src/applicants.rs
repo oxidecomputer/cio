@@ -198,9 +198,14 @@ pub async fn get_file_contents(
                 let mut outfile = fs::File::create(&output).unwrap();
                 copy(&mut file, &mut outfile).unwrap();
 
+                // Concatenate all the zip files into our result.
+                result += &format!("====================== zip file: {} ======================\n\n",output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), ""));
                 if output.as_path().ends_with(".pdf") {
                     result += &read_pdf(&name, output.clone());
+                } else {
+                    result += &fs::read_to_string(&output).unwrap();
                 }
+                result += "\n\n\n";
             }
 
             // Get and Set permissions
