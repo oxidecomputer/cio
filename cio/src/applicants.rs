@@ -200,7 +200,9 @@ pub async fn get_file_contents(
                 let mut outfile = fs::File::create(&output).unwrap();
                 copy(&mut file, &mut outfile).unwrap();
 
-                if !output.is_dir() {
+                if !output.is_dir()
+                    && output.to_str().unwrap().ends_with("responses.pdf")
+                {
                     // Concatenate all the zip files into our result.
                     result += &format!("====================== zip file: {} ======================\n\n",output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), ""));
                     if output.as_path().extension().unwrap() == "pdf" {
