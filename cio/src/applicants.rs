@@ -211,20 +211,6 @@ pub async fn get_file_contents(
                     result += "\n\n\n";
                 }
             }
-
-            // Get and Set permissions
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-
-                if let Some(mode) = file.unix_mode() {
-                    fs::set_permissions(
-                        &output,
-                        fs::Permissions::from_mode(mode),
-                    )
-                    .unwrap();
-                }
-            }
         }
     } else if name.ends_with(".doc")
         || name.ends_with(".pptx")
@@ -257,7 +243,7 @@ pub async fn get_file_contents(
     // Delete the temporary file, if it exists.
     for p in vec![path, output] {
         if p.exists() && !p.is_dir() {
-            //fs::remove_file(p).unwrap();
+            fs::remove_file(p).unwrap();
         }
     }
 
@@ -265,7 +251,8 @@ pub async fn get_file_contents(
 }
 
 fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
-    let output = env::temp_dir();
+    let mut output = env::temp_dir();
+    output.push("tempfile.txt");
 
     // Extract the text from the PDF
     let cmd_output = Command::new("pdftotext")
@@ -285,7 +272,7 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
                 "[applicants] running pdf2text failed: {} | name: {}, path: {}",
                 e,
                 name,
-                path.to_str().unwrap()
+                path.as_path().display()
             );
             stdout().write_all(&cmd_output.stdout).unwrap();
             stderr().write_all(&cmd_output.stderr).unwrap();
