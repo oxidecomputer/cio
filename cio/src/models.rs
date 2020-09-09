@@ -1834,7 +1834,7 @@ impl NewRFD {
         }
         self.html = clean_rfd_html_links(&self.html, &self.number_string);
 
-        self.authors = get_authors(&self.content);
+        self.authors = get_authors(&self.content, is_markdown);
     }
 }
 

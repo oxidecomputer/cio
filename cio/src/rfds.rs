@@ -156,11 +156,32 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     cleaned
 }
 
-pub fn get_authors(content: &str) -> String {
-    // TODO: make work w asciidoc.
-    let re = Regex::new(r"authors:(?m)(.*$)").unwrap();
+pub fn get_authors(content: &str, is_markdown: bool) -> String {
+    if is_markdown {
+        // TODO: make work w asciidoc.
+        let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
+        match re.find(&content) {
+            Some(v) => {
+                return v.as_str().replace("authors:", "").trim().to_string()
+            }
+            None => return Default::default(),
+        }
+    }
+
+    // We must have asciidoc content.
+    // We want to find the line under the first "=" line (which is the title), authors is under
+    // that.
+    let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
     match re.find(&content) {
-        Some(v) => v.as_str().replace("authors:", "").trim().to_string(),
+        Some(v) => {
+            let val = v.as_str().trim().to_string();
+            let parts: Vec<&str> = val.split('\n').collect();
+            if parts.len() < 2 {
+                Default::default()
+            } else {
+                parts[1].to_string()
+            }
+        }
         None => Default::default(),
     }
 }
@@ -282,24 +303,34 @@ mod tests {
     #[test]
     fn test_get_authors() {
         let mut content = r#"sdfsdf
-        sdfsdf
-        authors: things, joe
-        dsfsdf
-        sdf
-        authors: nope"#;
-        let mut authors = get_authors(&content);
-        let expected = "things, joe".to_string();
-
+sdfsdf
+authors: things, joe
+dsfsdf
+sdf
+authors: nope"#;
+        let mut authors = get_authors(&content, true);
+        let mut expected = "things, joe".to_string();
         assert_eq!(expected, authors);
 
         content = r#"sdfsdf
-        sdfsdf
-        :authors: things, joe
-        dsfsdf
-        sdf
-        authors: nope"#;
-        authors = get_authors(&content);
+= sdfgsdfgsdfg
+things, joe
+dsfsdf
+sdf
+:authors: nope"#;
+        authors = get_authors(&content, true);
+        expected = "".to_string();
+        assert_eq!(expected, authors);
 
+        content = r#"sdfsdf
+= sdfgsdfgsdfg
+things <things@email.com>, joe <joe@email.com>
+dsfsdf
+sdf
+authors: nope"#;
+        authors = get_authors(&content, false);
+        expected =
+            r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
     }
 
