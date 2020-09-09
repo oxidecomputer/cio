@@ -17,7 +17,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
       - name: Log into GitHub Container Registry
-        run: echo "${{ secrets.GLOBAL_GITHUB_TOKEN }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GLOBAL_GITHUB_TOKEN }}" | docker login https://ghcr.io -u ${{ secrets.DOCKER_USER }} --password-stdin
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
