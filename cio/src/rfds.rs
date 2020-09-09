@@ -156,6 +156,15 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     cleaned
 }
 
+pub fn get_authors(content: &str) -> String {
+    // TODO: make work w asciidoc.
+    let re = Regex::new(r"authors:(?m)(.*$)").unwrap();
+    match re.find(&content) {
+        Some(v) => v.as_str().replace("authors:", "").trim().to_string(),
+        None => Default::default(),
+    }
+}
+
 pub async fn refresh_airtable_rfds() {
     // Initialize the Airtable client.
     let airtable =
@@ -236,7 +245,8 @@ pub async fn refresh_db_rfds(github: &Github) {
 #[cfg(test)]
 mod tests {
     use crate::rfds::{
-        clean_rfd_html_links, refresh_airtable_rfds, refresh_db_rfds,
+        clean_rfd_html_links, get_authors, refresh_airtable_rfds,
+        refresh_db_rfds,
     };
     use crate::utils::authenticate_github;
 
@@ -267,6 +277,30 @@ mod tests {
         <a href="/rfd/0032#things" \>"#;
 
         assert_eq!(expected, cleaned);
+    }
+
+    #[test]
+    fn test_get_authors() {
+        let mut content = r#"sdfsdf
+        sdfsdf
+        authors: things, joe
+        dsfsdf
+        sdf
+        authors: nope"#;
+        let mut authors = get_authors(&content);
+        let expected = "things, joe".to_string();
+
+        assert_eq!(expected, authors);
+
+        content = r#"sdfsdf
+        sdfsdf
+        :authors: things, joe
+        dsfsdf
+        sdf
+        authors: nope"#;
+        authors = get_authors(&content);
+
+        assert_eq!(expected, authors);
     }
 
     #[tokio::test(threaded_scheduler)]

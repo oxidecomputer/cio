@@ -32,8 +32,8 @@ use crate::applicants::{
     email_send_received_application, get_file_contents, ApplicantSheetColumns,
 };
 use crate::rfds::{
-    clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc,
-    parse_markdown,
+    clean_rfd_html_links, get_authors, get_rfd_contents_from_repo,
+    parse_asciidoc, parse_markdown,
 };
 use crate::schema::{
     applicants, auth_logins, github_repos, mailing_list_subscribers,
@@ -1803,8 +1803,27 @@ impl NewRFD {
         self.content = rfd_content;
         self.sha = sha;
 
-        // TODO: figure out how to get the commit date, hubcaps doesn't seem to have it
-        // probably need to send a patch
+        let repo = github.repo(github_org(), "rfd");
+        if branch == "master" {
+            // Get the commit date.
+            let commits = repo.commits().list().await.unwrap();
+            let commit = commits.get(0).unwrap();
+            let commit_date = format!("{}-00:00", commit.commit.author.date);
+            self.commit_date =
+                DateTime::parse_from_str(&commit_date, "%Y-%m-%dT%H:%M:%SZ%:z")
+                    .unwrap()
+                    .with_timezone(&Utc);
+        } else {
+            // Get the branch.
+            let commit = repo.commits().get(&branch).await.unwrap();
+            // TODO: we should not have to duplicate this code below
+            // but the references were mad...
+            let commit_date = format!("{}-00:00", commit.commit.author.date);
+            self.commit_date =
+                DateTime::parse_from_str(&commit_date, "%Y-%m-%dT%H:%M:%SZ%:z")
+                    .unwrap()
+                    .with_timezone(&Utc);
+        }
 
         if is_markdown {
             // Parse the markdown.
@@ -1815,7 +1834,7 @@ impl NewRFD {
         }
         self.html = clean_rfd_html_links(&self.html, &self.number_string);
 
-        // TODO: parse the author
+        self.authors = get_authors(&self.content);
     }
 }
 
