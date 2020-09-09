@@ -203,7 +203,7 @@ pub async fn get_file_contents(
                 if !output.is_dir() {
                     // Concatenate all the zip files into our result.
                     result += &format!("====================== zip file: {} ======================\n\n",output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), ""));
-                    if output.as_path().ends_with(".pdf") {
+                    if output.as_path().extension().unwrap() == "pdf" {
                         result += &read_pdf(&name, output.clone());
                     } else {
                         result += &fs::read_to_string(&output).unwrap();
