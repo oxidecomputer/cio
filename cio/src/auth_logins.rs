@@ -180,7 +180,8 @@ pub async fn get_auth_users(
         auth_logins.push(auth_login);
 
         // Update our database with all the auth_user_logins.
-        for auth_user_login in auth_user_logins {
+        for mut auth_user_login in auth_user_logins {
+            auth_user_login.email = user.email.to_string();
             db.upsert_auth_user_login(&auth_user_login);
         }
     }
@@ -404,6 +405,7 @@ pub async fn refresh_airtable_auth_user_logins() {
                 if in_airtable_fields.log_id == auth_user_login.log_id
                     && in_airtable_fields.date == auth_user_login.date
                     && in_airtable_fields.id == auth_user_login.id
+                    && in_airtable_fields.email == auth_user_login.email
                 {
                     // We do not need to update the record.
                     continue;
