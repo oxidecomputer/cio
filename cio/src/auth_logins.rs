@@ -63,22 +63,17 @@ impl User {
             || self.company.trim() == "Oxide Computer Company"
         {
             company = "@oxidecomputer";
-        }
-        // Check if we have a Benchmark Manufacturing email address.
-        if self.email.ends_with("@bench.com") {
+        } else if self.email.ends_with("@bench.com") {
+            // Check if we have a Benchmark Manufacturing email address.
             company = "@bench";
-        }
-
-        // Cleanup algolia.
-        if self.company.trim() == "Algolia" {
+        } else if self.company.trim() == "Algolia" {
+            // Cleanup algolia.
             company = "@algolia";
-        }
-
-        // Cleanup David Tolnay and other weird empty parses
-        if self.company.trim() == "0xF9BA143B95FF6D82"
+        } else if self.company.trim() == "0xF9BA143B95FF6D82"
             || self.company.trim().is_empty()
             || self.company.trim() == "TBD"
         {
+            // Cleanup David Tolnay and other weird empty parses
             company = "";
         }
 
