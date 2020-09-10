@@ -69,8 +69,13 @@ impl User {
             company = "@bench";
         }
 
+        // Cleanup algolia.
+        if self.company.trim() == "Algolia" {
+            company = "@algolia";
+        }
+
         if self.company.trim().is_empty() || self.company.trim() == "TBD" {
-            company = "empty";
+            company = "";
         }
 
         NewAuthLogin {
