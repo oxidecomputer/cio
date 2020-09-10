@@ -74,7 +74,11 @@ impl User {
             company = "@algolia";
         }
 
-        if self.company.trim().is_empty() || self.company.trim() == "TBD" {
+        // Cleanup David Tolnay and other weird empty parses
+        if self.company.trim() == "0xF9BA143B95FF6D82"
+            || self.company.trim().is_empty()
+            || self.company.trim() == "TBD"
+        {
             company = "";
         }
 
