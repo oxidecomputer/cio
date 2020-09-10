@@ -302,6 +302,7 @@ pub async fn refresh_airtable_auth_users() {
                 "created_at",
                 "user_id",
                 "last_login",
+                "email_verified",
             ],
         )
         .await
