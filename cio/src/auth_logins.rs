@@ -69,6 +69,10 @@ impl User {
             company = "@bench";
         }
 
+        if self.company.trim().is_empty() || self.company.trim() == "TBD" {
+            company = "empty";
+        }
+
         NewAuthLogin {
             user_id: self.user_id.to_string(),
             name: self.name.to_string(),
