@@ -60,6 +60,7 @@ impl User {
         // Check if we have an Oxide email address.
         if self.email.ends_with("@oxidecomputer.com")
             || self.email.ends_with("@oxide.computer")
+            || self.company == "Oxide Computer Company"
         {
             company = "@oxidecomputer";
         }
