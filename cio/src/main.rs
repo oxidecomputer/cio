@@ -33,7 +33,7 @@ async fn main() -> Result<(), String> {
      * port.
      */
     let config_dropshot = ConfigDropshot {
-        bind_address: "127.0.0.1:8888".parse().unwrap(),
+        bind_address: "0.0.0.0:8888".parse().unwrap(),
     };
 
     /*
