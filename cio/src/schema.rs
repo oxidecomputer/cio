@@ -58,10 +58,37 @@ table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         last_login -> Timestamptz,
-        last_application_accessed -> Varchar,
         last_ip -> Varchar,
         logins_count -> Int4,
         link_to_people -> Array<Text>,
+        last_application_accessed -> Varchar,
+        link_to_auth_user_logins -> Array<Text>,
+    }
+}
+
+table! {
+    auth_user_logins (id) {
+        id -> Int4,
+        log_id -> Varchar,
+        date -> Timestamptz,
+        user_id -> Varchar,
+        user_name -> Varchar,
+        email -> Varchar,
+        client_name -> Varchar,
+        link_to_auth_user -> Array<Text>,
+        typev -> Varchar,
+        description -> Varchar,
+        connection -> Varchar,
+        connection_id -> Varchar,
+        client_id -> Varchar,
+        ip -> Varchar,
+        hostname -> Varchar,
+        audience -> Varchar,
+        scope -> Varchar,
+        strategy -> Varchar,
+        strategy_type -> Varchar,
+        is_mobile -> Bool,
+        user_agent -> Varchar,
     }
 }
 
@@ -279,6 +306,7 @@ table! {
 allow_tables_to_appear_in_same_query!(
     applicants,
     auth_logins,
+    auth_user_logins,
     buildings,
     conference_rooms,
     github_labels,

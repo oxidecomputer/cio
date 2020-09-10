@@ -1,0 +1,23 @@
+CREATE TABLE auth_user_logins (
+    id SERIAL PRIMARY KEY,
+    log_id VARCHAR NOT NULL UNIQUE,
+    date TIMESTAMPTZ NOT NULL,
+    user_id VARCHAR NOT NULL,
+    user_name VARCHAR NOT NULL,
+    email VARCHAR NOT NULL,
+    client_name VARCHAR NOT NULL,
+    link_to_auth_user TEXT [] NOT NULL,
+    typev VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    connection VARCHAR NOT NULL,
+    connection_id VARCHAR NOT NULL,
+    client_id VARCHAR NOT NULL,
+    ip VARCHAR NOT NULL,
+    hostname VARCHAR NOT NULL,
+    audience VARCHAR NOT NULL,
+    scope VARCHAR NOT NULL,
+    strategy VARCHAR NOT NULL,
+    strategy_type VARCHAR NOT NULL,
+    is_mobile BOOLEAN NOT NULL DEFAULT 'f',
+    user_agent VARCHAR NOT NULL
+)

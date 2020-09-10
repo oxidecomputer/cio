@@ -19,5 +19,6 @@ CREATE TABLE auth_logins (
     last_application_accessed VARCHAR NOT NULL,
     last_ip VARCHAR NOT NULL,
     logins_count INTEGER NOT NULL,
-    link_to_people TEXT [] NOT NULL
+    link_to_people TEXT [] NOT NULL,
+    link_to_auth_user_logins TEXT [] NOT NULL
 )

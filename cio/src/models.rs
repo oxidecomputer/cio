@@ -24,8 +24,8 @@ use crate::utils::{check_if_github_issue_exists, github_org};
 
 use crate::airtable::{
     airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
-    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_BASE_ID_RACK_ROADMAP,
-    AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
+    AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
+    AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
 };
 use crate::applicants::{
@@ -36,8 +36,8 @@ use crate::rfds::{
     parse_asciidoc, parse_markdown,
 };
 use crate::schema::{
-    applicants, auth_logins, github_repos, mailing_list_subscribers,
-    rfds as r_f_ds, rfds,
+    applicants, auth_logins, auth_user_logins, github_repos,
+    mailing_list_subscribers, rfds as r_f_ds, rfds,
 };
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
@@ -1157,6 +1157,74 @@ pub struct NewAuthLogin {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_people: Vec<String>,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_auth_user_logins: Vec<String>,
+}
+
+/// The data type for a NewAuthUserLogin.
+#[db_struct {
+    new_name = "AuthUserLogin",
+    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    table = "AIRTABLE_AUTH_USER_LOGINS_TABLE",
+}]
+#[serde(rename_all = "camelCase")]
+#[derive(
+    Debug,
+    Insertable,
+    AsChangeset,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+#[table_name = "auth_user_logins"]
+pub struct NewAuthUserLogin {
+    pub date: DateTime<Utc>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
+    pub typev: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub connection: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub connection_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub client_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub client_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ip: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub hostname: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub audience: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scope: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub strategy: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub strategy_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub log_id: String,
+    #[serde(default, alias = "isMobile")]
+    pub is_mobile: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_agent: String,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_auth_user: Vec<String>,
 }
 
 /// The data type for a JournalClubMeeting.

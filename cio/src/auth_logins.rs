@@ -13,10 +13,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
     airtable_api_key, AIRTABLE_AUTH_USERS_TABLE,
-    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
+    AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
+    AIRTABLE_GRID_VIEW,
 };
 use crate::db::Database;
-use crate::models::{AuthLogin, NewAuthLogin};
+use crate::models::{AuthLogin, AuthUserLogin, NewAuthLogin, NewAuthUserLogin};
 
 /// The data type for an Auth0 user.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -174,56 +175,12 @@ pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
     auth_logins
 }
 
-/// The data type for a user log.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct UserLog {
-    pub date: DateTime<Utc>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "type"
-    )]
-    pub typev: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub description: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub connection: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub connection_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub client_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub client_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub ip: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub hostname: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub user_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub user_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub audience: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub scope: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub strategy: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub strategy_type: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub log_id: String,
-    #[serde(default, alias = "isMobile")]
-    pub is_mobile: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub user_agent: String,
-}
-
 // TODO: clean this all up to be an auth0 api library.
 async fn get_auth_logs_for_user(
     token: &str,
     domain: &str,
     user_id: &str,
-) -> Vec<UserLog> {
+) -> Vec<NewAuthUserLogin> {
     let client = Client::new();
     let resp = client
         .get(&format!(
@@ -278,7 +235,7 @@ async fn get_auth_logs_for_user(
         }
     };
 
-    resp.json::<Vec<UserLog>>().await.unwrap()
+    resp.json::<Vec<NewAuthUserLogin>>().await.unwrap()
 }
 
 async fn get_auth_logins_page(
