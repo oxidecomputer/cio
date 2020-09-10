@@ -449,7 +449,10 @@ pub async fn refresh_db_auth() {
 
 #[cfg(test)]
 mod tests {
-    use crate::auth_logins::{refresh_airtable_auth_users, refresh_db_auth};
+    use crate::auth_logins::{
+        refresh_airtable_auth_user_logins, refresh_airtable_auth_users,
+        refresh_db_auth,
+    };
 
     #[tokio::test(threaded_scheduler)]
     async fn test_auth_refresh_db() {
