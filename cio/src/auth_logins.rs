@@ -139,7 +139,7 @@ pub async fn get_auth_users(
 
     let mut users: Vec<User> = Default::default();
 
-    let rate_limit_sleep = time::Duration::from_millis(1000);
+    let rate_limit_sleep = time::Duration::from_millis(2000);
 
     let mut i: i32 = 0;
     let mut has_records = true;
@@ -172,12 +172,13 @@ pub async fn get_auth_users(
             let first_result = auth_user_logins.get(0).unwrap();
             auth_login.last_application_accessed =
                 first_result.client_name.to_string();
-            // We need to sleep here for a half second so we don't get rate limited.
-            // https://auth0.com/docs/policies/rate-limit-policy
-            thread::sleep(rate_limit_sleep);
         }
 
         auth_logins.push(auth_login);
+
+        // We need to sleep here for a half second so we don't get rate limited.
+        // https://auth0.com/docs/policies/rate-limit-policy
+        thread::sleep(rate_limit_sleep);
 
         // Update our database with all the auth_user_logins.
         for mut auth_user_login in auth_user_logins {
