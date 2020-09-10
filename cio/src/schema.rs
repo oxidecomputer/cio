@@ -58,10 +58,10 @@ table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         last_login -> Timestamptz,
+        last_application_accessed -> Varchar,
         last_ip -> Varchar,
         logins_count -> Int4,
         link_to_people -> Array<Text>,
-        last_application_accessed -> Varchar,
         link_to_auth_user_logins -> Array<Text>,
     }
 }

@@ -8,12 +8,14 @@ use crate::configs::{
     LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig,
 };
 use crate::models::{
-    Applicant, AuthLogin, GithubRepo, MailingListSubscriber, NewApplicant,
-    NewAuthLogin, NewMailingListSubscriber, NewRFD, NewRepo, RFD,
+    Applicant, AuthLogin, AuthUserLogin, GithubRepo, MailingListSubscriber,
+    NewApplicant, NewAuthLogin, NewAuthUserLogin, NewMailingListSubscriber,
+    NewRFD, NewRepo, RFD,
 };
 use crate::schema::{
-    applicants, auth_logins, buildings, conference_rooms, github_labels,
-    github_repos, groups, links, mailing_list_subscribers, rfds, users,
+    applicants, auth_logins, auth_user_logins, buildings, conference_rooms,
+    github_labels, github_repos, groups, links, mailing_list_subscribers, rfds,
+    users,
 };
 
 pub struct Database {
@@ -222,6 +224,58 @@ impl Database {
             .values(auth_login)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating auth_login failed: {}", e))
+    }
+
+    pub fn get_auth_user_logins(&self) -> Vec<AuthUserLogin> {
+        auth_user_logins::dsl::auth_user_logins
+            .order_by(auth_user_logins::dsl::id.desc())
+            .load::<AuthUserLogin>(&self.conn)
+            .unwrap()
+    }
+
+    pub fn upsert_auth_user_login(
+        &self,
+        auth_user_login: &NewAuthUserLogin,
+    ) -> AuthUserLogin {
+        // See if we already have the auth_user_login in the database.
+        match auth_user_logins::dsl::auth_user_logins
+            .filter(
+                auth_user_logins::dsl::log_id
+                    .eq(auth_user_login.log_id.to_string()),
+            )
+            .limit(1)
+            .load::<AuthUserLogin>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the auth_user_login in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let a = r.get(0).unwrap();
+
+                    // Update the auth_user_login.
+                    return diesel::update(a)
+                        .set(auth_user_login)
+                        .get_result::<AuthUserLogin>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "unable to update auth_user_login {}: {}",
+                                a.id, e
+                            )
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the auth_user_login in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(auth_user_logins::table)
+            .values(auth_user_login)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| {
+                panic!("creating auth_user_login failed: {}", e)
+            })
     }
 
     pub fn get_github_labels(&self) -> Vec<GithubLabel> {

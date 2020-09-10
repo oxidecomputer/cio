@@ -89,6 +89,7 @@ impl User {
             logins_count: self.logins_count,
             link_to_people: Default::default(),
             last_application_accessed: Default::default(),
+            link_to_auth_user_logins: Default::default(),
         }
     }
 }
