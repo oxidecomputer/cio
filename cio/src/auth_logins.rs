@@ -205,7 +205,7 @@ async fn get_auth_logs_for_user(
             domain, user_id
         ))
         .bearer_auth(token)
-        .query(&[("sort", "date:-1")])
+        .query(&[("sort", "date:-1"), ("per_page", "100")])
         .send()
         .await
         .unwrap();

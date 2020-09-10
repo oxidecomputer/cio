@@ -16,7 +16,7 @@ CREATE TABLE auth_user_logins (
     scope VARCHAR NOT NULL,
     strategy VARCHAR NOT NULL,
     strategy_type VARCHAR NOT NULL,
-    log_id VARCHAR NOT NULL UNIQUE,
+    log_id VARCHAR NOT NULL,
     is_mobile BOOLEAN NOT NULL DEFAULT 'f',
     user_agent VARCHAR NOT NULL,
     link_to_auth_user TEXT [] NOT NULL

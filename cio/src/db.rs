@@ -240,9 +240,10 @@ impl Database {
         // See if we already have the auth_user_login in the database.
         match auth_user_logins::dsl::auth_user_logins
             .filter(
-                auth_user_logins::dsl::log_id
-                    .eq(auth_user_login.log_id.to_string()),
+                auth_user_logins::dsl::user_id
+                    .eq(auth_user_login.user_id.to_string()),
             )
+            .filter(auth_user_logins::dsl::date.eq(auth_user_login.date))
             .limit(1)
             .load::<AuthUserLogin>(&self.conn)
         {
