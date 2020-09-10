@@ -60,18 +60,20 @@ impl User {
         // Check if we have an Oxide email address.
         if self.email.ends_with("@oxidecomputer.com")
             || self.email.ends_with("@oxide.computer")
-            || self.company.trim() == "Oxide Computer Company"
+            || self.company.trim().to_string()
+                == "Oxide Computer Company".to_string()
         {
             company = "@oxidecomputer";
         } else if self.email.ends_with("@bench.com") {
             // Check if we have a Benchmark Manufacturing email address.
             company = "@bench";
-        } else if self.company.trim() == "Algolia" {
+        } else if self.company.trim().to_string() == "Algolia".to_string() {
             // Cleanup algolia.
             company = "@algolia";
-        } else if self.company.trim() == "0xF9BA143B95FF6D82"
+        } else if self.company.trim().to_string()
+            == "0xF9BA143B95FF6D82".to_string()
             || self.company.trim().is_empty()
-            || self.company.trim() == "TBD"
+            || self.company.trim().to_string() == "TBD".to_string()
         {
             // Cleanup David Tolnay and other weird empty parses
             company = "";
