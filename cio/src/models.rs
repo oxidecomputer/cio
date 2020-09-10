@@ -1168,16 +1168,8 @@ pub struct NewAuthLogin {
     base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
     table = "AIRTABLE_AUTH_USER_LOGINS_TABLE",
 }]
-#[serde(rename_all = "camelCase")]
 #[derive(
-    Debug,
-    Insertable,
-    AsChangeset,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
+    Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize,
 )]
 #[table_name = "auth_user_logins"]
 pub struct NewAuthUserLogin {

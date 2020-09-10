@@ -113,7 +113,7 @@ pub struct Token {
 }
 
 /// List users.
-pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
+pub async fn get_auth_users(domain: String, db: Database) -> Vec<NewAuthLogin> {
     let client = Client::new();
     // Get our token.
     let client_id = env::var("CIO_AUTH0_CLIENT_ID").unwrap();
@@ -136,12 +136,17 @@ pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
 
     let mut users: Vec<User> = Default::default();
 
+    let rate_limit_sleep = time::Duration::from_millis(1000);
+
     let mut i: i32 = 0;
     let mut has_records = true;
     while has_records {
         let mut u =
-            get_auth_logins_page(&token.access_token, &domain, &i.to_string())
+            get_auth_users_page(&token.access_token, &domain, &i.to_string())
                 .await;
+        // We need to sleep here for a half second so we don't get rate limited.
+        // https://auth0.com/docs/policies/rate-limit-policy
+        thread::sleep(rate_limit_sleep);
 
         has_records = !u.is_empty();
         i += 1;
@@ -155,22 +160,26 @@ pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
         let mut auth_login = user.to_auth_login();
 
         // Get the application they last accessed.
-        let auth_logs =
+        let auth_user_logins =
             get_auth_logs_for_user(&token.access_token, &domain, &user.user_id)
                 .await;
 
         // Get the first result.
-        if !auth_logs.is_empty() {
-            let first_result = auth_logs.get(0).unwrap();
+        if !auth_user_logins.is_empty() {
+            let first_result = auth_user_logins.get(0).unwrap();
             auth_login.last_application_accessed =
                 first_result.client_name.to_string();
             // We need to sleep here for a half second so we don't get rate limited.
             // https://auth0.com/docs/policies/rate-limit-policy
-            let half_second = time::Duration::from_millis(800);
-            thread::sleep(half_second);
+            thread::sleep(rate_limit_sleep);
         }
 
         auth_logins.push(auth_login);
+
+        // Update our database with all the auth_user_logins.
+        for auth_user_login in auth_user_logins {
+            db.upsert_auth_user_login(&auth_user_login);
+        }
     }
 
     auth_logins
@@ -239,7 +248,7 @@ async fn get_auth_logs_for_user(
     resp.json::<Vec<NewAuthUserLogin>>().await.unwrap()
 }
 
-async fn get_auth_logins_page(
+async fn get_auth_users_page(
     token: &str,
     domain: &str,
     page: &str,
@@ -273,7 +282,7 @@ async fn get_auth_logins_page(
     resp.json::<Vec<User>>().await.unwrap()
 }
 
-pub async fn refresh_airtable_auth_logins() {
+pub async fn refresh_airtable_auth_users() {
     // Initialize the Airtable client.
     let airtable =
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
@@ -289,7 +298,6 @@ pub async fn refresh_airtable_auth_logins() {
                 "updated_at",
                 "created_at",
                 "user_id",
-                "email_verified",
                 "last_login",
             ],
         )
@@ -307,7 +315,7 @@ pub async fn refresh_airtable_auth_logins() {
 
     // Initialize our database.
     let db = Database::new();
-    let auth_logins = db.get_auth_logins();
+    let auth_logins = db.get_auth_users();
 
     let mut updated: i32 = 0;
     for mut auth_login in auth_logins {
@@ -327,9 +335,11 @@ pub async fn refresh_airtable_auth_logins() {
                     continue;
                 }
 
-                // Set the Link to People from the original so it stays intact.
+                // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
                 auth_login.link_to_people =
                     in_airtable_fields.link_to_people.clone();
+                auth_login.link_to_auth_user_logins =
+                    in_airtable_fields.link_to_auth_user_logins;
 
                 record.fields = json!(auth_login);
 
@@ -353,12 +363,80 @@ pub async fn refresh_airtable_auth_logins() {
     println!("updated {} auth_logins", updated);
 }
 
-// Sync the auth_logins with our database.
-pub async fn refresh_db_auth_logins() {
-    let auth_logins = get_auth_logins("oxide".to_string()).await;
+pub async fn refresh_airtable_auth_user_logins() {
+    // Initialize the Airtable client.
+    let airtable =
+        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+
+    let records = airtable
+        .list_records(
+            AIRTABLE_AUTH_USER_LOGINS_TABLE,
+            AIRTABLE_GRID_VIEW,
+            vec![],
+        )
+        .await
+        .unwrap();
+
+    let mut airtable_auth_user_logins: BTreeMap<i32, (Record, AuthUserLogin)> =
+        Default::default();
+    for record in records {
+        let fields: AuthUserLogin =
+            serde_json::from_value(record.fields.clone()).unwrap();
+
+        airtable_auth_user_logins.insert(fields.id, (record, fields));
+    }
 
     // Initialize our database.
     let db = Database::new();
+    let auth_user_logins = db.get_auth_user_logins();
+
+    let mut updated: i32 = 0;
+    for mut auth_user_login in auth_user_logins {
+        // See if we have it in our fields.
+        match airtable_auth_user_logins.get(&auth_user_login.id) {
+            Some((r, in_airtable_fields)) => {
+                let mut record = r.clone();
+
+                if in_airtable_fields.log_id == auth_login.log_id
+                    && in_airtable_fields.date == auth_login.date
+                    && in_airtable_fields.id == auth_login.id
+                {
+                    // We do not need to update the record.
+                    continue;
+                }
+
+                // Set the link_to_auth_user from the original so it stays intact.
+                auth_login.link_to_auth_user =
+                    in_airtable_fields.link_to_auth_user.clone();
+
+                record.fields = json!(auth_user_login);
+
+                airtable
+                    .update_records(
+                        AIRTABLE_AUTH_USER_LOGINS_TABLE,
+                        vec![record.clone()],
+                    )
+                    .await
+                    .unwrap();
+
+                updated += 1;
+            }
+            None => {
+                // Create the record.
+                auth_user_login.push_to_airtable().await;
+            }
+        }
+    }
+
+    println!("updated {} auth_user_logins", updated);
+}
+
+// Sync the auth_logins with our database.
+pub async fn refresh_db_auth() {
+    // Initialize our database.
+    let db = Database::new();
+
+    let auth_logins = get_auth_users("oxide".to_string(), db).await;
 
     // Sync rfds.
     for auth_login in auth_logins {
@@ -368,17 +446,20 @@ pub async fn refresh_db_auth_logins() {
 
 #[cfg(test)]
 mod tests {
-    use crate::auth_logins::{
-        refresh_airtable_auth_logins, refresh_db_auth_logins,
-    };
+    use crate::auth_logins::{refresh_airtable_auth_users, refresh_db_auth};
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_auth_logins() {
-        refresh_db_auth_logins().await;
+    async fn test_auth_refresh_db() {
+        refresh_db_auth().await;
     }
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_auth_logins_airtable() {
-        refresh_airtable_auth_logins().await;
+    async fn test_auth_users_airtable() {
+        refresh_airtable_auth_users().await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_auth_user_logins_airtable() {
+        refresh_airtable_auth_user_logins().await;
     }
 }

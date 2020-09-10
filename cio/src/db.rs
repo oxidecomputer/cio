@@ -272,7 +272,7 @@ impl Database {
 
         diesel::insert_into(auth_user_logins::table)
             .values(auth_user_login)
-            .get_result(&self.conn)
+            .get_result::<AuthUserLogin>(&self.conn)
             .unwrap_or_else(|e| {
                 panic!("creating auth_user_login failed: {}", e)
             })

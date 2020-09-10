@@ -69,26 +69,26 @@ table! {
 table! {
     auth_user_logins (id) {
         id -> Int4,
-        log_id -> Varchar,
         date -> Timestamptz,
-        user_id -> Varchar,
-        user_name -> Varchar,
-        email -> Varchar,
-        client_name -> Varchar,
-        link_to_auth_user -> Array<Text>,
         typev -> Varchar,
         description -> Varchar,
         connection -> Varchar,
         connection_id -> Varchar,
         client_id -> Varchar,
+        client_name -> Varchar,
         ip -> Varchar,
         hostname -> Varchar,
+        user_id -> Varchar,
+        user_name -> Varchar,
+        email -> Varchar,
         audience -> Varchar,
         scope -> Varchar,
         strategy -> Varchar,
         strategy_type -> Varchar,
+        log_id -> Varchar,
         is_mobile -> Bool,
         user_agent -> Varchar,
+        link_to_auth_user -> Array<Text>,
     }
 }
 
