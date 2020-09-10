@@ -149,6 +149,7 @@ pub async fn get_auth_users(
                 .await;
         // We need to sleep here for a half second so we don't get rate limited.
         // https://auth0.com/docs/policies/rate-limit-policy
+        // https://auth0.com/docs/policies/rate-limit-policy/management-api-endpoint-rate-limits
         thread::sleep(rate_limit_sleep);
 
         has_records = !u.is_empty();
@@ -178,6 +179,7 @@ pub async fn get_auth_users(
 
         // We need to sleep here for a half second so we don't get rate limited.
         // https://auth0.com/docs/policies/rate-limit-policy
+        // https://auth0.com/docs/policies/rate-limit-policy/management-api-endpoint-rate-limits
         thread::sleep(rate_limit_sleep);
 
         // Update our database with all the auth_user_logins.
