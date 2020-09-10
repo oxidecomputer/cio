@@ -58,6 +58,7 @@ table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         last_login -> Timestamptz,
+        last_application_accessed -> Varchar,
         last_ip -> Varchar,
         logins_count -> Int4,
         link_to_people -> Array<Text>,

@@ -1,15 +1,18 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::env;
+use std::{thread, time};
 
 use airtable_api::{Airtable, Record};
+use chrono::naive::NaiveDateTime;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use chrono_humanize::HumanTime;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_AUTH_LOGINS_TABLE,
+    airtable_api_key, AIRTABLE_AUTH_USERS_TABLE,
     AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
 };
 use crate::db::Database;
@@ -84,6 +87,7 @@ impl User {
             last_ip: self.last_ip.to_string(),
             logins_count: self.logins_count,
             link_to_people: Default::default(),
+            last_application_accessed: Default::default(),
         }
     }
 }
@@ -91,6 +95,7 @@ impl User {
 /// The data type for an Auth0 identity.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Identity {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub access_token: String,
     pub provider: String,
     pub user_id: String,
@@ -132,12 +137,9 @@ pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
     let mut i: i32 = 0;
     let mut has_records = true;
     while has_records {
-        let mut u = get_auth_logins_page(
-            token.access_token.to_string(),
-            domain.to_string(),
-            &i.to_string(),
-        )
-        .await;
+        let mut u =
+            get_auth_logins_page(&token.access_token, &domain, &i.to_string())
+                .await;
 
         has_records = !u.is_empty();
         i += 1;
@@ -147,22 +149,152 @@ pub async fn get_auth_logins(domain: String) -> Vec<NewAuthLogin> {
 
     let mut auth_logins: Vec<NewAuthLogin> = Default::default();
     for user in users {
-        auth_logins.push(user.to_auth_login());
+        // Convert the user to an AuthLogin.
+        let mut auth_login = user.to_auth_login();
+
+        // Get the application they last accessed.
+        let auth_logs =
+            get_auth_logs_for_user(&token.access_token, &domain, &user.user_id)
+                .await;
+
+        // Get the first result.
+        if !auth_logs.is_empty() {
+            let first_result = auth_logs.get(0).unwrap();
+            auth_login.last_application_accessed =
+                first_result.client_name.to_string();
+            // We need to sleep here for a half second so we don't get rate limited.
+            // https://auth0.com/docs/policies/rate-limit-policy
+            let half_second = time::Duration::from_millis(800);
+            thread::sleep(half_second);
+        }
+
+        auth_logins.push(auth_login);
     }
 
     auth_logins
 }
 
+/// The data type for a user log.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UserLog {
+    pub date: DateTime<Utc>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
+    pub typev: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub connection: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub connection_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub client_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub client_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ip: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub hostname: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub audience: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scope: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub strategy: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub strategy_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub log_id: String,
+    #[serde(default, alias = "isMobile")]
+    pub is_mobile: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_agent: String,
+}
+
+// TODO: clean this all up to be an auth0 api library.
+async fn get_auth_logs_for_user(
+    token: &str,
+    domain: &str,
+    user_id: &str,
+) -> Vec<UserLog> {
+    let client = Client::new();
+    let resp = client
+        .get(&format!(
+            "https://{}.auth0.com/api/v2/users/{}/logs",
+            domain, user_id
+        ))
+        .bearer_auth(token)
+        .query(&[("sort", "date:-1")])
+        .send()
+        .await
+        .unwrap();
+
+    match resp.status() {
+        StatusCode::OK => (),
+        StatusCode::TOO_MANY_REQUESTS => {
+            // Get the rate limit headers.
+            let headers = resp.headers();
+            let limit =
+                headers.get("x-ratelimit-limit").unwrap().to_str().unwrap();
+            let remaining = headers
+                .get("x-ratelimit-remaining")
+                .unwrap()
+                .to_str()
+                .unwrap();
+            let reset =
+                headers.get("x-ratelimit-reset").unwrap().to_str().unwrap();
+            let reset_int = reset.parse::<i64>().unwrap();
+
+            // Convert the reset to a more sane number.
+            let ts = DateTime::from_utc(
+                NaiveDateTime::from_timestamp(reset_int, 0),
+                Utc,
+            );
+            let mut dur = ts - Utc::now();
+            if dur.num_seconds() > 0 {
+                dur = -dur;
+            }
+            let time = HumanTime::from(dur);
+
+            println!("getting auth0 user logs failed because of rate limit: {}, remaining: {}, reset: {}",limit, remaining, time);
+
+            return vec![];
+        }
+        s => {
+            println!(
+                "getting auth0 user logs failed, status: {} | resp: {}",
+                s,
+                resp.text().await.unwrap(),
+            );
+
+            return vec![];
+        }
+    };
+
+    resp.json::<Vec<UserLog>>().await.unwrap()
+}
+
 async fn get_auth_logins_page(
-    token: String,
-    domain: String,
+    token: &str,
+    domain: &str,
     page: &str,
 ) -> Vec<User> {
     let client = Client::new();
     let resp = client
         .get(&format!("https://{}.auth0.com/api/v2/users", domain))
         .bearer_auth(token)
-        .query(&[("per_page", "20"), ("page", page), ("last_login", "-1")])
+        .query(&[
+            ("per_page", "20"),
+            ("page", page),
+            ("sort", "last_login:-1"),
+        ])
         .send()
         .await
         .unwrap();
@@ -190,7 +322,7 @@ pub async fn refresh_airtable_auth_logins() {
 
     let records = airtable
         .list_records(
-            AIRTABLE_AUTH_LOGINS_TABLE,
+            AIRTABLE_AUTH_USERS_TABLE,
             AIRTABLE_GRID_VIEW,
             vec![
                 "id",
@@ -230,6 +362,8 @@ pub async fn refresh_airtable_auth_logins() {
                     && in_airtable_fields.last_login == auth_login.last_login
                     && in_airtable_fields.logins_count
                         == auth_login.logins_count
+                    && in_airtable_fields.last_application_accessed
+                        == auth_login.last_application_accessed
                 {
                     // We do not need to update the record.
                     continue;
@@ -243,7 +377,7 @@ pub async fn refresh_airtable_auth_logins() {
 
                 airtable
                     .update_records(
-                        AIRTABLE_AUTH_LOGINS_TABLE,
+                        AIRTABLE_AUTH_USERS_TABLE,
                         vec![record.clone()],
                     )
                     .await

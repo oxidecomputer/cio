@@ -23,7 +23,7 @@ use std::io::Write;
 use crate::utils::{check_if_github_issue_exists, github_org};
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_LOGINS_TABLE,
+    airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
     AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_BASE_ID_RACK_ROADMAP,
     AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
@@ -1107,7 +1107,7 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 #[db_struct {
     new_name = "AuthLogin",
     base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
-    table = "AIRTABLE_AUTH_LOGINS_TABLE",
+    table = "AIRTABLE_AUTH_USERS_TABLE",
 }]
 #[serde(rename_all = "camelCase")]
 #[derive(
@@ -1149,6 +1149,8 @@ pub struct NewAuthLogin {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_login: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_application_accessed: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_ip: String,
     pub logins_count: i32,
