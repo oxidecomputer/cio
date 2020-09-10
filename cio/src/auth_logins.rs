@@ -318,6 +318,7 @@ pub async fn refresh_airtable_auth_users() {
                 "user_id",
                 "last_login",
                 "email_verified",
+                "company",
             ],
         )
         .await
@@ -349,6 +350,7 @@ pub async fn refresh_airtable_auth_users() {
                         == auth_login.logins_count
                     && in_airtable_fields.last_application_accessed
                         == auth_login.last_application_accessed
+                    && in_airtable_fields.company == auth_user_login.company
                 {
                     // We do not need to update the record.
                     continue;
