@@ -318,6 +318,8 @@ pub async fn refresh_airtable_auth_users() {
                 "user_id",
                 "last_login",
                 "email_verified",
+                "link_to_auth_user_logins",
+                "last_application_accessed",
                 "company",
             ],
         )
