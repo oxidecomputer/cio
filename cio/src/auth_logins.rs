@@ -113,7 +113,10 @@ pub struct Token {
 }
 
 /// List users.
-pub async fn get_auth_users(domain: String, db: Database) -> Vec<NewAuthLogin> {
+pub async fn get_auth_users(
+    domain: String,
+    db: &Database,
+) -> Vec<NewAuthLogin> {
     let client = Client::new();
     // Get our token.
     let client_id = env::var("CIO_AUTH0_CLIENT_ID").unwrap();
@@ -315,7 +318,7 @@ pub async fn refresh_airtable_auth_users() {
 
     // Initialize our database.
     let db = Database::new();
-    let auth_logins = db.get_auth_users();
+    let auth_logins = db.get_auth_logins();
 
     let mut updated: i32 = 0;
     for mut auth_login in auth_logins {
@@ -339,7 +342,7 @@ pub async fn refresh_airtable_auth_users() {
                 auth_login.link_to_people =
                     in_airtable_fields.link_to_people.clone();
                 auth_login.link_to_auth_user_logins =
-                    in_airtable_fields.link_to_auth_user_logins;
+                    in_airtable_fields.link_to_auth_user_logins.clone();
 
                 record.fields = json!(auth_login);
 
@@ -397,16 +400,16 @@ pub async fn refresh_airtable_auth_user_logins() {
             Some((r, in_airtable_fields)) => {
                 let mut record = r.clone();
 
-                if in_airtable_fields.log_id == auth_login.log_id
-                    && in_airtable_fields.date == auth_login.date
-                    && in_airtable_fields.id == auth_login.id
+                if in_airtable_fields.log_id == auth_user_login.log_id
+                    && in_airtable_fields.date == auth_user_login.date
+                    && in_airtable_fields.id == auth_user_login.id
                 {
                     // We do not need to update the record.
                     continue;
                 }
 
                 // Set the link_to_auth_user from the original so it stays intact.
-                auth_login.link_to_auth_user =
+                auth_user_login.link_to_auth_user =
                     in_airtable_fields.link_to_auth_user.clone();
 
                 record.fields = json!(auth_user_login);
@@ -436,7 +439,7 @@ pub async fn refresh_db_auth() {
     // Initialize our database.
     let db = Database::new();
 
-    let auth_logins = get_auth_users("oxide".to_string(), db).await;
+    let auth_logins = get_auth_users("oxide".to_string(), &db).await;
 
     // Sync rfds.
     for auth_login in auth_logins {

@@ -53,7 +53,7 @@ async fn main() -> Result<(), String> {
      */
     let mut api = ApiDescription::new();
     api.register(api_get_applicants).unwrap();
-    api.register(api_get_auth_logins).unwrap();
+    api.register(api_get_auth_users).unwrap();
     api.register(api_get_buildings).unwrap();
     api.register(api_get_conference_rooms).unwrap();
     api.register(api_get_github_labels).unwrap();
@@ -152,13 +152,13 @@ impl Context {
  */
 
 /**
- * Fetch all auth logins.
+ * Fetch all auth users.
  */
 #[endpoint {
     method = GET,
-    path = "/authLogins",
+    path = "/auth/users",
 }]
-async fn api_get_auth_logins(
+async fn api_get_auth_users(
     _rqctx: Arc<RequestContext>,
 ) -> Result<HttpResponseOk<Vec<AuthLogin>>, HttpError> {
     // TODO: figure out how to share this between threads.
