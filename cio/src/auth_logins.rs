@@ -459,7 +459,8 @@ pub async fn refresh_airtable_auth_user_logins() {
                     && in_airtable_fields.date == auth_user_login.date
                     && in_airtable_fields.id == auth_user_login.id
                     && in_airtable_fields.email == auth_user_login.email
-                    && !in_airtable_fields.link_to_auth_user.is_empty()
+                    && in_airtable_fields.link_to_auth_user
+                        == auth_user_login.link_to_auth_user
                 {
                     // We do not need to update the record.
                     continue;
