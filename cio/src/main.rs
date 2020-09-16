@@ -164,7 +164,7 @@ async fn api_get_auth_users(
     // TODO: figure out how to share this between threads.
     let db = Database::new();
 
-    Ok(HttpResponseOk(db.get_auth_logins()))
+    Ok(HttpResponseOk(db.get_auth_users()))
 }
 
 /**

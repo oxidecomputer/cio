@@ -180,14 +180,14 @@ impl Database {
             })
     }
 
-    pub fn get_auth_logins(&self) -> Vec<AuthLogin> {
+    pub fn get_auth_users(&self) -> Vec<AuthLogin> {
         auth_logins::dsl::auth_logins
             .order_by(auth_logins::dsl::id.desc())
             .load::<AuthLogin>(&self.conn)
             .unwrap()
     }
 
-    pub fn upsert_auth_login(&self, auth_login: &NewAuthLogin) -> AuthLogin {
+    pub fn upsert_auth_user(&self, auth_login: &NewAuthLogin) -> AuthLogin {
         // See if we already have the auth_login in the database.
         match auth_logins::dsl::auth_logins
             .filter(
