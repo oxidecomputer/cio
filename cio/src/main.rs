@@ -19,8 +19,8 @@ use cio_api::configs::{
 use cio_api::db::Database;
 use cio_api::journal_clubs::get_meetings_from_repo;
 use cio_api::models::{
-    Applicant, AuthLogin, GithubRepo, JournalClubMeeting,
-    MailingListSubscriber, RFD,
+    Applicant, AuthUser, GithubRepo, JournalClubMeeting, MailingListSubscriber,
+    RFD,
 };
 use cio_api::utils::authenticate_github;
 
@@ -160,7 +160,7 @@ impl Context {
 }]
 async fn api_get_auth_users(
     _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<AuthLogin>>, HttpError> {
+) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
     // TODO: figure out how to share this between threads.
     let db = Database::new();
 

@@ -1,1 +1,1 @@
-DROP TABLE auth_logins
+DROP TABLE auth_users

@@ -40,7 +40,7 @@ table! {
 }
 
 table! {
-    auth_logins (id) {
+    auth_users (id) {
         id -> Int4,
         user_id -> Varchar,
         name -> Varchar,
@@ -305,7 +305,7 @@ table! {
 
 allow_tables_to_appear_in_same_query!(
     applicants,
-    auth_logins,
+    auth_users,
     auth_user_logins,
     buildings,
     conference_rooms,

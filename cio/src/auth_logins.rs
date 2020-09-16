@@ -17,7 +17,7 @@ use crate::airtable::{
     AIRTABLE_GRID_VIEW,
 };
 use crate::db::Database;
-use crate::models::{AuthLogin, AuthUserLogin, NewAuthLogin, NewAuthUserLogin};
+use crate::models::{AuthUser, AuthUserLogin, NewAuthUser, NewAuthUserLogin};
 
 /// The data type for an Auth0 user.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -54,8 +54,8 @@ pub struct User {
 }
 
 impl User {
-    /// Convert an auth0 user into a NewAuthLogin.
-    pub fn to_auth_login(&self) -> NewAuthLogin {
+    /// Convert an auth0 user into a NewAuthUser.
+    pub fn to_auth_user(&self) -> NewAuthUser {
         let mut company: &str = &self.company;
         // Check if we have an Oxide email address.
         if self.email.ends_with("@oxidecomputer.com")
@@ -79,7 +79,7 @@ impl User {
             company = "";
         }
 
-        NewAuthLogin {
+        NewAuthUser {
             user_id: self.user_id.to_string(),
             name: self.name.to_string(),
             nickname: self.nickname.to_string(),
@@ -124,10 +124,7 @@ pub struct Token {
 }
 
 /// List users.
-pub async fn get_auth_users(
-    domain: String,
-    db: &Database,
-) -> Vec<NewAuthLogin> {
+pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
     let client = Client::new();
     // Get our token.
     let client_id = env::var("CIO_AUTH0_CLIENT_ID").unwrap();
@@ -169,10 +166,10 @@ pub async fn get_auth_users(
         users.append(&mut u);
     }
 
-    let mut auth_logins: Vec<NewAuthLogin> = Default::default();
+    let mut auth_users: Vec<NewAuthUser> = Default::default();
     for user in users {
-        // Convert the user to an AuthLogin.
-        let mut auth_login = user.to_auth_login();
+        // Convert the user to an AuthUser.
+        let mut auth_user = user.to_auth_user();
 
         // Get the application they last accessed.
         let auth_user_logins =
@@ -182,11 +179,11 @@ pub async fn get_auth_users(
         // Get the first result.
         if !auth_user_logins.is_empty() {
             let first_result = auth_user_logins.get(0).unwrap();
-            auth_login.last_application_accessed =
+            auth_user.last_application_accessed =
                 first_result.client_name.to_string();
         }
 
-        auth_logins.push(auth_login);
+        auth_users.push(auth_user);
 
         // We need to sleep here for a half second so we don't get rate limited.
         // https://auth0.com/docs/policies/rate-limit-policy
@@ -200,7 +197,7 @@ pub async fn get_auth_users(
         }
     }
 
-    auth_logins
+    auth_users
 }
 
 // TODO: clean this all up to be an auth0 api library.
@@ -326,10 +323,10 @@ pub async fn refresh_airtable_auth_users() {
         .await
         .unwrap();
 
-    let mut airtable_auth_users: BTreeMap<i32, (Record, AuthLogin)> =
+    let mut airtable_auth_users: BTreeMap<i32, (Record, AuthUser)> =
         Default::default();
     for record in records {
-        let fields: AuthLogin =
+        let fields: AuthUser =
             serde_json::from_value(record.fields.clone()).unwrap();
 
         airtable_auth_users.insert(fields.id, (record, fields));
@@ -432,7 +429,7 @@ pub async fn refresh_airtable_auth_user_logins() {
 
     let mut airtable_auth_users: BTreeMap<String, String> = Default::default();
     for user_record in user_records {
-        let user_fields: AuthLogin =
+        let user_fields: AuthUser =
             serde_json::from_value(user_record.fields.clone()).unwrap();
 
         airtable_auth_users
@@ -454,6 +451,7 @@ pub async fn refresh_airtable_auth_user_logins() {
                     && in_airtable_fields.date == auth_user_login.date
                     && in_airtable_fields.id == auth_user_login.id
                     && in_airtable_fields.email == auth_user_login.email
+                    && !in_airtable_fields.link_to_auth_user.is_empty()
                 {
                     // We do not need to update the record.
                     continue;

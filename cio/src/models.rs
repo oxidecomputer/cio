@@ -36,7 +36,7 @@ use crate::rfds::{
     parse_asciidoc, parse_markdown,
 };
 use crate::schema::{
-    applicants, auth_logins, auth_user_logins, github_repos,
+    applicants, auth_user_logins, auth_users, github_repos,
     mailing_list_subscribers, rfds as r_f_ds, rfds,
 };
 use crate::slack::{
@@ -1103,9 +1103,9 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     Default::default()
 }
 
-/// The data type for an NewAuthLogin.
+/// The data type for an NewAuthUser.
 #[db_struct {
-    new_name = "AuthLogin",
+    new_name = "AuthUser",
     base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
     table = "AIRTABLE_AUTH_USERS_TABLE",
 }]
@@ -1120,8 +1120,8 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     Deserialize,
     Serialize,
 )]
-#[table_name = "auth_logins"]
-pub struct NewAuthLogin {
+#[table_name = "auth_users"]
+pub struct NewAuthUser {
     pub user_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,

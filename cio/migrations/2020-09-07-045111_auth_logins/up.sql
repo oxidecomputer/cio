@@ -1,4 +1,4 @@
-CREATE TABLE auth_logins (
+CREATE TABLE auth_users (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR NOT NULL UNIQUE,
     name VARCHAR NOT NULL,

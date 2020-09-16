@@ -8,12 +8,12 @@ use crate::configs::{
     LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig,
 };
 use crate::models::{
-    Applicant, AuthLogin, AuthUserLogin, GithubRepo, MailingListSubscriber,
-    NewApplicant, NewAuthLogin, NewAuthUserLogin, NewMailingListSubscriber,
+    Applicant, AuthUser, AuthUserLogin, GithubRepo, MailingListSubscriber,
+    NewApplicant, NewAuthUser, NewAuthUserLogin, NewMailingListSubscriber,
     NewRFD, NewRepo, RFD,
 };
 use crate::schema::{
-    applicants, auth_logins, auth_user_logins, buildings, conference_rooms,
+    applicants, auth_user_logins, auth_users, buildings, conference_rooms,
     github_labels, github_repos, groups, links, mailing_list_subscribers, rfds,
     users,
 };
@@ -180,50 +180,45 @@ impl Database {
             })
     }
 
-    pub fn get_auth_users(&self) -> Vec<AuthLogin> {
-        auth_logins::dsl::auth_logins
-            .order_by(auth_logins::dsl::id.desc())
-            .load::<AuthLogin>(&self.conn)
+    pub fn get_auth_users(&self) -> Vec<AuthUser> {
+        auth_users::dsl::auth_users
+            .order_by(auth_users::dsl::id.desc())
+            .load::<AuthUser>(&self.conn)
             .unwrap()
     }
 
-    pub fn upsert_auth_user(&self, auth_login: &NewAuthLogin) -> AuthLogin {
-        // See if we already have the auth_login in the database.
-        match auth_logins::dsl::auth_logins
-            .filter(
-                auth_logins::dsl::user_id.eq(auth_login.user_id.to_string()),
-            )
+    pub fn upsert_auth_user(&self, auth_user: &NewAuthUser) -> AuthUser {
+        // See if we already have the auth_user in the database.
+        match auth_users::dsl::auth_users
+            .filter(auth_users::dsl::user_id.eq(auth_user.user_id.to_string()))
             .limit(1)
-            .load::<AuthLogin>(&self.conn)
+            .load::<AuthUser>(&self.conn)
         {
             Ok(r) => {
                 if r.is_empty() {
-                    // We don't have the auth_login in the database so we need to add it.
+                    // We don't have the auth_user in the database so we need to add it.
                     // That will happen below.
                 } else {
                     let a = r.get(0).unwrap();
 
-                    // Update the auth_login.
+                    // Update the auth_user.
                     return diesel::update(a)
-                        .set(auth_login)
-                        .get_result::<AuthLogin>(&self.conn)
+                        .set(auth_user)
+                        .get_result::<AuthUser>(&self.conn)
                         .unwrap_or_else(|e| {
-                            panic!(
-                                "unable to update auth_login {}: {}",
-                                a.id, e
-                            )
+                            panic!("unable to update auth_user {}: {}", a.id, e)
                         });
                 }
             }
             Err(e) => {
-                println!("[db] on err: {:?}; we don't have the auth_login in the database, adding it", e);
+                println!("[db] on err: {:?}; we don't have the auth_user in the database, adding it", e);
             }
         }
 
-        diesel::insert_into(auth_logins::table)
-            .values(auth_login)
+        diesel::insert_into(auth_users::table)
+            .values(auth_user)
             .get_result(&self.conn)
-            .unwrap_or_else(|e| panic!("creating auth_login failed: {}", e))
+            .unwrap_or_else(|e| panic!("creating auth_user failed: {}", e))
     }
 
     pub fn get_auth_user_logins(&self) -> Vec<AuthUserLogin> {
