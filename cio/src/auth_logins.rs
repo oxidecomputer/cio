@@ -440,6 +440,16 @@ pub async fn refresh_airtable_auth_user_logins() {
 
     let mut updated: i32 = 0;
     for mut auth_user_login in auth_user_logins {
+        // Set the link_to_auth_user to the right user.
+        let user_record_id = if let Some(u) =
+            airtable_auth_users.get(&auth_user_login.user_id)
+        {
+            u.to_string()
+        } else {
+            "".to_string()
+        };
+        auth_user_login.link_to_auth_user = vec![user_record_id];
+
         // See if we have it in our fields.
         match airtable_auth_user_logins.get(&auth_user_login.id) {
             Some((r, in_airtable_fields)) => {
@@ -454,16 +464,6 @@ pub async fn refresh_airtable_auth_user_logins() {
                     // We do not need to update the record.
                     continue;
                 }
-
-                // Set the link_to_auth_user to the right user.
-                let user_record_id = if let Some(u) =
-                    airtable_auth_users.get(&auth_user_login.user_id)
-                {
-                    u.to_string()
-                } else {
-                    "".to_string()
-                };
-                auth_user_login.link_to_auth_user = vec![user_record_id];
 
                 record.fields = json!(auth_user_login);
 
