@@ -448,7 +448,9 @@ pub async fn refresh_airtable_auth_user_logins() {
         } else {
             "".to_string()
         };
-        auth_user_login.link_to_auth_user = vec![user_record_id];
+        if !user_record_id.is_empty() {
+            auth_user_login.link_to_auth_user = vec![user_record_id];
+        }
 
         // See if we have it in our fields.
         match airtable_auth_user_logins.get(&auth_user_login.id) {
