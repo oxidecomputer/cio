@@ -168,8 +168,8 @@ impl NewApplicant {
                 s = "Declined".to_string();
             } else if s.contains("hired") {
                 s = "Hired".to_string();
-            } else if s.contains("contractor") {
-                s = "Contractor".to_string();
+            } else if s.contains("contractor") || s.contains("consulting") {
+                s = "Consulting".to_string();
             } else {
                 s = "Needs to be triaged".to_string();
             }
