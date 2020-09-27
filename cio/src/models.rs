@@ -170,6 +170,8 @@ impl NewApplicant {
                 s = "Hired".to_string();
             } else if s.contains("contractor") || s.contains("consulting") {
                 s = "Consulting".to_string();
+            } else if s.contains("keeping warm") {
+                s = "Keeping warm".to_string();
             } else {
                 s = "Needs to be triaged".to_string();
             }
