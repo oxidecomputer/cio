@@ -1,7 +1,6 @@
 use airtable_api::{Airtable, Record};
-use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{DateTime, NaiveDate};
 use chrono_humanize::HumanTime;
 use diesel::deserialize::{self, FromSql};
 use diesel::pg::Pg;
@@ -1223,6 +1222,7 @@ pub struct NewAuthUserLogin {
     pub link_to_auth_user: Vec<String>,
 }
 
+// TODO: figure out the meeting date bullshit
 /// The data type for a JournalClubMeeting.
 #[serde(rename_all = "camelCase")]
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -1231,13 +1231,71 @@ pub struct JournalClubMeeting {
     pub issue: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub papers: Vec<JournalClubPaper>,
-    pub date: NaiveDate,
+    #[serde(
+        alias = "issue_date",
+        deserialize_with = "journal_date_format::deserialize",
+        serialize_with = "journal_date_format::serialize"
+    )]
+    pub issue_date: NaiveDate,
+    #[serde(
+        alias = "meeting_date",
+        deserialize_with = "journal_date_format::deserialize",
+        serialize_with = "journal_date_format::serialize"
+    )]
+    pub meeting_date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub coordinator: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub recording: String,
+}
+
+mod journal_date_format {
+    use chrono::NaiveDate;
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    const FORMAT: &str = "%m/%d/%Y";
+    pub const DEFAULT_DATE: &str = "01/01/1969";
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(
+        date: &NaiveDate,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = format!("{}", date.format(FORMAT));
+        if s == DEFAULT_DATE {
+            s = "".to_string();
+        }
+        serializer.serialize_str(&s)
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut s = String::deserialize(deserializer).unwrap();
+        if s.trim().is_empty() {
+            s = DEFAULT_DATE.to_string();
+        }
+        NaiveDate::parse_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
+    }
 }
 
 impl JournalClubMeeting {
@@ -1257,17 +1315,22 @@ impl JournalClubMeeting {
             fields: None,
         });
 
+        let mut text = format!(
+            "<https://github.com/{}|@{}> | issue date: {} | status: *{}*",
+            self.coordinator,
+            self.coordinator,
+            self.issue_date.format("%m/%d/%Y"),
+            self.state
+        );
+        let meeting_date = self.meeting_date.format("%m/%d/%Y").to_string();
+        if meeting_date != journal_date_format::DEFAULT_DATE {
+            text += &format!(" | meeting date: {}", meeting_date);
+        }
         objects.push(MessageBlock {
             block_type: MessageBlockType::Context,
             elements: Some(vec![MessageBlockText {
                 text_type: MessageType::Markdown,
-                text: format!(
-                    "<https://github.com/{}|@{}> | {} | status: *{}*",
-                    self.coordinator,
-                    self.coordinator,
-                    self.date.format("%m/%d/%Y"),
-                    self.state
-                ),
+                text: text,
             }]),
             text: None,
             accessory: None,
