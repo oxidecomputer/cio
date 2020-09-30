@@ -11,7 +11,6 @@ use dropshot::HttpError;
 use dropshot::HttpResponseOk;
 use dropshot::HttpServer;
 use dropshot::RequestContext;
-use hubcaps::Github;
 
 use cio_api::configs::{
     Building, ConferenceRoom, GithubLabel, Group, Link, User,
@@ -21,7 +20,6 @@ use cio_api::models::{
     Applicant, AuthUser, GithubRepo, JournalClubMeeting, MailingListSubscriber,
     RFD,
 };
-use cio_api::utils::authenticate_github;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -112,7 +110,7 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new() -> Arc<Context> {
-        let mut api_context = Context {};
+        let api_context = Context {};
 
         Arc::new(api_context)
     }
@@ -121,7 +119,7 @@ impl Context {
      * Given `rqctx` (which is provided by Dropshot to all HTTP handler
      * functions), return our application-specific context.
      */
-    pub fn from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
+    pub fn _from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
         let ctx: Arc<dyn Any + Send + Sync + 'static> =
             Arc::clone(&rqctx.server.private);
         ctx.downcast::<Context>()

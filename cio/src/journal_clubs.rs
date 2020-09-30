@@ -35,7 +35,7 @@ pub async fn refresh_db_journal_club_meetings(github: &Github) {
     let db = Database::new();
 
     // Sync journal_club_meetings.
-    for (_, journal_club_meeting) in journal_club_meetings {
+    for journal_club_meeting in journal_club_meetings {
         db.upsert_journal_club_meeting(&journal_club_meeting);
     }
 }

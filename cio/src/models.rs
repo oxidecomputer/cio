@@ -1384,7 +1384,15 @@ impl JournalClubMeeting {
 /// The data type for JournalClubPapers.
 #[serde(rename_all = "camelCase")]
 #[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+    Debug,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    FromSqlRow,
+    AsExpression,
+    Serialize,
+    Deserialize,
 )]
 #[sql_type = "Jsonb"]
 pub struct JournalClubPapers {
@@ -1409,7 +1417,15 @@ impl ToSql<Jsonb, Pg> for JournalClubPapers {
 /// The data type for a JournalClubPaper.
 #[serde(rename_all = "camelCase")]
 #[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+    Debug,
+    Default,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    FromSqlRow,
+    AsExpression,
+    Serialize,
+    Deserialize,
 )]
 pub struct JournalClubPaper {
     pub title: String,
