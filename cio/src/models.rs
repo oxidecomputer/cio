@@ -27,7 +27,7 @@ use crate::airtable::{
     AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP,
     AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
     AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
-    AIRTABLE_RFD_TABLE,
+    AIRTABLE_RFD_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
 };
 use crate::applicants::{
     email_send_received_application, get_file_contents, ApplicantSheetColumns,
@@ -38,7 +38,7 @@ use crate::rfds::{
 };
 use crate::schema::{
     applicants, auth_user_logins, auth_users, github_repos,
-    journal_club_meetings, mailing_list_subscribers, rfds as r_f_ds, rfds,
+    journal_club_meetings,journal_club_papers, mailing_list_subscribers, rfds as r_f_ds, rfds,
 };
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
@@ -1238,7 +1238,8 @@ pub struct NewAuthUserLogin {
 pub struct NewJournalClubMeeting {
     pub title: String,
     pub issue: String,
-    pub papers: JournalClubPapers,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub papers: Vec<String>,
     #[serde(
         deserialize_with = "journal_date_format::deserialize",
         serialize_with = "journal_date_format::serialize"
@@ -1384,56 +1385,25 @@ impl JournalClubMeeting {
     }
 }
 
-// TODO: find a less hacky way to store the papers in the database.
-/// The data type for JournalClubPapers.
-#[serde(rename_all = "camelCase")]
+/// The data type for a NewJournalClubPaper.
+#[db_struct {
+    new_name = "JournalClubPaper",
+    base_id = "AIRTABLE_BASE_ID_MISC",
+    table = "AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE",
+}]
 #[derive(
-    Debug,
-    Default,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    FromSqlRow,
-    AsExpression,
-    Serialize,
-    Deserialize,
+    Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize,
 )]
-#[sql_type = "Jsonb"]
-pub struct JournalClubPapers {
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub papers: Vec<JournalClubPaper>,
-}
-
-impl FromSql<Jsonb, Pg> for JournalClubPapers {
-    fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
-        let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
-        Ok(serde_json::from_value(value).unwrap())
-    }
-}
-
-impl ToSql<Jsonb, Pg> for JournalClubPapers {
-    fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
-        let value = serde_json::to_value(self).unwrap();
-        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&value, out)
-    }
-}
-
-/// The data type for a JournalClubPaper.
-#[serde(rename_all = "camelCase")]
-#[derive(
-    Debug,
-    Default,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    FromSqlRow,
-    AsExpression,
-    Serialize,
-    Deserialize,
-)]
+#[table_name = "journal_club_papers"]
 pub struct JournalClubPaper {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub meeting: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to meeting: Vec<String>,
 }
 
 /// The data type for a MailingListSubscriber.

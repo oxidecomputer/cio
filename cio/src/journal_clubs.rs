@@ -54,7 +54,7 @@ pub async fn refresh_airtable_journal_club_meetings() {
         .list_records(
             AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE,
             AIRTABLE_GRID_VIEW,
-            vec![],
+            vec!["id", "issue", "title", "issue_date", "state", "coordinator"],
         )
         .await
         .unwrap();

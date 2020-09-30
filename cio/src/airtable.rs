@@ -15,6 +15,7 @@ pub static AIRTABLE_AUTH_USER_LOGINS_TABLE: &str = "Auth User Logins";
 pub static AIRTABLE_MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";
 pub static AIRTABLE_DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
 pub static AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE: &str = "Journal Club Meetings";
+pub static AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE: &str = "Journal Club Papers";
 
 pub static AIRTABLE_GRID_VIEW: &str = "Grid view";
 

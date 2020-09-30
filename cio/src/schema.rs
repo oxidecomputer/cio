@@ -223,12 +223,22 @@ table! {
         id -> Int4,
         title -> Varchar,
         issue -> Varchar,
-        papers -> Jsonb,
+        papers -> Array<Text>,
         issue_date -> Date,
         meeting_date -> Date,
         coordinator -> Varchar,
         state -> Varchar,
         recording -> Varchar,
+    }
+}
+
+table! {
+    journal_club_papers (id) {
+        id -> Int4,
+        title -> Varchar,
+        link -> Varchar,
+        meeting -> Varchar,
+        link_to_meeting -> Array<Text>,
     }
 }
 
@@ -314,6 +324,7 @@ allow_tables_to_appear_in_same_query!(
     github_repos,
     groups,
     journal_club_meetings,
+    journal_club_papers,
     links,
     mailing_list_subscribers,
     rfds,
