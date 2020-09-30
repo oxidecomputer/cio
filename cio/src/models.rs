@@ -24,8 +24,10 @@ use crate::utils::{check_if_github_issue_exists, github_org};
 use crate::airtable::{
     airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
     AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
-    AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
-    AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
+    AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP,
+    AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
+    AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
+    AIRTABLE_RFD_TABLE,
 };
 use crate::applicants::{
     email_send_received_application, get_file_contents, ApplicantSheetColumns,
@@ -1226,6 +1228,8 @@ pub struct NewAuthUserLogin {
 /// The data type for a NewJournalClubMeeting.
 #[db_struct {
     new_name = "JournalClubMeeting",
+    base_id = "AIRTABLE_BASE_ID_MISC",
+    table = "AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE",
 }]
 #[derive(
     Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize,
