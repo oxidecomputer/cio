@@ -1276,7 +1276,7 @@ impl JournalClubMeeting {
             self.state
         );
         let meeting_date = self.meeting_date.format("%m/%d/%Y").to_string();
-        if meeting_date != "01/01/1969".to_string() {
+        if meeting_date != *"01/01/1969" {
             text += &format!(" | meeting date: {}", meeting_date);
         }
         objects.push(MessageBlock {
