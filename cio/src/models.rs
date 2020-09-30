@@ -26,8 +26,8 @@ use crate::airtable::{
     AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
     AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP,
     AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
-    AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
-    AIRTABLE_RFD_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
+    AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
+    AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
 };
 use crate::applicants::{
     email_send_received_application, get_file_contents, ApplicantSheetColumns,
@@ -38,7 +38,8 @@ use crate::rfds::{
 };
 use crate::schema::{
     applicants, auth_user_logins, auth_users, github_repos,
-    journal_club_meetings,journal_club_papers, mailing_list_subscribers, rfds as r_f_ds, rfds,
+    journal_club_meetings, journal_club_papers, mailing_list_subscribers,
+    rfds as r_f_ds, rfds,
 };
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
@@ -1240,15 +1241,7 @@ pub struct NewJournalClubMeeting {
     pub issue: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub papers: Vec<String>,
-    #[serde(
-        deserialize_with = "journal_date_format::deserialize",
-        serialize_with = "journal_date_format::serialize"
-    )]
     pub issue_date: NaiveDate,
-    #[serde(
-        deserialize_with = "journal_date_format::deserialize",
-        serialize_with = "journal_date_format::serialize"
-    )]
     pub meeting_date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub coordinator: String,
@@ -1256,53 +1249,6 @@ pub struct NewJournalClubMeeting {
     pub state: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub recording: String,
-}
-
-mod journal_date_format {
-    use chrono::NaiveDate;
-    use serde::{self, Deserialize, Deserializer, Serializer};
-
-    const FORMAT: &str = "%m/%d/%Y";
-    pub const DEFAULT_DATE: &str = "01/01/1969";
-
-    // The signature of a serialize_with function must follow the pattern:
-    //
-    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
-    //    where
-    //        S: Serializer
-    //
-    // although it may also be generic over the input types T.
-    pub fn serialize<S>(
-        date: &NaiveDate,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut s = format!("{}", date.format(FORMAT));
-        if s == DEFAULT_DATE {
-            s = "".to_string();
-        }
-        serializer.serialize_str(&s)
-    }
-
-    // The signature of a deserialize_with function must follow the pattern:
-    //
-    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
-    //    where
-    //        D: Deserializer<'de>
-    //
-    // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let mut s = String::deserialize(deserializer).unwrap();
-        if s.trim().is_empty() {
-            s = DEFAULT_DATE.to_string();
-        }
-        NaiveDate::parse_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
-    }
 }
 
 impl JournalClubMeeting {
@@ -1330,7 +1276,7 @@ impl JournalClubMeeting {
             self.state
         );
         let meeting_date = self.meeting_date.format("%m/%d/%Y").to_string();
-        if meeting_date != journal_date_format::DEFAULT_DATE {
+        if meeting_date != "01/01/1969".to_string() {
             text += &format!(" | meeting date: {}", meeting_date);
         }
         objects.push(MessageBlock {
@@ -1359,7 +1305,9 @@ impl JournalClubMeeting {
             });
         }
 
-        for p in self.papers.papers.clone() {
+        for paper in self.papers.clone() {
+            let p: NewJournalClubPaper = serde_json::from_str(&paper).unwrap();
+
             let mut title = p.title.to_string();
             if p.title == self.title {
                 title = "Paper".to_string();
@@ -1395,7 +1343,7 @@ impl JournalClubMeeting {
     Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize,
 )]
 #[table_name = "journal_club_papers"]
-pub struct JournalClubPaper {
+pub struct NewJournalClubPaper {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1403,7 +1351,7 @@ pub struct JournalClubPaper {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub meeting: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub link_to meeting: Vec<String>,
+    pub link_to_meeting: Vec<String>,
 }
 
 /// The data type for a MailingListSubscriber.
