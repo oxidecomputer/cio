@@ -1332,7 +1332,7 @@ impl JournalClubMeeting {
             block_type: MessageBlockType::Context,
             elements: Some(vec![MessageBlockText {
                 text_type: MessageType::Markdown,
-                text: text,
+                text,
             }]),
             text: None,
             accessory: None,
