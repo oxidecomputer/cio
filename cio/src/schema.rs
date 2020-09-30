@@ -221,13 +221,14 @@ table! {
 table! {
     journal_club_meetings (id) {
         id -> Int4,
-        issue -> Varchar,
         title -> Varchar,
-        date -> Date,
+        issue -> Varchar,
+        papers -> Jsonb,
+        issue_date -> Date,
+        meeting_date -> Date,
         coordinator -> Varchar,
         state -> Varchar,
         recording -> Varchar,
-        papers -> Json,
     }
 }
 
@@ -305,8 +306,8 @@ table! {
 
 allow_tables_to_appear_in_same_query!(
     applicants,
-    auth_users,
     auth_user_logins,
+    auth_users,
     buildings,
     conference_rooms,
     github_labels,

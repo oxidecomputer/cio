@@ -8,14 +8,14 @@ use crate::configs::{
     LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig,
 };
 use crate::models::{
-    Applicant, AuthUser, AuthUserLogin, GithubRepo, MailingListSubscriber,
-    NewApplicant, NewAuthUser, NewAuthUserLogin, NewMailingListSubscriber,
-    NewRFD, NewRepo, RFD,
+    Applicant, AuthUser, AuthUserLogin, GithubRepo, JournalClubMeeting,
+    MailingListSubscriber, NewApplicant, NewAuthUser, NewAuthUserLogin,
+    NewJournalClubMeeting, NewMailingListSubscriber, NewRFD, NewRepo, RFD,
 };
 use crate::schema::{
     applicants, auth_user_logins, auth_users, buildings, conference_rooms,
-    github_labels, github_repos, groups, links, mailing_list_subscribers, rfds,
-    users,
+    github_labels, github_repos, groups, journal_club_meetings, links,
+    mailing_list_subscribers, rfds, users,
 };
 
 pub struct Database {
@@ -407,6 +407,58 @@ impl Database {
             .values(group)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating group failed: {}", e))
+    }
+
+    pub fn get_journal_club_meetings(&self) -> Vec<JournalClubMeeting> {
+        journal_club_meetings::dsl::journal_club_meetings
+            .order_by(journal_club_meetings::dsl::id.desc())
+            .load::<JournalClubMeeting>(&self.conn)
+            .unwrap()
+    }
+
+    pub fn upsert_journal_club_meeting(
+        &self,
+        journal_club_meeting: &NewJournalClubMeeting,
+    ) -> JournalClubMeeting {
+        // See if we already have the journal_club_meeting in the database.
+        match journal_club_meetings::dsl::journal_club_meetings
+            .filter(
+                journal_club_meetings::dsl::issue
+                    .eq(journal_club_meeting.issue.to_string()),
+            )
+            .limit(1)
+            .load::<JournalClubMeeting>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the journal_club_meeting in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let a = r.get(0).unwrap();
+
+                    // Update the journal_club_meeting.
+                    return diesel::update(a)
+                        .set(journal_club_meeting)
+                        .get_result::<JournalClubMeeting>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "unable to update journal_club_meeting {}: {}",
+                                a.id, e
+                            )
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the journal_club_meeting in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(journal_club_meetings::table)
+            .values(journal_club_meeting)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| {
+                panic!("creating journal_club_meeting failed: {}", e)
+            })
     }
 
     pub fn get_links(&self) -> Vec<Link> {

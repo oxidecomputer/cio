@@ -17,7 +17,6 @@ use cio_api::configs::{
     Building, ConferenceRoom, GithubLabel, Group, Link, User,
 };
 use cio_api::db::Database;
-use cio_api::journal_clubs::get_meetings_from_repo;
 use cio_api::models::{
     Applicant, AuthUser, GithubRepo, JournalClubMeeting, MailingListSubscriber,
     RFD,
@@ -85,8 +84,7 @@ async fn main() -> Result<(), String> {
     /*
      * The functions that implement our API endpoints will share this context.
      */
-    let github = authenticate_github();
-    let api_context = Context::new(github).await;
+    let api_context = Context::new().await;
 
     /*
      * Set up the server.
@@ -106,33 +104,17 @@ async fn main() -> Result<(), String> {
  * Application-specific context (state shared by handler functions)
  */
 struct Context {
-    // A GitHub client.
-    github: Github,
-
-    // A cache of journal club meetings that we will continuously update.
-    journal_club_meetings: Vec<JournalClubMeeting>,
+    // TODO: share a database connection here.
 }
 
 impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new(github: Github) -> Arc<Context> {
-        let mut api_context = Context {
-            github,
-            journal_club_meetings: Default::default(),
-        };
-
-        // Refresh our context.
-        api_context.refresh().await;
+    pub async fn new() -> Arc<Context> {
+        let mut api_context = Context {};
 
         Arc::new(api_context)
-    }
-
-    pub async fn refresh(&mut self) {
-        println!("Refreshing cache of journal club meetings...");
-        let journal_club_meetings = get_meetings_from_repo(&self.github).await;
-        self.journal_club_meetings = journal_club_meetings;
     }
 
     /**
@@ -265,11 +247,11 @@ async fn api_get_groups(
     path = "/journalClubMeetings",
 }]
 async fn api_get_journal_club_meetings(
-    rqctx: Arc<RequestContext>,
+    _rqctx: Arc<RequestContext>,
 ) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+    let db = Database::new();
 
-    Ok(HttpResponseOk(api_context.journal_club_meetings.clone()))
+    Ok(HttpResponseOk(db.get_journal_club_meetings()))
 }
 
 /**

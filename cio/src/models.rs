@@ -36,7 +36,7 @@ use crate::rfds::{
 };
 use crate::schema::{
     applicants, auth_user_logins, auth_users, github_repos,
-    mailing_list_subscribers, rfds as r_f_ds, rfds,
+    journal_club_meetings, mailing_list_subscribers, rfds as r_f_ds, rfds,
 };
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
@@ -1223,22 +1223,24 @@ pub struct NewAuthUserLogin {
 }
 
 // TODO: figure out the meeting date bullshit
-/// The data type for a JournalClubMeeting.
-#[serde(rename_all = "camelCase")]
-#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct JournalClubMeeting {
+/// The data type for a NewJournalClubMeeting.
+#[db_struct {
+    new_name = "JournalClubMeeting",
+}]
+#[derive(
+    Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize,
+)]
+#[table_name = "journal_club_meetings"]
+pub struct NewJournalClubMeeting {
     pub title: String,
     pub issue: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub papers: Vec<JournalClubPaper>,
+    pub papers: JournalClubPapers,
     #[serde(
-        alias = "issue_date",
         deserialize_with = "journal_date_format::deserialize",
         serialize_with = "journal_date_format::serialize"
     )]
     pub issue_date: NaiveDate,
     #[serde(
-        alias = "meeting_date",
         deserialize_with = "journal_date_format::deserialize",
         serialize_with = "journal_date_format::serialize"
     )]
@@ -1352,7 +1354,7 @@ impl JournalClubMeeting {
             });
         }
 
-        for p in self.papers.clone() {
+        for p in self.papers.papers.clone() {
             let mut title = p.title.to_string();
             if p.title == self.title {
                 title = "Paper".to_string();
@@ -1375,6 +1377,32 @@ impl JournalClubMeeting {
             attachments: None,
             blocks: Some(objects),
         })
+    }
+}
+
+// TODO: find a less hacky way to store the papers in the database.
+/// The data type for JournalClubPapers.
+#[serde(rename_all = "camelCase")]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
+#[sql_type = "Jsonb"]
+pub struct JournalClubPapers {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub papers: Vec<JournalClubPaper>,
+}
+
+impl FromSql<Jsonb, Pg> for JournalClubPapers {
+    fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
+        let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
+        Ok(serde_json::from_value(value).unwrap())
+    }
+}
+
+impl ToSql<Jsonb, Pg> for JournalClubPapers {
+    fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+        let value = serde_json::to_value(self).unwrap();
+        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&value, out)
     }
 }
 
