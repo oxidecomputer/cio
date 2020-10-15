@@ -349,6 +349,14 @@ impl NewApplicant {
             && phone.starts_with("420")
         {
             country = phonenumber::country::CZ;
+        } else if location.to_lowercase().contains("turkey")
+            && phone.starts_with("90")
+        {
+            country = phonenumber::country::TR;
+        } else if location.to_lowercase().contains("sweden")
+            && phone.starts_with("46")
+        {
+            country = phonenumber::country::SE;
         } else if (location.to_lowercase().contains("mumbai")
             || location.to_lowercase().contains("india")
             || location.to_lowercase().contains("bangalore"))
