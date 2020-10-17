@@ -1932,12 +1932,13 @@ impl NewRFD {
 
         if is_markdown {
             // Parse the markdown.
-            self.html = parse_markdown(&self.content);
+            let html = parse_markdown(&self.content);
+            self.html = clean_rfd_html_links(&html, &self.number_string);
         } else {
             // Parse the acsiidoc.
-            self.html = parse_asciidoc(&self.content);
+            let html = parse_asciidoc(&self.content);
+            self.html = clean_rfd_html_links(&html, &self.number_string);
         }
-        self.html = clean_rfd_html_links(&self.html, &self.number_string);
 
         self.authors = get_authors(&self.content, is_markdown);
     }

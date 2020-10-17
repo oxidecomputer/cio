@@ -127,6 +127,7 @@ pub fn parse_asciidoc(content: &str) -> String {
 pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     let mut cleaned = content
         .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
+        .replace("href=\"#", &format!("href=\"/rfd/{}#", num))
         .replace(
             r#"img src=""#,
             &format!(r#"img src="/static/images/{}/"#, num),
@@ -285,6 +286,7 @@ mod tests {
         https://3245.rfd.oxide.computer/things
         https://3265.rfd.oxide.computer/things
         <img src="things.png" \>
+        <a href="\#_principles">
         <a href="\#things" \>"#;
 
         let cleaned = clean_rfd_html_links(&content, "0032");
@@ -295,6 +297,7 @@ mod tests {
         https://rfd.shared.oxide.computer/rfd/3245/things
         https://rfd.shared.oxide.computer/rfd/3265/things
         <img src="/static/images/0032/things.png" \>
+        <a href="/rfd/0032#_principles">
         <a href="/rfd/0032#things" \>"#;
 
         assert_eq!(expected, cleaned);
