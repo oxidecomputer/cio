@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::fs::File;
+use std::io::Read;
 use std::sync::Arc;
 
 use dropshot::endpoint;
@@ -11,6 +12,7 @@ use dropshot::HttpError;
 use dropshot::HttpResponseOk;
 use dropshot::HttpServer;
 use dropshot::RequestContext;
+use hyper::{Body, Response, StatusCode};
 
 use cio_api::configs::{
     Building, ConferenceRoom, GithubLabel, Group, Link, User,
@@ -20,6 +22,9 @@ use cio_api::models::{
     Applicant, AuthUser, GithubRepo, JournalClubMeeting, MailingListSubscriber,
     RFD,
 };
+
+#[macro_use]
+extern crate serde_json;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -60,11 +65,13 @@ async fn main() -> Result<(), String> {
     api.register(api_get_links).unwrap();
     api.register(api_get_mailing_list_subscribers).unwrap();
     api.register(api_get_rfds).unwrap();
+    api.register(api_get_schema).unwrap();
     api.register(api_get_users).unwrap();
 
     // Print the OpenAPI Spec to stdout.
-    println!("Writing OpenAPI spec to openapi-cio.json...");
-    let mut buffer = File::create("openapi-cio.json").unwrap();
+    let api_file = "openapi-cio.json";
+    println!("Writing OpenAPI spec to {}...", api_file);
+    let mut buffer = File::create(api_file).unwrap();
     api.print_openapi(
         &mut buffer,
         &"CIO API",
@@ -78,11 +85,15 @@ async fn main() -> Result<(), String> {
         &"0.0.1",
     )
     .unwrap();
+    let mut f = File::open(api_file).unwrap();
+    let mut api_schema = String::new();
+    f.read_to_string(&mut api_schema).unwrap();
+    let schema: openapiv3::OpenAPI = serde_json::from_str(&api_schema).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
      */
-    let api_context = Context::new().await;
+    let api_context = Context::new(schema).await;
 
     /*
      * Set up the server.
@@ -103,14 +114,15 @@ async fn main() -> Result<(), String> {
  */
 struct Context {
     // TODO: share a database connection here.
+    schema: openapiv3::OpenAPI,
 }
 
 impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new() -> Arc<Context> {
-        let api_context = Context {};
+    pub async fn new(schema: openapiv3::OpenAPI) -> Arc<Context> {
+        let api_context = Context { schema: schema };
 
         Arc::new(api_context)
     }
@@ -119,7 +131,7 @@ impl Context {
      * Given `rqctx` (which is provided by Dropshot to all HTTP handler
      * functions), return our application-specific context.
      */
-    pub fn _from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
+    pub fn from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
         let ctx: Arc<dyn Any + Send + Sync + 'static> =
             Arc::clone(&rqctx.server.private);
         ctx.downcast::<Context>()
@@ -130,6 +142,24 @@ impl Context {
 /*
  * HTTP API interface
  */
+
+/**
+ * Return the OpenAPI schema in JSON format.
+ */
+#[endpoint {
+    method = GET,
+    path = "/",
+}]
+async fn api_get_schema(
+    rqctx: Arc<RequestContext>,
+) -> Result<Response<Body>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .body(Body::from(json!(api_context.schema).to_string()))
+        .unwrap())
+}
 
 /**
  * Fetch all auth users.
