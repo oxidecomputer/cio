@@ -681,7 +681,9 @@ impl NewApplicant {
         let labels = vec!["hiring".to_string()];
         let body = format!("- [ ] Schedule follow up meetings
 - [ ] Schedule sync to discuss
+
 ## Candidate Information
+
 Submitted Date: {}
 Email: {}
 Phone: {}
@@ -689,11 +691,11 @@ Location: {}
 GitHub: {}
 Resume: {}
 Oxide Candidate Materials: {}
+
 ## Reminder
-To view the all the candidates refer to the following Google
-spreadsheets:
-- [Engineering Applications](https://docs.google.com/spreadsheets/d/1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA/edit?usp=sharing)
-- [Product Engineering and Design Applications](https://docs.google.com/spreadsheets/d/1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI/edit?usp=sharing)
+
+To view the all the candidates refer to the Airtable workspace: https://airtable-applicants.corp.oxide.computer
+
 cc @jessfraz @sdtuck @bcantrill",
 		self.submitted_time,
 		self.email,
