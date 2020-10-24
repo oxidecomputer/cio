@@ -196,7 +196,7 @@ impl NewApplicant {
         // then we have a portfolio.
         let portfolio =
             if row.len() > columns.portfolio && columns.portfolio != 0 {
-                row[columns.portfolio].trim().to_lowercase()
+                row[columns.portfolio].trim()
             } else {
                 "".to_lowercase()
             };
