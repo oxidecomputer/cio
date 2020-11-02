@@ -203,6 +203,7 @@ pub async fn get_file_contents(
                 let file_name = output.to_str().unwrap();
                 if (!output.is_dir())
                     && (file_name.ends_with("responses.pdf")
+                        || file_name.ends_with("OxideQuestions.pdf")
                         || file_name.ends_with("Questionnaire.pdf"))
                 {
                     // Concatenate all the zip files into our result.
