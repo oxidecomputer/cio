@@ -485,6 +485,14 @@ impl NewApplicant {
                             "Exploratory samples",
                             &materials_contents,
                         );
+
+                        if work_samples.is_empty() {
+                            work_samples = parse_question(
+                                r"design sample\(s\)",
+                                "Questionnaire",
+                                &materials_contents,
+                            );
+                        }
                     }
                 }
             }
@@ -507,6 +515,14 @@ impl NewApplicant {
                     "Analysis samples",
                     &materials_contents,
                 );
+
+                if writing_samples.is_empty() {
+                    writing_samples = parse_question(
+                        r"Writing sample\(s\)",
+                        "Code and/or design sample",
+                        &materials_contents,
+                    );
+                }
             }
         }
 
