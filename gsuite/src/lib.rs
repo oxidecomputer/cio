@@ -1545,7 +1545,10 @@ impl User {
         // Get the AWS Role information.
         if !user.aws_role.is_empty() {
             let mut aws_role: HashMap<String, Value> = HashMap::new();
-            aws_role.insert("Role".to_string(), json!(user.aws_role.clone()));
+            let mut aws_type: HashMap<String, String> = HashMap::new();
+            aws_type.insert("type".to_string(), "work".to_string());
+            aws_type.insert("role".to_string(), user.aws_role.to_string());
+            aws_role.insert("Role".to_string(), json!(vec![aws_type]));
             cs.insert(
                 "Amazon_Web_Services".to_string(),
                 UserCustomProperties(Some(aws_role)),
@@ -1618,7 +1621,9 @@ impl Serialize for UserCustomProperties {
             if v.is_string() {
                 map.serialize_entry(&k, v.as_str().unwrap()).unwrap();
             } else if v.is_array() {
-                map.serialize_entry(&k, v.as_array().unwrap()).unwrap();
+                let val: Vec<HashMap<String, String>> =
+                    serde_json::from_str(&v.to_string()).unwrap();
+                map.serialize_entry(&k, &val).unwrap();
             }
         }
         map.end()
