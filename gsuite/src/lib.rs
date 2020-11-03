@@ -54,6 +54,8 @@
  * ```
  */
 use std::collections::HashMap;
+use std::error;
+use std::fmt;
 use std::sync::Arc;
 
 use rand::distributions::Alphanumeric;
@@ -152,7 +154,7 @@ impl GSuite {
     }
 
     /// List Google groups.
-    pub async fn list_groups(&self) -> Vec<Group> {
+    pub async fn list_groups(&self) -> Result<Vec<Group>, APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -165,21 +167,25 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
         let value: Groups = resp.json().await.unwrap();
 
-        value.groups.unwrap()
+        Ok(value.groups.unwrap())
     }
 
     /// Get the settings for a Google group.
-    pub async fn get_group_settings(&self, group_email: &str) -> GroupSettings {
+    pub async fn get_group_settings(
+        &self,
+        group_email: &str,
+    ) -> Result<GroupSettings, APIError> {
         // Build the request.
         let request = self.request(
             GROUPS_SETTINGS_ENDPOINT,
@@ -192,19 +198,20 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
-        resp.json().await.unwrap()
+        Ok(resp.json().await.unwrap())
     }
 
     /// Update a Google group.
-    pub async fn update_group(&self, group: &Group) {
+    pub async fn update_group(&self, group: &Group) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -217,16 +224,22 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// Update a Google group's settings.
-    pub async fn update_group_settings(&self, settings: &GroupSettings) {
+    pub async fn update_group_settings(
+        &self,
+        settings: &GroupSettings,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             GROUPS_SETTINGS_ENDPOINT,
@@ -239,16 +252,19 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// Create a google group.
-    pub async fn create_group(&self, group: &Group) -> Group {
+    pub async fn create_group(&self, group: &Group) -> Result<Group, APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -261,15 +277,16 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
-        resp.json().await.unwrap()
+        Ok(resp.json().await.unwrap())
     }
 
     /// Update a Google group's aliases.
@@ -279,12 +296,18 @@ impl GSuite {
         A::Item: AsRef<str>,
     {
         for alias in aliases {
-            self.update_group_alias(group_key, alias.as_ref()).await;
+            self.update_group_alias(group_key, alias.as_ref())
+                .await
+                .unwrap();
         }
     }
 
     /// Update an alias for a Google group.
-    pub async fn update_group_alias(&self, group_key: &str, alias: &str) {
+    pub async fn update_group_alias(
+        &self,
+        group_key: &str,
+        alias: &str,
+    ) -> Result<(), APIError> {
         let mut a: HashMap<&str, &str> = HashMap::new();
         a.insert("alias", alias);
         // Build the request.
@@ -304,19 +327,25 @@ impl GSuite {
 
                 if body.contains("duplicate") {
                     // Ignore the error because we don't care about if it is a duplicate.
-                    return;
+                    return Ok(());
                 }
 
-                panic!(
-                    "received response status: {:?}\nresponse body: {:?}",
-                    s, body,
-                );
+                return Err(APIError {
+                    status_code: s,
+                    body,
+                });
             }
         };
+
+        Ok(())
     }
 
     /// Check if a user is a member of a Google group.
-    pub async fn group_has_member(&self, group_id: &str, email: &str) -> bool {
+    pub async fn group_has_member(
+        &self,
+        group_id: &str,
+        email: &str,
+    ) -> Result<bool, APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -329,17 +358,18 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
         let value: MembersHasMember = resp.json().await.unwrap();
 
-        value.is_member.unwrap()
+        Ok(value.is_member.unwrap())
     }
 
     /// Update a member of a Google group.
@@ -348,7 +378,7 @@ impl GSuite {
         group_id: &str,
         email: &str,
         role: &str,
-    ) {
+    ) -> Result<(), APIError> {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -366,12 +396,15 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// Add a user as a member of a Google group.
@@ -380,7 +413,7 @@ impl GSuite {
         group_id: &str,
         email: &str,
         role: &str,
-    ) {
+    ) -> Result<(), APIError> {
         let mut member: Member = Default::default();
         member.role = Some(role.to_string());
         member.email = Some(email.to_string());
@@ -398,16 +431,23 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// Remove a user as a member of a Google group.
-    pub async fn group_remove_member(&self, group_id: &str, email: &str) {
+    pub async fn group_remove_member(
+        &self,
+        group_id: &str,
+        email: &str,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -420,16 +460,19 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// List users.
-    pub async fn list_users(&self) -> Vec<User> {
+    pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -446,21 +489,22 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
         let value: Users = resp.json().await.unwrap();
 
-        value.users.unwrap()
+        Ok(value.users.unwrap())
     }
 
     /// Update a user.
-    pub async fn update_user(&self, user: &User) {
+    pub async fn update_user(&self, user: &User) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -473,16 +517,19 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// Create a user.
-    pub async fn create_user(&self, user: &User) -> User {
+    pub async fn create_user(&self, user: &User) -> Result<User, APIError> {
         // Build the request.
         let request =
             self.request(DIRECTORY_ENDPOINT, Method::POST, "users", user, None);
@@ -490,15 +537,16 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
-        resp.json().await.unwrap()
+        Ok(resp.json().await.unwrap())
     }
 
     /// Update a user's aliases.
@@ -508,12 +556,18 @@ impl GSuite {
         A::Item: AsRef<str>,
     {
         for alias in aliases {
-            self.update_user_alias(user_id, alias.as_ref()).await;
+            self.update_user_alias(user_id, alias.as_ref())
+                .await
+                .unwrap();
         }
     }
 
     /// Update an alias for a user.
-    pub async fn update_user_alias(&self, user_id: &str, alias: &str) {
+    pub async fn update_user_alias(
+        &self,
+        user_id: &str,
+        alias: &str,
+    ) -> Result<(), APIError> {
         let mut a: HashMap<&str, &str> = HashMap::new();
         a.insert("alias", alias);
         // Build the request.
@@ -533,19 +587,23 @@ impl GSuite {
 
                 if body.contains("duplicate") {
                     // Ignore the error because we don't care about if it is a duplicate.
-                    return;
+                    return Ok(());
                 }
 
-                panic!(
-                    "received response status: {:?}\nresponse body: {:?}",
-                    s, body,
-                );
+                return Err(APIError {
+                    status_code: s,
+                    body,
+                });
             }
         };
+
+        Ok(())
     }
 
     /// List calendar resources.
-    pub async fn list_calendar_resources(&self) -> Vec<CalendarResource> {
+    pub async fn list_calendar_resources(
+        &self,
+    ) -> Result<Vec<CalendarResource>, APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -558,21 +616,25 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
         let value: CalendarResources = resp.json().await.unwrap();
 
-        value.items.unwrap()
+        Ok(value.items.unwrap())
     }
 
     /// Update a calendar resource.
-    pub async fn update_calendar_resource(&self, resource: &CalendarResource) {
+    pub async fn update_calendar_resource(
+        &self,
+        resource: &CalendarResource,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -588,16 +650,22 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// Create a calendar resource.
-    pub async fn create_calendar_resource(&self, resource: &CalendarResource) {
+    pub async fn create_calendar_resource(
+        &self,
+        resource: &CalendarResource,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -610,16 +678,19 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// List buildings.
-    pub async fn list_buildings(&self) -> Vec<Building> {
+    pub async fn list_buildings(&self) -> Result<Vec<Building>, APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -632,21 +703,25 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
 
         // Try to deserialize the response.
         let value: Buildings = resp.json().await.unwrap();
 
-        value.buildings.unwrap()
+        Ok(value.buildings.unwrap())
     }
 
     /// Update a building.
-    pub async fn update_building(&self, building: &Building) {
+    pub async fn update_building(
+        &self,
+        building: &Building,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -662,16 +737,22 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
     }
 
     /// Create a building.
-    pub async fn create_building(&self, building: &Building) {
+    pub async fn create_building(
+        &self,
+        building: &Building,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
@@ -684,12 +765,51 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
-            s => panic!(
-                "received response status: {:?}\nbody: {}",
-                s,
-                resp.text().await.unwrap()
-            ),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
         };
+
+        Ok(())
+    }
+}
+
+/// Error type returned by our library.
+pub struct APIError {
+    pub status_code: StatusCode,
+    pub body: String,
+}
+
+impl fmt::Display for APIError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
+    }
+}
+
+impl fmt::Debug for APIError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
+    }
+}
+
+// This is important for other errors to wrap this one.
+impl error::Error for APIError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        // Generic error, underlying cause isn't tracked.
+        None
     }
 }
 
