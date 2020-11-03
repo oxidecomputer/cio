@@ -62,7 +62,11 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
+use serde_json::value::Value;
 use yup_oauth2::AccessToken;
+
+#[macro_use]
+extern crate serde_json;
 
 use cio_api::configs::{BuildingConfig, ResourceConfig, UserConfig};
 use cio_api::utils::get_github_user_public_ssh_keys;
@@ -1509,8 +1513,11 @@ impl User {
 
         let mut cs: HashMap<String, UserCustomProperties> = HashMap::new();
         if !user.github.is_empty() {
-            let mut gh: HashMap<String, String> = HashMap::new();
-            gh.insert("GitHub_Username".to_string(), user.github.clone());
+            let mut gh: HashMap<String, Value> = HashMap::new();
+            gh.insert(
+                "GitHub_Username".to_string(),
+                json!(user.github.clone()),
+            );
             cs.insert("Contact".to_string(), UserCustomProperties(Some(gh)));
 
             // Set their GitHub SSH Keys to their Google SSH Keys.
@@ -1526,15 +1533,18 @@ impl User {
         }
 
         if !user.chat.is_empty() {
-            let mut chat: HashMap<String, String> = HashMap::new();
-            chat.insert("Matrix_Chat_Username".to_string(), user.chat.clone());
+            let mut chat: HashMap<String, Value> = HashMap::new();
+            chat.insert(
+                "Matrix_Chat_Username".to_string(),
+                json!(user.chat.clone()),
+            );
             cs.insert("Contact".to_string(), UserCustomProperties(Some(chat)));
         }
 
         // Get the AWS Role information.
         if !user.aws_role.is_empty() {
-            let mut aws_role: HashMap<String, String> = HashMap::new();
-            aws_role.insert("Role".to_string(), user.aws_role.clone());
+            let mut aws_role: HashMap<String, Value> = HashMap::new();
+            aws_role.insert("Role".to_string(), json!(user.aws_role.clone()));
             cs.insert(
                 "Amazon Web Services".to_string(),
                 UserCustomProperties(Some(aws_role)),
@@ -1594,7 +1604,7 @@ pub struct UserSSHKey {
 
 /// Custom properties for a user.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct UserCustomProperties(pub Option<HashMap<String, String>>);
+pub struct UserCustomProperties(pub Option<HashMap<String, Value>>);
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Users {
