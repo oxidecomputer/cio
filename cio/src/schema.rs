@@ -311,6 +311,7 @@ table! {
         groups -> Array<Text>,
         is_super_admin -> Bool,
         building -> Varchar,
+        aws_role -> Varchar,
     }
 }
 

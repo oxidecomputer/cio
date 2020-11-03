@@ -116,6 +116,13 @@ pub struct UserConfig {
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub building: String,
+
+    #[serde(
+        default,
+        alias = "aws_role",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub aws_role: String,
 }
 
 /// The data type for a group. This applies to Google Groups.

@@ -1411,6 +1411,16 @@ impl User {
             cs.insert("Contact".to_string(), UserCustomProperties(Some(chat)));
         }
 
+        // Get the AWS Role information.
+        if !user.aws_role.is_empty() {
+            let mut aws_role: HashMap<String, String> = HashMap::new();
+            aws_role.insert("Role".to_string(), user.aws_role.clone());
+            cs.insert(
+                "Amazon Web Services".to_string(),
+                UserCustomProperties(Some(aws_role)),
+            );
+        }
+
         // Set the custom schemas.
         self.custom_schemas = Some(cs);
 
