@@ -122,7 +122,7 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(schema: openapiv3::OpenAPI) -> Arc<Context> {
-        let api_context = Context { schema: schema };
+        let api_context = Context { schema };
 
         Arc::new(api_context)
     }
