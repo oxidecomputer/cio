@@ -1546,7 +1546,7 @@ impl User {
             let mut aws_role: HashMap<String, Value> = HashMap::new();
             aws_role.insert("Role".to_string(), json!(user.aws_role.clone()));
             cs.insert(
-                "Amazon Web Services".to_string(),
+                "Amazon_Web_Services".to_string(),
                 UserCustomProperties(Some(aws_role)),
             );
         }
