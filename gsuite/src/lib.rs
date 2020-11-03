@@ -1547,7 +1547,7 @@ impl User {
             let mut aws_role: HashMap<String, Value> = HashMap::new();
             let mut aws_type: HashMap<String, String> = HashMap::new();
             aws_type.insert("type".to_string(), "work".to_string());
-            aws_type.insert("role".to_string(), user.aws_role.to_string());
+            aws_type.insert("value".to_string(), user.aws_role.to_string());
             aws_role.insert("Role".to_string(), json!(vec![aws_type]));
             cs.insert(
                 "Amazon_Web_Services".to_string(),
