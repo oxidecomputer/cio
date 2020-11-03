@@ -61,7 +61,8 @@ use std::sync::Arc;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
-use serde::{Deserialize, Serialize};
+use serde::ser::SerializeMap;
+use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::Value;
 use yup_oauth2::AccessToken;
 
@@ -1603,8 +1604,26 @@ pub struct UserSSHKey {
 }
 
 /// Custom properties for a user.
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Deserialize)]
 pub struct UserCustomProperties(pub Option<HashMap<String, Value>>);
+
+impl Serialize for UserCustomProperties {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let ucp = self.0.as_ref().unwrap();
+        let mut map = s.serialize_map(Some(ucp.len())).unwrap();
+        for (k, v) in ucp {
+            if v.is_string() {
+                map.serialize_entry(&k, v.as_str().unwrap()).unwrap();
+            } else if v.is_array() {
+                map.serialize_entry(&k, v.as_array().unwrap()).unwrap();
+            }
+        }
+        map.end()
+    }
+}
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Users {
