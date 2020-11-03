@@ -292,7 +292,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "futures-util",
- "google-drive 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.9",
  "html2text",
  "hubcaps",
  "hyper",
@@ -322,7 +322,7 @@ dependencies = [
  "airtable-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.15",
  "chrono-humanize",
- "google-drive 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.9",
  "html2text",
  "pandoc",
  "regex",
@@ -808,6 +808,8 @@ dependencies = [
 [[package]]
 name = "google-drive"
 version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bbdb9ce269e80f2723ac871e7f0f44dc0809de8c511a4813010a9635d455dea"
 dependencies = [
  "bytes",
  "reqwest",
@@ -817,9 +819,7 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bbdb9ce269e80f2723ac871e7f0f44dc0809de8c511a4813010a9635d455dea"
+version = "0.1.10"
 dependencies = [
  "bytes",
  "reqwest",
