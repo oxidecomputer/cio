@@ -29,6 +29,9 @@ pub struct Config {
     pub links: BTreeMap<String, LinkConfig>,
 
     pub labels: Vec<LabelConfig>,
+
+    pub github_outside_contributors:
+        BTreeMap<String, GitHubOutsideContributorsConfig>,
 }
 
 impl Config {
@@ -358,6 +361,16 @@ pub struct LabelConfig {
     pub name: String,
     pub description: String,
     pub color: String,
+}
+
+/// The data type for GitHub outside contributors to repositories.
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
+pub struct GitHubOutsideContributorsConfig {
+    pub description: String,
+    pub users: Vec<String>,
+    pub repos: Vec<String>,
 }
 
 /// Get the configs from the GitHub repository and parse them.
