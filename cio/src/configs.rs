@@ -30,8 +30,8 @@ pub struct Config {
 
     pub labels: Vec<LabelConfig>,
 
-    pub github_outside_contributors:
-        BTreeMap<String, GitHubOutsideContributorsConfig>,
+    pub github_outside_collaborators:
+        BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
 }
 
 impl Config {
@@ -363,11 +363,11 @@ pub struct LabelConfig {
     pub color: String,
 }
 
-/// The data type for GitHub outside contributors to repositories.
+/// The data type for GitHub outside collaborators to repositories.
 #[derive(
     Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
 )]
-pub struct GitHubOutsideContributorsConfig {
+pub struct GitHubOutsideCollaboratorsConfig {
     pub description: String,
     pub users: Vec<String>,
     pub repos: Vec<String>,
