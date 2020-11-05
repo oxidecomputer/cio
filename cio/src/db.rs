@@ -369,6 +369,15 @@ impl Database {
             .unwrap_or_else(|e| panic!("creating github_repo failed: {}", e))
     }
 
+    pub fn delete_github_repo_by_name(&self, name: &str) {
+        diesel::delete(
+            github_repos::dsl::github_repos
+                .filter(github_repos::dsl::name.eq(name.to_string())),
+        )
+        .execute(&self.conn)
+        .unwrap();
+    }
+
     pub fn get_groups(&self) -> Vec<Group> {
         groups::dsl::groups
             .order_by(groups::dsl::id.desc())

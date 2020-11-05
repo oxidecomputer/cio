@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -15,7 +16,7 @@ use yup_oauth2::{
 };
 
 use crate::db::Database;
-use crate::models::NewRepo;
+use crate::models::{GithubRepo, NewRepo};
 
 /// Write a file.
 pub fn write_file(file: PathBuf, contents: String) {
@@ -140,9 +141,27 @@ pub async fn refresh_db_github_repos(github: &Github) {
     // Initialize our database.
     let db = Database::new();
 
+    // Get all the repos.
+    let db_repos = db.get_github_repos();
+    // Create a BTreeMap
+    let mut repo_map: BTreeMap<String, GithubRepo> = Default::default();
+    for r in db_repos {
+        repo_map.insert(r.name.to_string(), r);
+    }
+
     // Sync github_repos.
     for github_repo in github_repos {
         db.upsert_github_repo(&github_repo);
+
+        // Remove the repo from the map.
+        repo_map.remove(&github_repo.name);
+    }
+
+    // Remove any repos that should no longer be in the database.
+    // This is found by the remaining repos that are in the map since we removed
+    // the existing repos from the map above.
+    for (name, _) in repo_map {
+        db.delete_github_repo_by_name(&name);
     }
 }
 
