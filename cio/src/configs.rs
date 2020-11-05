@@ -30,6 +30,7 @@ pub struct Config {
 
     pub labels: Vec<LabelConfig>,
 
+    #[serde(alias = "github-outside-collaborators")]
     pub github_outside_collaborators:
         BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
 }
