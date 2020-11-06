@@ -372,6 +372,7 @@ pub struct GitHubOutsideCollaboratorsConfig {
     pub description: String,
     pub users: Vec<String>,
     pub repos: Vec<String>,
+    pub perm: String,
 }
 
 /// Get the configs from the GitHub repository and parse them.
