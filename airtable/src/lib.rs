@@ -208,6 +208,37 @@ impl Airtable {
         Ok(records)
     }
 
+    /// Get record from a table.
+    pub async fn get_record(
+        &self,
+        table: &str,
+        record_id: &str,
+    ) -> Result<Record, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            format!("{}/{}", table, record_id),
+            (),
+            None,
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let record: Record = resp.json().await.unwrap();
+
+        Ok(record)
+    }
+
     /// Bulk create records in a table.
     ///
     /// Due to limitations on the Airtable API, you can only bulk create 10
