@@ -312,9 +312,15 @@ impl Airtable {
         };
 
         // Try to deserialize the response.
-        let r: APICall<T> = resp.json().await.unwrap();
-
-        Ok(r.records)
+        match resp.json::<APICall<T>>().await {
+            Ok(v) => {
+                return Ok(v.records);
+            }
+            Err(_) => {
+                // This might fail. On a faiture just return an empty vector.
+                return Ok(vec![]);
+            }
+        }
     }
 }
 
