@@ -33,6 +33,8 @@ pub struct Config {
     #[serde(alias = "github-outside-collaborators")]
     pub github_outside_collaborators:
         BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
+
+    pub huddles: BTreeMap<String, HuddleConfig>,
 }
 
 impl Config {
@@ -373,6 +375,16 @@ pub struct GitHubOutsideCollaboratorsConfig {
     pub users: Vec<String>,
     pub repos: Vec<String>,
     pub perm: String,
+}
+
+/// The data type for a huddle meeting that syncs with Airtable and notes in GitHub.
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
+pub struct HuddleConfig {
+    pub description: String,
+    pub airtable_base_id: String,
+    pub email: String,
 }
 
 /// Get the configs from the GitHub repository and parse them.
