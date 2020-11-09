@@ -68,6 +68,7 @@ pub struct Meeting {
     pub recording: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "Attendees")]
     pub attendees: Option<Vec<AirtableUser>>,
+    pub reminder_email_sent: bool,
 }
 
 /// Convert the date format `%Y-%m-%d` to a NaiveDate.
@@ -120,4 +121,7 @@ pub struct MeetingReminderEmailData {
     pub last_meeting_reports_link: String,
     pub meeting_id: String,
     pub should_send: bool,
+    pub huddle_name: String,
+    pub time: String,
+    pub email: String,
 }
