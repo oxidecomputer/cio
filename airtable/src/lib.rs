@@ -6,14 +6,15 @@
  * Example:
  *
  * ```
- * use airtable_api::Airtable;
+ * use airtable_api::{Airtable, Record};
+ * use serde::{Deserialize, Serialize};
  *
  * async fn get_records() {
  *     // Initialize the Airtable client.
  *     let airtable = Airtable::new_from_env();
  *
  *     // Get the current records from a table.
- *     let mut records = airtable
+ *     let mut records: Vec<Record<SomeFormat>> = airtable
  *         .list_records(
  *             "Table Name",
  *             "Grid view",
@@ -26,6 +27,11 @@
  *     for (i, record) in records.clone().iter().enumerate() {
  *         println!("{} - {:?}", i, record);
  *     }
+ * }
+ *
+ * #[derive(Debug, Clone, Serialize, Deserialize)]
+ * pub struct SomeFormat {
+ *     pub x: bool,
  * }
  * ```
  */
