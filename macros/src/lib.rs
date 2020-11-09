@@ -55,12 +55,12 @@ fn do_db_struct(
                 let record = Record {
                     id: None,
                     created_time: None,
-                    fields: serde_json::to_value(self).unwrap(),
+                    fields: self.clone(),
                 };
 
                 // Send the new record to the Airtable client.
                 // Batch can only handle 10 at a time.
-                airtable
+                let _ : Vec<Record<#new_name>> = airtable
                     .create_records(#table, vec![record])
                     .await
                     .unwrap();
@@ -150,12 +150,12 @@ mod tests {
                     let record = Record {
                         id: None,
                         created_time: None,
-                        fields: serde_json::to_value(self).unwrap(),
+                        fields: self.clone(),
                     };
 
                     // Send the new record to the Airtable client.
                     // Batch can only handle 10 at a time.
-                    airtable
+                    let _ : Vec<Record<DuplicatedItem>> = airtable
                         .create_records(AIRTABLE_RFD_TABLE, vec![record])
                         .await
                         .unwrap();
