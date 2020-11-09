@@ -97,6 +97,7 @@ pub struct Meeting {
         rename = "Attendees"
     )]
     pub attendees: Vec<AirtableUser>,
+    #[serde(default)]
     pub reminder_email_sent: bool,
 }
 
