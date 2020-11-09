@@ -119,8 +119,6 @@ pub struct MeetingReminderEmailData {
     pub date: String,
     pub topics: Vec<DiscussionTopic>,
     pub last_meeting_reports_link: String,
-    pub meeting_id: String,
-    pub should_send: bool,
     pub huddle_name: String,
     pub time: String,
     pub email: String,
