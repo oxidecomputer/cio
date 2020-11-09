@@ -43,7 +43,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "reqwest",
  "serde",
@@ -291,7 +291,7 @@ dependencies = [
 name = "cio-api"
 version = "0.1.2"
 dependencies = [
- "airtable-api 0.1.6",
+ "airtable-api 0.1.8",
  "chrono 0.4.19",
  "chrono-humanize",
  "clap",

@@ -32,9 +32,11 @@
 use std::env;
 use std::error;
 use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Airtable API.
@@ -130,12 +132,12 @@ impl Airtable {
     }
 
     /// List records in a table for a particular view.
-    pub async fn list_records(
+    pub async fn list_records<T: DeserializeOwned>(
         &self,
         table: &str,
         view: &str,
         fields: Vec<&str>,
-    ) -> Result<Vec<Record>, APIError> {
+    ) -> Result<Vec<Record<T>>, APIError> {
         let mut params =
             vec![("pageSize", "100".to_string()), ("view", view.to_string())];
         for field in fields {
@@ -158,7 +160,7 @@ impl Airtable {
         };
 
         // Try to deserialize the response.
-        let mut r: APICall = resp.json().await.unwrap();
+        let mut r: APICall<T> = resp.json().await.unwrap();
 
         let mut records = r.records;
 
@@ -209,11 +211,11 @@ impl Airtable {
     }
 
     /// Get record from a table.
-    pub async fn get_record(
+    pub async fn get_record<T: DeserializeOwned>(
         &self,
         table: &str,
         record_id: &str,
-    ) -> Result<Record, APIError> {
+    ) -> Result<Record<T>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -234,7 +236,7 @@ impl Airtable {
         };
 
         // Try to deserialize the response.
-        let record: Record = resp.json().await.unwrap();
+        let record: Record<T> = resp.json().await.unwrap();
 
         Ok(record)
     }
@@ -243,11 +245,11 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk create 10
     /// records at a time.
-    pub async fn create_records(
+    pub async fn create_records<T: Serialize + DeserializeOwned>(
         &self,
         table: &str,
-        records: Vec<Record>,
-    ) -> Result<Vec<Record>, APIError> {
+        records: Vec<Record<T>>,
+    ) -> Result<Vec<Record<T>>, APIError> {
         // Build the request.
         let request = self.request(
             Method::POST,
@@ -272,7 +274,7 @@ impl Airtable {
         };
 
         // Try to deserialize the response.
-        let r: APICall = resp.json().await.unwrap();
+        let r: APICall<T> = resp.json().await.unwrap();
 
         Ok(r.records)
     }
@@ -281,11 +283,11 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk update 10
     /// records at a time.
-    pub async fn update_records(
+    pub async fn update_records<T: Serialize + DeserializeOwned>(
         &self,
         table: &str,
-        records: Vec<Record>,
-    ) -> Result<Vec<Record>, APIError> {
+        records: Vec<Record<T>>,
+    ) -> Result<Vec<Record<T>>, APIError> {
         // Build the request.
         let request = self.request(
             Method::PATCH,
@@ -310,7 +312,7 @@ impl Airtable {
         };
 
         // Try to deserialize the response.
-        let r: APICall = resp.json().await.unwrap();
+        let r: APICall<T> = resp.json().await.unwrap();
 
         Ok(r.records)
     }
@@ -353,14 +355,14 @@ impl error::Error for APIError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct APICall {
+struct APICall<T> {
     /// If there are more records, the response will contain an
     /// offset. To fetch the next page of records, include offset
     /// in the next request's parameters.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub offset: Option<String>,
     /// The current page number of returned records.
-    pub records: Vec<Record>,
+    pub records: Vec<Record<T>>,
     /// The Airtable API will perform best-effort automatic data conversion
     /// from string values if the typecast parameter is passed in. Automatic
     /// conversion is disabled by default to ensure data integrity, but it may
@@ -370,11 +372,11 @@ struct APICall {
 }
 
 /// An Airtable record.
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct Record {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Record<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
-    pub fields: serde_json::Value,
+    pub fields: T,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_time: Option<String>,
 }

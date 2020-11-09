@@ -483,18 +483,15 @@ pub async fn refresh_airtable_applicants() {
         AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
     );
 
-    let records = airtable
+    let records: Vec<Record<Applicant>> = airtable
         .list_records(AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_GRID_VIEW, vec![])
         .await
         .unwrap();
 
-    let mut airtable_applicants: BTreeMap<i32, (Record, Applicant)> =
+    let mut airtable_applicants: BTreeMap<i32, Record<Applicant>> =
         Default::default();
     for record in records {
-        let fields: Applicant =
-            serde_json::from_value(record.fields.clone()).unwrap();
-
-        airtable_applicants.insert(fields.id, (record, fields));
+        airtable_applicants.insert(record.fields.id, record);
     }
 
     // Initialize our database.
@@ -505,10 +502,10 @@ pub async fn refresh_airtable_applicants() {
     for applicant in applicants {
         // See if we have it in our fields.
         match airtable_applicants.get(&applicant.id) {
-            Some((r, _in_airtable_fields)) => {
+            Some(r) => {
                 let mut record = r.clone();
 
-                record.fields = json!(applicant);
+                record.fields = applicant;
 
                 airtable
                     .update_records(

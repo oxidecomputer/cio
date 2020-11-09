@@ -1,4 +1,4 @@
-use airtable_api::Airtable;
+use airtable_api::{Airtable, Record};
 use chrono::offset::Utc;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
     let airtable =
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
-    let records = airtable
+    let records: Vec<Record<NewMailingListSubscriber>> = airtable
         .list_records(
             AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
             AIRTABLE_GRID_VIEW,
@@ -27,10 +27,7 @@ pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
 
     let mut subscribers: Vec<NewMailingListSubscriber> = Default::default();
     for record in records {
-        let fields: NewMailingListSubscriber =
-            serde_json::from_value(record.fields.clone()).unwrap();
-
-        subscribers.push(fields);
+        subscribers.push(record.fields);
     }
     subscribers
 }

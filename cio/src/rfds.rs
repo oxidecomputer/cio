@@ -192,17 +192,14 @@ pub async fn refresh_airtable_rfds() {
     let airtable =
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_RACK_ROADMAP);
 
-    let records = airtable
+    let records: Vec<Record<RFD>> = airtable
         .list_records(AIRTABLE_RFD_TABLE, AIRTABLE_GRID_VIEW, vec![])
         .await
         .unwrap();
 
-    let mut airtable_rfds: BTreeMap<i32, (Record, RFD)> = Default::default();
+    let mut airtable_rfds: BTreeMap<i32, Record<RFD>> = Default::default();
     for record in records {
-        let fields: RFD =
-            serde_json::from_value(record.fields.clone()).unwrap();
-
-        airtable_rfds.insert(fields.id, (record, fields));
+        airtable_rfds.insert(record.fields.id, record);
     }
 
     // Initialize our database.
@@ -213,19 +210,18 @@ pub async fn refresh_airtable_rfds() {
     for mut rfd in rfds {
         // See if we have it in our fields.
         match airtable_rfds.get(&rfd.id) {
-            Some((r, in_airtable_fields)) => {
+            Some(r) => {
                 let mut record = r.clone();
 
                 // Set the Link to People from the original so it stays intact.
-                rfd.milestones = in_airtable_fields.milestones.clone();
-                rfd.relevant_components =
-                    in_airtable_fields.relevant_components.clone();
+                rfd.milestones = r.fields.milestones.clone();
+                rfd.relevant_components = r.fields.relevant_components.clone();
                 // Airtable can only hold 100,000 chars. IDK which one is that long but LOL
                 // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
                 rfd.content = truncate(&rfd.content, 100000);
                 rfd.html = truncate(&rfd.html, 100000);
 
-                record.fields = json!(rfd);
+                record.fields = rfd;
 
                 airtable
                     .update_records(AIRTABLE_RFD_TABLE, vec![record.clone()])

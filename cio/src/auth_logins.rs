@@ -300,7 +300,7 @@ pub async fn refresh_airtable_auth_users() {
     let airtable =
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
-    let records = airtable
+    let records: Vec<Record<AuthUser>> = airtable
         .list_records(
             AIRTABLE_AUTH_USERS_TABLE,
             AIRTABLE_GRID_VIEW,
@@ -321,13 +321,10 @@ pub async fn refresh_airtable_auth_users() {
         .await
         .unwrap();
 
-    let mut airtable_auth_users: BTreeMap<i32, (Record, AuthUser)> =
+    let mut airtable_auth_users: BTreeMap<i32, Record<AuthUser>> =
         Default::default();
     for record in records {
-        let fields: AuthUser =
-            serde_json::from_value(record.fields.clone()).unwrap();
-
-        airtable_auth_users.insert(fields.id, (record, fields));
+        airtable_auth_users.insert(record.fields.id, record);
     }
 
     // Initialize our database.
@@ -338,27 +335,26 @@ pub async fn refresh_airtable_auth_users() {
     for mut auth_user in auth_users {
         // See if we have it in our fields.
         match airtable_auth_users.get(&auth_user.id) {
-            Some((r, in_airtable_fields)) => {
+            Some(r) => {
                 let mut record = r.clone();
 
-                if in_airtable_fields.user_id == auth_user.user_id
-                    && in_airtable_fields.last_login == auth_user.last_login
-                    && in_airtable_fields.logins_count == auth_user.logins_count
-                    && in_airtable_fields.last_application_accessed
+                if r.fields.user_id == auth_user.user_id
+                    && r.fields.last_login == auth_user.last_login
+                    && r.fields.logins_count == auth_user.logins_count
+                    && r.fields.last_application_accessed
                         == auth_user.last_application_accessed
-                    && in_airtable_fields.company == auth_user.company
+                    && r.fields.company == auth_user.company
                 {
                     // We do not need to update the record.
                     continue;
                 }
 
                 // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
-                auth_user.link_to_people =
-                    in_airtable_fields.link_to_people.clone();
+                auth_user.link_to_people = r.fields.link_to_people.clone();
                 auth_user.link_to_auth_user_logins =
-                    in_airtable_fields.link_to_auth_user_logins.clone();
+                    r.fields.link_to_auth_user_logins.clone();
 
-                record.fields = json!(auth_user);
+                record.fields = auth_user;
 
                 airtable
                     .update_records(
@@ -385,7 +381,7 @@ pub async fn refresh_airtable_auth_user_logins() {
     let airtable =
         Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
-    let records = airtable
+    let records: Vec<Record<AuthUserLogin>> = airtable
         .list_records(
             AIRTABLE_AUTH_USER_LOGINS_TABLE,
             AIRTABLE_GRID_VIEW,
@@ -394,17 +390,14 @@ pub async fn refresh_airtable_auth_user_logins() {
         .await
         .unwrap();
 
-    let mut airtable_auth_user_logins: BTreeMap<i32, (Record, AuthUserLogin)> =
+    let mut airtable_auth_user_logins: BTreeMap<i32, Record<AuthUserLogin>> =
         Default::default();
     for record in records {
-        let fields: AuthUserLogin =
-            serde_json::from_value(record.fields.clone()).unwrap();
-
-        airtable_auth_user_logins.insert(fields.id, (record, fields));
+        airtable_auth_user_logins.insert(record.fields.id, record);
     }
 
     // We need to get the user records to link the log records to the user table.
-    let user_records = airtable
+    let user_records: Vec<Record<AuthUser>> = airtable
         .list_records(
             AIRTABLE_AUTH_USERS_TABLE,
             AIRTABLE_GRID_VIEW,
@@ -427,11 +420,8 @@ pub async fn refresh_airtable_auth_user_logins() {
 
     let mut airtable_auth_users: BTreeMap<String, String> = Default::default();
     for user_record in user_records {
-        let user_fields: AuthUser =
-            serde_json::from_value(user_record.fields.clone()).unwrap();
-
         airtable_auth_users
-            .insert(user_fields.user_id, user_record.id.unwrap());
+            .insert(user_record.fields.user_id, user_record.id.unwrap());
     }
 
     // Initialize our database.
@@ -454,21 +444,21 @@ pub async fn refresh_airtable_auth_user_logins() {
 
         // See if we have it in our fields.
         match airtable_auth_user_logins.get(&auth_user_login.id) {
-            Some((r, in_airtable_fields)) => {
+            Some(r) => {
                 let mut record = r.clone();
 
-                if in_airtable_fields.log_id == auth_user_login.log_id
-                    && in_airtable_fields.date == auth_user_login.date
-                    && in_airtable_fields.id == auth_user_login.id
-                    && in_airtable_fields.email == auth_user_login.email
-                    && in_airtable_fields.link_to_auth_user
+                if r.fields.log_id == auth_user_login.log_id
+                    && r.fields.date == auth_user_login.date
+                    && r.fields.id == auth_user_login.id
+                    && r.fields.email == auth_user_login.email
+                    && r.fields.link_to_auth_user
                         == auth_user_login.link_to_auth_user
                 {
                     // We do not need to update the record.
                     continue;
                 }
 
-                record.fields = json!(auth_user_login);
+                record.fields = auth_user_login;
 
                 airtable
                     .update_records(

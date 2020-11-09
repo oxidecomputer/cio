@@ -151,7 +151,7 @@ pub async fn refresh_airtable_journal_club_meetings() {
     // Initialize the Airtable client.
     let airtable = Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_MISC);
 
-    let records = airtable
+    let records: Vec<Record<JournalClubMeeting>> = airtable
         .list_records(
             AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE,
             AIRTABLE_GRID_VIEW,
@@ -162,13 +162,10 @@ pub async fn refresh_airtable_journal_club_meetings() {
 
     let mut airtable_journal_club_meetings: BTreeMap<
         i32,
-        (Record, JournalClubMeeting),
+        Record<JournalClubMeeting>,
     > = Default::default();
     for record in records {
-        let fields: JournalClubMeeting =
-            serde_json::from_value(record.fields.clone()).unwrap();
-
-        airtable_journal_club_meetings.insert(fields.id, (record, fields));
+        airtable_journal_club_meetings.insert(record.fields.id, record);
     }
 
     // Initialize our database.
@@ -182,13 +179,13 @@ pub async fn refresh_airtable_journal_club_meetings() {
 
         // See if we have it in our fields.
         match airtable_journal_club_meetings.get(&journal_club_meeting.id) {
-            Some((r, in_airtable_fields)) => {
+            Some(r) => {
                 let mut record = r.clone();
 
                 // Set the papers fileds.
-                journal_club_meeting.papers = in_airtable_fields.papers.clone();
+                journal_club_meeting.papers = r.fields.papers.clone();
 
-                record.fields = json!(journal_club_meeting);
+                record.fields = journal_club_meeting;
 
                 airtable
                     .update_records(
@@ -214,7 +211,7 @@ pub async fn refresh_airtable_journal_club_papers() {
     // Initialize the Airtable client.
     let airtable = Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_MISC);
 
-    let records = airtable
+    let records: Vec<Record<JournalClubPaper>> = airtable
         .list_records(
             AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
             AIRTABLE_GRID_VIEW,
@@ -225,16 +222,13 @@ pub async fn refresh_airtable_journal_club_papers() {
 
     let mut airtable_journal_club_papers: BTreeMap<
         i32,
-        (Record, JournalClubPaper),
+        Record<JournalClubPaper>,
     > = Default::default();
     for record in records {
-        let fields: JournalClubPaper =
-            serde_json::from_value(record.fields.clone()).unwrap();
-
-        airtable_journal_club_papers.insert(fields.id, (record, fields));
+        airtable_journal_club_papers.insert(record.fields.id, record);
     }
 
-    let meeting_records = airtable
+    let meeting_records: Vec<Record<JournalClubMeeting>> = airtable
         .list_records(
             AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE,
             AIRTABLE_GRID_VIEW,
@@ -246,11 +240,8 @@ pub async fn refresh_airtable_journal_club_papers() {
     let mut airtable_journal_club_meetings: BTreeMap<String, String> =
         Default::default();
     for meeting_record in meeting_records {
-        let fields: JournalClubMeeting =
-            serde_json::from_value(meeting_record.fields.clone()).unwrap();
-
         airtable_journal_club_meetings
-            .insert(fields.issue, meeting_record.id.unwrap());
+            .insert(meeting_record.fields.issue, meeting_record.id.unwrap());
     }
 
     // Initialize our database.
@@ -273,10 +264,10 @@ pub async fn refresh_airtable_journal_club_papers() {
 
         // See if we have it in our fields.
         match airtable_journal_club_papers.get(&journal_club_paper.id) {
-            Some((r, _in_airtable_fields)) => {
+            Some(r) => {
                 let mut record = r.clone();
 
-                record.fields = json!(journal_club_paper);
+                record.fields = journal_club_paper;
 
                 airtable
                     .update_records(
