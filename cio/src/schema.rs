@@ -309,7 +309,7 @@ table! {
         github -> Varchar,
         twitter -> Varchar,
         groups -> Array<Text>,
-        is_super_admin -> Bool,
+        is_group_admin -> Bool,
         building -> Varchar,
         aws_role -> Varchar,
     }

@@ -117,8 +117,8 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub groups: Vec<String>,
 
-    #[serde(default, alias = "is_super_admin")]
-    pub is_super_admin: bool,
+    #[serde(default, alias = "is_group_admin")]
+    pub is_group_admin: bool,
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub building: String,
