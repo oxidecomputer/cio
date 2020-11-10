@@ -135,6 +135,13 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
         .replace(
             r#"object data=""#,
             &format!(r#"object data="/static/images/{}/"#, num),
+        )
+        .replace(
+            r#"object type="image/svg+xml" data=""#,
+            &format!(
+                r#"object type="image/svg+xml" data="/static/images/{}/"#,
+                num
+            ),
         );
 
     let mut re =
@@ -288,6 +295,7 @@ mod tests {
         <img src="things.png" \>
         <a href="\#_principles">
         <object data="thing.svg">
+        <object type="image/svg+xml" data="thing.svg">
         <a href="\#things" \>"#;
 
         let cleaned = clean_rfd_html_links(&content, "0032");
@@ -300,6 +308,7 @@ mod tests {
         <img src="/static/images/0032/things.png" \>
         <a href="/rfd/0032#_principles">
         <object data="/static/images/0032/thing.svg">
+        <object type="image/svg+xml" data="/static/images/0032/thing.svg">
         <a href="/rfd/0032#things" \>"#;
 
         assert_eq!(expected, cleaned);
