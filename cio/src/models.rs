@@ -1,3 +1,8 @@
+use std::env;
+use std::fs;
+use std::io::{stderr, stdout, Write};
+use std::process::Command;
+
 use airtable_api::{Airtable, Record};
 use chrono::offset::Utc;
 use chrono::{DateTime, NaiveDate};
@@ -17,7 +22,6 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
-use std::io::Write;
 
 use crate::utils::{check_if_github_issue_exists, github_org};
 
@@ -1976,5 +1980,82 @@ impl RFD {
         }
 
         msg
+    }
+
+    /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
+    /// repository.
+    pub async fn convert_and_upload_pdf(&self, github: &Github) {
+        // Get the rfd repo client.
+        let rfd_repo = github.repo(github_org(), "rfd");
+
+        // TODO: do code highlighting
+        let mut path = env::temp_dir();
+        path.push("contents.adoc");
+
+        // Write the contents to a temporary file.
+        let mut file = fs::File::create(path.clone()).unwrap();
+        file.write_all(self.content.as_bytes()).unwrap();
+
+        let rfd_path =
+            format!("/pdfs/RFD {}: {}.pdf", self.number_string, self.title);
+
+        let cmd_output = Command::new("asciidoctor-pdf")
+            .args(&["-o", "-", path.to_str().unwrap()])
+            .output()
+            .unwrap();
+
+        if !cmd_output.status.success() {
+            println!("[rfdpdf] running asciidoctor failed:");
+            stdout().write_all(&cmd_output.stdout).unwrap();
+            stderr().write_all(&cmd_output.stderr).unwrap();
+            return;
+        }
+
+        let content = cmd_output.stdout;
+
+        // Send the command output to the repo.
+        // Try to get the notes from this meeting from the reports repo.
+        match rfd_repo.content().file(&rfd_path, "master").await {
+            Ok(file) => {
+                let decoded: Vec<u8> = file.content.into();
+                // Compare the rfd and see if we need to update them.
+                if content == decoded {
+                    // They are the same so we can return early, we do not need to update the
+                    // file.
+                    return;
+                }
+
+                // We need to update the file. Ignore failure.
+                rfd_repo.content().update(
+                                    &rfd_path,
+                                    &content,
+                                    &format!("Updating RFD {} rendered PDF\n\nThis is done automatically from thecio repo.",self.number_string),
+                                    &file.sha).await
+                            .ok();
+
+                println!(
+                    "[rfdpdf] Updated the PDF in the rfd repo at {}",
+                    rfd_path
+                );
+            }
+            Err(_) => {
+                // Create the rfd file in the repo. Ignore failure.
+                rfd_repo.content().create(
+                                    &rfd_path,
+                                    &content,
+                                    &format!("Creating RFD {} rendered pdf\n\nThis is done automatically from the airtable command in the configs repo.", self.number_string),
+                            ).await.ok();
+
+                println!(
+                    "[rfdpdf] Created the PDF file in the rfd repo at {}",
+                    rfd_path
+                );
+            }
+        }
+
+        // Delete our temporary file.
+        if path.exists() && !path.is_dir() {
+            fs::remove_file(path).unwrap();
+        }
     }
 }

@@ -93,7 +93,6 @@ pub fn parse_markdown(content: &str) -> String {
 }
 
 pub fn parse_asciidoc(content: &str) -> String {
-    // TODO: do code highlighting
     let mut path = env::temp_dir();
     path.push("contents.adoc");
 
@@ -271,11 +270,24 @@ pub async fn refresh_db_rfds(github: &Github) {
     }
 }
 
+// Sync the rfds from the database as rendered PDFs in GitHub.
+pub async fn refresh_rfd_pdfs(github: &Github) {
+    // Initialize our database.
+    let db = Database::new();
+
+    let rfds = db.get_rfds();
+
+    // Sync rfds.
+    for rfd in rfds {
+        rfd.convert_and_upload_pdf(github).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::rfds::{
         clean_rfd_html_links, get_authors, refresh_airtable_rfds,
-        refresh_db_rfds,
+        refresh_db_rfds, refresh_rfd_pdfs,
     };
     use crate::utils::authenticate_github;
 
@@ -351,5 +363,11 @@ authors: nope"#;
     #[tokio::test(threaded_scheduler)]
     async fn test_rfds_airtable() {
         refresh_airtable_rfds().await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_rfd_pdfs() {
+        let github = authenticate_github();
+        refresh_rfd_pdfs(&github).await;
     }
 }

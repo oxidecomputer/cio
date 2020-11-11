@@ -32,9 +32,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34c16d701779d62b76c8ecbb2a6539a7206c4db18115343d728a280e799c8b0f"
+version = "0.1.10"
 dependencies = [
  "reqwest",
  "serde",
@@ -44,6 +42,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c22b5caef9f20e22b96b2767d3d1cd48903eca264ff8f3f74475d8ab349963ba"
 dependencies = [
  "reqwest",
  "serde",
@@ -291,7 +291,7 @@ dependencies = [
 name = "cio-api"
 version = "0.1.2"
 dependencies = [
- "airtable-api 0.1.9",
+ "airtable-api 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.19",
  "chrono-humanize",
  "clap",
@@ -327,7 +327,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e9773cf75245f9adf4a26b7d0c0e6b9ca171892d4ca48e3bf3aeaf80e788bfc"
 dependencies = [
- "airtable-api 0.1.9",
+ "airtable-api 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.19",
  "chrono-humanize",
  "google-drive 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -990,7 +990,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=ref-for-files#1629509b87ea886a3e8bd8172fba813e08be1a51"
+source = "git+https://github.com/jessfraz/hubcaps?branch=ref-for-files#6794b168c7c3db5017c972707c15063bdc61d6f6"
 dependencies = [
  "base64 0.12.3",
  "data-encoding",
@@ -1400,9 +1400,9 @@ dependencies = [
 
 [[package]]
 name = "native-tls"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a1cda389c26d6b88f3d2dc38aa1b750fe87d298cc5d795ec9e975f402f00372"
+checksum = "6fcc7939b5edc4e4f86b1b4a04bb1498afaaf871b1a6691838ed06fcb48d3a3f"
 dependencies = [
  "lazy_static",
  "libc",
@@ -1514,9 +1514,9 @@ checksum = "8d3b63360ec3cb337817c2dbd47ab4a0f170d285d8e5a2064600f3def1402397"
 
 [[package]]
 name = "once_cell"
-version = "1.4.1"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "260e51e7efe62b592207e9e13a68e43692a7a279171d6ba57abd208bf23645ad"
+checksum = "f53cef67919d7d247eb9a2f128ca9e522789967ef1eb4ccd8c71a95a8aedf596"
 
 [[package]]
 name = "oncemutex"
@@ -1586,9 +1586,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba7ae1a2180ed02ddfdb5ab70c70d596a26dd642e097bb6fe78b1bde8588ed97"
+checksum = "7151b083b0664ed58ed669fcdd92f01c3d2fdbf10af4931a301474950b52bfa9"
 
 [[package]]
 name = "pem"
@@ -2365,9 +2365,9 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.3.15"
+version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1fa70dc5c8104ec096f4fe7ede7a221d35ae13dcd19ba1ad9a81d2cab9a1c44"
+checksum = "7fd8b795c389288baa5f355489c65e71fd48a02104600d15c4cfbc561e9e429d"
 dependencies = [
  "cfg-if 0.1.10",
  "libc",
@@ -2533,9 +2533,18 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "0.3.4"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "238ce071d267c5710f9d31451efec16c5ee22de34df17cc05e56cbc92e967117"
+checksum = "b78a366903f506d2ad52ca8dc552102ffdd3e937ba8a227f024dc1d1eae28575"
+dependencies = [
+ "tinyvec_macros",
+]
+
+[[package]]
+name = "tinyvec_macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
@@ -2714,9 +2723,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.13"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fb19cf769fa8c6a80a162df694621ebeb4dafb606470b2b2fce0be40a98a977"
+checksum = "b7f98e67a4d84f730d343392f9bfff7d21e3fca562b9cb7a43b768350beeddc6"
 dependencies = [
  "tinyvec",
 ]
