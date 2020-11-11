@@ -319,12 +319,10 @@ impl Airtable {
 
         // Try to deserialize the response.
         match resp.json::<APICall<T>>().await {
-            Ok(v) => {
-                return Ok(v.records);
-            }
+            Ok(v) => Ok(v.records),
             Err(_) => {
                 // This might fail. On a faiture just return an empty vector.
-                return Ok(vec![]);
+                Ok(vec![])
             }
         }
     }
