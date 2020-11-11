@@ -1996,8 +1996,11 @@ impl RFD {
         let mut file = fs::File::create(path.clone()).unwrap();
         file.write_all(self.content.as_bytes()).unwrap();
 
-        let rfd_path =
-            format!("/pdfs/RFD {}: {}.pdf", self.number_string, self.title);
+        let rfd_path = format!(
+            "/pdfs/RFD {}: {}.pdf",
+            self.number_string,
+            self.title.replace("/", "-")
+        );
 
         let cmd_output = Command::new("asciidoctor-pdf")
             .args(&["-o", "-", path.to_str().unwrap()])
