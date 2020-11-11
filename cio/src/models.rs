@@ -1989,6 +1989,7 @@ impl RFD {
         let rfd_repo = github.repo(github_org(), "rfd");
 
         // TODO: do code highlighting
+        // TODO: get images to work
         let mut path = env::temp_dir();
         path.push("contents.adoc");
 
