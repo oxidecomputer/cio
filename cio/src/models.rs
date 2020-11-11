@@ -1995,8 +1995,8 @@ impl RFD {
         path.push("contents.adoc");
 
         let mut workspace =
-            env::var("GITHUB_WORKSPACE").unwrap_or("..".to_string());
-        workspace = workspace.trim_end_matches("/").to_string();
+            env::var("GITHUB_WORKSPACE").unwrap_or_else(|_| "..".to_string());
+        workspace = workspace.trim_end_matches('/').to_string();
 
         // Fix the path for images.
         // TODO: this only fixes asciidoc images, not markdown.
