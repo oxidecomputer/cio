@@ -1901,6 +1901,9 @@ impl NewRFD {
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
     pub async fn expand(&mut self, github: &Github) {
+        // Trim the title.
+        self.title = self.title.trim().to_string();
+
         // Add leading zeros to the number for the number_string.
         self.number_string = self.number.to_string();
         while self.number_string.len() < 4 {
@@ -2012,7 +2015,7 @@ impl RFD {
         let rfd_path = format!(
             "/pdfs/RFD {}: {}.pdf",
             self.number_string,
-            self.title.replace("/", "-")
+            self.title.replace("/", "-").trim()
         );
 
         let cmd_output = Command::new("asciidoctor-pdf")
