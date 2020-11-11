@@ -1998,9 +1998,9 @@ impl RFD {
         // Fix the path for images.
         // TODO: this only fixes asciidoc images, not markdown.
         let rfd_content = self.content.replace(
-            r#"image::""#,
+            "image::",
             &format!(
-                r#"image::{}/rfd/src/public/static/images/{}/"#,
+                "image::{}/rfd/src/public/static/images/{}/",
                 workspace, self.number_string
             ),
         );
