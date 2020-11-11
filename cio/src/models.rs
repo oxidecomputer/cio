@@ -1996,6 +1996,7 @@ impl RFD {
         workspace = workspace.trim_end_matches("/").to_string();
 
         // Fix the path for images.
+        // TODO: this only fixes asciidoc images, not markdown.
         let rfd_content = self.content.replace(
             r#"image::""#,
             &format!(
