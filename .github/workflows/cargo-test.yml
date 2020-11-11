@@ -11,10 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - uses: actions/checkout@v2
+        with:
+          repository: oxidecomputer/rfd
+          token: ${{ secrets.GADMIN_GITHUB_TOKEN }}
+          path: rfd
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
-          sudo apt update -y && sudo apt install -y asciidoctor pandoc poppler-utils ruby-asciidoctor-pdf
+          sudo apt update -y && sudo apt install -y asciidoctor pandoc poppler-utils ruby-asciidoctor-pdf ruby-rouge
       - name: Install SQL proxy
         shell: bash
         run: |

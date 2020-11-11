@@ -1988,14 +1988,25 @@ impl RFD {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
 
-        // TODO: do code highlighting
-        // TODO: get images to work
         let mut path = env::temp_dir();
         path.push("contents.adoc");
 
+        let mut workspace =
+            env::var("GITHUB_WORKSPACE").unwrap_or("..".to_string());
+        workspace = workspace.trim_end_matches("/").to_string();
+
+        // Fix the path for images.
+        let rfd_content = self.content.replace(
+            r#"image::""#,
+            &format!(
+                r#"image::{}/rfd/src/public/static/images/{}/"#,
+                workspace, self.number_string
+            ),
+        );
+
         // Write the contents to a temporary file.
         let mut file = fs::File::create(path.clone()).unwrap();
-        file.write_all(self.content.as_bytes()).unwrap();
+        file.write_all(rfd_content.as_bytes()).unwrap();
 
         let rfd_path = format!(
             "/pdfs/RFD {}: {}.pdf",
@@ -2004,7 +2015,13 @@ impl RFD {
         );
 
         let cmd_output = Command::new("asciidoctor-pdf")
-            .args(&["-o", "-", path.to_str().unwrap()])
+            .args(&[
+                "-o",
+                "-",
+                "-a",
+                "source-highlighter=rouge",
+                path.to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -2023,6 +2040,7 @@ impl RFD {
             Ok(file) => {
                 let decoded: Vec<u8> = file.content.into();
                 // Compare the rfd and see if we need to update them.
+                // TODO: this check is ineffective.
                 if content == decoded {
                     // They are the same so we can return early, we do not need to update the
                     // file.
@@ -2042,7 +2060,13 @@ impl RFD {
                     rfd_path
                 );
             }
-            Err(_) => {
+            Err(e) => {
+                println!("getting the file {} failed: {:?}", rfd_path, e);
+                if e.to_string().contains("RateLimit") {
+                    // Return early.
+                    return;
+                }
+
                 // Create the rfd file in the repo. Ignore failure.
                 rfd_repo.content().create(
                                     &rfd_path,
