@@ -60,11 +60,11 @@ pub struct DiscussionTopic {
 /// huddle meetings, etc.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Meeting {
-    #[serde(rename = "Name")]
+    #[serde(rename = "Name", skip_serializing_if = "String::is_empty")]
     pub name: String,
     #[serde(with = "meeting_date_format", rename = "Date")]
     pub date: NaiveDate,
-    #[serde(rename = "Week")]
+    #[serde(rename = "Week", skip_serializing_if = "String::is_empty")]
     pub week: String,
     #[serde(
         default,
