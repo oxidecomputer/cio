@@ -289,23 +289,6 @@ dependencies = [
 
 [[package]]
 name = "cio-api"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e9773cf75245f9adf4a26b7d0c0e6b9ca171892d4ca48e3bf3aeaf80e788bfc"
-dependencies = [
- "airtable-api 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "chrono 0.4.19",
- "chrono-humanize",
- "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "html2text",
- "pandoc",
- "regex",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "airtable-api 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -867,7 +850,7 @@ dependencies = [
 name = "gsuite-api"
 version = "0.1.6"
 dependencies = [
- "cio-api 0.2.0",
+ "cio-api",
  "rand",
  "reqwest",
  "serde",
@@ -3048,7 +3031,7 @@ name = "zoom-api"
 version = "0.1.4"
 dependencies = [
  "chrono 0.4.19",
- "cio-api 0.1.2",
+ "cio-api",
  "jsonwebtoken",
  "reqwest",
  "serde",
