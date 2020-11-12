@@ -59,9 +59,6 @@ use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use yup_oauth2::AccessToken;
 
-#[macro_use]
-extern crate serde_json;
-
 /// The endpoint for the Google Drive API.
 const ENDPOINT: &str = "https://www.googleapis.com/drive/v3/";
 

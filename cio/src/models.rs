@@ -2050,7 +2050,7 @@ impl RFD {
         create_or_update_file_in_github_repo(
             &rfd_repo,
             &rfd_path,
-            cmd_output.stdout,
+            cmd_output.stdout.clone(),
         )
         .await;
 

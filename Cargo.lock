@@ -848,7 +848,6 @@ dependencies = [
  "bytes",
  "reqwest",
  "serde",
- "serde_json",
  "yup-oauth2",
 ]
 
