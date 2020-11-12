@@ -166,7 +166,9 @@ pub async fn refresh_db_github_repos(github: &Github) {
     }
 }
 
-/// Update or create a file in a repository.
+/// Create or update a file in a GitHub repository.
+/// If the file does not exist, it will be created.
+/// If the file exists, it will be updated _only if_ the content of the file has changed.
 pub async fn create_or_update_file(
     repo: &Repository,
     file_path: &str,
