@@ -1,7 +1,7 @@
 [package]
 name = "cio-api"
 description = "Helper functions and types for doing the activities of a CIO"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -18,8 +18,7 @@ comrak = "0.8"
 diesel = { version = "1.4.5", features = ["serde_json", "postgres", "chrono", "128-column-tables"] }
 dropshot = "^0.3.0"
 futures-util = "0.3"
-#google-drive = "^0.1.0"
-google-drive = {path = "../drive" }
+google-drive = "^0.1.0"
 html2text = "0.1"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "ref-for-files", features = ["httpcache"] }
