@@ -2055,7 +2055,7 @@ impl RFD {
                 rfd_repo.content().update(
                                     &rfd_path,
                                     &content,
-                                    &format!("Updating RFD {} rendered PDF\n\nThis is done automatically from thecio repo.",self.number_string),
+                                    &format!("Updating RFD {} rendered PDF\n\nThis is done automatically from the cio repo.",self.number_string),
                                     &file.sha).await
                             .ok();
 
@@ -2075,7 +2075,7 @@ impl RFD {
                 rfd_repo.content().create(
                                     &rfd_path,
                                     &content,
-                                    &format!("Creating RFD {} rendered pdf\n\nThis is done automatically from the airtable command in the configs repo.", self.number_string),
+                                    &format!("Creating RFD {} rendered pdf\n\nThis is done automatically from the cio repo.", self.number_string),
                             ).await.ok();
 
                 println!(
