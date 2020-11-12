@@ -6,8 +6,9 @@ use std::path::PathBuf;
 
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
-use hubcaps::repositories::OrgRepoType;
-use hubcaps::repositories::OrganizationRepoListOptions;
+use hubcaps::repositories::{
+    OrgRepoType, OrganizationRepoListOptions, Repository,
+};
 use hubcaps::{Credentials, Github};
 use reqwest::get;
 use reqwest::Client;
@@ -134,7 +135,7 @@ pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
     repos
 }
 
-// Sync the repos with our database.
+/// Sync the repos with our database.
 pub async fn refresh_db_github_repos(github: &Github) {
     let github_repos = list_all_github_repos(github).await;
 
@@ -162,6 +163,86 @@ pub async fn refresh_db_github_repos(github: &Github) {
     // the existing repos from the map above.
     for (name, _) in repo_map {
         db.delete_github_repo_by_name(&name);
+    }
+}
+
+/// Update or create a file in a repository.
+pub async fn create_or_update_file(
+    repo: &Repository,
+    file_path: &str,
+    new_content: Vec<u8>,
+) {
+    let content = new_content.trim();
+
+    // Try to get the content for the file from the repo.
+    match repo.content().file(file_path, "master").await {
+        Ok(file) => {
+            let file_content: Vec<u8> = file.content.into();
+            let decoded = file_content.trim();
+
+            // Compare the content to the decoded content and see if we need to update them.
+            if content == decoded {
+                // They are the same so we can return early, we do not need to update the
+                // file.
+                println!("[github content] File contents at {} are the same, no update needed", file_path);
+                return;
+            }
+
+            // We need to update the file. Ignore failure.
+            repo.content().update(
+                                    file_path,
+                                    &content,
+                                    &format!("Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",file_path),
+                                    &file.sha).await
+                            .ok();
+
+            println!("[github content] Updated file at {}", file_path);
+        }
+        Err(e) => {
+            println!(
+                "[github content] Getting the file at {} failed: {:?}",
+                file_path, e
+            );
+            if e.to_string().contains("RateLimit") {
+                // Return early.
+                return;
+            }
+
+            // Create the file in the repo. Ignore failure.
+            repo.content().create(
+                                    file_path,
+                                    &content,
+                                    &format!("Creating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",file_path),
+                            ).await.ok();
+
+            println!("[github content] Created file at {}", file_path);
+        }
+    }
+}
+
+trait SliceExt {
+    fn trim(&self) -> Self;
+}
+
+impl SliceExt for Vec<u8> {
+    fn trim(&self) -> Vec<u8> {
+        fn is_whitespace(c: &u8) -> bool {
+            c == &b'\t' || c == &b' '
+        }
+
+        fn is_not_whitespace(c: &u8) -> bool {
+            !is_whitespace(c)
+        }
+
+        if let Some(first) = self.iter().position(is_not_whitespace) {
+            if let Some(last) = self.iter().rposition(is_not_whitespace) {
+                self[first..last + 1].to_vec()
+            } else {
+                unreachable!();
+            }
+        } else {
+            vec![]
+        }
     }
 }
 

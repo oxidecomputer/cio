@@ -23,7 +23,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
 
-use crate::utils::{check_if_github_issue_exists, github_org};
+use crate::utils::{
+    check_if_github_issue_exists, create_or_update_file, github_org,
+};
 
 use crate::airtable::{
     airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
@@ -2036,54 +2038,8 @@ impl RFD {
             return;
         }
 
-        let content = cmd_output.stdout;
-
-        // Send the command output to the repo.
-        // Try to get the notes from this meeting from the reports repo.
-        match rfd_repo.content().file(&rfd_path, "master").await {
-            Ok(file) => {
-                let decoded: Vec<u8> = file.content.into();
-                // Compare the rfd and see if we need to update them.
-                // TODO: this check is ineffective.
-                if content == decoded {
-                    // They are the same so we can return early, we do not need to update the
-                    // file.
-                    return;
-                }
-
-                // We need to update the file. Ignore failure.
-                rfd_repo.content().update(
-                                    &rfd_path,
-                                    &content,
-                                    &format!("Updating RFD {} rendered PDF\n\nThis is done automatically from the cio repo.",self.number_string),
-                                    &file.sha).await
-                            .ok();
-
-                println!(
-                    "[rfdpdf] Updated the PDF in the rfd repo at {}",
-                    rfd_path
-                );
-            }
-            Err(e) => {
-                println!("getting the file {} failed: {:?}", rfd_path, e);
-                if e.to_string().contains("RateLimit") {
-                    // Return early.
-                    return;
-                }
-
-                // Create the rfd file in the repo. Ignore failure.
-                rfd_repo.content().create(
-                                    &rfd_path,
-                                    &content,
-                                    &format!("Creating RFD {} rendered pdf\n\nThis is done automatically from the cio repo.", self.number_string),
-                            ).await.ok();
-
-                println!(
-                    "[rfdpdf] Created the PDF file in the rfd repo at {}",
-                    rfd_path
-                );
-            }
-        }
+        // Create or update the file in the github repository.
+        create_or_update_file(&rfd_repo, &rfd_path, cmd_output.stdout).await;
 
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {
