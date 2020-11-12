@@ -545,7 +545,8 @@ dependencies = [
 [[package]]
 name = "dropshot"
 version = "0.3.0"
-source = "git+https://github.com/oxidecomputer/dropshot#9455ffd8e6f4b781ac613bf3d00d7c2569580fda"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2011bc8d134839611be86dd4451f4f40c5917fbe92cc26a1273a63a88d785a66"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -576,7 +577,8 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.3.0"
-source = "git+https://github.com/oxidecomputer/dropshot#9455ffd8e6f4b781ac613bf3d00d7c2569580fda"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "611c544a5aded53072edd372dc4b221f634f3338f3f9692561befb31f4fc3b20"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -990,7 +992,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=ref-for-files#6794b168c7c3db5017c972707c15063bdc61d6f6"
+source = "git+https://github.com/jessfraz/hubcaps?branch=ref-for-files#78589c4a0cab2a79261c7980641632b5c34c729c"
 dependencies = [
  "base64 0.12.3",
  "data-encoding",
@@ -1514,9 +1516,9 @@ checksum = "8d3b63360ec3cb337817c2dbd47ab4a0f170d285d8e5a2064600f3def1402397"
 
 [[package]]
 name = "once_cell"
-version = "1.5.1"
+version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f53cef67919d7d247eb9a2f128ca9e522789967ef1eb4ccd8c71a95a8aedf596"
+checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
 
 [[package]]
 name = "oncemutex"
@@ -2572,9 +2574,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
+checksum = "e44da00bfc73a25f814cd8d7e57a68a5c31b74b3152a0a1d1f590c97ed06265a"
 dependencies = [
  "proc-macro2",
  "quote",
