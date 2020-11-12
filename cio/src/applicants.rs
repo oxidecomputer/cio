@@ -123,8 +123,8 @@ pub async fn get_file_contents(
 
     // Get information about the file.
     let drive_file = drive_client.get_file_by_id(&id).await.unwrap();
-    let mime_type = drive_file.mime_type.unwrap();
-    let name = drive_file.name.unwrap();
+    let mime_type = drive_file.mime_type;
+    let name = drive_file.name;
 
     let mut path = env::temp_dir();
     let mut output = env::temp_dir();

@@ -24,7 +24,8 @@ use serde_json::Value;
 use sheets::Sheets;
 
 use crate::utils::{
-    check_if_github_issue_exists, create_or_update_file, github_org,
+    check_if_github_issue_exists, create_or_update_file_in_github_repo,
+    github_org,
 };
 
 use crate::airtable::{
@@ -1989,7 +1990,13 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    pub async fn convert_and_upload_pdf(&self, github: &Github) {
+    pub async fn convert_and_upload_pdf(
+        &self,
+        github: &Github,
+        drive_client: &GoogleDrive,
+        drive_id: &str,
+        parent_id: &str,
+    ) {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
 
@@ -2014,11 +2021,12 @@ impl RFD {
         let mut file = fs::File::create(path.clone()).unwrap();
         file.write_all(rfd_content.as_bytes()).unwrap();
 
-        let rfd_path = format!(
-            "/pdfs/RFD {}: {}.pdf",
+        let file_name = format!(
+            "RFD {}: {}.pdf",
             self.number_string,
             self.title.replace("/", "-").trim()
         );
+        let rfd_path = format!("/pdfs/{}", file_name,);
 
         let cmd_output = Command::new("asciidoctor-pdf")
             .args(&[
@@ -2039,7 +2047,24 @@ impl RFD {
         }
 
         // Create or update the file in the github repository.
-        create_or_update_file(&rfd_repo, &rfd_path, cmd_output.stdout).await;
+        create_or_update_file_in_github_repo(
+            &rfd_repo,
+            &rfd_path,
+            cmd_output.stdout,
+        )
+        .await;
+
+        // Create or update the file in the google_drive.
+        drive_client
+            .create_or_upload_file(
+                drive_id,
+                parent_id,
+                &file_name,
+                "application/pdf",
+                &cmd_output.stdout,
+            )
+            .await
+            .unwrap();
 
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {

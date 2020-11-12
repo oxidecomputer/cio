@@ -300,7 +300,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "futures-util",
- "google-drive 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.10",
  "html2text",
  "hubcaps",
  "hyper",
@@ -848,6 +848,7 @@ dependencies = [
  "bytes",
  "reqwest",
  "serde",
+ "serde_json",
  "yup-oauth2",
 ]
 

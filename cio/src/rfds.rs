@@ -8,6 +8,7 @@ use std::str::from_utf8;
 
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
+use google_drive::GoogleDrive;
 use hubcaps::Github;
 use regex::Regex;
 
@@ -17,7 +18,7 @@ use crate::airtable::{
 };
 use crate::db::Database;
 use crate::models::{NewRFD, RFD};
-use crate::utils::github_org;
+use crate::utils::{get_gsuite_token, github_org};
 
 /// Get the RFDs from the rfd GitHub repo.
 pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
@@ -272,6 +273,26 @@ pub async fn refresh_db_rfds(github: &Github) {
 
 // Sync the rfds from the database as rendered PDFs in GitHub.
 pub async fn refresh_rfd_pdfs(github: &Github) {
+    // Get gsuite token.
+    let token = get_gsuite_token().await;
+
+    // Initialize the Google Drive client.
+    let drive_client = GoogleDrive::new(token);
+
+    // Figure out where our directory is.
+    // It should be in the shared drive : "Automated Documents"/"rfds"
+    let drive = drive_client
+        .get_drive_by_name("Automated Documents")
+        .await
+        .unwrap();
+    let drive_id = drive.id;
+
+    // Get the directory by the name.
+    let dir = drive_client
+        .get_file_by_name(&drive_id, "rfds")
+        .await
+        .unwrap();
+
     // Initialize our database.
     let db = Database::new();
 
@@ -279,7 +300,13 @@ pub async fn refresh_rfd_pdfs(github: &Github) {
 
     // Sync rfds.
     for rfd in rfds {
-        rfd.convert_and_upload_pdf(github).await;
+        rfd.convert_and_upload_pdf(
+            github,
+            &drive_client,
+            &drive_id,
+            &dir.get(0).unwrap().id,
+        )
+        .await;
     }
 }
 

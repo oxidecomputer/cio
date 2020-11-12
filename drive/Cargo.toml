@@ -12,4 +12,5 @@ documentation = "https://docs.rs/google-drive"
 bytes = "0.5"
 reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
 yup-oauth2 = "^4.1.3"
