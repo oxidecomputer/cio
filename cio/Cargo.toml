@@ -21,7 +21,7 @@ futures-util = "0.3"
 google-drive = "^0.1.0"
 html2text = "0.1"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
-hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "ref-for-files", features = ["httpcache"] }
+hubcaps = { git = "https://github.com/softprops/hubcaps", branch = "master", features = ["httpcache"] }
 hyper = "0.13.0"
 macros = { path = "../macros" }
 openapiv3 = "0.3.0"
