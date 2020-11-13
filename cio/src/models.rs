@@ -2001,7 +2001,7 @@ impl RFD {
         let rfd_repo = github.repo(github_org(), "rfd");
 
         let mut path = env::temp_dir();
-        path.push("contents.adoc");
+        path.push(format!("pdfcontents{}.adoc", self.number_string));
 
         let mut workspace =
             env::var("GITHUB_WORKSPACE").unwrap_or_else(|_| "..".to_string());
