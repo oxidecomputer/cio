@@ -323,7 +323,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     let mut applicants: Vec<NewApplicant> = Default::default();
     for (sheet_name, sheet_id) in get_sheets_map() {
         // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string()).await.unwrap();
+        let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000").await.unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
