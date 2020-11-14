@@ -168,15 +168,20 @@ impl Sheets {
     }
 
     /// Update values.
-    pub async fn update_values(&self, sheet_id: &str, range: &str, value: String) -> Result<UpdateValuesResponse, APIError> {
+    pub async fn update_values(&self, sheet_id: &str, range: &str, values: Vec<Vec<String>>, major_dimension: Option<String>) -> Result<UpdateValuesResponse, APIError> {
+        let url = format!(
+            "spreadsheets/{}/values/{}",
+            sheet_id.to_string(),
+            range.to_string()
+        );
         // Build the request.
         let request = self.request(
             Method::PUT,
-            format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range.to_string()),
+            url,
             ValueRange {
                 range: Some(range.to_string()),
-                values: Some(vec![vec![value]]),
-                major_dimension: None,
+                values: Some(values),
+                major_dimension: major_dimension,
             },
             Some(vec![
                 ("valueInputOption", "USER_ENTERED".to_string()),
