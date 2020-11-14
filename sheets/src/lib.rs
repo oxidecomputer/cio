@@ -33,7 +33,7 @@
  *     let sheets_client = Sheets::new(token);
  *
  *     // Get the values in the sheet.
- *     let sheet_values = sheets_client.get_values("sheet_id", "Form Responses 1!A1:S1000".to_string()).await.unwrap();
+ *     let sheet_values = sheets_client.get_values("sheet_id", "Form Responses 1!A1:S1000").await.unwrap();
  *     let values = sheet_values.values.unwrap();
  *
  *     if values.is_empty() {
@@ -121,11 +121,12 @@ impl Sheets {
     }
 
     /// Get values.
-    pub async fn get_values(&self, sheet_id: &str, range: String) -> Result<ValueRange, APIError> {
+    pub async fn get_values(&self, sheet_id: &str, range: &str) -> Result<ValueRange, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range),
+            format!("spreadsheets/{}/values/{}",
+                    sheet_id.to_string(), range.to_string()),
             (),
             Some(vec![
                 ("valueRenderOption", "FORMATTED_VALUE".to_string()),
@@ -153,7 +154,7 @@ impl Sheets {
     /// The `cell_name` is something like `A1` and what is returned is a string representation of
     /// the cell's value.
     pub async fn get_value(&self, sheet_id: &str, cell_name: String) -> Result<String, APIError> {
-        let value_range = self.get_values(sheet_id, cell_name).await.unwrap();
+        let value_range = self.get_values(sheet_id, &cell_name).await.unwrap();
         let values = value_range.values.unwrap_or_default();
         if values.is_empty() {
             return Ok(String::new());
