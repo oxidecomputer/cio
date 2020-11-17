@@ -312,6 +312,14 @@ table! {
         is_group_admin -> Bool,
         building -> Varchar,
         aws_role -> Varchar,
+        home_address_street_1 -> Varchar,
+        home_address_street_2 -> Varchar,
+        home_address_city -> Varchar,
+        home_address_state -> Varchar,
+        home_address_zip -> Varchar,
+        home_address_country -> Varchar,
+        start_date -> Date,
+        public_ssh_keys -> Array<Text>,
     }
 }
 

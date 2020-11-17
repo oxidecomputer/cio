@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::str::from_utf8;
 
+use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
 use hubcaps::Github;
@@ -76,7 +77,6 @@ impl Config {
     Debug,
     Insertable,
     AsChangeset,
-    Default,
     PartialEq,
     Clone,
     JsonSchema,
@@ -129,6 +129,29 @@ pub struct UserConfig {
         skip_serializing_if = "String::is_empty"
     )]
     pub aws_role: String,
+
+    /// The following fields do not exist in the config files but are populated
+    /// by the Gusto API before the record gets saved in the database.
+    /// Home address (automatically populated by Gusto)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub home_address_street_1: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub home_address_street_2: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub home_address_city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub home_address_state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub home_address_zip: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub home_address_country: String,
+    /// Start date (automatically populated by Gusto)
+    pub start_date: NaiveDate,
+
+    /// The following field does not exist in the config files but is populated by
+    /// the GitHub API before the record gets saved in the database.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub public_ssh_keys: Vec<String>,
 }
 
 /// The data type for a group. This applies to Google Groups.
