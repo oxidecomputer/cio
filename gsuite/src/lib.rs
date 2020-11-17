@@ -974,11 +974,8 @@ pub struct GroupSettings {
     )]
     pub default_message_deny_notification_text: Option<String>,
     /// If this groups should be included in global address list or not.
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "includeInGlobalAddressList"
-    )]
-    pub include_in_global_address_list: Option<String>,
+    #[serde(default, rename = "includeInGlobalAddressList")]
+    pub include_in_global_address_list: bool,
     /// If the group is archive only
     #[serde(skip_serializing_if = "Option::is_none", rename = "archiveOnly")]
     pub archive_only: Option<String>,
@@ -1562,7 +1559,7 @@ impl User {
         }
 
         // Include the user in the global address list
-        user.include_in_global_address_list = true;
+        self.include_in_global_address_list = true;
 
         if !user.gender.is_empty() {
             self.gender = Some(UserGender {
