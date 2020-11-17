@@ -1561,6 +1561,9 @@ impl User {
             }];
         }
 
+        // Include the user in the global address list
+        user.include_in_global_address_list = true;
+
         if !user.gender.is_empty() {
             self.gender = Some(UserGender {
                 address_me_as: "".to_string(),
@@ -1607,7 +1610,7 @@ impl User {
         // Set the custom schemas.
         self.custom_schemas = HashMap::new();
         let mut contact: HashMap<String, Value> = HashMap::new();
-        contact.insert("Start Date".to_string(), json!(user.start_date));
+        contact.insert("Start_Date".to_string(), json!(user.start_date));
 
         // Set the GitHub username.
         if !user.github.is_empty() {
