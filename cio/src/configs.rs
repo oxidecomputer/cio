@@ -146,6 +146,7 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_country: String,
     /// Start date (automatically populated by Gusto)
+    #[serde(default, alias = "start_date")]
     pub start_date: NaiveDate,
 
     /// The following field does not exist in the config files but is populated by
