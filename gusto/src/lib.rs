@@ -104,7 +104,7 @@ impl Gusto {
             header::HeaderValue::from_static("application/json"),
         );
 
-        self.client.request(method.clone(), url).headers(headers)
+        self.client.request(method, url).headers(headers)
     }
 
     /// List employees by company id.

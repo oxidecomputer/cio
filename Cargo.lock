@@ -301,7 +301,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.0",
  "html2text",
  "hubcaps",
  "hyper",
@@ -862,6 +862,8 @@ dependencies = [
 [[package]]
 name = "gusto-api"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4593600a1d7c083e334272eaa0912e5a34cb8fd29e844bae6fad3ee7807f703"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -871,9 +873,7 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4593600a1d7c083e334272eaa0912e5a34cb8fd29e844bae6fad3ee7807f703"
+version = "0.1.1"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
