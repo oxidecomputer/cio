@@ -58,6 +58,8 @@ use std::error;
 use std::fmt;
 use std::sync::Arc;
 
+use chrono::offset::Utc;
+use chrono::DateTime;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
@@ -504,7 +506,7 @@ impl GSuite {
         // Try to deserialize the response.
         let value: Users = resp.json().await.unwrap();
 
-        Ok(value.users.unwrap())
+        Ok(value.users)
     }
 
     /// Update a user.
@@ -513,7 +515,7 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            &format!("users/{}", user.id.as_ref().unwrap()),
+            &format!("users/{}", user.id),
             user,
             None,
         );
@@ -1250,159 +1252,203 @@ struct Member {
 }
 
 /// A user.
+/// FROM: https://developers.google.com/admin-sdk/directory/v1/reference/users#resource
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct User {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub addresses: Vec<UserAddress>,
+    /// Indicates if user has agreed to terms (read-only)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "agreedToTerms")]
+    pub agreed_to_terms: Option<bool>,
+    /// List of aliases (read-only)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
+    /// Indicates if user is archived (read-only)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub addresses: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "posixAccounts")]
-    pub posix_accounts: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub phones: Option<Vec<UserPhone>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub locations: Option<Vec<UserLocation>>,
-    /// Boolean indicating if the user is delegated admin (Read-only)
+    pub archived: Option<bool>,
+    /// Boolean indicating if the user should change password in next login
+    #[serde(default, rename = "changePasswordAtNextLogin")]
+    pub change_password_at_next_login: bool,
+    /// User's G Suite account creation time (read-only)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "creationTime")]
+    pub creation_time: Option<DateTime<Utc>>,
+    /// Custom fields of the user
+    #[serde(
+        default,
+        skip_serializing_if = "HashMap::is_empty",
+        rename = "customSchemas"
+    )]
+    pub custom_schemas: HashMap<String, UserCustomProperties>,
+    /// CustomerId of User (read-only)
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customerId"
+    )]
+    pub customer_id: String,
+    /// User's G Suite account deletion time (read-only)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "deletionTime")]
+    pub deletion_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub emails: Vec<UserEmail>,
+    /// ETag of the resource (read-only)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// A list of external IDs for the user, such as an employee or network ID.
+    /// The maximum allowed data size for this field is 2Kb.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "externalIds"
+    )]
+    pub external_ids: Vec<UserExternalId>,
+    pub gender: UserGender,
+    /// Hash function name for password. Supported are MD5, SHA-1 and crypt
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "hashFunction"
+    )]
+    pub hash_function: String,
+    /// Unique identifier of User (read-only)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    /// The user's Instant Messenger (IM) accounts. A user account can have
+    /// multiple ims properties. But, only one of these ims properties can be
+    /// the primary IM contact. The maximum allowed data size for this field is
+    /// 2Kb.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ims: Vec<UserInstantMessenger>,
+    /// Boolean indicating if user is included in Global Address List
+    #[serde(default, rename = "includeInGlobalAddressList")]
+    pub include_in_global_address_list: bool,
+    /// Boolean indicating if ip is whitelisted
+    #[serde(default, rename = "ipWhitelisted")]
+    pub ip_whitelisted: bool,
+    /// Boolean indicating if the user is admin (read-only)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "isAdmin")]
+    pub is_admin: Option<bool>,
+    /// Boolean indicating if the user is delegated admin (read-only)
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "isDelegatedAdmin"
     )]
     pub is_delegated_admin: Option<bool>,
-    /// ETag of the user's photo (Read-only)
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "thumbnailPhotoEtag"
-    )]
-    pub thumbnail_photo_etag: Option<String>,
-    /// Indicates if user is suspended.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub suspended: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub keywords: Option<String>,
-    /// Kind of resource this is.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub kind: Option<String>,
-    /// Unique identifier of User (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    /// List of aliases (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub aliases: Option<Vec<String>>,
-    /// List of non editable aliases (Read-only)
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "nonEditableAliases"
-    )]
-    pub non_editable_aliases: Option<Vec<String>>,
-    /// Indicates if user is archived.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub archived: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "deletionTime")]
-    pub deletion_time: Option<String>,
-    /// Suspension reason if user is suspended (Read-only)
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "suspensionReason"
-    )]
-    pub suspension_reason: Option<String>,
-    /// Photo Url of the user (Read-only)
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "thumbnailPhotoUrl"
-    )]
-    pub thumbnail_photo_url: Option<String>,
-    /// Is enrolled in 2-step verification (Read-only)
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "isEnrolledIn2Sv"
-    )]
-    pub is_enrolled_in2_sv: Option<bool>,
-    /// Boolean indicating if user is included in Global Address List
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "includeInGlobalAddressList"
-    )]
-    pub include_in_global_address_list: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub relations: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub languages: Option<String>,
-    /// Boolean indicating if the user is admin (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isAdmin")]
-    pub is_admin: Option<bool>,
-    /// ETag of the resource.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub etag: Option<String>,
-    /// User's last login time. (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "lastLoginTime")]
-    pub last_login_time: Option<String>,
-    /// OrgUnit of User
-    #[serde(skip_serializing_if = "Option::is_none", rename = "orgUnitPath")]
-    pub org_unit_path: Option<String>,
-    /// Indicates if user has agreed to terms (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "agreedToTerms")]
-    pub agreed_to_terms: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "externalIds")]
-    pub external_ids: Option<String>,
-    /// Boolean indicating if ip is whitelisted
-    #[serde(skip_serializing_if = "Option::is_none", rename = "ipWhitelisted")]
-    pub ip_whitelisted: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "sshPublicKeys")]
-    pub ssh_public_keys: Option<Vec<UserSSHKey>>,
-    /// Custom fields of the user.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "customSchemas")]
-    pub custom_schemas: Option<HashMap<String, UserCustomProperties>>,
-    /// Is 2-step verification enforced (Read-only)
+    /// Is 2-step verification enforced (read-only)
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "isEnforcedIn2Sv"
     )]
     pub is_enforced_in2_sv: Option<bool>,
-    /// Is mailbox setup (Read-only)
+    /// Is enrolled in 2-step verification (read-only)
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "isEnrolledIn2Sv"
+    )]
+    pub is_enrolled_in2_sv: Option<bool>,
+    /// Is mailbox setup (read-only)
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "isMailboxSetup"
     )]
     pub is_mailbox_setup: Option<bool>,
-    /// User's password
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub password: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub emails: Option<Vec<UserEmail>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub organizations: Option<String>,
-    /// username of User
-    #[serde(skip_serializing_if = "Option::is_none", rename = "primaryEmail")]
-    pub primary_email: Option<String>,
-    /// Hash function name for password. Supported are MD5, SHA-1 and crypt
-    #[serde(skip_serializing_if = "Option::is_none", rename = "hashFunction")]
-    pub hash_function: Option<String>,
+    /// The user's keywords. The maximum allowed data size for this field is 1Kb.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keywords: Vec<UserKeyword>,
+    /// Kind of resource this is (read-only)
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub languages: Vec<UserLanguage>,
+    /// User's last login time (read-only)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "lastLoginTime")]
+    pub last_login_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub locations: Vec<UserLocation>,
     /// User's name
-    pub name: Option<UserName>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub gender: Option<UserGender>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
-    /// User's G Suite account creation time. (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "creationTime")]
-    pub creation_time: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub websites: Option<String>,
-    /// Boolean indicating if the user should change password in next login
+    pub name: UserName,
+    /// List of non editable aliases (read-only)
     #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "changePasswordAtNextLogin"
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "nonEditableAliases"
     )]
-    pub change_password_at_next_login: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ims: Option<String>,
-    /// CustomerId of User (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "customerId")]
-    pub customer_id: Option<String>,
+    pub non_editable_aliases: Vec<String>,
+    pub notes: UserNotes,
+    /// OrgUnit of User
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "orgUnitPath"
+    )]
+    pub org_unit_path: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub organizations: Vec<Organization>,
+    /// User's password
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub password: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub phones: Vec<UserPhone>,
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "posixAccounts"
+    )]
+    pub posix_accounts: Vec<UserPosixAccount>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "primaryEmail"
+    )]
+    pub primary_email: String,
     /// Recovery email of the user
-    #[serde(skip_serializing_if = "Option::is_none", rename = "recoveryEmail")]
-    pub recovery_email: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "recoveryEmail"
+    )]
+    pub recovery_email: String,
     /// Recovery phone of the user
-    #[serde(skip_serializing_if = "Option::is_none", rename = "recoveryPhone")]
-    pub recovery_phone: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "recoveryPhone"
+    )]
+    pub recovery_phone: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relations: Vec<UserRelation>,
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "sshPublicKeys"
+    )]
+    pub ssh_public_keys: Vec<UserSSHKey>,
+    /// Indicates if user is suspended
+    #[serde(default)]
+    pub suspended: bool,
+    /// Suspension reason if user is suspended (read-only)
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "suspensionReason"
+    )]
+    pub suspension_reason: String,
+    /// ETag of the user's photo (read-only)
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "thumbnailPhotoEtag"
+    )]
+    pub thumbnail_photo_etag: String,
+    /// Photo Url of the user (read-only)
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "thumbnailPhotoUrl"
+    )]
+    pub thumbnail_photo_url: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub websites: Vec<UserWebsite>,
 }
 
 impl User {
@@ -1415,129 +1461,116 @@ impl User {
     ) -> User {
         // TODO(cbiffle): use &mut self instead of consume-and-return
         // Set the settings for the user.
-        self.name = Some(UserName {
-            full_name: Some(format!("{} {}", user.first_name, user.last_name)),
-            given_name: Some(user.first_name.clone()),
-            family_name: Some(user.last_name.clone()),
-        });
+        self.name = UserName {
+            full_name: format!("{} {}", user.first_name, user.last_name),
+            given_name: user.first_name.to_string(),
+            family_name: user.last_name.to_string(),
+        };
 
         if !user.recovery_email.is_empty() {
             // Set the recovery email for the user.
-            self.recovery_email = Some(user.recovery_email.clone());
+            self.recovery_email = user.recovery_email.to_string();
 
             // Check if we have a home email set for the user and update it.
             let mut has_home_email = false;
-            match self.emails {
-                Some(mut emails) => {
-                    for (index, email) in emails.iter().enumerate() {
-                        match &email.typev {
-                            Some(typev) => {
-                                if typev == "home" {
-                                    // Update the set home email.
-                                    emails[index].address =
-                                        user.recovery_email.clone();
-                                    // Break the loop early.
-                                    has_home_email = true;
-                                    break;
-                                }
-                            }
-                            None => (),
-                        };
-                    }
-
-                    if !has_home_email {
-                        // Set the home email for the user.
-                        emails.push(UserEmail {
-                            typev: Some("home".to_string()),
-                            address: user.recovery_email.to_string(),
-                            primary: Some(false),
-                        });
-                    }
-
-                    // Set the emails.
-                    self.emails = Some(emails);
+            for (index, email) in self.emails.iter().enumerate() {
+                if email.typev == "home" {
+                    // Update the set home email.
+                    self.emails[index].address =
+                        user.recovery_email.to_string();
+                    // Break the loop early.
+                    has_home_email = true;
+                    break;
                 }
-                None => {
-                    self.emails = Some(vec![UserEmail {
-                        typev: Some("home".to_string()),
-                        address: user.recovery_email.to_string(),
-                        primary: Some(false),
-                    }]);
-                }
+            }
+
+            if !has_home_email {
+                // Set the home email for the user.
+                self.emails.push(UserEmail {
+                    custom_type: "".to_string(),
+                    typev: "home".to_string(),
+                    address: user.recovery_email.to_string(),
+                    primary: false,
+                });
             }
         }
 
         if !user.recovery_phone.is_empty() {
             // Set the recovery phone for the user.
-            self.recovery_phone = Some(user.recovery_phone.to_string());
+            self.recovery_phone = user.recovery_phone.to_string();
 
             // Set the home phone for the user.
-            self.phones = Some(vec![UserPhone {
+            self.phones = vec![UserPhone {
+                custom_type: "".to_string(),
                 typev: "home".to_string(),
                 value: user.recovery_phone.to_string(),
                 primary: true,
-            }]);
+            }];
         }
 
-        self.primary_email = Some(format!("{}@{}", user.username, domain));
-
-        // Write the user aliases.
-        let mut aliases: Vec<String> = Default::default();
-        for alias in &user.aliases {
-            aliases.push(format!("{}@{}", alias, domain));
-        }
-        self.aliases = Some(aliases);
+        self.primary_email = format!("{}@{}", user.username, domain);
 
         if change_password {
             // Since we are creating a new user, we want to change their password
             // at the next login.
-            self.change_password_at_next_login = Some(true);
+            self.change_password_at_next_login = true;
             // Generate a password for the user.
             let password = generate_password();
-            self.password = Some(password);
+            self.password = password;
         }
 
         if !user.gender.is_empty() {
-            let mut gender: UserGender = Default::default();
-            gender.typev = user.gender.to_string();
-            self.gender = Some(gender);
+            self.gender = UserGender {
+                address_me_as: "".to_string(),
+                custom_gender: "".to_string(),
+                typev: user.gender.to_string(),
+            };
         }
 
         if !user.building.is_empty() {
-            let mut location: UserLocation = Default::default();
-            location.typev = "desk".to_string();
-            location.building_id = Some(user.building.to_string());
-            location.floor_name = Some("1".to_string());
-            self.locations = Some(vec![location]);
+            self.locations = vec![UserLocation {
+                area: "".to_string(),
+                building_id: user.building.to_string(),
+                custom_type: "".to_string(),
+                desk_code: "".to_string(),
+                floor_name: "1".to_string(),
+                floor_section: "".to_string(),
+                typev: "desk".to_string(),
+            }];
         }
 
-        let mut cs: HashMap<String, UserCustomProperties> = HashMap::new();
+        // Set their GitHub SSH Keys to their Google SSH Keys.
+        for k in &user.public_ssh_keys {
+            self.ssh_public_keys.push(UserSSHKey {
+                key: k.to_string(),
+                expiration_time_usec: None,
+                // fingerprint is a read-only property so make sure it is empty
+                fingerprint: "".to_string(),
+            });
+        }
+
+        // Set the custom schemas.
+        self.custom_schemas = HashMap::new();
         if !user.github.is_empty() {
             let mut gh: HashMap<String, Value> = HashMap::new();
             gh.insert(
                 "GitHub_Username".to_string(),
-                json!(user.github.clone()),
+                json!(user.github.to_string()),
             );
-            cs.insert("Contact".to_string(), UserCustomProperties(Some(gh)));
-
-            // Set their GitHub SSH Keys to their Google SSH Keys.
-            let mut keys: Vec<UserSSHKey> = Default::default();
-            for k in &user.public_ssh_keys {
-                keys.push(UserSSHKey {
-                    key: k.to_string(),
-                    expiration_time_usec: None,
-                });
-            }
-            self.ssh_public_keys = Some(keys);
+            self.custom_schemas
+                .insert("Contact".to_string(), UserCustomProperties(Some(gh)));
         }
 
         if !user.chat.is_empty() {
             let mut chat: HashMap<String, Value> = HashMap::new();
             chat.insert(
                 "Matrix_Chat_Username".to_string(),
-                json!(user.chat.clone()),
+                json!(user.chat.to_string()),
             );
-            cs.insert("Contact".to_string(), UserCustomProperties(Some(chat)));
+            self.custom_schemas.insert(
+                "Contact".to_string(),
+                UserCustomProperties(Some(chat)),
+            );
         }
 
         // Get the AWS Role information.
@@ -1547,61 +1580,302 @@ impl User {
             aws_type.insert("type".to_string(), "work".to_string());
             aws_type.insert("value".to_string(), user.aws_role.to_string());
             aws_role.insert("Role".to_string(), json!(vec![aws_type]));
-            cs.insert(
+            self.custom_schemas.insert(
                 "Amazon_Web_Services".to_string(),
                 UserCustomProperties(Some(aws_role)),
             );
         }
 
-        // Set the custom schemas.
-        self.custom_schemas = Some(cs);
-
         self
     }
+}
+
+/// A user's address.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserAddress {
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub country: String,
+    /// The country code. Uses the ISO 3166-1 standard.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "countryCode")]
+    pub country_code: String,
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    /// For extended addresses, such as an address that includes a sub-region.
+    #[serde(
+        skip_serializing_if = "String::is_empty",
+        rename = "extendedAddress"
+    )]
+    pub extended_address: String,
+    /// A full and unstructured postal address. This is not synced with the structured address fields.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub formatted: String,
+    /// The town or city of the address.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub locality: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "poBox")]
+    pub po_box: String,
+    /// The ZIP or postal code, if applicable.
+    #[serde(rename = "postalCode", skip_serializing_if = "String::is_empty")]
+    pub postal_code: String,
+    pub primary: bool,
+    /// The abbreviated province or state.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub region: String,
+    /// Indicates if the user-supplied address was formatted. Formatted addresses are not currently supported.
+    #[serde(rename = "sourceIsStructured")]
+    pub source_is_structured: bool,
+    /// The street address, such as 1600 Amphitheatre Parkway.
+    /// Whitespace within the string is ignored; however, newlines are significant.
+    #[serde(
+        rename = "street_address",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub street_address: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    pub typev: String,
 }
 
 /// A user's email.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserEmail {
-    #[serde(skip_serializing_if = "Option::is_none", rename = "type")]
-    pub typev: Option<String>,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub address: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub primary: Option<bool>,
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    pub primary: bool,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    pub typev: String,
 }
 
-/// A user's phone.
+/// A user's external id.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct UserPhone {
-    #[serde(rename = "type")]
+pub struct UserExternalId {
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
     pub typev: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub value: String,
+}
+
+/// A user's gender.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserGender {
+    #[serde(rename = "addressMeAs", skip_serializing_if = "String::is_empty")]
+    pub address_me_as: String,
+    #[serde(rename = "customGender", skip_serializing_if = "String::is_empty")]
+    pub custom_gender: String,
+    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    pub typev: String,
+}
+
+/// A user's instant messanger.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserInstantMessenger {
+    /// If the protocol value is custom_protocol, this property holds the custom protocol's string.
+    #[serde(
+        skip_serializing_if = "String::is_empty",
+        rename = "customProtocol"
+    )]
+    pub custom_protocol: String,
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub im: String,
     pub primary: bool,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub protocol: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    pub typev: String,
+}
+
+/// A user's keyword.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserKeyword {
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    pub typev: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub value: String,
+}
+
+/// A user's language.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserLanguage {
+    /// Other language. A user can provide their own language name if there is no corresponding
+    /// Google III language code. If this is set, LanguageCode can't be set
+    #[serde(
+        skip_serializing_if = "String::is_empty",
+        rename = "customLanguage"
+    )]
+    pub custom_language: String,
+    /// Language Code. Should be used for storing Google III LanguageCode string representation for language. Illegal values cause SchemaException.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "languageCode")]
+    pub language_code: String,
+}
+
+/// A user's location.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserLocation {
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub area: String,
+    /// Unique ID for the building a resource is located in.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "buildingId")]
+    pub building_id: String,
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    /// Most specific textual code of individual desk location.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "deskCode")]
+    pub desk_code: String,
+    /// Name of the floor a resource is located on.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "floorName")]
+    pub floor_name: String,
+    /// Floor section. More specific location within the floor. For example, if a floor is divided into sections "A", "B", and "C", this field would identify one of those values.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "floorSection")]
+    pub floor_section: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    pub typev: String,
 }
 
 /// A user's name.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserName {
-    /// Full Name
-    #[serde(skip_serializing_if = "Option::is_none", rename = "fullName")]
-    pub full_name: Option<String>,
-    /// First Name
-    #[serde(skip_serializing_if = "Option::is_none", rename = "givenName")]
-    pub given_name: Option<String>,
-    /// Last Name
-    #[serde(skip_serializing_if = "Option::is_none", rename = "familyName")]
-    pub family_name: Option<String>,
+    /// Last name
+    #[serde(skip_serializing_if = "String::is_empty", rename = "familyName")]
+    pub family_name: String,
+    /// Full name
+    #[serde(skip_serializing_if = "String::is_empty", rename = "fullName")]
+    pub full_name: String,
+    /// First name
+    #[serde(skip_serializing_if = "String::is_empty", rename = "givenName")]
+    pub given_name: String,
+}
+
+/// A user's notes.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserNotes {
+    #[serde(rename = "contentType", skip_serializing_if = "String::is_empty")]
+    pub content_type: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub value: String,
+}
+
+/// An organization
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct Organization {
+    #[serde(skip_serializing_if = "String::is_empty", rename = "costCenter")]
+    pub cost_center: String,
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub department: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(rename = "fullTimeEquivalent")]
+    pub full_time_equivalent: u64,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub location: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    pub primary: bool,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub symbol: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    pub typev: String,
+}
+
+/// A user's phone.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserPhone {
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    pub primary: bool,
+    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    pub typev: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub value: String,
+}
+
+/// A user's posix account.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserPosixAccount {
+    #[serde(skip_serializing_if = "String::is_empty", rename = "accountId")]
+    pub account_id: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub gecos: String,
+    pub gid: isize,
+    #[serde(
+        skip_serializing_if = "String::is_empty",
+        rename = "homeDirectory"
+    )]
+    pub home_directory: String,
+    #[serde(
+        skip_serializing_if = "String::is_empty",
+        rename = "operatingSystemType"
+    )]
+    pub operating_system_type: String,
+    pub primary: bool,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub shell: String,
+    #[serde(skip_serializing_if = "String::is_empty", rename = "systemId")]
+    pub system_id: String,
+    pub uid: isize,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub username: String,
+}
+
+/// A user's relation.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserRelation {
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    pub typev: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub value: String,
 }
 
 /// A user's ssh key.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserSSHKey {
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub key: String,
+    /// An expiration time in microseconds since epoch.
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "expirationTimeUsec"
     )]
     pub expiration_time_usec: Option<i128>,
+    /// A SHA-256 fingerprint of the SSH public key (read-only)
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub fingerprint: String,
+}
+
+/// A user's website.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct UserWebsite {
+    /// If the value of type is custom, this property contains the custom type string.
+    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    pub custom_type: String,
+    pub primary: bool,
+    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    pub typev: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub value: String,
 }
 
 /// Custom properties for a user.
@@ -1631,37 +1905,23 @@ impl Serialize for UserCustomProperties {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Users {
     /// Token used to access next page of this result.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "nextPageToken")]
-    pub next_page_token: Option<String>,
+    #[serde(
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
+    pub next_page_token: String,
     /// Kind of resource this is.
-    pub kind: Option<String>,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// ETag of the resource.
-    pub etag: Option<String>,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub etag: String,
     /// Event that triggered this response (only used in case of Push Response)
-    pub trigger_event: Option<String>,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub trigger_event: String,
     /// List of user objects.
-    pub users: Option<Vec<User>>,
-}
-
-/// A user's location.
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct UserLocation {
-    #[serde(rename = "type")]
-    pub typev: String,
-    pub area: String,
-    /// Unique ID for the building a resource is located in.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "buildingId")]
-    pub building_id: Option<String>,
-    /// Name of the floor a resource is located on.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "floorName")]
-    pub floor_name: Option<String>,
-}
-
-/// A user's gender.
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct UserGender {
-    #[serde(rename = "type")]
-    pub typev: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub users: Vec<User>,
 }
 
 /// A calendar resource.
