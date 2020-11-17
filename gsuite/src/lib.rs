@@ -1637,59 +1637,91 @@ impl User {
 /// A user's address.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserAddress {
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub country: String,
     /// The country code. Uses the ISO 3166-1 standard.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "countryCode")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "countryCode"
+    )]
     pub country_code: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     /// For extended addresses, such as an address that includes a sub-region.
     #[serde(
+        default,
         skip_serializing_if = "String::is_empty",
         rename = "extendedAddress"
     )]
     pub extended_address: String,
     /// A full and unstructured postal address. This is not synced with the structured address fields.
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub formatted: String,
     /// The town or city of the address.
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub locality: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "poBox")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "poBox"
+    )]
     pub po_box: String,
     /// The ZIP or postal code, if applicable.
-    #[serde(rename = "postalCode", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "postalCode",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub postal_code: String,
+    #[serde(default)]
     pub primary: bool,
     /// The abbreviated province or state.
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub region: String,
     /// Indicates if the user-supplied address was formatted. Formatted addresses are not currently supported.
-    #[serde(rename = "sourceIsStructured")]
+    #[serde(default, rename = "sourceIsStructured")]
     pub source_is_structured: bool,
     /// The street address, such as 1600 Amphitheatre Parkway.
     /// Whitespace within the string is ignored; however, newlines are significant.
     #[serde(
+        default,
         rename = "street_address",
         skip_serializing_if = "String::is_empty"
     )]
     pub street_address: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
     pub typev: String,
 }
 
 /// A user's email.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserEmail {
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub address: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
+    #[serde(default)]
     pub primary: bool,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
     pub typev: String,
 }
 
@@ -1697,22 +1729,42 @@ pub struct UserEmail {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserExternalId {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
     pub typev: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
 }
 
 /// A user's gender.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserGender {
-    #[serde(rename = "addressMeAs", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "addressMeAs",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub address_me_as: String,
-    #[serde(rename = "customGender", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "customGender",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub custom_gender: String,
-    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "type",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub typev: String,
 }
 
@@ -1721,19 +1773,28 @@ pub struct UserGender {
 pub struct UserInstantMessenger {
     /// If the protocol value is custom_protocol, this property holds the custom protocol's string.
     #[serde(
+        default,
         skip_serializing_if = "String::is_empty",
         rename = "customProtocol"
     )]
     pub custom_protocol: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub im: String,
     pub primary: bool,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub protocol: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
     pub typev: String,
 }
 
@@ -1741,11 +1802,19 @@ pub struct UserInstantMessenger {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserKeyword {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
     pub typev: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
 }
 
@@ -1755,36 +1824,65 @@ pub struct UserLanguage {
     /// Other language. A user can provide their own language name if there is no corresponding
     /// Google III language code. If this is set, LanguageCode can't be set
     #[serde(
+        default,
         skip_serializing_if = "String::is_empty",
         rename = "customLanguage"
     )]
     pub custom_language: String,
     /// Language Code. Should be used for storing Google III LanguageCode string representation for language. Illegal values cause SchemaException.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "languageCode")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "languageCode"
+    )]
     pub language_code: String,
 }
 
 /// A user's location.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserLocation {
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub area: String,
     /// Unique ID for the building a resource is located in.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "buildingId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "buildingId"
+    )]
     pub building_id: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     /// Most specific textual code of individual desk location.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "deskCode")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "deskCode"
+    )]
     pub desk_code: String,
     /// Name of the floor a resource is located on.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "floorName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorName"
+    )]
     pub floor_name: String,
     /// Floor section. More specific location within the floor. For example, if a floor is divided into sections "A", "B", and "C", this field would identify one of those values.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "floorSection")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorSection"
+    )]
     pub floor_section: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
     pub typev: String,
 }
 
@@ -1792,51 +1890,79 @@ pub struct UserLocation {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserName {
     /// Last name
-    #[serde(skip_serializing_if = "String::is_empty", rename = "familyName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "familyName"
+    )]
     pub family_name: String,
     /// Full name
-    #[serde(skip_serializing_if = "String::is_empty", rename = "fullName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "fullName"
+    )]
     pub full_name: String,
     /// First name
-    #[serde(skip_serializing_if = "String::is_empty", rename = "givenName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "givenName"
+    )]
     pub given_name: String,
 }
 
 /// A user's notes.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserNotes {
-    #[serde(rename = "contentType", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "contentType",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub content_type: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
 }
 
 /// An organization
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Organization {
-    #[serde(skip_serializing_if = "String::is_empty", rename = "costCenter")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "costCenter"
+    )]
     pub cost_center: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub department: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub domain: String,
-    #[serde(rename = "fullTimeEquivalent")]
+    #[serde(default, rename = "fullTimeEquivalent")]
     pub full_time_equivalent: u64,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
     pub primary: bool,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub symbol: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "type")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
     pub typev: String,
 }
 
@@ -1844,40 +1970,61 @@ pub struct Organization {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserPhone {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     pub primary: bool,
-    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "type",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub typev: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
 }
 
 /// A user's posix account.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserPosixAccount {
-    #[serde(skip_serializing_if = "String::is_empty", rename = "accountId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "accountId"
+    )]
     pub account_id: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gecos: String,
+    #[serde(default)]
     pub gid: isize,
     #[serde(
+        default,
         skip_serializing_if = "String::is_empty",
         rename = "homeDirectory"
     )]
     pub home_directory: String,
     #[serde(
+        default,
         skip_serializing_if = "String::is_empty",
         rename = "operatingSystemType"
     )]
     pub operating_system_type: String,
+    #[serde(default)]
     pub primary: bool,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub shell: String,
-    #[serde(skip_serializing_if = "String::is_empty", rename = "systemId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "systemId"
+    )]
     pub system_id: String,
+    #[serde(default)]
     pub uid: isize,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub username: String,
 }
 
@@ -1885,27 +2032,36 @@ pub struct UserPosixAccount {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserRelation {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
-    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "type",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub typev: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
 }
 
 /// A user's ssh key.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserSSHKey {
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub key: String,
     /// An expiration time in microseconds since epoch.
     #[serde(
+        default,
         skip_serializing_if = "Option::is_none",
         rename = "expirationTimeUsec"
     )]
     pub expiration_time_usec: Option<i128>,
     /// A SHA-256 fingerprint of the SSH public key (read-only)
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub fingerprint: String,
 }
 
@@ -1913,12 +2069,21 @@ pub struct UserSSHKey {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserWebsite {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
+    #[serde(default, alias = "is_group_admin")]
     pub primary: bool,
-    #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "type",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub typev: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
 }
 
