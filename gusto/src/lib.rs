@@ -6,27 +6,17 @@
  * Example:
  *
  * ```
- * use gusto_api::{Gusto, Record};
+ * use gusto::Gusto;
  * use serde::{Deserialize, Serialize};
  *
- * async fn get_records() {
+ * async fn get_current_user() {
  *     // Initialize the Gusto client.
  *     let gusto = Gusto::new_from_env();
  *
- *     // Get the current records from a table.
- *     let mut records: Vec<Record<SomeFormat>> = gusto
- *         .list_records(
- *             "Table Name",
- *             "Grid view",
- *             vec!["the", "fields", "you", "want", "to", "return"],
- *         )
- *         .await
- *         .unwrap();
+ *     // Get the current user.
+ *     let current_user = gusto.current_user().await.unwrap();
  *
- *     // Iterate over the records.
- *     for (i, record) in records.clone().iter().enumerate() {
- *         println!("{} - {:?}", i, record);
- *     }
+ *     println!("{:?}", current_user);
  * }
  *
  * #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,7 +33,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use chrono::naive::NaiveDate;
-use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use reqwest::{header, Client, Method, RequestBuilder, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Gusto API.
@@ -52,7 +42,6 @@ const ENDPOINT: &str = "https://api.gusto.com";
 /// Entrypoint for interacting with the Gusto API.
 pub struct Gusto {
     key: String,
-    base_id: String,
 
     client: Arc<Client>,
 }
@@ -60,17 +49,15 @@ pub struct Gusto {
 impl Gusto {
     /// Create a new Gusto client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API Key and Base ID your requests will work.
-    pub fn new<K, B>(key: K, base_id: B) -> Self
+    /// given a valid API Key your requests will work.
+    pub fn new<K>(key: K) -> Self
     where
         K: ToString,
-        B: ToString,
     {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
                 key: key.to_string(),
-                base_id: base_id.to_string(),
 
                 client: Arc::new(c),
             },
@@ -81,12 +68,11 @@ impl Gusto {
     /// Create a new Gusto client struct from environment variables. It
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API Key and Base ID your requests will work.
+    /// given a valid API your requests will work.
     pub fn new_from_env() -> Self {
         let key = env::var("GUSTO_API_KEY").unwrap();
-        let base_id = env::var("GUSTO_BASE_ID").unwrap();
 
-        Gusto::new(key, base_id)
+        Gusto::new(key)
     }
 
     /// Get the currently set API key.
@@ -94,16 +80,9 @@ impl Gusto {
         &self.key
     }
 
-    fn request<P, B>(
-        &self,
-        method: Method,
-        path: P,
-        body: B,
-        query: Vec<(&str, String)>,
-    ) -> Request
+    fn request<P>(&self, method: Method, path: P) -> RequestBuilder
     where
         P: ToString,
-        B: Serialize,
     {
         // Build the url.
         let base = Url::parse(ENDPOINT).unwrap();
@@ -125,25 +104,14 @@ impl Gusto {
             header::HeaderValue::from_static("application/json"),
         );
 
-        let mut rb = self.client.request(method.clone(), url).headers(headers);
-
-        if !query.is_empty() {
-            rb = rb.query(&query);
-        }
-
-        // Add the body, this is to ensure our GET and DELETE calls succeed.
-        if method != Method::GET && method != Method::DELETE {
-            rb = rb.json(&body);
-        }
-
-        // Build the request.
-        rb.build().unwrap()
+        self.client.request(method.clone(), url).headers(headers)
     }
 
     /// List employees by company id.
     pub async fn current_user(&self) -> Result<CurrentUser, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, "/v1/me", (), vec![]);
+        let rb = self.request(Method::GET, "/v1/me");
+        let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -168,12 +136,11 @@ impl Gusto {
         company_id: &u64,
     ) -> Result<Vec<Employee>, APIError> {
         // Build the request.
-        let request = self.request(
+        let rb = self.request(
             Method::GET,
             &format!("/v1/companies/{}/employees", company_id),
-            (),
-            vec![],
         );
+        let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
