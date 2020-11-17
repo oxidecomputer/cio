@@ -1,5 +1,6 @@
 use airtable_api::User as AirtableUser;
 use chrono::naive::NaiveDate;
+use gusto::date_format;
 use serde::{Deserialize, Serialize};
 
 /// The data type for customer interactions.
