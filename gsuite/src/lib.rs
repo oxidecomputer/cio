@@ -1589,29 +1589,33 @@ impl User {
             });
         }
 
+        // Set the IM field for matrix.
+        // TODO: once we migrate to slack update or add to this.
+        if !user.chat.is_empty() {
+            self.ims = vec![UserInstantMessenger {
+                custom_protocol: "matrix".to_string(),
+                custom_type: "".to_string(),
+                im: user.chat.to_string(),
+                primary: true,
+                protocol: "custom_protocol".to_string(),
+                typev: "work".to_string(),
+            }];
+        }
+
         // Set the custom schemas.
         self.custom_schemas = HashMap::new();
+        let mut contact: HashMap<String, Value> = HashMap::new();
+        contact.insert("Start Date".to_string(), json!(user.start_date));
+
+        // Set the GitHub username.
         if !user.github.is_empty() {
-            let mut gh: HashMap<String, Value> = HashMap::new();
-            gh.insert(
+            contact.insert(
                 "GitHub_Username".to_string(),
                 json!(user.github.to_string()),
             );
-            self.custom_schemas
-                .insert("Contact".to_string(), UserCustomProperties(Some(gh)));
         }
-
-        if !user.chat.is_empty() {
-            let mut chat: HashMap<String, Value> = HashMap::new();
-            chat.insert(
-                "Matrix_Chat_Username".to_string(),
-                json!(user.chat.to_string()),
-            );
-            self.custom_schemas.insert(
-                "Contact".to_string(),
-                UserCustomProperties(Some(chat)),
-            );
-        }
+        self.custom_schemas
+            .insert("Contact".to_string(), UserCustomProperties(Some(contact)));
 
         // Get the AWS Role information.
         if !user.aws_role.is_empty() {
