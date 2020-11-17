@@ -14,7 +14,7 @@ use crate::db::Database;
 use crate::schema::{
     buildings, conference_rooms, github_labels, groups, links, users,
 };
-use crate::utils::github_org;
+use crate::utils::{get_github_user_public_ssh_keys, github_org};
 
 /// The data type for our configuration files.
 #[derive(
@@ -152,6 +152,22 @@ pub struct UserConfig {
     /// the GitHub API before the record gets saved in the database.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub public_ssh_keys: Vec<String>,
+}
+
+impl UserConfig {
+    async fn populate_ssh_keys(&mut self) {
+        if self.github.is_empty() {
+            // Return early if we don't know their github handle.
+            return;
+        }
+
+        self.public_ssh_keys =
+            get_github_user_public_ssh_keys(&self.github).await;
+    }
+
+    pub async fn expand(&mut self) {
+        self.populate_ssh_keys().await;
+    }
 }
 
 /// The data type for a group. This applies to Google Groups.
@@ -474,7 +490,9 @@ pub async fn refresh_db_configs(github: &Github) {
     }
 
     // Sync users.
-    for (_, user) in configs.users {
+    for (_, mut user) in configs.users {
+        user.expand().await;
+
         db.upsert_user(&user);
     }
 }

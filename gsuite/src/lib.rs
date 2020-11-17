@@ -70,7 +70,6 @@ use yup_oauth2::AccessToken;
 extern crate serde_json;
 
 use cio_api::configs::{BuildingConfig, ResourceConfig, UserConfig};
-use cio_api::utils::get_github_user_public_ssh_keys;
 
 /// The endpoint for the GSuite Directory API.
 const DIRECTORY_ENDPOINT: &str =
@@ -1522,9 +1521,8 @@ impl User {
             cs.insert("Contact".to_string(), UserCustomProperties(Some(gh)));
 
             // Set their GitHub SSH Keys to their Google SSH Keys.
-            let ssh_keys = get_github_user_public_ssh_keys(&user.github).await;
             let mut keys: Vec<UserSSHKey> = Default::default();
-            for k in ssh_keys {
+            for k in &user.public_ssh_keys {
                 keys.push(UserSSHKey {
                     key: k.to_string(),
                     expiration_time_usec: None,
