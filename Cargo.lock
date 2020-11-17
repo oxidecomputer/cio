@@ -301,7 +301,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto",
+ "gusto-api",
  "html2text",
  "hubcaps",
  "hyper",
@@ -860,7 +860,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gusto"
+name = "gusto-api"
 version = "0.1.0"
 dependencies = [
  "chrono 0.4.19",

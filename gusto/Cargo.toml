@@ -1,5 +1,5 @@
 [package]
-name = "gusto"
+name = "gusto-api"
 description = "An API client for Gusto"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]

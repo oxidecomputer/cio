@@ -6,7 +6,7 @@
  * Example:
  *
  * ```
- * use gusto::Gusto;
+ * use gusto_api::Gusto;
  * use serde::{Deserialize, Serialize};
  *
  * async fn get_current_user() {

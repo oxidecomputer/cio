@@ -19,7 +19,8 @@ diesel = { version = "1.4.5", features = ["serde_json", "postgres", "chrono", "1
 dropshot = "^0.3.0"
 futures-util = "0.3"
 google-drive = "^0.1.0"
-gusto = { path = "../gusto" }
+#gusto-api = "^0.1.0"
+gusto-api = { path = "../gusto" }
 html2text = "0.1"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/softprops/hubcaps", branch = "master", features = ["httpcache"] }
