@@ -859,6 +859,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gusto"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.4.19",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "h2"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -10,7 +10,7 @@ pub struct CustomerInteraction {
     pub name: String,
     #[serde(rename = "Company")]
     pub company: Vec<String>,
-    #[serde(with = "meeting_date_format", rename = "Date")]
+    #[serde(with = "date_format", rename = "Date")]
     pub date: NaiveDate,
     #[serde(rename = "Type")]
     pub meeting_type: String,
@@ -62,7 +62,7 @@ pub struct DiscussionTopic {
 pub struct Meeting {
     #[serde(rename = "Name", skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(with = "meeting_date_format", rename = "Date")]
+    #[serde(with = "date_format", rename = "Date")]
     pub date: NaiveDate,
     #[serde(rename = "Week", skip_serializing_if = "String::is_empty")]
     pub week: String,
@@ -99,48 +99,6 @@ pub struct Meeting {
     pub attendees: Vec<AirtableUser>,
     #[serde(default)]
     pub reminder_email_sent: bool,
-}
-
-/// Convert the date format `%Y-%m-%d` to a NaiveDate.
-mod meeting_date_format {
-    use chrono::naive::NaiveDate;
-    use serde::{self, Deserialize, Deserializer, Serializer};
-
-    const FORMAT: &str = "%Y-%m-%d";
-
-    // The signature of a serialize_with function must follow the pattern:
-    //
-    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
-    //    where
-    //        S: Serializer
-    //
-    // although it may also be generic over the input types T.
-    pub fn serialize<S>(
-        date: &NaiveDate,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let s = format!("{}", date.format(FORMAT));
-        serializer.serialize_str(&s)
-    }
-
-    // The signature of a deserialize_with function must follow the pattern:
-    //
-    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
-    //    where
-    //        D: Deserializer<'de>
-    //
-    // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-
-        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap())
-    }
 }
 
 /// The data type for sending reminders for meetings.
