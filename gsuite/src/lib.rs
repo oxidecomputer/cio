@@ -1302,7 +1302,8 @@ pub struct User {
         rename = "externalIds"
     )]
     pub external_ids: Vec<UserExternalId>,
-    pub gender: UserGender,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gender: Option<UserGender>,
     /// Hash function name for password. Supported are MD5, SHA-1 and crypt
     #[serde(
         default,
@@ -1561,11 +1562,11 @@ impl User {
         }
 
         if !user.gender.is_empty() {
-            self.gender = UserGender {
+            self.gender = Some(UserGender {
                 address_me_as: "".to_string(),
                 custom_gender: "".to_string(),
                 typev: user.gender.to_string(),
-            };
+            });
         }
 
         if !user.building.is_empty() {
