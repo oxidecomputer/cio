@@ -2117,21 +2117,22 @@ impl Serialize for UserCustomProperties {
 struct Users {
     /// Token used to access next page of this result.
     #[serde(
+        default,
         skip_serializing_if = "String::is_empty",
         rename = "nextPageToken"
     )]
     pub next_page_token: String,
     /// Kind of resource this is.
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
     /// ETag of the resource.
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub etag: String,
     /// Event that triggered this response (only used in case of Push Response)
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub trigger_event: String,
     /// List of user objects.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub users: Vec<User>,
 }
 
