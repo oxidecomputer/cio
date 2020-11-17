@@ -1317,7 +1317,7 @@ pub struct User {
     /// multiple ims properties. But, only one of these ims properties can be
     /// the primary IM contact. The maximum allowed data size for this field is
     /// 2Kb.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ims: Vec<UserInstantMessenger>,
     /// Boolean indicating if user is included in Global Address List
     #[serde(default, rename = "includeInGlobalAddressList")]
@@ -1356,7 +1356,7 @@ pub struct User {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub keywords: Vec<UserKeyword>,
     /// Kind of resource this is (read-only)
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub languages: Vec<UserLanguage>,
