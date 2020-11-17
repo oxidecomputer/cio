@@ -1374,7 +1374,8 @@ pub struct User {
         rename = "nonEditableAliases"
     )]
     pub non_editable_aliases: Vec<String>,
-    pub notes: UserNotes,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<UserNotes>,
     /// OrgUnit of User
     #[serde(
         default,
