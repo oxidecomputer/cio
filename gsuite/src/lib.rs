@@ -1519,6 +1519,46 @@ impl User {
             self.password = password;
         }
 
+        // Set the user's address if we have one.
+        if !user.home_address_street_1.is_empty() {
+            let mut street_address = user.home_address_street_1.to_string();
+            if !user.home_address_street_2.is_empty() {
+                street_address = format!(
+                    "{}\n{}",
+                    user.home_address_street_1, user.home_address_street_2,
+                );
+            }
+            let formatted = format!(
+                "{}\n{} {}, {}, {}",
+                street_address,
+                user.home_address_city,
+                user.home_address_state,
+                user.home_address_zip,
+                user.home_address_country
+            );
+
+            self.addresses = vec![UserAddress {
+                country: user.home_address_country.to_string(),
+                // TODO: fix this when we have an employee from another country.
+                country_code: "US".to_string(),
+                custom_type: "".to_string(),
+                extended_address: "".to_string(),
+                formatted,
+                locality: user.home_address_city.to_string(),
+                po_box: "".to_string(),
+                postal_code: user.home_address_zip.to_string(),
+                primary: true,
+                region: user.home_address_state.to_string(),
+                // Indicates if the user-supplied address was formatted. Formatted addresses are
+                // not currently supported.
+                // FROM: https://developers.google.com/admin-sdk/directory/v1/reference/users#resource
+                // TODO: figure out when this is supported and what it means
+                source_is_structured: false,
+                street_address,
+                typev: "home".to_string(),
+            }];
+        }
+
         if !user.gender.is_empty() {
             self.gender = UserGender {
                 address_me_as: "".to_string(),
