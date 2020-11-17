@@ -974,8 +974,12 @@ pub struct GroupSettings {
     )]
     pub default_message_deny_notification_text: Option<String>,
     /// If this groups should be included in global address list or not.
-    #[serde(default, rename = "includeInGlobalAddressList")]
-    pub include_in_global_address_list: bool,
+    #[serde(
+        default,
+        rename = "includeInGlobalAddressList",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub include_in_global_address_list: Option<String>,
     /// If the group is archive only
     #[serde(skip_serializing_if = "Option::is_none", rename = "archiveOnly")]
     pub archive_only: Option<String>,
