@@ -41,6 +41,8 @@ use std::fmt;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use chrono::offset::Utc;
+use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -174,11 +176,7 @@ impl Airtable {
 
         let mut records = r.records;
 
-        let mut offset = if let Some(o) = r.offset {
-            o
-        } else {
-            "".to_string()
-        };
+        let mut offset = r.offset;
 
         // Paginate if we should.
         // TODO: make this more DRY
@@ -210,11 +208,7 @@ impl Airtable {
 
             records.append(&mut r.records);
 
-            offset = if let Some(o) = r.offset {
-                o
-            } else {
-                "".to_string()
-            };
+            offset = r.offset;
         }
 
         Ok(records)
@@ -266,7 +260,7 @@ impl Airtable {
             table.to_string(),
             APICall {
                 records,
-                offset: None,
+                offset: "".to_string(),
                 typecast: Some(true),
             },
             None,
@@ -304,7 +298,7 @@ impl Airtable {
             table.to_string(),
             APICall {
                 records,
-                offset: None,
+                offset: "".to_string(),
                 typecast: Some(true),
             },
             None,
@@ -373,8 +367,8 @@ struct APICall<T> {
     /// If there are more records, the response will contain an
     /// offset. To fetch the next page of records, include offset
     /// in the next request's parameters.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub offset: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub offset: String,
     /// The current page number of returned records.
     pub records: Vec<Record<T>>,
     /// The Airtable API will perform best-effort automatic data conversion
@@ -388,11 +382,11 @@ struct APICall<T> {
 /// An Airtable record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Record<T> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
     pub fields: T,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_time: Option<String>,
+    pub created_time: Option<DateTime<Utc>>,
 }
 
 /// An airtable user.

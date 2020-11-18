@@ -22,6 +22,7 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
+use tokio::runtime::Handle;
 
 use crate::airtable::{
     AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
@@ -1299,7 +1300,23 @@ pub struct NewAuthUserLogin {
 
 /// Implement updating the Airtable record for a AuthUserLogin.
 impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
-    fn update_airtable_record(&mut self, _record: AuthUserLogin) {}
+    fn update_airtable_record(&mut self, _record: AuthUserLogin) {
+        // Get the current auth users in Airtable so we can link to it.
+        // TODO: make this more dry so we do not call it every single damn time.
+        let handle = Handle::current();
+        let auth_users =
+            handle.block_on(async { AuthUsers::get_from_airtable().await });
+
+        // Iterate over the auth_users and see if we find a match.
+        for (_id, auth_user_record) in auth_users {
+            if auth_user_record.fields.user_id == self.user_id {
+                // Set the link_to_auth_user to the right user.
+                self.link_to_auth_user = vec![auth_user_record.id];
+                // Break the loop and return early.
+                break;
+            }
+        }
+    }
 }
 
 // TODO: figure out the meeting null date bullshit
@@ -1441,7 +1458,23 @@ pub struct NewJournalClubPaper {
 
 /// Implement updating the Airtable record for a JournalClubPaper.
 impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
-    fn update_airtable_record(&mut self, _record: JournalClubPaper) {}
+    fn update_airtable_record(&mut self, _record: JournalClubPaper) {
+        // Get the current journal club meetings in Airtable so we can link to it.
+        // TODO: make this more dry so we do not call it every single damn time.
+        let handle = Handle::current();
+        let journal_club_meetings = handle
+            .block_on(async { JournalClubMeetings::get_from_airtable().await });
+
+        // Iterate over the journal_club_meetings and see if we find a match.
+        for (_id, meeting_record) in journal_club_meetings {
+            if meeting_record.fields.issue == self.meeting {
+                // Set the link_to_meeting to the right meeting.
+                self.link_to_meeting = vec![meeting_record.id];
+                // Break the loop and return early.
+                break;
+            }
+        }
+    }
 }
 
 /// The data type for a MailingListSubscriber.
@@ -1502,9 +1535,9 @@ impl NewMailingListSubscriber {
 
         // Create the record.
         let record = Record {
-            id: None,
+            id: "".to_string(),
             created_time: None,
-            fields: serde_json::to_value(self).unwrap(),
+            fields: self.clone(),
         };
 
         // Send the new record to the Airtable client.

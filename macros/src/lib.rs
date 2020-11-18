@@ -61,7 +61,7 @@ fn do_db_struct(
 
                 // Create the record.
                 let record = airtable_api::Record {
-                    id: None,
+                    id: "".to_string(),
                     created_time: None,
                     fields: self.clone(),
                 };
@@ -79,8 +79,8 @@ fn do_db_struct(
 
         pub struct #new_name_plural(pub Vec<#new_name>);
         impl #new_name_plural {
-            /// Update Airtable records in a table from a vector.
-            pub async fn update_airtable(&self) {
+            /// Get the current records from Airtable.
+            pub async fn get_from_airtable() -> std::collections::BTreeMap<i32, airtable_api::Record<#new_name>> {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
@@ -98,22 +98,37 @@ fn do_db_struct(
                     records.insert(record.fields.id, record);
                 }
 
+                records
+            }
+
+            /// Update Airtable records in a table from a vector.
+            pub async fn update_airtable(&self) {
+                // Initialize the Airtable client.
+                let airtable = airtable_api::Airtable::new(
+                    airtable_api::api_key_from_env(),
+                    #base_id,
+                );
+
+                let records = #new_name_plural::get_from_airtable().await;
+
                 for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
-                            // If the Airtable record and the vector record are the same, then we can return early since
-                            // we do not need to update it in Airtable.
-                            if vec_record == r.fields {
-                                println!("[airtable] id={} in vector equals Airtable record, skipping update", vec_record.id);
-                                continue;
-                            }
-
                             // Let's update the Airtable record with the record from the vector.
                             let mut record = r.clone();
 
                             // Run the custom trait to update the new record from the old record.
                             vec_record.update_airtable_record(record.fields.clone());
+
+                            // If the Airtable record and the vector record are the same, then we can return early since
+                            // we do not need to update it in Airtable.
+                            // We do this after we update the record so that those fields match as
+                            // well.
+                            if vec_record == r.fields {
+                                println!("[airtable] id={} in vector equals Airtable record, skipping update", vec_record.id);
+                                continue;
+                            }
 
                             record.fields = vec_record.clone();
 
@@ -228,7 +243,7 @@ mod tests {
 
                 // Create the record.
                 let record = airtable_api::Record {
-                    id: None,
+                    id: "".to_string(),
                     created_time: None,
                     fields: self.clone(),
                 };
@@ -246,8 +261,8 @@ mod tests {
 
         pub struct DuplicatedItems(pub Vec<DuplicatedItem>);
         impl DuplicatedItems {
-            /// Update Airtable records in a table from a vector.
-            pub async fn update_airtable(&self) {
+            /// Get the current records from Airtable.
+            pub async fn get_from_airtable() -> std::collections::BTreeMap<i32, airtable_api::Record<DuplicatedItem>> {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
@@ -265,22 +280,37 @@ mod tests {
                     records.insert(record.fields.id, record);
                 }
 
+                records
+            }
+
+            /// Update Airtable records in a table from a vector.
+            pub async fn update_airtable(&self) {
+                // Initialize the Airtable client.
+                let airtable = airtable_api::Airtable::new(
+                    airtable_api::api_key_from_env(),
+                    AIRTABLE_BASE_ID_CUSTOMER_LEADS,
+                );
+
+                let records = DuplicatedItems::get_from_airtable().await;
+
                 for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
-                            // If the Airtable record and the vector record are the same, then we can return early since
-                            // we do not need to update it in Airtable.
-                            if vec_record == r.fields {
-                                println!("[airtable] id={} in vector equals Airtable record, skipping update", vec_record.id);
-                                continue;
-                            }
-
                             // Let's update the Airtable record with the record from the vector.
                             let mut record = r.clone();
 
                             // Run the custom trait to update the new record from the old record.
                             vec_record.update_airtable_record(record.fields.clone());
+
+                            // If the Airtable record and the vector record are the same, then we can return early since
+                            // we do not need to update it in Airtable.
+                            // We do this after we update the record so that those fields match as
+                            // well.
+                            if vec_record == r.fields {
+                                println!("[airtable] id={} in vector equals Airtable record, skipping update", vec_record.id);
+                                continue;
+                            }
 
                             record.fields = vec_record.clone();
 

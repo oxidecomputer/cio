@@ -9,7 +9,8 @@ repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/cio-api"
 
 [dependencies]
-airtable-api = "^0.1.0"
+#airtable-api = "^0.1.0"
+airtable-api = { path = "../airtable" }
 chrono = "0.4"
 chrono-humanize = "0.0.11"
 clap = {version = "2", features = ["yaml"]}

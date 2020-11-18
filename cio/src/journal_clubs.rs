@@ -1,20 +1,11 @@
-use std::collections::BTreeMap;
 use std::str::from_utf8;
 
-use airtable_api::{api_key_from_env, Airtable, Record};
 use chrono::NaiveDate;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{
-    AIRTABLE_BASE_ID_MISC, AIRTABLE_GRID_VIEW,
-    AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
-};
 use crate::db::Database;
-use crate::models::{
-    JournalClubMeeting, JournalClubPaper, NewJournalClubMeeting,
-    NewJournalClubPaper,
-};
+use crate::models::{NewJournalClubMeeting, NewJournalClubPaper};
 use crate::utils::github_org;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -147,95 +138,13 @@ pub async fn refresh_db_journal_club_meetings(github: &Github) {
     }
 }
 
-pub async fn refresh_airtable_journal_club_papers() {
-    // Initialize the Airtable client.
-    let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_MISC);
-
-    let records: Vec<Record<JournalClubPaper>> = airtable
-        .list_records(
-            AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
-            AIRTABLE_GRID_VIEW,
-            vec![],
-        )
-        .await
-        .unwrap();
-
-    let mut airtable_journal_club_papers: BTreeMap<
-        i32,
-        Record<JournalClubPaper>,
-    > = Default::default();
-    for record in records {
-        airtable_journal_club_papers.insert(record.fields.id, record);
-    }
-
-    let meeting_records: Vec<Record<JournalClubMeeting>> = airtable
-        .list_records(
-            AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE,
-            AIRTABLE_GRID_VIEW,
-            vec![],
-        )
-        .await
-        .unwrap();
-
-    let mut airtable_journal_club_meetings: BTreeMap<String, String> =
-        Default::default();
-    for meeting_record in meeting_records {
-        airtable_journal_club_meetings
-            .insert(meeting_record.fields.issue, meeting_record.id.unwrap());
-    }
-
-    // Initialize our database.
-    let db = Database::new();
-    let journal_club_papers = db.get_journal_club_papers();
-
-    let mut updated: i32 = 0;
-    for mut journal_club_paper in journal_club_papers {
-        // Set the link_to_meeting to the right meeting.
-        let meeting_record_id = if let Some(m) =
-            airtable_journal_club_meetings.get(&journal_club_paper.meeting)
-        {
-            m.to_string()
-        } else {
-            "".to_string()
-        };
-        if !meeting_record_id.is_empty() {
-            journal_club_paper.link_to_meeting = vec![meeting_record_id];
-        }
-
-        // See if we have it in our fields.
-        match airtable_journal_club_papers.get(&journal_club_paper.id) {
-            Some(r) => {
-                let mut record = r.clone();
-
-                record.fields = journal_club_paper;
-
-                airtable
-                    .update_records(
-                        AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
-                        vec![record.clone()],
-                    )
-                    .await
-                    .unwrap();
-
-                updated += 1;
-            }
-            None => {
-                // Create the record.
-                journal_club_paper.push_to_airtable().await;
-            }
-        }
-    }
-
-    println!("updated {} journal_club_papers", updated);
-}
-
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
     use crate::journal_clubs::{
         refresh_airtable_journal_club_papers, refresh_db_journal_club_meetings,
     };
-    use crate::models::JournalClubMeetings;
+    use crate::models::{JournalClubMeetings, JournalClubPapers};
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
@@ -258,6 +167,13 @@ mod tests {
 
     #[tokio::test(threaded_scheduler)]
     async fn test_journal_club_papers_airtable() {
-        refresh_airtable_journal_club_papers().await;
+        // Initialize our database.
+        let db = Database::new();
+
+        let journal_club_papers = db.get_journal_club_papers();
+        // Update journal club papers in airtable.
+        JournalClubPapers(journal_club_papers)
+            .update_airtable()
+            .await;
     }
 }
