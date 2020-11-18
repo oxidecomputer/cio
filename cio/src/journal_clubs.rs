@@ -147,66 +147,6 @@ pub async fn refresh_db_journal_club_meetings(github: &Github) {
     }
 }
 
-pub async fn refresh_airtable_journal_club_meetings() {
-    // Initialize the Airtable client.
-    let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_MISC);
-
-    let records: Vec<Record<JournalClubMeeting>> = airtable
-        .list_records(
-            AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE,
-            AIRTABLE_GRID_VIEW,
-            vec![],
-        )
-        .await
-        .unwrap();
-
-    let mut airtable_journal_club_meetings: BTreeMap<
-        i32,
-        Record<JournalClubMeeting>,
-    > = Default::default();
-    for record in records {
-        airtable_journal_club_meetings.insert(record.fields.id, record);
-    }
-
-    // Initialize our database.
-    let db = Database::new();
-    let journal_club_meetings = db.get_journal_club_meetings();
-
-    let mut updated: i32 = 0;
-    for mut journal_club_meeting in journal_club_meetings {
-        // Reset the papers field.
-        journal_club_meeting.papers = Default::default();
-
-        // See if we have it in our fields.
-        match airtable_journal_club_meetings.get(&journal_club_meeting.id) {
-            Some(r) => {
-                let mut record = r.clone();
-
-                // Set the papers fileds.
-                journal_club_meeting.papers = r.fields.papers.clone();
-
-                record.fields = journal_club_meeting;
-
-                airtable
-                    .update_records(
-                        AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE,
-                        vec![record.clone()],
-                    )
-                    .await
-                    .unwrap();
-
-                updated += 1;
-            }
-            None => {
-                // Create the record.
-                journal_club_meeting.push_to_airtable().await;
-            }
-        }
-    }
-
-    println!("updated {} journal_club_meetings", updated);
-}
-
 pub async fn refresh_airtable_journal_club_papers() {
     // Initialize the Airtable client.
     let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_MISC);
@@ -291,10 +231,11 @@ pub async fn refresh_airtable_journal_club_papers() {
 
 #[cfg(test)]
 mod tests {
+    use crate::db::Database;
     use crate::journal_clubs::{
-        refresh_airtable_journal_club_meetings,
         refresh_airtable_journal_club_papers, refresh_db_journal_club_meetings,
     };
+    use crate::models::JournalClubMeetings;
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
@@ -305,7 +246,14 @@ mod tests {
 
     #[tokio::test(threaded_scheduler)]
     async fn test_journal_club_meetings_airtable() {
-        refresh_airtable_journal_club_meetings().await;
+        // Initialize our database.
+        let db = Database::new();
+
+        let journal_club_meetings = db.get_journal_club_meetings();
+        // Update journal club meetings in airtable.
+        JournalClubMeetings(journal_club_meetings)
+            .update_airtable()
+            .await;
     }
 
     #[tokio::test(threaded_scheduler)]

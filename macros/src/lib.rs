@@ -10,8 +10,14 @@ use syn::{Field, ItemStruct};
 #[derive(Deserialize, Debug)]
 struct Metadata {
     new_name: String,
-    table: Option<String>,
-    base_id: Option<String>,
+    #[serde(default)]
+    table: String,
+    #[serde(default)]
+    base_id: String,
+    #[serde(default)]
+    custom_partial_eq: bool,
+    #[serde(default)]
+    airtable_fields: Vec<String>,
 }
 
 #[proc_macro_attribute]
@@ -40,9 +46,10 @@ fn do_db_struct(
     }
 
     let mut airtable = Default::default();
-    if metadata.base_id.is_some() && metadata.table.is_some() {
-        let base_id = format_ident!("{}", metadata.base_id.unwrap());
-        let table = format_ident!("{}", metadata.table.unwrap());
+    if !metadata.base_id.is_empty() && !metadata.table.is_empty() {
+        let base_id = format_ident!("{}", metadata.base_id);
+        let table = format_ident!("{}", metadata.table);
+        let airtable_fields = metadata.airtable_fields;
 
         airtable = quote!(
         impl #new_name {
@@ -73,7 +80,7 @@ fn do_db_struct(
         pub struct #new_name_plural(pub Vec<#new_name>);
         impl #new_name_plural {
             /// Update Airtable records in a table from a vector.
-            async fn update_airtable(&self) {
+            pub async fn update_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
@@ -81,7 +88,7 @@ fn do_db_struct(
                 );
 
                 let result: Vec<airtable_api::Record<#new_name>> = airtable
-                    .list_records(#table, "Grid view", vec![])
+                    .list_records(#table, "Grid view", vec![#(#airtable_fields),*])
                     .await
                     .unwrap();
 
@@ -91,7 +98,7 @@ fn do_db_struct(
                     records.insert(record.fields.id, record);
                 }
 
-                for vec_record in self.0.clone() {
+                for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
@@ -104,6 +111,10 @@ fn do_db_struct(
 
                             // Let's update the Airtable record with the record from the vector.
                             let mut record = r.clone();
+
+                            // Run the custom trait to update the new record from the old record.
+                            vec_record.update_airtable_record(record.fields.clone());
+
                             record.fields = vec_record.clone();
 
                             airtable
@@ -134,6 +145,12 @@ fn do_db_struct(
                     );
     }
 
+    // Does this struct have a custom PartialEq function?
+    let mut partial_eq_text = Default::default();
+    if !metadata.custom_partial_eq {
+        partial_eq_text = quote!(PartialEq,);
+    }
+
     let new_struct = quote!(
         #item
 
@@ -142,7 +159,7 @@ fn do_db_struct(
             Queryable,
             Identifiable,
             Associations,
-            PartialEq,
+            #partial_eq_text
             Clone,
             JsonSchema,
             Deserialize,
@@ -230,7 +247,7 @@ mod tests {
         pub struct DuplicatedItems(pub Vec<DuplicatedItem>);
         impl DuplicatedItems {
             /// Update Airtable records in a table from a vector.
-            async fn update_airtable(&self) {
+            pub async fn update_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
@@ -248,7 +265,7 @@ mod tests {
                     records.insert(record.fields.id, record);
                 }
 
-                for vec_record in self.0.clone() {
+                for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
@@ -261,6 +278,10 @@ mod tests {
 
                             // Let's update the Airtable record with the record from the vector.
                             let mut record = r.clone();
+
+                            // Run the custom trait to update the new record from the old record.
+                            vec_record.update_airtable_record(record.fields.clone());
+
                             record.fields = vec_record.clone();
 
                             airtable

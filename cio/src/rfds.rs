@@ -1,4 +1,3 @@
-use airtable_api::{api_key_from_env, Airtable, Record};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -12,11 +11,8 @@ use google_drive::GoogleDrive;
 use hubcaps::Github;
 use regex::Regex;
 
-use crate::airtable::{
-    AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GRID_VIEW, AIRTABLE_RFD_TABLE,
-};
 use crate::db::Database;
-use crate::models::{NewRFD, RFD};
+use crate::models::NewRFD;
 use crate::utils::{get_gsuite_token, github_org};
 
 /// Get the RFDs from the rfd GitHub repo.
@@ -197,66 +193,6 @@ pub fn get_authors(content: &str, is_markdown: bool) -> String {
     }
 }
 
-pub async fn refresh_airtable_rfds() {
-    // Initialize the Airtable client.
-    let airtable =
-        Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_RACK_ROADMAP);
-
-    let records: Vec<Record<RFD>> = airtable
-        .list_records(AIRTABLE_RFD_TABLE, AIRTABLE_GRID_VIEW, vec![])
-        .await
-        .unwrap();
-
-    let mut airtable_rfds: BTreeMap<i32, Record<RFD>> = Default::default();
-    for record in records {
-        airtable_rfds.insert(record.fields.id, record);
-    }
-
-    // Initialize our database.
-    let db = Database::new();
-    let rfds = db.get_rfds();
-
-    let mut updated: i32 = 0;
-    for mut rfd in rfds {
-        // See if we have it in our fields.
-        match airtable_rfds.get(&rfd.id) {
-            Some(r) => {
-                let mut record = r.clone();
-
-                // Set the Link to People from the original so it stays intact.
-                rfd.milestones = r.fields.milestones.clone();
-                rfd.relevant_components = r.fields.relevant_components.clone();
-                // Airtable can only hold 100,000 chars. IDK which one is that long but LOL
-                // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
-                rfd.content = truncate(&rfd.content, 100000);
-                rfd.html = truncate(&rfd.html, 100000);
-
-                record.fields = rfd;
-
-                airtable
-                    .update_records(AIRTABLE_RFD_TABLE, vec![record.clone()])
-                    .await
-                    .unwrap();
-
-                updated += 1;
-            }
-            None => {
-                // Create the record.
-                rfd.push_to_airtable().await;
-            }
-        }
-    }
-
-    println!("updated {} rfds", updated);
-}
-
-fn truncate(s: &str, max_chars: usize) -> String {
-    match s.char_indices().nth(max_chars) {
-        None => s.to_string(),
-        Some((idx, _)) => s[..idx].to_string(),
-    }
-}
-
 // Sync the rfds with our database.
 pub async fn refresh_db_rfds(github: &Github) {
     let rfds = get_rfds_from_repo(github).await;
@@ -311,9 +247,10 @@ pub async fn refresh_rfd_pdfs(github: &Github) {
 
 #[cfg(test)]
 mod tests {
+    use crate::db::Database;
+    use crate::models::RFDs;
     use crate::rfds::{
-        clean_rfd_html_links, get_authors, refresh_airtable_rfds,
-        refresh_db_rfds, refresh_rfd_pdfs,
+        clean_rfd_html_links, get_authors, refresh_db_rfds, refresh_rfd_pdfs,
     };
     use crate::utils::authenticate_github;
 
@@ -388,7 +325,12 @@ authors: nope"#;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_rfds_airtable() {
-        refresh_airtable_rfds().await;
+        // Initialize our database.
+        let db = Database::new();
+
+        let rfds = db.get_rfds();
+        // Update rfds in airtable.
+        RFDs(rfds).update_airtable().await;
     }
 
     #[tokio::test(threaded_scheduler)]

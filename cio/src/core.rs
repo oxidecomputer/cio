@@ -3,6 +3,11 @@ use chrono::naive::NaiveDate;
 use gusto_api::date_format;
 use serde::{Deserialize, Serialize};
 
+/// Define the trait for doing logic in updating Airtable.
+pub trait UpdateAirtableRecord<T> {
+    fn update_airtable_record(&mut self, _: T);
+}
+
 /// The data type for customer interactions.
 /// This is inline with our Airtable workspace.
 #[derive(Debug, Clone, Deserialize, Serialize)]

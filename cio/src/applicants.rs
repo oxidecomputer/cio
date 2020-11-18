@@ -4,7 +4,6 @@ use std::fs;
 use std::io::{copy, stderr, stdout, Write};
 use std::process::Command;
 
-use airtable_api::{api_key_from_env, Airtable, Record};
 use google_drive::GoogleDrive;
 use html2text::from_read;
 use hubcaps::issues::{IssueListOptions, State};
@@ -13,12 +12,8 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 
-use crate::airtable::{
-    AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
-    AIRTABLE_GRID_VIEW,
-};
 use crate::db::Database;
-use crate::models::{Applicant, NewApplicant};
+use crate::models::NewApplicant;
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
 use crate::utils::{authenticate_github, get_gsuite_token, github_org};
 
@@ -476,57 +471,6 @@ pub async fn email_send_new_applicant_notification(
         .await;
 }
 
-pub async fn refresh_airtable_applicants() {
-    // Initialize the Airtable client.
-    let airtable = Airtable::new(
-        api_key_from_env(),
-        AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
-    );
-
-    let records: Vec<Record<Applicant>> = airtable
-        .list_records(AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_GRID_VIEW, vec![])
-        .await
-        .unwrap();
-
-    let mut airtable_applicants: BTreeMap<i32, Record<Applicant>> =
-        Default::default();
-    for record in records {
-        airtable_applicants.insert(record.fields.id, record);
-    }
-
-    // Initialize our database.
-    let db = Database::new();
-    let applicants = db.get_applicants();
-
-    let mut updated: i32 = 0;
-    for applicant in applicants {
-        // See if we have it in our fields.
-        match airtable_applicants.get(&applicant.id) {
-            Some(r) => {
-                let mut record = r.clone();
-
-                record.fields = applicant;
-
-                airtable
-                    .update_records(
-                        AIRTABLE_APPLICATIONS_TABLE,
-                        vec![record.clone()],
-                    )
-                    .await
-                    .unwrap();
-
-                updated += 1;
-            }
-            None => {
-                // Create the record.
-                applicant.push_to_airtable().await;
-            }
-        }
-    }
-
-    println!("updated {} applicants", updated);
-}
-
 // Sync the applicants with our database.
 pub async fn refresh_db_applicants() {
     let applicants = get_raw_applicants().await;
@@ -542,9 +486,9 @@ pub async fn refresh_db_applicants() {
 
 #[cfg(test)]
 mod tests {
-    use crate::applicants::{
-        refresh_airtable_applicants, refresh_db_applicants,
-    };
+    use crate::applicants::refresh_db_applicants;
+    use crate::db::Database;
+    use crate::models::Applicants;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
@@ -553,6 +497,11 @@ mod tests {
 
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants_airtable() {
-        refresh_airtable_applicants().await;
+        // Initialize our database.
+        let db = Database::new();
+
+        let applicants = db.get_applicants();
+        // Update applicants in airtable.
+        Applicants(applicants).update_airtable().await;
     }
 }

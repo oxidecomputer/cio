@@ -294,87 +294,6 @@ async fn get_auth_users_page(
     resp.json::<Vec<User>>().await.unwrap()
 }
 
-pub async fn refresh_airtable_auth_users() {
-    // Initialize the Airtable client.
-    let airtable =
-        Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
-
-    let records: Vec<Record<AuthUser>> = airtable
-        .list_records(
-            AIRTABLE_AUTH_USERS_TABLE,
-            AIRTABLE_GRID_VIEW,
-            vec![
-                "id",
-                "link_to_people",
-                "logins_count",
-                "updated_at",
-                "created_at",
-                "user_id",
-                "last_login",
-                "email_verified",
-                "link_to_auth_user_logins",
-                "last_application_accessed",
-                "company",
-            ],
-        )
-        .await
-        .unwrap();
-
-    let mut airtable_auth_users: BTreeMap<i32, Record<AuthUser>> =
-        Default::default();
-    for record in records {
-        airtable_auth_users.insert(record.fields.id, record);
-    }
-
-    // Initialize our database.
-    let db = Database::new();
-    let auth_users = db.get_auth_users();
-
-    let mut updated: i32 = 0;
-    for mut auth_user in auth_users {
-        // See if we have it in our fields.
-        match airtable_auth_users.get(&auth_user.id) {
-            Some(r) => {
-                let mut record = r.clone();
-
-                if r.fields.user_id == auth_user.user_id
-                    && r.fields.last_login == auth_user.last_login
-                    && r.fields.logins_count == auth_user.logins_count
-                    && r.fields.last_application_accessed
-                        == auth_user.last_application_accessed
-                    && r.fields.company == auth_user.company
-                {
-                    // We do not need to update the record.
-                    continue;
-                }
-
-                // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
-                auth_user.link_to_people = r.fields.link_to_people.clone();
-                auth_user.link_to_auth_user_logins =
-                    r.fields.link_to_auth_user_logins.clone();
-
-                record.fields = auth_user;
-
-                airtable
-                    .update_records(
-                        AIRTABLE_AUTH_USERS_TABLE,
-                        vec![record.clone()],
-                    )
-                    .await
-                    .unwrap();
-
-                updated += 1;
-            }
-            None => {
-                // Create the record.
-                auth_user.push_to_airtable().await;
-            }
-        }
-    }
-
-    println!("updated {} auth_users", updated);
-}
-
 pub async fn refresh_airtable_auth_user_logins() {
     // Initialize the Airtable client.
     let airtable =
@@ -495,9 +414,10 @@ pub async fn refresh_db_auth() {
 #[cfg(test)]
 mod tests {
     use crate::auth_logins::{
-        refresh_airtable_auth_user_logins, refresh_airtable_auth_users,
-        refresh_db_auth,
+        refresh_airtable_auth_user_logins, refresh_db_auth,
     };
+    use crate::db::Database;
+    use crate::models::AuthUsers;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_auth_refresh_db() {
@@ -506,7 +426,12 @@ mod tests {
 
     #[tokio::test(threaded_scheduler)]
     async fn test_auth_users_airtable() {
-        refresh_airtable_auth_users().await;
+        // Initialize our database.
+        let db = Database::new();
+
+        let auth_users = db.get_auth_users();
+        // Update auth users in airtable.
+        AuthUsers(auth_users).update_airtable().await;
     }
 
     #[tokio::test(threaded_scheduler)]

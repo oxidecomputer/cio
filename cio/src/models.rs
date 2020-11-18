@@ -23,11 +23,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
 
-use crate::utils::{
-    check_if_github_issue_exists, create_or_update_file_in_github_repo,
-    github_org,
-};
-
 use crate::airtable::{
     AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
     AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
@@ -39,6 +34,7 @@ use crate::airtable::{
 use crate::applicants::{
     email_send_received_application, get_file_contents, ApplicantSheetColumns,
 };
+use crate::core::UpdateAirtableRecord;
 use crate::rfds::{
     clean_rfd_html_links, get_authors, get_rfd_contents_from_repo,
     parse_asciidoc, parse_markdown,
@@ -51,6 +47,10 @@ use crate::schema::{
 use crate::slack::{
     FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType,
     MessageType,
+};
+use crate::utils::{
+    check_if_github_issue_exists, create_or_update_file_in_github_repo,
+    github_org,
 };
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
@@ -1142,11 +1142,30 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     Default::default()
 }
 
+/// Implement updating the Airtable record for an Applicant.
+impl UpdateAirtableRecord<Applicant> for Applicant {
+    fn update_airtable_record(&mut self, _record: Applicant) {}
+}
+
 /// The data type for an NewAuthUser.
 #[db_struct {
     new_name = "AuthUser",
     base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
     table = "AIRTABLE_AUTH_USERS_TABLE",
+    custom_partial_eq = true,
+    airtable_fields = [
+        "id",
+        "link_to_people",
+        "logins_count",
+        "updated_at",
+        "created_at",
+        "user_id",
+        "last_login",
+        "email_verified",
+        "link_to_auth_user_logins",
+        "last_application_accessed",
+        "company",
+    ],
 }]
 #[serde(rename_all = "camelCase")]
 #[derive(
@@ -1199,6 +1218,26 @@ pub struct NewAuthUser {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_auth_user_logins: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a AuthUser.
+impl UpdateAirtableRecord<AuthUser> for AuthUser {
+    fn update_airtable_record(&mut self, record: AuthUser) {
+        // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
+        self.link_to_people = record.link_to_people.clone();
+        self.link_to_auth_user_logins = record.link_to_auth_user_logins.clone();
+    }
+}
+
+impl PartialEq for AuthUser {
+    // We implement our own here because Airtable has a different data type for the picture.
+    fn eq(&self, other: &Self) -> bool {
+        self.user_id == other.user_id
+            && self.last_login == other.last_login
+            && self.logins_count == other.logins_count
+            && self.last_application_accessed == other.last_application_accessed
+            && self.company == other.company
+    }
 }
 
 /// The data type for a NewAuthUserLogin.
@@ -1258,7 +1297,12 @@ pub struct NewAuthUserLogin {
     pub link_to_auth_user: Vec<String>,
 }
 
-// TODO: figure out the meeting date bullshit
+/// Implement updating the Airtable record for a AuthUserLogin.
+impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
+    fn update_airtable_record(&mut self, _record: AuthUserLogin) {}
+}
+
+// TODO: figure out the meeting null date bullshit
 /// The data type for a NewJournalClubMeeting.
 #[db_struct {
     new_name = "JournalClubMeeting",
@@ -1366,6 +1410,14 @@ impl JournalClubMeeting {
     }
 }
 
+/// Implement updating the Airtable record for a JournalClubMeeting.
+impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
+    fn update_airtable_record(&mut self, record: JournalClubMeeting) {
+        // Set the papers field, since it is pre-populated as table links.
+        self.papers = record.papers.clone();
+    }
+}
+
 /// The data type for a NewJournalClubPaper.
 #[db_struct {
     new_name = "JournalClubPaper",
@@ -1385,6 +1437,11 @@ pub struct NewJournalClubPaper {
     pub meeting: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_meeting: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a JournalClubPaper.
+impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
+    fn update_airtable_record(&mut self, _record: JournalClubPaper) {}
 }
 
 /// The data type for a MailingListSubscriber.
@@ -1568,6 +1625,11 @@ impl Default for NewMailingListSubscriber {
             link_to_people: Default::default(),
         }
     }
+}
+
+/// Implement updating the Airtable record for a MailingListSubscriber.
+impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
+    fn update_airtable_record(&mut self, _record: MailingListSubscriber) {}
 }
 
 /// The data type for a GitHub user.
@@ -2070,5 +2132,25 @@ impl RFD {
         if path.exists() && !path.is_dir() {
             fs::remove_file(path).unwrap();
         }
+    }
+}
+
+/// Implement updating the Airtable record for an RFD.
+impl UpdateAirtableRecord<RFD> for RFD {
+    fn update_airtable_record(&mut self, record: RFD) {
+        // Set the Link to People from the original so it stays intact.
+        self.milestones = record.milestones.clone();
+        self.relevant_components = record.relevant_components.clone();
+        // Airtable can only hold 100,000 chars. IDK which one is that long but LOL
+        // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
+        self.content = truncate(&self.content, 100000);
+        self.html = truncate(&self.html, 100000);
+    }
+}
+
+fn truncate(s: &str, max_chars: usize) -> String {
+    match s.char_indices().nth(max_chars) {
+        None => s.to_string(),
+        Some((idx, _)) => s[..idx].to_string(),
     }
 }

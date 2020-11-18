@@ -15,6 +15,7 @@ use crate::airtable::{
     AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE,
     AIRTABLE_GROUPS_TABLE,
 };
+use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{
     buildings, conference_rooms, github_labels, groups, links, users,
@@ -203,6 +204,11 @@ impl UserConfig {
     }
 }
 
+/// Implement updating the Airtable record for a User.
+impl UpdateAirtableRecord<User> for User {
+    fn update_airtable_record(&mut self, _record: User) {}
+}
+
 /// The data type for a group. This applies to Google Groups.
 #[db_struct {
     new_name = "Group",
@@ -350,6 +356,11 @@ impl GroupConfig {
     }
 }
 
+/// Implement updating the Airtable record for a Group.
+impl UpdateAirtableRecord<Group> for Group {
+    fn update_airtable_record(&mut self, _record: Group) {}
+}
+
 /// The data type for a building.
 #[db_struct {
     new_name = "Building",
@@ -394,6 +405,11 @@ impl BuildingConfig {
     }
 }
 
+/// Implement updating the Airtable record for a Building.
+impl UpdateAirtableRecord<Building> for Building {
+    fn update_airtable_record(&mut self, _record: Building) {}
+}
+
 /// The data type for a resource. These are conference rooms that people can book
 /// through GSuite or Zoom.
 #[db_struct {
@@ -422,6 +438,11 @@ pub struct ResourceConfig {
     pub capacity: i32,
     pub floor: String,
     pub section: String,
+}
+
+/// Implement updating the Airtable record for a ConferenceRoom.
+impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
+    fn update_airtable_record(&mut self, _record: ConferenceRoom) {}
 }
 
 /// The data type for a link. These get turned into short links like
