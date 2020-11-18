@@ -9,7 +9,7 @@ repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/gsuite-api"
 
 [dependencies]
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 cio-api = { path = "../cio" }
 rand = "0.7"
 reqwest = { version = "0.10", features = ["json"] }

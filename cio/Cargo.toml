@@ -11,7 +11,7 @@ documentation = "https://docs.rs/cio-api"
 [dependencies]
 #airtable-api = "^0.1.0"
 airtable-api = { path = "../airtable" }
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 clap = {version = "2", features = ["yaml"]}
 csv = "1.1"
