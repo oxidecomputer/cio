@@ -184,7 +184,7 @@ impl GSuite {
         // Try to deserialize the response.
         let value: Groups = resp.json().await.unwrap();
 
-        Ok(value.groups.unwrap())
+        Ok(value.groups)
     }
 
     /// Get the settings for a Google group.
@@ -222,7 +222,7 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            &format!("groups/{}", group.id.as_ref().unwrap()),
+            &format!("groups/{}", group.id),
             group,
             None,
         );
@@ -250,7 +250,7 @@ impl GSuite {
         let request = self.request(
             GROUPS_SETTINGS_ENDPOINT,
             Method::PUT,
-            settings.email.as_ref().unwrap(),
+            &settings.email,
             settings,
             Some(&[("alt", "json")]),
         );
@@ -375,7 +375,7 @@ impl GSuite {
         // Try to deserialize the response.
         let value: MembersHasMember = resp.json().await.unwrap();
 
-        Ok(value.is_member.unwrap())
+        Ok(value.is_member)
     }
 
     /// Update a member of a Google group.
@@ -386,9 +386,9 @@ impl GSuite {
         role: &str,
     ) -> Result<(), APIError> {
         let mut member: Member = Default::default();
-        member.role = Some(role.to_string());
-        member.email = Some(email.to_string());
-        member.delivery_settings = Some("ALL_MAIL".to_string());
+        member.role = role.to_string();
+        member.email = email.to_string();
+        member.delivery_settings = "ALL_MAIL".to_string();
 
         // Build the request.
         let request = self.request(
@@ -421,9 +421,9 @@ impl GSuite {
         role: &str,
     ) -> Result<(), APIError> {
         let mut member: Member = Default::default();
-        member.role = Some(role.to_string());
-        member.email = Some(email.to_string());
-        member.delivery_settings = Some("ALL_MAIL".to_string());
+        member.role = role.to_string();
+        member.email = email.to_string();
+        member.delivery_settings = "ALL_MAIL".to_string();
 
         // Build the request.
         let request = self.request(
@@ -633,7 +633,7 @@ impl GSuite {
         // Try to deserialize the response.
         let value: CalendarResources = resp.json().await.unwrap();
 
-        Ok(value.items.unwrap())
+        Ok(value.items)
     }
 
     /// Update a calendar resource.
@@ -720,7 +720,7 @@ impl GSuite {
         // Try to deserialize the response.
         let value: Buildings = resp.json().await.unwrap();
 
-        Ok(value.buildings.unwrap())
+        Ok(value.buildings)
     }
 
     /// Update a building.
@@ -828,35 +828,43 @@ pub fn generate_password() -> String {
 /// A Google group.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Group {
-    /// List of non editable aliases (Read-only)
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "nonEditableAliases"
-    )]
-    pub non_editable_aliases: Option<Vec<String>>,
-    /// Kind of resource this is.
-    pub kind: Option<String>,
-    /// Description of the group
-    pub description: Option<String>,
-    /// Is the group created by admin (Read-only) *
+    /// Was the group created by admin (read-only)
     #[serde(skip_serializing_if = "Option::is_none", rename = "adminCreated")]
     pub admin_created: Option<bool>,
+    /// List of aliases (read-only)
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub aliases: Vec<String>,
+    /// Description of the group
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
     /// Group direct members count
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "directMembersCount"
     )]
-    pub direct_members_count: Option<String>,
-    /// Email of Group
-    pub email: Option<String>,
-    /// ETag of the resource.
-    pub etag: Option<String>,
-    /// List of aliases (Read-only)
-    pub aliases: Option<Vec<String>>,
-    /// Unique identifier of Group (Read-only)
-    pub id: Option<String>,
+    pub direct_members_count: Option<isize>,
+    /// Email of group
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    /// ETag of the resource
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// Unique identifier of group (read-only)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    /// Kind of resource this is
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// Group name
-    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    /// List of non editable aliases (Read-only)
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "nonEditableAliases"
+    )]
+    pub non_editable_aliases: Vec<String>,
 }
 
 /// A Google group's settings.
@@ -864,392 +872,499 @@ pub struct Group {
 pub struct GroupSettings {
     /// Permission to ban users. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanBanUsers"
     )]
-    pub who_can_ban_users: Option<String>,
+    pub who_can_ban_users: String,
     /// Permission for content assistants. Possible values are: Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanAssistContent"
     )]
-    pub who_can_assist_content: Option<String>,
+    pub who_can_assist_content: String,
     /// Are external members allowed to join the group.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "allowExternalMembers"
     )]
-    pub allow_external_members: Option<String>,
+    pub allow_external_members: String,
     /// Permission to enter free form tags for topics in a forum. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanEnterFreeFormTags"
     )]
-    pub who_can_enter_free_form_tags: Option<String>,
+    pub who_can_enter_free_form_tags: String,
     /// Permission to approve pending messages in the moderation queue. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanApproveMessages"
     )]
-    pub who_can_approve_messages: Option<String>,
+    pub who_can_approve_messages: String,
     /// Permission to mark a topic as a duplicate of another topic. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanMarkDuplicate"
     )]
-    pub who_can_mark_duplicate: Option<String>,
+    pub who_can_mark_duplicate: String,
     /// Permissions to join the group. Possible values are: ANYONE_CAN_JOIN ALL_IN_DOMAIN_CAN_JOIN INVITED_CAN_JOIN CAN_REQUEST_TO_JOIN
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanJoin")]
-    pub who_can_join: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanJoin"
+    )]
+    pub who_can_join: String,
     /// Permission to change tags and categories. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanModifyTagsAndCategories"
     )]
-    pub who_can_modify_tags_and_categories: Option<String>,
+    pub who_can_modify_tags_and_categories: String,
     /// Permission to mark a topic as not needing a response. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanMarkNoResponseNeeded"
     )]
-    pub who_can_mark_no_response_needed: Option<String>,
+    pub who_can_mark_no_response_needed: String,
     /// Permission to unmark any post from a favorite reply. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanUnmarkFavoriteReplyOnAnyTopic"
     )]
-    pub who_can_unmark_favorite_reply_on_any_topic: Option<String>,
+    pub who_can_unmark_favorite_reply_on_any_topic: String,
     /// Permission for content moderation. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanModerateContent"
     )]
-    pub who_can_moderate_content: Option<String>,
+    pub who_can_moderate_content: String,
     /// Primary language for the group.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "primaryLanguage"
     )]
-    pub primary_language: Option<String>,
+    pub primary_language: String,
     /// Permission to mark a post for a topic they started as a favorite reply. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanMarkFavoriteReplyOnOwnTopic"
     )]
-    pub who_can_mark_favorite_reply_on_own_topic: Option<String>,
+    pub who_can_mark_favorite_reply_on_own_topic: String,
     /// Permissions to view membership. Possible values are: ALL_IN_DOMAIN_CAN_VIEW ALL_MEMBERS_CAN_VIEW ALL_MANAGERS_CAN_VIEW ALL_OWNERS_CAN_VIEW
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanViewMembership"
     )]
-    pub who_can_view_membership: Option<String>,
+    pub who_can_view_membership: String,
     /// If favorite replies should be displayed above other replies.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "favoriteRepliesOnTop"
     )]
-    pub favorite_replies_on_top: Option<String>,
+    pub favorite_replies_on_top: String,
     /// Permission to mark any other user's post as a favorite reply. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanMarkFavoriteReplyOnAnyTopic"
     )]
-    pub who_can_mark_favorite_reply_on_any_topic: Option<String>,
+    pub who_can_mark_favorite_reply_on_any_topic: String,
     /// Whether to include custom footer.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "includeCustomFooter"
     )]
-    pub include_custom_footer: Option<String>,
+    pub include_custom_footer: String,
     /// Permission to move topics out of the group or forum. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanMoveTopicsOut"
     )]
-    pub who_can_move_topics_out: Option<String>,
+    pub who_can_move_topics_out: String,
     /// Default message deny notification message
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "defaultMessageDenyNotificationText"
     )]
-    pub default_message_deny_notification_text: Option<String>,
+    pub default_message_deny_notification_text: String,
     /// If this groups should be included in global address list or not.
     #[serde(
         default,
         rename = "includeInGlobalAddressList",
-        skip_serializing_if = "Option::is_none"
+        skip_serializing_if = "String::is_empty"
     )]
-    pub include_in_global_address_list: Option<String>,
+    pub include_in_global_address_list: String,
     /// If the group is archive only
-    #[serde(skip_serializing_if = "Option::is_none", rename = "archiveOnly")]
-    pub archive_only: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "archiveOnly"
+    )]
+    pub archive_only: String,
     /// Permission to delete topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanDeleteTopics"
     )]
-    pub who_can_delete_topics: Option<String>,
+    pub who_can_delete_topics: String,
     /// Permission to delete replies to topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanDeleteAnyPost"
     )]
-    pub who_can_delete_any_post: Option<String>,
+    pub who_can_delete_any_post: String,
     /// If the contents of the group are archived.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isArchived")]
-    pub is_archived: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "isArchived"
+    )]
+    pub is_archived: String,
     /// Can members post using the group email address.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "membersCanPostAsTheGroup"
     )]
-    pub members_can_post_as_the_group: Option<String>,
+    pub members_can_post_as_the_group: String,
     /// Permission to make topics appear at the top of the topic list. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanMakeTopicsSticky"
     )]
-    pub who_can_make_topics_sticky: Option<String>,
+    pub who_can_make_topics_sticky: String,
     /// If any of the settings that will be merged have custom roles which is anything other than owners, managers, or group scopes.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "customRolesEnabledForSettingsToBeMerged"
     )]
-    pub custom_roles_enabled_for_settings_to_be_merged: Option<String>,
+    pub custom_roles_enabled_for_settings_to_be_merged: String,
     /// Email id of the group
-    pub email: Option<String>,
+    pub email: String,
     /// Permission for who can discover the group. Possible values are: ALL_MEMBERS_CAN_DISCOVER ALL_IN_DOMAIN_CAN_DISCOVER ANYONE_CAN_DISCOVER
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanDiscoverGroup"
     )]
-    pub who_can_discover_group: Option<String>,
+    pub who_can_discover_group: String,
     /// Permission to modify members (change member roles). Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanModifyMembers"
     )]
-    pub who_can_modify_members: Option<String>,
+    pub who_can_modify_members: String,
     /// Moderation level for messages. Possible values are: MODERATE_ALL_MESSAGES MODERATE_NON_MEMBERS MODERATE_NEW_MEMBERS MODERATE_NONE
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "messageModerationLevel"
     )]
-    pub message_moderation_level: Option<String>,
+    pub message_moderation_level: String,
     /// Description of the group
-    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
     /// Permission to unassign any topic in a forum. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanUnassignTopic"
     )]
-    pub who_can_unassign_topic: Option<String>,
+    pub who_can_unassign_topic: String,
     /// Whome should the default reply to a message go to. Possible values are: REPLY_TO_CUSTOM REPLY_TO_SENDER REPLY_TO_LIST REPLY_TO_OWNER REPLY_TO_IGNORE REPLY_TO_MANAGERS
-    #[serde(skip_serializing_if = "Option::is_none", rename = "replyTo")]
-    pub reply_to: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "replyTo"
+    )]
+    pub reply_to: String,
     /// Default email to which reply to any message should go.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "customReplyTo")]
-    pub custom_reply_to: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customReplyTo"
+    )]
+    pub custom_reply_to: String,
     /// Should the member be notified if his message is denied by owner.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "sendMessageDenyNotification"
     )]
-    pub send_message_deny_notification: Option<String>,
+    pub send_message_deny_notification: String,
     /// If a primary Collab Inbox feature is enabled.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "enableCollaborativeInbox"
     )]
-    pub enable_collaborative_inbox: Option<String>,
+    pub enable_collaborative_inbox: String,
     /// Permission to contact owner of the group via web UI. Possible values are: ANYONE_CAN_CONTACT ALL_IN_DOMAIN_CAN_CONTACT ALL_MEMBERS_CAN_CONTACT ALL_MANAGERS_CAN_CONTACT
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanContactOwner"
     )]
-    pub who_can_contact_owner: Option<String>,
+    pub who_can_contact_owner: String,
     /// Default message display font. Possible values are: DEFAULT_FONT FIXED_WIDTH_FONT
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "messageDisplayFont"
     )]
-    pub message_display_font: Option<String>,
+    pub message_display_font: String,
     /// Permission to leave the group. Possible values are: ALL_MANAGERS_CAN_LEAVE ALL_OWNERS_CAN_LEAVE ALL_MEMBERS_CAN_LEAVE NONE_CAN_LEAVE
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanLeaveGroup"
     )]
-    pub who_can_leave_group: Option<String>,
+    pub who_can_leave_group: String,
     /// Permissions to add members. Possible values are: ALL_MANAGERS_CAN_ADD ALL_OWNERS_CAN_ADD ALL_MEMBERS_CAN_ADD NONE_CAN_ADD
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanAdd")]
-    pub who_can_add: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanAdd"
+    )]
+    pub who_can_add: String,
     /// Permissions to post messages to the group. Possible values are: NONE_CAN_POST ALL_MANAGERS_CAN_POST ALL_MEMBERS_CAN_POST ALL_OWNERS_CAN_POST ALL_IN_DOMAIN_CAN_POST ANYONE_CAN_POST
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanPostMessage"
     )]
-    pub who_can_post_message: Option<String>,
+    pub who_can_post_message: String,
     /// Permission to move topics into the group or forum. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanMoveTopicsIn"
     )]
-    pub who_can_move_topics_in: Option<String>,
+    pub who_can_move_topics_in: String,
     /// Permission to take topics in a forum. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanTakeTopics"
     )]
-    pub who_can_take_topics: Option<String>,
-    /// Name of the Group
-    pub name: Option<String>,
+    pub who_can_take_topics: String,
+    /// Name of the group
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
     /// The type of the resource.
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// Maximum message size allowed.
     #[serde(
+        default,
         skip_serializing_if = "Option::is_none",
         rename = "maxMessageBytes"
     )]
     pub max_message_bytes: Option<i32>,
     /// Permissions to invite members. Possible values are: ALL_MEMBERS_CAN_INVITE ALL_MANAGERS_CAN_INVITE ALL_OWNERS_CAN_INVITE NONE_CAN_INVITE
-    #[serde(skip_serializing_if = "Option::is_none", rename = "whoCanInvite")]
-    pub who_can_invite: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanInvite"
+    )]
+    pub who_can_invite: String,
     /// Permission to approve members. Possible values are: ALL_OWNERS_CAN_APPROVE ALL_MANAGERS_CAN_APPROVE ALL_MEMBERS_CAN_APPROVE NONE_CAN_APPROVE
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanApproveMembers"
     )]
-    pub who_can_approve_members: Option<String>,
+    pub who_can_approve_members: String,
     /// Moderation level for messages detected as spam. Possible values are: ALLOW MODERATE SILENTLY_MODERATE REJECT
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "spamModerationLevel"
     )]
-    pub spam_moderation_level: Option<String>,
+    pub spam_moderation_level: String,
     /// If posting from web is allowed.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "allowWebPosting"
     )]
-    pub allow_web_posting: Option<String>,
+    pub allow_web_posting: String,
     /// Permission for membership moderation. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanModerateMembers"
     )]
-    pub who_can_moderate_members: Option<String>,
+    pub who_can_moderate_members: String,
     /// Permission to add references to a topic. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanAddReferences"
     )]
-    pub who_can_add_references: Option<String>,
+    pub who_can_add_references: String,
     /// Permissions to view group. Possible values are: ANYONE_CAN_VIEW ALL_IN_DOMAIN_CAN_VIEW ALL_MEMBERS_CAN_VIEW ALL_MANAGERS_CAN_VIEW ALL_OWNERS_CAN_VIEW
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanViewGroup"
     )]
-    pub who_can_view_group: Option<String>,
+    pub who_can_view_group: String,
     /// Is the group listed in groups directory
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "showInGroupGSuite"
     )]
-    pub show_in_group_directory: Option<String>,
+    pub show_in_group_directory: String,
     /// Permission to post announcements, a special topic type. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanPostAnnouncements"
     )]
-    pub who_can_post_announcements: Option<String>,
+    pub who_can_post_announcements: String,
     /// Permission to lock topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanLockTopics"
     )]
-    pub who_can_lock_topics: Option<String>,
+    pub who_can_lock_topics: String,
     /// Permission to assign topics in a forum to another user. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanAssignTopics"
     )]
-    pub who_can_assign_topics: Option<String>,
+    pub who_can_assign_topics: String,
     /// Custom footer text.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "customFooterText"
     )]
-    pub custom_footer_text: Option<String>,
+    pub custom_footer_text: String,
     /// Is google allowed to contact admins.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "allowGoogleCommunication"
     )]
-    pub allow_google_communication: Option<String>,
+    pub allow_google_communication: String,
     /// Permission to hide posts by reporting them as abuse. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "whoCanHideAbuse"
     )]
-    pub who_can_hide_abuse: Option<String>,
+    pub who_can_hide_abuse: String,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Groups {
     /// Token used to access next page of this result.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "nextPageToken")]
-    pub next_page_token: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
+    pub next_page_token: String,
     /// Kind of resource this is.
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// ETag of the resource.
-    pub etag: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// Event that triggered this response (only used in case of Push Response)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_event: String,
     /// List of group objects.
-    pub groups: Option<Vec<Group>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub groups: Vec<Group>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct MembersHasMember {
     /// Identifies whether the given user is a member of the group. Membership can be direct or nested.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isMember")]
-    pub is_member: Option<bool>,
+    #[serde(default, rename = "isMember")]
+    pub is_member: bool,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Members {
     /// Token used to access next page of this result.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "nextPageToken")]
-    pub next_page_token: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
+    pub next_page_token: String,
     /// Kind of resource this is.
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// ETag of the resource.
-    pub etag: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// Event that triggered this response (only used in case of Push Response)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_event: String,
     /// List of member objects.
-    pub members: Option<Vec<Member>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<Member>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Member {
-    /// Status of member (Immutable)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
+    /// Status of member (immutable)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
     /// Kind of resource this is.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// Delivery settings of member
-    pub delivery_settings: Option<String>,
-    /// Email of member (Read-only)
-    pub email: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub delivery_settings: String,
+    /// Email of member (read-only)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
     /// ETag of the resource.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub etag: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
     /// Role of member
-    pub role: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub role: String,
     /// Type of member (Immutable)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "type")]
-    pub type_: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "type"
+    )]
+    pub typev: String,
     /// Unique identifier of customer member (Read-only) Unique identifier of group (Read-only) Unique identifier of member (Read-only)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
 }
 
 /// A user.
@@ -2144,61 +2259,96 @@ struct Users {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CalendarResource {
     /// The type of the resource. For calendar resources, the value is admin#directory#resources#calendars#CalendarResource.
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// Capacity of a resource, number of seats in a room.
     pub capacity: Option<i32>,
     /// The type of the calendar resource, intended for non-room resources.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "resourceType")]
-    pub typev: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "resourceType"
+    )]
+    pub typev: String,
     /// Description of the resource, visible only to admins.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "resourceDescription"
     )]
-    pub description: Option<String>,
+    pub description: String,
     /// The read-only auto-generated name of the calendar resource which includes metadata about the resource such as building name, floor, capacity, etc. For example, "NYC-2-Training Room 1A (16)".
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "generatedResourceName"
     )]
-    pub generated_resource_name: Option<String>,
+    pub generated_resource_name: String,
     /// ETag of the resource.
-    pub etags: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etags: String,
     /// The category of the calendar resource. Either CONFERENCE_ROOM or OTHER. Legacy data is set to CATEGORY_UNKNOWN.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "resourceCategory"
     )]
-    pub category: Option<String>,
+    pub category: String,
     /// The read-only email for the calendar resource. Generated as part of creating a new calendar resource.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "resourceEmail")]
-    pub email: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "resourceEmail"
+    )]
+    pub email: String,
     /// The name of the calendar resource. For example, "Training Room 1A".
-    #[serde(rename = "resourceName")]
+    #[serde(
+        rename = "resourceName",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub name: String,
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "Vec::is_empty",
         rename = "featureInstances"
     )]
-    pub feature_instances: Option<Vec<CalendarFeatures>>,
+    pub feature_instances: Vec<CalendarFeatures>,
     /// Name of the section within a floor a resource is located in.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "floorSection")]
-    pub floor_section: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorSection"
+    )]
+    pub floor_section: String,
     /// The unique ID for the calendar resource.
-    #[serde(rename = "resourceId")]
+    #[serde(
+        default,
+        rename = "resourceId",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub id: String,
     /// Unique ID for the building a resource is located in.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "buildingId")]
-    pub building_id: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "buildingId"
+    )]
+    pub building_id: String,
     /// Name of the floor a resource is located on.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "floorName")]
-    pub floor_name: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorName"
+    )]
+    pub floor_name: String,
     /// Description of the resource, visible to users and admins.
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "userVisibleDescription"
     )]
-    pub user_visible_description: Option<String>,
+    pub user_visible_description: String,
 }
 
 impl CalendarResource {
@@ -2211,15 +2361,15 @@ impl CalendarResource {
         // TODO(cbiffle): the consume-and-return self pattern here complicates
         // things; use &mut self
         self.id = id.to_string();
-        self.typev = Some(resource.typev.clone());
-        self.name = resource.name.clone();
-        self.building_id = Some(resource.building.clone());
-        self.description = Some(resource.description.clone());
-        self.user_visible_description = Some(resource.description.clone());
+        self.typev = resource.typev.to_string();
+        self.name = resource.name.to_string();
+        self.building_id = resource.building.to_string();
+        self.description = resource.description.to_string();
+        self.user_visible_description = resource.description.to_string();
         self.capacity = Some(resource.capacity);
-        self.floor_name = Some(resource.floor.clone());
-        self.floor_section = Some(resource.section.clone());
-        self.category = Some("CONFERENCE_ROOM".to_string());
+        self.floor_name = resource.floor.to_string();
+        self.floor_section = resource.section.to_string();
+        self.category = "CONFERENCE_ROOM".to_string();
 
         self
     }
@@ -2227,26 +2377,39 @@ impl CalendarResource {
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct CalendarResources {
-    /// The continuation token, used to page through large result sets. Provide this value in a subsequent request to return the next page of results.
-    #[serde(rename = "nextPageToken")]
-    pub next_page_token: Option<String>,
-    /// The CalendarResources in this page of results.
-    pub items: Option<Vec<CalendarResource>>,
-    /// Identifies this as a collection of CalendarResources. This is always admin#directory#resources#calendars#calendarResourcesList.
-    pub kind: Option<String>,
+    /// Token used to access next page of this result.
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
+    pub next_page_token: String,
+    /// Kind of resource this is.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// ETag of the resource.
-    pub etag: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// Event that triggered this response (only used in case of Push Response)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_event: String,
+    /// List of calendar resource objects.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<CalendarResource>,
 }
 
 /// A feature of a calendar.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CalendarFeature {
     /// The continuation token, used to page through large result sets. Provide this value in a subsequent request to return the next page of results.
-    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
     /// Identifies this as a collection of CalendarFeatures. This is always admin#directory#resources#calendars#calendarFeaturesList.
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// ETag of the resource.
-    pub etags: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etags: String,
 }
 
 /// A calendar's features.
@@ -2259,24 +2422,40 @@ pub struct CalendarFeatures {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Building {
     /// Kind of resource this is.
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
     /// The building name as seen by users in Calendar. Must be unique for the customer. For example, "NYC-CHEL". The maximum length is 100 characters.
-    #[serde(rename = "buildingName")]
+    #[serde(
+        rename = "buildingName",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub name: String,
     /// The geographic coordinates of the center of the building, expressed as latitude and longitude in decimal degrees.
     pub coordinates: Option<BuildingCoordinates>,
     /// ETag of the resource.
-    pub etags: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etags: String,
     /// The postal address of the building. See PostalAddress for details. Note that only a single address line and region code are required.
-    pub address: Option<BuildingAddress>,
+    #[serde(default)]
+    pub address: BuildingAddress,
     /// The display names for all floors in this building. The floors are expected to be sorted in ascending order, from lowest floor to highest floor. For example, ["B2", "B1", "L", "1", "2", "2M", "3", "PH"] Must contain at least one entry.
-    #[serde(rename = "floorNames")]
-    pub floor_names: Option<Vec<String>>,
+    #[serde(
+        rename = "floorNames",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub floor_names: Vec<String>,
     /// Unique identifier for the building. The maximum length is 100 characters.
-    #[serde(rename = "buildingId")]
+    #[serde(
+        rename = "buildingId",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub id: String,
     /// A brief description of the building. For example, "Chelsea Market".
-    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
 }
 
 impl Building {
@@ -2284,18 +2463,18 @@ impl Building {
     pub fn update(mut self, building: &BuildingConfig, id: &str) -> Building {
         // TOOD(cbiffle): use &mut self instead of consume-and-return
         self.id = id.to_string();
-        self.name = building.name.clone();
-        self.description = Some(building.description.clone());
-        self.address = Some(BuildingAddress {
-            address_lines: Some(vec![building.address.clone()]),
-            locality: Some(building.city.clone()),
-            administrative_area: Some(building.state.clone()),
-            postal_code: Some(building.zipcode.clone()),
-            region_code: Some(building.country.clone()),
-            language_code: Some("en".to_string()),
-            sublocality: None,
-        });
-        self.floor_names = Some(building.floors.clone());
+        self.name = building.name.to_string();
+        self.description = building.description.to_string();
+        self.address = BuildingAddress {
+            address_lines: vec![building.address.to_string()],
+            locality: building.city.to_string(),
+            administrative_area: building.state.to_string(),
+            postal_code: building.zipcode.to_string(),
+            region_code: building.country.to_string(),
+            language_code: "en".to_string(),
+            sublocality: "".to_string(),
+        };
+        self.floor_names = building.floors.clone();
 
         self
     }
@@ -2303,46 +2482,80 @@ impl Building {
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Buildings {
-    /// The continuation token, used to page through large result sets. Provide this value in a subsequent request to return the next page of results.
-    #[serde(rename = "nextPageToken")]
-    pub next_page_token: Option<String>,
-    /// The Buildings in this page of results.
-    pub buildings: Option<Vec<Building>>,
-    /// ETag of the resource.
-    pub etag: Option<String>,
+    /// Token used to access next page of this result.
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
+    pub next_page_token: String,
     /// Kind of resource this is.
-    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    /// ETag of the resource.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// Event that triggered this response (only used in case of Push Response)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_event: String,
+    /// List of building objects.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<Building>,
 }
 
 /// A building's coordinates.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct BuildingCoordinates {
     /// Latitude in decimal degrees.
-    pub latitude: Option<f64>,
+    #[serde(default)]
+    pub latitude: f64,
     /// Longitude in decimal degrees.
-    pub longitude: Option<f64>,
+    #[serde(default)]
+    pub longitude: f64,
 }
 
 /// A building's address.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct BuildingAddress {
     /// Optional. BCP-47 language code of the contents of this address (if known).
-    #[serde(rename = "languageCode")]
-    pub language_code: Option<String>,
+    #[serde(
+        rename = "languageCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub language_code: String,
     /// Optional. Highest administrative subdivision which is used for postal addresses of a country or region.
-    #[serde(rename = "administrativeArea")]
-    pub administrative_area: Option<String>,
+    #[serde(
+        rename = "administrativeArea",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub administrative_area: String,
     /// Required. CLDR region code of the country/region of the address.
-    #[serde(rename = "regionCode")]
-    pub region_code: Option<String>,
+    #[serde(
+        rename = "regionCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub region_code: String,
     /// Optional. Generally refers to the city/town portion of the address. Examples: US city, IT comune, UK post town. In regions of the world where localities are not well defined or do not fit into this structure well, leave locality empty and use addressLines.
-    pub locality: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub locality: String,
     /// Optional. Postal code of the address.
-    #[serde(rename = "postalCode")]
-    pub postal_code: Option<String>,
+    #[serde(
+        rename = "postalCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub postal_code: String,
     /// Optional. Sublocality of the address.
-    pub sublocality: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sublocality: String,
     /// Unstructured address lines describing the lower levels of an address.
-    #[serde(rename = "addressLines")]
-    pub address_lines: Option<Vec<String>>,
+    #[serde(
+        rename = "addressLines",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub address_lines: Vec<String>,
 }
