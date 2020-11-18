@@ -10,6 +10,11 @@ use macros::db_struct;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::airtable::{
+    airtable_api_key, AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE,
+    AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE,
+    AIRTABLE_GROUPS_TABLE,
+};
 use crate::db::Database;
 use crate::schema::{
     buildings, conference_rooms, github_labels, groups, links, users,
@@ -71,6 +76,8 @@ impl Config {
 /// The data type for a user.
 #[db_struct {
     new_name = "User",
+    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    table = "AIRTABLE_EMPLOYEES_TABLE",
 }]
 #[serde(rename_all = "camelCase")]
 #[derive(
@@ -174,6 +181,8 @@ impl UserConfig {
 /// The data type for a group. This applies to Google Groups.
 #[db_struct {
     new_name = "Group",
+    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    table = "AIRTABLE_GROUPS_TABLE",
 }]
 #[serde(rename_all = "camelCase")]
 #[derive(
@@ -304,6 +313,8 @@ pub struct GroupConfig {
 /// The data type for a building.
 #[db_struct {
     new_name = "Building",
+    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    table = "AIRTABLE_BUILDINGS_TABLE",
 }]
 #[derive(
     Debug,
@@ -332,6 +343,8 @@ pub struct BuildingConfig {
 /// through GSuite or Zoom.
 #[db_struct {
     new_name = "ConferenceRoom",
+    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
 }]
 #[derive(
     Debug,

@@ -44,12 +44,13 @@ fn do_db_struct(
         let table = format_ident!("{}", metadata.table.unwrap());
 
         airtable = quote!(
+        use airtable_api::{Airtable, Record, api_key};
         impl #new_name {
             /// Push the row to our Airtable workspace.
             pub async fn push_to_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable =
-                    Airtable::new(airtable_api_key(), #base_id);
+                    Airtable::new(api_key(), #base_id);
 
                 // Create the record.
                 let record = Record {
@@ -139,12 +140,13 @@ mod tests {
                 pub bar: String
             }
 
+            use airtable_api::{Airtable, Record, api_key};
             impl DuplicatedItem {
                 /// Push the row to our Airtable workspace.
                 pub async fn push_to_airtable(&self) {
                     // Initialize the Airtable client.
                     let airtable =
-                        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+                        Airtable::new(api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
                     // Create the record.
                     let record = Record {

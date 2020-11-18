@@ -9,6 +9,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
+airtable-api = "^0.1.0"
 proc-macro2 = "1"
 quote = "1"
 schemars = "0.7"

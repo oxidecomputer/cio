@@ -56,6 +56,11 @@ pub struct Airtable {
     client: Arc<Client>,
 }
 
+/// Get the API key from the AIRTABLE_API_KEY env variable.
+pub fn api_key_from_env() -> String {
+    env::var("AIRTABLE_API_KEY").unwrap()
+}
+
 impl Airtable {
     /// Create a new Airtable client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
@@ -82,10 +87,9 @@ impl Airtable {
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Base ID your requests will work.
     pub fn new_from_env() -> Self {
-        let key = env::var("AIRTABLE_API_KEY").unwrap();
         let base_id = env::var("AIRTABLE_BASE_ID").unwrap();
 
-        Airtable::new(key, base_id)
+        Airtable::new(api_key_from_env(), base_id)
     }
 
     /// Get the currently set API key.
