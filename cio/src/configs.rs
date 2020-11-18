@@ -210,13 +210,13 @@ pub struct GroupConfig {
     /// members of this group.
     /// - false: Users not belonging to the organization are not allowed to
     /// become members of this group.
-    #[serde(alias = "allow_external_members")]
+    #[serde(default, alias = "allow_external_members")]
     pub allow_external_members: bool,
 
     /// allow_web_posting: Allows posting from web. Possible values are:
     /// - true: Allows any member to post to the group forum.
     /// - false: Members only use Gmail to communicate with the group.
-    #[serde(alias = "allow_web_posting")]
+    #[serde(default, alias = "allow_web_posting")]
     pub allow_web_posting: bool,
 
     /// is_archived: Allows the Group contents to be archived. Possible values
@@ -224,7 +224,7 @@ pub struct GroupConfig {
     /// - true: Archive messages sent to the group.
     /// - false: Do not keep an archive of messages sent to this group. If
     /// false, previously archived messages remain in the archive.
-    #[serde(alias = "is_archived")]
+    #[serde(default, alias = "is_archived")]
     pub is_archived: bool,
 
     /// who_can_discover_group: Specifies the set of users for whom this group
