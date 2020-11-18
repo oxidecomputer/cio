@@ -141,9 +141,7 @@ pub async fn refresh_db_journal_club_meetings(github: &Github) {
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
-    use crate::journal_clubs::{
-        refresh_airtable_journal_club_papers, refresh_db_journal_club_meetings,
-    };
+    use crate::journal_clubs::refresh_db_journal_club_meetings;
     use crate::models::{JournalClubMeetings, JournalClubPapers};
     use crate::utils::authenticate_github;
 
