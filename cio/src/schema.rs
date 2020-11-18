@@ -310,6 +310,7 @@ table! {
         twitter -> Varchar,
         groups -> Array<Text>,
         is_group_admin -> Bool,
+        is_system_account -> Bool,
         building -> Varchar,
         aws_role -> Varchar,
         home_address_street_1 -> Varchar,
@@ -318,6 +319,7 @@ table! {
         home_address_state -> Varchar,
         home_address_zip -> Varchar,
         home_address_country -> Varchar,
+        home_address_formatted -> Varchar,
         start_date -> Date,
         public_ssh_keys -> Array<Text>,
     }

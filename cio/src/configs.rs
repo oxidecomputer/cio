@@ -126,6 +126,8 @@ pub struct UserConfig {
 
     #[serde(default, alias = "is_group_admin")]
     pub is_group_admin: bool,
+    #[serde(default, alias = "is_system_account")]
+    pub is_system_account: bool,
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub building: String,
@@ -152,6 +154,8 @@ pub struct UserConfig {
     pub home_address_zip: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_country: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub home_address_formatted: String,
     /// Start date (automatically populated by Gusto)
     #[serde(alias = "start_date")]
     pub start_date: NaiveDate,
@@ -173,8 +177,29 @@ impl UserConfig {
             get_github_user_public_ssh_keys(&self.github).await;
     }
 
+    async fn populate_from_gusto(&mut self) {
+        // TODO: actually get the data from Guso once we have credentials.
+        let mut street_address = self.home_address_street_1.to_string();
+        if !self.home_address_street_2.is_empty() {
+            street_address = format!(
+                "{}\n{}",
+                self.home_address_street_1, self.home_address_street_2,
+            );
+        }
+        self.home_address_formatted = format!(
+            "{}\n{} {}, {}, {}",
+            street_address,
+            self.home_address_city,
+            self.home_address_state,
+            self.home_address_zip,
+            self.home_address_country
+        );
+    }
+
     pub async fn expand(&mut self) {
         self.populate_ssh_keys().await;
+
+        self.populate_from_gusto().await;
     }
 }
 

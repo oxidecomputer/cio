@@ -1641,6 +1641,7 @@ impl User {
 
         // Set the user's address if we have one.
         if !user.home_address_street_1.is_empty() {
+            // TODO: this code is duplicated in configs.rs find a way to make it DRY.
             let mut street_address = user.home_address_street_1.to_string();
             if !user.home_address_street_2.is_empty() {
                 street_address = format!(
@@ -1648,22 +1649,13 @@ impl User {
                     user.home_address_street_1, user.home_address_street_2,
                 );
             }
-            let formatted = format!(
-                "{}\n{} {}, {}, {}",
-                street_address,
-                user.home_address_city,
-                user.home_address_state,
-                user.home_address_zip,
-                user.home_address_country
-            );
-
             self.addresses = vec![UserAddress {
                 country: user.home_address_country.to_string(),
                 // TODO: fix this when we have an employee from another country.
                 country_code: "US".to_string(),
                 custom_type: "".to_string(),
                 extended_address: "".to_string(),
-                formatted,
+                formatted: user.home_address_formatted.to_string(),
                 locality: user.home_address_city.to_string(),
                 po_box: "".to_string(),
                 postal_code: user.home_address_zip.to_string(),

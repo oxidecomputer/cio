@@ -12,6 +12,7 @@ CREATE TABLE users (
     twitter VARCHAR NOT NULL,
     groups TEXT [] NOT NULL,
     is_group_admin BOOLEAN NOT NULL DEFAULT 'f',
+    is_system_account BOOLEAN NOT NULL DEFAULT 'f'
     building VARCHAR NOT NULL,
     aws_role VARCHAR NOT NULL,
     home_address_street_1 VARCHAR NOT NULL,
@@ -20,6 +21,7 @@ CREATE TABLE users (
     home_address_state VARCHAR NOT NULL,
     home_address_zip VARCHAR NOT NULL,
     home_address_country VARCHAR NOT NULL,
+    home_address_formatted VARCHAR NOT NULL,
     start_date DATE NOT NULL,
     public_ssh_keys [] TEXT NOT NULL
 )
