@@ -513,12 +513,34 @@ pub async fn refresh_db_configs(github: &Github) {
 
 #[cfg(test)]
 mod tests {
-    use crate::configs::refresh_db_configs;
+    use crate::configs::{
+        refresh_db_configs, Buildings, ConferenceRooms, Groups, Users,
+    };
+    use crate::db::Database;
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_configs() {
         let github = authenticate_github();
         refresh_db_configs(&github).await;
+
+        // Initialize our database.
+        let db = Database::new();
+
+        let users = db.get_users();
+        // Update users in airtable.
+        Users(users).update_airtable().await;
+
+        let groups = db.get_groups();
+        // Update groups in Airtable.
+        Groups(groups).update_airtable().await;
+
+        let buildings = db.get_buildings();
+        // Update buildings in Airtable.
+        Buildings(buildings).update_airtable().await;
+
+        let conference_rooms = db.get_conference_rooms();
+        // Update conference rooms in Airtable.
+        ConferenceRooms(conference_rooms).update_airtable().await;
     }
 }
