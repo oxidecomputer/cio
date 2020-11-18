@@ -225,6 +225,8 @@ impl UserConfig {
 pub struct GroupConfig {
     pub name: String,
     pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub link: String,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
@@ -333,6 +335,19 @@ pub struct GroupConfig {
     /// list.
     #[serde(alias = "who_can_view_membership")]
     pub who_can_view_membership: String,
+}
+
+impl GroupConfig {
+    pub fn get_link(&self) -> String {
+        format!(
+            "https://groups.google.com/a/oxidecomputer.com/forum/#!forum/{}",
+            self.name
+        )
+    }
+
+    pub fn expand(&mut self) {
+        self.link = self.get_link();
+    }
 }
 
 /// The data type for a building.
@@ -518,7 +533,9 @@ pub async fn refresh_db_configs(github: &Github) {
     }
 
     // Sync groups.
-    for (_, group) in configs.groups {
+    for (_, mut group) in configs.groups {
+        group.expand();
+
         db.upsert_group(&group);
     }
 

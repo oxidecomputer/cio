@@ -205,6 +205,7 @@ table! {
         id -> Int4,
         name -> Varchar,
         description -> Varchar,
+        link -> Varchar,
         aliases -> Array<Text>,
         allow_external_members -> Bool,
         allow_web_posting -> Bool,

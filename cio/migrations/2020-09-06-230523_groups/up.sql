@@ -2,6 +2,7 @@ CREATE TABLE groups (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL UNIQUE,
     description VARCHAR NOT NULL,
+    link VARCHAR NOT NULL,
     aliases TEXT [] NOT NULL,
     allow_external_members BOOLEAN NOT NULL DEFAULT 'f',
     allow_web_posting BOOLEAN NOT NULL DEFAULT 'f',
