@@ -186,8 +186,9 @@ impl UserConfig {
                 self.home_address_street_1, self.home_address_street_2,
             );
         }
+        // TODO: make the address fields match Buildings config in naming.
         self.home_address_formatted = format!(
-            "{}\n{} {}, {}, {}",
+            "{}\n{}, {} {}, {}",
             street_address,
             self.home_address_city,
             self.home_address_state,
@@ -371,12 +372,27 @@ impl GroupConfig {
 pub struct BuildingConfig {
     pub name: String,
     pub description: String,
-    pub address: String,
+    pub street_address: String,
     pub city: String,
     pub state: String,
     pub zipcode: String,
     pub country: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub address_formatted: String,
     pub floors: Vec<String>,
+}
+
+impl BuildingConfig {
+    fn expand(&mut self) {
+        self.address_formatted = format!(
+            "{}\n{}, {} {}, {}",
+            self.street_address,
+            self.city,
+            self.state,
+            self.zipcode,
+            self.country
+        );
+    }
 }
 
 /// The data type for a resource. These are conference rooms that people can book
@@ -518,7 +534,9 @@ pub async fn refresh_db_configs(github: &Github) {
     let db = Database::new();
 
     // Sync buildings.
-    for (_, building) in configs.buildings {
+    for (_, mut building) in configs.buildings {
+        building.expand();
+
         db.upsert_building(&building);
     }
 

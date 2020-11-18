@@ -2460,7 +2460,7 @@ impl Building {
         self.name = building.name.to_string();
         self.description = building.description.to_string();
         self.address = BuildingAddress {
-            address_lines: vec![building.address.to_string()],
+            address_lines: vec![building.street_address.to_string()],
             locality: building.city.to_string(),
             administrative_area: building.state.to_string(),
             postal_code: building.zipcode.to_string(),

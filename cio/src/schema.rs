@@ -97,11 +97,12 @@ table! {
         id -> Int4,
         name -> Varchar,
         description -> Varchar,
-        address -> Varchar,
+        street_address -> Varchar,
         city -> Varchar,
         state -> Varchar,
         zipcode -> Varchar,
         country -> Varchar,
+        address_formatted -> Varchar,
         floors -> Array<Text>,
     }
 }
