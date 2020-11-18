@@ -1658,7 +1658,7 @@ impl User {
                 formatted: user.home_address_formatted.to_string(),
                 locality: user.home_address_city.to_string(),
                 po_box: "".to_string(),
-                postal_code: user.home_address_zip.to_string(),
+                postal_code: user.home_address_zipcode.to_string(),
                 primary: true,
                 region: user.home_address_state.to_string(),
                 // Indicates if the user-supplied address was formatted. Formatted addresses are

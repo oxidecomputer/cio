@@ -19,7 +19,7 @@ CREATE TABLE users (
     home_address_street_2 VARCHAR NOT NULL,
     home_address_city VARCHAR NOT NULL,
     home_address_state VARCHAR NOT NULL,
-    home_address_zip VARCHAR NOT NULL,
+    home_address_zipcode VARCHAR NOT NULL,
     home_address_country VARCHAR NOT NULL,
     home_address_formatted VARCHAR NOT NULL,
     start_date DATE NOT NULL,

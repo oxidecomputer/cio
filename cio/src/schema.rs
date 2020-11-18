@@ -319,7 +319,7 @@ table! {
         home_address_street_2 -> Varchar,
         home_address_city -> Varchar,
         home_address_state -> Varchar,
-        home_address_zip -> Varchar,
+        home_address_zipcode -> Varchar,
         home_address_country -> Varchar,
         home_address_formatted -> Varchar,
         start_date -> Date,

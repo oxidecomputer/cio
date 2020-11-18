@@ -151,7 +151,7 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_state: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub home_address_zip: String,
+    pub home_address_zipcode: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_country: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -186,13 +186,12 @@ impl UserConfig {
                 self.home_address_street_1, self.home_address_street_2,
             );
         }
-        // TODO: make the address fields match Buildings config in naming.
         self.home_address_formatted = format!(
             "{}\n{}, {} {}, {}",
             street_address,
             self.home_address_city,
             self.home_address_state,
-            self.home_address_zip,
+            self.home_address_zipcode,
             self.home_address_country
         );
     }
