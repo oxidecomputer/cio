@@ -826,6 +826,7 @@ pub fn generate_password() -> String {
 }
 
 /// A Google group.
+/// FROM: https://developers.google.com/admin-sdk/directory/v1/reference/groups
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Group {
     /// Was the group created by admin (read-only)
@@ -839,10 +840,11 @@ pub struct Group {
     pub description: String,
     /// Group direct members count
     #[serde(
-        skip_serializing_if = "Option::is_none",
+        default,
+        skip_serializing_if = "String::is_empty",
         rename = "directMembersCount"
     )]
-    pub direct_members_count: Option<isize>,
+    pub direct_members_count: String,
     /// Email of group
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
