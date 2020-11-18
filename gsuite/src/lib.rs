@@ -1847,7 +1847,7 @@ pub struct UserLanguage {
 /// A user's location.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserLocation {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default)]
     pub area: String,
     /// Unique ID for the building a resource is located in.
     #[serde(
