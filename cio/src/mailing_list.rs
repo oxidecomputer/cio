@@ -1,10 +1,10 @@
-use airtable_api::{Airtable, Record};
+use airtable_api::{api_key_from_env, Airtable, Record};
 use chrono::offset::Utc;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
+    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
     AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
 };
 use crate::db::Database;
@@ -14,7 +14,7 @@ use crate::models::NewMailingListSubscriber;
 pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
     // Initialize the Airtable client.
     let airtable =
-        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+        Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
     let records: Vec<Record<NewMailingListSubscriber>> = airtable
         .list_records(

@@ -1,4 +1,4 @@
-use airtable_api::{Airtable, Record};
+use airtable_api::{api_key_from_env, Airtable, Record};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -13,8 +13,7 @@ use hubcaps::Github;
 use regex::Regex;
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GRID_VIEW,
-    AIRTABLE_RFD_TABLE,
+    AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GRID_VIEW, AIRTABLE_RFD_TABLE,
 };
 use crate::db::Database;
 use crate::models::{NewRFD, RFD};
@@ -201,7 +200,7 @@ pub fn get_authors(content: &str, is_markdown: bool) -> String {
 pub async fn refresh_airtable_rfds() {
     // Initialize the Airtable client.
     let airtable =
-        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_RACK_ROADMAP);
+        Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_RACK_ROADMAP);
 
     let records: Vec<Record<RFD>> = airtable
         .list_records(AIRTABLE_RFD_TABLE, AIRTABLE_GRID_VIEW, vec![])

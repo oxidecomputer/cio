@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{stderr, stdout, Write};
 use std::process::Command;
 
-use airtable_api::{Airtable, Record};
+use airtable_api::{api_key_from_env, Airtable, Record};
 use chrono::offset::Utc;
 use chrono::{DateTime, NaiveDate};
 use chrono_humanize::HumanTime;
@@ -29,7 +29,7 @@ use crate::utils::{
 };
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
+    AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
     AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
     AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP,
     AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
@@ -1441,7 +1441,7 @@ impl NewMailingListSubscriber {
     pub async fn push_to_airtable(&self) {
         // Initialize the Airtable client.
         let airtable =
-            Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+            Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
         // Create the record.
         let record = Record {

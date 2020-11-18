@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::env;
 use std::{thread, time};
 
-use airtable_api::{Airtable, Record};
+use airtable_api::{api_key_from_env, Airtable, Record};
 use chrono::naive::NaiveDateTime;
 use chrono::offset::Utc;
 use chrono::DateTime;
@@ -12,9 +12,8 @@ use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_AUTH_USERS_TABLE,
-    AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS,
-    AIRTABLE_GRID_VIEW,
+    AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE,
+    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
 };
 use crate::db::Database;
 use crate::models::{AuthUser, AuthUserLogin, NewAuthUser, NewAuthUserLogin};
@@ -298,7 +297,7 @@ async fn get_auth_users_page(
 pub async fn refresh_airtable_auth_users() {
     // Initialize the Airtable client.
     let airtable =
-        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+        Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
     let records: Vec<Record<AuthUser>> = airtable
         .list_records(
@@ -379,7 +378,7 @@ pub async fn refresh_airtable_auth_users() {
 pub async fn refresh_airtable_auth_user_logins() {
     // Initialize the Airtable client.
     let airtable =
-        Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+        Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
     let records: Vec<Record<AuthUserLogin>> = airtable
         .list_records(

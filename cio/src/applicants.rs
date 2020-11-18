@@ -4,7 +4,7 @@ use std::fs;
 use std::io::{copy, stderr, stdout, Write};
 use std::process::Command;
 
-use airtable_api::{Airtable, Record};
+use airtable_api::{api_key_from_env, Airtable, Record};
 use google_drive::GoogleDrive;
 use html2text::from_read;
 use hubcaps::issues::{IssueListOptions, State};
@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_APPLICATIONS_TABLE,
-    AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_GRID_VIEW,
+    AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
+    AIRTABLE_GRID_VIEW,
 };
 use crate::db::Database;
 use crate::models::{Applicant, NewApplicant};
@@ -479,7 +479,7 @@ pub async fn email_send_new_applicant_notification(
 pub async fn refresh_airtable_applicants() {
     // Initialize the Airtable client.
     let airtable = Airtable::new(
-        airtable_api_key(),
+        api_key_from_env(),
         AIRTABLE_BASE_ID_RECURITING_APPLICATIONS,
     );
 

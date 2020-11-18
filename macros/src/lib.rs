@@ -44,16 +44,15 @@ fn do_db_struct(
         let table = format_ident!("{}", metadata.table.unwrap());
 
         airtable = quote!(
-        use airtable_api::{Airtable, Record, api_key};
         impl #new_name {
             /// Push the row to our Airtable workspace.
             pub async fn push_to_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable =
-                    Airtable::new(api_key(), #base_id);
+                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), #base_id);
 
                 // Create the record.
-                let record = Record {
+                let record = airtable_api::Record {
                     id: None,
                     created_time: None,
                     fields: self.clone(),
@@ -61,7 +60,7 @@ fn do_db_struct(
 
                 // Send the new record to the Airtable client.
                 // Batch can only handle 10 at a time.
-                let _ : Vec<Record<#new_name>> = airtable
+                let _ : Vec<airtable_api::Record<#new_name>> = airtable
                     .create_records(#table, vec![record])
                     .await
                     .unwrap();
@@ -140,16 +139,15 @@ mod tests {
                 pub bar: String
             }
 
-            use airtable_api::{Airtable, Record, api_key};
             impl DuplicatedItem {
                 /// Push the row to our Airtable workspace.
                 pub async fn push_to_airtable(&self) {
                     // Initialize the Airtable client.
                     let airtable =
-                        Airtable::new(api_key(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+                        airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
 
                     // Create the record.
-                    let record = Record {
+                    let record = airtable_api::Record {
                         id: None,
                         created_time: None,
                         fields: self.clone(),
@@ -157,7 +155,7 @@ mod tests {
 
                     // Send the new record to the Airtable client.
                     // Batch can only handle 10 at a time.
-                    let _ : Vec<Record<DuplicatedItem>> = airtable
+                    let _ : Vec<airtable_api::Record<DuplicatedItem>> = airtable
                         .create_records(AIRTABLE_RFD_TABLE, vec![record])
                         .await
                         .unwrap();

@@ -11,7 +11,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE,
+    AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE,
     AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE,
     AIRTABLE_GROUPS_TABLE,
 };

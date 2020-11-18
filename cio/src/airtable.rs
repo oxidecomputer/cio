@@ -1,5 +1,3 @@
-use std::env;
-
 pub static AIRTABLE_BASE_ID_CUSTOMER_LEADS: &str = "appr7imQLcR3pWaNa";
 pub static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 pub static AIRTABLE_CUSTOMER_INTERACTIONS_TABLE: &str = "Interactions";
@@ -27,7 +25,3 @@ pub static AIRTABLE_DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
 pub static AIRTABLE_MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";
 
 pub static AIRTABLE_GRID_VIEW: &str = "Grid view";
-
-pub fn airtable_api_key() -> String {
-    env::var("AIRTABLE_API_KEY").unwrap()
-}

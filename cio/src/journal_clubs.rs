@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 use std::str::from_utf8;
 
-use airtable_api::{Airtable, Record};
+use airtable_api::{api_key_from_env, Airtable, Record};
 use chrono::NaiveDate;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
-    airtable_api_key, AIRTABLE_BASE_ID_MISC, AIRTABLE_GRID_VIEW,
+    AIRTABLE_BASE_ID_MISC, AIRTABLE_GRID_VIEW,
     AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE,
 };
 use crate::db::Database;
@@ -149,7 +149,7 @@ pub async fn refresh_db_journal_club_meetings(github: &Github) {
 
 pub async fn refresh_airtable_journal_club_meetings() {
     // Initialize the Airtable client.
-    let airtable = Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_MISC);
+    let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_MISC);
 
     let records: Vec<Record<JournalClubMeeting>> = airtable
         .list_records(
@@ -209,7 +209,7 @@ pub async fn refresh_airtable_journal_club_meetings() {
 
 pub async fn refresh_airtable_journal_club_papers() {
     // Initialize the Airtable client.
-    let airtable = Airtable::new(airtable_api_key(), AIRTABLE_BASE_ID_MISC);
+    let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_MISC);
 
     let records: Vec<Record<JournalClubPaper>> = airtable
         .list_records(
