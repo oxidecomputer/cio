@@ -73,7 +73,7 @@ fn do_db_struct(
         pub struct #new_name_plural(pub Vec<#new_name>);
         impl #new_name_plural {
             /// Update Airtable records in a table from a vector.
-            async fn update_airtable(self) {
+            async fn update_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
@@ -91,7 +91,7 @@ fn do_db_struct(
                     records.insert(record.fields.id, record);
                 }
 
-                for vec_record in self.0 {
+                for vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
@@ -230,7 +230,7 @@ mod tests {
         pub struct DuplicatedItems(pub Vec<DuplicatedItem>);
         impl DuplicatedItems {
             /// Update Airtable records in a table from a vector.
-            async fn update_airtable(self) {
+            async fn update_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
@@ -248,7 +248,7 @@ mod tests {
                     records.insert(record.fields.id, record);
                 }
 
-                for vec_record in self.0 {
+                for vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
