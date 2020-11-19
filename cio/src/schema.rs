@@ -328,6 +328,7 @@ table! {
         home_address_country -> Varchar,
         home_address_formatted -> Varchar,
         start_date -> Date,
+        birthday -> Date,
         public_ssh_keys -> Array<Text>,
     }
 }

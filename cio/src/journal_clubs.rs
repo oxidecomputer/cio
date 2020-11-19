@@ -37,7 +37,7 @@ mod meeting_date_format {
     use serde::{self, Deserialize, Deserializer, Serializer};
 
     const FORMAT: &str = "%m/%d/%Y";
-    pub const DEFAULT_DATE: &str = "01/01/1969";
+    pub const DEFAULT_DATE: &str = "01/01/1970";
 
     // The signature of a serialize_with function must follow the pattern:
     //

@@ -24,5 +24,6 @@ CREATE TABLE users (
     home_address_country VARCHAR NOT NULL,
     home_address_formatted VARCHAR NOT NULL,
     start_date DATE NOT NULL,
+    birthday DATE NOT NULL,
     public_ssh_keys [] TEXT NOT NULL
 )
