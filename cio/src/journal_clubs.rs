@@ -55,7 +55,7 @@ mod meeting_date_format {
         S: Serializer,
     {
         let mut s = format!("{}", date.format(FORMAT));
-        if *date == chrono::naive::MIN_DATE {
+        if *date == crate::utils::default_date() {
             s = "".to_string();
         }
         serializer.serialize_str(&s)
@@ -74,7 +74,7 @@ mod meeting_date_format {
     {
         let s = String::deserialize(deserializer).unwrap();
         Ok(NaiveDate::parse_from_str(&s, FORMAT)
-            .unwrap_or(chrono::naive::MIN_DATE))
+            .unwrap_or(crate::utils::default_date()))
     }
 }
 

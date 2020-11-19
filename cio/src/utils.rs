@@ -249,7 +249,7 @@ impl SliceExt for Vec<u8> {
 }
 
 pub fn default_date() -> chrono::naive::NaiveDate {
-    chrono::naive::MIN_DATE
+    chrono::naive::NaiveDate::parse_from_str("1970-01-01", "%Y-%m-%d").unwrap()
 }
 
 #[cfg(test)]

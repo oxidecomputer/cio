@@ -201,7 +201,7 @@ mod null_date_format {
         S: Serializer,
     {
         let mut s = format!("{}", date.format(FORMAT));
-        if *date == chrono::naive::MIN_DATE {
+        if *date == crate::utils::default_date() {
             s = "".to_string();
         }
         serializer.serialize_str(&s)

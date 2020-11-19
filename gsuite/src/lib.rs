@@ -385,10 +385,14 @@ impl GSuite {
         email: &str,
         role: &str,
     ) -> Result<(), APIError> {
-        let mut member: Member = Default::default();
-        member.role = role.to_string();
-        member.email = email.to_string();
-        member.delivery_settings = "ALL_MAIL".to_string();
+        let member = Member {
+            role: role.to_string(),
+            email: email.to_string(),
+            delivery_settings: "ALL_MAIL".to_string(),
+            etag: "".to_string(),
+            id: "".to_string(),
+            kind: "".to_string(),
+        };
 
         // Build the request.
         let request = self.request(
@@ -420,10 +424,14 @@ impl GSuite {
         email: &str,
         role: &str,
     ) -> Result<(), APIError> {
-        let mut member: Member = Default::default();
-        member.role = role.to_string();
-        member.email = email.to_string();
-        member.delivery_settings = "ALL_MAIL".to_string();
+        let member = Member {
+            role: role.to_string(),
+            email: email.to_string(),
+            delivery_settings: "ALL_MAIL".to_string(),
+            etag: "".to_string(),
+            id: "".to_string(),
+            kind: "".to_string(),
+        };
 
         // Build the request.
         let request = self.request(
