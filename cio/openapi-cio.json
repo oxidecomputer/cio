@@ -81,7 +81,7 @@
         }
       }
     },
-    "/conferenceRooms": {
+    "/conference_rooms": {
       "get": {
         "description": "\n * Fetch a list of conference rooms.\n ",
         "operationId": "api_get_conference_rooms",
@@ -165,7 +165,7 @@
         }
       }
     },
-    "/journalClubMeetings": {
+    "/journal_club_meetings": {
       "get": {
         "description": "\n * Fetch a list of journal club meetings.\n ",
         "operationId": "api_get_journal_club_meetings",
@@ -207,7 +207,7 @@
         }
       }
     },
-    "/mailingListSubscribers": {
+    "/mailing_list_subscribers": {
       "get": {
         "description": "\n * Fetch a list of mailing list subscribers.\n ",
         "operationId": "api_get_mailing_list_subscribers",
@@ -596,25 +596,25 @@
         "description": "The data type for a GitHub user.",
         "type": "object",
         "properties": {
-          "avatarUrl": {
+          "avatar_url": {
             "type": "string"
           },
-          "eventsUrl": {
+          "events_url": {
             "type": "string"
           },
-          "followersUrl": {
+          "followers_url": {
             "type": "string"
           },
-          "followingUrl": {
+          "following_url": {
             "type": "string"
           },
-          "gistsUrl": {
+          "gists_url": {
             "type": "string"
           },
-          "gravatarId": {
+          "gravatar_id": {
             "type": "string"
           },
-          "htmlUrl": {
+          "html_url": {
             "type": "string"
           },
           "id": {
@@ -625,22 +625,22 @@
           "login": {
             "type": "string"
           },
-          "organizationsUrl": {
+          "organizations_url": {
             "type": "string"
           },
-          "receivedEventsUrl": {
+          "received_events_url": {
             "type": "string"
           },
-          "reposUrl": {
+          "repos_url": {
             "type": "string"
           },
-          "siteAdmin": {
+          "site_admin": {
             "type": "boolean"
           },
-          "starredUrl": {
+          "starred_url": {
             "type": "string"
           },
-          "subscriptionsUrl": {
+          "subscriptions_url": {
             "type": "string"
           },
           "url": {
@@ -648,21 +648,21 @@
           }
         },
         "required": [
-          "avatarUrl",
-          "eventsUrl",
-          "followersUrl",
-          "followingUrl",
-          "gistsUrl",
-          "gravatarId",
-          "htmlUrl",
+          "avatar_url",
+          "events_url",
+          "followers_url",
+          "following_url",
+          "gists_url",
+          "gravatar_id",
+          "html_url",
           "id",
           "login",
-          "organizationsUrl",
-          "receivedEventsUrl",
-          "reposUrl",
-          "siteAdmin",
-          "starredUrl",
-          "subscriptionsUrl",
+          "organizations_url",
+          "received_events_url",
+          "repos_url",
+          "site_admin",
+          "starred_url",
+          "subscriptions_url",
           "url"
         ]
       },
@@ -1280,6 +1280,11 @@
           "aws_role": {
             "type": "string"
           },
+          "birthday": {
+            "description": "Birthday (automatically populated by Gusto)",
+            "type": "string",
+            "format": "date"
+          },
           "building": {
             "type": "string"
           },
@@ -1371,7 +1376,6 @@
           "first_name",
           "id",
           "last_name",
-          "start_date",
           "username"
         ]
       }
