@@ -269,6 +269,7 @@ impl UpdateAirtableRecord<User> for User {
 #[table_name = "groups"]
 pub struct GroupConfig {
     pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub link: String,
@@ -307,7 +308,11 @@ pub struct GroupConfig {
     /// - ANYONE_CAN_DISCOVER
     /// - ALL_IN_DOMAIN_CAN_DISCOVER
     /// - ALL_MEMBERS_CAN_DISCOVER
-    #[serde(alias = "who_can_discover_group")]
+    #[serde(
+        alias = "who_can_discover_group",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_discover_group: String,
 
     /// who_can_join: Permission to join group. Possible values are:
@@ -323,7 +328,11 @@ pub struct GroupConfig {
     /// - INVITED_CAN_JOIN: Candidates for membership can be invited to join.
     ///
     /// - CAN_REQUEST_TO_JOIN: Non members can request an invitation to join.
-    #[serde(alias = "who_can_join")]
+    #[serde(
+        alias = "who_can_join",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_join: String,
 
     /// who_can_moderate_members: Specifies who can manage members. Possible
@@ -332,7 +341,11 @@ pub struct GroupConfig {
     /// - OWNERS_AND_MANAGERS
     /// - OWNERS_ONLY
     /// - NONE
-    #[serde(alias = "who_can_moderate_members")]
+    #[serde(
+        alias = "who_can_moderate_members",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_moderate_members: String,
 
     /// who_can_post_message: Permissions to post messages. Possible values are:
@@ -354,7 +367,11 @@ pub struct GroupConfig {
     /// who_can_post_message is set to ANYONE_CAN_POST, we recommend the
     /// messageModerationLevel be set to MODERATE_NON_MEMBERS to protect the
     /// group from possible spam.
-    #[serde(alias = "who_can_post_message")]
+    #[serde(
+        alias = "who_can_post_message",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_post_message: String,
 
     /// who_can_view_group: Permissions to view group messages. Possible values
@@ -367,7 +384,11 @@ pub struct GroupConfig {
     /// messages.
     /// - ALL_MANAGERS_CAN_VIEW: Any group manager can view this group's
     /// messages.
-    #[serde(alias = "who_can_view_group")]
+    #[serde(
+        alias = "who_can_view_group",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_view_group: String,
 
     /// who_can_view_membership: Permissions to view membership. Possible values
@@ -381,7 +402,11 @@ pub struct GroupConfig {
     /// list.
     /// - ALL_MANAGERS_CAN_VIEW: The group managers can view group members
     /// list.
-    #[serde(alias = "who_can_view_membership")]
+    #[serde(
+        alias = "who_can_view_membership",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_view_membership: String,
 }
 
@@ -427,14 +452,21 @@ impl UpdateAirtableRecord<Group> for Group {
 #[table_name = "buildings"]
 pub struct BuildingConfig {
     pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub street_address: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub zipcode: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub country: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub address_formatted: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub floors: Vec<String>,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -488,14 +520,18 @@ impl UpdateAirtableRecord<Building> for Building {
 #[table_name = "conference_rooms"]
 pub struct ResourceConfig {
     pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
     #[serde(rename = "type")]
     pub typev: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub building: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_building: Vec<String>,
     pub capacity: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub floor: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub section: String,
 }
 
