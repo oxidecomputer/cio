@@ -588,6 +588,13 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
+            StatusCode::NOT_FOUND => {
+                // Try again. It might just be that the user was just created.
+                // TODO: this will result in an endless loop if that is not the case
+                // clean this up eventually. Sorry future person.
+                println!("Got 404 while updating user alias for user {} alias {}, trying again", user_id, alias);
+                return self.update_user_alias(user_id, alias).await;
+            },
             s => {
                 let body = resp.text().await.unwrap();
 

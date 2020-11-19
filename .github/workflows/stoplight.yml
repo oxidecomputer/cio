@@ -1,0 +1,21 @@
+on:
+  push:
+    branches:
+      - master # Push events on master branch
+    paths:
+      - "cio/open-api.json" # Only run on changes to OpenAPI files.
+      - ".github/workflows/stoplight.yml" # Run when this file changes.
+name: Stoplight
+jobs:
+  stoplight:
+    name: stoplight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+        node-version: '12'
+      - run: npm install @stoplight/cli@4
+      - name:
+        run: |
+          npx @stoplight/cli@4 push --ci-token ${{ secrets.STOPLIGHT_TOKEN }} --url https://oxide.stoplight.io
