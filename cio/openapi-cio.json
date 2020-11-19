@@ -11,6 +11,13 @@
     "version": "0.0.1"
   },
   "paths": {
+    "/": {
+      "get": {
+        "description": "\n * Return the OpenAPI schema in JSON format.\n ",
+        "operationId": "api_get_schema",
+        "responses": {}
+      }
+    },
     "/applicants": {
       "get": {
         "description": "\n * Fetch all applicants.\n ",
@@ -32,10 +39,10 @@
         }
       }
     },
-    "/authLogins": {
+    "/auth/users": {
       "get": {
-        "description": "\n * Fetch all auth logins.\n ",
-        "operationId": "api_get_auth_logins",
+        "description": "\n * Fetch all auth users.\n ",
+        "operationId": "api_get_auth_users",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -44,7 +51,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AuthLogin"
+                    "$ref": "#/components/schemas/AuthUser"
                   }
                 }
               }
@@ -390,12 +397,11 @@
           "name",
           "resume",
           "role",
-          "sheet_id",
           "status",
           "submitted_time"
         ]
       },
-      "AuthLogin": {
+      "AuthUser": {
         "type": "object",
         "properties": {
           "blog": {
@@ -418,12 +424,29 @@
             "type": "integer",
             "format": "int32"
           },
+          "last_application_accessed": {
+            "type": "string"
+          },
           "last_ip": {
             "type": "string"
           },
           "last_login": {
             "type": "string",
             "format": "date-time"
+          },
+          "link_to_auth_user_logins": {
+            "description": "link to another table in Airtable",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "link_to_people": {
+            "description": "link to another table in Airtable",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "locale": {
             "type": "string"
@@ -463,15 +486,10 @@
         },
         "required": [
           "created_at",
-          "email",
           "email_verified",
           "id",
-          "last_ip",
           "last_login",
           "logins_count",
-          "name",
-          "nickname",
-          "picture",
           "updated_at",
           "user_id"
         ]
@@ -479,17 +497,29 @@
       "Building": {
         "type": "object",
         "properties": {
-          "address": {
+          "address_formatted": {
             "type": "string"
           },
           "city": {
             "type": "string"
+          },
+          "conference_rooms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "country": {
             "type": "string"
           },
           "description": {
             "type": "string"
+          },
+          "employees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "floors": {
             "type": "array",
@@ -507,20 +537,16 @@
           "state": {
             "type": "string"
           },
+          "street_address": {
+            "type": "string"
+          },
           "zipcode": {
             "type": "string"
           }
         },
         "required": [
-          "address",
-          "city",
-          "country",
-          "description",
-          "floors",
           "id",
-          "name",
-          "state",
-          "zipcode"
+          "name"
         ]
       },
       "ConferenceRoom": {
@@ -543,6 +569,12 @@
             "type": "integer",
             "format": "int32"
           },
+          "link_to_building": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "name": {
             "type": "string"
           },
@@ -554,13 +586,9 @@
           }
         },
         "required": [
-          "building",
           "capacity",
-          "description",
-          "floor",
           "id",
           "name",
-          "section",
           "type"
         ]
       },
@@ -970,6 +998,15 @@
             "description": "is_archived: Allows the Group contents to be archived. Possible values are: - true: Archive messages sent to the group. - false: Do not keep an archive of messages sent to this group. If false, previously archived messages remain in the archive.",
             "type": "boolean"
           },
+          "link": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "name": {
             "type": "string"
           },
@@ -999,38 +1036,35 @@
           }
         },
         "required": [
-          "allow_external_members",
-          "allow_web_posting",
-          "description",
           "id",
-          "is_archived",
-          "name",
-          "who_can_discover_group",
-          "who_can_join",
-          "who_can_moderate_members",
-          "who_can_post_message",
-          "who_can_view_group",
-          "who_can_view_membership"
+          "name"
         ]
       },
       "JournalClubMeeting": {
-        "description": "The data type for a JournalClubMeeting.",
         "type": "object",
         "properties": {
           "coordinator": {
             "type": "string"
           },
-          "date": {
-            "type": "string",
-            "format": "date"
+          "id": {
+            "type": "integer",
+            "format": "int32"
           },
           "issue": {
             "type": "string"
           },
+          "issue_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "meeting_date": {
+            "type": "string",
+            "format": "date"
+          },
           "papers": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JournalClubPaper"
+              "type": "string"
             }
           },
           "recording": {
@@ -1044,24 +1078,10 @@
           }
         },
         "required": [
-          "date",
+          "id",
           "issue",
-          "title"
-        ]
-      },
-      "JournalClubPaper": {
-        "description": "The data type for a JournalClubPaper.",
-        "type": "object",
-        "properties": {
-          "link": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "link",
+          "issue_date",
+          "meeting_date",
           "title"
         ]
       },
@@ -1195,6 +1215,13 @@
             "description": "link is the canonical link to the source.",
             "type": "string"
           },
+          "milestones": {
+            "description": "milestones only exist in Airtable",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "name": {
             "description": "(generated) name is a combination of number and title.",
             "type": "string"
@@ -1206,6 +1233,13 @@
           "number_string": {
             "description": "(generated) number_string is the long version of the number with leading zeros",
             "type": "string"
+          },
+          "relevant_components": {
+            "description": "relevant_components only exist in Airtable",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "rendered_link": {
             "description": "(generated) rendered_link is the link to the rfd in the rendered html website in the form of https://rfd.shared.oxide.computer/rfd/{{number_string}}",
@@ -1243,6 +1277,9 @@
               "type": "string"
             }
           },
+          "aws_role": {
+            "type": "string"
+          },
           "building": {
             "type": "string"
           },
@@ -1264,21 +1301,64 @@
               "type": "string"
             }
           },
+          "home_address_city": {
+            "type": "string"
+          },
+          "home_address_country": {
+            "type": "string"
+          },
+          "home_address_formatted": {
+            "type": "string"
+          },
+          "home_address_state": {
+            "type": "string"
+          },
+          "home_address_street_1": {
+            "description": "The following fields do not exist in the config files but are populated by the Gusto API before the record gets saved in the database. Home address (automatically populated by Gusto)",
+            "type": "string"
+          },
+          "home_address_street_2": {
+            "type": "string"
+          },
+          "home_address_zipcode": {
+            "type": "string"
+          },
           "id": {
             "type": "integer",
             "format": "int32"
           },
-          "is_super_admin": {
+          "is_group_admin": {
+            "type": "boolean"
+          },
+          "is_system_account": {
             "type": "boolean"
           },
           "last_name": {
             "type": "string"
+          },
+          "link_to_building": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "public_ssh_keys": {
+            "description": "The following field does not exist in the config files but is populated by the GitHub API before the record gets saved in the database.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "recovery_email": {
             "type": "string"
           },
           "recovery_phone": {
             "type": "string"
+          },
+          "start_date": {
+            "description": "Start date (automatically populated by Gusto)",
+            "type": "string",
+            "format": "date"
           },
           "twitter": {
             "type": "string"
@@ -1291,6 +1371,7 @@
           "first_name",
           "id",
           "last_name",
+          "start_date",
           "username"
         ]
       }
