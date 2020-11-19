@@ -12,7 +12,7 @@
   },
   "servers": [
     {
-      "url": "https://api.internal.oxide.computer",
+      "url": "http://api.internal.oxide.computer",
       "description": "Hosted behind our VPN"
     }
   ],
