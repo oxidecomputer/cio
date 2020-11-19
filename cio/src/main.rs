@@ -96,7 +96,7 @@ async fn main() -> Result<(), String> {
     // Modify more of the schema.
     // TODO: make this cleaner when dropshot allows for it.
     schema.servers = vec![openapiv3::Server {
-        url: "http://api.internal.oxide.computer".to_string(),
+        url: "https://api.internal.oxide.computer".to_string(),
         description: Some("Hosted behind our VPN".to_string()),
         variables: None,
     }];
