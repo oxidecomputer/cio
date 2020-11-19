@@ -81,7 +81,6 @@ impl Config {
     base_id = "AIRTABLE_BASE_ID_DIRECTORY",
     table = "AIRTABLE_EMPLOYEES_TABLE",
 }]
-#[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
     Insertable,
@@ -292,7 +291,6 @@ impl UpdateAirtableRecord<User> for User {
     base_id = "AIRTABLE_BASE_ID_DIRECTORY",
     table = "AIRTABLE_GROUPS_TABLE",
 }]
-#[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
     Default,

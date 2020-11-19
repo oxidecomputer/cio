@@ -212,7 +212,7 @@ async fn api_get_buildings(
  */
 #[endpoint {
     method = GET,
-    path = "/conferenceRooms",
+    path = "/conference_rooms",
 }]
 async fn api_get_conference_rooms(
     _rqctx: Arc<RequestContext>,
@@ -272,7 +272,7 @@ async fn api_get_groups(
  */
 #[endpoint {
     method = GET,
-    path = "/journalClubMeetings",
+    path = "/journal_club_meetings",
 }]
 async fn api_get_journal_club_meetings(
     _rqctx: Arc<RequestContext>,
@@ -302,7 +302,7 @@ async fn api_get_links(
  */
 #[endpoint {
     method = GET,
-    path = "/mailingListSubscribers",
+    path = "/mailing_list_subscribers",
 }]
 async fn api_get_mailing_list_subscribers(
     _rqctx: Arc<RequestContext>,

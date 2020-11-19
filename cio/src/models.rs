@@ -1169,7 +1169,6 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
         "company",
     ],
 }]
-#[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
     Insertable,
@@ -1485,7 +1484,6 @@ impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
     base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
     table = "AIRTABLE_MAILING_LIST_SIGNUPS_TABLE",
 }]
-#[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
     Insertable,
@@ -1670,7 +1668,6 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 }
 
 /// The data type for a GitHub user.
-#[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
     Default,
@@ -1720,7 +1717,6 @@ impl ToSql<Jsonb, Pg> for GitHubUser {
 #[db_struct {
     new_name = "GithubRepo",
 }]
-#[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
     Insertable,
@@ -1942,7 +1938,6 @@ impl NewRepo {
     base_id = "AIRTABLE_BASE_ID_RACK_ROADMAP",
     table = "AIRTABLE_RFD_TABLE",
 }]
-#[serde(rename_all = "camelCase")]
 #[derive(
     Debug,
     Insertable,
