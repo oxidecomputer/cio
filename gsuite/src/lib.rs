@@ -392,6 +392,8 @@ impl GSuite {
             etag: "".to_string(),
             id: "".to_string(),
             kind: "".to_string(),
+            status: "".to_string(),
+            typev: "".to_string(),
         };
 
         // Build the request.
@@ -431,6 +433,8 @@ impl GSuite {
             etag: "".to_string(),
             id: "".to_string(),
             kind: "".to_string(),
+            status: "".to_string(),
+            typev: "".to_string(),
         };
 
         // Build the request.
