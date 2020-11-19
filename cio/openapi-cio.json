@@ -10,6 +10,12 @@
     },
     "version": "0.0.1"
   },
+  "servers": [
+    {
+      "url": "https://api.internal.oxide.computer",
+      "description": "Hosted behind our VPN"
+    }
+  ],
   "paths": {
     "/": {
       "get": {
@@ -1380,5 +1386,9 @@
         ]
       }
     }
+  },
+  "externalDocs": {
+    "description": "Automatically updated documentation site, public, not behind the VPN.",
+    "url": "https://api.docs.corp.oxide.computer"
   }
 }

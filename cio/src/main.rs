@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
@@ -70,8 +71,10 @@ async fn main() -> Result<(), String> {
 
     // Print the OpenAPI Spec to stdout.
     let api_file = "openapi-cio.json";
+    let mut tmp_file = env::temp_dir();
+    tmp_file.push("openapi-cio.json");
     println!("Writing OpenAPI spec to {}...", api_file);
-    let mut buffer = File::create(api_file).unwrap();
+    let mut buffer = File::create(tmp_file.clone()).unwrap();
     api.print_openapi(
         &mut buffer,
         &"CIO API",
@@ -85,10 +88,25 @@ async fn main() -> Result<(), String> {
         &"0.0.1",
     )
     .unwrap();
-    let mut f = File::open(api_file).unwrap();
+    let mut f = File::open(tmp_file).unwrap();
     let mut api_schema = String::new();
     f.read_to_string(&mut api_schema).unwrap();
-    let schema: openapiv3::OpenAPI = serde_json::from_str(&api_schema).unwrap();
+    let mut schema: openapiv3::OpenAPI =
+        serde_json::from_str(&api_schema).unwrap();
+    // Modify more of the schema.
+    // TODO: make this cleaner when dropshot allows for it.
+    schema.servers = vec![openapiv3::Server {
+        url: "https://api.internal.oxide.computer".to_string(),
+        description: Some("Hosted behind our VPN".to_string()),
+        variables: None,
+    }];
+    schema.external_docs = Some(openapiv3::ExternalDocumentation{
+        description: Some("Automatically updated documentation site, public, not behind the VPN.".to_string()),
+        url: "https://api.docs.corp.oxide.computer".to_string(),
+    });
+    // Save it back to the file.
+    serde_json::to_writer_pretty(&File::create(api_file).unwrap(), &schema)
+        .unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
