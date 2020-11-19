@@ -248,6 +248,10 @@ impl SliceExt for Vec<u8> {
     }
 }
 
+pub fn default_date() -> chrono::naive::NaiveDate {
+    chrono::naive::MIN_DATE
+}
+
 #[cfg(test)]
 mod tests {
     use crate::utils::authenticate_github;

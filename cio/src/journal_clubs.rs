@@ -15,11 +15,13 @@ pub struct Meeting {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub papers: Vec<NewJournalClubPaper>,
     #[serde(
+        default = "crate::utils::default_date",
         deserialize_with = "meeting_date_format::deserialize",
         serialize_with = "meeting_date_format::serialize"
     )]
     pub issue_date: NaiveDate,
     #[serde(
+        default = "crate::utils::default_date",
         deserialize_with = "meeting_date_format::deserialize",
         serialize_with = "meeting_date_format::serialize"
     )]
@@ -37,7 +39,6 @@ mod meeting_date_format {
     use serde::{self, Deserialize, Deserializer, Serializer};
 
     const FORMAT: &str = "%m/%d/%Y";
-    pub const DEFAULT_DATE: &str = "01/01/1970";
 
     // The signature of a serialize_with function must follow the pattern:
     //
@@ -54,7 +55,7 @@ mod meeting_date_format {
         S: Serializer,
     {
         let mut s = format!("{}", date.format(FORMAT));
-        if s == DEFAULT_DATE {
+        if *date == chrono::naive::MIN_DATE {
             s = "".to_string();
         }
         serializer.serialize_str(&s)
@@ -71,11 +72,9 @@ mod meeting_date_format {
     where
         D: Deserializer<'de>,
     {
-        let mut s = String::deserialize(deserializer).unwrap();
-        if s.trim().is_empty() {
-            s = DEFAULT_DATE.to_string();
-        }
-        NaiveDate::parse_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
+        let s = String::deserialize(deserializer).unwrap();
+        Ok(NaiveDate::parse_from_str(&s, FORMAT)
+            .unwrap_or(chrono::naive::MIN_DATE))
     }
 }
 

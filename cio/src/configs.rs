@@ -162,14 +162,14 @@ pub struct UserConfig {
     pub home_address_formatted: String,
     /// Start date (automatically populated by Gusto)
     #[serde(
+        default = "crate::utils::default_date",
         alias = "start_date",
-        deserialize_with = "null_date_format::deserialize",
         serialize_with = "null_date_format::serialize"
     )]
     pub start_date: NaiveDate,
     /// Birthday (automatically populated by Gusto)
     #[serde(
-        deserialize_with = "null_date_format::deserialize",
+        default = "crate::utils::default_date",
         serialize_with = "null_date_format::serialize"
     )]
     pub birthday: NaiveDate,
@@ -182,10 +182,9 @@ pub struct UserConfig {
 
 mod null_date_format {
     use chrono::naive::NaiveDate;
-    use serde::{self, Deserialize, Deserializer, Serializer};
+    use serde::{self, Serializer};
 
     const FORMAT: &str = "%Y-%m-%d";
-    const DEFAULT_DATE: &str = "1970-01-01";
 
     // The signature of a serialize_with function must follow the pattern:
     //
@@ -202,28 +201,10 @@ mod null_date_format {
         S: Serializer,
     {
         let mut s = format!("{}", date.format(FORMAT));
-        if s == DEFAULT_DATE {
+        if *date == chrono::naive::MIN_DATE {
             s = "".to_string();
         }
         serializer.serialize_str(&s)
-    }
-
-    // The signature of a deserialize_with function must follow the pattern:
-    //
-    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
-    //    where
-    //        D: Deserializer<'de>
-    //
-    // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let mut s = String::deserialize(deserializer).unwrap();
-        if s.trim().is_empty() {
-            s = DEFAULT_DATE.to_string();
-        }
-        NaiveDate::parse_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
     }
 }
 
