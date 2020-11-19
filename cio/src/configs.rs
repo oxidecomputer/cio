@@ -208,7 +208,42 @@ impl UserConfig {
 /// Implement updating the Airtable record for a User.
 #[async_trait]
 impl UpdateAirtableRecord<User> for User {
-    async fn update_airtable_record(&mut self, _record: User) {}
+    async fn update_airtable_record(&mut self, _record: User) {
+        // Get the current groups in Airtable so we can link to them.
+        // TODO: make this more dry so we do not call it every single damn time.
+        let groups = Groups::get_from_airtable().await;
+
+        let mut links: Vec<String> = Default::default();
+        // Iterate over the group names in our record and match it against the
+        // group ids and see if we find a match.
+        for group in &self.groups {
+            // Iterate over the groups to get the ID.
+            for (_id, g) in &groups {
+                if group.to_string() == g.fields.name {
+                    // Append the ID to our links.
+                    links.push(g.id.to_string());
+                    // Break the loop and return early.
+                    break;
+                }
+            }
+        }
+
+        self.groups = links;
+
+        // Set the building to right building link.
+        // Get the current buildings in Airtable so we can link to it.
+        // TODO: make this more dry so we do not call it every single damn time.
+        let buildings = Buildings::get_from_airtable().await;
+        // Iterate over the buildings to get the ID.
+        for (_id, building) in &buildings {
+            if self.building == building.fields.name {
+                // Set the ID.
+                self.building = building.id.to_string();
+                // Break the loop and return early.
+                break;
+            }
+        }
+    }
 }
 
 /// The data type for a group. This applies to Google Groups.
@@ -238,6 +273,9 @@ pub struct GroupConfig {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<String>,
 
     /// allow_external_members: Identifies whether members external to your
     /// organization can join the group. Possible values are:
@@ -361,7 +399,10 @@ impl GroupConfig {
 /// Implement updating the Airtable record for a Group.
 #[async_trait]
 impl UpdateAirtableRecord<Group> for Group {
-    async fn update_airtable_record(&mut self, _record: Group) {}
+    async fn update_airtable_record(&mut self, record: Group) {
+        // Make sure we don't mess with the members since that is populated by the Users table.
+        self.members = record.members.clone();
+    }
 }
 
 /// The data type for a building.
@@ -393,6 +434,11 @@ pub struct BuildingConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub address_formatted: String,
     pub floors: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub employees: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conference_rooms: Vec<String>,
 }
 
 impl BuildingConfig {
@@ -411,7 +457,12 @@ impl BuildingConfig {
 /// Implement updating the Airtable record for a Building.
 #[async_trait]
 impl UpdateAirtableRecord<Building> for Building {
-    async fn update_airtable_record(&mut self, _record: Building) {}
+    async fn update_airtable_record(&mut self, record: Building) {
+        // Make sure we don't mess with the employees since that is populated by the Users table.
+        self.employees = record.employees.clone();
+        // Make sure we don't mess with the conference_rooms since that is populated by the Conference Rooms table.
+        self.conference_rooms = record.conference_rooms.clone();
+    }
 }
 
 /// The data type for a resource. These are conference rooms that people can book
@@ -447,7 +498,21 @@ pub struct ResourceConfig {
 /// Implement updating the Airtable record for a ConferenceRoom.
 #[async_trait]
 impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
-    async fn update_airtable_record(&mut self, _record: ConferenceRoom) {}
+    async fn update_airtable_record(&mut self, _record: ConferenceRoom) {
+        // Set the building to right building link.
+        // Get the current buildings in Airtable so we can link to it.
+        // TODO: make this more dry so we do not call it every single damn time.
+        let buildings = Buildings::get_from_airtable().await;
+        // Iterate over the buildings to get the ID.
+        for (_id, building) in &buildings {
+            if self.building == building.fields.name {
+                // Set the ID.
+                self.building = building.id.to_string();
+                // Break the loop and return early.
+                break;
+            }
+        }
+    }
 }
 
 /// The data type for a link. These get turned into short links like

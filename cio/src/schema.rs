@@ -104,6 +104,8 @@ table! {
         country -> Varchar,
         address_formatted -> Varchar,
         floors -> Array<Text>,
+        employees -> Array<Text>,
+        conference_rooms -> Array<Text>,
     }
 }
 
@@ -208,6 +210,7 @@ table! {
         description -> Varchar,
         link -> Varchar,
         aliases -> Array<Text>,
+        members -> Array<Text>,
         allow_external_members -> Bool,
         allow_web_posting -> Bool,
         is_archived -> Bool,

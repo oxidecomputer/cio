@@ -8,5 +8,7 @@ CREATE TABLE buildings (
     zipcode VARCHAR NOT NULL,
     country VARCHAR NOT NULL,
     address_formatted VARCHAR NOT NULL,
-    floors TEXT [] NOT NULL
+    floors TEXT [] NOT NULL,
+    employees TEXT [] NOT NULL,
+    conference_rooms TEXT [] NOT NULL
 )
