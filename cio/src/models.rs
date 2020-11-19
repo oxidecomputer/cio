@@ -2123,7 +2123,7 @@ impl RFD {
         let file_name = format!(
             "RFD {}: {}.pdf",
             self.number_string,
-            self.title.replace("/", "-").trim()
+            self.title.replace("/", "-").replace("'", "").trim()
         );
         let rfd_path = format!("/pdfs/{}", file_name,);
 
