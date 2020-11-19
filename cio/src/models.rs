@@ -4,6 +4,7 @@ use std::io::{stderr, stdout, Write};
 use std::process::Command;
 
 use airtable_api::{api_key_from_env, Airtable, Record};
+use async_trait::async_trait;
 use chrono::offset::Utc;
 use chrono::{DateTime, NaiveDate};
 use chrono_humanize::HumanTime;
@@ -22,7 +23,6 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
-use tokio::runtime::Handle;
 
 use crate::airtable::{
     AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE,
@@ -1144,8 +1144,9 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 }
 
 /// Implement updating the Airtable record for an Applicant.
+#[async_trait]
 impl UpdateAirtableRecord<Applicant> for Applicant {
-    fn update_airtable_record(&mut self, _record: Applicant) {}
+    async fn update_airtable_record(&mut self, _record: Applicant) {}
 }
 
 /// The data type for an NewAuthUser.
@@ -1222,8 +1223,9 @@ pub struct NewAuthUser {
 }
 
 /// Implement updating the Airtable record for a AuthUser.
+#[async_trait]
 impl UpdateAirtableRecord<AuthUser> for AuthUser {
-    fn update_airtable_record(&mut self, record: AuthUser) {
+    async fn update_airtable_record(&mut self, record: AuthUser) {
         // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
         self.link_to_people = record.link_to_people.clone();
         self.link_to_auth_user_logins = record.link_to_auth_user_logins.clone();
@@ -1299,13 +1301,12 @@ pub struct NewAuthUserLogin {
 }
 
 /// Implement updating the Airtable record for a AuthUserLogin.
+#[async_trait]
 impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
-    fn update_airtable_record(&mut self, _record: AuthUserLogin) {
+    async fn update_airtable_record(&mut self, _record: AuthUserLogin) {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let handle = Handle::current();
-        let auth_users =
-            handle.block_on(async { AuthUsers::get_from_airtable().await });
+        let auth_users = AuthUsers::get_from_airtable().await;
 
         // Iterate over the auth_users and see if we find a match.
         for (_id, auth_user_record) in auth_users {
@@ -1428,8 +1429,9 @@ impl JournalClubMeeting {
 }
 
 /// Implement updating the Airtable record for a JournalClubMeeting.
+#[async_trait]
 impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
-    fn update_airtable_record(&mut self, record: JournalClubMeeting) {
+    async fn update_airtable_record(&mut self, record: JournalClubMeeting) {
         // Set the papers field, since it is pre-populated as table links.
         self.papers = record.papers.clone();
     }
@@ -1457,13 +1459,13 @@ pub struct NewJournalClubPaper {
 }
 
 /// Implement updating the Airtable record for a JournalClubPaper.
+#[async_trait]
 impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
-    fn update_airtable_record(&mut self, _record: JournalClubPaper) {
+    async fn update_airtable_record(&mut self, _record: JournalClubPaper) {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let handle = Handle::current();
-        let journal_club_meetings = handle
-            .block_on(async { JournalClubMeetings::get_from_airtable().await });
+        let journal_club_meetings =
+            JournalClubMeetings::get_from_airtable().await;
 
         // Iterate over the journal_club_meetings and see if we find a match.
         for (_id, meeting_record) in journal_club_meetings {
@@ -1661,8 +1663,10 @@ impl Default for NewMailingListSubscriber {
 }
 
 /// Implement updating the Airtable record for a MailingListSubscriber.
+#[async_trait]
 impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
-    fn update_airtable_record(&mut self, _record: MailingListSubscriber) {}
+    async fn update_airtable_record(&mut self, _record: MailingListSubscriber) {
+    }
 }
 
 /// The data type for a GitHub user.
@@ -2169,8 +2173,9 @@ impl RFD {
 }
 
 /// Implement updating the Airtable record for an RFD.
+#[async_trait]
 impl UpdateAirtableRecord<RFD> for RFD {
-    fn update_airtable_record(&mut self, record: RFD) {
+    async fn update_airtable_record(&mut self, record: RFD) {
         // Set the Link to People from the original so it stays intact.
         self.milestones = record.milestones.clone();
         self.relevant_components = record.relevant_components.clone();

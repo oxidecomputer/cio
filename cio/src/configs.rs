@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::str::from_utf8;
 
+use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
@@ -205,8 +206,9 @@ impl UserConfig {
 }
 
 /// Implement updating the Airtable record for a User.
+#[async_trait]
 impl UpdateAirtableRecord<User> for User {
-    fn update_airtable_record(&mut self, _record: User) {}
+    async fn update_airtable_record(&mut self, _record: User) {}
 }
 
 /// The data type for a group. This applies to Google Groups.
@@ -357,8 +359,9 @@ impl GroupConfig {
 }
 
 /// Implement updating the Airtable record for a Group.
+#[async_trait]
 impl UpdateAirtableRecord<Group> for Group {
-    fn update_airtable_record(&mut self, _record: Group) {}
+    async fn update_airtable_record(&mut self, _record: Group) {}
 }
 
 /// The data type for a building.
@@ -406,8 +409,9 @@ impl BuildingConfig {
 }
 
 /// Implement updating the Airtable record for a Building.
+#[async_trait]
 impl UpdateAirtableRecord<Building> for Building {
-    fn update_airtable_record(&mut self, _record: Building) {}
+    async fn update_airtable_record(&mut self, _record: Building) {}
 }
 
 /// The data type for a resource. These are conference rooms that people can book
@@ -441,8 +445,9 @@ pub struct ResourceConfig {
 }
 
 /// Implement updating the Airtable record for a ConferenceRoom.
+#[async_trait]
 impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
-    fn update_airtable_record(&mut self, _record: ConferenceRoom) {}
+    async fn update_airtable_record(&mut self, _record: ConferenceRoom) {}
 }
 
 /// The data type for a link. These get turned into short links like

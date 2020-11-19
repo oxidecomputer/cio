@@ -119,7 +119,7 @@ fn do_db_struct(
                             let mut record = r.clone();
 
                             // Run the custom trait to update the new record from the old record.
-                            vec_record.update_airtable_record(record.fields.clone());
+                            vec_record.update_airtable_record(record.fields.clone()).await;
 
                             // If the Airtable record and the vector record are the same, then we can return early since
                             // we do not need to update it in Airtable.
@@ -301,7 +301,7 @@ mod tests {
                             let mut record = r.clone();
 
                             // Run the custom trait to update the new record from the old record.
-                            vec_record.update_airtable_record(record.fields.clone());
+                            vec_record.update_airtable_record(record.fields.clone()).await;
 
                             // If the Airtable record and the vector record are the same, then we can return early since
                             // we do not need to update it in Airtable.
