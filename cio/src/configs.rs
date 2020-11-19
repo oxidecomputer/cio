@@ -133,6 +133,8 @@ pub struct UserConfig {
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub building: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_building: Vec<String>,
 
     #[serde(
         default,
@@ -238,7 +240,7 @@ impl UpdateAirtableRecord<User> for User {
         for (_id, building) in &buildings {
             if self.building == building.fields.name {
                 // Set the ID.
-                self.building = building.id.to_string();
+                self.link_to_building = vec![building.id.to_string()];
                 // Break the loop and return early.
                 break;
             }
@@ -490,6 +492,8 @@ pub struct ResourceConfig {
     #[serde(rename = "type")]
     pub typev: String,
     pub building: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_building: Vec<String>,
     pub capacity: i32,
     pub floor: String,
     pub section: String,
@@ -507,7 +511,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
         for (_id, building) in &buildings {
             if self.building == building.fields.name {
                 // Set the ID.
-                self.building = building.id.to_string();
+                self.link_to_building = vec![building.id.to_string()];
                 // Break the loop and return early.
                 break;
             }

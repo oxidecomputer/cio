@@ -4,6 +4,7 @@ CREATE TABLE conference_rooms (
     description VARCHAR NOT NULL,
     typev VARCHAR NOT NULL,
     building VARCHAR NOT NULL,
+    link_to_building TEXT [] NOT NULL,
     capacity INTEGER NOT NULL,
     floor VARCHAR NOT NULL,
     section VARCHAR NOT NULL

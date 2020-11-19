@@ -12,8 +12,9 @@ CREATE TABLE users (
     twitter VARCHAR NOT NULL,
     groups TEXT [] NOT NULL,
     is_group_admin BOOLEAN NOT NULL DEFAULT 'f',
-    is_system_account BOOLEAN NOT NULL DEFAULT 'f'
+    is_system_account BOOLEAN NOT NULL DEFAULT 'f',
     building VARCHAR NOT NULL,
+    link_to_building TEXT [] NOT NULL,
     aws_role VARCHAR NOT NULL,
     home_address_street_1 VARCHAR NOT NULL,
     home_address_street_2 VARCHAR NOT NULL,
