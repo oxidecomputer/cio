@@ -9,15 +9,16 @@ use acme_lib::persist::FilePersist;
 use acme_lib::{Directory, DirectoryUrl};
 use cloudflare::endpoints::{dns, zone};
 use cloudflare::framework::{
-    apiclient::ApiClient, auth::Credentials, Environment, HttpApiClient,
-    HttpApiClientConfig,
+    async_api::{ApiClient, Client},
+    auth::Credentials,
+    Environment, HttpApiClientConfig,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
-pub fn create_ssl_certificate(domain: &str) -> Certificate {
+pub async fn create_ssl_certificate(domain: &str) -> Certificate {
     let email = env::var("CLOUDFLARE_EMAIL").unwrap();
 
     // Create the Cloudflare client.
@@ -25,7 +26,7 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
         email: env::var("CLOUDFLARE_EMAIL").unwrap(),
         key: env::var("CLOUDFLARE_TOKEN").unwrap(),
     };
-    let api_client = HttpApiClient::new(
+    let api_client = Client::new(
         cf_creds,
         HttpApiClientConfig::default(),
         Environment::Production,
@@ -84,6 +85,7 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
                     ..Default::default()
                 },
             })
+            .await
             .unwrap()
             .result;
 
@@ -101,6 +103,7 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
                     ..Default::default()
                 },
             })
+            .await
             .unwrap()
             .result;
 
@@ -120,6 +123,7 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
                         priority: None,
                     },
                 })
+                .await
                 .unwrap()
                 .result;
 
@@ -139,6 +143,7 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
                         proxied: None,
                     },
                 })
+                .await
                 .unwrap()
                 .result;
 
@@ -205,8 +210,8 @@ pub struct Certificate {
 
 impl Certificate {
     /// For a certificate struct, populate the certficate fields for the domain.
-    pub fn populate(&mut self) {
-        *self = create_ssl_certificate(&self.domain);
+    pub async fn populate(&mut self) {
+        *self = create_ssl_certificate(&self.domain).await;
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
