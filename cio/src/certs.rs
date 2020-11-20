@@ -223,11 +223,11 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
 )]
 #[table_name = "certificates"]
 pub struct NewCertificate {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub private_key: String,
+    pub domain: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub certificate: String,
-    pub domain: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub private_key: String,
     #[serde(default)]
     pub valid_days_left: i32,
     #[serde(
@@ -281,7 +281,7 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// disk, then fill in the rest.
-    pub async fn populate_from_disk(&mut self, dir: &str) {
+    pub fn populate_from_disk(&mut self, dir: &str) {
         let path = self.get_path(dir);
 
         self.certificate =
