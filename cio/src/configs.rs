@@ -183,7 +183,7 @@ pub struct UserConfig {
     pub public_ssh_keys: Vec<String>,
 }
 
-mod null_date_format {
+pub mod null_date_format {
     use chrono::naive::NaiveDate;
     use serde::{self, Serializer};
 

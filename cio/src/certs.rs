@@ -7,6 +7,7 @@ use std::time;
 use acme_lib::create_p384_key;
 use acme_lib::persist::FilePersist;
 use acme_lib::{Directory, DirectoryUrl};
+use chrono::NaiveDate;
 use chrono::{DateTime, TimeZone, Utc};
 use cloudflare::endpoints::{dns, zone};
 use cloudflare::framework::{
@@ -191,13 +192,12 @@ pub async fn create_ssl_certificate(domain: &str) -> Certificate {
         certificate: cert.certificate().to_string(),
         domain: domain.to_string(),
         valid_days_left: cert.valid_days_left(),
+        expiration_date: crate::utils::default_date(),
     }
 }
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
-#[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Certificate {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub private_key: String,
@@ -206,6 +206,11 @@ pub struct Certificate {
     pub domain: String,
     #[serde(default)]
     pub valid_days_left: i64,
+    #[serde(
+        default = "crate::utils::default_date",
+        serialize_with = "crate::configs::null_date_format::serialize"
+    )]
+    pub expiration_date: NaiveDate,
 }
 
 impl Certificate {

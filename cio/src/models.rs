@@ -1681,22 +1681,37 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 )]
 #[sql_type = "Jsonb"]
 pub struct GitHubUser {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub login: String,
+    #[serde(default)]
     pub id: u64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub avatar_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gravatar_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub html_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub followers_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub following_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gists_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub starred_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub subscriptions_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub organizations_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub repos_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub events_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub received_events_url: String,
+    #[serde(default)]
     pub site_admin: bool,
 }
 
