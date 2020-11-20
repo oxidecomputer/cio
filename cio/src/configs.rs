@@ -46,7 +46,7 @@ pub struct Config {
     pub huddles: BTreeMap<String, HuddleConfig>,
 
     #[serde(default)]
-    pub certficates: BTreeMap<String, Certificate>,
+    pub certificates: BTreeMap<String, Certificate>,
 }
 
 impl Config {
