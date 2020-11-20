@@ -16,6 +16,7 @@ use crate::airtable::{
     AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE,
     AIRTABLE_GROUPS_TABLE,
 };
+use crate::certs::Certificate;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{
@@ -43,6 +44,8 @@ pub struct Config {
         BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
 
     pub huddles: BTreeMap<String, HuddleConfig>,
+
+    pub certficates: BTreeMap<String, Certificate>,
 }
 
 impl Config {

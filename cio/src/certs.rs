@@ -12,9 +12,11 @@ use cloudflare::framework::{
     apiclient::ApiClient, auth::Credentials, Environment, HttpApiClient,
     HttpApiClientConfig,
 };
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
-/// The DNS Challenge is added to Cloudflare automatically.
+/// The DNS Challenge TXT record is added to Cloudflare automatically.
 pub fn create_ssl_certificate(domain: &str) -> Certificate {
     let email = env::var("CLOUDFLARE_EMAIL").unwrap();
 
@@ -183,20 +185,29 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
         certificate: cert.certificate().to_string(),
         domain: domain.to_string(),
         valid_days_left: cert.valid_days_left(),
-        acme_certificate: cert,
     }
 }
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 pub struct Certificate {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub private_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub certificate: String,
     pub domain: String,
+    #[serde(default)]
     pub valid_days_left: i64,
-    pub acme_certificate: acme_lib::Certificate,
 }
 
 impl Certificate {
+    /// For a certificate struct, populate the certficate fields for the domain.
+    pub fn populate(&mut self) {
+        *self = create_ssl_certificate(&self.domain);
+    }
+
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
     pub fn save_to_directory(&self, dir: &str) {
         let path = Path::new(dir).join(self.domain.to_string());
