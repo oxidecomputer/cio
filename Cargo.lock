@@ -78,6 +78,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ansi_term"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
+dependencies = [
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "arc-swap"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -337,6 +346,7 @@ dependencies = [
  "comrak",
  "csv",
  "diesel",
+ "diffy",
  "dropshot",
  "futures-util",
  "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -367,7 +377,7 @@ version = "2.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37e58ac78573c40708d45522f0d80fa2f01cc4f9b4e2bf749807255454312002"
 dependencies = [
- "ansi_term",
+ "ansi_term 0.11.0",
  "atty",
  "bitflags",
  "strsim 0.8.0",
@@ -620,6 +630,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "diffy"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f807f0e94954d20729e378653f4caf2a654c7ad5032dc591d6214255a672e1e7"
+dependencies = [
+ "ansi_term 0.12.1",
 ]
 
 [[package]]

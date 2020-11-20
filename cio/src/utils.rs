@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::from_utf8;
 
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
@@ -190,6 +191,24 @@ pub async fn create_or_update_file_in_github_repo(
                 return;
             }
 
+            // When the pdfs are generated they change the modified time that is
+            // encoded in the file. We want to get that diff and see if it is
+            // the only change so that we are not always updating those files.
+            let diff = diffy::create_patch_bytes(&decoded, &content);
+            let bdiff = diff.to_bytes();
+            let str_diff = from_utf8(&bdiff).unwrap_or("");
+            if str_diff.contains("-/ModDate")
+                && str_diff.contains("-/CreationDate")
+                && str_diff.contains("+/ModDate")
+                && str_diff.contains("-/CreationDate")
+                && str_diff.contains("@@ -5,8 +5,8 @@")
+            {
+                // The binary contents are the same so we can return early.
+                // The only thing that changed was the modified time and creation date.
+                println!("[github content] File contents at {} are the same, no update needed", file_path);
+                return;
+            }
+
             // We need to update the file. Ignore failure.
             repo.content().update(
                                     file_path,
@@ -205,7 +224,7 @@ pub async fn create_or_update_file_in_github_repo(
                 "[github content] Getting the file at {} failed: {:?}",
                 file_path, e
             );
-            if e.to_string().contains("RateLimit") {
+            if format!("{:?}", e).contains("RateLimit") {
                 // Return early.
                 return;
             }
