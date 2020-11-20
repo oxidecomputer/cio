@@ -3,6 +3,7 @@
 pub mod airtable;
 pub mod applicants;
 pub mod auth_logins;
+pub mod certs;
 pub mod configs;
 pub mod core;
 pub mod db;

@@ -6,3 +6,6 @@
 .cache
 
 rfd/
+
+*.key
+*.crt
