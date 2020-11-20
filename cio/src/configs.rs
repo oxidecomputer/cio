@@ -731,6 +731,10 @@ pub async fn refresh_db_configs(github: &Github) {
     for (name, mut link) in configs.links {
         link.name = name;
         db.upsert_link(&link);
+
+        let conference_rooms = db.get_conference_rooms();
+        // Update conference rooms in Airtable.
+        ConferenceRooms(conference_rooms).update_airtable().await;
     }
 
     // Sync users.
@@ -750,6 +754,7 @@ pub async fn refresh_db_configs(github: &Github) {
 
 #[cfg(test)]
 mod tests {
+    use crate::certs::Certificates;
     use crate::configs::{
         refresh_db_configs, Buildings, ConferenceRooms, Groups, Users,
     };
@@ -779,5 +784,9 @@ mod tests {
         let conference_rooms = db.get_conference_rooms();
         // Update conference rooms in Airtable.
         ConferenceRooms(conference_rooms).update_airtable().await;
+
+        let certificates = db.get_certificates();
+        // Update certificates in Airtable.
+        Certificates(certificates).update_airtable().await;
     }
 }

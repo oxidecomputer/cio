@@ -113,8 +113,8 @@ table! {
     certificates (id) {
         id -> Int4,
         domain -> Varchar,
-        certificate -> Varchar,
-        private_key -> Varchar,
+        certificate -> Text,
+        private_key -> Text,
         valid_days_left -> Int4,
         expiration_date -> Date,
     }
