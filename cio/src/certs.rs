@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::from_utf8;
 use std::thread;
 use std::time;
@@ -279,10 +279,27 @@ impl NewCertificate {
         self.valid_days_left = self.valid_days_left();
     }
 
+    /// For a certificate struct, populate the certificate and private_key fields from
+    /// disk, then fill in the rest.
+    pub async fn populate_from_disk(&mut self, dir: &str) {
+        let path = self.get_path(dir);
+
+        self.certificate =
+            fs::read_to_string(path.clone().join("fullchain.pem")).unwrap();
+        self.private_key =
+            fs::read_to_string(path.clone().join("privkey.pem")).unwrap();
+        let exp_date = self.expiration_date();
+        self.expiration_date = exp_date.date().naive_utc();
+        self.valid_days_left = self.valid_days_left();
+    }
+
+    fn get_path(&self, dir: &str) -> PathBuf {
+        Path::new(dir).join(self.domain.replace("*.", "wildcard.").to_string())
+    }
+
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
     pub fn save_to_directory(&self, dir: &str) {
-        let path = Path::new(dir)
-            .join(self.domain.replace("*.", "wildcard.").to_string());
+        let path = self.get_path(dir);
 
         // Create the directory if it does not exist.
         fs::create_dir_all(path.clone()).unwrap();
