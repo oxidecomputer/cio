@@ -31,6 +31,7 @@ hubcaps = { git = "https://github.com/softprops/hubcaps", branch = "master", fea
 hyper = "0.13.0"
 macros = { path = "../macros" }
 openapiv3 = "0.3.0"
+openssl = "0.10"
 pandoc = "0.8"
 phonenumber = "0.2"
 regex = "1"

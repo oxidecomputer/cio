@@ -1683,6 +1683,7 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 pub struct GitHubUser {
     pub login: String,
     pub id: u64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub avatar_url: String,
     pub gravatar_id: String,
     pub url: String,

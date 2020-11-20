@@ -7,12 +7,14 @@ use std::time;
 use acme_lib::create_p384_key;
 use acme_lib::persist::FilePersist;
 use acme_lib::{Directory, DirectoryUrl};
+use chrono::{DateTime, TimeZone, Utc};
 use cloudflare::endpoints::{dns, zone};
 use cloudflare::framework::{
     async_api::{ApiClient, Client},
     auth::Credentials,
     Environment, HttpApiClientConfig,
 };
+use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -228,5 +230,33 @@ impl Certificate {
         .unwrap();
         fs::write(path.join("privkey.pem"), self.private_key.as_bytes())
             .unwrap();
+    }
+
+    /// Inspect the certificate to count the number of (whole) valid days left.
+    ///
+    /// It's up to the ACME API provider to decide how long an issued certificate is valid.
+    /// Let's Encrypt sets the validity to 90 days. This function reports 89 days for newly
+    /// issued cert, since it counts _whole_ days.
+    ///
+    /// It is possible to get negative days for an expired certificate.
+    pub fn valid_days_left(&self) -> i64 {
+        let expires = self.expiration_date();
+        let dur = expires - Utc::now();
+
+        dur.num_days()
+    }
+
+    /// Inspect the certificate to get the expiration_date.
+    pub fn expiration_date(&self) -> DateTime<Utc> {
+        // load as x509
+        let x509 =
+            X509::from_pem(self.certificate.as_bytes()).expect("from_pem");
+
+        // convert asn1 time to Tm
+        let not_after = format!("{}", x509.not_after());
+        // Display trait produces this format, which is kinda dumb.
+        // Apr 19 08:48:46 2019 GMT
+        Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z")
+            .expect("strptime")
     }
 }

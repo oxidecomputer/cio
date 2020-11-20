@@ -356,6 +356,7 @@ dependencies = [
  "hyper",
  "macros",
  "openapiv3",
+ "openssl",
  "pandoc",
  "phonenumber",
  "regex",
