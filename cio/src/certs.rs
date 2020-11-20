@@ -89,7 +89,8 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
 
         // Our zone identifier should be the first record's ID.
         let zone_identifier = &zones[0].id;
-        let record_name = format!("_acme-challenge.{}", domain);
+        let record_name =
+            format!("_acme-challenge.{}", domain.replace("*.", ""));
 
         // Check if we already have a TXT record and we need to update it.
         let dns_records = api_client
@@ -210,7 +211,8 @@ impl Certificate {
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
     pub fn save_to_directory(&self, dir: &str) {
-        let path = Path::new(dir).join(self.domain.to_string());
+        let path = Path::new(dir)
+            .join(self.domain.replace("*.", "wildcard.").to_string());
 
         // Create the directory if it does not exist.
         fs::create_dir_all(path.clone()).unwrap();
