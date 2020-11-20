@@ -285,12 +285,16 @@ impl NewCertificate {
         let path = self.get_path(dir);
 
         self.certificate =
-            fs::read_to_string(path.clone().join("fullchain.pem")).unwrap();
-        self.private_key =
-            fs::read_to_string(path.clone().join("privkey.pem")).unwrap();
-        let exp_date = self.expiration_date();
-        self.expiration_date = exp_date.date().naive_utc();
-        self.valid_days_left = self.valid_days_left();
+            fs::read_to_string(path.clone().join("fullchain.pem"))
+                .unwrap_or("".to_string());
+        self.private_key = fs::read_to_string(path.clone().join("privkey.pem"))
+            .unwrap_or("".to_string());
+
+        if !self.certificate.is_empty() {
+            let exp_date = self.expiration_date();
+            self.expiration_date = exp_date.date().naive_utc();
+            self.valid_days_left = self.valid_days_left();
+        }
     }
 
     fn get_path(&self, dir: &str) -> PathBuf {
