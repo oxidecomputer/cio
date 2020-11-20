@@ -1,12 +1,14 @@
 use std::env;
 use std::fs;
 use std::path::Path;
+use std::str::from_utf8;
 use std::thread;
 use std::time;
 
 use acme_lib::create_p384_key;
 use acme_lib::persist::FilePersist;
 use acme_lib::{Directory, DirectoryUrl};
+use async_trait::async_trait;
 use chrono::NaiveDate;
 use chrono::{DateTime, TimeZone, Utc};
 use cloudflare::endpoints::{dns, zone};
@@ -15,13 +17,16 @@ use cloudflare::framework::{
     auth::Credentials,
     Environment, HttpApiClientConfig,
 };
+use hubcaps::Github;
 use macros::db_struct;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_CERTIFICATES_TABLE};
+use crate::core::UpdateAirtableRecord;
 use crate::schema::certificates;
+use crate::utils::github_org;
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
@@ -233,11 +238,45 @@ pub struct NewCertificate {
 }
 
 impl NewCertificate {
-    /// For a certificate struct, populate the certficate fields for the domain.
+    /// For a certificate struct, populate the certificate fields for the domain.
     /// This will create the cert from Let's Encrypt and update Cloudflare TXT records for the
     /// verification.
     pub async fn populate(&mut self) {
         *self = create_ssl_certificate(&self.domain).await;
+    }
+
+    /// For a certificate struct, populate the certificate and private_key fields from
+    /// GitHub, then fill in the rest.
+    pub async fn populate_from_github(&mut self, github: &Github) {
+        let repo = github.repo(github_org(), "configs");
+        let cert = repo
+            .content()
+            .file(
+                &format!(
+                    "nginx/ssl/{}/fullchain.pem",
+                    self.domain.replace("*.", "wildcard.")
+                ),
+                "master",
+            )
+            .await
+            .unwrap();
+        let priv_key = repo
+            .content()
+            .file(
+                &format!(
+                    "nginx/ssl/{}/privkey.pem",
+                    self.domain.replace("*.", "wildcard.")
+                ),
+                "master",
+            )
+            .await
+            .unwrap();
+
+        self.certificate = from_utf8(&cert.content).unwrap().to_string();
+        self.private_key = from_utf8(&priv_key.content).unwrap().to_string();
+        let exp_date = self.expiration_date();
+        self.expiration_date = exp_date.date().naive_utc();
+        self.valid_days_left = self.valid_days_left();
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
@@ -269,7 +308,7 @@ impl NewCertificate {
         let expires = self.expiration_date();
         let dur = expires - Utc::now();
 
-        dur.num_days()
+        dur.num_days() as i32
     }
 
     /// Inspect the certificate to get the expiration_date.
@@ -285,4 +324,10 @@ impl NewCertificate {
         Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z")
             .expect("strptime")
     }
+}
+
+/// Implement updating the Airtable record for a Certificate.
+#[async_trait]
+impl UpdateAirtableRecord<Certificate> for Certificate {
+    async fn update_airtable_record(&mut self, _record: Certificate) {}
 }

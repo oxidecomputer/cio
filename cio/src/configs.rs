@@ -739,6 +739,13 @@ pub async fn refresh_db_configs(github: &Github) {
 
         db.upsert_user(&user);
     }
+
+    // Sync certificates.
+    for (_, mut cert) in configs.certificates {
+        cert.populate_from_github(github).await;
+
+        db.upsert_certificate(&cert);
+    }
 }
 
 #[cfg(test)]

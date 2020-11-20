@@ -3,6 +3,7 @@ use std::env;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
+use crate::certs::{Certificate, NewCertificate};
 use crate::configs::{
     Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig,
     LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig,
@@ -14,9 +15,10 @@ use crate::models::{
     NewMailingListSubscriber, NewRFD, NewRepo, RFD,
 };
 use crate::schema::{
-    applicants, auth_user_logins, auth_users, buildings, conference_rooms,
-    github_labels, github_repos, groups, journal_club_meetings,
-    journal_club_papers, links, mailing_list_subscribers, rfds, users,
+    applicants, auth_user_logins, auth_users, buildings, certificates,
+    conference_rooms, github_labels, github_repos, groups,
+    journal_club_meetings, journal_club_papers, links,
+    mailing_list_subscribers, rfds, users,
 };
 
 pub struct Database {
@@ -127,6 +129,55 @@ impl Database {
             .values(building)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating building failed: {}", e))
+    }
+
+    pub fn get_certificates(&self) -> Vec<Certificate> {
+        certificates::dsl::certificates
+            .order_by(certificates::dsl::id.desc())
+            .load::<Certificate>(&self.conn)
+            .unwrap()
+    }
+
+    pub fn upsert_certificate(
+        &self,
+        certificate: &NewCertificate,
+    ) -> Certificate {
+        // See if we already have the certificate in the database.
+        match certificates::dsl::certificates
+            .filter(
+                certificates::dsl::domain.eq(certificate.domain.to_string()),
+            )
+            .limit(1)
+            .load::<Certificate>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the certificate in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let b = r.get(0).unwrap();
+
+                    // Update the certificate.
+                    return diesel::update(b)
+                        .set(certificate)
+                        .get_result::<Certificate>(&self.conn)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "unable to update certificate {}: {}",
+                                b.id, e
+                            )
+                        });
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the certificate in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(certificates::table)
+            .values(certificate)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating certificate failed: {}", e))
     }
 
     pub fn get_conference_rooms(&self) -> Vec<ConferenceRoom> {
