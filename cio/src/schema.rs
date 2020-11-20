@@ -110,6 +110,17 @@ table! {
 }
 
 table! {
+    certificates (id) {
+        id -> Int4,
+        domain -> Varchar,
+        certificate -> Varchar,
+        private_key -> Varchar,
+        valid_days_left -> Int4,
+        expiration_date -> Date,
+    }
+}
+
+table! {
     conference_rooms (id) {
         id -> Int4,
         name -> Varchar,
@@ -338,6 +349,7 @@ allow_tables_to_appear_in_same_query!(
     auth_user_logins,
     auth_users,
     buildings,
+    certificates,
     conference_rooms,
     github_labels,
     github_repos,
