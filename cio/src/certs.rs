@@ -1,10 +1,12 @@
 use std::env;
+use std::fs;
+use std::path::Path;
 use std::thread;
 use std::time;
 
 use acme_lib::create_p384_key;
 use acme_lib::persist::FilePersist;
-use acme_lib::{Certificate, Directory, DirectoryUrl};
+use acme_lib::{Directory, DirectoryUrl};
 use cloudflare::endpoints::{dns, zone};
 use cloudflare::framework::{
     apiclient::ApiClient, auth::Credentials, Environment, HttpApiClient,
@@ -28,13 +30,12 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
     )
     .unwrap();
 
-    // Save/load keys and certificates to current dir.
-    let persist = FilePersist::new(".");
+    // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
+    let persist = FilePersist::new(env::temp_dir());
 
     // Create a directory entrypoint.
     // Use DirectoryUrl::LetsEncrypStaging for dev/testing.
-    let dir =
-        Directory::from_url(persist, DirectoryUrl::LetsEncryptStaging).unwrap();
+    let dir = Directory::from_url(persist, DirectoryUrl::LetsEncrypt).unwrap();
 
     // Reads the private account key from persistence, or
     // creates a new one before accessing the API to establish
@@ -177,15 +178,39 @@ pub fn create_ssl_certificate(domain: &str) -> Certificate {
 
     println!("cert: {:?}", cert);
 
-    cert
+    Certificate {
+        private_key: cert.private_key().to_string(),
+        certificate: cert.certificate().to_string(),
+        domain: domain.to_string(),
+        valid_days_left: cert.valid_days_left(),
+        acme_certificate: cert,
+    }
 }
 
-/*#[cfg(test)]
-mod tests {
-    use crate::certs::create_ssl_certificate;
+/// A data type to hold the values of a let's encrypt certificate for a domain.
+pub struct Certificate {
+    pub private_key: String,
+    pub certificate: String,
+    pub domain: String,
+    pub valid_days_left: i64,
+    pub acme_certificate: acme_lib::Certificate,
+}
 
-    #[test]
-    fn test_certs() {
-        create_ssl_certificate("api.internal.oxide.computer");
+impl Certificate {
+    /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
+    pub fn save_to_directory(&self, dir: &str) {
+        let path = Path::new(dir).join(self.domain.to_string());
+
+        // Create the directory if it does not exist.
+        fs::create_dir_all(path.clone()).unwrap();
+
+        // Write the files.
+        fs::write(
+            path.clone().join("fullchain.pem"),
+            self.certificate.as_bytes(),
+        )
+        .unwrap();
+        fs::write(path.join("privkey.pem"), self.private_key.as_bytes())
+            .unwrap();
     }
-}*/
+}
