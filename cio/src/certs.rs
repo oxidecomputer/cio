@@ -184,8 +184,6 @@ pub async fn create_ssl_certificate(domain: &str) -> Certificate {
     // the persistence.
     let cert = ord_cert.download_and_save_cert().unwrap();
 
-    println!("cert: {:?}", cert);
-
     Certificate {
         private_key: cert.private_key().to_string(),
         certificate: cert.certificate().to_string(),
