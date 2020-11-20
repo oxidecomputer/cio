@@ -15,13 +15,17 @@ use cloudflare::framework::{
     auth::Credentials,
     Environment, HttpApiClientConfig,
 };
+use macros::db_struct;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_CERTIFICATES_TABLE};
+use crate::schema::certificates;
+
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
-pub async fn create_ssl_certificate(domain: &str) -> Certificate {
+pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
     let email = env::var("CLOUDFLARE_EMAIL").unwrap();
 
     // Create the Cloudflare client.
@@ -187,25 +191,40 @@ pub async fn create_ssl_certificate(domain: &str) -> Certificate {
     // the persistence.
     let cert = ord_cert.download_and_save_cert().unwrap();
 
-    Certificate {
+    NewCertificate {
         private_key: cert.private_key().to_string(),
         certificate: cert.certificate().to_string(),
         domain: domain.to_string(),
-        valid_days_left: cert.valid_days_left(),
+        valid_days_left: cert.valid_days_left() as i32,
         expiration_date: crate::utils::default_date(),
     }
 }
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
-#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct Certificate {
+#[db_struct {
+    new_name = "Certificate",
+    base_id = "AIRTABLE_BASE_ID_MISC",
+    table = "AIRTABLE_CERTIFICATES_TABLE",
+}]
+#[derive(
+    Debug,
+    Insertable,
+    AsChangeset,
+    PartialEq,
+    Clone,
+    JsonSchema,
+    Deserialize,
+    Serialize,
+)]
+#[table_name = "certificates"]
+pub struct NewCertificate {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub private_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub certificate: String,
     pub domain: String,
     #[serde(default)]
-    pub valid_days_left: i64,
+    pub valid_days_left: i32,
     #[serde(
         default = "crate::utils::default_date",
         serialize_with = "crate::configs::null_date_format::serialize"
@@ -213,8 +232,10 @@ pub struct Certificate {
     pub expiration_date: NaiveDate,
 }
 
-impl Certificate {
+impl NewCertificate {
     /// For a certificate struct, populate the certficate fields for the domain.
+    /// This will create the cert from Let's Encrypt and update Cloudflare TXT records for the
+    /// verification.
     pub async fn populate(&mut self) {
         *self = create_ssl_certificate(&self.domain).await;
     }
@@ -244,7 +265,7 @@ impl Certificate {
     /// issued cert, since it counts _whole_ days.
     ///
     /// It is possible to get negative days for an expired certificate.
-    pub fn valid_days_left(&self) -> i64 {
+    pub fn valid_days_left(&self) -> i32 {
         let expires = self.expiration_date();
         let dur = expires - Utc::now();
 
