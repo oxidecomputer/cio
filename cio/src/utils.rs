@@ -224,8 +224,16 @@ pub async fn create_or_update_file_in_github_repo(
                 "[github content] Getting the file at {} failed: {:?}",
                 file_path, e
             );
-            if format!("{:?}", e).contains("RateLimit") {
+            let error_string = format!("{:?}", e);
+            if error_string.contains("RateLimit") {
                 // Return early.
+                return;
+            }
+            if error_string.contains("too_large") {
+                // The file is too big for us to get it's contents through this API.
+                // The error suggests we use the Git Data API but we need the file sha for
+                // that.
+                // TODO: figure this out.
                 return;
             }
 
