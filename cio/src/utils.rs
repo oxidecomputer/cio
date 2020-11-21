@@ -5,6 +5,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::from_utf8;
 
+use futures_util::TryStreamExt;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
 use hubcaps::repositories::{
@@ -220,10 +221,6 @@ pub async fn create_or_update_file_in_github_repo(
             println!("[github content] Updated file at {}", file_path);
         }
         Err(e) => {
-            println!(
-                "[github content] Getting the file at {} failed: {:?}",
-                file_path, e
-            );
             let error_string = format!("{:?}", e);
             if error_string.contains("RateLimit") {
                 // Return early.
@@ -233,9 +230,45 @@ pub async fn create_or_update_file_in_github_repo(
                 // The file is too big for us to get it's contents through this API.
                 // The error suggests we use the Git Data API but we need the file sha for
                 // that.
-                // TODO: figure this out.
+                // TODO: make this less awful.
+                // Get all the items in the directory and try to find our file and get the sha
+                // for it so we can update it.
+                let mut path = PathBuf::from(file_path);
+                path.pop();
+
+                for item in repo
+                    .content()
+                    .iter(path.to_str().unwrap(), "master")
+                    .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
+                    .await
+                    .unwrap()
+                {
+                    if file_path.trim_start_matches('/') != item.path {
+                        // Continue early.
+                        continue;
+                    }
+
+                    // Otherwise, this is our file.
+                    // We can actually update the file since we have the sha.
+                    repo.content().update(
+                                    file_path,
+                                    &content,
+                                    &format!("Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",file_path),
+                                    &item.sha).await
+                            .ok();
+
+                    println!("[github content] Updated file at {}", file_path);
+
+                    // We can break the loop now.
+                    break;
+                }
+
                 return;
             }
+            println!(
+                "[github content] Getting the file at {} failed: {:?}",
+                file_path, e
+            );
 
             // Create the file in the repo. Ignore failure.
             repo.content().create(
