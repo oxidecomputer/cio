@@ -12,6 +12,7 @@ documentation = "https://docs.rs/cio-api"
 acme-lib = "^0.8.0"
 airtable-api = "^0.1.0"
 async-trait = "^0.1.0"
+base64 = "0.12"
 diffy = "^0.2.0"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"

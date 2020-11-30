@@ -249,6 +249,25 @@ pub async fn create_or_update_file_in_github_repo(
                     }
 
                     // Otherwise, this is our file.
+                    // We have the sha we can see if the files match using the
+                    // Git Data API.
+                    let blob = repo.git().blob(&item.sha).await.unwrap();
+                    // Base64 decode the contents.
+                    // TODO: move this logic to hubcaps.
+                    let v = blob.content.replace("\n", "");
+                    let decoded =
+                        base64::decode_config(&v, base64::STANDARD).unwrap();
+                    let file_content: Vec<u8> = decoded.into();
+                    let decoded_content = file_content.trim();
+
+                    // Compare the content to the decoded content and see if we need to update them.
+                    if content == decoded_content {
+                        // They are the same so we can return early, we do not need to update the
+                        // file.
+                        println!("[github content] File contents at {} are the same, no update needed", file_path);
+                        return;
+                    }
+
                     // We can actually update the file since we have the sha.
                     repo.content().update(
                                     file_path,

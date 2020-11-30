@@ -340,6 +340,7 @@ dependencies = [
  "acme-lib",
  "airtable-api 0.1.12",
  "async-trait",
+ "base64 0.12.3",
  "chrono 0.4.19",
  "chrono-humanize",
  "clap",
