@@ -661,9 +661,17 @@ pub struct GitHubOutsideCollaboratorsConfig {
     Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
 )]
 pub struct HuddleConfig {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
     pub description: String,
     pub airtable_base_id: String,
     pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub link_to_airtable_form: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub link_to_airtable_workspace: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub google_calendar_event_name: String,
 }
 
 /// Get the configs from the GitHub repository and parse them.
