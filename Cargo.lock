@@ -52,6 +52,7 @@ version = "0.1.12"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
+ "schemars",
  "serde",
  "serde_json",
 ]

@@ -2,6 +2,7 @@ use airtable_api::User as AirtableUser;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use gusto_api::date_format;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Define the trait for doing logic in updating Airtable.
@@ -66,11 +67,15 @@ pub struct DiscussionTopic {
 /// The data type for a meeting.
 /// This is inline with our Airtable workspace for product huddle meetings, hardware
 /// huddle meetings, etc.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub struct Meeting {
     #[serde(rename = "Name", skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(with = "date_format", rename = "Date")]
+    #[serde(
+        serialize_with = "gusto_api::date_format",
+        deserialize_with = "gusto_api::date_format",
+        rename = "Date"
+    )]
     pub date: NaiveDate,
     #[serde(rename = "Week", skip_serializing_if = "String::is_empty")]
     pub week: String,

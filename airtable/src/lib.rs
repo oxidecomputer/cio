@@ -44,6 +44,7 @@ use std::sync::Arc;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -390,7 +391,7 @@ pub struct Record<T> {
 }
 
 /// An airtable user.
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct User {
     pub id: String,
     pub email: String,

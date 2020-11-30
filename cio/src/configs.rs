@@ -17,7 +17,7 @@ use crate::airtable::{
     AIRTABLE_GROUPS_TABLE,
 };
 use crate::certs::NewCertificate;
-use crate::core::UpdateAirtableRecord;
+use crate::core::{Meeting, UpdateAirtableRecord};
 use crate::db::Database;
 use crate::schema::{
     buildings, conference_rooms, github_labels, groups, links, users,
@@ -672,6 +672,8 @@ pub struct HuddleConfig {
     pub link_to_airtable_workspace: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub google_calendar_event_name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub meetings: Vec<Meeting>,
 }
 
 /// Get the configs from the GitHub repository and parse them.
