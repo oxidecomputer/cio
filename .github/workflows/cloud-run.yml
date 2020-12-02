@@ -62,6 +62,6 @@ jobs:
           --cpu 2 \
           --memory 2Gi \
           --platform "managed" \
-          --set-env-vars "PORT=8000,CIO_DATABASE_URL=${{secrets.CIO_DATABASE_URL}},RUST_BACKTRACE=1,SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL=${{secrets.SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL}},AIRTABLE_API_KEY=${{secrets.AIRTABLE_API_KEY}},GITHUB_TOKEN=${{secrets.GLOBAL_GITHUB_TOKEN}},GITHUB_ORG=oxidecomputer" \
+          --set-env-vars "CIO_DATABASE_URL=${{secrets.CIO_DATABASE_URL}},RUST_BACKTRACE=1,SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL=${{secrets.SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL}},AIRTABLE_API_KEY=${{secrets.AIRTABLE_API_KEY}},GITHUB_TOKEN=${{secrets.GLOBAL_GITHUB_TOKEN}},GITHUB_ORG=oxidecomputer" \
           --max-instances=1 \
           --allow-unauthenticated

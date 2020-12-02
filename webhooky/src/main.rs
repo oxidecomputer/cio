@@ -14,10 +14,10 @@ async fn main() -> Result<(), String> {
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
-     * request port 8000.
+     * request port 8080.
      */
     let config_dropshot = ConfigDropshot {
-        bind_address: "0.0.0.0:8000".parse().unwrap(),
+        bind_address: "0.0.0.0:8080".parse().unwrap(),
     };
 
     /*
