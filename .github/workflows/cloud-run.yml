@@ -1,0 +1,69 @@
+name: cloud-run
+
+on:
+  push:
+    branches:
+    - master
+
+env:
+  PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+  RUN_REGION: us-central1
+  SERVICE_NAME: webhooky
+
+jobs:
+  setup-build-deploy:
+    name: Setup, Build, and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@master
+      with:
+        submodules: true
+        token: ${{ secrets.GLOBAL_GITHUB_TOKEN }}
+
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache cargo index
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    # Setup gcloud CLI
+    - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        version: '290.0.1'
+        service_account_key: ${{ secrets.GOOGLE_CLOUD_SA_KEY }}
+        project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+
+    # Build and push image to Google Container Registry
+    - name: Build
+      run: |-
+        cd webhooky \
+        gcloud builds submit \
+          --quiet \
+          --timeout 2h \
+          --machine-type n1-highcpu-32 \
+          --tag "gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA"
+    # Deploy image to Cloud Run
+    - name: Deploy
+      run: |-
+        gcloud run deploy "$SERVICE_NAME" \
+          --quiet \
+          --region "$RUN_REGION" \
+          --image "gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA" \
+          --cpu 2 \
+          --memory 2Gi \
+          --add-cloudsql-instances "${{ secrets.INSTANCE_CONNECTION_NAME }}" \
+          --platform "managed" \
+          --set-env-vars "CIO_DATABASE_URL=${{secrets.CIO_DATABASE_URL}},RUST_BACKTRACE=1,INSTANCE_CONNECTION_NAME=${{secrets.INSTANCE_CONNECTION_NAME}},SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL=${{secrets.SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL}},AIRTABLE_API_KEY=${{secrets.AIRTABLE_API_KEY}},GITHUB_TOKEN=${{secrets.GLOBAL_GITHUB_TOKEN}},GITHUB_ORG=oxidecomputer" \
+          --max-instances=1 \
+          --allow-unauthenticated
