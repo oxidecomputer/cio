@@ -102,7 +102,7 @@ pub struct GitHubWebhook {
     pub id: String,
     /// The type of event. Events uses PascalCase for the name.
     #[serde(default, rename = "type")]
-    pub typev: String,
+    pub typev: GitHubEventType,
     /// The user that triggered the event.
     pub actor: GitHubActor,
     /// The repository object where the event occurred.
@@ -110,4 +110,31 @@ pub struct GitHubWebhook {
     /// The event payload object is unique to the event type.
     /// See the event type below for the event API payload object.
     pub payload: Value,
+}
+
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
+pub enum GitHubEventType {
+    CommitCommentEvent,
+    CreateEvent,
+    DeleteEvent,
+    ForkEvent,
+    GollumEvent,
+    IssueCommentEvent,
+    IssuesEvent,
+    MemberEvent,
+    PublicEvent,
+    PullRequestEvent,
+    PullRequestReviewCommentEvent,
+    PushEvent,
+    ReleaseEvent,
+    SponsorshipEvent,
+    WatchEvent,
+    /// NoopEvent is not a real GitHub event type, it is merely here as a default.
+    NoopEvent,
+}
+
+impl Default for GitHubEventType {
+    fn default() -> Self {
+        GitHubEventType::NoopEvent
+    }
 }
