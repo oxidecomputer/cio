@@ -4,15 +4,10 @@ use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 
-use dropshot::endpoint;
-use dropshot::ApiDescription;
-use dropshot::ConfigDropshot;
-use dropshot::ConfigLogging;
-use dropshot::ConfigLoggingLevel;
-use dropshot::HttpError;
-use dropshot::HttpResponseOk;
-use dropshot::HttpServer;
-use dropshot::RequestContext;
+use dropshot::{
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
+    ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServer, RequestContext,
+};
 use hyper::{Body, Response, StatusCode};
 
 use cio_api::configs::{
@@ -32,8 +27,7 @@ async fn main() -> Result<(), String> {
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
-     * request port 0, which allows the operating system to pick any available
-     * port.
+     * request port 8888.
      */
     let config_dropshot = ConfigDropshot {
         bind_address: "0.0.0.0:8888".parse().unwrap(),
