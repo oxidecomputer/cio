@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
-RUN gem --no-rdoc --no-ri install \
+RUN gem install \
 	asciidoctor-pdf \
 	rouge
 
