@@ -4,6 +4,7 @@
 [![cargo-clippy](https://github.com/oxidecomputer/cio/workflows/cargo%20clippy/badge.svg)](https://github.com/oxidecomputer/cio/actions?query=workflow%3A%22cargo+clippy%22)
 [![cargo-test](https://github.com/oxidecomputer/cio/workflows/cargo%20test/badge.svg)](https://github.com/oxidecomputer/cio/actions?query=workflow%3A%22cargo+test%22)
 [![rustfmt](https://github.com/oxidecomputer/cio/workflows/rustfmt/badge.svg)](https://github.com/oxidecomputer/cio/actions?query=workflow%3A%22rustfmt%22)
+[![cloud-run](https://github.com/oxidecomputer/cio/workflows/cloud-run/badge.svg)](https://github.com/oxidecomputer/cio/actions?query=workflow%3Acloud-run)
 
 A set of Rust libraries for accessing various APIs for doing CIO jobs.
 
