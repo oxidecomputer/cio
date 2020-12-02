@@ -52,7 +52,7 @@ async fn main() -> Result<(), String> {
 
 /** Listen for GitHub webhooks. */
 #[endpoint {
-    method = GET,
+    method = POST,
     path = "/github",
 }]
 async fn listen_github_webhooks(
