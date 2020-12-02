@@ -1,0 +1,10 @@
+[package]
+name = "webhooky"
+description = "A simple webhook server for listening on GitHub and Google Sheets webhooks to perform events."
+version = "0.1.0"
+authors = ["Jess Frazelle <jess@oxide.computer>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
