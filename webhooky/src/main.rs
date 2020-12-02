@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
-    ConfigLoggingLevel, HttpError, HttpResponseUpdatedNoContent, HttpServer,
-    RequestContext, TypedBody,
+    ConfigLoggingLevel, HttpError, HttpResponseOk,
+    HttpResponseUpdatedNoContent, HttpServer, RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,7 @@ async fn main() -> Result<(), String> {
      * specifies the HTTP method and URI path that identify the endpoint,
      * allowing this metadata to live right alongside the handler function.
      */
+    api.register(ping).unwrap();
     api.register(listen_github_webhooks).unwrap();
 
     // Start the server.
@@ -48,6 +49,17 @@ async fn main() -> Result<(), String> {
 
     let server_task = server.run();
     server.wait_for_shutdown(server_task).await
+}
+
+/** Return pong. */
+#[endpoint {
+    method = GET,
+    path = "/ping",
+}]
+async fn ping(
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<String>, HttpError> {
+    Ok(HttpResponseOk("pong".to_string()))
 }
 
 /** Listen for GitHub webhooks. */
