@@ -3,8 +3,11 @@ use std::sync::Arc;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
     ConfigLoggingLevel, HttpError, HttpResponseUpdatedNoContent, HttpServer,
-    RequestContext,
+    RequestContext, TypedBody,
 };
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -54,6 +57,57 @@ async fn main() -> Result<(), String> {
 }]
 async fn listen_github_webhooks(
     _rqctx: Arc<RequestContext>,
+    body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseUpdatedNoContent, HttpError> {
+    println!("{:?}", body_param.into_inner());
     Ok(HttpResponseUpdatedNoContent())
+}
+
+/// A GitHub actor.
+#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubActor {
+    /// The unique identifier for the actor.
+    pub id: String,
+    /// The username of the actor.
+    pub login: String,
+    /// The specific display format of the username.
+    pub display_login: String,
+    /// The unique identifier of the Gravatar profile for the actor.
+    pub gravatar_id: String,
+    /// The REST API URL used to retrieve the user object, which includes
+    /// additional user information.
+    pub url: String,
+    /// The URL of the actor's profile image.
+    pub avatar_url: String,
+}
+
+/// A GitHub repo, abbreviated datatype for the webhook.
+#[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubRepo {
+    /// The unique identifier of the repository.
+    pub id: String,
+    /// The name of the repository, which includes the owner and repository name.
+    /// For example, octocat/hello-world is the name of the hello-world
+    /// repository owned by the octocat user account.
+    pub name: String,
+    /// The REST API URL used to retrieve the repository object, which includes
+    /// additional repository information.
+    pub url: String,
+}
+
+/// A GitHub webhook event.
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubWebhook {
+    /// Unique identifier for the event.
+    pub id: String,
+    /// The type of event. Events uses PascalCase for the name.
+    #[serde(default, rename = "type")]
+    pub typev: String,
+    /// The user that triggered the event.
+    pub actor: GitHubActor,
+    /// The repository object where the event occurred.
+    pub repo: GitHubRepo,
+    /// The event payload object is unique to the event type.
+    /// See the event type below for the event API payload object.
+    pub payload: Value,
 }
