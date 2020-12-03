@@ -179,9 +179,7 @@ pub async fn refresh_db_rfds(github: &Github) {
 mod tests {
     use crate::db::Database;
     use crate::models::{NewRFD, RFDs};
-    use crate::rfds::{
-        clean_rfd_html_links, refresh_db_rfds, refresh_rfd_pdfs,
-    };
+    use crate::rfds::{clean_rfd_html_links, refresh_db_rfds};
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
