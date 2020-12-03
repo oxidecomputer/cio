@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
+use cio_api::slack::{get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github, get_gsuite_token, github_org};
 
 #[tokio::main]
@@ -176,7 +177,6 @@ async fn listen_github_webhooks(
     if event_type != "push".to_string()
         && event_type != "pull_request".to_string()
     {
-        // If we did not get a push event we can log it and return early.
         let msg = format!(
             "Aborted, not a `push` or `pull_request` event, got `{}`",
             event_type
@@ -411,8 +411,39 @@ async fn listen_mailchimp_webhooks(
     _rqctx: Arc<RequestContext>,
     query_args: Query<MailchimpWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
+    // TODO: share the database connection in the context.
+    let db = Database::new();
+
     let event = query_args.into_inner();
+
     println!("[mailchimp] {:?}", event);
+
+    if event.webhook_type != "subscribe".to_string() {
+        let msg = format!(
+            "Aborted, not a `subscribe` event, got `{}`",
+            event.webhook_type
+        );
+        println!("[mailchimp]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
+    }
+
+    // Parse the webhook as a new mailing list subscriber.
+    /*let new_subscriber = event.as_signup();
+
+    // TODO: Update the subscriber in the database.
+    let subscriber = db.upsert_mailing_list_subscriber(&new_subscriber);
+
+    // TODO: Update airtable with the new subscriber.
+    let mut airtable_subscriber = subscriber.clone();
+    airtable_subscriber.create_or_update_in_airtable().await;
+
+    // Parse the signup into a slack message.
+    // Send the message to the slack channel.
+    post_to_channel(
+        get_public_relations_channel_post_url(),
+        new_subscriber.as_slack_msg(),
+    )
+    .await;*/
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }
