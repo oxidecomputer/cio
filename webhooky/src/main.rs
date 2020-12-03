@@ -207,7 +207,7 @@ async fn listen_github_webhooks(
         }
 
         // We have a newly opened pull request.
-        // Let's update the discussion link for the RFD.
+        // TODO: Let's update the discussion link for the RFD.
         let msg =
             format!("`{}` event was to the {} repo with action `{}`, updated discussion link for the RFD",event_type, repo_name, event.action);
         println!("[github]: {}", msg);
@@ -289,15 +289,12 @@ async fn listen_github_webhooks(
             commit.timestamp.unwrap(),
         )
         .await;
-        println!("[github] RFD: {:?}", new_rfd);
 
         // Get the old RFD from the database. We will need this later to
         // check if the RFD's state changed.
         let old_rfd = db.get_rfd(new_rfd.number);
         let mut old_rfd_state = "".to_string();
         if old_rfd.is_some() {
-            println!("[github] old RFD: {:?}", old_rfd);
-
             old_rfd_state = old_rfd.unwrap().state;
         }
 
@@ -346,7 +343,7 @@ async fn listen_github_webhooks(
                 // Check if the pull request is for our branch.
                 let pull_branch =
                     pull.head.commit_ref.trim_start_matches("refs/heads/");
-                println!("pull brnach: {}", pull_branch);
+                println!("pull branch: {}", pull_branch);
 
                 if pull_branch == branch {
                     println!("[github] RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}", rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url);
@@ -358,7 +355,7 @@ async fn listen_github_webhooks(
 
             // Open a pull request, if we don't already have one.
             if !has_pull {
-                // Open a pull request.
+                // TODO: Open a pull request.
                 println!("[github] RFD {} has moved from state {} -> {}, on branch {}, opening a PR",rfd.number_string, old_rfd_state, rfd.state, branch);
 
                 /*let pull = github_repo
