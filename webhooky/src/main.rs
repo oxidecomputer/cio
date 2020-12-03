@@ -171,23 +171,34 @@ async fn listen_github_webhooks(
         .unwrap()
         .to_string();
 
-    if event_type != "push".to_string() {
+    if event_type != "push".to_string()
+        && event_type != "pull_request".to_string()
+    {
         // If we did not get a push event we can log it and return early.
-        let msg =
-            format!("Aborted, not a `push` event, got `{}`", event.action);
+        let msg = format!(
+            "Aborted, not a `push` or `pull_request` event, got `{}`",
+            event.action
+        );
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
 
-    // Handle the push event.
-    // Check if it came from the rfd repo.
+    // Check if the event came from the rfd repo.
     let repo = event.clone().repository.unwrap();
     let repo_name = repo.name;
     if repo_name != "rfd" {
         // We only care about the rfd repo push events for now.
         // We can throw this out, log it and return early.
         let msg =
-            format!("Aborted, `push` event was to the {} repo, no automations are set up for this repo yet", repo_name);
+            format!("Aborted, `{}` event was to the {} repo, no automations are set up for this repo yet",event_type, repo_name);
+        println!("[github]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
+    }
+
+    if event_type == "pull_request" {
+        // Handle if we got a pull_request.
+        let msg =
+            format!("Aborted, `{}` event was to the {} repo, no automations are set up for pull requests yet",event_type, repo_name);
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -349,6 +360,10 @@ async fn listen_github_webhooks(
                                             ))
                                     .await
                                     .unwrap();*/
+
+                // We could update the discussion link here, but we will already
+                // trigger a pull request created event, so we might as well let
+                // that do its thing.
             }
         }
 
