@@ -1686,6 +1686,14 @@ pub struct GitHubUser {
     #[serde(default)]
     pub id: u64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub avatar_url: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gravatar_id: String,
@@ -1879,8 +1887,10 @@ impl NewRepo {
         NewRepo {
             github_id: r.id.to_string(),
             owner: GitHubUser {
-                login: r.owner.login,
+                login: r.owner.login.to_string(),
                 id: r.owner.id,
+                name: r.owner.login,
+                email: "".to_string(),
                 avatar_url: r.owner.avatar_url,
                 gravatar_id: r.owner.gravatar_id,
                 url: r.owner.url,
