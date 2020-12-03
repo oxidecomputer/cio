@@ -145,13 +145,13 @@ mod tests {
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_journal_club_meetings() {
+    async fn test_cron_journal_club_meetings() {
         let github = authenticate_github();
         refresh_db_journal_club_meetings(&github).await;
     }
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_journal_club_meetings_airtable() {
+    async fn test_cron_journal_club_meetings_airtable() {
         // Initialize our database.
         let db = Database::new();
 
@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_journal_club_papers_airtable() {
+    async fn test_cron_journal_club_papers_airtable() {
         // Initialize our database.
         let db = Database::new();
 

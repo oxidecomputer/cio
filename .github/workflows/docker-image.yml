@@ -3,7 +3,7 @@ on:
   push:
     branches: master
 jobs:
-  github-cache:
+  docker-image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master

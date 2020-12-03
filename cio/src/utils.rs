@@ -337,7 +337,7 @@ mod tests {
     use crate::utils::refresh_db_github_repos;
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_github_repos() {
+    async fn test_cron_github_repos() {
         let github = authenticate_github();
         refresh_db_github_repos(&github).await;
     }

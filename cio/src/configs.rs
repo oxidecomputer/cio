@@ -800,7 +800,7 @@ mod tests {
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_configs() {
+    async fn test_cron_configs() {
         let github = authenticate_github();
         refresh_db_configs(&github).await;
 

@@ -203,7 +203,7 @@ mod tests {
     use crate::mailing_list::refresh_db_mailing_list_subscribers;
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_mailing_list_subscribers() {
+    async fn test_cron_mailing_list_subscribers() {
         refresh_db_mailing_list_subscribers().await;
     }
 }

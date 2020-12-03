@@ -255,7 +255,7 @@ mod tests {
     use crate::utils::authenticate_github;
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_rfds() {
+    async fn test_cron_rfds() {
         let github = authenticate_github();
         refresh_db_rfds(&github).await;
     }
@@ -324,7 +324,7 @@ authors: nope"#;
     }
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_rfds_airtable() {
+    async fn test_cron_rfds_airtable() {
         // Initialize our database.
         let db = Database::new();
 
@@ -334,7 +334,7 @@ authors: nope"#;
     }
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_rfd_pdfs() {
+    async fn test_cron_rfd_pdfs() {
         let github = authenticate_github();
         refresh_rfd_pdfs(&github).await;
     }

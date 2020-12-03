@@ -308,12 +308,12 @@ mod tests {
     use crate::models::{AuthUserLogins, AuthUsers};
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_auth_refresh_db() {
+    async fn test_cron_auth_refresh_db() {
         refresh_db_auth().await;
     }
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_auth_users_airtable() {
+    async fn test_cron_auth_users_airtable() {
         // Initialize our database.
         let db = Database::new();
 
@@ -323,7 +323,7 @@ mod tests {
     }
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_auth_user_logins_airtable() {
+    async fn test_cron_auth_user_logins_airtable() {
         // Initialize our database.
         let db = Database::new();
 

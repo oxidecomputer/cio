@@ -1,6 +1,4 @@
 on:
-  schedule:
-    - cron: "*/60 * * * *"
   push:
     branches:
       - '**'
@@ -11,21 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: actions/checkout@v2
-        with:
-          repository: oxidecomputer/rfd
-          token: ${{ secrets.GLOBAL_GITHUB_TOKEN }}
-          path: rfd
-      - name: Install asciidoctor, pandoc, and pdftotext
-        shell: bash
-        run: |
-          sudo apt update -y && sudo apt install -y asciidoctor pandoc poppler-utils ruby
-          sudo gem install asciidoctor-pdf rouge
-      - name: Install SQL proxy
-        shell: bash
-        run: |
-          wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy \
-          && chmod +x cloud_sql_proxy
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
@@ -52,32 +35,7 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Set up environment
-        shell: bash
-        run: |
-          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key \
-          && echo "$SQL_PROXY_KEY" > ${{ github.workspace }}/sql_proxy_key
-        env:
-          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
-          SQL_PROXY_KEY: ${{ secrets.SQL_PROXY_KEY }}
-      - name: Start the sql_proxy
-        shell: bash
-        run: |
-          ./cloud_sql_proxy -instances=${{ secrets.INSTANCE_CONNECTION_NAME }}=tcp:5432 \
-                  -credential_file=${{ github.workspace }}/sql_proxy_key &
       - name: Run cargo test
         run: |
-          cargo test
+          cargo test -- --skip test_cron
         shell: bash
-        env:
-          CIO_AUTH0_CLIENT_ID: ${{ secrets.CIO_AUTH0_CLIENT_ID }}
-          CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
-          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
-          CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
-          GITHUB_ORG: oxidecomputer
-          GITHUB_TOKEN: ${{ secrets.GLOBAL_GITHUB_TOKEN }}
-          GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
-          GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
-          GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
-          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          SLACK_HIRING_CHANNEL_POST_URL: ${{ secrets.SLACK_HIRING_CHANNEL_POST_URL }}
