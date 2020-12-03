@@ -94,7 +94,7 @@ mod mailchimp_date_format {
 
 impl MailchimpWebhook {
     /// Convert to a signup data type.
-    pub fn as_signup(&self) -> NewMailingListSubscriber {
+    pub fn as_subscriber(&self) -> NewMailingListSubscriber {
         let mut signup: NewMailingListSubscriber = Default::default();
 
         if self.data.merges.is_some() {
