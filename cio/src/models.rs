@@ -1745,6 +1745,7 @@ impl ToSql<Jsonb, Pg> for GitHubUser {
 )]
 #[table_name = "github_repos"]
 pub struct NewRepo {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub github_id: String,
     pub owner: GitHubUser,
     pub name: String,
