@@ -12,7 +12,7 @@ use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cio_api::models::{GitHubUser, GithubRepo};
+use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
 use cio_api::utils::authenticate_github;
 
 #[tokio::main]
@@ -221,6 +221,15 @@ async fn listen_github_webhooks(
             "[github] `push` event -> file {} was modified on branch {}",
             file, branch
         );
+        // Parse the RFD.
+        let new_rfd = NewRFD::new_from_github(
+            &api_context.github,
+            branch,
+            &file,
+            commit.timestamp,
+        )
+        .await;
+        println!("[github] RFD: {:?}", new_rfd);
     }
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))

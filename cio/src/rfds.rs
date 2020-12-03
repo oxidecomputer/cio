@@ -163,36 +163,6 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     cleaned
 }
 
-pub fn get_authors(content: &str, is_markdown: bool) -> String {
-    if is_markdown {
-        // TODO: make work w asciidoc.
-        let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
-        match re.find(&content) {
-            Some(v) => {
-                return v.as_str().replace("authors:", "").trim().to_string()
-            }
-            None => return Default::default(),
-        }
-    }
-
-    // We must have asciidoc content.
-    // We want to find the line under the first "=" line (which is the title), authors is under
-    // that.
-    let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
-    match re.find(&content) {
-        Some(v) => {
-            let val = v.as_str().trim().to_string();
-            let parts: Vec<&str> = val.split('\n').collect();
-            if parts.len() < 2 {
-                Default::default()
-            } else {
-                parts[1].to_string()
-            }
-        }
-        None => Default::default(),
-    }
-}
-
 // Sync the rfds with our database.
 pub async fn refresh_db_rfds(github: &Github) {
     let rfds = get_rfds_from_repo(github).await;
@@ -248,9 +218,9 @@ pub async fn refresh_rfd_pdfs(github: &Github) {
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
-    use crate::models::RFDs;
+    use crate::models::{NewRFD, RFDs};
     use crate::rfds::{
-        clean_rfd_html_links, get_authors, refresh_db_rfds, refresh_rfd_pdfs,
+        clean_rfd_html_links, refresh_db_rfds, refresh_rfd_pdfs,
     };
     use crate::utils::authenticate_github;
 
@@ -297,7 +267,7 @@ authors: things, joe
 dsfsdf
 sdf
 authors: nope"#;
-        let mut authors = get_authors(&content, true);
+        let mut authors = NewRFD::get_authors(&content, true);
         let mut expected = "things, joe".to_string();
         assert_eq!(expected, authors);
 
@@ -307,7 +277,7 @@ things, joe
 dsfsdf
 sdf
 :authors: nope"#;
-        authors = get_authors(&content, true);
+        authors = NewRFD::get_authors(&content, true);
         expected = "".to_string();
         assert_eq!(expected, authors);
 
@@ -317,10 +287,80 @@ things <things@email.com>, joe <joe@email.com>
 dsfsdf
 sdf
 authors: nope"#;
-        authors = get_authors(&content, false);
+        authors = NewRFD::get_authors(&content, false);
         expected =
             r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
+    }
+
+    #[test]
+    fn test_get_state() {
+        let mut content = r#"sdfsdf
+sdfsdf
+state: discussion
+dsfsdf
+sdf
+authors: nope"#;
+        let mut state = NewRFD::get_state(&content);
+        let mut expected = "discussion".to_string();
+        assert_eq!(expected, state);
+
+        content = r#"sdfsdf
+= sdfgsdfgsdfg
+:state: prediscussion
+dsfsdf
+sdf
+:state: nope"#;
+        state = NewRFD::get_state(&content);
+        expected = "prediscussion".to_string();
+        assert_eq!(expected, state);
+    }
+
+    #[test]
+    fn test_get_discussion() {
+        let mut content = r#"sdfsdf
+sdfsdf
+discussion: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+authors: nope"#;
+        let mut discussion = NewRFD::get_discussion(&content);
+        let expected =
+            "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
+        assert_eq!(expected, discussion);
+
+        content = r#"sdfsdf
+= sdfgsdfgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+:discussion: nope"#;
+        discussion = NewRFD::get_discussion(&content);
+        assert_eq!(expected, discussion);
+    }
+
+    #[test]
+    fn test_get_title() {
+        let mut content = r#"things
+# RFD 43 Identity and Access Management (IAM)
+sdfsdf
+title: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+authors: nope"#;
+        let mut title = NewRFD::get_title(&content);
+        let expected = "Identity and Access Management (IAM)".to_string();
+        assert_eq!(expected, title);
+
+        content = r#"sdfsdf
+= RFD 43 Identity and Access Management (IAM)
+:title: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+= RFD 53 Bye
+sdf
+:title: nope"#;
+        title = NewRFD::get_title(&content);
+        assert_eq!(expected, title);
     }
 
     #[tokio::test(threaded_scheduler)]

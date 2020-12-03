@@ -1,3 +1,4 @@
+#![feature(str_split_once)]
 #![recursion_limit = "256"]
 
 pub mod airtable;

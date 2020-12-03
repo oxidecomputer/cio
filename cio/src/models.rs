@@ -38,8 +38,8 @@ use crate::applicants::{
 };
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{
-    clean_rfd_html_links, get_authors, get_rfd_contents_from_repo,
-    parse_asciidoc, parse_markdown,
+    clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc,
+    parse_markdown,
 };
 use crate::schema::{
     applicants, auth_user_logins, auth_users, github_repos,
@@ -2089,18 +2089,7 @@ impl NewRFD {
         // Parse the discussion from the contents.
         let discussion = NewRFD::get_discussion(&content);
 
-        // Parse the RFD contents.
-        let mut html = String::new();
         let is_markdown = file_path.ends_with(".md");
-        if is_markdown {
-            // Parse the markdown.
-            html = parse_markdown(&content);
-        } else {
-            // Parse the acsiidoc.
-            html = parse_asciidoc(&content);
-        }
-
-        let authors = get_authors(&content, is_markdown);
 
         NewRFD {
             number,
@@ -2112,8 +2101,8 @@ impl NewRFD {
             short_link: NewRFD::generate_short_link(number),
             rendered_link: NewRFD::generate_rendered_link(&number_string),
             discussion,
-            authors,
-            html: clean_rfd_html_links(&html, &number_string),
+            authors: NewRFD::get_authors(&content, is_markdown),
+            html: NewRFD::get_html(&content, is_markdown, &number_string),
             content,
             sha: file.sha,
             commit_date,
@@ -2124,18 +2113,45 @@ impl NewRFD {
         }
     }
 
+    pub fn get_html(
+        content: &str,
+        is_markdown: bool,
+        number_string: &str,
+    ) -> String {
+        let html: String;
+        if is_markdown {
+            // Parse the markdown.
+            html = parse_markdown(&content);
+        } else {
+            // Parse the acsiidoc.
+            html = parse_asciidoc(&content);
+        }
+
+        clean_rfd_html_links(&html, number_string)
+    }
+
     pub fn get_title(content: &str) -> String {
-        let re = Regex::new(r"(?m)(^RFD .*$)").unwrap();
+        let re = Regex::new(r"(?m)(RFD .*$)").unwrap();
         match re.find(&content) {
             Some(v) => {
-                return v.as_str().replace("RFD ", "").trim().to_string()
+                // TODO: find less horrible way to do this.
+                let trimmed = v
+                    .as_str()
+                    .replace("RFD", "")
+                    .replace("# ", "")
+                    .replace("= ", " ")
+                    .trim()
+                    .to_string();
+
+                let (_, s) = trimmed.split_once(' ').unwrap();
+                s.to_string()
             }
             None => return Default::default(),
         }
     }
 
     pub fn get_state(content: &str) -> String {
-        let re = Regex::new(r"(?m)(^state.*$)").unwrap();
+        let re = Regex::new(r"(?m)(state:.*$)").unwrap();
         match re.find(&content) {
             Some(v) => {
                 return v.as_str().replace("state:", "").trim().to_string()
@@ -2145,7 +2161,7 @@ impl NewRFD {
     }
 
     pub fn get_discussion(content: &str) -> String {
-        let re = Regex::new(r"(?m)(^discussion.*$)").unwrap();
+        let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
         match re.find(&content) {
             Some(v) => {
                 return v.as_str().replace("discussion:", "").trim().to_string()
@@ -2174,6 +2190,40 @@ impl NewRFD {
 
     pub fn generate_rendered_link(number_string: &str) -> String {
         format!("https://rfd.shared.oxide.computer/rfd/{}", number_string)
+    }
+
+    pub fn get_authors(content: &str, is_markdown: bool) -> String {
+        if is_markdown {
+            // TODO: make work w asciidoc.
+            let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
+            match re.find(&content) {
+                Some(v) => {
+                    return v
+                        .as_str()
+                        .replace("authors:", "")
+                        .trim()
+                        .to_string()
+                }
+                None => return Default::default(),
+            }
+        }
+
+        // We must have asciidoc content.
+        // We want to find the line under the first "=" line (which is the title), authors is under
+        // that.
+        let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
+        match re.find(&content) {
+            Some(v) => {
+                let val = v.as_str().trim().to_string();
+                let parts: Vec<&str> = val.split('\n').collect();
+                if parts.len() < 2 {
+                    Default::default()
+                } else {
+                    parts[1].to_string()
+                }
+            }
+            None => Default::default(),
+        }
     }
 
     /// Expand the fields in the RFD.
@@ -2229,17 +2279,10 @@ impl NewRFD {
         }
 
         // Parse the HTML.
-        let mut html = String::new();
-        if is_markdown {
-            // Parse the markdown.
-            html = parse_markdown(&self.content);
-        } else {
-            // Parse the acsiidoc.
-            html = parse_asciidoc(&self.content);
-        }
-        self.html = clean_rfd_html_links(&html, &self.number_string);
+        self.html =
+            NewRFD::get_html(&self.content, is_markdown, &self.number_string);
 
-        self.authors = get_authors(&self.content, is_markdown);
+        self.authors = NewRFD::get_authors(&self.content, is_markdown);
     }
 }
 
