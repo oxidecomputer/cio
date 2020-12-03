@@ -224,7 +224,8 @@ pub mod null_date_format {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
+        // TODO: actually get the Unix timestamp.
+        let s = String::deserialize(deserializer).unwrap_or("".to_string());
 
         // Try to convert from the string to an int, in case we have a numerical
         // time stamp.
