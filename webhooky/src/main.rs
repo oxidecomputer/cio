@@ -286,7 +286,7 @@ async fn listen_github_webhooks(
             &github_repo,
             branch,
             &file,
-            commit.timestamp,
+            commit.timestamp.unwrap(),
         )
         .await;
         println!("[github] RFD: {:?}", new_rfd);
@@ -495,17 +495,20 @@ pub struct GitHubWebhook {
 
 /// A GitHub commit.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
-#[derive(Debug, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
+#[derive(
+    Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize,
+)]
 pub struct GitHubCommit {
     /// The SHA of the commit.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
     /// The ISO 8601 timestamp of the commit.
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: Option<DateTime<Utc>>,
     /// The commit message.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub message: String,
     /// The git author of the commit.
+    #[serde(default, alias = "user")]
     pub author: GitHubUser,
     /// URL that points to the commit API resource.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -522,6 +525,12 @@ pub struct GitHubCommit {
     /// An array of files removed in the commit.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub removed: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub commit_ref: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sha: String,
 }
 
 /// A GitHub pull request.
@@ -530,9 +539,52 @@ pub struct GitHubCommit {
     Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
 )]
 pub struct GitHubPullRequest {
+    #[serde(default)]
+    pub id: u64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
     /// The HTML location of this pull request.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub html_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub diff_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub patch_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub issue_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub commits_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub review_comments_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub review_comment_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub comments_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub statuses_url: String,
+    #[serde(default)]
+    pub number: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub body: String,
+    /*pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,*/
+    #[serde(default)]
+    pub closed_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub merged_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub head: GitHubCommit,
+    #[serde(default)]
+    pub base: GitHubCommit,
+    // links
+    #[serde(default)]
+    pub user: GitHubUser,
+    #[serde(default)]
+    pub merged: bool,
 }
 
 impl GitHubCommit {
