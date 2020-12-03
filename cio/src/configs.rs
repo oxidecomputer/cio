@@ -225,7 +225,8 @@ pub mod null_date_format {
         D: Deserializer<'de>,
     {
         // TODO: actually get the Unix timestamp.
-        let s = String::deserialize(deserializer).unwrap_or("".to_string());
+        let s = String::deserialize(deserializer)
+            .unwrap_or("2020-12-03T15:49:27Z".to_string());
 
         // Try to convert from the string to an int, in case we have a numerical
         // time stamp.
