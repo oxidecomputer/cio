@@ -3548,6 +3548,7 @@ dependencies = [
 name = "webhooky"
 version = "0.1.0"
 dependencies = [
+ "chrono 0.4.19",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio)",
  "dropshot",
  "schemars",

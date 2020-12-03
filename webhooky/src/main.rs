@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use chrono::offset::Utc;
+use chrono::DateTime;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
     ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk,
@@ -76,15 +78,29 @@ async fn listen_github_webhooks(
 
     if event.action != "push".to_string() {
         // If we did not get a push event we can log it and return early.
-        println!("github: {:?}", event);
+        println!("[github] ignored event: {:?}", event);
         return Ok(HttpResponseAccepted(
             "Aborted, event was not a push event".to_string(),
         ));
     }
 
-    println!("github push event: {:?}", event);
-
     // Handle the push event.
+    // Check if it came from the rfd repo.
+    let repo_name = event.clone().repository.unwrap().name;
+    if repo_name != "rfd" {
+        // We only care about the rfd repo push events for now.
+        // We can throw this out, log it and return early.
+        println!("[github] ignored event: {:?}", event);
+        return Ok(HttpResponseAccepted(
+            "Aborted, event was not a push event to the rfd repo".to_string(),
+        ));
+    }
+
+    // Now we can continue since we have a push event to the rfd repo.
+    // Get the branch name.
+    let branch = event.refv.trim_start_matches("refs/heads/");
+
+    println!("[github] got push event to rfd repo branch: {}", branch);
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }
@@ -150,4 +166,54 @@ pub struct GitHubWebhook {
     /// property when the event is configured for and sent to a GitHub App.
     #[serde(default)]
     pub installation: GitHubInstallation,
+
+    /// `push` event fields.
+    /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
+    ///
+    /// The full `git ref` that was pushed. Example: `refs/heads/main`.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ref")]
+    pub refv: String,
+    /// The SHA of the most recent commit on `ref` before the push.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub before: String,
+    /// The SHA of the most recent commit on `ref` after the push.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub after: String,
+    /// An array of commit objects describing the pushed commits.
+    /// The array includes a maximum of 20 commits. If necessary, you can use
+    /// the Commits API to fetch additional commits. This limit is applied to
+    /// timeline events only and isn't applied to webhook deliveries.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub commits: Vec<GitHubCommit>,
+}
+
+/// A GitHub commit.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
+#[derive(Debug, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubCommit {
+    /// The SHA of the commit.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    /// The ISO 8601 timestamp of the commit.
+    pub timestamp: DateTime<Utc>,
+    /// The commit message.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub message: String,
+    /// The git author of the commit.
+    pub author: GitHubUser,
+    /// URL that points to the commit API resource.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    /// Whether this commit is distinct from any that have been pushed before.
+    #[serde(default)]
+    pub distinct: bool,
+    /// An array of files added in the commit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub added: Vec<String>,
+    /// An array of files modified by the commit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modified: Vec<String>,
+    /// An array of files removed in the commit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed: Vec<String>,
 }

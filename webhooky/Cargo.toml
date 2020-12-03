@@ -8,6 +8,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = { version = "0.4", features = ["serde"] }
 cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
 #cio-api = { path = "../cio" }
 #dropshot = "^0.3.0"
