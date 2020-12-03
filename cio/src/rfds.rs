@@ -361,6 +361,17 @@ sdf
 :title: nope"#;
         title = NewRFD::get_title(&content);
         assert_eq!(expected, title);
+
+        // Add a test to show what happens for rfd 31 where there is no "RFD" in
+        // the title.
+        content = r#"sdfsdf
+= Identity and Access Management (IAM)
+:title: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+:title: nope"#;
+        title = NewRFD::get_title(&content);
+        assert_eq!(expected, title);
     }
 
     #[tokio::test(threaded_scheduler)]

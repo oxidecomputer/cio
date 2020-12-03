@@ -2075,8 +2075,12 @@ impl NewRFD {
             .unwrap();
         let content = from_utf8(&file.content).unwrap().trim().to_string();
 
-        // Parse the RFD number as an int.
-        let number = branch.trim_start_matches("0").parse::<i32>().unwrap();
+        // Parse the RFD directory as an int.
+        let (dir, _) = file_path
+            .trim_start_matches("rfd/")
+            .split_once('/')
+            .unwrap();
+        let number = dir.trim_start_matches("0").parse::<i32>().unwrap();
 
         let number_string = NewRFD::generate_number_string(number);
 
@@ -2131,7 +2135,7 @@ impl NewRFD {
     }
 
     pub fn get_title(content: &str) -> String {
-        let re = Regex::new(r"(?m)(RFD .*$)").unwrap();
+        let mut re = Regex::new(r"(?m)(RFD .*$)").unwrap();
         match re.find(&content) {
             Some(v) => {
                 // TODO: find less horrible way to do this.
@@ -2144,9 +2148,25 @@ impl NewRFD {
                     .to_string();
 
                 let (_, s) = trimmed.split_once(' ').unwrap();
+
+                // If the string is empty, it means there is no RFD in our
+                // title.
+                if s.is_empty() {}
+
                 s.to_string()
             }
-            None => return Default::default(),
+            None => {
+                // There is no "RFD" in our title. This is the case for RFD 31.
+                re = Regex::new(r"(?m)(^= .*$)").unwrap();
+                let results = re.find(&content).unwrap();
+                results
+                    .as_str()
+                    .replace("RFD", "")
+                    .replace("# ", "")
+                    .replace("= ", " ")
+                    .trim()
+                    .to_string()
+            }
         }
     }
 
