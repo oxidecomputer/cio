@@ -176,45 +176,6 @@ pub async fn refresh_db_rfds(github: &Github) {
     }
 }
 
-// Sync the rfds from the database as rendered PDFs in GitHub.
-pub async fn refresh_rfd_pdfs(github: &Github) {
-    // Get gsuite token.
-    let token = get_gsuite_token().await;
-
-    // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
-
-    // Figure out where our directory is.
-    // It should be in the shared drive : "Automated Documents"/"rfds"
-    let drive = drive_client
-        .get_drive_by_name("Automated Documents")
-        .await
-        .unwrap();
-    let drive_id = drive.id;
-
-    // Get the directory by the name.
-    let dir = drive_client
-        .get_file_by_name(&drive_id, "rfds")
-        .await
-        .unwrap();
-
-    // Initialize our database.
-    let db = Database::new();
-
-    let rfds = db.get_rfds();
-
-    // Sync rfds.
-    for rfd in rfds {
-        rfd.convert_and_upload_pdf(
-            github,
-            &drive_client,
-            &drive_id,
-            &dir.get(0).unwrap().id,
-        )
-        .await;
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
@@ -382,11 +343,5 @@ sdf
         let rfds = db.get_rfds();
         // Update rfds in airtable.
         RFDs(rfds).update_airtable().await;
-    }
-
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_rfd_pdfs() {
-        let github = authenticate_github();
-        refresh_rfd_pdfs(&github).await;
     }
 }
