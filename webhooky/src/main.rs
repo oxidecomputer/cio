@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
-    ConfigLoggingLevel, HttpError, HttpResponseOk,
-    HttpResponseUpdatedNoContent, HttpServer, RequestContext, TypedBody,
+    ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk,
+    HttpServer, RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -71,20 +71,22 @@ async fn ping(
 async fn listen_github_webhooks(
     _rqctx: Arc<RequestContext>,
     body_param: TypedBody<GitHubWebhook>,
-) -> Result<HttpResponseUpdatedNoContent, HttpError> {
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
 
     if event.action != "push".to_string() {
         // If we did not get a push event we can log it and return early.
         println!("github: {:?}", event);
-        return Ok(HttpResponseUpdatedNoContent());
+        return Ok(HttpResponseAccepted(
+            "Aborted, event was not a push event".to_string(),
+        ));
     }
 
     println!("github push event: {:?}", event);
 
     // Handle the push event.
 
-    Ok(HttpResponseUpdatedNoContent())
+    Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }
 
 /// A GitHub organization.
