@@ -403,7 +403,7 @@ async fn listen_github_webhooks(
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }
 
-/** Ping endpoint for MailChimp web hooks. */
+/** Ping endpoint for MailChimp webhooks. */
 #[endpoint {
     method = GET,
     path = "/mailchimp",
