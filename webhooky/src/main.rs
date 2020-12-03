@@ -179,7 +179,7 @@ async fn listen_github_webhooks(
         // If we did not get a push event we can log it and return early.
         let msg = format!(
             "Aborted, not a `push` or `pull_request` event, got `{}`",
-            event.action
+            event_type
         );
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
