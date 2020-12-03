@@ -75,6 +75,55 @@ fn do_db_struct(
 
                 println!("created new row in airtable: {:?}", self);
             }
+
+            /// Update the record in airtable.
+            pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<#new_name>) {
+                // Initialize the Airtable client.
+                let airtable =
+                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), #base_id);
+
+                // Run the custom trait to update the new record from the old record.
+                self.update_airtable_record(existing_record.fields.clone()).await;
+
+                // If the Airtable record and the record that was passed in are the same, then we can return early since
+                // we do not need to update it in Airtable.
+                // We do this after we update the record so that those fields match as
+                // well.
+                if self.clone() == existing_record.fields.clone() {
+                    println!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
+                    return;
+                }
+
+                existing_record.fields = self.clone();
+
+                airtable
+                    .update_records(
+                        #table,
+                        vec![existing_record.clone()],
+                    )
+                    .await
+                    .unwrap();
+                println!(
+                    "[airtable] id={} updated in Airtable",
+                    self.id
+                );
+            }
+
+            /// Update a row in our airtable workspace.
+            pub async fn create_or_update_in_airtable(&mut self) {
+                // Check if we already have the row in Airtable.
+                let records = #new_name_plural::get_from_airtable().await;
+                for (id, record) in records {
+                    if self.id == id {
+                        self.update_in_airtable(&mut record.clone()).await;
+
+                        return;
+                    }
+                }
+
+                // The record does not exist. We need to create it.
+                self.push_to_airtable().await;
+            }
         }
 
         pub struct #new_name_plural(pub Vec<#new_name>);
@@ -103,46 +152,13 @@ fn do_db_struct(
 
             /// Update Airtable records in a table from a vector.
             pub async fn update_airtable(&self) {
-                // Initialize the Airtable client.
-                let airtable = airtable_api::Airtable::new(
-                    airtable_api::api_key_from_env(),
-                    #base_id,
-                );
-
                 let records = #new_name_plural::get_from_airtable().await;
 
                 for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
-                            // Let's update the Airtable record with the record from the vector.
-                            let mut record = r.clone();
-
-                            // Run the custom trait to update the new record from the old record.
-                            vec_record.update_airtable_record(record.fields.clone()).await;
-
-                            // If the Airtable record and the vector record are the same, then we can return early since
-                            // we do not need to update it in Airtable.
-                            // We do this after we update the record so that those fields match as
-                            // well.
-                            if vec_record == r.fields {
-                                println!("[airtable] id={} in vector equals Airtable record, skipping update", vec_record.id);
-                                continue;
-                            }
-
-                            record.fields = vec_record.clone();
-
-                            airtable
-                                .update_records(
-                                    #table,
-                                    vec![record.clone()],
-                                )
-                                .await
-                                .unwrap();
-                            println!(
-                                "[airtable] id={} updated in Airtable",
-                                vec_record.id
-                            );
+                            vec_record.update_in_airtable(&mut r.clone()).await;
                         }
                         None => {
                             // We do not have the record in Airtable, let's create it.
@@ -257,6 +273,55 @@ mod tests {
 
                 println!("created new row in airtable: {:?}", self);
             }
+
+            /// Update the record in airtable.
+            pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<DuplicatedItem>) {
+                // Initialize the Airtable client.
+                let airtable =
+                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+
+                // Run the custom trait to update the new record from the old record.
+                self.update_airtable_record(existing_record.fields.clone()).await;
+
+                // If the Airtable record and the record that was passed in are the same, then we can return early since
+                // we do not need to update it in Airtable.
+                // We do this after we update the record so that those fields match as
+                // well.
+                if self.clone() == existing_record.fields.clone() {
+                    println!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
+                    return;
+                }
+
+                existing_record.fields = self.clone();
+
+                airtable
+                    .update_records(
+                        AIRTABLE_RFD_TABLE,
+                        vec![existing_record.clone()],
+                    )
+                    .await
+                    .unwrap();
+                println!(
+                    "[airtable] id={} updated in Airtable",
+                    self.id
+                );
+            }
+
+            /// Update a row in our airtable workspace.
+            pub async fn create_or_update_in_airtable(&mut self) {
+                // Check if we already have the row in Airtable.
+                let records = DuplicatedItems::get_from_airtable().await;
+                for (id, record) in records {
+                    if self.id == id {
+                        self.update_in_airtable(&mut record.clone()).await;
+
+                        return;
+                    }
+                }
+
+                // The record does not exist. We need to create it.
+                self.push_to_airtable().await;
+            }
         }
 
         pub struct DuplicatedItems(pub Vec<DuplicatedItem>);
@@ -285,46 +350,13 @@ mod tests {
 
             /// Update Airtable records in a table from a vector.
             pub async fn update_airtable(&self) {
-                // Initialize the Airtable client.
-                let airtable = airtable_api::Airtable::new(
-                    airtable_api::api_key_from_env(),
-                    AIRTABLE_BASE_ID_CUSTOMER_LEADS,
-                );
-
                 let records = DuplicatedItems::get_from_airtable().await;
 
                 for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
                     match records.get(&vec_record.id) {
                         Some(r) => {
-                            // Let's update the Airtable record with the record from the vector.
-                            let mut record = r.clone();
-
-                            // Run the custom trait to update the new record from the old record.
-                            vec_record.update_airtable_record(record.fields.clone()).await;
-
-                            // If the Airtable record and the vector record are the same, then we can return early since
-                            // we do not need to update it in Airtable.
-                            // We do this after we update the record so that those fields match as
-                            // well.
-                            if vec_record == r.fields {
-                                println!("[airtable] id={} in vector equals Airtable record, skipping update", vec_record.id);
-                                continue;
-                            }
-
-                            record.fields = vec_record.clone();
-
-                            airtable
-                                .update_records(
-                                    AIRTABLE_RFD_TABLE,
-                                    vec![record.clone()],
-                                )
-                                .await
-                                .unwrap();
-                            println!(
-                                "[airtable] id={} updated in Airtable",
-                                vec_record.id
-                            );
+                            vec_record.update_in_airtable(&mut r.clone()).await;
                         }
                         None => {
                             // We do not have the record in Airtable, let's create it.
