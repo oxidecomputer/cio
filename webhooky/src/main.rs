@@ -302,6 +302,8 @@ async fn listen_github_webhooks(
         // for that RFD.
         // Make sure we are not on the master branch, since then we would not need
         // a PR. Instead, below, the state of the RFD would be moved to `published`.
+        // TODO: see if we drop events if we do we might want to remove the check with
+        // the old state and just do it everytime an RFD is in discussion.
         if old_rfd_state != rfd.state
             && rfd.state == "discussion"
             && branch != repo.default_branch.to_string()

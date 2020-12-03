@@ -38,10 +38,10 @@ pub async fn get_gsuite_token() -> AccessToken {
     // Get the GSuite credentials file.
     let mut gsuite_credential_file =
         env::var("GADMIN_CREDENTIAL_FILE").unwrap_or("".to_string());
-    let gsuite_key = env::var("GSUITE_KEY").unwrap_or("".to_string());
+    let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or("".to_string());
 
     if gsuite_credential_file.is_empty() && !gsuite_key.is_empty() {
-        println!("gsuite key: {}", gsuite_key);
+        let b = base64::decode(gsuite_key).unwrap();
 
         // Save the gsuite key to a tmp file.
         let mut file_path = env::temp_dir();
@@ -49,7 +49,7 @@ pub async fn get_gsuite_token() -> AccessToken {
 
         // Create the file and write to it.
         let mut file = fs::File::create(file_path.clone()).unwrap();
-        file.write_all(gsuite_key.as_bytes()).unwrap();
+        file.write_all(&b).unwrap();
 
         // Set the GSuite credential file to the temp path.
         gsuite_credential_file = file_path.to_str().unwrap().to_string();
