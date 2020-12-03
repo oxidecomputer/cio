@@ -1816,8 +1816,17 @@ pub struct NewRepo {
     pub has_pages: bool,
     pub has_downloads: bool,
     pub archived: bool,
+    #[serde(
+        deserialize_with = "crate::configs::null_date_format::deserialize"
+    )]
     pub pushed_at: DateTime<Utc>,
+    #[serde(
+        deserialize_with = "crate::configs::null_date_format::deserialize"
+    )]
     pub created_at: DateTime<Utc>,
+    #[serde(
+        deserialize_with = "crate::configs::null_date_format::deserialize"
+    )]
     pub updated_at: DateTime<Utc>,
 }
 

@@ -185,7 +185,8 @@ pub struct UserConfig {
 
 pub mod null_date_format {
     use chrono::naive::NaiveDate;
-    use serde::{self, Serializer};
+    use chrono::{DateTime, TimeZone, Utc};
+    use serde::{self, Deserialize, Deserializer, Serializer};
 
     const FORMAT: &str = "%Y-%m-%d";
 
@@ -208,6 +209,34 @@ pub mod null_date_format {
             s = "".to_string();
         }
         serializer.serialize_str(&s)
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> Result<DateTime<Utc>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+
+        // Try to convert from the string to an int, in case we have a numerical
+        // time stamp.
+        match s.parse::<i64>() {
+            Ok(_int) => {
+                // Return the parsed time since epoch.
+                return Ok(Utc.datetime_from_str(&s, "%s").unwrap());
+            }
+            Err(_e) => (),
+        }
+
+        Ok(Utc.datetime_from_str(&s, FORMAT).unwrap())
     }
 }
 
