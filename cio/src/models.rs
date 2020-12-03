@@ -1336,7 +1336,17 @@ pub struct NewJournalClubMeeting {
     pub issue: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub papers: Vec<String>,
+    #[serde(
+        default = "crate::utils::default_date",
+        deserialize_with = "crate::journal_clubs::meeting_date_format::deserialize",
+        serialize_with = "crate::journal_clubs::meeting_date_format::serialize"
+    )]
     pub issue_date: NaiveDate,
+    #[serde(
+        default = "crate::utils::default_date",
+        deserialize_with = "crate::journal_clubs::meeting_date_format::deserialize",
+        serialize_with = "crate::journal_clubs::meeting_date_format::serialize"
+    )]
     pub meeting_date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub coordinator: String,

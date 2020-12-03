@@ -34,7 +34,7 @@ pub struct Meeting {
     pub recording: String,
 }
 
-mod meeting_date_format {
+pub mod meeting_date_format {
     use chrono::NaiveDate;
     use serde::{self, Deserialize, Deserializer, Serializer};
 
@@ -72,7 +72,7 @@ mod meeting_date_format {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer).unwrap();
+        let s = String::deserialize(deserializer).unwrap_or("".to_string());
         Ok(NaiveDate::parse_from_str(&s, FORMAT)
             .unwrap_or(crate::utils::default_date()))
     }
