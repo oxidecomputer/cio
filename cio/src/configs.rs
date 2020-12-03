@@ -236,7 +236,7 @@ pub mod null_date_format {
             Err(_e) => (),
         }
 
-        Ok(Utc.datetime_from_str(&s, FORMAT).unwrap())
+        Ok(Utc.datetime_from_str(&s, "%+").unwrap())
     }
 }
 
