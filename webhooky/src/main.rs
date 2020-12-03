@@ -12,6 +12,7 @@ use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use cio_api::db::Database;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
 use cio_api::utils::authenticate_github;
 
@@ -122,6 +123,8 @@ async fn listen_github_webhooks(
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
+    // TODO: share the database connection in the context.
+    let db = Database::new();
 
     let event = body_param.into_inner();
 
@@ -233,6 +236,38 @@ async fn listen_github_webhooks(
         )
         .await;
         println!("[github] RFD: {:?}", new_rfd);
+
+        // Get the old RFD from the database. We will need this later to
+        // check if the RFD's state changed.
+        let old_rfd = db.get_rfd(new_rfd.number);
+        let mut old_rfd_state = "".to_string();
+        if old_rfd.is_some() {
+            println!("[github] old RFD: {:?}", old_rfd);
+
+            old_rfd_state = old_rfd.unwrap().state;
+        }
+
+        // TODO: Update the RFD in the database.
+        // let rfd = db.upsert_rfd(new_rfd);
+
+        // TODO: Create all the shortlinks for the RFD if we need to,
+        // this would be on added files, only.
+
+        // TODO: Update airtable with the new RFD.
+
+        // TODO: Update the PDFs for the RFD.
+
+        // Check if the RFD state changed from what is currently in the
+        // database.
+        // If the RFD's state was changed to `discussion`, we need to open a PR
+        // for that RFD.
+        // TODO: change these to reference s/new_rfd/rfd/g
+        if old_rfd_state != new_rfd.state && new_rfd.state == "discussion" {
+            println!(
+                "[github] RFD {} has moved from state {} -> {}",
+                new_rfd.number_string, old_rfd_state, new_rfd.state
+            );
+        }
     }
 
     // TODO: should we do something if the file gets deleted (?)

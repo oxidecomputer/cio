@@ -671,32 +671,39 @@ impl Database {
             .unwrap()
     }
 
-    pub fn upsert_rfd(&self, rfd: &NewRFD) -> RFD {
-        // See if we already have the rfd in the database.
+    pub fn get_rfd(&self, number: i32) -> Option<RFD> {
         match rfds::dsl::rfds
-            .filter(rfds::dsl::number.eq(rfd.number))
+            .filter(rfds::dsl::number.eq(number))
             .limit(1)
             .load::<RFD>(&self.conn)
         {
             Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the rfd in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let a = r.get(0).unwrap();
-
-                    // Update the rfd.
-                    return diesel::update(a)
-                        .set(rfd)
-                        .get_result::<RFD>(&self.conn)
-                        .unwrap_or_else(|e| {
-                            panic!("unable to update rfd {}: {}", a.id, e)
-                        });
+                if !r.is_empty() {
+                    return Some(r.get(0).unwrap().clone());
                 }
             }
             Err(e) => {
-                println!("[db] on err: {:?}; we don't have the rfd in the database, adding it", e);
+                println!("[db] on err: {:?}; we don't have the rfd with number {} in the database",number,  e);
+                return None;
             }
+        }
+
+        None
+    }
+
+    pub fn upsert_rfd(&self, rfd: &NewRFD) -> RFD {
+        // See if we already have the rfd in the database.
+        match self.get_rfd(rfd.number) {
+            Some(r) => {
+                // Update the rfd.
+                return diesel::update(&r)
+                    .set(rfd)
+                    .get_result::<RFD>(&self.conn)
+                    .unwrap_or_else(|e| {
+                        panic!("unable to update rfd {}: {}", r.id, e)
+                    });
+            }
+            None => {}
         }
 
         diesel::insert_into(rfds::table)
