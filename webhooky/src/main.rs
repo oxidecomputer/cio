@@ -87,14 +87,64 @@ async fn listen_github_webhooks(
     Ok(HttpResponseUpdatedNoContent())
 }
 
+/// A GitHub organization.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubOrganization {
+    pub login: String,
+    pub id: u64,
+    pub url: String,
+    pub repos_url: String,
+    pub events_url: String,
+    pub hooks_url: String,
+    pub issues_url: String,
+    pub members_url: String,
+    pub public_members_url: String,
+    pub avatar_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+}
+
+/// A GitHub app installation.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubInstallation {
+    pub id: u64,
+    // account: Account
+    pub access_tokens_url: String,
+    pub repositories_url: String,
+    pub html_url: String,
+    pub app_id: i32,
+    pub target_id: i32,
+    pub target_type: String,
+    // permissions: Permissions
+    pub events: Vec<String>,
+    // created_at, updated_at
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub single_file_name: String,
+    pub repository_selection: String,
+}
+
 /// A GitHub webhook event.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads
 #[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubWebhook {
-    /// The type of action.
+    /// Most webhook payloads contain an action property that contains the
+    /// specific activity that triggered the event.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub action: String,
-    /// The user that triggered the event.
+    /// The user that triggered the event. This property is included in
+    /// every webhook payload.
+    #[serde(default)]
     pub sender: GitHubUser,
-    /// The repository object where the event occurred.
+    /// The `repository` where the event occurred. Webhook payloads contain the
+    /// `repository` property when the event occurs from activity in a repository.
     pub repository: GithubRepo,
+    /// Webhook payloads contain the `organization` object when the webhook is
+    /// configured for an organization or the event occurs from activity in a
+    /// repository owned by an organization.
+    #[serde(default)]
+    pub organization: GitHubOrganization,
+    /// The GitHub App installation. Webhook payloads contain the `installation`
+    /// property when the event is configured for and sent to a GitHub App.
+    #[serde(default)]
+    pub installation: GitHubInstallation,
 }
