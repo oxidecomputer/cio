@@ -247,8 +247,8 @@ async fn listen_github_webhooks(
             old_rfd_state = old_rfd.unwrap().state;
         }
 
-        // TODO: Update the RFD in the database.
-        // let rfd = db.upsert_rfd(new_rfd);
+        // Update the RFD in the database.
+        let rfd = db.upsert_rfd(&new_rfd);
 
         // TODO: Create all the shortlinks for the RFD if we need to,
         // this would be on added files, only.
@@ -261,13 +261,30 @@ async fn listen_github_webhooks(
         // database.
         // If the RFD's state was changed to `discussion`, we need to open a PR
         // for that RFD.
-        // TODO: change these to reference s/new_rfd/rfd/g
-        if old_rfd_state != new_rfd.state && new_rfd.state == "discussion" {
+        if old_rfd_state != rfd.state && rfd.state == "discussion" {
             println!(
-                "[github] RFD {} has moved from state {} -> {}",
-                new_rfd.number_string, old_rfd_state, new_rfd.state
+                "[github] RFD {} has moved from state {} -> {}, opening a PR.",
+                rfd.number_string, old_rfd_state, rfd.state
             );
+
+            // TODO: Open a pull request.
         }
+
+        // If the RFD was merged into the default branch, but the RFD state is not `published`,
+        // update the state of the RFD in GitHub to show it as `published`.
+        if branch == repo.default_branch && rfd.state != "published" {
+            println!(
+                "[github] RFD {} is the branch {} but its state is {}, updating it to `published`.",
+                rfd.number_string,repo.default_branch, old_rfd_state,
+            );
+
+            // TODO: Update the state of the RFD in GitHub to show it as `published`.
+            // After we change the file, this will kick off another webhook event, so we do not
+            // need to update the database again.
+        }
+
+        // TODO: If the title of the RFD changed, delete the old PDF file so it
+        // doesn't linger in GitHub and Google Drive.
     }
 
     // TODO: should we do something if the file gets deleted (?)
