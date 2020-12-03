@@ -71,13 +71,23 @@ async fn ping(
     path = "/github",
 }]
 async fn listen_github_webhooks(
-    _rqctx: Arc<RequestContext>,
+    rqctx: Arc<RequestContext>,
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
 
-    // TODO: parse the header `X-GitHub-Event`, then we don't need the empty string check here.
-    if event.action != "push".to_string() && event.action != "".to_string() {
+    // Parse the `X-GitHub-Event` header.
+    // TODO: make this nicer when supported as a first class method in dropshot.
+    let req = rqctx.request.lock().await;
+    let req_headers = req.headers();
+    let event_type = req_headers
+        .get("X-GitHub-Event")
+        .unwrap_or(&http::header::HeaderValue::from_str("").unwrap())
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    if event_type != "push".to_string() {
         // If we did not get a push event we can log it and return early.
         let msg =
             format!("Aborted, not a `push` event, got `{}`", event.action);
@@ -147,7 +157,22 @@ async fn listen_github_webhooks(
         return Ok(HttpResponseAccepted(msg));
     }
 
-    println!("[github] got push event to rfd repo branch: {}", branch);
+    // Iterate over the files and update the RFDs that have changed in our database.
+    for file in commit.modified {
+        // If the file is not a README.md or README.adoc, skip it.
+        // TODO: handle the updating of images.
+        if !file.ends_with("README.md") && !file.ends_with("README.adoc") {
+            // Continue through the loop.
+            continue;
+        }
+
+        // We have a README file that changed, let's parse the RFD and update it
+        // in our database.
+        println!(
+            "[github] `push` event -> file {} was modified on branch {}",
+            file, branch
+        );
+    }
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }
