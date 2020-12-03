@@ -41,6 +41,8 @@ pub async fn get_gsuite_token() -> AccessToken {
     let gsuite_key = env::var("GSUITE_KEY").unwrap_or("".to_string());
 
     if gsuite_credential_file.is_empty() && !gsuite_key.is_empty() {
+        println!("gsuite key: {}", gsuite_key);
+
         // Save the gsuite key to a tmp file.
         let mut file_path = env::temp_dir();
         file_path.push("gsuite_key.json");

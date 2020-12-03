@@ -7,13 +7,12 @@ use std::str::from_utf8;
 
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
-use google_drive::GoogleDrive;
 use hubcaps::Github;
 use regex::Regex;
 
 use crate::db::Database;
 use crate::models::NewRFD;
-use crate::utils::{get_gsuite_token, github_org};
+use crate::utils::github_org;
 
 /// Get the RFDs from the rfd GitHub repo.
 pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
