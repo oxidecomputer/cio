@@ -206,8 +206,11 @@ async fn listen_github_webhooks(
         return Ok(HttpResponseAccepted(msg));
     }
 
-    // Iterate over the files and update the RFDs that have changed in our database.
-    for file in commit.modified {
+    // Iterate over the files and update the RFDs that have been added or
+    // modified in our database.
+    let mut changed_files = commit.added.clone();
+    changed_files.append(&mut commit.modified.clone());
+    for file in changed_files {
         // If the file is not a README.md or README.adoc, skip it.
         // TODO: handle the updating of images.
         if !file.ends_with("README.md") && !file.ends_with("README.adoc") {
@@ -231,6 +234,8 @@ async fn listen_github_webhooks(
         .await;
         println!("[github] RFD: {:?}", new_rfd);
     }
+
+    // TODO: should we do something if the file gets deleted (?)
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }
