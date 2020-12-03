@@ -52,6 +52,7 @@ async fn main() -> Result<(), String> {
     api.register(ping).unwrap();
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_webhooks).unwrap();
+    api.register(ping_mailchimp_webhooks).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
@@ -400,6 +401,17 @@ async fn listen_github_webhooks(
     // TODO: should we do something if the file gets deleted (?)
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
+}
+
+/** Ping endpoint for MailChimp web hooks. */
+#[endpoint {
+    method = GET,
+    path = "/mailchimp",
+}]
+async fn ping_mailchimp_webhooks(
+    _rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<String>, HttpError> {
+    Ok(HttpResponseOk("ok".to_string()))
 }
 
 /** Listen for MailChimp webhooks. */
