@@ -1783,8 +1783,8 @@ pub struct NewRepo {
     pub languages_url: String,
     pub merges_url: String,
     pub milestones_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub mirror_url: String,
+    //#[serde(default, skip_serializing_if = "String::is_empty")]
+    //pub mirror_url: String,
     pub notifications_url: String,
     pub pulls_url: String,
     pub releases_url: String,
