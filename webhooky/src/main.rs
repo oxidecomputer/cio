@@ -76,7 +76,8 @@ async fn listen_github_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
 
-    if event.action != "push".to_string() {
+    // TODO: parse the header `X-GitHub-Event`, then we don't need the empty string check here.
+    if event.action != "push".to_string() && event.action != "".to_string() {
         // If we did not get a push event we can log it and return early.
         let msg =
             format!("Aborted, not a `push` event, got `{}`", event.action);
@@ -97,6 +98,7 @@ async fn listen_github_webhooks(
         return Ok(HttpResponseAccepted(msg));
     }
 
+    // Now we can continue since we have a push event to the rfd repo.
     // Ensure we have commits.
     if event.commits.is_empty() {
         // `push` even has no commits.
@@ -134,9 +136,16 @@ async fn listen_github_webhooks(
         return Ok(HttpResponseAccepted(msg));
     }
 
-    // Now we can continue since we have a push event to the rfd repo.
     // Get the branch name.
     let branch = event.refv.trim_start_matches("refs/heads/");
+    // Make sure we have a branch.
+    if branch.is_empty() {
+        // The branch name is empty.
+        // We can throw this out, log it and return early.
+        let msg = "Aborted, `push` event branch name is empty".to_string();
+        println!("[github]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
+    }
 
     println!("[github] got push event to rfd repo branch: {}", branch);
 
