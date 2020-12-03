@@ -89,6 +89,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf8dcb5b4bbaa28653b647d8c77bd4ed40183b48882e130c1f1ffb73de069fd7"
+
+[[package]]
 name = "arc-swap"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -345,7 +351,7 @@ dependencies = [
  "chrono 0.4.19",
  "chrono-humanize",
  "clap",
- "cloudflare-rs",
+ "cloudflare",
  "comrak",
  "csv",
  "diesel",
@@ -434,6 +440,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "cloudflare"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7e98b348a528dfb00d9f96803c232f85b481cc4f6fdcb8dc47e0a9b82bb349d"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono 0.4.19",
+ "http",
+ "percent-encoding 1.0.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "serde_with",
+ "slog",
+ "slog-term",
+ "sloggers 1.0.1",
+ "url",
+]
+
+[[package]]
 name = "cloudflare-rs"
 version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -451,7 +479,7 @@ dependencies = [
  "serde_with",
  "slog",
  "slog-term",
- "sloggers",
+ "sloggers 0.3.6",
  "url",
 ]
 
@@ -1465,6 +1493,24 @@ dependencies = [
  "rle-decode-fast",
  "take_mut",
 ]
+
+[[package]]
+name = "libflate"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "389de7875e06476365974da3e7ff85d55f1972188ccd9f6020dd7c8156e17914"
+dependencies = [
+ "adler32",
+ "crc32fast",
+ "libflate_lz77",
+ "rle-decode-fast",
+]
+
+[[package]]
+name = "libflate_lz77"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3286f09f7d4926fc486334f28d8d2e6ebe4f7f9994494b6dab27ddfad2c9b11b"
 
 [[package]]
 name = "linked-hash-map"
@@ -2811,6 +2857,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "slog-stdlog"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8228ab7302adbf4fcb37e66f3cda78003feb521e7fd9e3847ec117a7784d0f5a"
+dependencies = [
+ "log 0.4.11",
+ "slog",
+ "slog-scope",
+]
+
+[[package]]
 name = "slog-term"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2830,7 +2887,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31bef221d42166d6708aa1e9b0182324b37a0a7517ff590ec201dbfe1cfa46ef"
 dependencies = [
  "chrono 0.4.19",
- "libflate",
+ "libflate 0.1.27",
  "regex",
  "serde",
  "serde_derive",
@@ -2838,9 +2895,28 @@ dependencies = [
  "slog-async",
  "slog-kvfilter",
  "slog-scope",
- "slog-stdlog",
+ "slog-stdlog 3.0.5",
  "slog-term",
- "trackable",
+ "trackable 0.2.23",
+]
+
+[[package]]
+name = "sloggers"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f01d37507aa6f37490cfa08d71e2639b16906e84c285ae4b9f7ec7ca35756d69"
+dependencies = [
+ "chrono 0.4.19",
+ "libflate 1.0.3",
+ "regex",
+ "serde",
+ "slog",
+ "slog-async",
+ "slog-kvfilter",
+ "slog-scope",
+ "slog-stdlog 4.1.0",
+ "slog-term",
+ "trackable 1.0.0",
 ]
 
 [[package]]
@@ -3251,7 +3327,16 @@ version = "0.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11475c3c53b075360eac9794965822cb053996046545f91cf61d90e00b72efa5"
 dependencies = [
- "trackable_derive",
+ "trackable_derive 0.1.3",
+]
+
+[[package]]
+name = "trackable"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30fb6e13d129dd92c501458f64d56c708e3685e3fd307e878ec5f934c5c5bdb0"
+dependencies = [
+ "trackable_derive 1.0.0",
 ]
 
 [[package]]
@@ -3259,6 +3344,16 @@ name = "trackable_derive"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edcf0b9b2caa5f4804ef77aeee1b929629853d806117c48258f402b69737e65c"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "trackable_derive"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebeb235c5847e2f82cfe0f07eb971d1e5f6804b18dac2ae16349cc604380f82f"
 dependencies = [
  "quote",
  "syn",
