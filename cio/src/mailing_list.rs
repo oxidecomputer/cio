@@ -1,37 +1,9 @@
-use airtable_api::{api_key_from_env, Airtable, Record};
 use chrono::offset::Utc;
 use chrono::DateTime;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{
-    AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_GRID_VIEW,
-    AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
-};
-use crate::db::Database;
 use crate::models::NewMailingListSubscriber;
-
-/// Get all the mailing list subscribers from Airtable.
-pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
-    // Initialize the Airtable client.
-    let airtable =
-        Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
-
-    let records: Vec<Record<NewMailingListSubscriber>> = airtable
-        .list_records(
-            AIRTABLE_MAILING_LIST_SIGNUPS_TABLE,
-            AIRTABLE_GRID_VIEW,
-            vec![],
-        )
-        .await
-        .unwrap();
-
-    let mut subscribers: Vec<NewMailingListSubscriber> = Default::default();
-    for record in records {
-        subscribers.push(record.fields);
-    }
-    subscribers
-}
 
 /// The data type for the webhook from Mailchimp.
 ///
@@ -187,27 +159,4 @@ pub struct MailchimpWebhookGrouping {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<String>,
-}
-
-// Sync the mailing list subscribers with our database.
-pub async fn refresh_db_mailing_list_subscribers() {
-    let mailing_list_subscribers = get_all_subscribers().await;
-
-    // Initialize our database.
-    let db = Database::new();
-
-    // Sync mailing_list_subscribers.
-    for mailing_list_subscriber in mailing_list_subscribers {
-        db.upsert_mailing_list_subscriber(&mailing_list_subscriber);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::mailing_list::refresh_db_mailing_list_subscribers;
-
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_mailing_list_subscribers() {
-        refresh_db_mailing_list_subscribers().await;
-    }
 }

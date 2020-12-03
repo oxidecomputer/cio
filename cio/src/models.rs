@@ -1674,7 +1674,9 @@ impl Default for NewMailingListSubscriber {
 /// Implement updating the Airtable record for a MailingListSubscriber.
 #[async_trait]
 impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
-    async fn update_airtable_record(&mut self, _record: MailingListSubscriber) {
+    async fn update_airtable_record(&mut self, record: MailingListSubscriber) {
+        // Set the link_to_people from the original so it stays intact.
+        self.link_to_people = record.link_to_people.clone();
     }
 }
 
