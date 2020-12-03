@@ -106,7 +106,7 @@ async fn listen_github_webhooks(
         return Ok(HttpResponseAccepted(msg));
     }
 
-    let commit = event.commits.get(0).unwrap();
+    let mut commit = event.commits.get(0).unwrap().clone();
     // We only care about distinct commits.
     if !commit.distinct {
         // The commit is not distinct.
@@ -114,6 +114,21 @@ async fn listen_github_webhooks(
         let msg = format!(
             "Aborted, `push` event commit `{}` is not distinct",
             commit.id
+        );
+        println!("[github]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
+    }
+
+    // Ignore any changes that are not to the `rfd/` directory.
+    let dir = "rfd/";
+    commit.filter_files_by_path(dir);
+    if !commit.has_changed_files() {
+        // No files changed that we care about.
+        // We can throw this out, log it and return early.
+        let msg = format!(
+            "Aborted, `push` event commit `{}` does not include any changes to the `{}` directory",
+            commit.id,
+            dir
         );
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
@@ -239,4 +254,32 @@ pub struct GitHubCommit {
     /// An array of files removed in the commit.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub removed: Vec<String>,
+}
+
+impl GitHubCommit {
+    /// Filter the files that were added, modified, or removed by their prefix
+    /// including a specified directory or path.
+    pub fn filter_files_by_path(&mut self, dir: &str) {
+        self.added = filter(&self.added, dir);
+        self.modified = filter(&self.modified, dir);
+        self.removed = filter(&self.removed, dir);
+    }
+
+    /// Return if the commit has any files that were added, modified, or removed.
+    pub fn has_changed_files(&self) -> bool {
+        !self.added.is_empty()
+            || !self.modified.is_empty()
+            || !self.removed.is_empty()
+    }
+}
+
+fn filter(files: &Vec<String>, dir: &str) -> Vec<String> {
+    let mut in_dir: Vec<String> = Default::default();
+    for file in files {
+        if file.starts_with(dir) {
+            in_dir.push(file.to_string());
+        }
+    }
+
+    in_dir
 }
