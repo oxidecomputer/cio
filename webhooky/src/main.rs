@@ -139,7 +139,8 @@ pub struct GitHubWebhook {
     pub sender: GitHubUser,
     /// The `repository` where the event occurred. Webhook payloads contain the
     /// `repository` property when the event occurs from activity in a repository.
-    pub repository: GithubRepo,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repository: Option<GithubRepo>,
     /// Webhook payloads contain the `organization` object when the webhook is
     /// configured for an organization or the event occurs from activity in a
     /// repository owned by an organization.
