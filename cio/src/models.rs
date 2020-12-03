@@ -1783,8 +1783,12 @@ pub struct NewRepo {
     pub languages_url: String,
     pub merges_url: String,
     pub milestones_url: String,
-    //#[serde(default, skip_serializing_if = "String::is_empty")]
-    //pub mirror_url: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub mirror_url: String,
     pub notifications_url: String,
     pub pulls_url: String,
     pub releases_url: String,
@@ -1815,6 +1819,26 @@ pub struct NewRepo {
     pub pushed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+pub mod deserialize_null_string {
+    use serde::{self, Deserialize, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap_or("".to_string());
+
+        Ok(s)
+    }
 }
 
 impl NewRepo {
