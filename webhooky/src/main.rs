@@ -428,7 +428,7 @@ async fn listen_mailchimp_webhooks(
     }
 
     // Parse the webhook as a new mailing list subscriber.
-    /*let new_subscriber = event.as_signup();
+    /*let new_subscriber = event.as_subscriber();
 
     // TODO: Update the subscriber in the database.
     let subscriber = db.upsert_mailing_list_subscriber(&new_subscriber);
