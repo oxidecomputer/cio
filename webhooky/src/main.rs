@@ -78,22 +78,45 @@ async fn listen_github_webhooks(
 
     if event.action != "push".to_string() {
         // If we did not get a push event we can log it and return early.
-        println!("[github] ignored event: {:?}", event);
-        return Ok(HttpResponseAccepted(
-            "Aborted, event was not a push event".to_string(),
-        ));
+        let msg =
+            format!("Aborted, not a `push` event, got `{}`", event.action);
+        println!("[github]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
     }
 
     // Handle the push event.
     // Check if it came from the rfd repo.
-    let repo_name = event.clone().repository.unwrap().name;
+    let repo = event.clone().repository.unwrap();
+    let repo_name = repo.name;
     if repo_name != "rfd" {
         // We only care about the rfd repo push events for now.
         // We can throw this out, log it and return early.
-        println!("[github] ignored event: {:?}", event);
-        return Ok(HttpResponseAccepted(
-            "Aborted, event was not a push event to the rfd repo".to_string(),
-        ));
+        let msg =
+            format!("Aborted, `push` event was to the {} repo, no automations are set up for this repo yet", repo_name);
+        println!("[github]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
+    }
+
+    // Ensure we have commits.
+    if event.commits.is_empty() {
+        // `push` even has no commits.
+        // We can throw this out, log it and return early.
+        let msg = "Aborted, `push` event has no commits".to_string();
+        println!("[github]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
+    }
+
+    let commit = event.commits.get(0).unwrap();
+    // We only care about distinct commits.
+    if !commit.distinct {
+        // The commit is not distinct.
+        // We can throw this out, log it and return early.
+        let msg = format!(
+            "Aborted, `push` event commit `{}` is not distinct",
+            commit.id
+        );
+        println!("[github]: {}", msg);
+        return Ok(HttpResponseAccepted(msg));
     }
 
     // Now we can continue since we have a push event to the rfd repo.
