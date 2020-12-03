@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::io::{stderr, stdout, Write};
 use std::process::Command;
+use std::str::from_utf8;
 
 use airtable_api::{api_key_from_env, Airtable, Record};
 use async_trait::async_trait;
@@ -2058,6 +2059,123 @@ pub struct NewRFD {
 }
 
 impl NewRFD {
+    /// Return a NewRFD from a parsed file on a specific GitHub branch.
+    pub async fn new_from_github(
+        github: &Github,
+        branch: &str,
+        file_path: &str,
+        commit_date: DateTime<Utc>,
+    ) -> Self {
+        // Get the file from GitHub.
+        let file = github
+            .repo(github_org(), "rfd")
+            .content()
+            .file(file_path, branch)
+            .await
+            .unwrap();
+        let content = from_utf8(&file.content).unwrap().trim().to_string();
+
+        // Parse the RFD number as an int.
+        let number = branch.trim_start_matches("0").parse::<i32>().unwrap();
+
+        let number_string = NewRFD::generate_number_string(number);
+
+        // Parse the RFD title from the contents.
+        let title = NewRFD::get_title(&content);
+
+        // Parse the state from the contents.
+        let state = NewRFD::get_state(&content);
+
+        // Parse the discussion from the contents.
+        let discussion = NewRFD::get_discussion(&content);
+
+        // Parse the RFD contents.
+        let mut html = String::new();
+        let is_markdown = file_path.ends_with(".md");
+        if is_markdown {
+            // Parse the markdown.
+            html = parse_markdown(&content);
+        } else {
+            // Parse the acsiidoc.
+            html = parse_asciidoc(&content);
+        }
+
+        let authors = get_authors(&content, is_markdown);
+
+        NewRFD {
+            number,
+            number_string: number_string.to_string(),
+            title: title.to_string(),
+            name: NewRFD::generate_name(number, &title),
+            state,
+            link: file.html_url,
+            short_link: NewRFD::generate_short_link(number),
+            rendered_link: NewRFD::generate_rendered_link(&number_string),
+            discussion,
+            authors,
+            html: clean_rfd_html_links(&html, &number_string),
+            content,
+            sha: file.sha,
+            commit_date,
+            // Only exists in Airtable,
+            milestones: Default::default(),
+            // Only exists in Airtable,
+            relevant_components: Default::default(),
+        }
+    }
+
+    pub fn get_title(content: &str) -> String {
+        let re = Regex::new(r"(?m)(^RFD .*$)").unwrap();
+        match re.find(&content) {
+            Some(v) => {
+                return v.as_str().replace("RFD ", "").trim().to_string()
+            }
+            None => return Default::default(),
+        }
+    }
+
+    pub fn get_state(content: &str) -> String {
+        let re = Regex::new(r"(?m)(^state.*$)").unwrap();
+        match re.find(&content) {
+            Some(v) => {
+                return v.as_str().replace("state:", "").trim().to_string()
+            }
+            None => return Default::default(),
+        }
+    }
+
+    pub fn get_discussion(content: &str) -> String {
+        let re = Regex::new(r"(?m)(^discussion.*$)").unwrap();
+        match re.find(&content) {
+            Some(v) => {
+                return v.as_str().replace("discussion:", "").trim().to_string()
+            }
+            None => return Default::default(),
+        }
+    }
+
+    pub fn generate_number_string(number: i32) -> String {
+        // Add leading zeros to the number for the number_string.
+        let mut number_string = number.to_string();
+        while number_string.len() < 4 {
+            number_string = format!("0{}", number_string);
+        }
+
+        number_string
+    }
+
+    pub fn generate_name(number: i32, title: &str) -> String {
+        format!("RFD {} {}", number, title)
+    }
+
+    pub fn generate_short_link(number: i32) -> String {
+        format!("https://{}.rfd.oxide.computer", number)
+    }
+
+    pub fn generate_rendered_link(number_string: &str) -> String {
+        format!("https://rfd.shared.oxide.computer/rfd/{}", number_string)
+    }
+
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
     pub async fn expand(&mut self, github: &Github) {
@@ -2065,21 +2183,16 @@ impl NewRFD {
         self.title = self.title.trim().to_string();
 
         // Add leading zeros to the number for the number_string.
-        self.number_string = self.number.to_string();
-        while self.number_string.len() < 4 {
-            self.number_string = format!("0{}", self.number_string);
-        }
+        self.number_string = NewRFD::generate_number_string(self.number);
 
         // Set the full name.
-        self.name = format!("RFD {} {}", self.number, self.title);
+        self.name = NewRFD::generate_name(self.number, &self.title);
 
         // Set the short_link.
-        self.short_link = format!("https://{}.rfd.oxide.computer", self.number);
+        self.short_link = NewRFD::generate_short_link(self.number);
         // Set the rendered_link.
-        self.rendered_link = format!(
-            "https://rfd.shared.oxide.computer/rfd/{}",
-            self.number_string
-        );
+        self.rendered_link =
+            NewRFD::generate_rendered_link(&self.number_string);
 
         let mut branch = self.number_string.to_string();
         if self.link.contains("/master/") {
@@ -2115,15 +2228,16 @@ impl NewRFD {
                     .with_timezone(&Utc);
         }
 
+        // Parse the HTML.
+        let mut html = String::new();
         if is_markdown {
             // Parse the markdown.
-            let html = parse_markdown(&self.content);
-            self.html = clean_rfd_html_links(&html, &self.number_string);
+            html = parse_markdown(&self.content);
         } else {
             // Parse the acsiidoc.
-            let html = parse_asciidoc(&self.content);
-            self.html = clean_rfd_html_links(&html, &self.number_string);
+            html = parse_asciidoc(&self.content);
         }
+        self.html = clean_rfd_html_links(&html, &self.number_string);
 
         self.authors = get_authors(&self.content, is_markdown);
     }

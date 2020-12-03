@@ -14,6 +14,8 @@ cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
 #dropshot = "^0.3.0"
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "max-size" }
 http = "0.2.0"
+#hubcaps = { version = "0.6", features = ["httpcache"] }
+hubcaps = { git = "https://github.com/softprops/hubcaps", branch = "master", features = ["httpcache"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

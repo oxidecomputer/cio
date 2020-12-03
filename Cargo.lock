@@ -3647,6 +3647,7 @@ dependencies = [
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio)",
  "dropshot",
  "http",
+ "hubcaps",
  "schemars",
  "serde",
  "serde_json",

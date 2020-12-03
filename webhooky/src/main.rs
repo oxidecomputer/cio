@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use chrono::offset::Utc;
@@ -7,10 +8,12 @@ use dropshot::{
     ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk,
     HttpServer, RequestContext, TypedBody,
 };
+use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cio_api::models::{GitHubUser, GithubRepo};
+use cio_api::utils::authenticate_github;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -45,14 +48,58 @@ async fn main() -> Result<(), String> {
     api.register(ping).unwrap();
     api.register(listen_github_webhooks).unwrap();
 
-    // Start the server.
-    let mut server = HttpServer::new(&config_dropshot, api, Arc::new(()), &log)
+    /*
+     * The functions that implement our API endpoints will share this context.
+     */
+    let api_context = Context::new().await;
+
+    /*
+     * Set up the server.
+     */
+    let mut server = HttpServer::new(&config_dropshot, api, api_context, &log)
         .map_err(|error| format!("failed to start server: {}", error))
         .unwrap();
 
+    // Start the server.
     let server_task = server.run();
     server.wait_for_shutdown(server_task).await
 }
+
+/**
+ * Application-specific context (state shared by handler functions)
+ */
+struct Context {
+    // TODO: share a database connection here.
+    github: Github,
+}
+
+impl Context {
+    /**
+     * Return a new Context.
+     */
+    pub async fn new() -> Arc<Context> {
+        let api_context = Context {
+            github: authenticate_github(),
+        };
+
+        Arc::new(api_context)
+    }
+
+    /**
+     * Given `rqctx` (which is provided by Dropshot to all HTTP handler
+     * functions), return our application-specific context.
+     */
+    pub fn from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
+        let ctx: Arc<dyn Any + Send + Sync + 'static> =
+            Arc::clone(&rqctx.server.private);
+        ctx.downcast::<Context>()
+            .expect("wrong type for private data")
+    }
+}
+
+/*
+ * HTTP API interface
+ */
 
 /** Return pong. */
 #[endpoint {
@@ -74,6 +121,8 @@ async fn listen_github_webhooks(
     rqctx: Arc<RequestContext>,
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
     let event = body_param.into_inner();
 
     // Parse the `X-GitHub-Event` header.
