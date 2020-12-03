@@ -6,7 +6,7 @@ use chrono::DateTime;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
     ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk,
-    HttpServer, RequestContext, TypedBody,
+    HttpServer, Query, RequestContext, TypedBody,
 };
 use google_drive::GoogleDrive;
 use hubcaps::Github;
@@ -14,6 +14,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cio_api::db::Database;
+use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
 use cio_api::utils::{authenticate_github, get_gsuite_token, github_org};
 
@@ -49,6 +50,7 @@ async fn main() -> Result<(), String> {
      */
     api.register(ping).unwrap();
     api.register(listen_github_webhooks).unwrap();
+    api.register(listen_mailchimp_webhooks).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
@@ -396,6 +398,21 @@ async fn listen_github_webhooks(
     }
 
     // TODO: should we do something if the file gets deleted (?)
+
+    Ok(HttpResponseAccepted("Updated successfully".to_string()))
+}
+
+/** Listen for MailChimp webhooks. */
+#[endpoint {
+    method = POST,
+    path = "/mailchimp",
+}]
+async fn listen_mailchimp_webhooks(
+    _rqctx: Arc<RequestContext>,
+    query_args: Query<MailchimpWebhook>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = query_args.into_inner();
+    println!("[mailchimp] {:?}", event);
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }

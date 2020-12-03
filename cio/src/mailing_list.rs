@@ -1,6 +1,7 @@
 use airtable_api::{api_key_from_env, Airtable, Record};
 use chrono::offset::Utc;
 use chrono::DateTime;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{
@@ -36,11 +37,14 @@ pub async fn get_all_subscribers() -> Vec<NewMailingListSubscriber> {
 ///
 /// Docs:
 /// https://mailchimp.com/developer/guides/sync-audience-data-with-webhooks/#handling-the-webhook-response-in-your-application
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct MailchimpWebhook {
     #[serde(rename = "type")]
     pub webhook_type: String,
-    #[serde(with = "mailchimp_date_format")]
+    #[serde(
+        deserialize_with = "mailchimp_date_format::deserialize",
+        serialize_with = "mailchimp_date_format::serialize"
+    )]
     fired_at: DateTime<Utc>,
     data: MailchimpWebhookData,
 }
@@ -130,7 +134,7 @@ impl MailchimpWebhook {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct MailchimpWebhookData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
@@ -154,7 +158,7 @@ pub struct MailchimpWebhookData {
     pub merges: Option<MailchimpWebhookMerges>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct MailchimpWebhookMerges {
     #[serde(skip_serializing_if = "Option::is_none", rename = "FNAME")]
     pub first_name: Option<String>,
@@ -176,7 +180,7 @@ pub struct MailchimpWebhookMerges {
     pub groupings: Option<Vec<MailchimpWebhookGrouping>>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct MailchimpWebhookGrouping {
     pub id: String,
     pub unique_id: String,
