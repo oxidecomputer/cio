@@ -195,10 +195,21 @@ async fn listen_github_webhooks(
         return Ok(HttpResponseAccepted(msg));
     }
 
+    // Handle if we got a pull_request.
     if event_type == "pull_request" {
-        // Handle if we got a pull_request.
+        // We only care if the pull request was `opened`.
+        if event.action != "opened" {
+            // We can throw this out, log it and return early.
+            let msg =
+            format!("Aborted, `{}` event was to the {} repo, no automations are set up for action `{}` yet",event_type, repo_name, event.action);
+            println!("[github]: {}", msg);
+            return Ok(HttpResponseAccepted(msg));
+        }
+
+        // We have a newly opened pull request.
+        // Let's update the discussion link for the RFD.
         let msg =
-            format!("Aborted, `{}` event was to the {} repo, no automations are set up for pull requests yet",event_type, repo_name);
+            format!("`{}` event was to the {} repo with action `{}`, updated discussion link for the RFD",event_type, repo_name, event.action);
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -470,6 +481,16 @@ pub struct GitHubWebhook {
     /// timeline events only and isn't applied to webhook deliveries.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub commits: Vec<GitHubCommit>,
+
+    /// `pull_request` event fields.
+    /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
+    ///
+    /// The pull request number.
+    #[serde(default)]
+    pub number: i64,
+    /// The pull request itself.
+    #[serde(default)]
+    pub pull_request: GitHubPullRequest,
 }
 
 /// A GitHub commit.
@@ -501,6 +522,17 @@ pub struct GitHubCommit {
     /// An array of files removed in the commit.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub removed: Vec<String>,
+}
+
+/// A GitHub pull request.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
+#[derive(
+    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
+)]
+pub struct GitHubPullRequest {
+    /// The HTML location of this pull request.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub html_url: String,
 }
 
 impl GitHubCommit {
