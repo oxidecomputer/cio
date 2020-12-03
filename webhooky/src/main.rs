@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use cio_api::db::Database;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
-use cio_api::utils::{authenticate_github, get_gsuite_token};
+use cio_api::utils::{authenticate_github, get_gsuite_token, github_org};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -76,6 +76,7 @@ struct Context {
     drive_rfd_shared_id: String,
     drive_rfd_dir_id: String,
     github: Github,
+    github_org: String,
 }
 
 impl Context {
@@ -109,6 +110,7 @@ impl Context {
             drive_rfd_shared_id,
             drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap().id.to_string(),
             github: authenticate_github(),
+            github_org: github_org(),
         })
     }
 
@@ -149,6 +151,10 @@ async fn listen_github_webhooks(
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
+    let github_repo = api_context
+        .github
+        .repo(api_context.github_org.to_string(), "rfd");
+
     // TODO: share the database connection in the context.
     let db = Database::new();
 
@@ -255,7 +261,7 @@ async fn listen_github_webhooks(
         );
         // Parse the RFD.
         let new_rfd = NewRFD::new_from_github(
-            &api_context.github,
+            &github_repo,
             branch,
             &file,
             commit.timestamp,
@@ -294,20 +300,62 @@ async fn listen_github_webhooks(
         // database.
         // If the RFD's state was changed to `discussion`, we need to open a PR
         // for that RFD.
-        if old_rfd_state != rfd.state && rfd.state == "discussion" {
-            println!(
-                "[github] RFD {} has moved from state {} -> {}, opening a PR.",
-                rfd.number_string, old_rfd_state, rfd.state
-            );
+        // Make sure we are not on the master branch, since then we would not need
+        // a PR. Instead, below, the state of the RFD would be moved to `published`.
+        if old_rfd_state != rfd.state
+            && rfd.state == "discussion"
+            && branch != repo.default_branch.to_string()
+        {
+            // First, we need to make sure we don't already have a pull request open.
+            let pulls = github_repo
+                .pulls()
+                .list(
+                    &hubcaps::pulls::PullListOptions::builder()
+                        .state(hubcaps::issues::State::Open)
+                        .build(),
+                )
+                .await
+                .unwrap();
+            // Check if any pull requests are from our branch.
+            let mut has_pull = false;
+            for pull in pulls {
+                // Check if the pull request is for our branch.
+                let pull_branch =
+                    pull.head.commit_ref.trim_start_matches("refs/heads/");
+                println!("pull brnach: {}", pull_branch);
 
-            // TODO: Open a pull request.
+                if pull_branch == branch {
+                    println!("[github] RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}", rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url);
+
+                    has_pull = true;
+                    break;
+                }
+            }
+
+            // Open a pull request, if we don't already have one.
+            if !has_pull {
+                // Open a pull request.
+                println!("[github] RFD {} has moved from state {} -> {}, on branch {}, opening a PR",rfd.number_string, old_rfd_state, rfd.state, branch);
+
+                /*let pull = github_repo
+                                    .pulls()
+                                    .create(&hubcaps::pulls::PullOptions::new(
+                rfd.name,
+                format!("{}:{}", api_context.github_org,branch),
+                repo.default_branch.to_string(),
+                Some("Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your document and close this pull request."),
+                                            ))
+                                    .await
+                                    .unwrap();*/
+            }
         }
 
         // If the RFD was merged into the default branch, but the RFD state is not `published`,
         // update the state of the RFD in GitHub to show it as `published`.
-        if branch == repo.default_branch && rfd.state != "published" {
+        if branch == repo.default_branch.to_string() && rfd.state != "published"
+        {
             println!(
-                "[github] RFD {} is the branch {} but its state is {}, updating it to `published`.",
+                "[github] RFD {} is the branch {} but its state is {}, updating it to `published`",
                 rfd.number_string,repo.default_branch, old_rfd_state,
             );
 

@@ -15,7 +15,7 @@ use diesel::serialize::{self, Output, ToSql};
 use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
 use hubcaps::issues::{Issue, IssueOptions};
-use hubcaps::repositories::Repo;
+use hubcaps::repositories::{Repo, Repository};
 use hubcaps::Github;
 use macros::db_struct;
 use regex::Regex;
@@ -2071,18 +2071,13 @@ pub struct NewRFD {
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
     pub async fn new_from_github(
-        github: &Github,
+        repo: &Repository,
         branch: &str,
         file_path: &str,
         commit_date: DateTime<Utc>,
     ) -> Self {
         // Get the file from GitHub.
-        let file = github
-            .repo(github_org(), "rfd")
-            .content()
-            .file(file_path, branch)
-            .await
-            .unwrap();
+        let file = repo.content().file(file_path, branch).await.unwrap();
         let content = from_utf8(&file.content).unwrap().trim().to_string();
 
         // Parse the RFD directory as an int.
