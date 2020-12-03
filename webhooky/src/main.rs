@@ -8,13 +8,14 @@ use dropshot::{
     ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk,
     HttpServer, RequestContext, TypedBody,
 };
+use google_drive::GoogleDrive;
 use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cio_api::db::Database;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
-use cio_api::utils::authenticate_github;
+use cio_api::utils::{authenticate_github, get_gsuite_token};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -71,6 +72,9 @@ async fn main() -> Result<(), String> {
  */
 struct Context {
     // TODO: share a database connection here.
+    drive: GoogleDrive,
+    drive_rfd_shared_id: String,
+    drive_rfd_dir_id: String,
     github: Github,
 }
 
@@ -79,11 +83,33 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new() -> Arc<Context> {
-        let api_context = Context {
-            github: authenticate_github(),
-        };
+        // Get gsuite token.
+        let token = get_gsuite_token().await;
 
-        Arc::new(api_context)
+        // Initialize the Google Drive client.
+        let drive = GoogleDrive::new(token);
+
+        // Figure out where our directory is.
+        // It should be in the shared drive : "Automated Documents"/"rfds"
+        let shared_drive = drive
+            .get_drive_by_name("Automated Documents")
+            .await
+            .unwrap();
+        let drive_rfd_shared_id = shared_drive.id.to_string();
+
+        // Get the directory by the name.
+        let drive_rfd_dir = drive
+            .get_file_by_name(&drive_rfd_shared_id, "rfds")
+            .await
+            .unwrap();
+
+        // Create the context.
+        Arc::new(Context {
+            drive,
+            drive_rfd_shared_id,
+            drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap().id.to_string(),
+            github: authenticate_github(),
+        })
     }
 
     /**
@@ -255,7 +281,14 @@ async fn listen_github_webhooks(
 
         // TODO: Update airtable with the new RFD.
 
-        // TODO: Update the PDFs for the RFD.
+        // Update the PDFs for the RFD.
+        rfd.convert_and_upload_pdf(
+            &api_context.github,
+            &api_context.drive,
+            &api_context.drive_rfd_shared_id,
+            &api_context.drive_rfd_dir_id,
+        )
+        .await;
 
         // Check if the RFD state changed from what is currently in the
         // database.

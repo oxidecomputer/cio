@@ -384,7 +384,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#eaebec2d4bbf1361e989d954a57ddf3fdbe6f3c7"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#ee0da88bd62800ad6672c2a3129dc7828d3fc3e6"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1517,7 +1517,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#eaebec2d4bbf1361e989d954a57ddf3fdbe6f3c7"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#ee0da88bd62800ad6672c2a3129dc7828d3fc3e6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3546,6 +3546,7 @@ dependencies = [
  "chrono 0.4.19",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio)",
  "dropshot",
+ "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
  "schemars",
