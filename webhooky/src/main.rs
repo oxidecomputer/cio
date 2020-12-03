@@ -304,7 +304,9 @@ async fn listen_github_webhooks(
         // TODO: Create all the shortlinks for the RFD if we need to,
         // this would be on added files, only.
 
-        // TODO: Update airtable with the new RFD.
+        // Update airtable with the new RFD.
+        let mut airtable_rfd = rfd.clone();
+        airtable_rfd.create_or_update_in_airtable().await;
 
         // Update the PDFs for the RFD.
         rfd.convert_and_upload_pdf(
