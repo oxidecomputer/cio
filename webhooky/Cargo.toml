@@ -16,7 +16,7 @@ dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "max-size" }
 google-drive = "^0.1.0"
 http = "0.2.0"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
-hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "add-delete", features = ["httpcache"] }
+hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
