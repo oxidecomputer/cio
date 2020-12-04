@@ -1756,7 +1756,7 @@ checksum = "64e9829a50b42bb782c1df523f78d332fe371b10c661e78b7a3c34b0198e9fac"
 [[package]]
 name = "influxdb"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/influxdb-rust?branch=cloud#94a1cf809c66b476905650836699a8940855aed2"
+source = "git+https://github.com/jessfraz/influxdb-rust?branch=cloud#067bab90c3d5d97d01dc3975120d032fd21516de"
 dependencies = [
  "chrono 0.4.19",
  "futures",

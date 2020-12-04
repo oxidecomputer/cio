@@ -1,9 +1,9 @@
 use std::env;
 
 use chrono::offset::Utc;
-use chrono::DateTime;
-use influxdb::Client as InfluxClient;
+use chrono::{DateTime, Duration};
 use influxdb::InfluxDbWriteable;
+use influxdb::{Client as InfluxClient, Query as InfluxQuery};
 
 use crate::utils::{authenticate_github_jwt, list_all_github_repos};
 
@@ -23,6 +23,33 @@ impl Client {
         )
     }
 
+    pub async fn event_exists(
+        &self,
+        table: &str,
+        github_id: i64,
+        action: &str,
+        time: DateTime<Utc>,
+    ) -> bool {
+        let flux_date_format = "%Y-%m-%dT%H:%M:%SZ";
+
+        let read_query = InfluxQuery::raw_read_query(&format!(
+            r#"from(bucket:"github_webhooks")
+                    |> range(start: {}, stop: {})
+                    |> filter(fn: (r) => r._measurement == "{}")
+                    |> filter(fn: (r) => r.github_id == {})
+                    |> filter(fn: (r) => r.action == "{}")
+                    "#,
+            time.format(flux_date_format),
+            (time + Duration::seconds(1)).format(flux_date_format),
+            table,
+            github_id,
+            action
+        ));
+        let read_result = self.0.query(&read_query).await;
+
+        read_result.is_ok()
+    }
+
     pub async fn update_pull_request_events(&self) {
         let github = authenticate_github_jwt();
         let repos = list_all_github_repos(&github).await;
@@ -40,48 +67,83 @@ impl Client {
                 )
                 .await
                 .unwrap();
+
             for pull in pulls {
                 // Add events for each pull request if it does not already exist.
-                let pull_request_created = PullRequest {
-                    time: pull.created_at,
-                    repo_name: repo.name.to_string(),
-                    sender: pull.user.login.to_string(),
-                    action: "opened".to_string(),
-                    head_reference: pull.head.commit_ref.to_string(),
-                    base_reference: pull.base.commit_ref.to_string(),
-                    number: pull.number.to_string().parse::<i64>().unwrap(),
-                    github_id: pull.id.to_string().parse::<i64>().unwrap(),
-                };
-                self.0
-                    .query(
-                        &pull_request_created
-                            .clone()
-                            .into_query("pull_request"),
+                // Check if this event already exists.
+                // Let's see if the data we wrote is there.
+                let github_id = pull.id.to_string().parse::<i64>().unwrap();
+                let exists = self
+                    .event_exists(
+                        "pull_request",
+                        github_id,
+                        "opened",
+                        pull.created_at,
                     )
-                    .await
-                    .unwrap();
-                println!("added event: {:?}", pull_request_created);
+                    .await;
 
-                if pull.merged_at.is_some() {
-                    let pull_request_merged = PullRequest {
-                        time: pull.merged_at.unwrap(),
+                if !exists {
+                    // Add the event.
+                    let pull_request_created = PullRequest {
+                        time: pull.created_at,
                         repo_name: repo.name.to_string(),
                         sender: pull.user.login.to_string(),
-                        action: "merged".to_string(),
+                        action: "opened".to_string(),
                         head_reference: pull.head.commit_ref.to_string(),
                         base_reference: pull.base.commit_ref.to_string(),
                         number: pull.number.to_string().parse::<i64>().unwrap(),
-                        github_id: pull.id.to_string().parse::<i64>().unwrap(),
+                        github_id,
                     };
                     self.0
                         .query(
-                            &pull_request_merged
+                            &pull_request_created
                                 .clone()
                                 .into_query("pull_request"),
                         )
                         .await
                         .unwrap();
-                    println!("added event: {:?}", pull_request_merged);
+                    println!("added event: {:?}", pull_request_created);
+                }
+
+                if pull.merged_at.is_some() {
+                    let merged_at = pull.merged_at.unwrap();
+
+                    // Check if we already have the event.
+                    let exists = self
+                        .event_exists(
+                            "pull_request",
+                            github_id,
+                            "merged",
+                            merged_at,
+                        )
+                        .await;
+
+                    if !exists {
+                        // Add the event.
+                        let pull_request_merged = PullRequest {
+                            time: merged_at,
+                            repo_name: repo.name.to_string(),
+                            sender: pull.user.login.to_string(),
+                            action: "merged".to_string(),
+                            head_reference: pull.head.commit_ref.to_string(),
+                            base_reference: pull.base.commit_ref.to_string(),
+                            number: pull
+                                .number
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap(),
+                            github_id,
+                        };
+                        self.0
+                            .query(
+                                &pull_request_merged
+                                    .clone()
+                                    .into_query("pull_request"),
+                            )
+                            .await
+                            .unwrap();
+                        println!("added event: {:?}", pull_request_merged);
+                    }
                 }
             }
         }
