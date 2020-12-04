@@ -639,6 +639,7 @@ impl GitHubWebhook {
             action: self.action.to_string(),
             repository: self.repository.clone().unwrap().name.to_string(),
             sender: self.sender.login.to_string(),
+            number: self.number,
         }
     }
 }
@@ -654,6 +655,8 @@ struct InfluxGitHubWebhook {
     repository: String,
     #[tag]
     sender: String,
+    #[tag]
+    number: i64,
 }
 
 /// A GitHub commit.
