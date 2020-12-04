@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::str::from_utf8;
+use std::{thread, time};
 
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
@@ -361,7 +362,10 @@ impl User {
                         .unwrap();
 
                 // TODO: Figure out rate limit.
-                println!("Updated slack user: {}", self.email());
+                let rate_limit_sleep = time::Duration::from_secs(10);
+                // We need to sleep here for a half second so we don't get rate limited.
+                thread::sleep(rate_limit_sleep);
+                println!("updated slack user: {}", self.email());
 
                 // Return early.
                 return;
