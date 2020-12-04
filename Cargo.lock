@@ -559,7 +559,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "dropshot",
+ "dropshot 0.3.0 (git+https://github.com/jessfraz/dropshot?branch=fix-query)",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -604,7 +604,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "dropshot",
+ "dropshot 0.3.0 (git+https://github.com/jessfraz/dropshot?branch=max-size)",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1023,13 +1023,44 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "dropshot"
 version = "0.3.0"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#f47f15260d5c87dba3caa104c364c5337e0d803f"
+dependencies = [
+ "async-trait",
+ "base64 0.12.3",
+ "bytes",
+ "chrono 0.4.19",
+ "dropshot_endpoint 0.3.0 (git+https://github.com/jessfraz/dropshot?branch=fix-query)",
+ "futures",
+ "hostname 0.3.1",
+ "http",
+ "hyper",
+ "indexmap",
+ "openapiv3",
+ "paste",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_qs 0.7.0",
+ "slog",
+ "slog-async",
+ "slog-bunyan",
+ "slog-json",
+ "slog-term",
+ "tokio",
+ "toml",
+ "uuid",
+]
+
+[[package]]
+name = "dropshot"
+version = "0.3.0"
 source = "git+https://github.com/jessfraz/dropshot?branch=max-size#272f3593c1fa4b99cc9ee711cfa2f99b9f57ab71"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
  "bytes",
  "chrono 0.4.19",
- "dropshot_endpoint",
+ "dropshot_endpoint 0.3.0 (git+https://github.com/jessfraz/dropshot?branch=max-size)",
  "futures",
  "hostname 0.3.1",
  "http",
@@ -1049,6 +1080,19 @@ dependencies = [
  "tokio",
  "toml",
  "uuid",
+]
+
+[[package]]
+name = "dropshot_endpoint"
+version = "0.3.0"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#f47f15260d5c87dba3caa104c364c5337e0d803f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "schemars",
+ "serde",
+ "serde_tokenstream",
+ "syn",
 ]
 
 [[package]]
@@ -4141,7 +4185,7 @@ version = "0.1.0"
 dependencies = [
  "chrono 0.4.19",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio)",
- "dropshot",
+ "dropshot 0.3.0 (git+https://github.com/jessfraz/dropshot?branch=fix-query)",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
