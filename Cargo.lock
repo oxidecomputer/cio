@@ -358,7 +358,7 @@ dependencies = [
  "diffy",
  "dropshot",
  "futures-util",
- "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "html2text",
  "hubcaps",
@@ -384,7 +384,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#941e42fd6f903ab058984eacdd67255a2b9b4f88"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#16bc992207246ab5e3c80b7ea828828f9eb4995f"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -400,7 +400,7 @@ dependencies = [
  "diffy",
  "dropshot",
  "futures-util",
- "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "html2text",
  "hubcaps",
@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "bytes",
  "reqwest",
@@ -1078,9 +1078,9 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c07c7047339a4024a637cab4881d721dc996ff9dca549b0c0901f5341498ab4"
+checksum = "c913fdff6be92427d4b9dfe46789c8cefb00cbee6086bd0803d4cb32e4747335"
 dependencies = [
  "bytes",
  "reqwest",
@@ -1517,7 +1517,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#941e42fd6f903ab058984eacdd67255a2b9b4f88"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#16bc992207246ab5e3c80b7ea828828f9eb4995f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3546,7 +3546,7 @@ dependencies = [
  "chrono 0.4.19",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio)",
  "dropshot",
- "google-drive 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
  "schemars",

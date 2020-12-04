@@ -419,7 +419,16 @@ async fn listen_github_webhooks(
                 &old_pdf.sha,
             ).await.unwrap();
 
-            // TODO: Delete the old filename from drive.
+            // Delete the old filename from drive.
+            api_context
+                .drive
+                .delete_file_by_name(
+                    &api_context.drive_rfd_shared_id,
+                    &old_rfd_pdf,
+                )
+                .await
+                .unwrap();
+
             println!("[github] RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive", rfd.number_string, old_rfd_pdf, rfd.get_pdf_filename());
         }
     }
