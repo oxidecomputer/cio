@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::env;
 use std::sync::Arc;
 
 use chrono::offset::Utc;
@@ -10,6 +11,8 @@ use dropshot::{
 };
 use google_drive::GoogleDrive;
 use hubcaps::Github;
+use influxdb::Client as InfluxClient;
+use influxdb::InfluxDbWriteable;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -81,6 +84,7 @@ struct Context {
     drive_rfd_dir_id: String,
     github: Github,
     github_org: String,
+    influx: InfluxClient,
 }
 
 impl Context {
@@ -108,6 +112,15 @@ impl Context {
             .await
             .unwrap();
 
+        let influx = InfluxClient::new(
+            env::var("INFLUX_DB_URL").unwrap(),
+            "github_webhooks",
+        )
+        .with_auth(
+            env::var("GADMIN_SUBJECT").unwrap(),
+            env::var("INFLUX_DB_TOKEN").unwrap(),
+        );
+
         // Create the context.
         Arc::new(Context {
             drive,
@@ -115,6 +128,7 @@ impl Context {
             drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap().id.to_string(),
             github: authenticate_github_jwt(),
             github_org: github_org(),
+            influx,
         })
     }
 
@@ -174,6 +188,14 @@ async fn listen_github_webhooks(
         .to_str()
         .unwrap()
         .to_string();
+
+    // Save all events to influxdb.
+    let influx_event = event.to_influx(event_type.to_string());
+    api_context
+        .influx
+        .query(&influx_event.into_query(&event_type))
+        .await
+        .unwrap();
 
     if event_type != "push".to_string()
         && event_type != "pull_request".to_string()
@@ -607,6 +629,31 @@ pub struct GitHubWebhook {
     /// The pull request itself.
     #[serde(default)]
     pub pull_request: GitHubPullRequest,
+}
+
+impl GitHubWebhook {
+    fn to_influx(&self, event_type: String) -> InfluxGitHubWebhook {
+        InfluxGitHubWebhook {
+            time: Utc::now(),
+            event_type,
+            action: self.action.to_string(),
+            repository: self.repository.clone().unwrap().name.to_string(),
+            sender: self.sender.login.to_string(),
+        }
+    }
+}
+
+#[derive(InfluxDbWriteable)]
+struct InfluxGitHubWebhook {
+    time: DateTime<Utc>,
+    #[tag]
+    event_type: String,
+    #[tag]
+    action: String,
+    #[tag]
+    repository: String,
+    #[tag]
+    sender: String,
 }
 
 /// A GitHub commit.
