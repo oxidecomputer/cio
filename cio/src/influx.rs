@@ -163,6 +163,7 @@ impl Client {
                 }
 
                 // Get the comments for the issue.
+                // TODO: paginate
                 let issue_comments = r
                     .issue(issue.number)
                     .comments()
@@ -303,6 +304,54 @@ impl Client {
                         .await;
                     }
                 }
+
+                // Get the pull request review comments for the pull request.
+                // TODO: paginate
+                let pull_comments = r
+                    .pulls()
+                    .get(pull.number)
+                    .review_comments()
+                    .list()
+                    .await
+                    .unwrap();
+
+                for pull_comment in pull_comments {
+                    // Add events for each pull comment if it does not already exist.
+                    // Check if this event already exists.
+                    // Let's see if the data we wrote is there.
+                    let github_id =
+                        pull_comment.id.to_string().parse::<i64>().unwrap();
+                    let exists = self
+                        .event_exists(
+                            EventType::PullRequestReviewComment.name(),
+                            github_id,
+                            "created",
+                            pull_comment.created_at,
+                        )
+                        .await;
+
+                    if !exists {
+                        // Add the event.
+                        let pull_comment_created = PullRequestReviewComment {
+                            time: pull_comment.created_at,
+                            repo_name: repo.name.to_string(),
+                            sender: pull_comment.user.login.to_string(),
+                            action: "created".to_string(),
+                            pull_request_number: pull
+                                .number
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap(),
+                            github_id,
+                            comment: pull_comment.body.to_string(),
+                        };
+                        self.query(
+                            pull_comment_created,
+                            EventType::PullRequestReviewComment.name(),
+                        )
+                        .await;
+                    }
+                }
             }
         }
     }
@@ -374,6 +423,22 @@ pub struct IssueComment {
     pub action: String,
     #[tag]
     pub issue_number: i64,
+    pub github_id: i64,
+    pub comment: String,
+}
+
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request_review_comment
+#[derive(InfluxDbWriteable, Clone, Debug)]
+pub struct PullRequestReviewComment {
+    pub time: DateTime<Utc>,
+    #[tag]
+    pub repo_name: String,
+    #[tag]
+    pub sender: String,
+    #[tag]
+    pub action: String,
+    #[tag]
+    pub pull_request_number: i64,
     pub github_id: i64,
     pub comment: String,
 }
