@@ -590,7 +590,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#6de25b8efcfb90c3a543541f655115a7bf2c57fa"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0bc5ac46cd5f5b955eb9d620be6f0c0be855f56e"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1756,7 +1756,7 @@ checksum = "64e9829a50b42bb782c1df523f78d332fe371b10c661e78b7a3c34b0198e9fac"
 [[package]]
 name = "influxdb"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/influxdb-rust?branch=cloud#327a09cf76da5d9bb9aeadd7b4564f523bd89f6f"
+source = "git+https://github.com/jessfraz/influxdb-rust?branch=cloud#94a1cf809c66b476905650836699a8940855aed2"
 dependencies = [
  "chrono 0.4.19",
  "futures",
@@ -1955,7 +1955,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#6de25b8efcfb90c3a543541f655115a7bf2c57fa"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0bc5ac46cd5f5b955eb9d620be6f0c0be855f56e"
 dependencies = [
  "proc-macro2",
  "quote",
