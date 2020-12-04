@@ -315,8 +315,10 @@ async fn listen_github_webhooks(
         // We have a README file that changed, let's parse the RFD and update it
         // in our database.
         println!(
-            "[github] `push` event -> file {} was modified on branch {}",
-            file, branch
+            "[github] `{}` event -> file {} was modified on branch {}",
+            event_type.name(),
+            file,
+            branch
         );
         // Parse the RFD.
         let new_rfd = NewRFD::new_from_github(
@@ -410,19 +412,18 @@ async fn listen_github_webhooks(
 
             // Open a pull request, if we don't already have one.
             if !has_pull {
-                // TODO: Open a pull request.
                 println!("[github] RFD {} has moved from state {} -> {}, on branch {}, opening a PR",rfd.number_string, old_rfd_state, rfd.state, branch);
 
-                /*let pull = github_repo
+                let pull = github_repo
                                     .pulls()
                                     .create(&hubcaps::pulls::PullOptions::new(
-                rfd.name,
+                rfd.name.to_string(),
                 format!("{}:{}", api_context.github_org,branch),
                 repo.default_branch.to_string(),
                 Some("Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your document and close this pull request."),
                                             ))
                                     .await
-                                    .unwrap();*/
+                                    .unwrap();
 
                 // We could update the discussion link here, but we will already
                 // trigger a pull request created event, so we might as well let

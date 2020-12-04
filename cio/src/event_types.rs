@@ -285,7 +285,10 @@ impl FromStr for EventType {
             "team" => Ok(EventType::Team),
             "team_add" => Ok(EventType::TeamAdd),
             "watch" => Ok(EventType::Watch),
-            _ => Err("invalid GitHub event"),
+            _ => {
+                println!("invalid GitHub event: `{}`", s);
+                Ok(EventType::Wildcard)
+            }
         }
     }
 }
