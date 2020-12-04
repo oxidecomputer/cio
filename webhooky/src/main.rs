@@ -12,7 +12,6 @@ use dropshot::{
 };
 use google_drive::GoogleDrive;
 use hubcaps::Github;
-use influxdb::InfluxDbWriteable;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -187,37 +186,17 @@ async fn listen_github_webhooks(
     match event_type {
         EventType::Push => {
             let influx_event = event.into_influx_push();
-            match api_context
+            api_context
                 .influx
-                .0
-                .query(&influx_event.clone().into_query(event_type.name()))
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => {
-                    println!(
-                        "[influxdb] error: {}, event: {:?}",
-                        e, influx_event
-                    )
-                }
-            }
+                .query(influx_event, event_type.name())
+                .await;
         }
         EventType::PullRequest => {
             let influx_event = event.into_influx_pull_request();
-            match api_context
+            api_context
                 .influx
-                .0
-                .query(&influx_event.clone().into_query(event_type.name()))
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => {
-                    println!(
-                        "[influxdb] error: {}, event: {:?}",
-                        e, influx_event
-                    )
-                }
-            }
+                .query(influx_event, event_type.name())
+                .await;
         }
         _ => (),
     }

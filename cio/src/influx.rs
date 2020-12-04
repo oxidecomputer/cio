@@ -1,4 +1,5 @@
 use std::env;
+use std::fmt::Debug;
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
@@ -48,6 +49,27 @@ impl Client {
         let read_result = self.0.query(&read_query).await;
 
         read_result.is_ok()
+    }
+
+    pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(
+        &self,
+        q: Q,
+        table: &str,
+    ) -> String {
+        match self.0.query(&q.clone().into_query(table)).await {
+            Ok(v) => {
+                println!("successfully updated table `{}`: {:?}", table, q);
+                return v;
+            }
+            Err(e) => {
+                println!(
+                    "[influxdb] table `{}` error: {}, event: {:?}",
+                    table, e, q
+                )
+            }
+        }
+
+        "".to_string()
     }
 
     pub async fn update_pull_request_events(&self) {
