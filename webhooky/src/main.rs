@@ -300,8 +300,11 @@ async fn listen_github_webhooks(
         // check if the RFD's state changed.
         let old_rfd = db.get_rfd(new_rfd.number);
         let mut old_rfd_state = "".to_string();
+        let mut old_rfd_pdf = "".to_string();
         if old_rfd.is_some() {
-            old_rfd_state = old_rfd.unwrap().state;
+            let o = old_rfd.unwrap();
+            old_rfd_state = o.state.to_string();
+            old_rfd_pdf = o.get_pdf_filename();
         }
 
         // Update the RFD in the database.
@@ -397,8 +400,27 @@ async fn listen_github_webhooks(
             // need to update the database again.
         }
 
-        // TODO: If the title of the RFD changed, delete the old PDF file so it
+        // If the title of the RFD changed, delete the old PDF file so it
         // doesn't linger in GitHub and Google Drive.
+        if old_rfd_pdf != rfd.get_pdf_filename() {
+            let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
+
+            // First get the sha of the old pdf.
+            let old_pdf = github_repo
+                .content()
+                .file(&pdf_path, &repo.default_branch)
+                .await
+                .unwrap();
+
+            // Delete the old filename from GitHub.
+            github_repo.content().delete(
+                &pdf_path,
+                &format!("Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.", old_rfd_pdf),
+                &old_pdf.sha,
+            ).await.unwrap();
+
+            // TODO: Delete the old filename from drive.
+        }
     }
 
     // TODO: should we do something if the file gets deleted (?)

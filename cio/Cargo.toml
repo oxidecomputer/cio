@@ -29,7 +29,7 @@ gusto-api = "^0.1.1"
 #gusto-api = { path = "../gusto" }
 html2text = "0.1"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
-hubcaps = { git = "https://github.com/softprops/hubcaps", branch = "master", features = ["httpcache"] }
+hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "add-delete", features = ["httpcache"] }
 hyper = "0.13.0"
 macros = { path = "../macros" }
 openapiv3 = "0.3.0"
