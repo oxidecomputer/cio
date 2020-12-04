@@ -191,11 +191,16 @@ async fn listen_github_webhooks(
 
     // Save all events to influxdb.
     let influx_event = event.to_influx(event_type.to_string());
-    api_context
+    match api_context
         .influx
-        .query(&influx_event.into_query(&event_type))
+        .query(&influx_event.clone().into_query(&event_type))
         .await
-        .unwrap();
+    {
+        Ok(_) => (),
+        Err(e) => {
+            println!("[influxdb] error: {}, event: {:?}", e, influx_event)
+        }
+    }
 
     if event_type != "push".to_string()
         && event_type != "pull_request".to_string()
@@ -644,7 +649,7 @@ impl GitHubWebhook {
     }
 }
 
-#[derive(InfluxDbWriteable)]
+#[derive(InfluxDbWriteable, Clone, Debug)]
 struct InfluxGitHubWebhook {
     time: DateTime<Utc>,
     #[tag]
