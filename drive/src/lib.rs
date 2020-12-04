@@ -500,6 +500,45 @@ impl GoogleDrive {
 
         Ok(())
     }
+
+    /// Delete a file by its name.
+    pub async fn delete_file_by_name(
+        &self,
+        drive_id: &str,
+        name: &str,
+    ) -> Result<(), APIError> {
+        // Check if the file exists.
+        let files = self.get_file_by_name(drive_id, name).await.unwrap();
+        if files.is_empty() {
+            // Return early.
+            return Ok(());
+        }
+
+        let file = files.get(0).unwrap().clone();
+        // Make the request.
+        let request = self.request(
+            Method::DELETE,
+            format!("files/{}", file.id),
+            (),
+            Some(vec![("includeItemsFromAllDrives", "true".to_string())]),
+            &[],
+            "",
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(())
+    }
 }
 
 /// Error type returned by our library.
