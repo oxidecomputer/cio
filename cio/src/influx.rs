@@ -49,7 +49,13 @@ impl Client {
         ));
         let read_result = self.0.query(&read_query).await;
 
-        read_result.is_ok()
+        if read_result.is_ok() {
+            if read_result.unwrap().trim().is_empty() {
+                return false;
+            }
+            return true;
+        }
+        false
     }
 
     pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(
