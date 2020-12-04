@@ -198,6 +198,13 @@ async fn listen_github_webhooks(
                 .query(influx_event, event_type.name())
                 .await;
         }
+        EventType::Issues => {
+            let influx_event = event.into_influx_issue();
+            api_context
+                .influx
+                .query(influx_event, event_type.name())
+                .await;
+        }
         _ => (),
     }
 
@@ -674,6 +681,17 @@ impl GitHubWebhook {
             number: self.number,
             github_id: self.pull_request.id.to_string().parse::<i64>().unwrap(),
             merged: self.pull_request.merged,
+        }
+    }
+
+    pub fn into_influx_issue(&self) -> influx::Issue {
+        influx::Issue {
+            time: Utc::now(),
+            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            sender: self.sender.login.to_string(),
+            action: self.action.to_string(),
+            number: self.number,
+            github_id: self.pull_request.id.to_string().parse::<i64>().unwrap(),
         }
     }
 }
