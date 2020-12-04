@@ -187,6 +187,21 @@ pub struct PullRequest {
     pub github_id: i64,
 }
 
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#issues
+#[derive(InfluxDbWriteable, Clone, Debug)]
+pub struct Issue {
+    pub time: DateTime<Utc>,
+    #[tag]
+    pub repo_name: String,
+    #[tag]
+    pub sender: String,
+    #[tag]
+    pub action: String,
+    #[tag]
+    pub number: i64,
+    pub github_id: i64,
+}
+
 #[cfg(test)]
 mod tests {
     use crate::influx::Client;
