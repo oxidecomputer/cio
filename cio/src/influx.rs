@@ -42,7 +42,8 @@ impl Client {
                     |> filter(fn: (r) => r.action == "{}")
                     "#,
             time.format(flux_date_format),
-            (time + Duration::seconds(1)).format(flux_date_format),
+            // TODO: see how accurate the webhook server is.
+            (time + Duration::minutes(60)).format(flux_date_format),
             table,
             github_id,
             action
@@ -158,6 +159,55 @@ impl Client {
                         };
                         self.query(issue_closed, EventType::Issues.name())
                             .await;
+                    }
+                }
+
+                // Get the comments for the issue.
+                let issue_comments = r
+                    .issue(issue.number)
+                    .comments()
+                    .list(
+                        &hubcaps::comments::CommentListOptions::builder()
+                            .build(),
+                    )
+                    .await
+                    .unwrap();
+
+                for issue_comment in issue_comments {
+                    // Add events for each issue comment if it does not already exist.
+                    // Check if this event already exists.
+                    // Let's see if the data we wrote is there.
+                    let github_id =
+                        issue_comment.id.to_string().parse::<i64>().unwrap();
+                    let exists = self
+                        .event_exists(
+                            EventType::IssueComment.name(),
+                            github_id,
+                            "created",
+                            issue_comment.created_at,
+                        )
+                        .await;
+
+                    if !exists {
+                        // Add the event.
+                        let issue_comment_created = IssueComment {
+                            time: issue_comment.created_at,
+                            repo_name: repo.name.to_string(),
+                            sender: issue_comment.user.login.to_string(),
+                            action: "created".to_string(),
+                            issue_number: issue
+                                .number
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap(),
+                            github_id,
+                            comment: issue_comment.body.to_string(),
+                        };
+                        self.query(
+                            issue_comment_created,
+                            EventType::IssueComment.name(),
+                        )
+                        .await;
                     }
                 }
             }
@@ -310,6 +360,22 @@ pub struct Issue {
     #[tag]
     pub number: i64,
     pub github_id: i64,
+}
+
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#issue_comment
+#[derive(InfluxDbWriteable, Clone, Debug)]
+pub struct IssueComment {
+    pub time: DateTime<Utc>,
+    #[tag]
+    pub repo_name: String,
+    #[tag]
+    pub sender: String,
+    #[tag]
+    pub action: String,
+    #[tag]
+    pub issue_number: i64,
+    pub github_id: i64,
+    pub comment: String,
 }
 
 #[cfg(test)]

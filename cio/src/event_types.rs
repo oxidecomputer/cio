@@ -166,6 +166,9 @@ pub enum EventType {
 
     /// Any time a User stars a Repository.
     Watch,
+
+    /// When a GitHub Actions workflow run is requested or completed.
+    WorkflowRun,
 }
 
 impl EventType {
@@ -222,6 +225,7 @@ impl EventType {
             EventType::Team => "team",
             EventType::TeamAdd => "team_add",
             EventType::Watch => "watch",
+            EventType::WorkflowRun => "workflow_run",
         }
     }
 }
@@ -285,6 +289,7 @@ impl FromStr for EventType {
             "team" => Ok(EventType::Team),
             "team_add" => Ok(EventType::TeamAdd),
             "watch" => Ok(EventType::Watch),
+            "workflow_run" => Ok(EventType::WorkflowRun),
             _ => {
                 println!("invalid GitHub event: `{}`", s);
                 Ok(EventType::Wildcard)
