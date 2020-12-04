@@ -11,7 +11,9 @@ use hubcaps::issues::Issue;
 use hubcaps::repositories::{
     OrgRepoType, OrganizationRepoListOptions, Repository,
 };
-use hubcaps::{Credentials, Github};
+use hubcaps::{
+    Credentials, Github, InstallationTokenGenerator, JWTCredentials,
+};
 use reqwest::get;
 use reqwest::Client;
 use yup_oauth2::{
@@ -124,6 +126,38 @@ pub fn authenticate_github() -> Github {
         "https://api.github.com",
         concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
         Credentials::Token(github_token),
+        Client::builder().build().unwrap(),
+        http_cache,
+    )
+}
+
+/// Authenticate GitHub with JSON web token credentials.
+pub fn authenticate_github_jwt(installation_id: u64) -> Github {
+    let app_id_str = env::var("GH_APP_ID").unwrap();
+    let app_id = app_id_str.parse::<u64>().unwrap();
+    let encoded_private_key = env::var("GH_PRIVATE_KEY").unwrap();
+    let private_key = base64::decode(encoded_private_key).unwrap();
+
+    // Decode the key.
+    let key = nom_pem::decode_block(&private_key).unwrap();
+
+    // Get the JWT credentials.
+    let jwt = JWTCredentials::new(app_id, key.data).unwrap();
+
+    // Get the current working directory.
+    let curdir = env::current_dir().unwrap();
+
+    // Create the HTTP cache.
+    let http_cache =
+        Box::new(FileBasedCache::new(curdir.join(".cache/github")));
+
+    let token_generator =
+        InstallationTokenGenerator::new(installation_id, jwt.clone());
+
+    Github::custom(
+        "https://api.github.com",
+        concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
+        Credentials::InstallationToken(token_generator),
         Client::builder().build().unwrap(),
         http_cache,
     )

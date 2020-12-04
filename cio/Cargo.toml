@@ -32,6 +32,7 @@ html2text = "0.1"
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "add-delete", features = ["httpcache"] }
 hyper = "0.13.0"
 macros = { path = "../macros" }
+nom_pem = "4"
 openapiv3 = "0.3.0"
 openssl = "0.10"
 pandoc = "0.8"
