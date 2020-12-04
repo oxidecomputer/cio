@@ -132,9 +132,12 @@ pub fn authenticate_github() -> Github {
 }
 
 /// Authenticate GitHub with JSON web token credentials.
-pub fn authenticate_github_jwt(installation_id: u64) -> Github {
+pub fn authenticate_github_jwt() -> Github {
+    // Parse our env variables.
     let app_id_str = env::var("GH_APP_ID").unwrap();
     let app_id = app_id_str.parse::<u64>().unwrap();
+    let installation_id_str = env::var("GH_INSTALLATION_ID").unwrap();
+    let installation_id = installation_id_str.parse::<u64>().unwrap();
     let encoded_private_key = env::var("GH_PRIVATE_KEY").unwrap();
     let private_key = base64::decode(encoded_private_key).unwrap();
 
