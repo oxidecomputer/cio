@@ -310,8 +310,21 @@ async fn listen_github_webhooks(
         // Update the RFD in the database.
         let rfd = db.upsert_rfd(&new_rfd);
 
-        // TODO: Create all the shortlinks for the RFD if we need to,
+        // Create all the shorturls for the RFD if we need to,
         // this would be on added files, only.
+        // TODO: see if we can make this faster by doing something better than
+        // dispatching the workflow.
+        github_repo
+            .actions()
+            .workflows()
+            .dispatch(
+                "run-shorturls",
+                &hubcaps::workflows::WorkflowDispatchOptions::builder()
+                    .reference(repo.default_branch.to_string())
+                    .build(),
+            )
+            .await
+            .unwrap();
 
         // Update airtable with the new RFD.
         let mut airtable_rfd = rfd.clone();
