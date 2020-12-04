@@ -590,7 +590,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#cf56257016609f2a373a6b20a8380774bfd3589c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#af02c3a9d6ddb21558989bcbb6ca7e167dc6126e"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1023,7 +1023,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "dropshot"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#90a76774b224945208401b15ffbbd5c3c948e9db"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#abc85db852feb1e5d6bac23b4cb9b1d4f23d30fa"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -1041,6 +1041,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.7.0",
+ "serde_urlencoded 0.6.1",
  "slog",
  "slog-async",
  "slog-bunyan",
@@ -1054,7 +1055,7 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#90a76774b224945208401b15ffbbd5c3c948e9db"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#abc85db852feb1e5d6bac23b4cb9b1d4f23d30fa"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1607,7 +1608,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.7.0",
- "serde_urlencoded",
+ "serde_urlencoded 0.7.0",
  "url",
 ]
 
@@ -1955,7 +1956,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#cf56257016609f2a373a6b20a8380774bfd3589c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#af02c3a9d6ddb21558989bcbb6ca7e167dc6126e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2792,7 +2793,7 @@ dependencies = [
  "pin-project-lite 0.2.0",
  "serde",
  "serde_json",
- "serde_urlencoded",
+ "serde_urlencoded 0.7.0",
  "tokio",
  "tokio-tls",
  "url",
@@ -3111,6 +3112,18 @@ dependencies = [
  "proc-macro2",
  "serde",
  "syn",
+]
+
+[[package]]
+name = "serde_urlencoded"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ec5d77e2d4c73717816afac02670d5c4f534ea95ed430442cad02e7a6e32c97"
+dependencies = [
+ "dtoa",
+ "itoa",
+ "serde",
+ "url",
 ]
 
 [[package]]
