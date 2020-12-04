@@ -17,7 +17,7 @@ use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
 use cio_api::slack::{get_public_relations_channel_post_url, post_to_channel};
-use cio_api::utils::{authenticate_github, get_gsuite_token, github_org};
+use cio_api::utils::{authenticate_github_jwt, get_gsuite_token, github_org};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -113,7 +113,7 @@ impl Context {
             drive,
             drive_rfd_shared_id,
             drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap().id.to_string(),
-            github: authenticate_github(),
+            github: authenticate_github_jwt(),
             github_org: github_org(),
         })
     }

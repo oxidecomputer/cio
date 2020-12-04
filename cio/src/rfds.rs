@@ -180,11 +180,11 @@ mod tests {
     use crate::db::Database;
     use crate::models::{NewRFD, RFDs};
     use crate::rfds::{clean_rfd_html_links, refresh_db_rfds};
-    use crate::utils::authenticate_github;
+    use crate::utils::authenticate_github_jwt;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_rfds() {
-        let github = authenticate_github();
+        let github = authenticate_github_jwt();
         refresh_db_rfds(&github).await;
     }
 
