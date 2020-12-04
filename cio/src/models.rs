@@ -2329,6 +2329,15 @@ impl RFD {
         msg
     }
 
+    /// Get the filename for the PDF of the RFD.
+    pub fn get_pdf_filename(&self) -> String {
+        format!(
+            "RFD {}: {}.pdf",
+            self.number_string,
+            self.title.replace("/", "-").replace("'", "").trim()
+        )
+    }
+
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
     pub async fn convert_and_upload_pdf(
@@ -2362,12 +2371,8 @@ impl RFD {
         let mut file = fs::File::create(path.clone()).unwrap();
         file.write_all(rfd_content.as_bytes()).unwrap();
 
-        let file_name = format!(
-            "RFD {}: {}.pdf",
-            self.number_string,
-            self.title.replace("/", "-").replace("'", "").trim()
-        );
-        let rfd_path = format!("/pdfs/{}", file_name,);
+        let file_name = self.get_pdf_filename();
+        let rfd_path = format!("/pdfs/{}", file_name);
 
         let cmd_output = Command::new("asciidoctor-pdf")
             .args(&[
