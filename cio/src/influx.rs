@@ -313,6 +313,7 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_influx() {
         let influx = Client::new_from_env();
+        influx.update_issues_events().await;
         influx.update_pull_request_events().await;
     }
 }
