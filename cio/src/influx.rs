@@ -6,6 +6,7 @@ use chrono::{DateTime, Duration};
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client as InfluxClient, Query as InfluxQuery};
 
+use crate::event_types::EventType;
 use crate::utils::{authenticate_github_jwt, list_all_github_repos};
 
 pub struct Client(pub InfluxClient);
@@ -72,6 +73,91 @@ impl Client {
         "".to_string()
     }
 
+    pub async fn update_issues_events(&self) {
+        let github = authenticate_github_jwt();
+        let repos = list_all_github_repos(&github).await;
+
+        // For each repo, get information on the pull requests.
+        for repo in repos {
+            let r = github.repo(repo.owner.login, repo.name.to_string());
+            // TODO: paginate.
+            let issues = r
+                .issues()
+                .list(
+                    &hubcaps::issues::IssueListOptions::builder()
+                        .state(hubcaps::issues::State::All)
+                        .per_page(100)
+                        .build(),
+                )
+                .await
+                .unwrap();
+
+            for issue in issues {
+                // Add events for each issue if it does not already exist.
+                // Check if this event already exists.
+                // Let's see if the data we wrote is there.
+                let github_id = issue.id.to_string().parse::<i64>().unwrap();
+                let exists = self
+                    .event_exists(
+                        EventType::Issues.name(),
+                        github_id,
+                        "opened",
+                        issue.created_at,
+                    )
+                    .await;
+
+                if !exists {
+                    // Add the event.
+                    let issue_created = Issue {
+                        time: issue.created_at,
+                        repo_name: repo.name.to_string(),
+                        sender: issue.user.login.to_string(),
+                        action: "opened".to_string(),
+                        number: issue
+                            .number
+                            .to_string()
+                            .parse::<i64>()
+                            .unwrap(),
+                        github_id,
+                    };
+                    self.query(issue_created, EventType::Issues.name()).await;
+                }
+
+                if issue.closed_at.is_some() {
+                    let closed_at = issue.closed_at.unwrap();
+
+                    // Check if we already have the event.
+                    let exists = self
+                        .event_exists(
+                            EventType::Issues.name(),
+                            github_id,
+                            "closed",
+                            closed_at,
+                        )
+                        .await;
+
+                    if !exists {
+                        // Add the event.
+                        let issue_closed = Issue {
+                            time: closed_at,
+                            repo_name: repo.name.to_string(),
+                            sender: issue.user.login.to_string(),
+                            action: "closed".to_string(),
+                            number: issue
+                                .number
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap(),
+                            github_id,
+                        };
+                        self.query(issue_closed, EventType::Issues.name())
+                            .await;
+                    }
+                }
+            }
+        }
+    }
+
     pub async fn update_pull_request_events(&self) {
         let github = authenticate_github_jwt();
         let repos = list_all_github_repos(&github).await;
@@ -97,7 +183,7 @@ impl Client {
                 let github_id = pull.id.to_string().parse::<i64>().unwrap();
                 let exists = self
                     .event_exists(
-                        "pull_request",
+                        EventType::PullRequest.name(),
                         github_id,
                         "opened",
                         pull.created_at,
@@ -115,38 +201,35 @@ impl Client {
                         base_reference: pull.base.commit_ref.to_string(),
                         number: pull.number.to_string().parse::<i64>().unwrap(),
                         github_id,
+                        merged: false,
                     };
-                    self.0
-                        .query(
-                            &pull_request_created
-                                .clone()
-                                .into_query("pull_request"),
-                        )
-                        .await
-                        .unwrap();
-                    println!("added event: {:?}", pull_request_created);
+                    self.query(
+                        pull_request_created,
+                        EventType::PullRequest.name(),
+                    )
+                    .await;
                 }
 
-                if pull.merged_at.is_some() {
-                    let merged_at = pull.merged_at.unwrap();
+                if pull.closed_at.is_some() {
+                    let closed_at = pull.closed_at.unwrap();
 
                     // Check if we already have the event.
                     let exists = self
                         .event_exists(
-                            "pull_request",
+                            EventType::PullRequest.name(),
                             github_id,
-                            "merged",
-                            merged_at,
+                            "closed",
+                            closed_at,
                         )
                         .await;
 
                     if !exists {
                         // Add the event.
-                        let pull_request_merged = PullRequest {
-                            time: merged_at,
+                        let pull_request_closed = PullRequest {
+                            time: closed_at,
                             repo_name: repo.name.to_string(),
                             sender: pull.user.login.to_string(),
-                            action: "merged".to_string(),
+                            action: "closed".to_string(),
                             head_reference: pull.head.commit_ref.to_string(),
                             base_reference: pull.base.commit_ref.to_string(),
                             number: pull
@@ -155,16 +238,13 @@ impl Client {
                                 .parse::<i64>()
                                 .unwrap(),
                             github_id,
+                            merged: pull.merged,
                         };
-                        self.0
-                            .query(
-                                &pull_request_merged
-                                    .clone()
-                                    .into_query("pull_request"),
-                            )
-                            .await
-                            .unwrap();
-                        println!("added event: {:?}", pull_request_merged);
+                        self.query(
+                            pull_request_closed,
+                            EventType::PullRequest.name(),
+                        )
+                        .await;
                     }
                 }
             }
@@ -200,6 +280,8 @@ pub struct PullRequest {
     pub sender: String,
     #[tag]
     pub action: String,
+    #[tag]
+    pub merged: bool,
     #[tag]
     pub head_reference: String,
     #[tag]
