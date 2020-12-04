@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::env;
 use std::fs;
 use std::str::from_utf8;
 
@@ -276,6 +277,99 @@ impl UserConfig {
         self.populate_ssh_keys().await;
 
         self.populate_from_gusto().await;
+    }
+}
+
+impl User {
+    /// Generate and return the full name for the user.
+    pub fn full_name(&self) -> String {
+        format!("{} {}", self.first_name, self.last_name)
+    }
+
+    /// Generate the email address for the user.
+    pub fn email(&self) -> String {
+        format!("{}@oxidecomputer.com", self.username)
+    }
+
+    /// Creates or updates the Slack user based on their user config.
+    pub async fn to_slack_user(&self) {
+        // Authenticate Slack.
+        let client = slack_api::requests::default_client().unwrap();
+        let token = env::var("SLACK_TOKEN").unwrap();
+
+        // List all the users.
+        let users_response = slack_api::users::list(
+            &client,
+            &token,
+            &slack_api::users::ListRequest { presence: None },
+        )
+        .await
+        .unwrap();
+        let users = users_response.members.unwrap();
+
+        // Try to find our user, to see if we should update or create them.
+        for user in users {
+            let profile = user.clone().profile.unwrap();
+            let is_bot = user.is_bot.unwrap_or_default();
+            if is_bot || profile.email.is_none() {
+                // Continue early, skip the bots.
+                continue;
+            }
+
+            let profile_email = profile.email.unwrap();
+            let user_id = user.id.unwrap();
+
+            if profile_email == self.email() {
+                // We found our user.
+                // Update the user's profile.
+                let p = crate::slack::UserProfile {
+                    avatar_hash: profile.avatar_hash.unwrap_or_default(),
+                    display_name: self.github.to_string(),
+                    display_name_normalized: self.github.to_string(),
+                    email: self.email(),
+                    fields: Default::default(),
+                    first_name: self.first_name.to_string(),
+                    guest_channels: profile.guest_channels.unwrap_or_default(),
+                    image_192: profile.image_192.unwrap_or_default(),
+                    image_24: profile.image_24.unwrap_or_default(),
+                    image_32: profile.image_32.unwrap_or_default(),
+                    image_48: profile.image_48.unwrap_or_default(),
+                    image_512: profile.image_512.unwrap_or_default(),
+                    image_72: profile.image_72.unwrap_or_default(),
+                    image_original: profile.image_original.unwrap_or_default(),
+                    last_name: self.last_name.to_string(),
+                    phone: self.recovery_phone.to_string(),
+                    real_name: self.full_name(),
+                    real_name_normalized: self.full_name(),
+                    skype: profile.skype.unwrap_or_default(),
+                    status_emoji: profile.status_emoji.unwrap_or_default(),
+                    status_text: profile.status_text.unwrap_or_default(),
+                    team: profile.team.unwrap_or_default(),
+                    title: profile.title.unwrap_or_default(),
+                };
+
+                let profile_hash = json!(p).to_string();
+                let req = slack_api::users_profile::SetRequest {
+                    user: Some(&user_id),
+                    profile: Some(&profile_hash),
+                    name: None,
+                    value: None,
+                };
+                let response =
+                    slack_api::users_profile::set(&client, &token, &req)
+                        .await
+                        .unwrap();
+
+                // TODO: Figure out rate limit.
+                println!("Updated slack user: {}", self.email());
+
+                // Return early.
+                return;
+            }
+        }
+
+        println!("could not find user: {}", self.username);
+        // TODO: Send an invite to the user.
     }
 }
 
@@ -770,17 +864,16 @@ pub async fn refresh_db_configs(github: &Github) {
     for (name, mut link) in configs.links {
         link.name = name;
         db.upsert_link(&link);
-
-        let conference_rooms = db.get_conference_rooms();
-        // Update conference rooms in Airtable.
-        ConferenceRooms(conference_rooms).update_airtable().await;
     }
 
     // Sync users.
     for (_, mut user) in configs.users {
         user.expand().await;
 
-        db.upsert_user(&user);
+        let new_user = db.upsert_user(&user);
+
+        // Update slack user.
+        new_user.to_slack_user().await;
     }
 
     // Sync certificates.

@@ -739,7 +739,7 @@ cc @jessfraz @sdtuck @bcantrill",
                 body: Some(body),
                 assignee: Some("jessfraz".to_string()),
                 labels,
-                milestone: None,
+                milestone: Default::default(),
             })
             .await
             .unwrap();
@@ -788,7 +788,7 @@ cc @jessfraz @sdtuck @bcantrill",
                 body: Some(body),
                 assignee: Some("jessfraz".to_string()),
                 labels,
-                milestone: None,
+                milestone: Default::default(),
             })
             .await
             .unwrap();
@@ -872,54 +872,54 @@ cc @jessfraz @sdtuck @bcantrill",
         }
 
         json!(FormattedMessage {
-            channel: None,
-            attachments: None,
-            blocks: Some(vec![
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![
                 MessageBlock {
                     block_type: MessageBlockType::Section,
                     text: Some(MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: intro_msg,
                     }),
-                    elements: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    elements: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: info_msg,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: values_msg,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: status_msg,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 }
-            ])
+            ]
         })
     }
 
@@ -1064,54 +1064,54 @@ impl Applicant {
         }
 
         json!(FormattedMessage {
-            channel: None,
-            attachments: None,
-            blocks: Some(vec![
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![
                 MessageBlock {
                     block_type: MessageBlockType::Section,
                     text: Some(MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: intro_msg,
                     }),
-                    elements: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    elements: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: info_msg,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: values_msg,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: status_msg,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 }
-            ])
+            ]
         })
     }
 }
@@ -1367,10 +1367,10 @@ impl JournalClubMeeting {
                 text_type: MessageType::Markdown,
                 text: format!("<{}|*{}*>", self.issue, self.title),
             }),
-            elements: None,
-            accessory: None,
-            block_id: None,
-            fields: None,
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
         });
 
         let mut text = format!(
@@ -1386,27 +1386,27 @@ impl JournalClubMeeting {
         }
         objects.push(MessageBlock {
             block_type: MessageBlockType::Context,
-            elements: Some(vec![MessageBlockText {
+            elements: vec![MessageBlockText {
                 text_type: MessageType::Markdown,
                 text,
-            }]),
-            text: None,
-            accessory: None,
-            block_id: None,
-            fields: None,
+            }],
+            text: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
         });
 
         if !self.recording.is_empty() {
             objects.push(MessageBlock {
                 block_type: MessageBlockType::Context,
-                elements: Some(vec![MessageBlockText {
+                elements: vec![MessageBlockText {
                     text_type: MessageType::Markdown,
                     text: format!("<{}|Meeting recording>", self.recording),
-                }]),
-                text: None,
-                accessory: None,
-                block_id: None,
-                fields: None,
+                }],
+                text: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
             });
         }
 
@@ -1419,21 +1419,21 @@ impl JournalClubMeeting {
             }
             objects.push(MessageBlock {
                 block_type: MessageBlockType::Context,
-                elements: Some(vec![MessageBlockText {
+                elements: vec![MessageBlockText {
                     text_type: MessageType::Markdown,
                     text: format!("<{}|{}>", p.link, title),
-                }]),
-                text: None,
-                accessory: None,
-                block_id: None,
-                fields: None,
+                }],
+                text: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
             });
         }
 
         json!(FormattedMessage {
-            channel: None,
-            attachments: None,
-            blocks: Some(objects),
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: objects,
         })
     }
 }
@@ -1547,7 +1547,7 @@ impl NewMailingListSubscriber {
         // Create the record.
         let record = Record {
             id: "".to_string(),
-            created_time: None,
+            created_time: Default::default(),
             fields: self.clone(),
         };
 
@@ -1586,10 +1586,10 @@ impl NewMailingListSubscriber {
                     text_type: MessageType::Markdown,
                     text: format!("\n>{}", self.interest),
                 }),
-                elements: None,
-                accessory: None,
-                block_id: None,
-                fields: None,
+                elements: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
             };
         }
 
@@ -1607,44 +1607,44 @@ impl NewMailingListSubscriber {
         context += &format!("subscribed to mailing list {}", time);
 
         json!(FormattedMessage {
-            channel: None,
-            attachments: None,
-            blocks: Some(vec![
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![
                 MessageBlock {
                     block_type: MessageBlockType::Section,
                     text: Some(MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: msg,
                     }),
-                    elements: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    elements: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 interest,
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: updates,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: Some(vec![MessageBlockText {
+                    elements: vec![MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: context,
-                    }]),
-                    text: None,
-                    accessory: None,
-                    block_id: None,
-                    fields: None,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
                 }
-            ]),
+            ],
         })
     }
 }

@@ -178,6 +178,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-compression"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb1ff21a63d3262af46b9f33a826a8d134e2d0d9b2179c86034948b732ea8b2a"
+dependencies = [
+ "bytes",
+ "flate2",
+ "futures-core",
+ "memchr",
+ "pin-project-lite 0.1.11",
+]
+
+[[package]]
 name = "async-executor"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -566,6 +579,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sheets 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slack_api",
  "tokio",
  "toml",
  "yup-oauth2",
@@ -2753,6 +2767,7 @@ version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb15d6255c792356a0f578d8a645c677904dc02e862bebe2ecc18e0c01b9a0ce"
 dependencies = [
+ "async-compression",
  "base64 0.13.0",
  "bytes",
  "encoding_rs",
@@ -3240,6 +3255,19 @@ name = "slab"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
+
+[[package]]
+name = "slack_api"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07d3c02beffb13b2ca8f6a946dbdc4ba1c97afecd253d5909dfa9b2631dc5cd4"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
 
 [[package]]
 name = "slog"

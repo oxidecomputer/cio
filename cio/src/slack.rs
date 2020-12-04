@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 
 use chrono::offset::Utc;
@@ -93,12 +94,12 @@ pub struct BotCommand {
 /// Docs: https://api.slack.com/messaging/composing/layouts
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FormattedMessage {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub channel: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub blocks: Option<Vec<MessageBlock>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub attachments: Option<Vec<MessageAttachment>>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub channel: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blocks: Vec<MessageBlock>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<MessageAttachment>,
 }
 
 /// A Slack message block.
@@ -110,14 +111,14 @@ pub struct MessageBlock {
     pub block_type: MessageBlockType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<MessageBlockText>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub elements: Option<Vec<MessageBlockText>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub block_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elements: Vec<MessageBlockText>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub block_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accessory: Option<MessageBlockAccessory>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fields: Option<Vec<MessageBlockText>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fields: Vec<MessageBlockText>,
 }
 
 /// A message block type in Slack.
@@ -174,36 +175,36 @@ pub struct MessageBlockAccessory {
 /// Docs: https://api.slack.com/messaging/composing/layouts#building-attachments
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MessageAttachment {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub blocks: Option<Vec<MessageBlock>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_icon: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_link: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fallback: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fields: Option<Vec<MessageAttachmentField>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub footer: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub footer_icon: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pretext: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thumb_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title_link: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blocks: Vec<MessageBlock>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub author_icon: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub author_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub author_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub color: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub fallback: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fields: Vec<MessageAttachmentField>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub footer: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub footer_icon: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub pretext: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub thumb_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title_link: String,
     #[serde(with = "ts_seconds")]
     pub ts: DateTime<Utc>,
 }
@@ -213,5 +214,62 @@ pub struct MessageAttachment {
 pub struct MessageAttachmentField {
     pub short: bool,
     pub title: String,
+    pub value: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UserProfile {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub avatar_hash: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub display_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub display_name_normalized: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub fields: HashMap<String, UserProfileFields>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub first_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub guest_channels: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_192: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_24: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_32: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_48: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_512: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_72: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub image_original: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub real_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub real_name_normalized: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub skype: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status_emoji: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status_text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub team: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UserProfileFields {
+    pub alt: String,
+    pub label: String,
     pub value: String,
 }
