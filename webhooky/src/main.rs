@@ -200,6 +200,8 @@ async fn listen_github_webhooks(
 
     // Handle if we got a pull_request.
     if event_type == "pull_request" {
+        println!("[github]: pull_request {:?}", event);
+
         // We only care if the pull request was `opened`.
         if event.action != "opened" {
             // We can throw this out, log it and return early.
@@ -211,6 +213,7 @@ async fn listen_github_webhooks(
 
         // We have a newly opened pull request.
         // TODO: Let's update the discussion link for the RFD.
+
         let msg =
             format!("`{}` event was to the {} repo with action `{}`, updated discussion link for the RFD",event_type, repo_name, event.action);
         println!("[github]: {}", msg);
