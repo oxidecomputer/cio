@@ -621,7 +621,7 @@ pub struct GitHubCommit {
     pub removed: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub label: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "ref")]
     pub commit_ref: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sha: String,
