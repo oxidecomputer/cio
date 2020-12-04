@@ -198,8 +198,22 @@ async fn listen_github_webhooks(
                 .query(influx_event, event_type.name())
                 .await;
         }
+        EventType::PullRequestReviewComment => {
+            let influx_event = event.into_influx_pull_request_review_comment();
+            api_context
+                .influx
+                .query(influx_event, event_type.name())
+                .await;
+        }
         EventType::Issues => {
             let influx_event = event.into_influx_issue();
+            api_context
+                .influx
+                .query(influx_event, event_type.name())
+                .await;
+        }
+        EventType::IssueComment => {
+            let influx_event = event.into_influx_issue_comment();
             api_context
                 .influx
                 .query(influx_event, event_type.name())
@@ -639,6 +653,20 @@ pub struct GitHubWebhook {
     /// The pull request itself.
     #[serde(default)]
     pub pull_request: GitHubPullRequest,
+
+    /// `issues` event fields.
+    /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#issues
+    ///
+    /// The issue itself.
+    #[serde(default)]
+    pub issue: GitHubIssue,
+
+    /// `issue_comment` event fields.
+    /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#issue_comment
+    ///
+    /// The comment itself.
+    #[serde(default)]
+    pub comment: GitHubComment,
 }
 
 impl GitHubWebhook {
@@ -685,6 +713,20 @@ impl GitHubWebhook {
         }
     }
 
+    pub fn into_influx_pull_request_review_comment(
+        &self,
+    ) -> influx::PullRequestReviewComment {
+        influx::PullRequestReviewComment {
+            time: Utc::now(),
+            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            sender: self.sender.login.to_string(),
+            action: self.action.to_string(),
+            pull_request_number: self.pull_request.number,
+            github_id: self.comment.id.to_string().parse::<i64>().unwrap(),
+            comment: self.comment.body.to_string(),
+        }
+    }
+
     pub fn into_influx_issue(&self) -> influx::Issue {
         influx::Issue {
             time: Utc::now(),
@@ -693,6 +735,18 @@ impl GitHubWebhook {
             action: self.action.to_string(),
             number: self.number,
             github_id: self.pull_request.id.to_string().parse::<i64>().unwrap(),
+        }
+    }
+
+    pub fn into_influx_issue_comment(&self) -> influx::IssueComment {
+        influx::IssueComment {
+            time: Utc::now(),
+            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            sender: self.sender.login.to_string(),
+            action: self.action.to_string(),
+            issue_number: self.issue.number,
+            github_id: self.comment.id.to_string().parse::<i64>().unwrap(),
+            comment: self.comment.body.to_string(),
         }
     }
 }
@@ -828,4 +882,83 @@ pub struct GitHubPullRequest {
     pub user: GitHubUser,
     #[serde(default)]
     pub merged: bool,
+}
+
+/// A Github issue.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues
+#[derive(
+    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
+)]
+pub struct GitHubIssue {
+    #[serde(default)]
+    pub id: u64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    pub labels_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub comments_url: String,
+    pub events_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub html_url: String,
+    #[serde(default)]
+    pub number: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub body: String,
+    #[serde(default)]
+    pub user: GitHubUser,
+    //#[serde(default, skip_serializing_if = "Vec::is_empty")]
+    //pub labels: Vec<GitHubLabel>,
+    #[serde(default)]
+    pub assignee: GitHubUser,
+    #[serde(default)]
+    pub locked: bool,
+    #[serde(default)]
+    pub comments: i64,
+    #[serde(default)]
+    pub pull_request: GitHubPullRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub closed_at: Option<DateTime<Utc>>,
+    /* pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,*/
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub assignees: Vec<GitHubUser>,
+}
+
+/// A reference to a pull request.
+#[derive(
+    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
+)]
+pub struct GitHubPullRef {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub html_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub diff_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub patch_url: String,
+}
+
+/// A Github comment.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues#comments
+#[derive(
+    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
+)]
+pub struct GitHubComment {
+    #[serde(default)]
+    pub id: u64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub html_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub body: String,
+    #[serde(default)]
+    pub user: GitHubUser,
+    /* pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,*/
 }
