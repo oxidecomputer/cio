@@ -515,19 +515,28 @@ pub struct GitHubOrganization {
 /// A GitHub app installation.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubInstallation {
-    pub id: u64,
+    #[serde(default)]
+    pub id: i64,
     // account: Account
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub access_tokens_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub repositories_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub html_url: String,
+    #[serde(default)]
     pub app_id: i32,
+    #[serde(default)]
     pub target_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub target_type: String,
     // permissions: Permissions
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<String>,
     // created_at, updated_at
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub single_file_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub repository_selection: String,
 }
 
