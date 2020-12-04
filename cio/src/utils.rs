@@ -388,12 +388,12 @@ pub fn default_date() -> chrono::naive::NaiveDate {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::authenticate_github;
+    use crate::utils::authenticate_github_jwt;
     use crate::utils::refresh_db_github_repos;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_github_repos() {
-        let github = authenticate_github();
+        let github = authenticate_github_jwt();
         refresh_db_github_repos(&github).await;
     }
 }

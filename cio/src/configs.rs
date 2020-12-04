@@ -798,11 +798,11 @@ mod tests {
         refresh_db_configs, Buildings, ConferenceRooms, Groups, Users,
     };
     use crate::db::Database;
-    use crate::utils::authenticate_github;
+    use crate::utils::authenticate_github_jwt;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_configs() {
-        let github = authenticate_github();
+        let github = authenticate_github_jwt();
         refresh_db_configs(&github).await;
 
         // Initialize our database.

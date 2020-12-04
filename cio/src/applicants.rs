@@ -15,7 +15,7 @@ use sheets::Sheets;
 use crate::db::Database;
 use crate::models::NewApplicant;
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_github, get_gsuite_token, github_org};
+use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org};
 
 /// The data type for a Google Sheet applicant columns, we use this when
 /// parsing the Google Sheets for applicants.
@@ -323,7 +323,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     // Initialize the GSuite sheets client.
     let drive_client = GoogleDrive::new(token.clone());
 
-    let github = authenticate_github();
+    let github = authenticate_github_jwt();
 
     // Get all the hiring issues on the meta repository.
     let meta_issues = github

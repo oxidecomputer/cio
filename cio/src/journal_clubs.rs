@@ -142,11 +142,11 @@ mod tests {
     use crate::db::Database;
     use crate::journal_clubs::refresh_db_journal_club_meetings;
     use crate::models::{JournalClubMeetings, JournalClubPapers};
-    use crate::utils::authenticate_github;
+    use crate::utils::authenticate_github_jwt;
 
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_journal_club_meetings() {
-        let github = authenticate_github();
+        let github = authenticate_github_jwt();
         refresh_db_journal_club_meetings(&github).await;
     }
 
