@@ -14,7 +14,6 @@ use cio_api::configs::{
     Building, ConferenceRoom, GithubLabel, Group, Link, User,
 };
 use cio_api::db::Database;
-use cio_api::event_types::EventType;
 use cio_api::models::{
     Applicant, AuthUser, GithubRepo, JournalClubMeeting, MailingListSubscriber,
     RFD,

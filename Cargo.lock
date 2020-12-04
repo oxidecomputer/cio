@@ -567,7 +567,52 @@ dependencies = [
  "hubcaps",
  "hyper",
  "influxdb",
- "macros",
+ "macros 0.1.0",
+ "nom_pem",
+ "openapiv3",
+ "openssl",
+ "pandoc",
+ "phonenumber",
+ "regex",
+ "reqwest",
+ "schemars",
+ "sendgrid-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "sheets 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slack_api",
+ "tokio",
+ "toml",
+ "yup-oauth2",
+ "zip",
+]
+
+[[package]]
+name = "cio-api"
+version = "0.2.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8b54201df2a61ad44fb432ac9df63bf2bc4e1be3"
+dependencies = [
+ "acme-lib",
+ "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait",
+ "base64 0.12.3",
+ "chrono 0.4.19",
+ "chrono-humanize",
+ "clap",
+ "cloudflare",
+ "comrak",
+ "csv",
+ "diesel",
+ "diffy",
+ "dropshot",
+ "futures-util",
+ "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "html2text",
+ "hubcaps",
+ "hyper",
+ "influxdb",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio)",
  "nom_pem",
  "openapiv3",
  "openssl",
@@ -1378,7 +1423,7 @@ name = "gsuite-api"
 version = "0.1.6"
 dependencies = [
  "chrono 0.4.19",
- "cio-api",
+ "cio-api 0.2.0",
  "rand",
  "reqwest",
  "serde",
@@ -1899,6 +1944,19 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "schemars",
+ "serde",
+ "serde_tokenstream",
+ "syn",
+]
+
+[[package]]
+name = "macros"
+version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8b54201df2a61ad44fb432ac9df63bf2bc4e1be3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4083,7 +4141,7 @@ name = "webhooky"
 version = "0.1.0"
 dependencies = [
  "chrono 0.4.19",
- "cio-api",
+ "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio)",
  "dropshot",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
@@ -4259,7 +4317,7 @@ name = "zoom-api"
 version = "0.1.4"
 dependencies = [
  "chrono 0.4.19",
- "cio-api",
+ "cio-api 0.2.0",
  "jsonwebtoken",
  "reqwest",
  "serde",

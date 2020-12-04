@@ -14,6 +14,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cio_api::db::Database;
+use cio_api::event_types::EventType;
 use cio_api::influx;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
