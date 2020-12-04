@@ -1,5 +1,4 @@
 use std::any::Any;
-use std::env;
 use std::sync::Arc;
 
 use chrono::offset::Utc;
@@ -11,12 +10,12 @@ use dropshot::{
 };
 use google_drive::GoogleDrive;
 use hubcaps::Github;
-use influxdb::Client as InfluxClient;
 use influxdb::InfluxDbWriteable;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cio_api::db::Database;
+use cio_api::influx;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
 use cio_api::slack::{get_public_relations_channel_post_url, post_to_channel};
@@ -84,7 +83,7 @@ struct Context {
     drive_rfd_dir_id: String,
     github: Github,
     github_org: String,
-    influx: InfluxClient,
+    influx: influx::Client,
 }
 
 impl Context {
@@ -112,15 +111,6 @@ impl Context {
             .await
             .unwrap();
 
-        let influx = InfluxClient::new(
-            env::var("INFLUX_DB_URL").unwrap(),
-            "github_webhooks",
-        )
-        .with_auth(
-            env::var("GADMIN_SUBJECT").unwrap(),
-            env::var("INFLUX_DB_TOKEN").unwrap(),
-        );
-
         // Create the context.
         Arc::new(Context {
             drive,
@@ -128,7 +118,7 @@ impl Context {
             drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap().id.to_string(),
             github: authenticate_github_jwt(),
             github_org: github_org(),
-            influx,
+            influx: influx::Client::new_from_env(),
         })
     }
 
@@ -190,15 +180,18 @@ async fn listen_github_webhooks(
         .to_string();
 
     // Save all events to influxdb.
-    let influx_event = event.to_influx(event_type.to_string());
-    match api_context
-        .influx
-        .query(&influx_event.clone().into_query(&event_type))
-        .await
-    {
-        Ok(_) => (),
-        Err(e) => {
-            println!("[influxdb] error: {}, event: {:?}", e, influx_event)
+    if event_type == "push" {
+        let influx_event = event.into_influx_push();
+        match api_context
+            .influx
+            .0
+            .query(&influx_event.clone().into_query(&event_type))
+            .await
+        {
+            Ok(_) => (),
+            Err(e) => {
+                println!("[influxdb] error: {}, event: {:?}", e, influx_event)
+            }
         }
     }
 
@@ -637,31 +630,34 @@ pub struct GitHubWebhook {
 }
 
 impl GitHubWebhook {
-    fn to_influx(&self, event_type: String) -> InfluxGitHubWebhook {
-        InfluxGitHubWebhook {
+    pub fn into_influx_push(&self) -> influx::Push {
+        let mut added: String = Default::default();
+        let mut modified: String = Default::default();
+        let mut removed: String = Default::default();
+        let mut commit_shas: String = Default::default();
+        for commit in &self.commits {
+            if commit.distinct {
+                added = add_to_string(added.to_string(), &commit.added);
+                modified =
+                    add_to_string(modified.to_string(), &commit.modified);
+                removed = add_to_string(removed.to_string(), &commit.removed);
+                commit_shas = format!("{},{}", commit_shas, commit.sha);
+            }
+        }
+
+        influx::Push {
             time: Utc::now(),
-            event_type,
-            action: self.action.to_string(),
-            repository: self.repository.clone().unwrap().name.to_string(),
+            repo_name: self.repository.as_ref().unwrap().name.to_string(),
             sender: self.sender.login.to_string(),
-            number: self.number,
+            reference: self.refv.to_string(),
+            added,
+            modified,
+            removed,
+            before: self.before.to_string(),
+            after: self.after.to_string(),
+            commit_shas,
         }
     }
-}
-
-#[derive(InfluxDbWriteable, Clone, Debug)]
-struct InfluxGitHubWebhook {
-    time: DateTime<Utc>,
-    #[tag]
-    event_type: String,
-    #[tag]
-    action: String,
-    #[tag]
-    repository: String,
-    #[tag]
-    sender: String,
-    #[tag]
-    number: i64,
 }
 
 /// A GitHub commit.
@@ -702,6 +698,45 @@ pub struct GitHubCommit {
     pub commit_ref: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sha: String,
+}
+
+impl GitHubCommit {
+    /// Filter the files that were added, modified, or removed by their prefix
+    /// including a specified directory or path.
+    pub fn filter_files_by_path(&mut self, dir: &str) {
+        self.added = filter(&self.added, dir);
+        self.modified = filter(&self.modified, dir);
+        self.removed = filter(&self.removed, dir);
+    }
+
+    /// Return if the commit has any files that were added, modified, or removed.
+    pub fn has_changed_files(&self) -> bool {
+        !self.added.is_empty()
+            || !self.modified.is_empty()
+            || !self.removed.is_empty()
+    }
+}
+
+fn filter(files: &Vec<String>, dir: &str) -> Vec<String> {
+    let mut in_dir: Vec<String> = Default::default();
+    for file in files {
+        if file.starts_with(dir) {
+            in_dir.push(file.to_string());
+        }
+    }
+
+    in_dir
+}
+
+fn add_to_string(s: String, a: &Vec<String>) -> String {
+    let mut v = s;
+    for b in a {
+        if !v.contains(b) {
+            v = format!("{},{}", v, b);
+        }
+    }
+
+    v
 }
 
 /// A GitHub pull request.
@@ -756,32 +791,4 @@ pub struct GitHubPullRequest {
     pub user: GitHubUser,
     #[serde(default)]
     pub merged: bool,
-}
-
-impl GitHubCommit {
-    /// Filter the files that were added, modified, or removed by their prefix
-    /// including a specified directory or path.
-    pub fn filter_files_by_path(&mut self, dir: &str) {
-        self.added = filter(&self.added, dir);
-        self.modified = filter(&self.modified, dir);
-        self.removed = filter(&self.removed, dir);
-    }
-
-    /// Return if the commit has any files that were added, modified, or removed.
-    pub fn has_changed_files(&self) -> bool {
-        !self.added.is_empty()
-            || !self.modified.is_empty()
-            || !self.removed.is_empty()
-    }
-}
-
-fn filter(files: &Vec<String>, dir: &str) -> Vec<String> {
-    let mut in_dir: Vec<String> = Default::default();
-    for file in files {
-        if file.starts_with(dir) {
-            in_dir.push(file.to_string());
-        }
-    }
-
-    in_dir
 }

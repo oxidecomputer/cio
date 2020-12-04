@@ -31,6 +31,7 @@ html2text = "0.1"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
 hyper = "0.13.0"
+influxdb = { git = "https://github.com/jessfraz/influxdb-rust", branch = "cloud", features = ["derive"] }
 macros = { path = "../macros" }
 nom_pem = "4"
 openapiv3 = "0.3.0"

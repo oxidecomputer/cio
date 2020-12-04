@@ -356,10 +356,9 @@ impl User {
                     name: None,
                     value: None,
                 };
-                let response =
-                    slack_api::users_profile::set(&client, &token, &req)
-                        .await
-                        .unwrap();
+                slack_api::users_profile::set(&client, &token, &req)
+                    .await
+                    .unwrap();
 
                 // TODO: Figure out rate limit.
                 let rate_limit_sleep = time::Duration::from_secs(10);
