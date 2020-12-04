@@ -590,7 +590,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#0bc5ac46cd5f5b955eb9d620be6f0c0be855f56e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#87c8921586cd6d0ac195b809e71c71d40ea8738a"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1023,7 +1023,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "dropshot"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#f47f15260d5c87dba3caa104c364c5337e0d803f"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#3745feabbc7e215daf2242f68154920facf41a73"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -1054,7 +1054,7 @@ dependencies = [
 [[package]]
 name = "dropshot"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=max-size#272f3593c1fa4b99cc9ee711cfa2f99b9f57ab71"
+source = "git+https://github.com/jessfraz/dropshot?branch=max-size#37748b72c35cef3623e622b7f4f8b403e14c4a80"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -1085,7 +1085,7 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#f47f15260d5c87dba3caa104c364c5337e0d803f"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#3745feabbc7e215daf2242f68154920facf41a73"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1098,7 +1098,7 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=max-size#272f3593c1fa4b99cc9ee711cfa2f99b9f57ab71"
+source = "git+https://github.com/jessfraz/dropshot?branch=max-size#37748b72c35cef3623e622b7f4f8b403e14c4a80"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1634,9 +1634,9 @@ dependencies = [
 
 [[package]]
 name = "http-types"
-version = "2.8.0"
+version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f316f6a06306570e899238d3b85375f350cfceda60ec47807c4164d6e169e58"
+checksum = "f2ab8d0085fb82859c9adf050bd53992297ecdd03a665a230dfa50c8c964bf3d"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -1999,7 +1999,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#0bc5ac46cd5f5b955eb9d620be6f0c0be855f56e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#87c8921586cd6d0ac195b809e71c71d40ea8738a"
 dependencies = [
  "proc-macro2",
  "quote",

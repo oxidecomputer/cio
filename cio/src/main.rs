@@ -31,6 +31,7 @@ async fn main() -> Result<(), String> {
      */
     let config_dropshot = ConfigDropshot {
         bind_address: "0.0.0.0:8888".parse().unwrap(),
+        request_body_max_bytes: dropshot::RequestBodyMaxBytes(100000000),
     };
 
     /*
