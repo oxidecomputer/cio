@@ -1,5 +1,6 @@
 use std::env;
 use std::fmt::Debug;
+use std::thread;
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
@@ -297,7 +298,27 @@ impl Client {
 
                 for c in commits {
                     // Get the verbose information for the commit.
-                    let commit = r.commits().get(&c.sha).await.unwrap();
+                    let commit = match r.commits().get(&c.sha).await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            // Check if we were rate limited here.
+                            // If so we should sleep until the rate limit is over.
+                            match e {
+                                hubcaps::errors::Error::RateLimit { reset } => {
+                                    // We got a rate limit error.
+                                    println!(
+                                        "got rate limited, sleeping for {}",
+                                        reset.as_secs()
+                                    );
+                                    thread::sleep(reset);
+                                }
+                                _ => panic!(e),
+                            }
+
+                            // Try to get the commit again.
+                            r.commits().get(&c.sha).await.unwrap()
+                        }
+                    };
 
                     // Add events for each commit if it does not already exist.
                     // Check if this event already exists.
