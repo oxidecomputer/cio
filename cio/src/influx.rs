@@ -341,7 +341,8 @@ impl Client {
 
         // For each repo, get information on the pull requests.
         for repo in repos {
-            let r = github.repo(repo.owner.login, repo.name.to_string());
+            let r = github
+                .repo(repo.owner.login.to_string(), repo.name.to_string());
             let pulls = r
                 .pulls()
                 .iter(
