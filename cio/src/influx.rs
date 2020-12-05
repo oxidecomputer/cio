@@ -333,6 +333,7 @@ impl Client {
                 .list(
                     &hubcaps::pulls::PullListOptions::builder()
                         .state(hubcaps::issues::State::All)
+                        .per_page(100)
                         .build(),
                 )
                 .await
