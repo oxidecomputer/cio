@@ -1,6 +1,7 @@
 use std::env;
 use std::fmt::Debug;
-use std::thread;
+use std::ops::Add;
+use std::{thread, time};
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
@@ -347,7 +348,9 @@ impl Client {
                                         "got rate limited, sleeping for {}s",
                                         reset.as_secs()
                                     );
-                                    thread::sleep(reset);
+                                    thread::sleep(
+                                        reset.add(time::Duration::from_secs(5)),
+                                    );
                                 }
                                 _ => panic!(
                                     "github getting commits failed: {}",
@@ -444,7 +447,9 @@ impl Client {
                                         "got rate limited, sleeping for {}s",
                                         reset.as_secs()
                                     );
-                                    thread::sleep(reset);
+                                    thread::sleep(
+                                        reset.add(time::Duration::from_secs(5)),
+                                    );
                                 }
                                 _ => panic!(
                                     "github getting check suites failed: {}",

@@ -508,7 +508,7 @@ async fn github_rate_limit(
     let response = github.rate_limit().get().await.unwrap();
     let reset_time = Utc.timestamp(response.resources.core.reset.into(), 0);
 
-    let mut dur = reset_time - Utc::now();
+    let dur = reset_time - Utc::now();
 
     Ok(HttpResponseOk(GitHubRateLimit {
         limit: response.resources.core.limit.into(),
