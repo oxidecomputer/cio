@@ -313,7 +313,7 @@ impl Client {
                     .review_comments()
                     .list()
                     .await
-                    .unwrap();
+                    .unwrap_or_default();
 
                 for pull_comment in pull_comments {
                     // Add events for each pull comment if it does not already exist.
