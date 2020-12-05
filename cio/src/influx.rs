@@ -349,7 +349,10 @@ impl Client {
                                     );
                                     thread::sleep(reset);
                                 }
-                                _ => panic!(e),
+                                _ => panic!(
+                                    "github getting commits failed: {}",
+                                    e
+                                ),
                             }
 
                             // Try to get the commit again.
@@ -443,7 +446,10 @@ impl Client {
                                     );
                                     thread::sleep(reset);
                                 }
-                                _ => panic!(e),
+                                _ => panic!(
+                                    "github getting check suites failed: {}",
+                                    e
+                                ),
                             }
 
                             // Try to get the check suites again.
