@@ -10,6 +10,7 @@ use influxdb::{Client as InfluxClient, Query as InfluxQuery};
 use crate::event_types::EventType;
 use crate::utils::{authenticate_github_jwt, list_all_github_repos};
 
+#[derive(Clone)]
 pub struct Client(pub InfluxClient);
 
 impl Client {
@@ -252,8 +253,10 @@ impl Client {
     }
 
     pub async fn update_push_events(&self) {
-        let github = authenticate_github_jwt();
-        let repos = list_all_github_repos(&github).await;
+        let gh = authenticate_github_jwt();
+        let repos = list_all_github_repos(&gh).await;
+
+        let mut handles: Vec<tokio::task::JoinHandle<_>> = Default::default();
 
         // For each repo, get information on the pull requests.
         for repo in repos {
@@ -261,77 +264,96 @@ impl Client {
                 // Continue early, we don't care about the forks.
                 continue;
             }
-            let r = github
-                .repo(repo.owner.login.to_string(), repo.name.to_string());
-            let commits = r
-                .commits()
-                .iter()
-                .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
-                .await
-                .map_err(|e| {
-                    println!(
-                        "iterating over commits in repo {} failed: {}",
-                        repo.name.to_string(),
-                        e
-                    )
-                })
-                .unwrap_or_default();
 
-            for c in commits {
-                // Get the verbose information for the commit.
-                let commit = r.commits().get(&c.sha).await.unwrap();
-
-                // Add events for each commit if it does not already exist.
-                // Check if this event already exists.
-                // Let's see if the data we wrote is there.
-                let time = commit.commit.author.date;
-                let exists = self
-                    .commit_exists(
-                        EventType::Push.name(),
-                        &commit.sha,
-                        &repo.name,
-                        time,
-                    )
-                    .await;
-
-                if !exists {
-                    // Get the changed files.
-                    let mut added: Vec<String> = Default::default();
-                    let mut modified: Vec<String> = Default::default();
-                    let mut removed: Vec<String> = Default::default();
-                    for file in commit.files {
-                        if file.status == "added" {
-                            added.push(file.filename.to_string());
-                        }
-                        if file.status == "modified" {
-                            modified.push(file.filename.to_string());
-                        }
-                        if file.status == "removed" {
-                            removed.push(file.filename.to_string());
-                        }
-                    }
-
-                    // Add the event.
-                    let push_event = Push {
-                        time,
-                        repo_name: repo.name.to_string(),
-                        sender: commit.author.login.to_string(),
-                        // TODO: iterate over all the branches
-                        // Do we need to do this??
-                        reference: repo.default_branch.to_string(),
-                        sha: commit.sha.to_string(),
-                        added: added.join(",").to_string(),
-                        modified: modified.join(",").to_string(),
-                        removed: removed.join(",").to_string(),
-                        additions: commit.stats.additions,
-                        deletions: commit.stats.deletions,
-                        total: commit.stats.total,
-                        message: commit.commit.message.to_string(),
-                    };
-
-                    self.query(push_event, EventType::Push.name()).await;
-                }
+            // Skip the RFD repo for now.
+            // TODO: remove this
+            if repo.name.to_string() == "rfd" {
+                continue;
             }
+
+            let client = self.clone();
+            let handle = tokio::task::spawn(async move {
+                let github = authenticate_github_jwt();
+
+                let r = github
+                    .repo(repo.owner.login.to_string(), repo.name.to_string());
+                let commits = r
+                    .commits()
+                    .iter()
+                    .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
+                    .await
+                    .map_err(|e| {
+                        println!(
+                            "iterating over commits in repo {} failed: {}",
+                            repo.name.to_string(),
+                            e
+                        )
+                    })
+                    .unwrap_or_default();
+
+                for c in commits {
+                    // Get the verbose information for the commit.
+                    let commit = r.commits().get(&c.sha).await.unwrap();
+
+                    // Add events for each commit if it does not already exist.
+                    // Check if this event already exists.
+                    // Let's see if the data we wrote is there.
+                    let time = commit.commit.author.date;
+                    let exists = client
+                        .commit_exists(
+                            EventType::Push.name(),
+                            &commit.sha,
+                            &repo.name,
+                            time,
+                        )
+                        .await;
+
+                    if !exists {
+                        // Get the changed files.
+                        let mut added: Vec<String> = Default::default();
+                        let mut modified: Vec<String> = Default::default();
+                        let mut removed: Vec<String> = Default::default();
+                        for file in commit.files {
+                            if file.status == "added" {
+                                added.push(file.filename.to_string());
+                            }
+                            if file.status == "modified" {
+                                modified.push(file.filename.to_string());
+                            }
+                            if file.status == "removed" {
+                                removed.push(file.filename.to_string());
+                            }
+                        }
+
+                        // Add the event.
+                        let push_event = Push {
+                            time,
+                            repo_name: repo.name.to_string(),
+                            sender: commit.author.login.to_string(),
+                            // TODO: iterate over all the branches
+                            // Do we need to do this??
+                            reference: repo.default_branch.to_string(),
+                            sha: commit.sha.to_string(),
+                            added: added.join(",").to_string(),
+                            modified: modified.join(",").to_string(),
+                            removed: removed.join(",").to_string(),
+                            additions: commit.stats.additions,
+                            deletions: commit.stats.deletions,
+                            total: commit.stats.total,
+                            message: commit.commit.message.to_string(),
+                        };
+
+                        client.query(push_event, EventType::Push.name()).await;
+                    }
+                }
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all the handles.
+        for handle in handles {
+            handle.await.unwrap();
         }
     }
 
