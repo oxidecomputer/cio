@@ -25,6 +25,40 @@ impl Client {
         )
     }
 
+    pub async fn commit_exists(
+        &self,
+        table: &str,
+        sha: &str,
+        repo_name: &str,
+        time: DateTime<Utc>,
+    ) -> bool {
+        let flux_date_format = "%Y-%m-%dT%H:%M:%SZ";
+
+        let read_query = InfluxQuery::raw_read_query(&format!(
+            r#"from(bucket:"github_webhooks")
+                    |> range(start: {}, stop: {})
+                    |> filter(fn: (r) => r._measurement == "{}")
+                    |> filter(fn: (r) => r.sha == "{}")
+                    |> filter(fn: (r) => r.repo_name == "{}")
+                    "#,
+            time.format(flux_date_format),
+            // TODO: see how accurate the webhook server is.
+            (time + Duration::minutes(60)).format(flux_date_format),
+            table,
+            sha,
+            repo_name
+        ));
+        let read_result = self.0.query(&read_query).await;
+
+        if read_result.is_ok() {
+            if read_result.unwrap().trim().is_empty() {
+                return false;
+            }
+            return true;
+        }
+        false
+    }
+
     pub async fn event_exists(
         &self,
         table: &str,
@@ -215,6 +249,72 @@ impl Client {
         }
     }
 
+    pub async fn update_push_events(&self) {
+        let github = authenticate_github_jwt();
+        let repos = list_all_github_repos(&github).await;
+
+        // For each repo, get information on the pull requests.
+        for repo in repos {
+            let r = github.repo(repo.owner.login, repo.name.to_string());
+            // TODO: paginate.
+            let commits = r.commits().list("").await.unwrap();
+
+            for c in commits {
+                // Get the verbose information for the commit.
+                let commit = r.commits().get(&c.sha).await.unwrap();
+
+                // Add events for each commit if it does not already exist.
+                // Check if this event already exists.
+                // Let's see if the data we wrote is there.
+                let time = commit.commit.author.date;
+                let exists = self
+                    .commit_exists(
+                        EventType::Push.name(),
+                        &commit.sha,
+                        &repo.name,
+                        time,
+                    )
+                    .await;
+
+                if !exists {
+                    // Get the changed files.
+                    let mut added: Vec<String> = Default::default();
+                    let mut modified: Vec<String> = Default::default();
+                    let mut removed: Vec<String> = Default::default();
+                    for file in commit.files {
+                        if file.status == "added" {
+                            added.push(file.filename.to_string());
+                        }
+                        if file.status == "modified" {
+                            modified.push(file.filename.to_string());
+                        }
+                        if file.status == "removed" {
+                            removed.push(file.filename.to_string());
+                        }
+                    }
+
+                    // Add the event.
+                    let push_event = Push {
+                        time,
+                        repo_name: repo.name.to_string(),
+                        sender: commit.author.login.to_string(),
+                        // TODO: iterate over all the branches
+                        reference: repo.default_branch.to_string(),
+                        sha: commit.sha.to_string(),
+                        added: added.join(",").to_string(),
+                        modified: modified.join(",").to_string(),
+                        removed: removed.join(",").to_string(),
+                        additions: commit.stats.additions,
+                        deletions: commit.stats.deletions,
+                        total: commit.stats.total,
+                    };
+
+                    self.query(push_event, EventType::Push.name()).await;
+                }
+            }
+        }
+    }
+
     pub async fn update_pull_request_events(&self) {
         let github = authenticate_github_jwt();
         let repos = list_all_github_repos(&github).await;
@@ -268,7 +368,10 @@ impl Client {
                 }
 
                 if pull.closed_at.is_some() {
-                    let closed_at = pull.closed_at.unwrap();
+                    let mut closed_at = pull.closed_at.unwrap();
+                    if pull.merged_at.is_some() {
+                        closed_at = pull.merged_at.unwrap();
+                    }
 
                     // Check if we already have the event.
                     let exists = self
@@ -295,7 +398,7 @@ impl Client {
                                 .parse::<i64>()
                                 .unwrap(),
                             github_id,
-                            merged: pull.merged,
+                            merged: pull.merged_at.is_some(),
                         };
                         self.query(
                             pull_request_closed,
@@ -370,9 +473,10 @@ pub struct Push {
     pub added: String,
     pub modified: String,
     pub removed: String,
-    pub before: String,
-    pub after: String,
-    pub commit_shas: String,
+    pub additions: i64,
+    pub deletions: i64,
+    pub total: i64,
+    pub sha: String,
 }
 
 /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
