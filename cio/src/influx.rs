@@ -62,6 +62,43 @@ impl Client {
         false
     }
 
+    pub async fn check_suite_exists(
+        &self,
+        table: &str,
+        github_id: i64,
+        action: &str,
+        sha: &str,
+        time: DateTime<Utc>,
+    ) -> bool {
+        let flux_date_format = "%Y-%m-%dT%H:%M:%SZ";
+
+        let read_query = InfluxQuery::raw_read_query(&format!(
+            r#"from(bucket:"github_webhooks")
+                    |> range(start: {}, stop: {})
+                    |> filter(fn: (r) => r._measurement == "{}")
+                    |> filter(fn: (r) => r.github_id == {})
+                    |> filter(fn: (r) => r.action == "{}")
+                    |> filter(fn: (r) => r.sha == "{}")
+                    "#,
+            time.format(flux_date_format),
+            // TODO: see how accurate the webhook server is.
+            (time + Duration::minutes(60)).format(flux_date_format),
+            table,
+            github_id,
+            action,
+            sha
+        ));
+        let read_result = self.0.query(&read_query).await;
+
+        if read_result.is_ok() {
+            if read_result.unwrap().trim().is_empty() {
+                return false;
+            }
+            return true;
+        }
+        false
+    }
+
     pub async fn event_exists(
         &self,
         table: &str,
@@ -307,7 +344,7 @@ impl Client {
                                 hubcaps::errors::Error::RateLimit { reset } => {
                                     // We got a rate limit error.
                                     println!(
-                                        "got rate limited, sleeping for {}",
+                                        "got rate limited, sleeping for {}s",
                                         reset.as_secs()
                                     );
                                     thread::sleep(reset);
@@ -333,6 +370,17 @@ impl Client {
                         )
                         .await;
 
+                    let sender = commit.author.login.to_string();
+                    if sender.is_empty() {
+                        // Make sure we don't have an empty sender!
+                        println!(
+                            "[warn]: sender for commit {} on repo {} is empty",
+                            commit.sha, repo.name
+                        );
+                        // Continue early, do not push the event.
+                        continue;
+                    }
+
                     if !exists {
                         // Get the changed files.
                         let mut added: Vec<String> = Default::default();
@@ -350,19 +398,11 @@ impl Client {
                             }
                         }
 
-                        let sender = commit.author.login.to_string();
-                        if sender.is_empty() {
-                            // Make sure we don't have an empty sender!
-                            println!("[warn]: sender for commit {} on repo {} is empty", commit.sha, repo.name);
-                            // Continue early, do not push the event.
-                            continue;
-                        }
-
                         // Add the event.
                         let push_event = Push {
                             time,
                             repo_name: repo.name.to_string(),
-                            sender,
+                            sender: sender.to_string(),
                             // TODO: iterate over all the branches
                             // Do we need to do this??
                             reference: repo.default_branch.to_string(),
@@ -377,6 +417,142 @@ impl Client {
                         };
 
                         client.query(push_event, EventType::Push.name()).await;
+                    }
+
+                    // Handle the check_suite events for each commit.
+                    let check_suites = match r
+                        .commits()
+                        .list_check_suites(
+                            &c.sha,
+                            &hubcaps::checks::CheckSuiteListOptions::builder()
+                                .per_page(100)
+                                .build(),
+                        )
+                        .await
+                    {
+                        Ok(c) => c,
+                        Err(e) => {
+                            // Check if we were rate limited here.
+                            // If so we should sleep until the rate limit is over.
+                            match e {
+                                hubcaps::errors::Error::RateLimit { reset } => {
+                                    // We got a rate limit error.
+                                    println!(
+                                        "got rate limited, sleeping for {}s",
+                                        reset.as_secs()
+                                    );
+                                    thread::sleep(reset);
+                                }
+                                _ => panic!(e),
+                            }
+
+                            // Try to get the check suites again.
+                            r
+                        .commits()
+                        .list_check_suites(&c.sha,
+                            &hubcaps::checks::CheckSuiteListOptions::builder()
+                                .per_page(100)
+                                .build(),
+                        )
+                        .await
+                        .unwrap()
+                        }
+                    }
+                    .check_suites;
+
+                    for check_suite in check_suites {
+                        let github_id =
+                            check_suite.id.to_string().parse::<i64>().unwrap();
+
+                        // Add events for each check_suite if it does not already exist.
+                        // Check if this event already exists.
+                        // Let's see if the data we wrote is there.
+                        let exists = client
+                            .check_suite_exists(
+                                EventType::CheckSuite.name(),
+                                github_id,
+                                "requested",
+                                &c.sha,
+                                check_suite.created_at,
+                            )
+                            .await;
+
+                        if !exists {
+                            // Add the event.
+                            let check_suite_event = CheckSuite {
+                                time: check_suite.created_at,
+                                repo_name: repo.name.to_string(),
+                                sender: sender.to_string(),
+                                // TODO: iterate over all the branches
+                                // Do we need to do this??
+                                reference: repo.default_branch.to_string(),
+                                sha: commit.sha.to_string(),
+                                action: "requested".to_string(),
+                                github_id,
+                                status: "requested".to_string(),
+                                conclusion: "".to_string(),
+                                head_branch: check_suite
+                                    .head_branch
+                                    .to_string(),
+                                head_sha: check_suite.head_sha.to_string(),
+                                name: check_suite.app.name.to_string(),
+                                slug: check_suite.app.slug.to_string(),
+                            };
+
+                            client
+                                .query(
+                                    check_suite_event,
+                                    EventType::CheckSuite.name(),
+                                )
+                                .await;
+                        }
+
+                        // Add the completed event if it is completed.
+                        if check_suite.status.to_string() == "completed" {
+                            // Check if this event already exists.
+                            // Let's see if the data we wrote is there.
+                            let exists = client
+                                .check_suite_exists(
+                                    EventType::CheckSuite.name(),
+                                    github_id,
+                                    "completed",
+                                    &c.sha,
+                                    check_suite.updated_at,
+                                )
+                                .await;
+
+                            if !exists {
+                                // Add the event.
+                                let completed_check_suite_event = CheckSuite {
+                                    time: check_suite.updated_at,
+                                    repo_name: repo.name.to_string(),
+                                    sender: sender.to_string(),
+                                    // TODO: iterate over all the branches
+                                    // Do we need to do this??
+                                    reference: repo.default_branch.to_string(),
+                                    sha: commit.sha.to_string(),
+                                    action: "completed".to_string(),
+                                    github_id,
+                                    status: "completed".to_string(),
+                                    conclusion: check_suite
+                                        .conclusion
+                                        .to_string(),
+                                    head_branch: check_suite
+                                        .head_branch
+                                        .to_string(),
+                                    head_sha: check_suite.head_sha.to_string(),
+                                    name: check_suite.app.name.to_string(),
+                                    slug: check_suite.app.slug.to_string(),
+                                };
+
+                                client
+                                    .query(
+                                        completed_check_suite_event,
+                                        EventType::CheckSuite.name(),
+                                    )
+                                    .await;
+                            }
+                        }
                     }
                 }
             });
@@ -639,6 +815,38 @@ pub struct PullRequestReviewComment {
     pub pull_request_number: i64,
     pub github_id: i64,
     pub comment: String,
+}
+
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_suite
+#[derive(InfluxDbWriteable, Clone, Debug)]
+pub struct CheckSuite {
+    pub time: DateTime<Utc>,
+    #[tag]
+    pub repo_name: String,
+    #[tag]
+    pub sender: String,
+    #[tag]
+    pub action: String,
+    #[tag]
+    pub head_branch: String,
+    #[tag]
+    pub head_sha: String,
+    #[tag]
+    pub status: String,
+    #[tag]
+    pub conclusion: String,
+
+    #[tag]
+    pub slug: String,
+    #[tag]
+    pub name: String,
+
+    #[tag]
+    pub reference: String,
+    #[tag]
+    pub sha: String,
+
+    pub github_id: i64,
 }
 
 #[cfg(test)]

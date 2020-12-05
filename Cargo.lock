@@ -590,7 +590,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#38f6142f54dba73834862aeed5d919e41fede82b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#31842c673b361bef57ad769b6613dca5c60c4e7c"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1633,7 +1633,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#d07bc4b508007b9c53cfc94694dd0cde1543678f"
+source = "git+https://github.com/jessfraz/hubcaps?branch=actions#56b88da2724d8e0987c298331c154317d8492791"
 dependencies = [
  "base64 0.12.3",
  "chrono 0.4.19",
@@ -1965,7 +1965,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#38f6142f54dba73834862aeed5d919e41fede82b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#31842c673b361bef57ad769b6613dca5c60c4e7c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2876,11 +2876,11 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.18.1"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d1126dcf58e93cee7d098dbda643b5f92ed724f1f6a63007c1116eed6700c81"
+checksum = "064fd21ff87c6e87ed4506e68beb42459caa4a0e2eb144932e6776768556980b"
 dependencies = [
- "base64 0.12.3",
+ "base64 0.13.0",
  "log 0.4.11",
  "ring",
  "sct",
@@ -3048,18 +3048,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.117"
+version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
+checksum = "06c64263859d87aa2eb554587e2d23183398d617427327cf2b3d0ed8c69e4800"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.117"
+version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbd1ae72adb44aab48f325a02444a5fc079349a8d804c1fc922aed3f7454c74e"
+checksum = "c84d3526699cd55261af4b941e4e725444df67aa4f9e6a3564f18030d12672df"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3941,9 +3941,9 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "ureq"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a599426c7388ab189dfd0eeb84c8d879490abc73e3e62a0b6a40e286f6427ab7"
+checksum = "ff7ad80b81fbe441b2fb30e0f525a62f34e9675c342f8d0e5bd6790748658659"
 dependencies = [
  "base64 0.13.0",
  "chunked_transfer",
@@ -3952,7 +3952,7 @@ dependencies = [
  "log 0.4.11",
  "once_cell",
  "qstring",
- "rustls 0.18.1",
+ "rustls 0.19.0",
  "url",
  "webpki",
  "webpki-roots",
@@ -4176,9 +4176,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f20dea7535251981a9670857150d571846545088359b28e4951d350bdaf179f"
+checksum = "82015b7e0b8bad8185994674a13a93306bea76cf5a16c5a181382fd3a5ec2376"
 dependencies = [
  "webpki",
 ]
