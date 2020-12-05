@@ -3,6 +3,7 @@ use std::fmt::Debug;
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
+use futures_util::TryStreamExt;
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client as InfluxClient, Query as InfluxQuery};
 
@@ -121,15 +122,15 @@ impl Client {
         // For each repo, get information on the pull requests.
         for repo in repos {
             let r = github.repo(repo.owner.login, repo.name.to_string());
-            // TODO: paginate.
             let issues = r
                 .issues()
-                .list(
+                .iter(
                     &hubcaps::issues::IssueListOptions::builder()
                         .state(hubcaps::issues::State::All)
                         .per_page(100)
                         .build(),
                 )
+                .try_collect::<Vec<hubcaps::issues::Issue>>()
                 .await
                 .unwrap();
 
@@ -197,14 +198,15 @@ impl Client {
                 }
 
                 // Get the comments for the issue.
-                // TODO: paginate
                 let issue_comments = r
                     .issue(issue.number)
                     .comments()
-                    .list(
+                    .iter(
                         &hubcaps::comments::CommentListOptions::builder()
+                            .per_page(100)
                             .build(),
                     )
+                    .try_collect::<Vec<hubcaps::comments::Comment>>()
                     .await
                     .unwrap();
 
@@ -259,9 +261,21 @@ impl Client {
                 // Continue early, we don't care about the forks.
                 continue;
             }
-            let r = github.repo(repo.owner.login, repo.name.to_string());
-            // TODO: paginate.
-            let commits = r.commits().list("").await.unwrap_or_default();
+            let r = github
+                .repo(repo.owner.login.to_string(), repo.name.to_string());
+            let commits = r
+                .commits()
+                .iter()
+                .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
+                .await
+                .map_err(|e| {
+                    println!(
+                        "iterating over commits in repo {} failed: {}",
+                        repo.name.to_string(),
+                        e
+                    )
+                })
+                .unwrap_or_default();
 
             for c in commits {
                 // Get the verbose information for the commit.
@@ -303,6 +317,7 @@ impl Client {
                         repo_name: repo.name.to_string(),
                         sender: commit.author.login.to_string(),
                         // TODO: iterate over all the branches
+                        // Do we need to do this??
                         reference: repo.default_branch.to_string(),
                         sha: commit.sha.to_string(),
                         added: added.join(",").to_string(),
@@ -327,15 +342,15 @@ impl Client {
         // For each repo, get information on the pull requests.
         for repo in repos {
             let r = github.repo(repo.owner.login, repo.name.to_string());
-            // TODO: paginate.
             let pulls = r
                 .pulls()
-                .list(
+                .iter(
                     &hubcaps::pulls::PullListOptions::builder()
                         .state(hubcaps::issues::State::All)
                         .per_page(100)
                         .build(),
                 )
+                .try_collect::<Vec<hubcaps::pulls::Pull>>()
                 .await
                 .unwrap();
 
@@ -415,13 +430,21 @@ impl Client {
                 }
 
                 // Get the pull request review comments for the pull request.
-                // TODO: paginate
                 let pull_comments = r
                     .pulls()
                     .get(pull.number)
                     .review_comments()
-                    .list()
+                    .iter()
+                    .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
                     .await
+                    .map_err(|e| {
+                        println!(
+                            "iterating over review comment in repo {} for pull {} failed: {}",
+                            repo.name.to_string(),
+                            pull.number,
+                            e
+                        )
+                    })
                     .unwrap_or_default();
 
                 for pull_comment in pull_comments {

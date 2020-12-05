@@ -172,15 +172,15 @@ pub fn github_org() -> String {
 
 /// List all the GitHub repositories for our org.
 pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
-    // TODO: paginate.
     let github_repos = github
         .org_repos(github_org())
-        .list(
+        .iter(
             &OrganizationRepoListOptions::builder()
                 .per_page(100)
                 .repo_type(OrgRepoType::All)
                 .build(),
         )
+        .try_collect::<Vec<hubcaps::repositories::Repo>>()
         .await
         .unwrap();
 
