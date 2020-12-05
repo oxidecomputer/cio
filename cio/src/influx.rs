@@ -307,6 +307,7 @@ impl Client {
                         additions: commit.stats.additions,
                         deletions: commit.stats.deletions,
                         total: commit.stats.total,
+                        message: commit.commit.message.to_string(),
                     };
 
                     self.query(push_event, EventType::Push.name()).await;
@@ -477,6 +478,7 @@ pub struct Push {
     pub deletions: i64,
     pub total: i64,
     pub sha: String,
+    pub message: String,
 }
 
 /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
