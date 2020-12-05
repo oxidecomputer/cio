@@ -435,7 +435,7 @@ impl Client {
                     .get(pull.number)
                     .review_comments()
                     .iter()
-                    .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
+                    .try_collect::<Vec<hubcaps::review_comments::ReviewComment>>()
                     .await
                     .map_err(|e| {
                         println!(
