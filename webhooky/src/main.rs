@@ -185,11 +185,8 @@ async fn listen_github_webhooks(
     // Save all events to influxdb.
     match event_type {
         EventType::Push => {
-            let influx_event = event.into_influx_push();
-            api_context
-                .influx
-                .query(influx_event, event_type.name())
-                .await;
+            let influx_event = event
+                .into_influx_push(&api_context.influx, &api_context.github);
         }
         EventType::PullRequest => {
             let influx_event = event.into_influx_pull_request();
@@ -670,32 +667,39 @@ pub struct GitHubWebhook {
 }
 
 impl GitHubWebhook {
-    pub fn into_influx_push(&self) -> influx::Push {
-        let mut added: String = Default::default();
-        let mut modified: String = Default::default();
-        let mut removed: String = Default::default();
-        let mut commit_shas: String = Default::default();
+    // Push an event for every commit.
+    pub async fn into_influx_push(
+        &self,
+        influx: &influx::Client,
+        github: &Github,
+    ) {
+        let repo = self.repository.as_ref().unwrap();
+
         for commit in &self.commits {
             if commit.distinct {
-                added = add_to_string(added.to_string(), &commit.added);
-                modified =
-                    add_to_string(modified.to_string(), &commit.modified);
-                removed = add_to_string(removed.to_string(), &commit.removed);
-                commit_shas = format!("{},{}", commit_shas, commit.sha);
-            }
-        }
+                let c = github
+                    .repo(repo.owner.login.to_string(), repo.name.to_string())
+                    .commits()
+                    .get(&commit.sha)
+                    .await
+                    .unwrap();
 
-        influx::Push {
-            time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
-            sender: self.sender.login.to_string(),
-            reference: self.refv.to_string(),
-            added,
-            modified,
-            removed,
-            before: self.before.to_string(),
-            after: self.after.to_string(),
-            commit_shas,
+                let push_event = influx::Push {
+                    time: c.commit.author.date,
+                    repo_name: repo.name.to_string(),
+                    sender: self.sender.login.to_string(),
+                    reference: self.refv.to_string(),
+                    added: commit.added.join(",").to_string(),
+                    modified: commit.removed.join(",").to_string(),
+                    removed: commit.removed.join(",").to_string(),
+                    sha: commit.sha.to_string(),
+                    additions: c.stats.additions,
+                    deletions: c.stats.deletions,
+                    total: c.stats.total,
+                };
+
+                influx.query(push_event, EventType::Push.name()).await;
+            }
         }
     }
 
