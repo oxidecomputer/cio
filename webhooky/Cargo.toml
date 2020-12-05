@@ -9,6 +9,7 @@ edition = "2018"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
+chrono-humanize = "0.0.11"
 cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
 #cio-api = { path = "../cio" }
 #dropshot = "^0.3.0"

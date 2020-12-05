@@ -3,7 +3,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{DateTime, TimeZone};
+use chrono_humanize::HumanTime;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
     ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk,
@@ -491,6 +492,37 @@ async fn listen_github_webhooks(
     // TODO: should we do something if the file gets deleted (?)
 
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
+}
+
+/** Get our current GitHub rate limit. */
+#[endpoint {
+    method = GET,
+    path = "/github/ratelimit",
+}]
+async fn github_rate_limit(
+    rqctx: Arc<RequestContext>,
+) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let github = &api_context.github;
+
+    let response = github.rate_limit().get().await.unwrap();
+    let reset_time = Utc.timestamp(response.resources.core.reset.into(), 0);
+
+    let mut dur = reset_time - Utc::now();
+
+    Ok(HttpResponseOk(GitHubRateLimit {
+        limit: response.resources.core.limit.into(),
+        remaining: response.resources.core.remaining.into(),
+        reset: HumanTime::from(dur).to_string(),
+    }))
+}
+
+/// A GitHub RateLimit
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubRateLimit {
+    pub limit: u32,
+    pub remaining: u32,
+    pub reset: String,
 }
 
 /** Ping endpoint for MailChimp webhooks. */
