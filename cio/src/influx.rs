@@ -434,7 +434,7 @@ impl Client {
                     .pulls()
                     .get(pull.number)
                     .review_comments()
-                    .iter()
+                    .iter(&hubcaps::review_comments::ReviewCommentListOptions::builder().per_page(100).build())
                     .try_collect::<Vec<hubcaps::review_comments::ReviewComment>>()
                     .await
                     .map_err(|e| {
