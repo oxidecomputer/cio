@@ -243,8 +243,6 @@ async fn listen_github_webhooks(
 
     // Handle if we got a pull_request.
     if event_type == EventType::PullRequest {
-        println!("[github]: pull_request {:?}", event);
-
         // We only care if the pull request was `opened`.
         if event.action != "opened" {
             // We can throw this out, log it and return early.
