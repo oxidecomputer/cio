@@ -496,7 +496,7 @@ impl Client {
                                 action: "requested".to_string(),
                                 github_id,
                                 status: "requested".to_string(),
-                                conclusion: "".to_string(),
+                                conclusion: "null".to_string(),
                                 head_branch: check_suite
                                     .head_branch
                                     .to_string(),
