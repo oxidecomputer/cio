@@ -256,7 +256,7 @@ impl Client {
         let gh = authenticate_github_jwt();
         let repos = list_all_github_repos(&gh).await;
 
-        let mut handles: Vec<tokio::task::JoinHandle<_>> = Default::default();
+        let mut handles: Vec<tokio::task::JoinHandle<()>> = Default::default();
 
         // For each repo, get information on the pull requests.
         for repo in repos {
@@ -325,11 +325,19 @@ impl Client {
                             }
                         }
 
+                        let sender = commit.author.login.to_string();
+                        if sender.is_empty() {
+                            // Make sure we don't have an empty sender!
+                            println!("[warn]: sender for commit {} on repo {} is empty", commit.sha, repo.name);
+                            // Continue early, do not push the event.
+                            continue;
+                        }
+
                         // Add the event.
                         let push_event = Push {
                             time,
                             repo_name: repo.name.to_string(),
-                            sender: commit.author.login.to_string(),
+                            sender,
                             // TODO: iterate over all the branches
                             // Do we need to do this??
                             reference: repo.default_branch.to_string(),
