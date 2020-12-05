@@ -583,10 +583,20 @@ mod tests {
     use crate::influx::Client;
 
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_influx() {
+    async fn test_cron_influx_push() {
         let influx = Client::new_from_env();
         influx.update_push_events().await;
-        influx.update_issues_events().await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_cron_influx_pulls() {
+        let influx = Client::new_from_env();
         influx.update_pull_request_events().await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_cron_influx_issues() {
+        let influx = Client::new_from_env();
+        influx.update_issues_events().await;
     }
 }
