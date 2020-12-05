@@ -696,6 +696,7 @@ impl GitHubWebhook {
                     additions: c.stats.additions,
                     deletions: c.stats.deletions,
                     total: c.stats.total,
+                    message: c.commit.message.to_string(),
                 };
 
                 influx.query(push_event, EventType::Push.name()).await;
