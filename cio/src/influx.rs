@@ -604,6 +604,7 @@ pub struct PullRequestReviewComment {
 mod tests {
     use crate::influx::Client;
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_influx_push() {
         let influx = Client::new_from_env();
