@@ -255,9 +255,13 @@ impl Client {
 
         // For each repo, get information on the pull requests.
         for repo in repos {
+            if repo.fork {
+                // Continue early, we don't care about the forks.
+                continue;
+            }
             let r = github.repo(repo.owner.login, repo.name.to_string());
             // TODO: paginate.
-            let commits = r.commits().list("").await.unwrap();
+            let commits = r.commits().list("").await.unwrap_or_default();
 
             for c in commits {
                 // Get the verbose information for the commit.
@@ -556,6 +560,7 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_influx() {
         let influx = Client::new_from_env();
+        influx.update_push_events().await;
         influx.update_issues_events().await;
         influx.update_pull_request_events().await;
     }
