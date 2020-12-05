@@ -168,6 +168,10 @@ impl Client {
 
                 if issue.closed_at.is_some() {
                     let closed_at = issue.closed_at.unwrap();
+                    let mut closed_by = issue.closed_by.login.to_string();
+                    if closed_by.is_empty() {
+                        closed_by = issue.user.login.to_string();
+                    }
 
                     // Check if we already have the event.
                     let exists = self
@@ -184,7 +188,7 @@ impl Client {
                         let issue_closed = Issue {
                             time: closed_at,
                             repo_name: repo.name.to_string(),
-                            sender: issue.user.login.to_string(),
+                            sender: closed_by,
                             action: "closed".to_string(),
                             number: issue
                                 .number
@@ -421,8 +425,16 @@ impl Client {
 
                 if pull.closed_at.is_some() {
                     let mut closed_at = pull.closed_at.unwrap();
+                    let mut closed_by = pull.closed_by.login.to_string();
+                    if closed_by.is_empty() {
+                        closed_by = pull.user.login.to_string();
+                    }
+
                     if pull.merged_at.is_some() {
                         closed_at = pull.merged_at.unwrap();
+                        if !pull.merged_by.login.is_empty() {
+                            closed_by = pull.merged_by.login.to_string();
+                        }
                     }
 
                     // Check if we already have the event.
@@ -440,7 +452,7 @@ impl Client {
                         let pull_request_closed = PullRequest {
                             time: closed_at,
                             repo_name: repo.name.to_string(),
-                            sender: pull.user.login.to_string(),
+                            sender: closed_by,
                             action: "closed".to_string(),
                             head_reference: pull.head.commit_ref.to_string(),
                             base_reference: pull.base.commit_ref.to_string(),
