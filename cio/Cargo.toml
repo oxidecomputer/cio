@@ -17,7 +17,7 @@ diffy = "^0.2.0"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 clap = {version = "2", features = ["yaml"]}
-cloudflare = "^0.7.0"
+cloudflare-rs = "^0.6.0"
 csv = "1.1"
 comrak = "0.8"
 diesel = { version = "1.4.5", features = ["serde_json", "postgres", "chrono", "128-column-tables"] }
