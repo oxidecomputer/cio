@@ -185,8 +185,9 @@ async fn listen_github_webhooks(
     // Save all events to influxdb.
     match event_type {
         EventType::Push => {
-            let influx_event = event
-                .into_influx_push(&api_context.influx, &api_context.github);
+            event
+                .into_influx_push(&api_context.influx, &api_context.github)
+                .await;
         }
         EventType::PullRequest => {
             let influx_event = event.into_influx_pull_request();
@@ -425,7 +426,7 @@ async fn listen_github_webhooks(
             if !has_pull {
                 println!("[github] RFD {} has moved from state {} -> {}, on branch {}, opening a PR",rfd.number_string, old_rfd_state, rfd.state, branch);
 
-                let pull = github_repo
+                github_repo
                                     .pulls()
                                     .create(&hubcaps::pulls::PullOptions::new(
                 rfd.name.to_string(),
@@ -822,17 +823,6 @@ fn filter(files: &Vec<String>, dir: &str) -> Vec<String> {
     }
 
     in_dir
-}
-
-fn add_to_string(s: String, a: &Vec<String>) -> String {
-    let mut v = s;
-    for b in a {
-        if !v.contains(b) {
-            v = format!("{},{}", v, b);
-        }
-    }
-
-    v
 }
 
 /// A GitHub pull request.
