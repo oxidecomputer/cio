@@ -17,6 +17,7 @@ diffy = "^0.2.0"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 clap = {version = "2", features = ["yaml"]}
+# One day go back to the non-forked "cloudflare" lib
 cloudflare-rs = "^0.6.0"
 csv = "1.1"
 comrak = "0.8"
