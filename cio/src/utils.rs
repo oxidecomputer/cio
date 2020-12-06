@@ -103,8 +103,6 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
 pub fn authenticate_github() -> Github {
     // Initialize the github client.
     let github_token = env::var("GITHUB_TOKEN").unwrap();
-    // Get the current working directory.
-    let curdir = env::current_dir().unwrap();
     // Create the HTTP cache.
     let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME").unwrap())));
     Github::custom(
@@ -131,9 +129,6 @@ pub fn authenticate_github_jwt() -> Github {
 
     // Get the JWT credentials.
     let jwt = JWTCredentials::new(app_id, key.data).unwrap();
-
-    // Get the current working directory.
-    let curdir = env::current_dir().unwrap();
 
     // Create the HTTP cache.
     let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME").unwrap())));

@@ -208,12 +208,6 @@ impl Client {
             // Do we need to do this??
             let reference = repo.default_branch.to_string();
 
-            // Skip the RFD repo for now.
-            // TODO: remove this
-            if repo.name.to_string() == "rfd" {
-                continue;
-            }
-
             let client = self.clone();
             let handle = tokio::task::spawn(async move {
                 // We need to do this here since we are in an async loop.
