@@ -31,26 +31,22 @@ impl Client {
         )
     }
 
-    pub async fn commit_exists(
+    async fn exists(
         &self,
         table: &str,
-        sha: &str,
-        repo_name: &str,
         time: DateTime<Utc>,
+        filter: &str,
     ) -> bool {
         let read_query = InfluxQuery::raw_read_query(&format!(
             r#"from(bucket:"github_webhooks")
-                    |> range(start: {}, stop: {})
-                    |> filter(fn: (r) => r._measurement == "{}")
-                    |> filter(fn: (r) => r.sha == "{}")
-                    |> filter(fn: (r) => r.repo_name == "{}")
-                    "#,
+    |> range(start: {}, stop: {})
+    |> filter(fn: (r) => r._measurement == "{}")
+    {}"#,
             time.format(FLUX_DATE_FORMAT),
             // TODO: see how accurate the webhook server is.
             (time + Duration::minutes(60)).format(FLUX_DATE_FORMAT),
             table,
-            sha,
-            repo_name
+            filter,
         ));
         let read_result = self.0.query(&read_query).await;
 
@@ -61,73 +57,55 @@ impl Client {
             return true;
         }
         false
+    }
+
+    pub async fn commit_exists(
+        &self,
+        time: DateTime<Utc>,
+        sha: &str,
+        repo_name: &str,
+    ) -> bool {
+        let filter = format!(
+            r#"|> filter(fn: (r) => r.sha == "{}")
+    |> filter(fn: (r) => r.repo_name == "{}")"#,
+            sha, repo_name
+        );
+
+        self.exists(EventType::Push.name(), time, &filter).await
     }
 
     pub async fn check_exists(
         &self,
         table: &str,
+        time: DateTime<Utc>,
         github_id: i64,
         action: &str,
         sha: &str,
-        time: DateTime<Utc>,
     ) -> bool {
-        let read_query = InfluxQuery::raw_read_query(&format!(
-            r#"from(bucket:"github_webhooks")
-                    |> range(start: {}, stop: {})
-                    |> filter(fn: (r) => r._measurement == "{}")
-                    |> filter(fn: (r) => r.github_id == {})
-                    |> filter(fn: (r) => r.action == "{}")
-                    |> filter(fn: (r) => r.sha == "{}")
-                    "#,
-            time.format(FLUX_DATE_FORMAT),
-            // TODO: see how accurate the webhook server is.
-            (time + Duration::minutes(60)).format(FLUX_DATE_FORMAT),
-            table,
-            github_id,
-            action,
-            sha
-        ));
-        let read_result = self.0.query(&read_query).await;
+        let filter = format!(
+            r#"|> filter(fn: (r) => r.github_id == {})
+    |> filter(fn: (r) => r.action == "{}")
+    |> filter(fn: (r) => r.sha == "{}")"#,
+            github_id, action, sha
+        );
 
-        if read_result.is_ok() {
-            if read_result.unwrap().trim().is_empty() {
-                return false;
-            }
-            return true;
-        }
-        false
+        self.exists(table, time, &filter).await
     }
 
     pub async fn event_exists(
         &self,
         table: &str,
+        time: DateTime<Utc>,
         github_id: i64,
         action: &str,
-        time: DateTime<Utc>,
     ) -> bool {
-        let read_query = InfluxQuery::raw_read_query(&format!(
-            r#"from(bucket:"github_webhooks")
-                    |> range(start: {}, stop: {})
-                    |> filter(fn: (r) => r._measurement == "{}")
-                    |> filter(fn: (r) => r.github_id == {})
-                    |> filter(fn: (r) => r.action == "{}")
-                    "#,
-            time.format(FLUX_DATE_FORMAT),
-            // TODO: see how accurate the webhook server is.
-            (time + Duration::minutes(60)).format(FLUX_DATE_FORMAT),
-            table,
-            github_id,
-            action
-        ));
-        let read_result = self.0.query(&read_query).await;
+        let filter = format!(
+            r#"|> filter(fn: (r) => r.github_id == {})
+    |> filter(fn: (r) => r.action == "{}")"#,
+            github_id, action
+        );
 
-        if read_result.is_ok() {
-            if read_result.unwrap().trim().is_empty() {
-                return false;
-            }
-            return true;
-        }
-        false
+        self.exists(table, time, &filter).await
     }
 
     pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(
@@ -178,9 +156,9 @@ impl Client {
                 let exists = self
                     .event_exists(
                         EventType::Issues.name(),
+                        issue.created_at,
                         github_id,
                         "opened",
-                        issue.created_at,
                     )
                     .await;
 
@@ -212,9 +190,9 @@ impl Client {
                     let exists = self
                         .event_exists(
                             EventType::Issues.name(),
+                            closed_at,
                             github_id,
                             "closed",
-                            closed_at,
                         )
                         .await;
 
@@ -259,9 +237,9 @@ impl Client {
                     let exists = self
                         .event_exists(
                             EventType::IssueComment.name(),
+                            issue_comment.created_at,
                             github_id,
                             "created",
-                            issue_comment.created_at,
                         )
                         .await;
 
@@ -364,12 +342,7 @@ impl Client {
                     // Let's see if the data we wrote is there.
                     let time = commit.commit.author.date;
                     let exists = client
-                        .commit_exists(
-                            EventType::Push.name(),
-                            &commit.sha,
-                            &repo.name,
-                            time,
-                        )
+                        .commit_exists(time, &commit.sha, &repo.name)
                         .await;
 
                     let sender = commit.author.login.to_string();
@@ -484,10 +457,10 @@ impl Client {
                         let exists = client
                             .check_exists(
                                 EventType::CheckSuite.name(),
+                                check_suite.created_at,
                                 github_id,
                                 "created",
                                 &commit.sha,
-                                check_suite.created_at,
                             )
                             .await;
 
@@ -528,10 +501,10 @@ impl Client {
                             let exists = client
                                 .check_exists(
                                     EventType::CheckSuite.name(),
+                                    check_suite.updated_at,
                                     github_id,
                                     "completed",
                                     &commit.sha,
-                                    check_suite.updated_at,
                                 )
                                 .await;
 
@@ -624,10 +597,10 @@ impl Client {
                             let exists = client
                                 .check_exists(
                                     EventType::CheckRun.name(),
+                                    check_run.started_at,
                                     check_run_github_id,
                                     "created",
                                     &commit.sha,
-                                    check_run.started_at,
                                 )
                                 .await;
 
@@ -686,10 +659,10 @@ impl Client {
                                 let exists = client
                                     .check_exists(
                                         EventType::CheckRun.name(),
+                                        check_run.completed_at.unwrap(),
                                         check_run_github_id,
                                         "completed",
                                         &commit.sha,
-                                        check_run.completed_at.unwrap(),
                                     )
                                     .await;
 
@@ -782,9 +755,9 @@ impl Client {
                 let exists = self
                     .event_exists(
                         EventType::PullRequest.name(),
+                        pull.created_at,
                         github_id,
                         "opened",
-                        pull.created_at,
                     )
                     .await;
 
@@ -826,9 +799,9 @@ impl Client {
                     let exists = self
                         .event_exists(
                             EventType::PullRequest.name(),
+                            closed_at,
                             github_id,
                             "closed",
-                            closed_at,
                         )
                         .await;
 
@@ -884,9 +857,9 @@ impl Client {
                     let exists = self
                         .event_exists(
                             EventType::PullRequestReviewComment.name(),
+                            pull_comment.created_at,
                             github_id,
                             "created",
-                            pull_comment.created_at,
                         )
                         .await;
 
