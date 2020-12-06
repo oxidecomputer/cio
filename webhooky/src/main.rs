@@ -723,9 +723,18 @@ impl GitHubWebhook {
                 let c = github
                     .repo(repo.owner.login.to_string(), repo.name.to_string())
                     .commits()
-                    .get(&commit.sha)
+                    .get(&commit.id)
                     .await
                     .unwrap();
+
+                if c.sha.to_string() != commit.id.to_string() {
+                    // We have a problem.
+                    panic!(
+                        "commit sha mismatch: {} {}",
+                        c.sha.to_string(),
+                        commit.id.to_string()
+                    );
+                }
 
                 let push_event = influx::Push {
                     time: c.commit.author.date,
@@ -735,7 +744,7 @@ impl GitHubWebhook {
                     added: commit.added.join(",").to_string(),
                     modified: commit.removed.join(",").to_string(),
                     removed: commit.removed.join(",").to_string(),
-                    sha: commit.sha.to_string(),
+                    sha: c.sha.to_string(),
                     additions: c.stats.additions,
                     deletions: c.stats.deletions,
                     total: c.stats.total,
