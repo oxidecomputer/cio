@@ -221,7 +221,7 @@ from(bucket:"github_webhooks")
                     .iter()
                     .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
                     .await
-                    .map_err(|e| println!("iterating over commits in repo {} failed: {}", repo.name.to_string(), e))
+                    .map_err(|e| println!("[warn]: iterating over commits in repo {} failed: {}", repo.name.to_string(), e))
                     .unwrap_or_default();
 
                 for c in commits {
@@ -239,7 +239,7 @@ from(bucket:"github_webhooks")
                                     println!("got rate limited, sleeping for {}s", reset.as_secs());
                                     thread::sleep(reset.add(time::Duration::from_secs(5)));
                                 }
-                                _ => panic!("github getting commits failed: {}", e),
+                                _ => panic!("[warn]: github getting commits failed: {}", e),
                             }
 
                             // Try to get the commit again.
@@ -316,7 +316,7 @@ from(bucket:"github_webhooks")
                                     println!("got rate limited, sleeping for {}s", reset.as_secs());
                                     thread::sleep(reset.add(time::Duration::from_secs(5)));
                                 }
-                                _ => panic!("github getting check suites failed: {}", e),
+                                _ => panic!("[warn]: github getting check suites failed: {}", e),
                             }
 
                             // Try to get the check suites again.
@@ -485,7 +485,7 @@ from(bucket:"github_webhooks")
 
         // Wait for all the handles.
         for handle in handles {
-            handle.await.unwrap_or_else(|e| println!("[warn: handle failed: {:?}]", e));
+            handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:?}]", e));
         }
     }
 
@@ -574,7 +574,7 @@ from(bucket:"github_webhooks")
                     .iter(&hubcaps::review_comments::ReviewCommentListOptions::builder().per_page(100).build())
                     .try_collect::<Vec<hubcaps::review_comments::ReviewComment>>()
                     .await
-                    .map_err(|e| println!("iterating over review comment in repo {} for pull {} failed: {}", repo.name.to_string(), pull.number, e))
+                    .map_err(|e| println!("[warn]: iterating over review comment in repo {} for pull {} failed: {}", repo.name.to_string(), pull.number, e))
                     .unwrap_or_default();
 
                 for pull_comment in pull_comments {
