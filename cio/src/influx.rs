@@ -24,7 +24,8 @@ impl Client {
 
     async fn exists(&self, table: &str, time: DateTime<Utc>, filter: &str) -> bool {
         let read_query = InfluxQuery::raw_read_query(&format!(
-            r#"from(bucket:"github_webhooks")
+            r#"import "influxdata/influxdb/schema"
+from(bucket:"github_webhooks")
     |> range(start: {}, stop: {})
     |> filter(fn: (r) => r._measurement == "{}")
     {}"#,
@@ -47,9 +48,10 @@ impl Client {
 
     pub async fn commit_exists(&self, time: DateTime<Utc>, sha: &str, repo_name: &str) -> bool {
         let filter = format!(
-            r#"|> filter(fn: (r) => r.sha == "{}")
-    |> filter(fn: (r) => r.repo_name == "{}")"#,
-            sha, repo_name
+            r#"|> filter(fn: (r) => r.repo_name == "{}")
+    |> schema.fieldsAsCols()
+    |> filter(fn: (r) => r.sha == "{}")"#,
+            repo_name, sha
         );
 
         self.exists(EventType::Push.name(), time, &filter).await
