@@ -187,11 +187,13 @@ async fn listen_github_webhooks(
     // Save all events to influxdb.
     match event_type {
         EventType::Push => {
+            println!("[{}] {:?}", event_type.name(), event);
             event
                 .into_influx_push(&api_context.influx, &api_context.github)
                 .await;
         }
         EventType::PullRequest => {
+            println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_pull_request();
             api_context
                 .influx
@@ -199,6 +201,7 @@ async fn listen_github_webhooks(
                 .await;
         }
         EventType::PullRequestReviewComment => {
+            println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_pull_request_review_comment();
             api_context
                 .influx
@@ -206,6 +209,7 @@ async fn listen_github_webhooks(
                 .await;
         }
         EventType::Issues => {
+            println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_issue();
             api_context
                 .influx
@@ -213,11 +217,15 @@ async fn listen_github_webhooks(
                 .await;
         }
         EventType::IssueComment => {
+            println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_issue_comment();
             api_context
                 .influx
                 .query(influx_event, event_type.name())
                 .await;
+        }
+        EventType::CheckSuite => {
+            println!("[{}] {:?}", event_type.name(), event);
         }
         _ => (),
     }
