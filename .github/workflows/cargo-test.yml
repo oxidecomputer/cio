@@ -37,5 +37,5 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       - name: Run cargo test
         run: |
-          cargo test -- --skip test_cron
+          cargo test
         shell: bash

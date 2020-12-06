@@ -400,11 +400,13 @@ mod tests {
     use crate::db::Database;
     use crate::models::Applicants;
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_applicants() {
         refresh_db_applicants().await;
     }
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_applicants_airtable() {
         // Initialize our database.

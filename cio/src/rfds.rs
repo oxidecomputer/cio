@@ -145,6 +145,7 @@ mod tests {
     use crate::rfds::{clean_rfd_html_links, refresh_db_rfds};
     use crate::utils::authenticate_github_jwt;
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_rfds() {
         let github = authenticate_github_jwt();
@@ -292,6 +293,7 @@ sdf
         assert_eq!(expected, title);
     }
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_rfds_airtable() {
         // Initialize our database.

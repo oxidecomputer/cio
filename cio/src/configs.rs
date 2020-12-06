@@ -739,6 +739,7 @@ mod tests {
     use crate::db::Database;
     use crate::utils::authenticate_github_jwt;
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_configs() {
         let github = authenticate_github_jwt();

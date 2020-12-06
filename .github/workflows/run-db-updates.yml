@@ -64,7 +64,7 @@ jobs:
                   -credential_file=${{ github.workspace }}/sql_proxy_key &
       - name: Run cargo test
         run: |
-          cargo test
+          cargo test test_cron -- --ignored
         shell: bash
         env:
           CIO_AUTH0_CLIENT_ID: ${{ secrets.CIO_AUTH0_CLIENT_ID }}

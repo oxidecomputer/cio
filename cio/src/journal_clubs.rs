@@ -139,12 +139,14 @@ mod tests {
     use crate::models::{JournalClubMeetings, JournalClubPapers};
     use crate::utils::authenticate_github_jwt;
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_journal_club_meetings() {
         let github = authenticate_github_jwt();
         refresh_db_journal_club_meetings(&github).await;
     }
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_journal_club_meetings_airtable() {
         // Initialize our database.
@@ -155,6 +157,7 @@ mod tests {
         JournalClubMeetings(journal_club_meetings).update_airtable().await;
     }
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_journal_club_papers_airtable() {
         // Initialize our database.

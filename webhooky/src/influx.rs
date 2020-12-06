@@ -790,17 +790,19 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_influx_push() {
+    async fn test_influx_push() {
         let influx = Client::new_from_env();
         influx.update_push_events().await;
     }
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_influx_pulls() {
         let influx = Client::new_from_env();
         influx.update_pull_request_events().await;
     }
 
+    #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_influx_issues() {
         let influx = Client::new_from_env();
