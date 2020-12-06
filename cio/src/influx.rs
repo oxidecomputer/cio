@@ -664,6 +664,82 @@ impl Client {
                                     )
                                     .await;
                             }
+
+                            let mut check_run_status =
+                                &hubcaps::checks::CheckRunState::Queued;
+                            if check_run.status.is_some() {
+                                check_run_status =
+                                    check_run.status.as_ref().unwrap();
+                            };
+
+                            // Add the completed event if it is completed.
+                            if *check_run_status
+                                == hubcaps::checks::CheckRunState::Completed
+                            {
+                                if check_run.completed_at.is_none() {
+                                    println!("[warn] check_run says it is completed but it does not have a completed_at for: {:?}", check_run);
+                                    continue;
+                                }
+
+                                // Check if this event already exists.
+                                // Let's see if the data we wrote is there.
+                                let exists = client
+                                    .check_exists(
+                                        EventType::CheckRun.name(),
+                                        check_run_github_id,
+                                        "completed",
+                                        &commit.sha,
+                                        check_run.completed_at.unwrap(),
+                                    )
+                                    .await;
+
+                                if !exists {
+                                    // Add the event.
+                                    let completed_check_run_event = CheckRun {
+                                        time: check_run.completed_at.unwrap(),
+                                        repo_name: repo.name.to_string(),
+                                        sender: sender.to_string(),
+                                        // TODO: iterate over all the branches
+                                        // Do we need to do this??
+                                        reference: repo
+                                            .default_branch
+                                            .to_string(),
+                                        sha: commit.sha.to_string(),
+                                        action: "completed".to_string(),
+                                        github_id: check_run_github_id,
+                                        status: "completed".to_string(),
+                                        conclusion: json!(check_run.conclusion)
+                                            .to_string()
+                                            .trim_matches('"')
+                                            .to_string(),
+                                        name: check_run.name.to_string(),
+
+                                        // Check suite details
+                                        head_branch: check_suite
+                                            .head_branch
+                                            .to_string(),
+                                        head_sha: check_suite
+                                            .head_sha
+                                            .to_string(),
+                                        app_name: check_suite
+                                            .app
+                                            .name
+                                            .to_string(),
+                                        app_slug: check_suite
+                                            .app
+                                            .slug
+                                            .to_string(),
+                                        check_suite_id: github_id,
+                                    };
+
+                                    client
+                                        .query(
+                                            completed_check_run_event,
+                                            EventType::CheckRun.name(),
+                                        )
+                                        .await;
+                                }
+                            }
                         }
                     }
                 }
