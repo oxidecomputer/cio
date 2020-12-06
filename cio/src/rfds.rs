@@ -199,7 +199,6 @@ dsfsdf
 sdf
 :authors: nope"#;
         authors = NewRFD::get_authors(&content, true);
-        expected = "".to_string();
         assert_eq!(expected, authors);
 
         content = r#"sdfsdf
