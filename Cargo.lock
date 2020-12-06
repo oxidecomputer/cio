@@ -590,7 +590,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#70fbae63464f7edf77f3aa99782df4e96a55b96f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#48c376cc5222b1a60e886388a2a4208b84cd8636"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1029,7 +1029,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "dropshot"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#16213f64b649caaaa28bf8c02eb519138d8baf10"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#5ec7549850a952dd589d9007970c21f109d7ebb1"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -1062,7 +1062,7 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#16213f64b649caaaa28bf8c02eb519138d8baf10"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#5ec7549850a952dd589d9007970c21f109d7ebb1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1966,7 +1966,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#70fbae63464f7edf77f3aa99782df4e96a55b96f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#48c376cc5222b1a60e886388a2a4208b84cd8636"
 dependencies = [
  "proc-macro2",
  "quote",
