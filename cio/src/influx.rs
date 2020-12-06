@@ -5,7 +5,7 @@ use std::{thread, time};
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
-use futures_util::TryStreamExt;
+use futures_util::stream::TryStreamExt;
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client as InfluxClient, Query as InfluxQuery};
 
@@ -81,11 +81,11 @@ from(bucket:"github_webhooks")
     pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(&self, q: Q, table: &str) -> String {
         match self.0.query(&q.clone().into_query(table)).await {
             Ok(v) => {
-                println!("successfully updated table `{}`: {:?}", table, q);
+                println!("successfully updated table `{}`: {:#?}", table, q);
                 return v;
             }
             Err(e) => {
-                println!("[influxdb] table `{}` error: {}, event: {:?}", table, e, q)
+                println!("[influxdb] table `{}` error: {}, event: {:#?}", table, e, q)
             }
         }
 
@@ -207,6 +207,7 @@ from(bucket:"github_webhooks")
 
             let repo_name = repo.name.to_string();
 
+            // TODO: remove this, it was only for fixing something.
             if repo_name != "rfd" {
                 continue;
             }
@@ -407,7 +408,7 @@ from(bucket:"github_webhooks")
                                             thread::sleep(reset.add(time::Duration::from_secs(5)));
                                         }
                                         _ => {
-                                            println!("[warn]: github getting check runs failed: {}, check_suite: {:?}", e, check_suite);
+                                            println!("[warn]: github getting check runs failed: {}, check_suite: {:#?}", e, check_suite);
                                             continue;
                                         }
                                     }
@@ -466,7 +467,7 @@ from(bucket:"github_webhooks")
                                 // Add the completed event if it is completed.
                                 if *check_run_status == hubcaps::checks::CheckRunState::Completed {
                                     if check_run.completed_at.is_none() {
-                                        println!("[warn]: check_run says it is completed but it does not have a completed_at time: {:?}", check_run);
+                                        println!("[warn]: check_run says it is completed but it does not have a completed_at time: {:#?}", check_run);
                                         continue;
                                     }
 
@@ -495,7 +496,7 @@ from(bucket:"github_webhooks")
 
                 // Wait for all the handles.
                 for inner_handle in inner_handles {
-                    inner_handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:?}]", e));
+                    inner_handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:#?}]", e));
                 }
             });
 
@@ -505,7 +506,7 @@ from(bucket:"github_webhooks")
 
         // Wait for all the handles.
         for handle in handles {
-            handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:?}]", e));
+            handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:#?}]", e));
         }
     }
 

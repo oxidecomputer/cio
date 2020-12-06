@@ -151,3 +151,23 @@ pub struct MailchimpWebhookGrouping {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::mailing_list::MailchimpWebhook;
+    use serde_qs::Config as QSConfig;
+
+    #[test]
+    fn test_mailchimp_webhook_parsing() {
+        let body_str = r#"type=subscribe&fired_at=2020-09-07 21:31:09&data[id]=b748506b63&data[email]=example@gmail.com&data[email_type]=html&data[ip_opt]=98.128.229.135&data[web_id]=404947702&data[merges][EMAIL]=example@gmail.com&data[merges][FNAME]=&data[merges][LNAME]=&data[merges][ADDRESS]=&data[merges][PHONE]=&data[merges][BIRTHDAY]=&data[merges][COMPANY]=&data[merges][INTEREST]=8&data[merges][INTERESTS]=Yes&data[merges][GROUPINGS][0][id]=6197&data[merges][GROUPINGS][0][unique_id]=458a556058&data[merges][GROUPINGS][0][name]=Interested in On the Metal podcast updates?&data[merges][GROUPINGS][0][groups]=Yes&data[merges][GROUPINGS][1][id]=6245&data[merges][GROUPINGS][1][unique_id]=f64af23d78&data[merges][GROUPINGS][1][name]=Interested in the Oxide newsletter?&data[merges][GROUPINGS][1][groups]=Yes&data[merges][GROUPINGS][2][id]=7518&data[merges][GROUPINGS][2][unique_id]=a9829c90a6&data[merges][GROUPINGS][2][name]=Interested in product updates?&data[merges][GROUPINGS][2][groups]=Yes&data[list_id]=8a6d823488"#;
+        let body = urlencoding::encode(body_str);
+
+        //let body = "type=subscribe&fired_at=2020-09-07+21%3A31%3A09";
+        let qs_non_strict = QSConfig::new(10, false);
+
+        // Parse the request body as a MailchimpWebhook.
+        let webhook: MailchimpWebhook = qs_non_strict.deserialize_bytes(body.as_bytes()).unwrap();
+
+        println!("{:?}", webhook);
+    }
+}

@@ -5,7 +5,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::from_utf8;
 
-use futures_util::TryStreamExt;
+use futures_util::stream::TryStreamExt;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
 use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repository};
