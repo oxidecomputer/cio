@@ -106,7 +106,7 @@ pub fn authenticate_github() -> Github {
     // Get the current working directory.
     let curdir = env::current_dir().unwrap();
     // Create the HTTP cache.
-    let http_cache = Box::new(FileBasedCache::new(curdir.join(".cache/github")));
+    let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME").unwrap())));
     Github::custom(
         "https://api.github.com",
         concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
@@ -136,7 +136,7 @@ pub fn authenticate_github_jwt() -> Github {
     let curdir = env::current_dir().unwrap();
 
     // Create the HTTP cache.
-    let http_cache = Box::new(FileBasedCache::new(curdir.join(".cache/github")));
+    let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME").unwrap())));
 
     let token_generator = InstallationTokenGenerator::new(installation_id, jwt.clone());
 

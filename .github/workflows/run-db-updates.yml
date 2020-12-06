@@ -32,7 +32,7 @@ jobs:
       - name: Cache github etags
         uses: actions/cache@v2
         with:
-          path: ${{ github.workspace }}/.cache
+          path: ~/.cache
           key: github-cache
       - name: Cache cargo registry
         uses: actions/cache@v2
