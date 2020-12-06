@@ -219,35 +219,31 @@ impl Client {
                     // Let's see if the data we wrote is there.
                     let github_id =
                         issue_comment.id.to_string().parse::<i64>().unwrap();
+                    let table = EventType::IssueComment.name();
+
+                    // Create the event.
+                    let ic = IssueComment {
+                        time: issue_comment.created_at,
+                        repo_name: repo_name.to_string(),
+                        sender: issue_comment.user.login.to_string(),
+                        action: "created".to_string(),
+                        issue_number: number,
+                        github_id,
+                        comment: issue_comment.body.to_string(),
+                    };
+
                     let exists = self
                         .event_exists(
-                            EventType::IssueComment.name(),
-                            issue_comment.created_at,
+                            table,
+                            ic.created_at,
                             github_id,
-                            "created",
+                            ic.action,
                         )
                         .await;
 
                     if !exists {
                         // Add the event.
-                        let issue_comment_created = IssueComment {
-                            time: issue_comment.created_at,
-                            repo_name: repo.name.to_string(),
-                            sender: issue_comment.user.login.to_string(),
-                            action: "created".to_string(),
-                            issue_number: issue
-                                .number
-                                .to_string()
-                                .parse::<i64>()
-                                .unwrap(),
-                            github_id,
-                            comment: issue_comment.body.to_string(),
-                        };
-                        self.query(
-                            issue_comment_created,
-                            EventType::IssueComment.name(),
-                        )
-                        .await;
+                        self.query(ic, table).await;
                     }
                 }
             }
@@ -566,7 +562,7 @@ impl Client {
                                     .await
                                     .unwrap()
                             }
-                        };
+                        }.check_runs;
 
                         // Iterate over the check runs.
                         for check_run in check_runs {
