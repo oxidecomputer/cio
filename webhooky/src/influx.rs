@@ -207,11 +207,6 @@ from(bucket:"github_webhooks")
 
             let repo_name = repo.name.to_string();
 
-            // TODO: remove this, it was only for fixing something.
-            if repo_name != "rfd" {
-                continue;
-            }
-
             let r = github.repo(repo.owner.login.to_string(), repo_name.to_string());
 
             // TODO: iterate over all the branches
