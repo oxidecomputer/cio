@@ -485,7 +485,7 @@ from(bucket:"github_webhooks")
 
         // Wait for all the handles.
         for handle in handles {
-            handle.await.unwrap();
+            handle.await.unwrap_or_else(|e| println!("[warn: handle failed: {:?}]", e));
         }
     }
 
