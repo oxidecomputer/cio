@@ -590,7 +590,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d5127820a1a65b21614f50349c789cdd64a2d4dd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#70fbae63464f7edf77f3aa99782df4e96a55b96f"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -611,7 +611,6 @@ dependencies = [
  "html2text",
  "hubcaps",
  "hyper",
- "influxdb",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio)",
  "nom_pem",
  "openapiv3",
@@ -1030,7 +1029,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "dropshot"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#abc85db852feb1e5d6bac23b4cb9b1d4f23d30fa"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#16213f64b649caaaa28bf8c02eb519138d8baf10"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -1056,13 +1055,14 @@ dependencies = [
  "slog-term",
  "tokio",
  "toml",
+ "urlencoding",
  "uuid",
 ]
 
 [[package]]
 name = "dropshot_endpoint"
 version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#abc85db852feb1e5d6bac23b4cb9b1d4f23d30fa"
+source = "git+https://github.com/jessfraz/dropshot?branch=fix-query#16213f64b649caaaa28bf8c02eb519138d8baf10"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1966,7 +1966,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d5127820a1a65b21614f50349c789cdd64a2d4dd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#70fbae63464f7edf77f3aa99782df4e96a55b96f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3971,6 +3971,12 @@ dependencies = [
  "percent-encoding 2.1.0",
  "serde",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9232eb53352b4442e40d7900465dfc534e8cb2dc8f18656fcb2ac16112b5593"
 
 [[package]]
 name = "utf-8"
