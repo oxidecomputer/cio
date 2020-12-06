@@ -63,7 +63,7 @@ impl Client {
         false
     }
 
-    pub async fn check_suite_exists(
+    pub async fn check_exists(
         &self,
         table: &str,
         github_id: i64,
@@ -486,11 +486,11 @@ impl Client {
                         // Check if this event already exists.
                         // Let's see if the data we wrote is there.
                         let exists = client
-                            .check_suite_exists(
+                            .check_exists(
                                 EventType::CheckSuite.name(),
                                 github_id,
-                                "requested",
-                                &c.sha,
+                                "created",
+                                &commit.sha,
                                 check_suite.created_at,
                             )
                             .await;
@@ -505,7 +505,7 @@ impl Client {
                                 // Do we need to do this??
                                 reference: repo.default_branch.to_string(),
                                 sha: commit.sha.to_string(),
-                                action: "requested".to_string(),
+                                action: "created".to_string(),
                                 github_id,
                                 status: "requested".to_string(),
                                 conclusion: "null".to_string(),
@@ -530,11 +530,11 @@ impl Client {
                             // Check if this event already exists.
                             // Let's see if the data we wrote is there.
                             let exists = client
-                                .check_suite_exists(
+                                .check_exists(
                                     EventType::CheckSuite.name(),
                                     github_id,
                                     "completed",
-                                    &c.sha,
+                                    &commit.sha,
                                     check_suite.updated_at,
                                 )
                                 .await;
@@ -567,6 +567,100 @@ impl Client {
                                     .query(
                                         completed_check_suite_event,
                                         EventType::CheckSuite.name(),
+                                    )
+                                    .await;
+                            }
+                        }
+
+                        // Get the check runs for this check suite.
+                        let check_runs =
+                            match r
+                                .checkruns()
+                                .list_for_suite(&github_id.to_string())
+                                .await
+                            {
+                                Ok(c) => c,
+                                Err(e) => {
+                                    // Check if we were rate limited here.
+                                    // If so we should sleep until the rate limit is over.
+                                    match e {
+                                        hubcaps::errors::Error::RateLimit {
+                                            reset,
+                                        } => {
+                                            // We got a rate limit error.
+                                            println!(
+                                        "got rate limited, sleeping for {}s",
+                                        reset.as_secs()
+                                    );
+                                            thread::sleep(reset.add(
+                                                time::Duration::from_secs(5),
+                                            ));
+                                        }
+                                        _ => panic!(
+                                    "github getting check suites failed: {}",
+                                    e
+                                ),
+                                    }
+
+                                    // Try to get the check runs again.
+                                    r.checkruns()
+                                        .list_for_suite(&github_id.to_string())
+                                        .await
+                                        .unwrap()
+                                }
+                            };
+
+                        // Iterate over the check runs.
+                        for check_run in check_runs {
+                            let check_run_github_id = check_suite
+                                .id
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap();
+
+                            // Add events for each check_run if it does not already exist.
+                            // Check if this event already exists.
+                            // Let's see if the data we wrote is there.
+                            let exists = client
+                                .check_exists(
+                                    EventType::CheckRun.name(),
+                                    check_run_github_id,
+                                    "created",
+                                    &commit.sha,
+                                    check_run.started_at,
+                                )
+                                .await;
+
+                            if !exists {
+                                // Add the event.
+                                let check_run_event = CheckRun {
+                                    time: check_run.started_at,
+                                    repo_name: repo.name.to_string(),
+                                    sender: sender.to_string(),
+                                    // TODO: iterate over all the branches
+                                    // Do we need to do this??
+                                    reference: repo.default_branch.to_string(),
+                                    sha: commit.sha.to_string(),
+                                    action: "created".to_string(),
+                                    github_id: check_run_github_id,
+                                    status: "queued".to_string(),
+                                    conclusion: "null".to_string(),
+                                    name: check_run.name.to_string(),
+
+                                    // Check suite details
+                                    head_branch: check_suite
+                                        .head_branch
+                                        .to_string(),
+                                    head_sha: check_suite.head_sha.to_string(),
+                                    app_name: check_suite.app.name.to_string(),
+                                    app_slug: check_suite.app.slug.to_string(),
+                                    check_suite_id: github_id,
+                                };
+
+                                client
+                                    .query(
+                                        check_run_event,
+                                        EventType::CheckRun.name(),
                                     )
                                     .await;
                             }
@@ -858,6 +952,42 @@ pub struct CheckSuite {
     pub slug: String,
     #[tag]
     pub name: String,
+
+    #[tag]
+    pub reference: String,
+    #[tag]
+    pub sha: String,
+
+    pub github_id: i64,
+}
+
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_run
+#[derive(InfluxDbWriteable, Clone, Debug)]
+pub struct CheckRun {
+    pub time: DateTime<Utc>,
+    #[tag]
+    pub repo_name: String,
+    #[tag]
+    pub sender: String,
+    #[tag]
+    pub action: String,
+    #[tag]
+    pub head_branch: String,
+    #[tag]
+    pub head_sha: String,
+    #[tag]
+    pub status: String,
+    #[tag]
+    pub conclusion: String,
+
+    #[tag]
+    pub name: String,
+    #[tag]
+    pub check_suite_id: i64,
+    #[tag]
+    pub app_slug: String,
+    #[tag]
+    pub app_name: String,
 
     #[tag]
     pub reference: String,

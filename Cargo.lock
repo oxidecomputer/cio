@@ -144,9 +144,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.34"
+version = "1.0.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf8dcb5b4bbaa28653b647d8c77bd4ed40183b48882e130c1f1ffb73de069fd7"
+checksum = "2c0df63cb2955042487fad3aefd2c6e3ae7389ac5dc1beb28921de0b69f779d4"
 
 [[package]]
 name = "arc-swap"
@@ -590,7 +590,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#42a7c12d2bb4e8ffddc47a0ae932f4f07b0d5e7e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#b5f4f6f41ff5d0f23de5ec9c4455f321a36aa338"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1633,7 +1633,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#620ccf02cb75c48173a670921557210137164e05"
+source = "git+https://github.com/jessfraz/hubcaps?branch=actions#278ba799f1e368e465d25fc53497f0adcde29b4b"
 dependencies = [
  "base64 0.12.3",
  "chrono 0.4.19",
@@ -1965,7 +1965,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#42a7c12d2bb4e8ffddc47a0ae932f4f07b0d5e7e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#b5f4f6f41ff5d0f23de5ec9c4455f321a36aa338"
 dependencies = [
  "proc-macro2",
  "quote",
