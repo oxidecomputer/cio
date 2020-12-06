@@ -363,6 +363,6 @@ mod tests {
         }
         };
 
-        assert_eq!(expected.to_string(), ret.unwrap().to_string());
+        assert_eq!(expected.to_string(), ret.to_string());
     }
 }
