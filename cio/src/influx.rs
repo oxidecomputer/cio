@@ -15,6 +15,8 @@ use crate::utils::{authenticate_github_jwt, list_all_github_repos};
 #[derive(Clone)]
 pub struct Client(pub InfluxClient);
 
+pub static FLUX_DATE_FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
+
 impl Client {
     pub fn new_from_env() -> Self {
         Client(
@@ -36,8 +38,6 @@ impl Client {
         repo_name: &str,
         time: DateTime<Utc>,
     ) -> bool {
-        let flux_date_format = "%Y-%m-%dT%H:%M:%SZ";
-
         let read_query = InfluxQuery::raw_read_query(&format!(
             r#"from(bucket:"github_webhooks")
                     |> range(start: {}, stop: {})
@@ -45,9 +45,9 @@ impl Client {
                     |> filter(fn: (r) => r.sha == "{}")
                     |> filter(fn: (r) => r.repo_name == "{}")
                     "#,
-            time.format(flux_date_format),
+            time.format(FLUX_DATE_FORMAT),
             // TODO: see how accurate the webhook server is.
-            (time + Duration::minutes(60)).format(flux_date_format),
+            (time + Duration::minutes(60)).format(FLUX_DATE_FORMAT),
             table,
             sha,
             repo_name
@@ -71,8 +71,6 @@ impl Client {
         sha: &str,
         time: DateTime<Utc>,
     ) -> bool {
-        let flux_date_format = "%Y-%m-%dT%H:%M:%SZ";
-
         let read_query = InfluxQuery::raw_read_query(&format!(
             r#"from(bucket:"github_webhooks")
                     |> range(start: {}, stop: {})
@@ -81,9 +79,9 @@ impl Client {
                     |> filter(fn: (r) => r.action == "{}")
                     |> filter(fn: (r) => r.sha == "{}")
                     "#,
-            time.format(flux_date_format),
+            time.format(FLUX_DATE_FORMAT),
             // TODO: see how accurate the webhook server is.
-            (time + Duration::minutes(60)).format(flux_date_format),
+            (time + Duration::minutes(60)).format(FLUX_DATE_FORMAT),
             table,
             github_id,
             action,
@@ -107,8 +105,6 @@ impl Client {
         action: &str,
         time: DateTime<Utc>,
     ) -> bool {
-        let flux_date_format = "%Y-%m-%dT%H:%M:%SZ";
-
         let read_query = InfluxQuery::raw_read_query(&format!(
             r#"from(bucket:"github_webhooks")
                     |> range(start: {}, stop: {})
@@ -116,9 +112,9 @@ impl Client {
                     |> filter(fn: (r) => r.github_id == {})
                     |> filter(fn: (r) => r.action == "{}")
                     "#,
-            time.format(flux_date_format),
+            time.format(FLUX_DATE_FORMAT),
             // TODO: see how accurate the webhook server is.
-            (time + Duration::minutes(60)).format(flux_date_format),
+            (time + Duration::minutes(60)).format(FLUX_DATE_FORMAT),
             table,
             github_id,
             action
@@ -583,23 +579,28 @@ impl Client {
                                 // Check if we were rate limited here.
                                 // If so we should sleep until the rate limit is over.
                                 match e {
-                                        hubcaps::errors::Error::RateLimit {
-                                            reset,
-                                        } => {
-                                            // We got a rate limit error.
-                                            println!(
+                                    hubcaps::errors::Error::RateLimit {
+                                        reset,
+                                    } => {
+                                        // We got a rate limit error.
+                                        println!(
                                         "got rate limited, sleeping for {}s",
                                         reset.as_secs()
                                     );
-                                            thread::sleep(reset.add(
+                                        thread::sleep(
+                                            reset.add(
                                                 time::Duration::from_secs(5),
-                                            ));
-                                        }
-                                        _ => println!(
-                                    "[warn] github getting check runs failed: {}",
-                                    e
-                                ),
+                                            ),
+                                        );
                                     }
+                                    _ => {
+                                        println!(
+                                    "[warn]: github getting check runs failed: {}, check_suite: {:?}",
+                                    e, check_suite
+                                );
+                                        continue;
+                                    }
+                                }
 
                                 // Try to get the check runs again.
                                 r.checkruns()
@@ -676,7 +677,7 @@ impl Client {
                                 == hubcaps::checks::CheckRunState::Completed
                             {
                                 if check_run.completed_at.is_none() {
-                                    println!("[warn] check_run says it is completed but it does not have a completed_at for: {:?}", check_run);
+                                    println!("[warn]: check_run says it is completed but it does not have a completed_at for: {:?}", check_run);
                                     continue;
                                 }
 
