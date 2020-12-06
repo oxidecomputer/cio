@@ -1914,15 +1914,13 @@ impl NewRFD {
             // Get the commit date.
             let commits = repo.commits().list(&rfd_dir).await.unwrap();
             let commit = commits.get(0).unwrap();
-            let commit_date = format!("{}-00:00", commit.commit.author.date);
-            self.commit_date = DateTime::parse_from_str(&commit_date, "%Y-%m-%dT%H:%M:%SZ%:z").unwrap().with_timezone(&Utc);
+            self.commit_date = commit.commit.author.date;
         } else {
             // Get the branch.
             let commit = repo.commits().get(&branch).await.unwrap();
             // TODO: we should not have to duplicate this code below
             // but the references were mad...
-            let commit_date = format!("{}-00:00", commit.commit.author.date);
-            self.commit_date = DateTime::parse_from_str(&commit_date, "%Y-%m-%dT%H:%M:%SZ%:z").unwrap().with_timezone(&Utc);
+            self.commit_date = commit.commit.author.date;
         }
 
         // Parse the HTML.
