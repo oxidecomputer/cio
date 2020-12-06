@@ -233,12 +233,7 @@ impl Client {
                     };
 
                     let exists = self
-                        .event_exists(
-                            table,
-                            ic.created_at,
-                            github_id,
-                            ic.action,
-                        )
+                        .event_exists(table, ic.time, github_id, &ic.action)
                         .await;
 
                     if !exists {
@@ -263,6 +258,11 @@ impl Client {
                 continue;
             }
 
+            let repo_name = repo.name.to_string();
+            // TODO: iterate over all the branches
+            // Do we need to do this??
+            let reference = repo.default_branch.to_string();
+
             // Skip the RFD repo for now.
             // TODO: remove this
             if repo.name.to_string() == "rfd" {
@@ -271,10 +271,11 @@ impl Client {
 
             let client = self.clone();
             let handle = tokio::task::spawn(async move {
+                // We need to do this here since we are in an async loop.
                 let github = authenticate_github_jwt();
-
                 let r = github
                     .repo(repo.owner.login.to_string(), repo.name.to_string());
+
                 let commits = r
                     .commits()
                     .iter()
@@ -319,13 +320,9 @@ impl Client {
                     };
 
                     // Add events for each commit if it does not already exist.
-                    // Check if this event already exists.
-                    // Let's see if the data we wrote is there.
                     let time = commit.commit.author.date;
-                    let exists = client
-                        .commit_exists(time, &commit.sha, &repo.name)
-                        .await;
 
+                    // Get the sender.
                     let sender = commit.author.login.to_string();
                     if sender.is_empty() {
                         // Make sure we don't have an empty sender!
@@ -337,42 +334,52 @@ impl Client {
                         continue;
                     }
 
-                    if !exists {
-                        // Get the changed files.
-                        let mut added: Vec<String> = Default::default();
-                        let mut modified: Vec<String> = Default::default();
-                        let mut removed: Vec<String> = Default::default();
-                        for file in commit.files {
-                            if file.status == "added" {
-                                added.push(file.filename.to_string());
-                            }
-                            if file.status == "modified" {
-                                modified.push(file.filename.to_string());
-                            }
-                            if file.status == "removed" {
-                                removed.push(file.filename.to_string());
-                            }
+                    let commit_sha = commit.sha.to_string();
+
+                    // Get the changed files.
+                    let mut added: Vec<String> = Default::default();
+                    let mut modified: Vec<String> = Default::default();
+                    let mut removed: Vec<String> = Default::default();
+                    for file in commit.files {
+                        if file.status == "added" {
+                            added.push(file.filename.to_string());
                         }
+                        if file.status == "modified" {
+                            modified.push(file.filename.to_string());
+                        }
+                        if file.status == "removed" {
+                            removed.push(file.filename.to_string());
+                        }
+                    }
 
+                    // Create the event.
+                    let push = Push {
+                        time,
+                        repo_name: repo_name.to_string(),
+                        sender: sender.to_string(),
+                        reference: reference.to_string(),
+                        sha: commit_sha.to_string(),
+
+                        added: added.join(",").to_string(),
+                        modified: modified.join(",").to_string(),
+                        removed: removed.join(",").to_string(),
+
+                        additions: commit.stats.additions,
+                        deletions: commit.stats.deletions,
+                        total: commit.stats.total,
+
+                        message: commit.commit.message.to_string(),
+                    };
+
+                    // Check if this event already exists.
+                    // Let's see if the data we wrote is there.
+                    let exists = client
+                        .commit_exists(push.time, &push.sha, &push.repo_name)
+                        .await;
+
+                    if !exists {
                         // Add the event.
-                        let push_event = Push {
-                            time,
-                            repo_name: repo.name.to_string(),
-                            sender: sender.to_string(),
-                            // TODO: iterate over all the branches
-                            // Do we need to do this??
-                            reference: repo.default_branch.to_string(),
-                            sha: commit.sha.to_string(),
-                            added: added.join(",").to_string(),
-                            modified: modified.join(",").to_string(),
-                            removed: removed.join(",").to_string(),
-                            additions: commit.stats.additions,
-                            deletions: commit.stats.deletions,
-                            total: commit.stats.total,
-                            message: commit.commit.message.to_string(),
-                        };
-
-                        client.query(push_event, EventType::Push.name()).await;
+                        client.query(push, EventType::Push.name()).await;
                     }
 
                     // Handle the check_suite events for each commit.
@@ -562,7 +569,8 @@ impl Client {
                                     .await
                                     .unwrap()
                             }
-                        }.check_runs;
+                        }
+                        .check_runs;
 
                         // Iterate over the check runs.
                         for check_run in check_runs {
