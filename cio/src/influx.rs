@@ -475,6 +475,13 @@ impl Client {
                         let github_id =
                             check_suite.id.to_string().parse::<i64>().unwrap();
 
+                        if check_suite.app.id <= 0 {
+                            // Continue early.
+                            println!("app id for check suite is 0 for https://github.com/{}/{}/commits/{}", repo.owner.login, repo.name,
+                            c.sha);
+                            continue;
+                        }
+
                         // Add events for each check_suite if it does not already exist.
                         // Check if this event already exists.
                         // Let's see if the data we wrote is there.
