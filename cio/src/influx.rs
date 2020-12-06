@@ -573,17 +573,16 @@ impl Client {
                         }
 
                         // Get the check runs for this check suite.
-                        let check_runs =
-                            match r
-                                .checkruns()
-                                .list_for_suite(&github_id.to_string())
-                                .await
-                            {
-                                Ok(c) => c,
-                                Err(e) => {
-                                    // Check if we were rate limited here.
-                                    // If so we should sleep until the rate limit is over.
-                                    match e {
+                        let check_runs = match r
+                            .checkruns()
+                            .list_for_suite(&github_id.to_string())
+                            .await
+                        {
+                            Ok(c) => c,
+                            Err(e) => {
+                                // Check if we were rate limited here.
+                                // If so we should sleep until the rate limit is over.
+                                match e {
                                         hubcaps::errors::Error::RateLimit {
                                             reset,
                                         } => {
@@ -596,19 +595,19 @@ impl Client {
                                                 time::Duration::from_secs(5),
                                             ));
                                         }
-                                        _ => panic!(
-                                    "github getting check suites failed: {}",
+                                        _ => println!(
+                                    "[warn] github getting check runs failed: {}",
                                     e
                                 ),
                                     }
 
-                                    // Try to get the check runs again.
-                                    r.checkruns()
-                                        .list_for_suite(&github_id.to_string())
-                                        .await
-                                        .unwrap()
-                                }
-                            };
+                                // Try to get the check runs again.
+                                r.checkruns()
+                                    .list_for_suite(&github_id.to_string())
+                                    .await
+                                    .unwrap()
+                            }
+                        };
 
                         // Iterate over the check runs.
                         for check_run in check_runs {
