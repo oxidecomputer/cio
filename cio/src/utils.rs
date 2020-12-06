@@ -2,8 +2,11 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::io::Write;
+use std::ops::Add;
 use std::path::PathBuf;
 use std::str::from_utf8;
+use std::thread;
+use std::time;
 
 use futures_util::stream::TryStreamExt;
 use hubcaps::http_cache::FileBasedCache;
@@ -246,74 +249,78 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, file_path: 
             println!("[github content] Updated file at {}", file_path);
         }
         Err(e) => {
-            let error_string = format!("{:?}", e);
-            if error_string.contains("RateLimit") {
-                // Return early.
-                return;
-            }
-            if error_string.contains("too_large") {
-                // The file is too big for us to get it's contents through this API.
-                // The error suggests we use the Git Data API but we need the file sha for
-                // that.
-                // TODO: make this less awful.
-                // Get all the items in the directory and try to find our file and get the sha
-                // for it so we can update it.
-                let mut path = PathBuf::from(file_path);
-                path.pop();
+            match e {
+                hubcaps::errors::Error::RateLimit { reset } => {
+                    // We got a rate limit error.
+                    println!("got rate limited, sleeping for {}s", reset.as_secs());
+                    thread::sleep(reset.add(time::Duration::from_secs(5)));
+                }
+                hubcaps::errors::Error::Fault { code: _, error } => {
+                    if error.message.contains("too_large") {
+                        // The file is too big for us to get it's contents through this API.
+                        // The error suggests we use the Git Data API but we need the file sha for
+                        // that.
+                        // TODO: make this less awful.
+                        // Get all the items in the directory and try to find our file and get the sha
+                        // for it so we can update it.
+                        let mut path = PathBuf::from(file_path);
+                        path.pop();
 
-                for item in repo
-                    .content()
-                    .iter(path.to_str().unwrap(), "master")
-                    .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
-                    .await
-                    .unwrap()
-                {
-                    if file_path.trim_start_matches('/') != item.path {
-                        // Continue early.
-                        continue;
-                    }
+                        for item in repo
+                            .content()
+                            .iter(path.to_str().unwrap(), "master")
+                            .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
+                            .await
+                            .unwrap()
+                        {
+                            if file_path.trim_start_matches('/') != item.path {
+                                // Continue early.
+                                continue;
+                            }
 
-                    // Otherwise, this is our file.
-                    // We have the sha we can see if the files match using the
-                    // Git Data API.
-                    let blob = repo.git().blob(&item.sha).await.unwrap();
-                    // Base64 decode the contents.
-                    // TODO: move this logic to hubcaps.
-                    let v = blob.content.replace("\n", "");
-                    let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
-                    let decoded_content = decoded.trim();
+                            // Otherwise, this is our file.
+                            // We have the sha we can see if the files match using the
+                            // Git Data API.
+                            let blob = repo.git().blob(&item.sha).await.unwrap();
+                            // Base64 decode the contents.
+                            // TODO: move this logic to hubcaps.
+                            let v = blob.content.replace("\n", "");
+                            let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
+                            let decoded_content = decoded.trim();
 
-                    // Compare the content to the decoded content and see if we need to update them.
-                    if content == decoded_content {
-                        // They are the same so we can return early, we do not need to update the
-                        // file.
-                        println!("[github content] File contents at {} are the same, no update needed", file_path);
+                            // Compare the content to the decoded content and see if we need to update them.
+                            if content == decoded_content {
+                                // They are the same so we can return early, we do not need to update the
+                                // file.
+                                println!("[github content] File contents at {} are the same, no update needed", file_path);
+                                return;
+                            }
+
+                            // We can actually update the file since we have the sha.
+                            repo.content()
+                                .update(
+                                    file_path,
+                                    &content,
+                                    &format!(
+                                        "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
+                                        file_path
+                                    ),
+                                    &item.sha,
+                                )
+                                .await
+                                .ok();
+
+                            println!("[github content] Updated file at {}", file_path);
+
+                            // We can break the loop now.
+                            break;
+                        }
+
                         return;
                     }
-
-                    // We can actually update the file since we have the sha.
-                    repo.content()
-                        .update(
-                            file_path,
-                            &content,
-                            &format!(
-                                "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
-                                file_path
-                            ),
-                            &item.sha,
-                        )
-                        .await
-                        .ok();
-
-                    println!("[github content] Updated file at {}", file_path);
-
-                    // We can break the loop now.
-                    break;
                 }
-
-                return;
+                _ => println!("[github content] Getting the file at {} failed: {:?}", file_path, e),
             }
-            println!("[github content] Getting the file at {} failed: {:?}", file_path, e);
 
             // Create the file in the repo. Ignore failure.
             repo.content()

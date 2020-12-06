@@ -584,7 +584,6 @@ dependencies = [
  "slack_api",
  "tokio",
  "toml",
- "urlencoding",
  "yup-oauth2",
  "zip",
 ]
@@ -592,7 +591,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#b941d1e1d5ed08c1e934cbe98e655471eb85f49f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d5127820a1a65b21614f50349c789cdd64a2d4dd"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -626,6 +625,7 @@ dependencies = [
  "sendgrid-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
+ "serde_qs 0.7.0",
  "sheets 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack_api",
  "tokio",
@@ -1967,7 +1967,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#b941d1e1d5ed08c1e934cbe98e655471eb85f49f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d5127820a1a65b21614f50349c789cdd64a2d4dd"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3972,12 +3972,6 @@ dependencies = [
  "percent-encoding 2.1.0",
  "serde",
 ]
-
-[[package]]
-name = "urlencoding"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9232eb53352b4442e40d7900465dfc534e8cb2dc8f18656fcb2ac16112b5593"
 
 [[package]]
 name = "utf-8"

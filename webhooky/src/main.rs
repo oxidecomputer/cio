@@ -164,34 +164,34 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     // Save all events to influxdb.
     match event_type {
         EventType::Push => {
-            println!("[{}] {:?}", event_type.name(), event);
+            println!("[{}] {:#?}", event_type.name(), event);
             event.as_influx_push(&api_context.influx, &api_context.github).await;
         }
         EventType::PullRequest => {
-            println!("[{}] {:?}", event_type.name(), event);
+            println!("[{}] {:#?}", event_type.name(), event);
             let influx_event = event.as_influx_pull_request();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::PullRequestReviewComment => {
-            println!("[{}] {:?}", event_type.name(), event);
+            println!("[{}] {:#?}", event_type.name(), event);
             let influx_event = event.as_influx_pull_request_review_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::Issues => {
-            println!("[{}] {:?}", event_type.name(), event);
+            println!("[{}] {:#?}", event_type.name(), event);
             let influx_event = event.as_influx_issue();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::IssueComment => {
-            println!("[{}] {:?}", event_type.name(), event);
+            println!("[{}] {:#?}", event_type.name(), event);
             let influx_event = event.as_influx_issue_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckSuite => {
-            println!("[{}] {:?}", event_type.name(), event);
+            println!("[{}] {:#?}", event_type.name(), event);
         }
         EventType::CheckRun => {
-            println!("[{}] {:?}", event_type.name(), event);
+            println!("[{}] {:#?}", event_type.name(), event);
         }
         _ => (),
     }
@@ -491,7 +491,7 @@ async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Quer
 
     let event = query_args.into_inner();
 
-    println!("[mailchimp] {:?}", event);
+    println!("[mailchimp] {:#?}", event);
 
     if event.webhook_type != *"subscribe" {
         let msg = format!("Aborted, not a `subscribe` event, got `{}`", event.webhook_type);
