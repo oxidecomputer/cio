@@ -55,6 +55,7 @@ async fn main() -> Result<(), String> {
      * allowing this metadata to live right alongside the handler function.
      */
     api.register(ping).unwrap();
+    api.register(github_rate_limit).unwrap();
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_webhooks).unwrap();
     api.register(ping_mailchimp_webhooks).unwrap();
