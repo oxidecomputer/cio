@@ -5,12 +5,12 @@ use std::{thread, time};
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
+use cio_api::utils::{authenticate_github_jwt, list_all_github_repos};
 use futures_util::stream::TryStreamExt;
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client as InfluxClient, Query as InfluxQuery};
 
 use crate::event_types::EventType;
-use crate::utils::{authenticate_github_jwt, list_all_github_repos};
 
 #[derive(Clone)]
 pub struct Client(pub InfluxClient);

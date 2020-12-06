@@ -9,8 +9,6 @@ pub mod certs;
 pub mod configs;
 pub mod core;
 pub mod db;
-pub mod event_types;
-pub mod influx;
 pub mod journal_clubs;
 pub mod mailing_list;
 pub mod models;
