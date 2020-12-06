@@ -150,33 +150,31 @@ impl Client {
 
             for issue in issues {
                 // Add events for each issue if it does not already exist.
+                let github_id = issue.id.to_string().parse::<i64>().unwrap();
+                let repo_name = repo.name.to_string();
+                let sender = issue.user.login.to_string();
+                let number = issue.number.to_string().parse::<i64>().unwrap();
+                let table = EventType::Issues.name();
+
+                // Create the event.
+                let mut i = Issue {
+                    time: issue.created_at,
+                    repo_name: repo_name.to_string(),
+                    sender: sender.to_string(),
+                    action: "opened".to_string(),
+                    number,
+                    github_id,
+                };
+
                 // Check if this event already exists.
                 // Let's see if the data we wrote is there.
-                let github_id = issue.id.to_string().parse::<i64>().unwrap();
                 let exists = self
-                    .event_exists(
-                        EventType::Issues.name(),
-                        issue.created_at,
-                        github_id,
-                        "opened",
-                    )
+                    .event_exists(table, i.time, github_id, &i.action)
                     .await;
 
                 if !exists {
                     // Add the event.
-                    let issue_created = Issue {
-                        time: issue.created_at,
-                        repo_name: repo.name.to_string(),
-                        sender: issue.user.login.to_string(),
-                        action: "opened".to_string(),
-                        number: issue
-                            .number
-                            .to_string()
-                            .parse::<i64>()
-                            .unwrap(),
-                        github_id,
-                    };
-                    self.query(issue_created, EventType::Issues.name()).await;
+                    self.query(i.clone(), table).await;
                 }
 
                 if issue.closed_at.is_some() {
@@ -186,32 +184,19 @@ impl Client {
                         closed_by = issue.user.login.to_string();
                     }
 
+                    // Modify the event with the new data.
+                    i.time = closed_at;
+                    i.sender = closed_by;
+                    i.action = "closed".to_string();
+
                     // Check if we already have the event.
                     let exists = self
-                        .event_exists(
-                            EventType::Issues.name(),
-                            closed_at,
-                            github_id,
-                            "closed",
-                        )
+                        .event_exists(table, i.time, github_id, &i.action)
                         .await;
 
                     if !exists {
                         // Add the event.
-                        let issue_closed = Issue {
-                            time: closed_at,
-                            repo_name: repo.name.to_string(),
-                            sender: closed_by,
-                            action: "closed".to_string(),
-                            number: issue
-                                .number
-                                .to_string()
-                                .parse::<i64>()
-                                .unwrap(),
-                            github_id,
-                        };
-                        self.query(issue_closed, EventType::Issues.name())
-                            .await;
+                        self.query(i, table).await;
                     }
                 }
 
