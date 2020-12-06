@@ -42,6 +42,7 @@
  * }
  * ```
  */
+#![allow(clippy::field_reassign_with_default)]
 use std::collections::HashMap;
 use std::error;
 use std::fmt;

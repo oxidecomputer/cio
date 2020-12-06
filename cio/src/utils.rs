@@ -31,9 +31,9 @@ pub fn write_file(file: PathBuf, contents: String) {
 
 /// Get a GSuite token.
 pub async fn get_gsuite_token() -> AccessToken {
+    let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
     // Get the GSuite credentials file.
-    let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or("".to_string());
-    let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or("".to_string());
+    let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or_default();
 
     if gsuite_credential_file.is_empty() && !gsuite_key.is_empty() {
         let b = base64::decode(gsuite_key).unwrap();
@@ -133,7 +133,7 @@ pub fn authenticate_github_jwt() -> Github {
     // Create the HTTP cache.
     let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME").unwrap())));
 
-    let token_generator = InstallationTokenGenerator::new(installation_id, jwt.clone());
+    let token_generator = InstallationTokenGenerator::new(installation_id, jwt);
 
     Github::custom(
         "https://api.github.com",
@@ -281,8 +281,7 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, file_path: 
                     // TODO: move this logic to hubcaps.
                     let v = blob.content.replace("\n", "");
                     let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
-                    let file_content: Vec<u8> = decoded.into();
-                    let decoded_content = file_content.trim();
+                    let decoded_content = decoded.trim();
 
                     // Compare the content to the decoded content and see if we need to update them.
                     if content == decoded_content {

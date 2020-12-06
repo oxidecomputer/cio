@@ -1,3 +1,4 @@
+#![allow(clippy::field_reassign_with_default)]
 use std::any::Any;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -16,7 +17,7 @@ use cio_api::event_types::EventType;
 use cio_api::influx;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
-use cio_api::slack::{get_public_relations_channel_post_url, post_to_channel};
+//use cio_api::slack::{get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, get_gsuite_token, github_org};
 
 #[tokio::main]
@@ -164,26 +165,26 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     match event_type {
         EventType::Push => {
             println!("[{}] {:?}", event_type.name(), event);
-            event.into_influx_push(&api_context.influx, &api_context.github).await;
+            event.as_influx_push(&api_context.influx, &api_context.github).await;
         }
         EventType::PullRequest => {
             println!("[{}] {:?}", event_type.name(), event);
-            let influx_event = event.into_influx_pull_request();
+            let influx_event = event.as_influx_pull_request();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::PullRequestReviewComment => {
             println!("[{}] {:?}", event_type.name(), event);
-            let influx_event = event.into_influx_pull_request_review_comment();
+            let influx_event = event.as_influx_pull_request_review_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::Issues => {
             println!("[{}] {:?}", event_type.name(), event);
-            let influx_event = event.into_influx_issue();
+            let influx_event = event.as_influx_issue();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::IssueComment => {
             println!("[{}] {:?}", event_type.name(), event);
-            let influx_event = event.into_influx_issue_comment();
+            let influx_event = event.as_influx_issue_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckSuite => {
@@ -340,7 +341,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // a PR. Instead, below, the state of the RFD would be moved to `published`.
         // TODO: see if we drop events if we do we might want to remove the check with
         // the old state and just do it everytime an RFD is in discussion.
-        if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != repo.default_branch.to_string() {
+        if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != repo.default_branch {
             // First, we need to make sure we don't already have a pull request open.
             let pulls = github_repo
                 .pulls()
@@ -391,7 +392,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
         // If the RFD was merged into the default branch, but the RFD state is not `published`,
         // update the state of the RFD in GitHub to show it as `published`.
-        if branch == repo.default_branch.to_string() && rfd.state != "published" {
+        if branch == repo.default_branch && rfd.state != "published" {
             println!(
                 "[github] RFD {} is the branch {} but its state is {}, updating it to `published`",
                 rfd.number_string, repo.default_branch, old_rfd_state,
@@ -456,8 +457,8 @@ async fn github_rate_limit(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<
     let dur = reset_time - Utc::now();
 
     Ok(HttpResponseOk(GitHubRateLimit {
-        limit: response.resources.core.limit.into(),
-        remaining: response.resources.core.remaining.into(),
+        limit: response.resources.core.limit,
+        remaining: response.resources.core.remaining,
         reset: HumanTime::from(dur).to_string(),
     }))
 }
@@ -486,13 +487,13 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResp
 }]
 async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // TODO: share the database connection in the context.
-    let db = Database::new();
+    //let db = Database::new();
 
     let event = query_args.into_inner();
 
     println!("[mailchimp] {:?}", event);
 
-    if event.webhook_type != "subscribe".to_string() {
+    if event.webhook_type != *"subscribe" {
         let msg = format!("Aborted, not a `subscribe` event, got `{}`", event.webhook_type);
         println!("[mailchimp]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
@@ -636,14 +637,14 @@ pub struct GitHubWebhook {
 
 impl GitHubWebhook {
     // Push an event for every commit.
-    pub async fn into_influx_push(&self, influx: &influx::Client, github: &Github) {
+    pub async fn as_influx_push(&self, influx: &influx::Client, github: &Github) {
         let repo = self.repository.as_ref().unwrap();
 
         for commit in &self.commits {
             if commit.distinct {
                 let c = github.repo(repo.owner.login.to_string(), repo.name.to_string()).commits().get(&commit.id).await.unwrap();
 
-                if c.sha.to_string() != commit.id.to_string() {
+                if c.sha != commit.id {
                     // We have a problem.
                     panic!("commit sha mismatch: {} {}", c.sha.to_string(), commit.id.to_string());
                 }
@@ -668,7 +669,7 @@ impl GitHubWebhook {
         }
     }
 
-    pub fn into_influx_pull_request(&self) -> influx::PullRequest {
+    pub fn as_influx_pull_request(&self) -> influx::PullRequest {
         influx::PullRequest {
             time: Utc::now(),
             repo_name: self.repository.as_ref().unwrap().name.to_string(),
@@ -682,7 +683,7 @@ impl GitHubWebhook {
         }
     }
 
-    pub fn into_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
+    pub fn as_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
         influx::PullRequestReviewComment {
             time: Utc::now(),
             repo_name: self.repository.as_ref().unwrap().name.to_string(),
@@ -694,7 +695,7 @@ impl GitHubWebhook {
         }
     }
 
-    pub fn into_influx_issue(&self) -> influx::Issue {
+    pub fn as_influx_issue(&self) -> influx::Issue {
         influx::Issue {
             time: Utc::now(),
             repo_name: self.repository.as_ref().unwrap().name.to_string(),
@@ -705,7 +706,7 @@ impl GitHubWebhook {
         }
     }
 
-    pub fn into_influx_issue_comment(&self) -> influx::IssueComment {
+    pub fn as_influx_issue_comment(&self) -> influx::IssueComment {
         influx::IssueComment {
             time: Utc::now(),
             repo_name: self.repository.as_ref().unwrap().name.to_string(),
@@ -771,7 +772,7 @@ impl GitHubCommit {
     }
 }
 
-fn filter(files: &Vec<String>, dir: &str) -> Vec<String> {
+fn filter(files: &[String], dir: &str) -> Vec<String> {
     let mut in_dir: Vec<String> = Default::default();
     for file in files {
         if file.starts_with(dir) {

@@ -330,7 +330,7 @@ from(bucket:"github_webhooks")
                         let github_id = check_suite.id.to_string().parse::<i64>().unwrap();
                         let table = EventType::CheckSuite.name();
 
-                        if check_suite.app.id <= 0 {
+                        if check_suite.app.id == 0 {
                             // Continue early.
                             println!("[warn]: app id for check suite is 0 for https://github.com/{}/{}/commits/{}", repo.owner.login, repo.name, c.sha);
                             continue;
@@ -366,7 +366,7 @@ from(bucket:"github_webhooks")
                         }
 
                         // Add the completed event if it is completed.
-                        if check_suite.status.to_string() == "completed" {
+                        if check_suite.status == "completed" {
                             // Modify the event.
                             cs.time = check_suite.updated_at;
                             cs.action = "completed".to_string();

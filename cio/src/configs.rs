@@ -184,7 +184,7 @@ pub mod null_date_format {
         D: Deserializer<'de>,
     {
         // TODO: actually get the Unix timestamp.
-        let s = String::deserialize(deserializer).unwrap_or("2020-12-03T15:49:27Z".to_string());
+        let s = String::deserialize(deserializer).unwrap_or_else(|_| "2020-12-03T15:49:27Z".to_string());
 
         // Try to convert from the string to an int, in case we have a numerical
         // time stamp.
@@ -329,8 +329,8 @@ impl UpdateAirtableRecord<User> for User {
         // group ids and see if we find a match.
         for group in &self.groups {
             // Iterate over the groups to get the ID.
-            for (_id, g) in &groups {
-                if group.to_string() == g.fields.name {
+            for g in groups.values() {
+                if *group == g.fields.name {
                     // Append the ID to our links.
                     links.push(g.id.to_string());
                     // Break the loop and return early.
@@ -346,7 +346,7 @@ impl UpdateAirtableRecord<User> for User {
         // TODO: make this more dry so we do not call it every single damn time.
         let buildings = Buildings::get_from_airtable().await;
         // Iterate over the buildings to get the ID.
-        for (_id, building) in &buildings {
+        for building in buildings.values() {
             if self.building == building.fields.name {
                 // Set the ID.
                 self.link_to_building = vec![building.id.to_string()];
@@ -499,7 +499,7 @@ impl GroupConfig {
 impl UpdateAirtableRecord<Group> for Group {
     async fn update_airtable_record(&mut self, record: Group) {
         // Make sure we don't mess with the members since that is populated by the Users table.
-        self.members = record.members.clone();
+        self.members = record.members;
     }
 }
 
@@ -549,7 +549,7 @@ impl UpdateAirtableRecord<Building> for Building {
         // Make sure we don't mess with the employees since that is populated by the Users table.
         self.employees = record.employees.clone();
         // Make sure we don't mess with the conference_rooms since that is populated by the Conference Rooms table.
-        self.conference_rooms = record.conference_rooms.clone();
+        self.conference_rooms = record.conference_rooms;
     }
 }
 
@@ -588,7 +588,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
         // TODO: make this more dry so we do not call it every single damn time.
         let buildings = Buildings::get_from_airtable().await;
         // Iterate over the buildings to get the ID.
-        for (_id, building) in &buildings {
+        for building in buildings.values() {
             if self.building == building.fields.name {
                 // Set the ID.
                 self.link_to_building = vec![building.id.to_string()];

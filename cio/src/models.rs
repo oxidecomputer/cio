@@ -977,7 +977,7 @@ impl UpdateAirtableRecord<AuthUser> for AuthUser {
     async fn update_airtable_record(&mut self, record: AuthUser) {
         // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
         self.link_to_people = record.link_to_people.clone();
-        self.link_to_auth_user_logins = record.link_to_auth_user_logins.clone();
+        self.link_to_auth_user_logins = record.link_to_auth_user_logins;
     }
 }
 
@@ -1184,7 +1184,7 @@ impl JournalClubMeeting {
 impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
     async fn update_airtable_record(&mut self, record: JournalClubMeeting) {
         // Set the papers field, since it is pre-populated as table links.
-        self.papers = record.papers.clone();
+        self.papers = record.papers;
     }
 }
 
@@ -1398,7 +1398,7 @@ impl Default for NewMailingListSubscriber {
 impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
     async fn update_airtable_record(&mut self, record: MailingListSubscriber) {
         // Set the link_to_people from the original so it stays intact.
-        self.link_to_people = record.link_to_people.clone();
+        self.link_to_people = record.link_to_people;
     }
 }
 
@@ -1557,7 +1557,7 @@ pub mod deserialize_null_string {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer).unwrap_or("".to_string());
+        let s = String::deserialize(deserializer).unwrap_or_default();
 
         Ok(s)
     }
@@ -1741,7 +1741,7 @@ impl NewRFD {
 
         // Parse the RFD directory as an int.
         let (dir, _) = file_path.trim_start_matches("rfd/").split_once('/').unwrap();
-        let number = dir.trim_start_matches("0").parse::<i32>().unwrap();
+        let number = dir.trim_start_matches('0').parse::<i32>().unwrap();
 
         let number_string = NewRFD::generate_number_string(number);
 
@@ -1819,7 +1819,7 @@ impl NewRFD {
         let re = Regex::new(r"(?m)(state:.*$)").unwrap();
         match re.find(&content) {
             Some(v) => return v.as_str().replace("state:", "").trim().to_string(),
-            None => return Default::default(),
+            None => Default::default(),
         }
     }
 
@@ -1827,7 +1827,7 @@ impl NewRFD {
         let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
         match re.find(&content) {
             Some(v) => return v.as_str().replace("discussion:", "").trim().to_string(),
-            None => return Default::default(),
+            None => Default::default(),
         }
     }
 
@@ -1859,7 +1859,7 @@ impl NewRFD {
             let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
             match re.find(&content) {
                 Some(v) => return v.as_str().replace("authors:", "").trim().to_string(),
-                None => return Default::default(),
+                None => Default::default(),
             }
         }
 
@@ -2007,7 +2007,7 @@ impl UpdateAirtableRecord<RFD> for RFD {
     async fn update_airtable_record(&mut self, record: RFD) {
         // Set the Link to People from the original so it stays intact.
         self.milestones = record.milestones.clone();
-        self.relevant_components = record.relevant_components.clone();
+        self.relevant_components = record.relevant_components;
         // Airtable can only hold 100,000 chars. IDK which one is that long but LOL
         // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
         self.content = truncate(&self.content, 100000);

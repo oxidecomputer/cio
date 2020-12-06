@@ -4,7 +4,6 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
-use serde_tokenstream::Error;
 use syn::{Field, ItemStruct};
 
 #[derive(Deserialize, Debug)]
@@ -22,13 +21,10 @@ struct Metadata {
 
 #[proc_macro_attribute]
 pub fn db_struct(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    match do_db_struct(attr.into(), item.into()) {
-        Ok(result) => result.into(),
-        Err(err) => err.to_compile_error().into(),
-    }
+    do_db_struct(attr.into(), item.into()).into()
 }
 
-fn do_db_struct(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
+fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
     let metadata = from_tokenstream::<Metadata>(&attr).unwrap();
     let new_name = format_ident!("{}", metadata.new_name);
     let new_name_plural = format_ident!("{}s", metadata.new_name);
@@ -197,7 +193,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Err
 
         #airtable
     );
-    Ok(new_struct)
+    new_struct
 }
 
 #[cfg(test)]

@@ -77,7 +77,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
         // Use the Cloudflare API for this.
 
         // We need the root of the domain not a subdomain.
-        let domain_parts: Vec<&str> = domain.split(".").collect();
+        let domain_parts: Vec<&str> = domain.split('.').collect();
         let root_domain = format!("{}.{}", domain_parts[domain_parts.len() - 2], domain_parts[domain_parts.len() - 1]);
 
         // Get the zone ID for the domain.
@@ -246,8 +246,8 @@ impl NewCertificate {
     pub fn populate_from_disk(&mut self, dir: &str) {
         let path = self.get_path(dir);
 
-        self.certificate = fs::read_to_string(path.clone().join("fullchain.pem")).unwrap_or("".to_string());
-        self.private_key = fs::read_to_string(path.clone().join("privkey.pem")).unwrap_or("".to_string());
+        self.certificate = fs::read_to_string(path.join("fullchain.pem")).unwrap_or_default();
+        self.private_key = fs::read_to_string(path.join("privkey.pem")).unwrap_or_default();
 
         if !self.certificate.is_empty() {
             let exp_date = self.expiration_date();
@@ -257,7 +257,7 @@ impl NewCertificate {
     }
 
     fn get_path(&self, dir: &str) -> PathBuf {
-        Path::new(dir).join(self.domain.replace("*.", "wildcard.").to_string())
+        Path::new(dir).join(self.domain.replace("*.", "wildcard."))
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
@@ -268,7 +268,7 @@ impl NewCertificate {
         fs::create_dir_all(path.clone()).unwrap();
 
         // Write the files.
-        fs::write(path.clone().join("fullchain.pem"), self.certificate.as_bytes()).unwrap();
+        fs::write(path.join("fullchain.pem"), self.certificate.as_bytes()).unwrap();
         fs::write(path.join("privkey.pem"), self.private_key.as_bytes()).unwrap();
     }
 

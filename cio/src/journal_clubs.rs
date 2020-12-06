@@ -69,8 +69,8 @@ pub mod meeting_date_format {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer).unwrap_or("".to_string());
-        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap_or(crate::utils::default_date()))
+        let s = String::deserialize(deserializer).unwrap_or_default();
+        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap_or_else(|_| crate::utils::default_date()))
     }
 }
 

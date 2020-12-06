@@ -541,15 +541,12 @@ impl Database {
 
     pub fn upsert_rfd(&self, rfd: &NewRFD) -> RFD {
         // See if we already have the rfd in the database.
-        match self.get_rfd(rfd.number) {
-            Some(r) => {
-                // Update the rfd.
-                return diesel::update(&r)
-                    .set(rfd)
-                    .get_result::<RFD>(&self.conn)
-                    .unwrap_or_else(|e| panic!("unable to update rfd {}: {}", r.id, e));
-            }
-            None => {}
+        if let Some(r) = self.get_rfd(rfd.number) {
+            // Update the rfd.
+            return diesel::update(&r)
+                .set(rfd)
+                .get_result::<RFD>(&self.conn)
+                .unwrap_or_else(|e| panic!("unable to update rfd {}: {}", r.id, e));
         }
 
         diesel::insert_into(rfds::table)
