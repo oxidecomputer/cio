@@ -4,20 +4,12 @@ use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 
-use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
-    ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServer, RequestContext,
-};
+use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServer, RequestContext};
 use hyper::{Body, Response, StatusCode};
 
-use cio_api::configs::{
-    Building, ConferenceRoom, GithubLabel, Group, Link, User,
-};
+use cio_api::configs::{Building, ConferenceRoom, GithubLabel, Group, Link, User};
 use cio_api::db::Database;
-use cio_api::models::{
-    Applicant, AuthUser, GithubRepo, JournalClubMeeting, MailingListSubscriber,
-    RFD,
-};
+use cio_api::models::{Applicant, AuthUser, GithubRepo, JournalClubMeeting, MailingListSubscriber, RFD};
 
 #[macro_use]
 extern crate serde_json;
@@ -38,13 +30,8 @@ async fn main() -> Result<(), String> {
      * For simplicity, we'll configure an "info"-level logger that writes to
      * stderr assuming that it's a terminal.
      */
-    let config_logging = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
-    };
-    let log = config_logging
-        .to_logger("cio-server")
-        .map_err(|error| format!("failed to create logger: {}", error))
-        .unwrap();
+    let config_logging = ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Info };
+    let log = config_logging.to_logger("cio-server").map_err(|error| format!("failed to create logger: {}", error)).unwrap();
 
     /*
      * Build a description of the API.
@@ -86,8 +73,7 @@ async fn main() -> Result<(), String> {
     let mut f = File::open(tmp_file).unwrap();
     let mut api_schema = String::new();
     f.read_to_string(&mut api_schema).unwrap();
-    let mut schema: openapiv3::OpenAPI =
-        serde_json::from_str(&api_schema).unwrap();
+    let mut schema: openapiv3::OpenAPI = serde_json::from_str(&api_schema).unwrap();
     // Modify more of the schema.
     // TODO: make this cleaner when dropshot allows for it.
     schema.servers = vec![openapiv3::Server {
@@ -95,13 +81,12 @@ async fn main() -> Result<(), String> {
         description: Some("Hosted behind our VPN".to_string()),
         variables: None,
     }];
-    schema.external_docs = Some(openapiv3::ExternalDocumentation{
+    schema.external_docs = Some(openapiv3::ExternalDocumentation {
         description: Some("Automatically updated documentation site, public, not behind the VPN.".to_string()),
         url: "https://api.docs.corp.oxide.computer".to_string(),
     });
     // Save it back to the file.
-    serde_json::to_writer_pretty(&File::create(api_file).unwrap(), &schema)
-        .unwrap();
+    serde_json::to_writer_pretty(&File::create(api_file).unwrap(), &schema).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
@@ -111,8 +96,7 @@ async fn main() -> Result<(), String> {
     /*
      * Set up the server.
      */
-    let mut server = HttpServer::new(&config_dropshot, api, api_context, &log)
-        .map_err(|error| format!("failed to create server: {}", error))?;
+    let mut server = HttpServer::new(&config_dropshot, api, api_context, &log).map_err(|error| format!("failed to create server: {}", error))?;
     let server_task = server.run();
 
     /*
@@ -145,10 +129,8 @@ impl Context {
      * functions), return our application-specific context.
      */
     pub fn from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
-        let ctx: Arc<dyn Any + Send + Sync + 'static> =
-            Arc::clone(&rqctx.server.private);
-        ctx.downcast::<Context>()
-            .expect("wrong type for private data")
+        let ctx: Arc<dyn Any + Send + Sync + 'static> = Arc::clone(&rqctx.server.private);
+        ctx.downcast::<Context>().expect("wrong type for private data")
     }
 }
 
@@ -163,15 +145,10 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(
-    rqctx: Arc<RequestContext>,
-) -> Result<Response<Body>, HttpError> {
+async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<Response<Body>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
 
-    Ok(Response::builder()
-        .status(StatusCode::OK)
-        .body(Body::from(json!(api_context.schema).to_string()))
-        .unwrap())
+    Ok(Response::builder().status(StatusCode::OK).body(Body::from(json!(api_context.schema).to_string())).unwrap())
 }
 
 /**
@@ -181,9 +158,7 @@ async fn api_get_schema(
     method = GET,
     path = "/auth/users",
 }]
-async fn api_get_auth_users(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
+async fn api_get_auth_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
     // TODO: figure out how to share this between threads.
     let db = Database::new();
 
@@ -197,9 +172,7 @@ async fn api_get_auth_users(
     method = GET,
     path = "/applicants",
 }]
-async fn api_get_applicants(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
+async fn api_get_applicants(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_applicants()))
@@ -212,9 +185,7 @@ async fn api_get_applicants(
     method = GET,
     path = "/buildings",
 }]
-async fn api_get_buildings(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
+async fn api_get_buildings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_buildings()))
@@ -227,9 +198,7 @@ async fn api_get_buildings(
     method = GET,
     path = "/conference_rooms",
 }]
-async fn api_get_conference_rooms(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<ConferenceRoom>>, HttpError> {
+async fn api_get_conference_rooms(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<ConferenceRoom>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_conference_rooms()))
@@ -242,9 +211,7 @@ async fn api_get_conference_rooms(
     method = GET,
     path = "/github/labels",
 }]
-async fn api_get_github_labels(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<GithubLabel>>, HttpError> {
+async fn api_get_github_labels(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubLabel>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_github_labels()))
@@ -257,9 +224,7 @@ async fn api_get_github_labels(
     method = GET,
     path = "/github/repos",
 }]
-async fn api_get_github_repos(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
+async fn api_get_github_repos(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_github_repos()))
@@ -272,9 +237,7 @@ async fn api_get_github_repos(
     method = GET,
     path = "/groups",
 }]
-async fn api_get_groups(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
+async fn api_get_groups(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_groups()))
@@ -287,9 +250,7 @@ async fn api_get_groups(
     method = GET,
     path = "/journal_club_meetings",
 }]
-async fn api_get_journal_club_meetings(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
+async fn api_get_journal_club_meetings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_journal_club_meetings()))
@@ -302,9 +263,7 @@ async fn api_get_journal_club_meetings(
     method = GET,
     path = "/links",
 }]
-async fn api_get_links(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
+async fn api_get_links(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_links()))
@@ -317,9 +276,7 @@ async fn api_get_links(
     method = GET,
     path = "/mailing_list_subscribers",
 }]
-async fn api_get_mailing_list_subscribers(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
+async fn api_get_mailing_list_subscribers(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_mailing_list_subscribers()))
@@ -332,9 +289,7 @@ async fn api_get_mailing_list_subscribers(
     method = GET,
     path = "/rfds",
 }]
-async fn api_get_rfds(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
+async fn api_get_rfds(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_rfds()))
@@ -347,9 +302,7 @@ async fn api_get_rfds(
     method = GET,
     path = "/users",
 }]
-async fn api_get_users(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
+async fn api_get_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
     let db = Database::new();
 
     Ok(HttpResponseOk(db.get_users()))

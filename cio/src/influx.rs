@@ -19,24 +19,10 @@ pub static FLUX_DATE_FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
 
 impl Client {
     pub fn new_from_env() -> Self {
-        Client(
-            InfluxClient::new(
-                env::var("INFLUX_DB_URL").unwrap(),
-                "github_webhooks",
-            )
-            .with_auth(
-                env::var("GADMIN_SUBJECT").unwrap(),
-                env::var("INFLUX_DB_TOKEN").unwrap(),
-            ),
-        )
+        Client(InfluxClient::new(env::var("INFLUX_DB_URL").unwrap(), "github_webhooks").with_auth(env::var("GADMIN_SUBJECT").unwrap(), env::var("INFLUX_DB_TOKEN").unwrap()))
     }
 
-    async fn exists(
-        &self,
-        table: &str,
-        time: DateTime<Utc>,
-        filter: &str,
-    ) -> bool {
+    async fn exists(&self, table: &str, time: DateTime<Utc>, filter: &str) -> bool {
         let read_query = InfluxQuery::raw_read_query(&format!(
             r#"from(bucket:"github_webhooks")
     |> range(start: {}, stop: {})
@@ -59,12 +45,7 @@ impl Client {
         false
     }
 
-    pub async fn commit_exists(
-        &self,
-        time: DateTime<Utc>,
-        sha: &str,
-        repo_name: &str,
-    ) -> bool {
+    pub async fn commit_exists(&self, time: DateTime<Utc>, sha: &str, repo_name: &str) -> bool {
         let filter = format!(
             r#"|> filter(fn: (r) => r.sha == "{}")
     |> filter(fn: (r) => r.repo_name == "{}")"#,
@@ -74,14 +55,7 @@ impl Client {
         self.exists(EventType::Push.name(), time, &filter).await
     }
 
-    pub async fn check_exists(
-        &self,
-        table: &str,
-        time: DateTime<Utc>,
-        github_id: i64,
-        action: &str,
-        sha: &str,
-    ) -> bool {
+    pub async fn check_exists(&self, table: &str, time: DateTime<Utc>, github_id: i64, action: &str, sha: &str) -> bool {
         let filter = format!(
             r#"|> filter(fn: (r) => r.github_id == {})
     |> filter(fn: (r) => r.action == "{}")
@@ -92,13 +66,7 @@ impl Client {
         self.exists(table, time, &filter).await
     }
 
-    pub async fn event_exists(
-        &self,
-        table: &str,
-        time: DateTime<Utc>,
-        github_id: i64,
-        action: &str,
-    ) -> bool {
+    pub async fn event_exists(&self, table: &str, time: DateTime<Utc>, github_id: i64, action: &str) -> bool {
         let filter = format!(
             r#"|> filter(fn: (r) => r.github_id == {})
     |> filter(fn: (r) => r.action == "{}")"#,
@@ -108,21 +76,14 @@ impl Client {
         self.exists(table, time, &filter).await
     }
 
-    pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(
-        &self,
-        q: Q,
-        table: &str,
-    ) -> String {
+    pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(&self, q: Q, table: &str) -> String {
         match self.0.query(&q.clone().into_query(table)).await {
             Ok(v) => {
                 println!("successfully updated table `{}`: {:?}", table, q);
                 return v;
             }
             Err(e) => {
-                println!(
-                    "[influxdb] table `{}` error: {}, event: {:?}",
-                    table, e, q
-                )
+                println!("[influxdb] table `{}` error: {}, event: {:?}", table, e, q)
             }
         }
 
@@ -138,12 +99,7 @@ impl Client {
             let r = github.repo(repo.owner.login, repo.name.to_string());
             let issues = r
                 .issues()
-                .iter(
-                    &hubcaps::issues::IssueListOptions::builder()
-                        .state(hubcaps::issues::State::All)
-                        .per_page(100)
-                        .build(),
-                )
+                .iter(&hubcaps::issues::IssueListOptions::builder().state(hubcaps::issues::State::All).per_page(100).build())
                 .try_collect::<Vec<hubcaps::issues::Issue>>()
                 .await
                 .unwrap();
@@ -168,9 +124,7 @@ impl Client {
 
                 // Check if this event already exists.
                 // Let's see if the data we wrote is there.
-                let exists = self
-                    .event_exists(table, i.time, github_id, &i.action)
-                    .await;
+                let exists = self.event_exists(table, i.time, github_id, &i.action).await;
 
                 if !exists {
                     // Add the event.
@@ -190,9 +144,7 @@ impl Client {
                     i.action = "closed".to_string();
 
                     // Check if we already have the event.
-                    let exists = self
-                        .event_exists(table, i.time, github_id, &i.action)
-                        .await;
+                    let exists = self.event_exists(table, i.time, github_id, &i.action).await;
 
                     if !exists {
                         // Add the event.
@@ -204,11 +156,7 @@ impl Client {
                 let issue_comments = r
                     .issue(issue.number)
                     .comments()
-                    .iter(
-                        &hubcaps::comments::CommentListOptions::builder()
-                            .per_page(100)
-                            .build(),
-                    )
+                    .iter(&hubcaps::comments::CommentListOptions::builder().per_page(100).build())
                     .try_collect::<Vec<hubcaps::comments::Comment>>()
                     .await
                     .unwrap();
@@ -217,8 +165,7 @@ impl Client {
                     // Add events for each issue comment if it does not already exist.
                     // Check if this event already exists.
                     // Let's see if the data we wrote is there.
-                    let github_id =
-                        issue_comment.id.to_string().parse::<i64>().unwrap();
+                    let github_id = issue_comment.id.to_string().parse::<i64>().unwrap();
                     let table = EventType::IssueComment.name();
 
                     // Create the event.
@@ -232,9 +179,7 @@ impl Client {
                         comment: issue_comment.body.to_string(),
                     };
 
-                    let exists = self
-                        .event_exists(table, ic.time, github_id, &ic.action)
-                        .await;
+                    let exists = self.event_exists(table, ic.time, github_id, &ic.action).await;
 
                     if !exists {
                         // Add the event.
@@ -273,26 +218,21 @@ impl Client {
             let handle = tokio::task::spawn(async move {
                 // We need to do this here since we are in an async loop.
                 let github = authenticate_github_jwt();
-                let r = github
-                    .repo(repo.owner.login.to_string(), repo.name.to_string());
+                let r = github.repo(repo.owner.login.to_string(), repo.name.to_string());
 
                 let commits = r
                     .commits()
                     .iter()
                     .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
                     .await
-                    .map_err(|e| {
-                        println!(
-                            "iterating over commits in repo {} failed: {}",
-                            repo.name.to_string(),
-                            e
-                        )
-                    })
+                    .map_err(|e| println!("iterating over commits in repo {} failed: {}", repo.name.to_string(), e))
                     .unwrap_or_default();
 
                 for c in commits {
+                    let commit_sha = c.sha.to_string();
+
                     // Get the verbose information for the commit.
-                    let commit = match r.commits().get(&c.sha).await {
+                    let commit = match r.commits().get(&commit_sha).await {
                         Ok(c) => c,
                         Err(e) => {
                             // Check if we were rate limited here.
@@ -300,22 +240,14 @@ impl Client {
                             match e {
                                 hubcaps::errors::Error::RateLimit { reset } => {
                                     // We got a rate limit error.
-                                    println!(
-                                        "got rate limited, sleeping for {}s",
-                                        reset.as_secs()
-                                    );
-                                    thread::sleep(
-                                        reset.add(time::Duration::from_secs(5)),
-                                    );
+                                    println!("got rate limited, sleeping for {}s", reset.as_secs());
+                                    thread::sleep(reset.add(time::Duration::from_secs(5)));
                                 }
-                                _ => panic!(
-                                    "github getting commits failed: {}",
-                                    e
-                                ),
+                                _ => panic!("github getting commits failed: {}", e),
                             }
 
                             // Try to get the commit again.
-                            r.commits().get(&c.sha).await.unwrap()
+                            r.commits().get(&commit_sha).await.unwrap()
                         }
                     };
 
@@ -326,15 +258,10 @@ impl Client {
                     let sender = commit.author.login.to_string();
                     if sender.is_empty() {
                         // Make sure we don't have an empty sender!
-                        println!(
-                            "[warn]: sender for commit {} on repo {} is empty",
-                            commit.sha, repo.name
-                        );
+                        println!("[warn]: sender for commit {} on repo {} is empty", commit.sha, repo.name);
                         // Continue early, do not push the event.
                         continue;
                     }
-
-                    let commit_sha = commit.sha.to_string();
 
                     // Get the changed files.
                     let mut added: Vec<String> = Default::default();
@@ -373,9 +300,7 @@ impl Client {
 
                     // Check if this event already exists.
                     // Let's see if the data we wrote is there.
-                    let exists = client
-                        .commit_exists(push.time, &push.sha, &push.repo_name)
-                        .await;
+                    let exists = client.commit_exists(push.time, &push.sha, &push.repo_name).await;
 
                     if !exists {
                         // Add the event.
@@ -383,16 +308,8 @@ impl Client {
                     }
 
                     // Handle the check_suite events for each commit.
-                    let check_suites = match r
-                        .commits()
-                        .list_check_suites(
-                            &c.sha,
-                            &hubcaps::checks::CheckSuiteListOptions::builder()
-                                .per_page(100)
-                                .build(),
-                        )
-                        .await
-                    {
+                    let check_suite_list_options = hubcaps::checks::CheckSuiteListOptions::builder().per_page(100).build();
+                    let check_suites = match r.commits().list_check_suites(&commit_sha, &check_suite_list_options).await {
                         Ok(c) => c,
                         Err(e) => {
                             // Check if we were rate limited here.
@@ -400,306 +317,165 @@ impl Client {
                             match e {
                                 hubcaps::errors::Error::RateLimit { reset } => {
                                     // We got a rate limit error.
-                                    println!(
-                                        "got rate limited, sleeping for {}s",
-                                        reset.as_secs()
-                                    );
-                                    thread::sleep(
-                                        reset.add(time::Duration::from_secs(5)),
-                                    );
+                                    println!("got rate limited, sleeping for {}s", reset.as_secs());
+                                    thread::sleep(reset.add(time::Duration::from_secs(5)));
                                 }
-                                _ => panic!(
-                                    "github getting check suites failed: {}",
-                                    e
-                                ),
+                                _ => panic!("github getting check suites failed: {}", e),
                             }
 
                             // Try to get the check suites again.
-                            r
-                        .commits()
-                        .list_check_suites(&c.sha,
-                            &hubcaps::checks::CheckSuiteListOptions::builder()
-                                .per_page(100)
-                                .build(),
-                        )
-                        .await
-                        .unwrap()
+                            r.commits().list_check_suites(&commit_sha, &check_suite_list_options).await.unwrap()
                         }
                     }
                     .check_suites;
 
                     for check_suite in check_suites {
-                        let github_id =
-                            check_suite.id.to_string().parse::<i64>().unwrap();
+                        // Add events for each check_suite if it does not already exist.
+                        let github_id = check_suite.id.to_string().parse::<i64>().unwrap();
+                        let table = EventType::CheckSuite.name();
 
                         if check_suite.app.id <= 0 {
                             // Continue early.
-                            println!("app id for check suite is 0 for https://github.com/{}/{}/commits/{}", repo.owner.login, repo.name,
-                            c.sha);
+                            println!("[warn]: app id for check suite is 0 for https://github.com/{}/{}/commits/{}", repo.owner.login, repo.name, c.sha);
                             continue;
                         }
 
-                        // Add events for each check_suite if it does not already exist.
+                        // Create the event.
+                        let mut cs = CheckSuite {
+                            time: check_suite.created_at,
+                            repo_name: repo_name.to_string(),
+                            sender: sender.to_string(),
+                            reference: reference.to_string(),
+                            sha: commit_sha.to_string(),
+
+                            action: "created".to_string(),
+                            status: "requested".to_string(),
+                            conclusion: "null".to_string(),
+
+                            head_branch: check_suite.head_branch.to_string(),
+                            head_sha: check_suite.head_sha.to_string(),
+                            name: check_suite.app.name.to_string(),
+                            slug: check_suite.app.slug.to_string(),
+
+                            github_id,
+                        };
+
                         // Check if this event already exists.
                         // Let's see if the data we wrote is there.
-                        let exists = client
-                            .check_exists(
-                                EventType::CheckSuite.name(),
-                                check_suite.created_at,
-                                github_id,
-                                "created",
-                                &commit.sha,
-                            )
-                            .await;
+                        let exists = client.check_exists(table, cs.time, cs.github_id, &cs.action, &cs.sha).await;
 
                         if !exists {
                             // Add the event.
-                            let check_suite_event = CheckSuite {
-                                time: check_suite.created_at,
-                                repo_name: repo.name.to_string(),
-                                sender: sender.to_string(),
-                                // TODO: iterate over all the branches
-                                // Do we need to do this??
-                                reference: repo.default_branch.to_string(),
-                                sha: commit.sha.to_string(),
-                                action: "created".to_string(),
-                                github_id,
-                                status: "requested".to_string(),
-                                conclusion: "null".to_string(),
-                                head_branch: check_suite
-                                    .head_branch
-                                    .to_string(),
-                                head_sha: check_suite.head_sha.to_string(),
-                                name: check_suite.app.name.to_string(),
-                                slug: check_suite.app.slug.to_string(),
-                            };
-
-                            client
-                                .query(
-                                    check_suite_event,
-                                    EventType::CheckSuite.name(),
-                                )
-                                .await;
+                            client.query(cs.clone(), table).await;
                         }
 
                         // Add the completed event if it is completed.
                         if check_suite.status.to_string() == "completed" {
+                            // Modify the event.
+                            cs.time = check_suite.updated_at;
+                            cs.action = "completed".to_string();
+                            cs.status = "completed".to_string();
+                            cs.conclusion = check_suite.conclusion.to_string();
+
                             // Check if this event already exists.
                             // Let's see if the data we wrote is there.
-                            let exists = client
-                                .check_exists(
-                                    EventType::CheckSuite.name(),
-                                    check_suite.updated_at,
-                                    github_id,
-                                    "completed",
-                                    &commit.sha,
-                                )
-                                .await;
+                            let exists = client.check_exists(table, cs.time, cs.github_id, &cs.action, &cs.sha).await;
 
                             if !exists {
                                 // Add the event.
-                                let completed_check_suite_event = CheckSuite {
-                                    time: check_suite.updated_at,
-                                    repo_name: repo.name.to_string(),
-                                    sender: sender.to_string(),
-                                    // TODO: iterate over all the branches
-                                    // Do we need to do this??
-                                    reference: repo.default_branch.to_string(),
-                                    sha: commit.sha.to_string(),
-                                    action: "completed".to_string(),
-                                    github_id,
-                                    status: "completed".to_string(),
-                                    conclusion: check_suite
-                                        .conclusion
-                                        .to_string(),
-                                    head_branch: check_suite
-                                        .head_branch
-                                        .to_string(),
-                                    head_sha: check_suite.head_sha.to_string(),
-                                    name: check_suite.app.name.to_string(),
-                                    slug: check_suite.app.slug.to_string(),
-                                };
-
-                                client
-                                    .query(
-                                        completed_check_suite_event,
-                                        EventType::CheckSuite.name(),
-                                    )
-                                    .await;
+                                client.query(cs.clone(), table).await;
                             }
                         }
 
                         // Get the check runs for this check suite.
-                        let check_runs = match r
-                            .checkruns()
-                            .list_for_suite(&github_id.to_string())
-                            .await
-                        {
+                        let check_runs = match r.checkruns().list_for_suite(&github_id.to_string()).await {
                             Ok(c) => c,
                             Err(e) => {
                                 // Check if we were rate limited here.
                                 // If so we should sleep until the rate limit is over.
                                 match e {
-                                    hubcaps::errors::Error::RateLimit {
-                                        reset,
-                                    } => {
+                                    hubcaps::errors::Error::RateLimit { reset } => {
                                         // We got a rate limit error.
-                                        println!(
-                                        "got rate limited, sleeping for {}s",
-                                        reset.as_secs()
-                                    );
-                                        thread::sleep(
-                                            reset.add(
-                                                time::Duration::from_secs(5),
-                                            ),
-                                        );
+                                        println!("got rate limited, sleeping for {}s", reset.as_secs());
+                                        thread::sleep(reset.add(time::Duration::from_secs(5)));
                                     }
                                     _ => {
-                                        println!(
-                                    "[warn]: github getting check runs failed: {}, check_suite: {:?}",
-                                    e, check_suite
-                                );
+                                        println!("[warn]: github getting check runs failed: {}, check_suite: {:?}", e, check_suite);
                                         continue;
                                     }
                                 }
 
                                 // Try to get the check runs again.
-                                r.checkruns()
-                                    .list_for_suite(&github_id.to_string())
-                                    .await
-                                    .unwrap()
+                                r.checkruns().list_for_suite(&github_id.to_string()).await.unwrap()
                             }
                         }
                         .check_runs;
 
                         // Iterate over the check runs.
                         for check_run in check_runs {
-                            let check_run_github_id = check_suite
-                                .id
-                                .to_string()
-                                .parse::<i64>()
-                                .unwrap();
-
                             // Add events for each check_run if it does not already exist.
+                            let github_id = check_suite.id.to_string().parse::<i64>().unwrap();
+                            let table = EventType::CheckRun.name();
+
+                            // Create the event.
+                            let mut cr = CheckRun {
+                                time: check_run.started_at,
+                                repo_name: repo_name.to_string(),
+                                sender: sender.to_string(),
+                                reference: reference.to_string(),
+                                sha: commit_sha.to_string(),
+
+                                action: "created".to_string(),
+                                status: "queued".to_string(),
+                                conclusion: "null".to_string(),
+
+                                name: check_run.name.to_string(),
+
+                                // Check suite details
+                                head_branch: cs.head_branch.to_string(),
+                                head_sha: cs.head_sha.to_string(),
+                                app_name: cs.name.to_string(),
+                                app_slug: cs.slug.to_string(),
+                                check_suite_id: cs.github_id,
+
+                                github_id,
+                            };
+
                             // Check if this event already exists.
                             // Let's see if the data we wrote is there.
-                            let exists = client
-                                .check_exists(
-                                    EventType::CheckRun.name(),
-                                    check_run.started_at,
-                                    check_run_github_id,
-                                    "created",
-                                    &commit.sha,
-                                )
-                                .await;
+                            let exists = client.check_exists(table, cr.time, cr.github_id, &cr.action, &cr.sha).await;
 
                             if !exists {
                                 // Add the event.
-                                let check_run_event = CheckRun {
-                                    time: check_run.started_at,
-                                    repo_name: repo.name.to_string(),
-                                    sender: sender.to_string(),
-                                    // TODO: iterate over all the branches
-                                    // Do we need to do this??
-                                    reference: repo.default_branch.to_string(),
-                                    sha: commit.sha.to_string(),
-                                    action: "created".to_string(),
-                                    github_id: check_run_github_id,
-                                    status: "queued".to_string(),
-                                    conclusion: "null".to_string(),
-                                    name: check_run.name.to_string(),
-
-                                    // Check suite details
-                                    head_branch: check_suite
-                                        .head_branch
-                                        .to_string(),
-                                    head_sha: check_suite.head_sha.to_string(),
-                                    app_name: check_suite.app.name.to_string(),
-                                    app_slug: check_suite.app.slug.to_string(),
-                                    check_suite_id: github_id,
-                                };
-
-                                client
-                                    .query(
-                                        check_run_event,
-                                        EventType::CheckRun.name(),
-                                    )
-                                    .await;
+                                client.query(cr.clone(), table).await;
                             }
 
-                            let mut check_run_status =
-                                &hubcaps::checks::CheckRunState::Queued;
+                            // Get the status for the check run.
+                            let mut check_run_status = &hubcaps::checks::CheckRunState::Queued;
                             if check_run.status.is_some() {
-                                check_run_status =
-                                    check_run.status.as_ref().unwrap();
+                                check_run_status = check_run.status.as_ref().unwrap();
                             };
 
                             // Add the completed event if it is completed.
-                            if *check_run_status
-                                == hubcaps::checks::CheckRunState::Completed
-                            {
+                            if *check_run_status == hubcaps::checks::CheckRunState::Completed {
                                 if check_run.completed_at.is_none() {
-                                    println!("[warn]: check_run says it is completed but it does not have a completed_at for: {:?}", check_run);
+                                    println!("[warn]: check_run says it is completed but it does not have a completed_at time: {:?}", check_run);
                                     continue;
                                 }
 
+                                // Modify the event.
+                                cr.time = check_run.completed_at.unwrap();
+                                cr.action = "completed".to_string();
+                                cr.status = "completed".to_string();
+                                cr.conclusion = json!(check_run.conclusion).to_string().trim_matches('"').to_string();
+
                                 // Check if this event already exists.
                                 // Let's see if the data we wrote is there.
-                                let exists = client
-                                    .check_exists(
-                                        EventType::CheckRun.name(),
-                                        check_run.completed_at.unwrap(),
-                                        check_run_github_id,
-                                        "completed",
-                                        &commit.sha,
-                                    )
-                                    .await;
+                                let exists = client.check_exists(table, cr.time, cr.github_id, &cr.action, &cr.sha).await;
 
                                 if !exists {
                                     // Add the event.
-                                    let completed_check_run_event = CheckRun {
-                                        time: check_run.completed_at.unwrap(),
-                                        repo_name: repo.name.to_string(),
-                                        sender: sender.to_string(),
-                                        // TODO: iterate over all the branches
-                                        // Do we need to do this??
-                                        reference: repo
-                                            .default_branch
-                                            .to_string(),
-                                        sha: commit.sha.to_string(),
-                                        action: "completed".to_string(),
-                                        github_id: check_run_github_id,
-                                        status: "completed".to_string(),
-                                        conclusion: json!(check_run.conclusion)
-                                            .to_string()
-                                            .trim_matches('"')
-                                            .to_string(),
-                                        name: check_run.name.to_string(),
-
-                                        // Check suite details
-                                        head_branch: check_suite
-                                            .head_branch
-                                            .to_string(),
-                                        head_sha: check_suite
-                                            .head_sha
-                                            .to_string(),
-                                        app_name: check_suite
-                                            .app
-                                            .name
-                                            .to_string(),
-                                        app_slug: check_suite
-                                            .app
-                                            .slug
-                                            .to_string(),
-                                        check_suite_id: github_id,
-                                    };
-
-                                    client
-                                        .query(
-                                            completed_check_run_event,
-                                            EventType::CheckRun.name(),
-                                        )
-                                        .await;
+                                    client.query(cr, table).await;
                                 }
                             }
                         }
@@ -707,6 +483,7 @@ impl Client {
                 }
             });
 
+            // Add this handle to our stack of handles.
             handles.push(handle);
         }
 
@@ -722,59 +499,53 @@ impl Client {
 
         // For each repo, get information on the pull requests.
         for repo in repos {
-            let r = github
-                .repo(repo.owner.login.to_string(), repo.name.to_string());
+            let repo_name = repo.name.to_string();
+
+            let r = github.repo(repo.owner.login.to_string(), repo.name.to_string());
+
             let pulls = r
                 .pulls()
-                .iter(
-                    &hubcaps::pulls::PullListOptions::builder()
-                        .state(hubcaps::issues::State::All)
-                        .per_page(100)
-                        .build(),
-                )
+                .iter(&hubcaps::pulls::PullListOptions::builder().state(hubcaps::issues::State::All).per_page(100).build())
                 .try_collect::<Vec<hubcaps::pulls::Pull>>()
                 .await
                 .unwrap();
 
             for pull in pulls {
                 // Add events for each pull request if it does not already exist.
+                let github_id = pull.id.to_string().parse::<i64>().unwrap();
+                let table = EventType::PullRequest.name();
+                let sender = pull.user.login.to_string();
+                let number = pull.number.to_string().parse::<i64>().unwrap();
+
+                // Create the event.
+                let mut pr = PullRequest {
+                    time: pull.created_at,
+                    repo_name: repo_name.to_string(),
+                    sender: sender.to_string(),
+
+                    action: "opened".to_string(),
+                    head_reference: pull.head.commit_ref.to_string(),
+                    base_reference: pull.base.commit_ref.to_string(),
+
+                    number,
+                    github_id,
+                    merged: false,
+                };
+
                 // Check if this event already exists.
                 // Let's see if the data we wrote is there.
-                let github_id = pull.id.to_string().parse::<i64>().unwrap();
-                let exists = self
-                    .event_exists(
-                        EventType::PullRequest.name(),
-                        pull.created_at,
-                        github_id,
-                        "opened",
-                    )
-                    .await;
+                let exists = self.event_exists(table, pr.time, pr.github_id, &pr.action).await;
 
                 if !exists {
                     // Add the event.
-                    let pull_request_created = PullRequest {
-                        time: pull.created_at,
-                        repo_name: repo.name.to_string(),
-                        sender: pull.user.login.to_string(),
-                        action: "opened".to_string(),
-                        head_reference: pull.head.commit_ref.to_string(),
-                        base_reference: pull.base.commit_ref.to_string(),
-                        number: pull.number.to_string().parse::<i64>().unwrap(),
-                        github_id,
-                        merged: false,
-                    };
-                    self.query(
-                        pull_request_created,
-                        EventType::PullRequest.name(),
-                    )
-                    .await;
+                    self.query(pr.clone(), table).await;
                 }
 
                 if pull.closed_at.is_some() {
                     let mut closed_at = pull.closed_at.unwrap();
-                    let mut closed_by = pull.closed_by.login.to_string();
+                    let mut closed_by = sender.to_string();
                     if closed_by.is_empty() {
-                        closed_by = pull.user.login.to_string();
+                        closed_by = pull.closed_by.login.to_string();
                     }
 
                     if pull.merged_at.is_some() {
@@ -784,38 +555,18 @@ impl Client {
                         }
                     }
 
+                    // Modify the event.
+                    pr.time = closed_at;
+                    pr.sender = closed_by;
+                    pr.action = "closed".to_string();
+                    pr.merged = pull.merged_at.is_some();
+
                     // Check if we already have the event.
-                    let exists = self
-                        .event_exists(
-                            EventType::PullRequest.name(),
-                            closed_at,
-                            github_id,
-                            "closed",
-                        )
-                        .await;
+                    let exists = self.event_exists(table, pr.time, pr.github_id, &pr.action).await;
 
                     if !exists {
                         // Add the event.
-                        let pull_request_closed = PullRequest {
-                            time: closed_at,
-                            repo_name: repo.name.to_string(),
-                            sender: closed_by,
-                            action: "closed".to_string(),
-                            head_reference: pull.head.commit_ref.to_string(),
-                            base_reference: pull.base.commit_ref.to_string(),
-                            number: pull
-                                .number
-                                .to_string()
-                                .parse::<i64>()
-                                .unwrap(),
-                            github_id,
-                            merged: pull.merged_at.is_some(),
-                        };
-                        self.query(
-                            pull_request_closed,
-                            EventType::PullRequest.name(),
-                        )
-                        .await;
+                        self.query(pr.clone(), table).await;
                     }
                 }
 
@@ -827,51 +578,33 @@ impl Client {
                     .iter(&hubcaps::review_comments::ReviewCommentListOptions::builder().per_page(100).build())
                     .try_collect::<Vec<hubcaps::review_comments::ReviewComment>>()
                     .await
-                    .map_err(|e| {
-                        println!(
-                            "iterating over review comment in repo {} for pull {} failed: {}",
-                            repo.name.to_string(),
-                            pull.number,
-                            e
-                        )
-                    })
+                    .map_err(|e| println!("iterating over review comment in repo {} for pull {} failed: {}", repo.name.to_string(), pull.number, e))
                     .unwrap_or_default();
 
                 for pull_comment in pull_comments {
                     // Add events for each pull comment if it does not already exist.
+                    let github_id = pull_comment.id.to_string().parse::<i64>().unwrap();
+                    let table = EventType::PullRequestReviewComment.name();
+
+                    // Create the event.
+                    let pc = PullRequestReviewComment {
+                        time: pull_comment.created_at,
+                        repo_name: repo_name.to_string(),
+                        sender: pull_comment.user.login.to_string(),
+                        action: "created".to_string(),
+                        comment: pull_comment.body.to_string(),
+
+                        pull_request_number: pr.number,
+                        github_id,
+                    };
+
                     // Check if this event already exists.
                     // Let's see if the data we wrote is there.
-                    let github_id =
-                        pull_comment.id.to_string().parse::<i64>().unwrap();
-                    let exists = self
-                        .event_exists(
-                            EventType::PullRequestReviewComment.name(),
-                            pull_comment.created_at,
-                            github_id,
-                            "created",
-                        )
-                        .await;
+                    let exists = self.event_exists(table, pc.time, pc.github_id, &pc.action).await;
 
                     if !exists {
                         // Add the event.
-                        let pull_comment_created = PullRequestReviewComment {
-                            time: pull_comment.created_at,
-                            repo_name: repo.name.to_string(),
-                            sender: pull_comment.user.login.to_string(),
-                            action: "created".to_string(),
-                            pull_request_number: pull
-                                .number
-                                .to_string()
-                                .parse::<i64>()
-                                .unwrap(),
-                            github_id,
-                            comment: pull_comment.body.to_string(),
-                        };
-                        self.query(
-                            pull_comment_created,
-                            EventType::PullRequestReviewComment.name(),
-                        )
-                        .await;
+                        self.query(pc, table).await;
                     }
                 }
             }

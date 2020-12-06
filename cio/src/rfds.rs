@@ -27,10 +27,7 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     let rfd_csv_string = from_utf8(&rfd_csv_content).unwrap();
 
     // Create the csv reader.
-    let mut csv_reader = ReaderBuilder::new()
-        .delimiter(b',')
-        .has_headers(true)
-        .from_reader(rfd_csv_string.as_bytes());
+    let mut csv_reader = ReaderBuilder::new().delimiter(b',').has_headers(true).from_reader(rfd_csv_string.as_bytes());
 
     // Create the BTreeMap of RFDs.
     let mut rfds: BTreeMap<i32, NewRFD> = Default::default();
@@ -48,11 +45,7 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
 }
 
 /// Try to get the markdown or asciidoc contents from the repo.
-pub async fn get_rfd_contents_from_repo(
-    github: &Github,
-    branch: &str,
-    dir: &str,
-) -> (String, bool, String) {
+pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str) -> (String, bool, String) {
     let repo_contents = github.repo(github_org(), "rfd").content();
     let mut is_markdown = false;
     let decoded: String;
@@ -70,10 +63,7 @@ pub async fn get_rfd_contents_from_repo(
 
             // Try to get the markdown instead.
             is_markdown = true;
-            let contents = repo_contents
-                .file(&format!("{}/README.md", dir), branch)
-                .await
-                .unwrap();
+            let contents = repo_contents.file(&format!("{}/README.md", dir), branch).await.unwrap();
 
             decoded = from_utf8(&contents.content).unwrap().trim().to_string();
             sha = contents.sha;
@@ -95,10 +85,7 @@ pub fn parse_asciidoc(content: &str) -> String {
     let mut file = fs::File::create(path.clone()).unwrap();
     file.write_all(content.as_bytes()).unwrap();
 
-    let cmd_output = Command::new("asciidoctor")
-        .args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()])
-        .output()
-        .unwrap();
+    let cmd_output = Command::new("asciidoctor").args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()]).output().unwrap();
 
     let result = if cmd_output.status.success() {
         from_utf8(&cmd_output.stdout).unwrap()
@@ -122,42 +109,18 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     let mut cleaned = content
         .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
         .replace("href=\"#", &format!("href=\"/rfd/{}#", num))
-        .replace(
-            r#"img src=""#,
-            &format!(r#"img src="/static/images/{}/"#, num),
-        )
-        .replace(
-            r#"object data=""#,
-            &format!(r#"object data="/static/images/{}/"#, num),
-        )
-        .replace(
-            r#"object type="image/svg+xml" data=""#,
-            &format!(
-                r#"object type="image/svg+xml" data="/static/images/{}/"#,
-                num
-            ),
-        );
+        .replace(r#"img src=""#, &format!(r#"img src="/static/images/{}/"#, num))
+        .replace(r#"object data=""#, &format!(r#"object data="/static/images/{}/"#, num))
+        .replace(r#"object type="image/svg+xml" data=""#, &format!(r#"object type="image/svg+xml" data="/static/images/{}/"#, num));
 
-    let mut re =
-        Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer").unwrap();
-    cleaned = re
-        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/000$num")
-        .to_string();
+    let mut re = Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer").unwrap();
+    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/000$num").to_string();
     re = Regex::new(r"https://(?P<num>[0-9][0-9]).rfd.oxide.computer").unwrap();
-    cleaned = re
-        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/00$num")
-        .to_string();
-    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer")
-        .unwrap();
-    cleaned = re
-        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/0$num")
-        .to_string();
-    re =
-        Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer")
-            .unwrap();
-    cleaned = re
-        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/$num")
-        .to_string();
+    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/00$num").to_string();
+    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
+    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/0$num").to_string();
+    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
+    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/$num").to_string();
 
     cleaned
 }
@@ -246,8 +209,7 @@ dsfsdf
 sdf
 authors: nope"#;
         authors = NewRFD::get_authors(&content, false);
-        expected =
-            r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
+        expected = r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
     }
 
@@ -283,8 +245,7 @@ dsfsdf
 sdf
 authors: nope"#;
         let mut discussion = NewRFD::get_discussion(&content);
-        let expected =
-            "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
+        let expected = "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
         assert_eq!(expected, discussion);
 
         content = r#"sdfsdf

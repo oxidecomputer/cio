@@ -21,22 +21,12 @@ pub fn get_public_relations_channel_post_url() -> String {
 /// Post text to a channel.
 pub async fn post_to_channel(url: String, v: Value) {
     let client = Client::new();
-    let resp = client
-        .post(&url)
-        .body(Body::from(v.to_string()))
-        .send()
-        .await
-        .unwrap();
+    let resp = client.post(&url).body(Body::from(v.to_string())).send().await.unwrap();
 
     match resp.status() {
         StatusCode::OK => (),
         s => {
-            println!(
-                "posting to slack webhook ({}) failed, status: {} | resp: {}",
-                url,
-                s,
-                resp.text().await.unwrap()
-            );
+            println!("posting to slack webhook ({}) failed, status: {} | resp: {}", url, s, resp.text().await.unwrap());
         }
     };
 }

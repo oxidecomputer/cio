@@ -8,17 +8,11 @@ use std::str::from_utf8;
 use futures_util::TryStreamExt;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
-use hubcaps::repositories::{
-    OrgRepoType, OrganizationRepoListOptions, Repository,
-};
-use hubcaps::{
-    Credentials, Github, InstallationTokenGenerator, JWTCredentials,
-};
+use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repository};
+use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
 use reqwest::get;
 use reqwest::Client;
-use yup_oauth2::{
-    read_service_account_key, AccessToken, ServiceAccountAuthenticator,
-};
+use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
 use crate::db::Database;
 use crate::models::{GithubRepo, NewRepo};
@@ -38,8 +32,7 @@ pub fn write_file(file: PathBuf, contents: String) {
 /// Get a GSuite token.
 pub async fn get_gsuite_token() -> AccessToken {
     // Get the GSuite credentials file.
-    let mut gsuite_credential_file =
-        env::var("GADMIN_CREDENTIAL_FILE").unwrap_or("".to_string());
+    let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or("".to_string());
     let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or("".to_string());
 
     if gsuite_credential_file.is_empty() && !gsuite_key.is_empty() {
@@ -58,9 +51,7 @@ pub async fn get_gsuite_token() -> AccessToken {
     }
 
     let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
-    let gsuite_secret = read_service_account_key(gsuite_credential_file)
-        .await
-        .expect("failed to read gsuite credential file");
+    let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
     let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
         .subject(gsuite_subject.to_string())
         .build()
@@ -94,12 +85,7 @@ pub fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> bool {
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
 pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
-    let body = get(&format!("https://github.com/{}.keys", handle))
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
+    let body = get(&format!("https://github.com/{}.keys", handle)).await.unwrap().text().await.unwrap();
 
     body.lines()
         .filter_map(|key| {
@@ -120,8 +106,7 @@ pub fn authenticate_github() -> Github {
     // Get the current working directory.
     let curdir = env::current_dir().unwrap();
     // Create the HTTP cache.
-    let http_cache =
-        Box::new(FileBasedCache::new(curdir.join(".cache/github")));
+    let http_cache = Box::new(FileBasedCache::new(curdir.join(".cache/github")));
     Github::custom(
         "https://api.github.com",
         concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
@@ -151,11 +136,9 @@ pub fn authenticate_github_jwt() -> Github {
     let curdir = env::current_dir().unwrap();
 
     // Create the HTTP cache.
-    let http_cache =
-        Box::new(FileBasedCache::new(curdir.join(".cache/github")));
+    let http_cache = Box::new(FileBasedCache::new(curdir.join(".cache/github")));
 
-    let token_generator =
-        InstallationTokenGenerator::new(installation_id, jwt.clone());
+    let token_generator = InstallationTokenGenerator::new(installation_id, jwt.clone());
 
     Github::custom(
         "https://api.github.com",
@@ -174,12 +157,7 @@ pub fn github_org() -> String {
 pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
     let github_repos = github
         .org_repos(github_org())
-        .iter(
-            &OrganizationRepoListOptions::builder()
-                .per_page(100)
-                .repo_type(OrgRepoType::All)
-                .build(),
-        )
+        .iter(&OrganizationRepoListOptions::builder().per_page(100).repo_type(OrgRepoType::All).build())
         .try_collect::<Vec<hubcaps::repositories::Repo>>()
         .await
         .unwrap();
@@ -226,11 +204,7 @@ pub async fn refresh_db_github_repos(github: &Github) {
 /// Create or update a file in a GitHub repository.
 /// If the file does not exist, it will be created.
 /// If the file exists, it will be updated _only if_ the content of the file has changed.
-pub async fn create_or_update_file_in_github_repo(
-    repo: &Repository,
-    file_path: &str,
-    new_content: Vec<u8>,
-) {
+pub async fn create_or_update_file_in_github_repo(repo: &Repository, file_path: &str, new_content: Vec<u8>) {
     let content = new_content.trim();
 
     // Try to get the content for the file from the repo.
@@ -253,12 +227,7 @@ pub async fn create_or_update_file_in_github_repo(
             let diff = diffy::create_patch_bytes(&decoded, &content);
             let bdiff = diff.to_bytes();
             let str_diff = from_utf8(&bdiff).unwrap_or("");
-            if str_diff.contains("-/ModDate")
-                && str_diff.contains("-/CreationDate")
-                && str_diff.contains("+/ModDate")
-                && str_diff.contains("-/CreationDate")
-                && str_diff.contains("@@ -5,8 +5,8 @@")
-            {
+            if str_diff.contains("-/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("+/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("@@ -5,8 +5,8 @@") {
                 // The binary contents are the same so we can return early.
                 // The only thing that changed was the modified time and creation date.
                 println!("[github content] File contents at {} are the same, no update needed", file_path);
@@ -266,12 +235,18 @@ pub async fn create_or_update_file_in_github_repo(
             }
 
             // We need to update the file. Ignore failure.
-            repo.content().update(
-                                    file_path,
-                                    &content,
-                                    &format!("Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",file_path),
-                                    &file.sha).await
-                            .ok();
+            repo.content()
+                .update(
+                    file_path,
+                    &content,
+                    &format!(
+                        "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
+                        file_path
+                    ),
+                    &file.sha,
+                )
+                .await
+                .ok();
 
             println!("[github content] Updated file at {}", file_path);
         }
@@ -310,8 +285,7 @@ pub async fn create_or_update_file_in_github_repo(
                     // Base64 decode the contents.
                     // TODO: move this logic to hubcaps.
                     let v = blob.content.replace("\n", "");
-                    let decoded =
-                        base64::decode_config(&v, base64::STANDARD).unwrap();
+                    let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
                     let file_content: Vec<u8> = decoded.into();
                     let decoded_content = file_content.trim();
 
@@ -324,12 +298,18 @@ pub async fn create_or_update_file_in_github_repo(
                     }
 
                     // We can actually update the file since we have the sha.
-                    repo.content().update(
-                                    file_path,
-                                    &content,
-                                    &format!("Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",file_path),
-                                    &item.sha).await
-                            .ok();
+                    repo.content()
+                        .update(
+                            file_path,
+                            &content,
+                            &format!(
+                                "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
+                                file_path
+                            ),
+                            &item.sha,
+                        )
+                        .await
+                        .ok();
 
                     println!("[github content] Updated file at {}", file_path);
 
@@ -339,17 +319,20 @@ pub async fn create_or_update_file_in_github_repo(
 
                 return;
             }
-            println!(
-                "[github content] Getting the file at {} failed: {:?}",
-                file_path, e
-            );
+            println!("[github content] Getting the file at {} failed: {:?}", file_path, e);
 
             // Create the file in the repo. Ignore failure.
-            repo.content().create(
-                                    file_path,
-                                    &content,
-                                    &format!("Creating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",file_path),
-                            ).await.ok();
+            repo.content()
+                .create(
+                    file_path,
+                    &content,
+                    &format!(
+                        "Creating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
+                        file_path
+                    ),
+                )
+                .await
+                .ok();
 
             println!("[github content] Created file at {}", file_path);
         }

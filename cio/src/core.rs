@@ -28,17 +28,9 @@ pub struct CustomerInteraction {
     pub people: Vec<String>,
     #[serde(default, rename = "Oxide Folks")]
     pub oxide_folks: Vec<AirtableUser>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Link to Notes"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Link to Notes")]
     pub notes_link: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Notes"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Notes")]
     pub notes: String,
 }
 
@@ -52,11 +44,7 @@ pub struct DiscussionTopic {
     pub submitter: AirtableUser,
     #[serde(rename = "Priority")]
     pub priority: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Notes"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Notes")]
     pub notes: String,
     // Never modify this, it is a linked record.
     #[serde(rename = "Associated meetings")]
@@ -70,44 +58,20 @@ pub struct DiscussionTopic {
 pub struct Meeting {
     #[serde(rename = "Name", skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(
-        serialize_with = "gusto_api::date_format::serialize",
-        deserialize_with = "gusto_api::date_format::deserialize",
-        rename = "Date"
-    )]
+    #[serde(serialize_with = "gusto_api::date_format::serialize", deserialize_with = "gusto_api::date_format::deserialize", rename = "Date")]
     pub date: NaiveDate,
     #[serde(rename = "Week", skip_serializing_if = "String::is_empty")]
     pub week: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Notes"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Notes")]
     pub notes: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Action items"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Action items")]
     pub action_items: String,
     // Never modify this, it is a linked record.
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "Proposed discussion"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Proposed discussion")]
     pub proposed_discussion: Vec<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Recording"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Recording")]
     pub recording: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "Attendees"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Attendees")]
     pub attendees: Vec<AirtableUser>,
     #[serde(default)]
     pub reminder_email_sent: bool,

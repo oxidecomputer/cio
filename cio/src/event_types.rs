@@ -191,9 +191,7 @@ impl EventType {
             EventType::Installation => "installation",
             EventType::IntegrationInstallation => "integration_installation",
             EventType::InstallationRepositories => "installation_repositories",
-            EventType::IntegrationInstallationRepositories => {
-                "integration_installation_repositories"
-            }
+            EventType::IntegrationInstallationRepositories => "integration_installation_repositories",
             EventType::IssueComment => "issue_comment",
             EventType::Issues => "issues",
             EventType::Label => "label",
@@ -210,16 +208,12 @@ impl EventType {
             EventType::Public => "public",
             EventType::PullRequest => "pull_request",
             EventType::PullRequestReview => "pull_request_review",
-            EventType::PullRequestReviewComment => {
-                "pull_request_review_comment"
-            }
+            EventType::PullRequestReviewComment => "pull_request_review_comment",
             EventType::Push => "push",
             EventType::Release => "release",
             EventType::Repository => "repository",
             EventType::RepositoryImport => "repository_import",
-            EventType::RepositoryVulnerabilityAlert => {
-                "repository_vulnerability_alert"
-            }
+            EventType::RepositoryVulnerabilityAlert => "repository_vulnerability_alert",
             EventType::SecurityAdvisory => "security_advisory",
             EventType::Status => "status",
             EventType::Team => "team",
@@ -249,15 +243,9 @@ impl FromStr for EventType {
             "github_app_authorization" => Ok(EventType::GitHubAppAuthorization),
             "gollum" => Ok(EventType::Gollum),
             "installation" => Ok(EventType::Installation),
-            "integration_installation" => {
-                Ok(EventType::IntegrationInstallation)
-            }
-            "installation_repositories" => {
-                Ok(EventType::InstallationRepositories)
-            }
-            "integration_installation_repositories" => {
-                Ok(EventType::IntegrationInstallationRepositories)
-            }
+            "integration_installation" => Ok(EventType::IntegrationInstallation),
+            "installation_repositories" => Ok(EventType::InstallationRepositories),
+            "integration_installation_repositories" => Ok(EventType::IntegrationInstallationRepositories),
             "issue_comment" => Ok(EventType::IssueComment),
             "issues" => Ok(EventType::Issues),
             "label" => Ok(EventType::Label),
@@ -273,17 +261,13 @@ impl FromStr for EventType {
             "project" => Ok(EventType::Project),
             "public" => Ok(EventType::Public),
             "pull_request" => Ok(EventType::PullRequest),
-            "pull_request_review_comment" => {
-                Ok(EventType::PullRequestReviewComment)
-            }
+            "pull_request_review_comment" => Ok(EventType::PullRequestReviewComment),
             "pull_request_review" => Ok(EventType::PullRequestReview),
             "push" => Ok(EventType::Push),
             "release" => Ok(EventType::Release),
             "repository" => Ok(EventType::Repository),
             "repository_import" => Ok(EventType::RepositoryImport),
-            "repository_vulnerability_alert" => {
-                Ok(EventType::RepositoryVulnerabilityAlert)
-            }
+            "repository_vulnerability_alert" => Ok(EventType::RepositoryVulnerabilityAlert),
             "security_advisory" => Ok(EventType::SecurityAdvisory),
             "status" => Ok(EventType::Status),
             "team" => Ok(EventType::Team),

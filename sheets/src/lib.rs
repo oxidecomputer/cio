@@ -13,12 +13,9 @@
  *
  * async fn get_sheet_values() {
  *     // Get the GSuite credentials file.
- *     let gsuite_credential_file =
- *         env::var("GADMIN_CREDENTIAL_FILE").unwrap();
+ *     let gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap();
  *     let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
- *     let gsuite_secret = read_service_account_key(gsuite_credential_file)
- *         .await
- *         .expect("failed to read gsuite credential file");
+ *     let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
  *     let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
  *         .subject(gsuite_subject.to_string())
  *         .build()
@@ -26,10 +23,7 @@
  *         .expect("failed to create authenticator");
  *
  *     // Add the scopes to the secret and get the token.
- *     let token = auth
- *         .token(&["https://www.googleapis.com/auth/spreadsheets"])
- *         .await
- *         .expect("failed to get token");
+ *     let token = auth.token(&["https://www.googleapis.com/auth/spreadsheets"]).await.expect("failed to get token");
  *
  *     if token.as_str().is_empty() {
  *         panic!("empty token is not valid");
@@ -39,10 +33,7 @@
  *     let sheets_client = Sheets::new(token);
  *
  *     // Get the values in the sheet.
- *     let sheet_values = sheets_client
- *         .get_values("sheet_id", "Form Responses 1!A1:S1000".to_string())
- *         .await
- *         .unwrap();
+ *     let sheet_values = sheets_client.get_values("sheet_id", "Form Responses 1!A1:S1000".to_string()).await.unwrap();
  *     let values = sheet_values.values.unwrap();
  *
  *     if values.is_empty() {
@@ -81,10 +72,7 @@ impl Sheets {
     pub fn new(token: AccessToken) -> Self {
         let client = Client::builder().build();
         match client {
-            Ok(c) => Self {
-                token,
-                client: Arc::new(c),
-            },
+            Ok(c) => Self { token, client: Arc::new(c) },
             Err(e) => panic!("creating client failed: {:?}", e),
         }
     }
@@ -94,13 +82,7 @@ impl Sheets {
         &self.token
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: String,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -118,10 +100,7 @@ impl Sheets {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(
-            header::CONTENT_TYPE,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -142,11 +121,7 @@ impl Sheets {
     }
 
     /// Get values.
-    pub async fn get_values(
-        &self,
-        sheet_id: &str,
-        range: String,
-    ) -> Result<ValueRange, APIError> {
+    pub async fn get_values(&self, sheet_id: &str, range: String) -> Result<ValueRange, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -175,20 +150,11 @@ impl Sheets {
     }
 
     /// Update values.
-    pub async fn update_values(
-        &self,
-        sheet_id: &str,
-        range: &str,
-        value: String,
-    ) -> Result<UpdateValuesResponse, APIError> {
+    pub async fn update_values(&self, sheet_id: &str, range: &str, value: String) -> Result<UpdateValuesResponse, APIError> {
         // Build the request.
         let request = self.request(
             Method::PUT,
-            format!(
-                "spreadsheets/{}/values/{}",
-                sheet_id.to_string(),
-                range.to_string()
-            ),
+            format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range.to_string()),
             ValueRange {
                 range: Some(range.to_string()),
                 values: Some(vec![vec![value]]),
@@ -197,10 +163,7 @@ impl Sheets {
             Some(vec![
                 ("valueInputOption", "USER_ENTERED".to_string()),
                 ("responseValueRenderOption", "FORMATTED_VALUE".to_string()),
-                (
-                    "responseDateTimeRenderOption",
-                    "FORMATTED_STRING".to_string(),
-                ),
+                ("responseDateTimeRenderOption", "FORMATTED_STRING".to_string()),
             ]),
         );
 
@@ -228,23 +191,13 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 

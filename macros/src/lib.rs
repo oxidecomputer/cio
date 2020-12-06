@@ -21,20 +21,14 @@ struct Metadata {
 }
 
 #[proc_macro_attribute]
-pub fn db_struct(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
+pub fn db_struct(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     match do_db_struct(attr.into(), item.into()) {
         Ok(result) => result.into(),
         Err(err) => err.to_compile_error().into(),
     }
 }
 
-fn do_db_struct(
-    attr: TokenStream,
-    item: TokenStream,
-) -> Result<TokenStream, Error> {
+fn do_db_struct(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     let metadata = from_tokenstream::<Metadata>(&attr).unwrap();
     let new_name = format_ident!("{}", metadata.new_name);
     let new_name_plural = format_ident!("{}s", metadata.new_name);

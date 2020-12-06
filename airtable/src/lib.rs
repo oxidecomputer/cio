@@ -14,14 +14,7 @@
  *     let airtable = Airtable::new_from_env();
  *
  *     // Get the current records from a table.
- *     let mut records: Vec<Record<SomeFormat>> = airtable
- *         .list_records(
- *             "Table Name",
- *             "Grid view",
- *             vec!["the", "fields", "you", "want", "to", "return"],
- *         )
- *         .await
- *         .unwrap();
+ *     let mut records: Vec<Record<SomeFormat>> = airtable.list_records("Table Name", "Grid view", vec!["the", "fields", "you", "want", "to", "return"]).await.unwrap();
  *
  *     // Iterate over the records.
  *     for (i, record) in records.clone().iter().enumerate() {
@@ -100,20 +93,12 @@ impl Airtable {
         &self.key
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: String,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
         let base = Url::parse(ENDPOINT).unwrap();
-        let url = base
-            .join(&(self.base_id.to_string() + "/" + &path))
-            .unwrap();
+        let url = base.join(&(self.base_id.to_string() + "/" + &path)).unwrap();
 
         let bt = format!("Bearer {}", self.key);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
@@ -121,10 +106,7 @@ impl Airtable {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(
-            header::CONTENT_TYPE,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -145,21 +127,14 @@ impl Airtable {
     }
 
     /// List records in a table for a particular view.
-    pub async fn list_records<T: DeserializeOwned>(
-        &self,
-        table: &str,
-        view: &str,
-        fields: Vec<&str>,
-    ) -> Result<Vec<Record<T>>, APIError> {
-        let mut params =
-            vec![("pageSize", "100".to_string()), ("view", view.to_string())];
+    pub async fn list_records<T: DeserializeOwned>(&self, table: &str, view: &str, fields: Vec<&str>) -> Result<Vec<Record<T>>, APIError> {
+        let mut params = vec![("pageSize", "100".to_string()), ("view", view.to_string())];
         for field in fields {
             params.push(("fields", field.to_string()));
         }
 
         // Build the request.
-        let mut request =
-            self.request(Method::GET, table.to_string(), (), Some(params));
+        let mut request = self.request(Method::GET, table.to_string(), (), Some(params));
 
         let mut resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -186,11 +161,7 @@ impl Airtable {
                 Method::GET,
                 table.to_string(),
                 (),
-                Some(vec![
-                    ("pageSize", "100".to_string()),
-                    ("view", view.to_string()),
-                    ("offset", offset),
-                ]),
+                Some(vec![("pageSize", "100".to_string()), ("view", view.to_string()), ("offset", offset)]),
             );
 
             resp = self.client.execute(request).await.unwrap();
@@ -216,18 +187,9 @@ impl Airtable {
     }
 
     /// Get record from a table.
-    pub async fn get_record<T: DeserializeOwned>(
-        &self,
-        table: &str,
-        record_id: &str,
-    ) -> Result<Record<T>, APIError> {
+    pub async fn get_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<Record<T>, APIError> {
         // Build the request.
-        let request = self.request(
-            Method::GET,
-            format!("{}/{}", table, record_id),
-            (),
-            None,
-        );
+        let request = self.request(Method::GET, format!("{}/{}", table, record_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -250,11 +212,7 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk create 10
     /// records at a time.
-    pub async fn create_records<T: Serialize + DeserializeOwned>(
-        &self,
-        table: &str,
-        records: Vec<Record<T>>,
-    ) -> Result<Vec<Record<T>>, APIError> {
+    pub async fn create_records<T: Serialize + DeserializeOwned>(&self, table: &str, records: Vec<Record<T>>) -> Result<Vec<Record<T>>, APIError> {
         // Build the request.
         let request = self.request(
             Method::POST,
@@ -288,11 +246,7 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk update 10
     /// records at a time.
-    pub async fn update_records<T: Serialize + DeserializeOwned>(
-        &self,
-        table: &str,
-        records: Vec<Record<T>>,
-    ) -> Result<Vec<Record<T>>, APIError> {
+    pub async fn update_records<T: Serialize + DeserializeOwned>(&self, table: &str, records: Vec<Record<T>>) -> Result<Vec<Record<T>>, APIError> {
         // Build the request.
         let request = self.request(
             Method::PATCH,
@@ -335,23 +289,13 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 

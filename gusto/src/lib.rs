@@ -99,10 +99,7 @@ impl Gusto {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(
-            header::CONTENT_TYPE,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
         self.client.request(method, url).headers(headers)
     }
@@ -131,15 +128,9 @@ impl Gusto {
     }
 
     /// Get information about the current user.
-    pub async fn list_employees_by_company_id(
-        &self,
-        company_id: &u64,
-    ) -> Result<Vec<Employee>, APIError> {
+    pub async fn list_employees_by_company_id(&self, company_id: &u64) -> Result<Vec<Employee>, APIError> {
         // Build the request.
-        let rb = self.request(
-            Method::GET,
-            &format!("/v1/companies/{}/employees", company_id),
-        );
+        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", company_id));
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -168,23 +159,13 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 
@@ -466,10 +447,7 @@ pub mod date_format {
     //        S: Serializer
     //
     // although it may also be generic over the input types T.
-    pub fn serialize<S>(
-        date: &NaiveDate,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {

@@ -47,10 +47,7 @@ pub mod meeting_date_format {
     //        S: Serializer
     //
     // although it may also be generic over the input types T.
-    pub fn serialize<S>(
-        date: &NaiveDate,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -73,8 +70,7 @@ pub mod meeting_date_format {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer).unwrap_or("".to_string());
-        Ok(NaiveDate::parse_from_str(&s, FORMAT)
-            .unwrap_or(crate::utils::default_date()))
+        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap_or(crate::utils::default_date()))
     }
 }
 
@@ -112,8 +108,7 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
     let meetings_json_string = from_utf8(&meetings_csv_content).unwrap();
 
     // Parse the meetings from the json string.
-    let meetings: Vec<Meeting> =
-        serde_json::from_str(meetings_json_string).unwrap();
+    let meetings: Vec<Meeting> = serde_json::from_str(meetings_json_string).unwrap();
 
     meetings
 }
@@ -157,9 +152,7 @@ mod tests {
 
         let journal_club_meetings = db.get_journal_club_meetings();
         // Update journal club meetings in airtable.
-        JournalClubMeetings(journal_club_meetings)
-            .update_airtable()
-            .await;
+        JournalClubMeetings(journal_club_meetings).update_airtable().await;
     }
 
     #[tokio::test(threaded_scheduler)]
@@ -169,8 +162,6 @@ mod tests {
 
         let journal_club_papers = db.get_journal_club_papers();
         // Update journal club papers in airtable.
-        JournalClubPapers(journal_club_papers)
-            .update_airtable()
-            .await;
+        JournalClubPapers(journal_club_papers).update_airtable().await;
     }
 }

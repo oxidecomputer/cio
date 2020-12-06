@@ -38,12 +38,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
         email: env::var("CLOUDFLARE_EMAIL").unwrap(),
         key: env::var("CLOUDFLARE_TOKEN").unwrap(),
     };
-    let api_client = Client::new(
-        cf_creds,
-        HttpApiClientConfig::default(),
-        Environment::Production,
-    )
-    .unwrap();
+    let api_client = Client::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
 
     // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
     let persist = FilePersist::new(env::temp_dir());
@@ -83,11 +78,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
 
         // We need the root of the domain not a subdomain.
         let domain_parts: Vec<&str> = domain.split(".").collect();
-        let root_domain = format!(
-            "{}.{}",
-            domain_parts[domain_parts.len() - 2],
-            domain_parts[domain_parts.len() - 1]
-        );
+        let root_domain = format!("{}.{}", domain_parts[domain_parts.len() - 2], domain_parts[domain_parts.len() - 1]);
 
         // Get the zone ID for the domain.
         let zones = api_client
@@ -103,8 +94,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
 
         // Our zone identifier should be the first record's ID.
         let zone_identifier = &zones[0].id;
-        let record_name =
-            format!("_acme-challenge.{}", domain.replace("*.", ""));
+        let record_name = format!("_acme-challenge.{}", domain.replace("*.", ""));
 
         // Check if we already have a TXT record and we need to update it.
         let dns_records = api_client
@@ -127,9 +117,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
                     zone_identifier: &zone_identifier,
                     params: dns::CreateDnsRecordParams {
                         name: &record_name,
-                        content: dns::DnsContent::TXT {
-                            content: challenge.dns_proof(),
-                        },
+                        content: dns::DnsContent::TXT { content: challenge.dns_proof() },
                         ttl: None,
                         proxied: None,
                         priority: None,
@@ -148,9 +136,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
                     identifier: &dns_records[0].id,
                     params: dns::UpdateDnsRecordParams {
                         name: &record_name,
-                        content: dns::DnsContent::TXT {
-                            content: challenge.dns_proof(),
-                        },
+                        content: dns::DnsContent::TXT { content: challenge.dns_proof() },
                         ttl: None,
                         proxied: None,
                     },
@@ -211,16 +197,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
     base_id = "AIRTABLE_BASE_ID_MISC",
     table = "AIRTABLE_CERTIFICATES_TABLE",
 }]
-#[derive(
-    Debug,
-    Insertable,
-    AsChangeset,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "certificates"]
 pub struct NewCertificate {
     pub domain: String,
@@ -230,10 +207,7 @@ pub struct NewCertificate {
     pub private_key: String,
     #[serde(default)]
     pub valid_days_left: i32,
-    #[serde(
-        default = "crate::utils::default_date",
-        serialize_with = "crate::configs::null_date_format::serialize"
-    )]
+    #[serde(default = "crate::utils::default_date", serialize_with = "crate::configs::null_date_format::serialize")]
     pub expiration_date: NaiveDate,
 }
 
@@ -251,24 +225,12 @@ impl NewCertificate {
         let repo = github.repo(github_org(), "configs");
         let cert = repo
             .content()
-            .file(
-                &format!(
-                    "nginx/ssl/{}/fullchain.pem",
-                    self.domain.replace("*.", "wildcard.")
-                ),
-                "master",
-            )
+            .file(&format!("nginx/ssl/{}/fullchain.pem", self.domain.replace("*.", "wildcard.")), "master")
             .await
             .unwrap();
         let priv_key = repo
             .content()
-            .file(
-                &format!(
-                    "nginx/ssl/{}/privkey.pem",
-                    self.domain.replace("*.", "wildcard.")
-                ),
-                "master",
-            )
+            .file(&format!("nginx/ssl/{}/privkey.pem", self.domain.replace("*.", "wildcard.")), "master")
             .await
             .unwrap();
 
@@ -284,11 +246,8 @@ impl NewCertificate {
     pub fn populate_from_disk(&mut self, dir: &str) {
         let path = self.get_path(dir);
 
-        self.certificate =
-            fs::read_to_string(path.clone().join("fullchain.pem"))
-                .unwrap_or("".to_string());
-        self.private_key = fs::read_to_string(path.clone().join("privkey.pem"))
-            .unwrap_or("".to_string());
+        self.certificate = fs::read_to_string(path.clone().join("fullchain.pem")).unwrap_or("".to_string());
+        self.private_key = fs::read_to_string(path.clone().join("privkey.pem")).unwrap_or("".to_string());
 
         if !self.certificate.is_empty() {
             let exp_date = self.expiration_date();
@@ -309,13 +268,8 @@ impl NewCertificate {
         fs::create_dir_all(path.clone()).unwrap();
 
         // Write the files.
-        fs::write(
-            path.clone().join("fullchain.pem"),
-            self.certificate.as_bytes(),
-        )
-        .unwrap();
-        fs::write(path.join("privkey.pem"), self.private_key.as_bytes())
-            .unwrap();
+        fs::write(path.clone().join("fullchain.pem"), self.certificate.as_bytes()).unwrap();
+        fs::write(path.join("privkey.pem"), self.private_key.as_bytes()).unwrap();
     }
 
     /// Inspect the certificate to count the number of (whole) valid days left.
@@ -335,15 +289,13 @@ impl NewCertificate {
     /// Inspect the certificate to get the expiration_date.
     pub fn expiration_date(&self) -> DateTime<Utc> {
         // load as x509
-        let x509 =
-            X509::from_pem(self.certificate.as_bytes()).expect("from_pem");
+        let x509 = X509::from_pem(self.certificate.as_bytes()).expect("from_pem");
 
         // convert asn1 time to Tm
         let not_after = format!("{}", x509.not_after());
         // Display trait produces this format, which is kinda dumb.
         // Apr 19 08:48:46 2019 GMT
-        Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z")
-            .expect("strptime")
+        Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z").expect("strptime")
     }
 }
 

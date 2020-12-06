@@ -110,10 +110,7 @@ impl ApplicantSheetColumns {
 }
 
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
-pub async fn get_file_contents(
-    drive_client: &GoogleDrive,
-    url: &str,
-) -> String {
+pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String {
     let id = url.replace("https://drive.google.com/open?id=", "");
 
     // Get information about the file.
@@ -165,27 +162,15 @@ pub async fn get_file_contents(
             {
                 let comment = file.comment();
                 if !comment.is_empty() {
-                    println!(
-                        "[applicants] zip file {} comment: {}",
-                        i, comment
-                    );
+                    println!("[applicants] zip file {} comment: {}", i, comment);
                 }
             }
 
             if (&*file.name()).ends_with('/') {
-                println!(
-                    "[applicants] zip file {} extracted to \"{}\"",
-                    i,
-                    output.as_path().display()
-                );
+                println!("[applicants] zip file {} extracted to \"{}\"", i, output.as_path().display());
                 fs::create_dir_all(&output).unwrap();
             } else {
-                println!(
-                    "[applicants] zip file {} extracted to \"{}\" ({} bytes)",
-                    i,
-                    output.as_path().display(),
-                    file.size()
-                );
+                println!("[applicants] zip file {} extracted to \"{}\" ({} bytes)", i, output.as_path().display(), file.size());
 
                 if let Some(p) = output.parent() {
                     if !p.exists() {
@@ -196,13 +181,12 @@ pub async fn get_file_contents(
                 copy(&mut file, &mut outfile).unwrap();
 
                 let file_name = output.to_str().unwrap();
-                if (!output.is_dir())
-                    && (file_name.ends_with("responses.pdf")
-                        || file_name.ends_with("OxideQuestions.pdf")
-                        || file_name.ends_with("Questionnaire.pdf"))
-                {
+                if (!output.is_dir()) && (file_name.ends_with("responses.pdf") || file_name.ends_with("OxideQuestions.pdf") || file_name.ends_with("Questionnaire.pdf")) {
                     // Concatenate all the zip files into our result.
-                    result += &format!("====================== zip file: {} ======================\n\n",output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), ""));
+                    result += &format!(
+                        "====================== zip file: {} ======================\n\n",
+                        output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                    );
                     if output.as_path().extension().unwrap() == "pdf" {
                         result += &read_pdf(&name, output.clone());
                     } else {
@@ -212,17 +196,10 @@ pub async fn get_file_contents(
                 }
             }
         }
-    } else if name.ends_with(".doc")
-        || name.ends_with(".pptx")
-        || name.ends_with(".jpg")
+    } else if name.ends_with(".doc") || name.ends_with(".pptx") || name.ends_with(".jpg")
     // TODO: handle these formats
     {
-        println!(
-            "[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}",
-            mime_type,
-            name,
-            path.to_str().unwrap()
-        );
+        println!("[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}", mime_type, name, path.to_str().unwrap());
     } else {
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
         path.push(name.to_string());
@@ -255,25 +232,12 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
     output.push("tempfile.txt");
 
     // Extract the text from the PDF
-    let cmd_output = Command::new("pdftotext")
-        .args(&[
-            "-enc",
-            "UTF-8",
-            path.to_str().unwrap(),
-            output.to_str().unwrap(),
-        ])
-        .output()
-        .unwrap();
+    let cmd_output = Command::new("pdftotext").args(&["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()]).output().unwrap();
 
     let result = match fs::read_to_string(output.clone()) {
         Ok(r) => r,
         Err(e) => {
-            println!(
-                "[applicants] running pdf2text failed: {} | name: {}, path: {}",
-                e,
-                name,
-                path.as_path().display()
-            );
+            println!("[applicants] running pdf2text failed: {} | name: {}, path: {}", e, name, path.as_path().display());
             stdout().write_all(&cmd_output.stdout).unwrap();
             stderr().write_all(&cmd_output.stderr).unwrap();
 
@@ -293,18 +257,9 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
 
 fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
-    sheets.insert(
-        "Engineering",
-        "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA",
-    );
-    sheets.insert(
-        "Product Engineering and Design",
-        "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI",
-    );
-    sheets.insert(
-        "Technical Program Management",
-        "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU",
-    );
+    sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
+    sheets.insert("Product Engineering and Design", "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI");
+    sheets.insert("Technical Program Management", "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU");
 
     sheets
 }
@@ -329,13 +284,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     let meta_issues = github
         .repo(github_org(), "meta")
         .issues()
-        .list(
-            &IssueListOptions::builder()
-                .per_page(100)
-                .state(State::All)
-                .labels(vec!["hiring"])
-                .build(),
-        )
+        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
 
@@ -343,13 +292,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     let configs_issues = github
         .repo(github_org(), "configs")
         .issues()
-        .list(
-            &IssueListOptions::builder()
-                .per_page(100)
-                .state(State::All)
-                .labels(vec!["hiring"])
-                .build(),
-        )
+        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
 
@@ -359,17 +302,11 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     // depending on the application status.
     for (sheet_name, sheet_id) in sheets {
         // Get the values in the sheet.
-        let sheet_values = sheets_client
-            .get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string())
-            .await
-            .unwrap();
+        let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string()).await.unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
-            panic!(
-                "unable to retrieve any data values from Google sheet {} {}",
-                sheet_id, sheet_name
-            );
+            panic!("unable to retrieve any data values from Google sheet {} {}", sheet_id, sheet_name);
         }
 
         // Parse the sheet columns.
@@ -388,39 +325,17 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
             }
 
             // Parse the applicant out of the row information.
-            let (applicant, is_new_applicant) = NewApplicant::parse(
-                &drive_client,
-                &sheets_client,
-                sheet_name,
-                sheet_id,
-                &columns,
-                &row,
-                row_index,
-            )
-            .await;
+            let (applicant, is_new_applicant) = NewApplicant::parse(&drive_client, &sheets_client, sheet_name, sheet_id, &columns, &row, row_index).await;
 
-            applicant
-                .create_github_next_steps_issue(&github, &meta_issues)
-                .await;
-            applicant
-                .create_github_onboarding_issue(&github, &configs_issues)
-                .await;
+            applicant.create_github_next_steps_issue(&github, &meta_issues).await;
+            applicant.create_github_onboarding_issue(&github, &configs_issues).await;
 
             if is_new_applicant {
                 // Post to Slack.
-                post_to_channel(
-                    get_hiring_channel_post_url(),
-                    applicant.as_slack_msg(),
-                )
-                .await;
+                post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
                 // Send a company-wide email.
-                email_send_new_applicant_notification(
-                    &sendgrid_client,
-                    applicant.clone(),
-                    "oxide.computer",
-                )
-                .await;
+                email_send_new_applicant_notification(&sendgrid_client, applicant.clone(), "oxide.computer").await;
             }
 
             applicants.push(applicant);
@@ -430,31 +345,26 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     applicants
 }
 
-pub async fn email_send_received_application(
-    sendgrid: &SendGrid,
-    email: &str,
-    domain: &str,
-) {
+pub async fn email_send_received_application(sendgrid: &SendGrid, email: &str, domain: &str) {
     // Send the message.
-    sendgrid.send_mail(
-        "Oxide Computer Company Application Received!".to_string(),
-                "Thank you for submitting your application materials! We really appreciate all
+    sendgrid
+        .send_mail(
+            "Oxide Computer Company Application Received!".to_string(),
+            "Thank you for submitting your application materials! We really appreciate all
 the time and thought everyone puts into their application. We will be in touch
 within the next couple weeks with more information.
 Sincerely,
-  The Oxide Team".to_string(),
-  vec![email.to_string()],
-        vec![format!("careers@{}",domain)],
-        vec![],
-    format!("careers@{}", domain),
-    ).await;
+  The Oxide Team"
+                .to_string(),
+            vec![email.to_string()],
+            vec![format!("careers@{}", domain)],
+            vec![],
+            format!("careers@{}", domain),
+        )
+        .await;
 }
 
-pub async fn email_send_new_applicant_notification(
-    sendgrid: &SendGrid,
-    applicant: NewApplicant,
-    domain: &str,
-) {
+pub async fn email_send_new_applicant_notification(sendgrid: &SendGrid, applicant: NewApplicant, domain: &str) {
     // Create the message.
     let message = applicant.clone().as_company_notification_email();
 

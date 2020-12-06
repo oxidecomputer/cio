@@ -5,11 +5,7 @@ use std::sync::Arc;
 use chrono::offset::Utc;
 use chrono::{DateTime, TimeZone};
 use chrono_humanize::HumanTime;
-use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
-    ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk,
-    HttpServer, Query, RequestContext, TypedBody,
-};
+use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, Query, RequestContext, TypedBody};
 use google_drive::GoogleDrive;
 use hubcaps::Github;
 use schemars::JsonSchema;
@@ -39,13 +35,8 @@ async fn main() -> Result<(), String> {
      * For simplicity, we'll configure an "info"-level logger that writes to
      * stderr assuming that it's a terminal.
      */
-    let config_logging = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
-    };
-    let log = config_logging
-        .to_logger("webhooky-server")
-        .map_err(|error| format!("failed to create logger: {}", error))
-        .unwrap();
+    let config_logging = ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Info };
+    let log = config_logging.to_logger("webhooky-server").map_err(|error| format!("failed to create logger: {}", error)).unwrap();
 
     // Describe the API.
     let mut api = ApiDescription::new();
@@ -103,17 +94,11 @@ impl Context {
 
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive
-            .get_drive_by_name("Automated Documents")
-            .await
-            .unwrap();
+        let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
         let drive_rfd_shared_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let drive_rfd_dir = drive
-            .get_file_by_name(&drive_rfd_shared_id, "rfds")
-            .await
-            .unwrap();
+        let drive_rfd_dir = drive.get_file_by_name(&drive_rfd_shared_id, "rfds").await.unwrap();
 
         // Create the context.
         Arc::new(Context {
@@ -131,10 +116,8 @@ impl Context {
      * functions), return our application-specific context.
      */
     pub fn from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
-        let ctx: Arc<dyn Any + Send + Sync + 'static> =
-            Arc::clone(&rqctx.server.private);
-        ctx.downcast::<Context>()
-            .expect("wrong type for private data")
+        let ctx: Arc<dyn Any + Send + Sync + 'static> = Arc::clone(&rqctx.server.private);
+        ctx.downcast::<Context>().expect("wrong type for private data")
     }
 }
 
@@ -147,9 +130,7 @@ impl Context {
     method = GET,
     path = "/ping",
 }]
-async fn ping(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
 }
 
@@ -158,14 +139,9 @@ async fn ping(
     method = POST,
     path = "/github",
 }]
-async fn listen_github_webhooks(
-    rqctx: Arc<RequestContext>,
-    body_param: TypedBody<GitHubWebhook>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GitHubWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
-    let github_repo = api_context
-        .github
-        .repo(api_context.github_org.to_string(), "rfd");
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd");
 
     // TODO: share the database connection in the context.
     let db = Database::new();
@@ -188,41 +164,27 @@ async fn listen_github_webhooks(
     match event_type {
         EventType::Push => {
             println!("[{}] {:?}", event_type.name(), event);
-            event
-                .into_influx_push(&api_context.influx, &api_context.github)
-                .await;
+            event.into_influx_push(&api_context.influx, &api_context.github).await;
         }
         EventType::PullRequest => {
             println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_pull_request();
-            api_context
-                .influx
-                .query(influx_event, event_type.name())
-                .await;
+            api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::PullRequestReviewComment => {
             println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_pull_request_review_comment();
-            api_context
-                .influx
-                .query(influx_event, event_type.name())
-                .await;
+            api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::Issues => {
             println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_issue();
-            api_context
-                .influx
-                .query(influx_event, event_type.name())
-                .await;
+            api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::IssueComment => {
             println!("[{}] {:?}", event_type.name(), event);
             let influx_event = event.into_influx_issue_comment();
-            api_context
-                .influx
-                .query(influx_event, event_type.name())
-                .await;
+            api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckSuite => {
             println!("[{}] {:?}", event_type.name(), event);
@@ -234,10 +196,7 @@ async fn listen_github_webhooks(
     }
 
     if event_type != EventType::Push && event_type != EventType::PullRequest {
-        let msg = format!(
-            "Aborted, not a `push` or `pull_request` event, got `{}`",
-            event_type
-        );
+        let msg = format!("Aborted, not a `push` or `pull_request` event, got `{}`", event_type);
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -248,8 +207,7 @@ async fn listen_github_webhooks(
     if repo_name != "rfd" {
         // We only care about the rfd repo push events for now.
         // We can throw this out, log it and return early.
-        let msg =
-            format!("Aborted, `{}` event was to the {} repo, no automations are set up for this repo yet",event_type, repo_name);
+        let msg = format!("Aborted, `{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -259,8 +217,10 @@ async fn listen_github_webhooks(
         // We only care if the pull request was `opened`.
         if event.action != "opened" {
             // We can throw this out, log it and return early.
-            let msg =
-            format!("Aborted, `{}` event was to the {} repo, no automations are set up for action `{}` yet",event_type, repo_name, event.action);
+            let msg = format!(
+                "Aborted, `{}` event was to the {} repo, no automations are set up for action `{}` yet",
+                event_type, repo_name, event.action
+            );
             println!("[github]: {}", msg);
             return Ok(HttpResponseAccepted(msg));
         }
@@ -268,8 +228,10 @@ async fn listen_github_webhooks(
         // We have a newly opened pull request.
         // TODO: Let's update the discussion link for the RFD.
 
-        let msg =
-            format!("`{}` event was to the {} repo with action `{}`, updated discussion link for the RFD",event_type, repo_name, event.action);
+        let msg = format!(
+            "`{}` event was to the {} repo with action `{}`, updated discussion link for the RFD",
+            event_type, repo_name, event.action
+        );
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -289,10 +251,7 @@ async fn listen_github_webhooks(
     if !commit.distinct {
         // The commit is not distinct.
         // We can throw this out, log it and return early.
-        let msg = format!(
-            "Aborted, `push` event commit `{}` is not distinct",
-            commit.id
-        );
+        let msg = format!("Aborted, `push` event commit `{}` is not distinct", commit.id);
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -303,11 +262,7 @@ async fn listen_github_webhooks(
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        let msg = format!(
-            "Aborted, `push` event commit `{}` does not include any changes to the `{}` directory",
-            commit.id,
-            dir
-        );
+        let msg = format!("Aborted, `push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
         println!("[github]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -337,20 +292,9 @@ async fn listen_github_webhooks(
 
         // We have a README file that changed, let's parse the RFD and update it
         // in our database.
-        println!(
-            "[github] `{}` event -> file {} was modified on branch {}",
-            event_type.name(),
-            file,
-            branch
-        );
+        println!("[github] `{}` event -> file {} was modified on branch {}", event_type.name(), file, branch);
         // Parse the RFD.
-        let new_rfd = NewRFD::new_from_github(
-            &github_repo,
-            branch,
-            &file,
-            commit.timestamp.unwrap(),
-        )
-        .await;
+        let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
         // Get the old RFD from the database. We will need this later to
         // check if the RFD's state changed.
@@ -375,9 +319,7 @@ async fn listen_github_webhooks(
             .workflows()
             .dispatch(
                 "run-shorturls",
-                &hubcaps::workflows::WorkflowDispatchOptions::builder()
-                    .reference(repo.default_branch.to_string())
-                    .build(),
+                &hubcaps::workflows::WorkflowDispatchOptions::builder().reference(repo.default_branch.to_string()).build(),
             )
             .await
             .unwrap();
@@ -387,13 +329,8 @@ async fn listen_github_webhooks(
         airtable_rfd.create_or_update_in_airtable().await;
 
         // Update the PDFs for the RFD.
-        rfd.convert_and_upload_pdf(
-            &api_context.github,
-            &api_context.drive,
-            &api_context.drive_rfd_shared_id,
-            &api_context.drive_rfd_dir_id,
-        )
-        .await;
+        rfd.convert_and_upload_pdf(&api_context.github, &api_context.drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
+            .await;
 
         // Check if the RFD state changed from what is currently in the
         // database.
@@ -403,30 +340,25 @@ async fn listen_github_webhooks(
         // a PR. Instead, below, the state of the RFD would be moved to `published`.
         // TODO: see if we drop events if we do we might want to remove the check with
         // the old state and just do it everytime an RFD is in discussion.
-        if old_rfd_state != rfd.state
-            && rfd.state == "discussion"
-            && branch != repo.default_branch.to_string()
-        {
+        if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != repo.default_branch.to_string() {
             // First, we need to make sure we don't already have a pull request open.
             let pulls = github_repo
                 .pulls()
-                .list(
-                    &hubcaps::pulls::PullListOptions::builder()
-                        .state(hubcaps::issues::State::Open)
-                        .build(),
-                )
+                .list(&hubcaps::pulls::PullListOptions::builder().state(hubcaps::issues::State::Open).build())
                 .await
                 .unwrap();
             // Check if any pull requests are from our branch.
             let mut has_pull = false;
             for pull in pulls {
                 // Check if the pull request is for our branch.
-                let pull_branch =
-                    pull.head.commit_ref.trim_start_matches("refs/heads/");
+                let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
                 println!("pull branch: {}", pull_branch);
 
                 if pull_branch == branch {
-                    println!("[github] RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}", rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url);
+                    println!(
+                        "[github] RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                        rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
+                    );
 
                     has_pull = true;
                     break;
@@ -435,7 +367,10 @@ async fn listen_github_webhooks(
 
             // Open a pull request, if we don't already have one.
             if !has_pull {
-                println!("[github] RFD {} has moved from state {} -> {}, on branch {}, opening a PR",rfd.number_string, old_rfd_state, rfd.state, branch);
+                println!(
+                    "[github] RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
+                    rfd.number_string, old_rfd_state, rfd.state, branch
+                );
 
                 github_repo
                                     .pulls()
@@ -456,11 +391,10 @@ async fn listen_github_webhooks(
 
         // If the RFD was merged into the default branch, but the RFD state is not `published`,
         // update the state of the RFD in GitHub to show it as `published`.
-        if branch == repo.default_branch.to_string() && rfd.state != "published"
-        {
+        if branch == repo.default_branch.to_string() && rfd.state != "published" {
             println!(
                 "[github] RFD {} is the branch {} but its state is {}, updating it to `published`",
-                rfd.number_string,repo.default_branch, old_rfd_state,
+                rfd.number_string, repo.default_branch, old_rfd_state,
             );
 
             // TODO: Update the state of the RFD in GitHub to show it as `published`.
@@ -474,30 +408,31 @@ async fn listen_github_webhooks(
             let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
             // First get the sha of the old pdf.
-            let old_pdf = github_repo
-                .content()
-                .file(&pdf_path, &repo.default_branch)
-                .await
-                .unwrap();
+            let old_pdf = github_repo.content().file(&pdf_path, &repo.default_branch).await.unwrap();
 
             // Delete the old filename from GitHub.
-            github_repo.content().delete(
-                &pdf_path,
-                &format!("Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.", old_rfd_pdf),
-                &old_pdf.sha,
-            ).await.unwrap();
-
-            // Delete the old filename from drive.
-            api_context
-                .drive
-                .delete_file_by_name(
-                    &api_context.drive_rfd_shared_id,
-                    &old_rfd_pdf,
+            github_repo
+                .content()
+                .delete(
+                    &pdf_path,
+                    &format!(
+                        "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
+                        old_rfd_pdf
+                    ),
+                    &old_pdf.sha,
                 )
                 .await
                 .unwrap();
 
-            println!("[github] RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive", rfd.number_string, old_rfd_pdf, rfd.get_pdf_filename());
+            // Delete the old filename from drive.
+            api_context.drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
+
+            println!(
+                "[github] RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive",
+                rfd.number_string,
+                old_rfd_pdf,
+                rfd.get_pdf_filename()
+            );
         }
     }
 
@@ -511,9 +446,7 @@ async fn listen_github_webhooks(
     method = GET,
     path = "/github/ratelimit",
 }]
-async fn github_rate_limit(
-    rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+async fn github_rate_limit(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
     let github = &api_context.github;
 
@@ -542,9 +475,7 @@ pub struct GitHubRateLimit {
     method = GET,
     path = "/mailchimp",
 }]
-async fn ping_mailchimp_webhooks(
-    _rqctx: Arc<RequestContext>,
-) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("ok".to_string()))
 }
 
@@ -553,10 +484,7 @@ async fn ping_mailchimp_webhooks(
     method = POST,
     path = "/mailchimp",
 }]
-async fn listen_mailchimp_webhooks(
-    _rqctx: Arc<RequestContext>,
-    query_args: Query<MailchimpWebhook>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // TODO: share the database connection in the context.
     let db = Database::new();
 
@@ -565,10 +493,7 @@ async fn listen_mailchimp_webhooks(
     println!("[mailchimp] {:?}", event);
 
     if event.webhook_type != "subscribe".to_string() {
-        let msg = format!(
-            "Aborted, not a `subscribe` event, got `{}`",
-            event.webhook_type
-        );
+        let msg = format!("Aborted, not a `subscribe` event, got `{}`", event.webhook_type);
         println!("[mailchimp]: {}", msg);
         return Ok(HttpResponseAccepted(msg));
     }
@@ -711,29 +636,16 @@ pub struct GitHubWebhook {
 
 impl GitHubWebhook {
     // Push an event for every commit.
-    pub async fn into_influx_push(
-        &self,
-        influx: &influx::Client,
-        github: &Github,
-    ) {
+    pub async fn into_influx_push(&self, influx: &influx::Client, github: &Github) {
         let repo = self.repository.as_ref().unwrap();
 
         for commit in &self.commits {
             if commit.distinct {
-                let c = github
-                    .repo(repo.owner.login.to_string(), repo.name.to_string())
-                    .commits()
-                    .get(&commit.id)
-                    .await
-                    .unwrap();
+                let c = github.repo(repo.owner.login.to_string(), repo.name.to_string()).commits().get(&commit.id).await.unwrap();
 
                 if c.sha.to_string() != commit.id.to_string() {
                     // We have a problem.
-                    panic!(
-                        "commit sha mismatch: {} {}",
-                        c.sha.to_string(),
-                        commit.id.to_string()
-                    );
+                    panic!("commit sha mismatch: {} {}", c.sha.to_string(), commit.id.to_string());
                 }
 
                 let push_event = influx::Push {
@@ -770,9 +682,7 @@ impl GitHubWebhook {
         }
     }
 
-    pub fn into_influx_pull_request_review_comment(
-        &self,
-    ) -> influx::PullRequestReviewComment {
+    pub fn into_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
         influx::PullRequestReviewComment {
             time: Utc::now(),
             repo_name: self.repository.as_ref().unwrap().name.to_string(),
@@ -810,9 +720,7 @@ impl GitHubWebhook {
 
 /// A GitHub commit.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
-#[derive(
-    Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubCommit {
     /// The SHA of the commit.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -859,9 +767,7 @@ impl GitHubCommit {
 
     /// Return if the commit has any files that were added, modified, or removed.
     pub fn has_changed_files(&self) -> bool {
-        !self.added.is_empty()
-            || !self.modified.is_empty()
-            || !self.removed.is_empty()
+        !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
     }
 }
 
@@ -878,9 +784,7 @@ fn filter(files: &Vec<String>, dir: &str) -> Vec<String> {
 
 /// A GitHub pull request.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
-#[derive(
-    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubPullRequest {
     #[serde(default)]
     pub id: u64,
@@ -932,9 +836,7 @@ pub struct GitHubPullRequest {
 
 /// A Github issue.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues
-#[derive(
-    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubIssue {
     #[serde(default)]
     pub id: u64,
@@ -975,9 +877,7 @@ pub struct GitHubIssue {
 }
 
 /// A reference to a pull request.
-#[derive(
-    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubPullRef {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
@@ -991,9 +891,7 @@ pub struct GitHubPullRef {
 
 /// A Github comment.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues#comments
-#[derive(
-    Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubComment {
     #[serde(default)]
     pub id: u64,

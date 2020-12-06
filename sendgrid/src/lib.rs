@@ -80,13 +80,7 @@ impl SendGrid {
         &self.key
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: String,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -99,10 +93,7 @@ impl SendGrid {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(
-            header::CONTENT_TYPE,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -125,8 +116,7 @@ impl SendGrid {
     /// Create a sendgrid message struct and send it.
     pub async fn send_raw_mail(&self, message: Message) {
         // Build the request.
-        let request =
-            self.request(Method::POST, "mail/send".to_string(), message, None);
+        let request = self.request(Method::POST, "mail/send".to_string(), message, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -138,15 +128,7 @@ impl SendGrid {
     /// Send an email.
     ///
     /// This is a nicer experience than using `send_raw_mail`.
-    pub async fn send_mail(
-        &self,
-        subject: String,
-        message: String,
-        to: Vec<String>,
-        cc: Vec<String>,
-        bcc: Vec<String>,
-        from: String,
-    ) {
+    pub async fn send_mail(&self, subject: String, message: String, to: Vec<String>, cc: Vec<String>, bcc: Vec<String>, from: String) {
         // Create the personalization.
         let mut p = Personalization::new();
         for t in to {
@@ -163,11 +145,7 @@ impl SendGrid {
         let message = Message::new()
             .set_from(Email::new().set_email(&from).set_name(&from))
             .set_subject(&subject)
-            .add_content(
-                Content::new()
-                    .set_content_type("text/plain")
-                    .set_value(&message),
-            )
+            .add_content(Content::new().set_content_type("text/plain").set_value(&message))
             .add_personalization(p);
 
         // Send the message.
@@ -398,10 +376,7 @@ impl Personalization {
     }
 
     /// Add a headers field.
-    pub fn add_headers(
-        mut self,
-        headers: HashMap<String, String>,
-    ) -> Personalization {
+    pub fn add_headers(mut self, headers: HashMap<String, String>) -> Personalization {
         match self.headers {
             None => {
                 let mut h = HashMap::new();
@@ -418,10 +393,7 @@ impl Personalization {
     }
 
     /// Add a dynamic template data field.
-    pub fn add_dynamic_template_data(
-        mut self,
-        dynamic_template_data: HashMap<String, String>,
-    ) -> Personalization {
+    pub fn add_dynamic_template_data(mut self, dynamic_template_data: HashMap<String, String>) -> Personalization {
         match self.dynamic_template_data {
             None => {
                 let mut h = HashMap::new();

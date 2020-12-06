@@ -13,23 +13,15 @@ use macros::db_struct;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{
-    AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE,
-    AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE,
-    AIRTABLE_GROUPS_TABLE,
-};
+use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE};
 use crate::certs::NewCertificate;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::{
-    buildings, conference_rooms, github_labels, groups, links, users,
-};
+use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
 use crate::utils::{get_github_user_public_ssh_keys, github_org};
 
 /// The data type for our configuration files.
-#[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Config {
     pub users: BTreeMap<String, UserConfig>,
     pub groups: BTreeMap<String, GroupConfig>,
@@ -42,8 +34,7 @@ pub struct Config {
     pub labels: Vec<LabelConfig>,
 
     #[serde(alias = "github-outside-collaborators")]
-    pub github_outside_collaborators:
-        BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
+    pub github_outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
 
     pub huddles: BTreeMap<String, HuddleConfig>,
 
@@ -67,8 +58,7 @@ impl Config {
             println!("decoding {}", file);
 
             // Read the file.
-            let body =
-                fs::read_to_string(file).expect("reading the file failed");
+            let body = fs::read_to_string(file).expect("reading the file failed");
 
             // Append the body of the file to the rest of the contents.
             contents.push_str(&body);
@@ -87,16 +77,7 @@ impl Config {
     base_id = "AIRTABLE_BASE_ID_DIRECTORY",
     table = "AIRTABLE_EMPLOYEES_TABLE",
 }]
-#[derive(
-    Debug,
-    Insertable,
-    AsChangeset,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "users"]
 pub struct UserConfig {
     #[serde(alias = "first_name")]
@@ -106,17 +87,9 @@ pub struct UserConfig {
     pub username: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
-    #[serde(
-        default,
-        alias = "recovery_email",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, alias = "recovery_email", skip_serializing_if = "String::is_empty")]
     pub recovery_email: String,
-    #[serde(
-        default,
-        alias = "recovery_phone",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, alias = "recovery_phone", skip_serializing_if = "String::is_empty")]
     pub recovery_phone: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gender: String,
@@ -141,11 +114,7 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_building: Vec<String>,
 
-    #[serde(
-        default,
-        alias = "aws_role",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, alias = "aws_role", skip_serializing_if = "String::is_empty")]
     pub aws_role: String,
 
     /// The following fields do not exist in the config files but are populated
@@ -166,17 +135,10 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_formatted: String,
     /// Start date (automatically populated by Gusto)
-    #[serde(
-        default = "crate::utils::default_date",
-        alias = "start_date",
-        serialize_with = "null_date_format::serialize"
-    )]
+    #[serde(default = "crate::utils::default_date", alias = "start_date", serialize_with = "null_date_format::serialize")]
     pub start_date: NaiveDate,
     /// Birthday (automatically populated by Gusto)
-    #[serde(
-        default = "crate::utils::default_date",
-        serialize_with = "null_date_format::serialize"
-    )]
+    #[serde(default = "crate::utils::default_date", serialize_with = "null_date_format::serialize")]
     pub birthday: NaiveDate,
 
     /// The following field does not exist in the config files but is populated by
@@ -199,10 +161,7 @@ pub mod null_date_format {
     //        S: Serializer
     //
     // although it may also be generic over the input types T.
-    pub fn serialize<S>(
-        date: &NaiveDate,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -220,15 +179,12 @@ pub mod null_date_format {
     //        D: Deserializer<'de>
     //
     // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(
-        deserializer: D,
-    ) -> Result<DateTime<Utc>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
     where
         D: Deserializer<'de>,
     {
         // TODO: actually get the Unix timestamp.
-        let s = String::deserialize(deserializer)
-            .unwrap_or("2020-12-03T15:49:27Z".to_string());
+        let s = String::deserialize(deserializer).unwrap_or("2020-12-03T15:49:27Z".to_string());
 
         // Try to convert from the string to an int, in case we have a numerical
         // time stamp.
@@ -251,26 +207,18 @@ impl UserConfig {
             return;
         }
 
-        self.public_ssh_keys =
-            get_github_user_public_ssh_keys(&self.github).await;
+        self.public_ssh_keys = get_github_user_public_ssh_keys(&self.github).await;
     }
 
     async fn populate_from_gusto(&mut self) {
         // TODO: actually get the data from Guso once we have credentials.
         let mut street_address = self.home_address_street_1.to_string();
         if !self.home_address_street_2.is_empty() {
-            street_address = format!(
-                "{}\n{}",
-                self.home_address_street_1, self.home_address_street_2,
-            );
+            street_address = format!("{}\n{}", self.home_address_street_1, self.home_address_street_2,);
         }
         self.home_address_formatted = format!(
             "{}\n{}, {} {}, {}",
-            street_address,
-            self.home_address_city,
-            self.home_address_state,
-            self.home_address_zipcode,
-            self.home_address_country
+            street_address, self.home_address_city, self.home_address_state, self.home_address_zipcode, self.home_address_country
         );
     }
 
@@ -299,13 +247,7 @@ impl User {
         let token = env::var("SLACK_TOKEN").unwrap();
 
         // List all the users.
-        let users_response = slack_api::users::list(
-            &client,
-            &token,
-            &slack_api::users::ListRequest { presence: None },
-        )
-        .await
-        .unwrap();
+        let users_response = slack_api::users::list(&client, &token, &slack_api::users::ListRequest { presence: None }).await.unwrap();
         let users = users_response.members.unwrap();
 
         // Try to find our user, to see if we should update or create them.
@@ -356,9 +298,7 @@ impl User {
                     name: None,
                     value: None,
                 };
-                slack_api::users_profile::set(&client, &token, &req)
-                    .await
-                    .unwrap();
+                slack_api::users_profile::set(&client, &token, &req).await.unwrap();
 
                 // TODO: Figure out rate limit.
                 let rate_limit_sleep = time::Duration::from_secs(10);
@@ -423,17 +363,7 @@ impl UpdateAirtableRecord<User> for User {
     base_id = "AIRTABLE_BASE_ID_DIRECTORY",
     table = "AIRTABLE_GROUPS_TABLE",
 }]
-#[derive(
-    Debug,
-    Default,
-    Insertable,
-    AsChangeset,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
+#[derive(Debug, Default, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "groups"]
 pub struct GroupConfig {
     pub name: String,
@@ -476,11 +406,7 @@ pub struct GroupConfig {
     /// - ANYONE_CAN_DISCOVER
     /// - ALL_IN_DOMAIN_CAN_DISCOVER
     /// - ALL_MEMBERS_CAN_DISCOVER
-    #[serde(
-        alias = "who_can_discover_group",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_discover_group", skip_serializing_if = "String::is_empty", default)]
     pub who_can_discover_group: String,
 
     /// who_can_join: Permission to join group. Possible values are:
@@ -496,11 +422,7 @@ pub struct GroupConfig {
     /// - INVITED_CAN_JOIN: Candidates for membership can be invited to join.
     ///
     /// - CAN_REQUEST_TO_JOIN: Non members can request an invitation to join.
-    #[serde(
-        alias = "who_can_join",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_join", skip_serializing_if = "String::is_empty", default)]
     pub who_can_join: String,
 
     /// who_can_moderate_members: Specifies who can manage members. Possible
@@ -509,11 +431,7 @@ pub struct GroupConfig {
     /// - OWNERS_AND_MANAGERS
     /// - OWNERS_ONLY
     /// - NONE
-    #[serde(
-        alias = "who_can_moderate_members",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_moderate_members", skip_serializing_if = "String::is_empty", default)]
     pub who_can_moderate_members: String,
 
     /// who_can_post_message: Permissions to post messages. Possible values are:
@@ -535,11 +453,7 @@ pub struct GroupConfig {
     /// who_can_post_message is set to ANYONE_CAN_POST, we recommend the
     /// messageModerationLevel be set to MODERATE_NON_MEMBERS to protect the
     /// group from possible spam.
-    #[serde(
-        alias = "who_can_post_message",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_post_message", skip_serializing_if = "String::is_empty", default)]
     pub who_can_post_message: String,
 
     /// who_can_view_group: Permissions to view group messages. Possible values
@@ -552,11 +466,7 @@ pub struct GroupConfig {
     /// messages.
     /// - ALL_MANAGERS_CAN_VIEW: Any group manager can view this group's
     /// messages.
-    #[serde(
-        alias = "who_can_view_group",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_view_group", skip_serializing_if = "String::is_empty", default)]
     pub who_can_view_group: String,
 
     /// who_can_view_membership: Permissions to view membership. Possible values
@@ -570,20 +480,13 @@ pub struct GroupConfig {
     /// list.
     /// - ALL_MANAGERS_CAN_VIEW: The group managers can view group members
     /// list.
-    #[serde(
-        alias = "who_can_view_membership",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_view_membership", skip_serializing_if = "String::is_empty", default)]
     pub who_can_view_membership: String,
 }
 
 impl GroupConfig {
     pub fn get_link(&self) -> String {
-        format!(
-            "https://groups.google.com/a/oxidecomputer.com/forum/#!forum/{}",
-            self.name
-        )
+        format!("https://groups.google.com/a/oxidecomputer.com/forum/#!forum/{}", self.name)
     }
 
     pub fn expand(&mut self) {
@@ -606,17 +509,7 @@ impl UpdateAirtableRecord<Group> for Group {
     base_id = "AIRTABLE_BASE_ID_DIRECTORY",
     table = "AIRTABLE_BUILDINGS_TABLE",
 }]
-#[derive(
-    Debug,
-    Insertable,
-    AsChangeset,
-    Default,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "buildings"]
 pub struct BuildingConfig {
     pub name: String,
@@ -645,14 +538,7 @@ pub struct BuildingConfig {
 
 impl BuildingConfig {
     fn expand(&mut self) {
-        self.address_formatted = format!(
-            "{}\n{}, {} {}, {}",
-            self.street_address,
-            self.city,
-            self.state,
-            self.zipcode,
-            self.country
-        );
+        self.address_formatted = format!("{}\n{}, {} {}, {}", self.street_address, self.city, self.state, self.zipcode, self.country);
     }
 }
 
@@ -674,17 +560,7 @@ impl UpdateAirtableRecord<Building> for Building {
     base_id = "AIRTABLE_BASE_ID_DIRECTORY",
     table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
 }]
-#[derive(
-    Debug,
-    Insertable,
-    AsChangeset,
-    Default,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "conference_rooms"]
 pub struct ResourceConfig {
     pub name: String,
@@ -728,17 +604,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
 #[db_struct {
     new_name = "Link",
 }]
-#[derive(
-    Debug,
-    Insertable,
-    AsChangeset,
-    Default,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "links"]
 pub struct LinkConfig {
     /// name will not be used in config files.
@@ -755,17 +621,7 @@ pub struct LinkConfig {
 #[db_struct {
     new_name = "GithubLabel",
 }]
-#[derive(
-    Debug,
-    Insertable,
-    AsChangeset,
-    Default,
-    PartialEq,
-    Clone,
-    JsonSchema,
-    Deserialize,
-    Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "github_labels"]
 pub struct LabelConfig {
     pub name: String,
@@ -774,9 +630,7 @@ pub struct LabelConfig {
 }
 
 /// The data type for GitHub outside collaborators to repositories.
-#[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubOutsideCollaboratorsConfig {
     pub description: String,
     pub users: Vec<String>,
@@ -785,9 +639,7 @@ pub struct GitHubOutsideCollaboratorsConfig {
 }
 
 /// The data type for a huddle meeting that syncs with Airtable and notes in GitHub.
-#[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct HuddleConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -806,20 +658,13 @@ pub struct HuddleConfig {
 pub async fn get_configs_from_repo(github: &Github) -> Config {
     let repo_contents = github.repo(github_org(), "configs").content();
 
-    let files = repo_contents
-        .iter("/configs/", "master")
-        .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
-        .await
-        .unwrap();
+    let files = repo_contents.iter("/configs/", "master").try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap();
 
     let mut file_contents = String::new();
     for file in files {
         println!("decoding {}", file.name);
         // Get the contents of the file.
-        let contents = repo_contents
-            .file(&format!("/{}", file.path), "master")
-            .await
-            .unwrap();
+        let contents = repo_contents.file(&format!("/{}", file.path), "master").await.unwrap();
 
         let decoded = from_utf8(&contents.content).unwrap().trim().to_string();
 
@@ -890,9 +735,7 @@ pub async fn refresh_db_configs(github: &Github) {
 #[cfg(test)]
 mod tests {
     use crate::certs::Certificates;
-    use crate::configs::{
-        refresh_db_configs, Buildings, ConferenceRooms, Groups, Users,
-    };
+    use crate::configs::{refresh_db_configs, Buildings, ConferenceRooms, Groups, Users};
     use crate::db::Database;
     use crate::utils::authenticate_github_jwt;
 

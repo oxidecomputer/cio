@@ -13,10 +13,7 @@ use crate::models::NewMailingListSubscriber;
 pub struct MailchimpWebhook {
     #[serde(rename = "type")]
     pub webhook_type: String,
-    #[serde(
-        deserialize_with = "mailchimp_date_format::deserialize",
-        serialize_with = "mailchimp_date_format::serialize"
-    )]
+    #[serde(deserialize_with = "mailchimp_date_format::deserialize", serialize_with = "mailchimp_date_format::serialize")]
     fired_at: DateTime<Utc>,
     data: MailchimpWebhookData,
 }
@@ -34,10 +31,7 @@ mod mailchimp_date_format {
     //        S: Serializer
     //
     // although it may also be generic over the input types T.
-    pub fn serialize<S>(
-        date: &DateTime<Utc>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(date: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -52,15 +46,12 @@ mod mailchimp_date_format {
     //        D: Deserializer<'de>
     //
     // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(
-        deserializer: D,
-    ) -> Result<DateTime<Utc>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer).unwrap();
-        Utc.datetime_from_str(&s, FORMAT)
-            .map_err(serde::de::Error::custom)
+        Utc.datetime_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
     }
 }
 

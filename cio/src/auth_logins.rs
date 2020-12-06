@@ -51,10 +51,7 @@ impl User {
     pub fn to_auth_user(&self) -> NewAuthUser {
         let mut company: &str = &self.company;
         // Check if we have an Oxide email address.
-        if self.email.ends_with("@oxidecomputer.com")
-            || self.email.ends_with("@oxide.computer")
-            || *self.company.trim() == *"Oxide Computer Company"
-        {
+        if self.email.ends_with("@oxidecomputer.com") || self.email.ends_with("@oxide.computer") || *self.company.trim() == *"Oxide Computer Company" {
             company = "@oxidecomputer";
         } else if self.email.ends_with("@bench.com") {
             // Check if we have a Benchmark Manufacturing email address.
@@ -62,10 +59,7 @@ impl User {
         } else if *self.company.trim() == *"Algolia" {
             // Cleanup algolia.
             company = "@algolia";
-        } else if *self.company.trim() == *"0xF9BA143B95FF6D82"
-            || self.company.trim().is_empty()
-            || *self.company.trim() == *"TBD"
-        {
+        } else if *self.company.trim() == *"0xF9BA143B95FF6D82" || self.company.trim().is_empty() || *self.company.trim() == *"TBD" {
             // Cleanup David Tolnay and other weird empty parses
             company = "";
         }
@@ -127,12 +121,7 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
     map.insert("audience", format!("https://{}.auth0.com/api/v2/", domain));
     map.insert("grant_type", "client_credentials".to_string());
 
-    let resp = client
-        .post(&format!("https://{}.auth0.com/oauth/token", domain))
-        .json(&map)
-        .send()
-        .await
-        .unwrap();
+    let resp = client.post(&format!("https://{}.auth0.com/oauth/token", domain)).json(&map).send().await.unwrap();
 
     let token: Token = resp.json().await.unwrap();
 
@@ -143,9 +132,7 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
     let mut i: i32 = 0;
     let mut has_records = true;
     while has_records {
-        let mut u =
-            get_auth_users_page(&token.access_token, &domain, &i.to_string())
-                .await;
+        let mut u = get_auth_users_page(&token.access_token, &domain, &i.to_string()).await;
         // We need to sleep here for a half second so we don't get rate limited.
         // https://auth0.com/docs/policies/rate-limit-policy
         // https://auth0.com/docs/policies/rate-limit-policy/management-api-endpoint-rate-limits
@@ -163,15 +150,12 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
         let mut auth_user = user.to_auth_user();
 
         // Get the application they last accessed.
-        let auth_user_logins =
-            get_auth_logs_for_user(&token.access_token, &domain, &user.user_id)
-                .await;
+        let auth_user_logins = get_auth_logs_for_user(&token.access_token, &domain, &user.user_id).await;
 
         // Get the first result.
         if !auth_user_logins.is_empty() {
             let first_result = auth_user_logins.get(0).unwrap();
-            auth_user.last_application_accessed =
-                first_result.client_name.to_string();
+            auth_user.last_application_accessed = first_result.client_name.to_string();
         }
 
         auth_users.push(auth_user);
@@ -192,17 +176,10 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
 }
 
 // TODO: clean this all up to be an auth0 api library.
-async fn get_auth_logs_for_user(
-    token: &str,
-    domain: &str,
-    user_id: &str,
-) -> Vec<NewAuthUserLogin> {
+async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec<NewAuthUserLogin> {
     let client = Client::new();
     let resp = client
-        .get(&format!(
-            "https://{}.auth0.com/api/v2/users/{}/logs",
-            domain, user_id
-        ))
+        .get(&format!("https://{}.auth0.com/api/v2/users/{}/logs", domain, user_id))
         .bearer_auth(token)
         .query(&[("sort", "date:-1"), ("per_page", "100")])
         .send()
@@ -214,38 +191,25 @@ async fn get_auth_logs_for_user(
         StatusCode::TOO_MANY_REQUESTS => {
             // Get the rate limit headers.
             let headers = resp.headers();
-            let limit =
-                headers.get("x-ratelimit-limit").unwrap().to_str().unwrap();
-            let remaining = headers
-                .get("x-ratelimit-remaining")
-                .unwrap()
-                .to_str()
-                .unwrap();
-            let reset =
-                headers.get("x-ratelimit-reset").unwrap().to_str().unwrap();
+            let limit = headers.get("x-ratelimit-limit").unwrap().to_str().unwrap();
+            let remaining = headers.get("x-ratelimit-remaining").unwrap().to_str().unwrap();
+            let reset = headers.get("x-ratelimit-reset").unwrap().to_str().unwrap();
             let reset_int = reset.parse::<i64>().unwrap();
 
             // Convert the reset to a more sane number.
-            let ts = DateTime::from_utc(
-                NaiveDateTime::from_timestamp(reset_int, 0),
-                Utc,
-            );
+            let ts = DateTime::from_utc(NaiveDateTime::from_timestamp(reset_int, 0), Utc);
             let mut dur = ts - Utc::now();
             if dur.num_seconds() > 0 {
                 dur = -dur;
             }
             let time = HumanTime::from(dur);
 
-            println!("getting auth0 user logs failed because of rate limit: {}, remaining: {}, reset: {}",limit, remaining, time);
+            println!("getting auth0 user logs failed because of rate limit: {}, remaining: {}, reset: {}", limit, remaining, time);
 
             return vec![];
         }
         s => {
-            println!(
-                "getting auth0 user logs failed, status: {} | resp: {}",
-                s,
-                resp.text().await.unwrap(),
-            );
+            println!("getting auth0 user logs failed, status: {} | resp: {}", s, resp.text().await.unwrap(),);
 
             return vec![];
         }
@@ -254,20 +218,12 @@ async fn get_auth_logs_for_user(
     resp.json::<Vec<NewAuthUserLogin>>().await.unwrap()
 }
 
-async fn get_auth_users_page(
-    token: &str,
-    domain: &str,
-    page: &str,
-) -> Vec<User> {
+async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User> {
     let client = Client::new();
     let resp = client
         .get(&format!("https://{}.auth0.com/api/v2/users", domain))
         .bearer_auth(token)
-        .query(&[
-            ("per_page", "20"),
-            ("page", page),
-            ("sort", "last_login:-1"),
-        ])
+        .query(&[("per_page", "20"), ("page", page), ("sort", "last_login:-1")])
         .send()
         .await
         .unwrap();
@@ -275,11 +231,7 @@ async fn get_auth_users_page(
     match resp.status() {
         StatusCode::OK => (),
         s => {
-            println!(
-                "getting auth0 users failed, status: {} | resp: {}",
-                s,
-                resp.text().await.unwrap()
-            );
+            println!("getting auth0 users failed, status: {} | resp: {}", s, resp.text().await.unwrap());
 
             return vec![];
         }

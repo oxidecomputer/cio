@@ -104,13 +104,7 @@ impl Zoom {
         &self.token
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: String,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -131,10 +125,7 @@ impl Zoom {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(
-            header::CONTENT_TYPE,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -157,15 +148,7 @@ impl Zoom {
     /// List users.
     pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
-        let request = self.request(
-            Method::GET,
-            "users".to_string(),
-            (),
-            Some(vec![
-                ("page_size", "100".to_string()),
-                ("page_number", "1".to_string()),
-            ]),
-        );
+        let request = self.request(Method::GET, "users".to_string(), (), Some(vec![("page_size", "100".to_string()), ("page_number", "1".to_string())]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -184,18 +167,9 @@ impl Zoom {
         Ok(r.users.unwrap())
     }
 
-    async fn get_user_with_login(
-        &self,
-        email: String,
-        login_type: LoginType,
-    ) -> Result<User, APIError> {
+    async fn get_user_with_login(&self, email: String, login_type: LoginType) -> Result<User, APIError> {
         // Build the request.
-        let request = self.request(
-            Method::GET,
-            format!("users/{}", email),
-            (),
-            Some(vec![("login_type", login_type.to_string())]),
-        );
+        let request = self.request(Method::GET, format!("users/{}", email), (), Some(vec![("login_type", login_type.to_string())]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -217,26 +191,17 @@ impl Zoom {
     /// Get a user.
     pub async fn get_user(&self, email: String) -> Result<User, APIError> {
         // By default try the Zoom login type.
-        match self
-            .get_user_with_login(email.to_string(), LoginType::Zoom)
-            .await
-        {
+        match self.get_user_with_login(email.to_string(), LoginType::Zoom).await {
             Ok(user) => Ok(user),
             Err(_) => {
                 // Try this request again with Google login type.
-                self.get_user_with_login(email.to_string(), LoginType::Google)
-                    .await
+                self.get_user_with_login(email.to_string(), LoginType::Google).await
             }
         }
     }
 
     /// Create a user.
-    pub async fn create_user(
-        &self,
-        first_name: String,
-        last_name: String,
-        email: String,
-    ) -> Result<User, APIError> {
+    pub async fn create_user(&self, first_name: String, last_name: String, email: String) -> Result<User, APIError> {
         // Build the request.
         let request = self.request(
             Method::POST,
@@ -272,14 +237,7 @@ impl Zoom {
     }
 
     /// Update a user.
-    pub async fn update_user(
-        &self,
-        first_name: String,
-        last_name: String,
-        email: String,
-        use_pmi: bool,
-        vanity_name: String,
-    ) -> Result<(), APIError> {
+    pub async fn update_user(&self, first_name: String, last_name: String, email: String, use_pmi: bool, vanity_name: String) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             Method::PATCH,
@@ -310,12 +268,7 @@ impl Zoom {
     /// List rooms.
     pub async fn list_rooms(&self) -> Result<Vec<Room>, APIError> {
         // Build the request.
-        let request = self.request(
-            Method::GET,
-            "rooms".to_string(),
-            (),
-            Some(vec![("page_size", "100".to_string())]),
-        );
+        let request = self.request(Method::GET, "rooms".to_string(), (), Some(vec![("page_size", "100".to_string())]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -339,12 +292,7 @@ impl Zoom {
         let id = room.clone().id.unwrap();
 
         // Build the request.
-        let request = self.request(
-            Method::PATCH,
-            format!("rooms/{}", id),
-            UpdateRoomRequest { basic: room },
-            None,
-        );
+        let request = self.request(Method::PATCH, format!("rooms/{}", id), UpdateRoomRequest { basic: room }, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -352,17 +300,12 @@ impl Zoom {
             s => {
                 let body = resp.text().await.unwrap();
 
-                if body.contains(
-                    "This conference room already has a Zoom Room account",
-                ) {
+                if body.contains("This conference room already has a Zoom Room account") {
                     // Ignore the duplicate error.
                     return Ok(());
                 }
 
-                return Err(APIError {
-                    status_code: s,
-                    body,
-                });
+                return Err(APIError { status_code: s, body });
             }
         };
 
@@ -372,8 +315,7 @@ impl Zoom {
     /// Create a room.
     pub async fn create_room(&self, room: Room) -> Result<Room, APIError> {
         // Build the request.
-        let request =
-            self.request(Method::POST, "rooms".to_string(), room, None);
+        let request = self.request(Method::POST, "rooms".to_string(), room, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -397,10 +339,7 @@ impl Zoom {
             Method::GET,
             "rooms/locations".to_string(),
             (),
-            Some(vec![
-                ("page_size", "100".to_string()),
-                ("type", "building".to_string()),
-            ]),
+            Some(vec![("page_size", "100".to_string()), ("type", "building".to_string())]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -421,21 +360,13 @@ impl Zoom {
     }
 
     /// Create a building.
-    pub async fn create_building(
-        &self,
-        mut building: Building,
-    ) -> Result<Building, APIError> {
+    pub async fn create_building(&self, mut building: Building) -> Result<Building, APIError> {
         // Set the parent location to the account id.
         // That is the root.
         building.parent_location_id = Some(self.account_id.to_string());
 
         // Build the request.
-        let request = self.request(
-            Method::POST,
-            "rooms/locations".to_string(),
-            building,
-            None,
-        );
+        let request = self.request(Method::POST, "rooms/locations".to_string(), building, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -453,10 +384,7 @@ impl Zoom {
     }
 
     /// Update a building.
-    pub async fn update_building(
-        &self,
-        mut building: Building,
-    ) -> Result<(), APIError> {
+    pub async fn update_building(&self, mut building: Building) -> Result<(), APIError> {
         let id = building.clone().id.unwrap();
 
         // Set the parent location to the account id.
@@ -464,12 +392,7 @@ impl Zoom {
         building.parent_location_id = Some(self.account_id.to_string());
 
         // Build the request.
-        let request = self.request(
-            Method::PATCH,
-            format!("rooms/locations/{}", id),
-            UpdateBuildingRequest { basic: building },
-            None,
-        );
+        let request = self.request(Method::PATCH, format!("rooms/locations/{}", id), UpdateBuildingRequest { basic: building }, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -488,9 +411,7 @@ impl Zoom {
     /// List cloud recordings available on an account.
     /// From: https://marketplace.zoom.us/docs/api-reference/zoom-api/cloud-recording/getaccountcloudrecording
     /// This assumes the caller is an admin.
-    pub async fn list_recordings_as_admin(
-        &self,
-    ) -> Result<Vec<Meeting>, APIError> {
+    pub async fn list_recordings_as_admin(&self) -> Result<Vec<Meeting>, APIError> {
         let now = Utc::now();
         let weeks = Duration::weeks(3);
 
@@ -524,11 +445,7 @@ impl Zoom {
     }
 
     /// Download a recording to a file.
-    pub async fn download_recording_to_file(
-        &self,
-        download_url: String,
-        file: PathBuf,
-    ) -> Result<(), APIError> {
+    pub async fn download_recording_to_file(&self, download_url: String, file: PathBuf) -> Result<(), APIError> {
         // Build the request.
         // TODO: add this back in if Zoom add auth to recordings... WOW.
         // let request = self.request(Method::GET, download_url, {}, None);
@@ -555,17 +472,9 @@ impl Zoom {
     }
 
     /// Delete all the recordings for a meeting.
-    pub async fn delete_meeting_recordings(
-        &self,
-        meeting_id: i64,
-    ) -> Result<(), APIError> {
+    pub async fn delete_meeting_recordings(&self, meeting_id: i64) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(
-            Method::DELETE,
-            format!("meetings/{}/recordings", meeting_id),
-            (),
-            None,
-        );
+        let request = self.request(Method::DELETE, format!("meetings/{}/recordings", meeting_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -590,23 +499,13 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
+        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
     }
 }
 
@@ -805,12 +704,7 @@ pub struct Room {
 
 impl Room {
     /// Update a room from a configuration.
-    pub fn update(
-        mut self,
-        resource: ResourceConfig,
-        passcode: String,
-        location_id: String,
-    ) -> Room {
+    pub fn update(mut self, resource: ResourceConfig, passcode: String, location_id: String) -> Room {
         self.name = resource.name;
         self.room_passcode = Some(passcode);
         self.required_code_to_ext = Some(true);
@@ -878,11 +772,7 @@ struct UpdateBuildingRequest {
 
 impl Building {
     /// Update a building from a configuration.
-    pub fn update(
-        mut self,
-        building: BuildingConfig,
-        passcode: String,
-    ) -> Building {
+    pub fn update(mut self, building: BuildingConfig, passcode: String) -> Building {
         self.name = building.name;
         self.description = Some(building.description);
         self.address = Some(building.address_formatted);
