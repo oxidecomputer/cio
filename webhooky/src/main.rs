@@ -227,6 +227,9 @@ async fn listen_github_webhooks(
         EventType::CheckSuite => {
             println!("[{}] {:?}", event_type.name(), event);
         }
+        EventType::CheckRun => {
+            println!("[{}] {:?}", event_type.name(), event);
+        }
         _ => (),
     }
 
