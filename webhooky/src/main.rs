@@ -52,6 +52,7 @@ async fn main() -> Result<(), String> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
+    api.register(listen_google_sheets_applicants_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_webhooks).unwrap();
     api.register(ping_mailchimp_webhooks).unwrap();
@@ -477,6 +478,21 @@ pub struct GitHubRateLimit {
     pub limit: u32,
     pub remaining: u32,
     pub reset: String,
+}
+
+/**
+ * Listen for updates to our Google Sheets applicants.
+ * These are set up with a Google Apps script on the sheets themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/google/sheets/applicants",
+}]
+async fn listen_google_sheets_applicants_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let body = body_param.into_inner();
+    println!("[applicants]: {}", body.to_string());
+
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /** Ping endpoint for MailChimp webhooks. */
