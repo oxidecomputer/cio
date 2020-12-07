@@ -196,7 +196,7 @@ from(bucket:"github_webhooks")
         let github = authenticate_github_jwt();
         let repos = list_all_github_repos(&github).await;
 
-        let mut handles: Vec<tokio::task::JoinHandle<()>> = Default::default();
+        //let mut handles: Vec<tokio::task::JoinHandle<()>> = Default::default();
 
         // For each repo, get information on the pull requests.
         for repo in repos {
@@ -207,10 +207,6 @@ from(bucket:"github_webhooks")
 
             let repo_name = repo.name.to_string();
 
-            if repo_name != "rfd" {
-                continue;
-            }
-
             let r = github.repo(repo.owner.login.to_string(), repo_name.to_string());
 
             // TODO: iterate over all the branches
@@ -218,102 +214,102 @@ from(bucket:"github_webhooks")
             let reference = repo.default_branch.to_string();
 
             let client = self.clone();
-            let r = r.clone();
-            let handle = tokio::task::spawn(async move {
-                //let mut inner_handles: Vec<tokio::task::JoinHandle<()>> = Default::default();
-                let commits = r
-                    .commits()
-                    .iter()
-                    .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
-                    .await
-                    .map_err(|e| println!("[warn]: iterating over commits in repo {} failed: {}", repo.name.to_string(), e))
-                    .unwrap_or_default();
+            //let r = r.clone();
+            //let handle = tokio::task::spawn(async move {
+            let mut inner_handles: Vec<tokio::task::JoinHandle<()>> = Default::default();
+            let commits = r
+                .commits()
+                .iter()
+                .try_collect::<Vec<hubcaps::repo_commits::RepoCommit>>()
+                .await
+                .map_err(|e| println!("[warn]: iterating over commits in repo {} failed: {}", repo.name.to_string(), e))
+                .unwrap_or_default();
 
-                for c in commits {
-                    let commit_sha = c.sha.to_string();
+            for c in commits {
+                let commit_sha = c.sha.to_string();
 
-                    // Get the verbose information for the commit.
-                    let commit = match r.commits().get(&commit_sha).await {
-                        Ok(c) => c,
-                        Err(e) => {
-                            // Check if we were rate limited here.
-                            // If so we should sleep until the rate limit is over.
-                            match e {
-                                hubcaps::errors::Error::RateLimit { reset } => {
-                                    // We got a rate limit error.
-                                    println!("got rate limited, sleeping for {}s", reset.as_secs());
-                                    thread::sleep(reset.add(time::Duration::from_secs(5)));
-                                }
-                                _ => panic!("[warn]: github getting commits failed: {}", e),
+                // Get the verbose information for the commit.
+                let commit = match r.commits().get(&commit_sha).await {
+                    Ok(c) => c,
+                    Err(e) => {
+                        // Check if we were rate limited here.
+                        // If so we should sleep until the rate limit is over.
+                        match e {
+                            hubcaps::errors::Error::RateLimit { reset } => {
+                                // We got a rate limit error.
+                                println!("got rate limited, sleeping for {}s", reset.as_secs());
+                                thread::sleep(reset.add(time::Duration::from_secs(5)));
                             }
-
-                            // Try to get the commit again.
-                            r.commits().get(&commit_sha).await.unwrap()
+                            _ => panic!("[warn]: github getting commits failed: {}", e),
                         }
-                    };
 
-                    // Add events for each commit if it does not already exist.
-                    let time = commit.commit.author.date;
-
-                    // Get the sender.
-                    let sender = commit.author.login.to_string();
-                    if sender.is_empty() {
-                        // Make sure we don't have an empty sender!
-                        println!("[warn]: sender for commit {} on repo {} is empty", commit_sha, repo_name);
-                        // Continue early, do not push the event.
-                        continue;
+                        // Try to get the commit again.
+                        r.commits().get(&commit_sha).await.unwrap()
                     }
+                };
 
-                    // Get the changed files.
-                    let mut added: Vec<String> = Default::default();
-                    let mut modified: Vec<String> = Default::default();
-                    let mut removed: Vec<String> = Default::default();
-                    for file in commit.files {
-                        if file.status == "added" {
-                            added.push(file.filename.to_string());
-                        }
-                        if file.status == "modified" {
-                            modified.push(file.filename.to_string());
-                        }
-                        if file.status == "removed" {
-                            removed.push(file.filename.to_string());
-                        }
+                // Add events for each commit if it does not already exist.
+                let time = commit.commit.author.date;
+
+                // Get the sender.
+                let sender = commit.author.login.to_string();
+                if sender.is_empty() {
+                    // Make sure we don't have an empty sender!
+                    println!("[warn]: sender for commit {} on repo {} is empty", commit_sha, repo_name);
+                    // Continue early, do not push the event.
+                    continue;
+                }
+
+                // Get the changed files.
+                let mut added: Vec<String> = Default::default();
+                let mut modified: Vec<String> = Default::default();
+                let mut removed: Vec<String> = Default::default();
+                for file in commit.files {
+                    if file.status == "added" {
+                        added.push(file.filename.to_string());
                     }
-
-                    // Create the event.
-                    let push = Push {
-                        time,
-                        repo_name: repo_name.to_string(),
-                        sender: sender.to_string(),
-                        reference: reference.to_string(),
-                        sha: commit_sha.to_string(),
-
-                        added: added.join(",").to_string(),
-                        modified: modified.join(",").to_string(),
-                        removed: removed.join(",").to_string(),
-
-                        additions: commit.stats.additions,
-                        deletions: commit.stats.deletions,
-                        total: commit.stats.total,
-
-                        message: commit.commit.message.to_string(),
-                    };
-
-                    // Check if this event already exists.
-                    // Let's see if the data we wrote is there.
-                    let exists = client.commit_exists(push.time, &push.sha, &push.repo_name).await;
-
-                    if !exists {
-                        // Add the event.
-                        client.query(push, EventType::Push.name()).await;
+                    if file.status == "modified" {
+                        modified.push(file.filename.to_string());
                     }
+                    if file.status == "removed" {
+                        removed.push(file.filename.to_string());
+                    }
+                }
 
-                    /*let client = client.clone();
-                    let repo = repo.clone();
-                    let r = r.clone();
-                    let repo_name = repo_name.clone();
-                    let reference = reference.clone();
-                    let inner_handle = tokio::task::spawn(async move {*/
+                // Create the event.
+                let push = Push {
+                    time,
+                    repo_name: repo_name.to_string(),
+                    sender: sender.to_string(),
+                    reference: reference.to_string(),
+                    sha: commit_sha.to_string(),
+
+                    added: added.join(",").to_string(),
+                    modified: modified.join(",").to_string(),
+                    removed: removed.join(",").to_string(),
+
+                    additions: commit.stats.additions,
+                    deletions: commit.stats.deletions,
+                    total: commit.stats.total,
+
+                    message: commit.commit.message.to_string(),
+                };
+
+                // Check if this event already exists.
+                // Let's see if the data we wrote is there.
+                let exists = client.commit_exists(push.time, &push.sha, &push.repo_name).await;
+
+                if !exists {
+                    // Add the event.
+                    client.query(push, EventType::Push.name()).await;
+                }
+
+                let client = client.clone();
+                let repo = repo.clone();
+                let r = r.clone();
+                let repo_name = repo_name.clone();
+                let reference = reference.clone();
+                let inner_handle = tokio::task::spawn(async move {
                     // Handle the check_suite events for each commit.
                     let check_suite_list_options = hubcaps::checks::CheckSuiteListOptions::builder().per_page(100).build();
                     let check_suites = match r.commits().list_check_suites(&commit_sha, &check_suite_list_options).await {
@@ -487,26 +483,26 @@ from(bucket:"github_webhooks")
                             }
                         }
                     }
-                    // });
+                });
 
-                    // Add this handle to our stack of handles.
-                    // inner_handles.push(inner_handle);
-                }
+                // Add this handle to our stack of handles.
+                inner_handles.push(inner_handle);
+            }
 
-                // Wait for all the handles.
-                /* for inner_handle in inner_handles {
-                    inner_handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:#?}]", e));
-                }*/
-            });
+            // Wait for all the handles.
+            for inner_handle in inner_handles {
+                inner_handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:#?}]", e));
+            }
+            // });
 
             // Add this handle to our stack of handles.
-            handles.push(handle);
+            // handles.push(handle);
         }
 
         // Wait for all the handles.
-        for handle in handles {
-            handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:#?}]", e));
-        }
+        // for handle in handles {
+        //    handle.await.unwrap_or_else(|e| println!("[warn]: handle failed: {:#?}]", e));
+        // }
     }
 
     pub async fn update_pull_request_events(&self) {
