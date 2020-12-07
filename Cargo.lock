@@ -1957,7 +1957,6 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "schemars",
  "serde",
  "serde_tokenstream",
  "syn",
@@ -3029,7 +3028,6 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 name = "sendgrid-api"
 version = "0.1.3"
 dependencies = [
- "chrono 0.4.19",
  "data-encoding",
  "reqwest",
  "serde",

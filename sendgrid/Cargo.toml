@@ -9,7 +9,6 @@ repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/sendgrid-api"
 
 [dependencies]
-chrono = "0.4"
 data-encoding = "2"
 reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
