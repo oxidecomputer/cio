@@ -6,6 +6,7 @@ pub mod influx;
 extern crate serde_json;
 
 use std::any::Any;
+use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
@@ -528,11 +529,71 @@ pub struct GitHubRateLimit {
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let body = body_param.into_inner();
-    println!("[google/sheets/edit]: {}", body.to_string());
+async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    println!("[google/sheets/edit]: {:?}", event);
 
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// A Google Sheet edit event.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GoogleSpreadsheetEditEvent {
+    #[serde(default)]
+    pub event: GoogleSpreadsheetEvent,
+    #[serde(default)]
+    pub spreadsheet: GoogleSpreadsheet,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GoogleSpreadsheetEvent {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "authMode")]
+    pub auth_mode: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "oldValue")]
+    pub old_value: String,
+    #[serde(default)]
+    pub range: GoogleSpreadsheetRange,
+    #[serde(default)]
+    pub source: GoogleSpreadsheetSource,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "triggerUid")]
+    pub trigger_uid: String,
+    #[serde(default)]
+    pub user: GoogleSpreadsheetUser,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty", rename = "namedValues")]
+    pub named_values: HashMap<String, Vec<String>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub values: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GoogleSpreadsheetRange {
+    #[serde(default, rename = "columnEnd")]
+    pub column_end: i64,
+    #[serde(default, rename = "columnStart")]
+    pub column_start: i64,
+    #[serde(default, rename = "rowEnd")]
+    pub row_end: i64,
+    #[serde(default, rename = "rowStart")]
+    pub row_start: i64,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GoogleSpreadsheetSource {}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GoogleSpreadsheetUser {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GoogleSpreadsheet {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
 }
 
 /**
@@ -545,11 +606,20 @@ async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_pa
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let body = body_param.into_inner();
-    println!("[google/sheets/row/create]: {}", body.to_string());
+async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    println!("[google/sheets/row/create]: {:?}", event);
 
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// A Google Sheet row create event.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct GoogleSpreadsheetRowCreateEvent {
+    #[serde(default)]
+    pub event: GoogleSpreadsheetEvent,
+    #[serde(default)]
+    pub spreadsheet: GoogleSpreadsheet,
 }
 
 /** Ping endpoint for MailChimp webhooks. */
