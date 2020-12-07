@@ -52,7 +52,8 @@ async fn main() -> Result<(), String> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
-    api.register(listen_google_sheets_applicants_webhooks).unwrap();
+    api.register(listen_google_sheets_edit_webhooks).unwrap();
+    api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_webhooks).unwrap();
     api.register(ping_mailchimp_webhooks).unwrap();
@@ -481,16 +482,31 @@ pub struct GitHubRateLimit {
 }
 
 /**
- * Listen for updates to our Google Sheets applicants.
+ * Listen for edits to our Google Sheets.
  * These are set up with a Google Apps script on the sheets themselves.
  */
 #[endpoint {
     method = POST,
-    path = "/google/sheets/applicants",
+    path = "/google/sheets/edit",
 }]
-async fn listen_google_sheets_applicants_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    println!("[applicants]: {}", body.to_string());
+    println!("[google/sheets/edit]: {}", body.to_string());
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for rows created in our Google Sheets.
+ * These are set up with a Google Apps script on the sheets themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/google/sheets/row/create",
+}]
+async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let body = body_param.into_inner();
+    println!("[google/sheets/row/create]: {}", body.to_string());
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
