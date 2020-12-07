@@ -193,6 +193,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         }
         EventType::CheckSuite => {
             println!("[{}] {:?}", event_type.name(), event);
+            //let influx_event = event.as_influx_check_suite();
+            //api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckRun => {
             println!("[{}] {:?}", event_type.name(), event);
@@ -637,6 +639,20 @@ pub struct GitHubWebhook {
     /// The comment itself.
     #[serde(default)]
     pub comment: GitHubComment,
+
+    /// `check_suite` event fields.
+    /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_suite
+    ///
+    /// The check suite itself.
+    #[serde(default)]
+    pub check_suite: GitHubCheckSuite,
+
+    /// `check_run` event fields.
+    /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_run
+    ///
+    /// The check run itself.
+    #[serde(default)]
+    pub check_run: GitHubCheckRun,
 }
 
 impl GitHubWebhook {
@@ -682,7 +698,7 @@ impl GitHubWebhook {
             head_reference: self.pull_request.head.commit_ref.to_string(),
             base_reference: self.pull_request.base.commit_ref.to_string(),
             number: self.number,
-            github_id: self.pull_request.id.to_string().parse::<i64>().unwrap(),
+            github_id: self.pull_request.id,
             merged: self.pull_request.merged,
         }
     }
@@ -694,7 +710,7 @@ impl GitHubWebhook {
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             pull_request_number: self.pull_request.number,
-            github_id: self.comment.id.to_string().parse::<i64>().unwrap(),
+            github_id: self.comment.id,
             comment: self.comment.body.to_string(),
         }
     }
@@ -706,7 +722,7 @@ impl GitHubWebhook {
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             number: self.number,
-            github_id: self.pull_request.id.to_string().parse::<i64>().unwrap(),
+            github_id: self.pull_request.id,
         }
     }
 
@@ -717,8 +733,52 @@ impl GitHubWebhook {
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             issue_number: self.issue.number,
-            github_id: self.comment.id.to_string().parse::<i64>().unwrap(),
+            github_id: self.comment.id,
             comment: self.comment.body.to_string(),
+        }
+    }
+
+    pub fn as_influx_check_suite(&self) -> influx::CheckSuite {
+        influx::CheckSuite {
+            time: Utc::now(),
+            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            sender: self.sender.login.to_string(),
+            action: self.action.to_string(),
+
+            head_branch: self.check_suite.head_branch.to_string(),
+            head_sha: self.check_suite.head_sha.to_string(),
+            status: self.check_suite.status.to_string(),
+            conclusion: self.check_suite.conclusion.to_string(),
+
+            slug: self.check_suite.app.slug.to_string(),
+            name: self.check_suite.app.name.to_string(),
+
+            reference: self.check_suite.head_branch.to_string(),
+            sha: self.check_suite.head_sha.to_string(),
+            github_id: self.check_suite.id,
+        }
+    }
+
+    pub fn as_influx_check_run(&self) -> influx::CheckRun {
+        influx::CheckRun {
+            time: Utc::now(),
+            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            sender: self.sender.login.to_string(),
+            action: self.action.to_string(),
+
+            head_branch: self.check_suite.head_branch.to_string(),
+            head_sha: self.check_run.head_sha.to_string(),
+            status: self.check_run.status.to_string(),
+            conclusion: self.check_run.conclusion.to_string(),
+
+            name: self.check_run.name.to_string(),
+            app_slug: self.check_run.app.slug.to_string(),
+            app_name: self.check_run.app.name.to_string(),
+
+            reference: self.check_suite.head_branch.to_string(),
+            sha: self.check_run.head_sha.to_string(),
+            check_suite_id: self.check_suite.id,
+            github_id: self.check_run.id,
         }
     }
 }
@@ -792,7 +852,7 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubPullRequest {
     #[serde(default)]
-    pub id: u64,
+    pub id: i64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
     /// The HTML location of this pull request.
@@ -844,7 +904,7 @@ pub struct GitHubPullRequest {
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubIssue {
     #[serde(default)]
-    pub id: u64,
+    pub id: i64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
     pub labels_url: String,
@@ -899,7 +959,7 @@ pub struct GitHubPullRef {
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubComment {
     #[serde(default)]
-    pub id: u64,
+    pub id: i64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -910,4 +970,52 @@ pub struct GitHubComment {
     pub user: GitHubUser,
     /* pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,*/
+}
+
+/// A GitHub check suite.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/checks#suites
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubCheckSuite {
+    #[serde(default)]
+    pub id: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub head_branch: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub head_sha: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub conclusion: String,
+    #[serde(default)]
+    pub app: GitHubApp,
+}
+
+/// A GitHub app.
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubApp {
+    pub id: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub slug: String,
+}
+
+/// A GitHub check run.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/checks#get-a-check-run
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubCheckRun {
+    #[serde(default)]
+    pub id: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub head_sha: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub conclusion: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default)]
+    pub check_suite: GitHubCheckSuite,
+    #[serde(default)]
+    pub app: GitHubApp,
 }
