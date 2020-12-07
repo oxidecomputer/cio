@@ -198,8 +198,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         }
         EventType::CheckRun => {
             println!("[{}] {:?}", event_type.name(), event);
-            //let influx_event = event.as_influx_check_suite();
-            //api_context.influx.query(influx_event, event_type.name()).await;
+            let influx_event = event.as_influx_check_run();
+            api_context.influx.query(influx_event, event_type.name()).await;
         }
         _ => (),
     }
