@@ -1,11 +1,14 @@
 use std::any::Any;
 use std::env;
+use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServer, RequestContext};
 use hyper::{Body, Response, StatusCode};
+use tracing::{event, instrument, span, Level};
+use tracing_subscriber::prelude::*;
 
 use cio_api::configs::{Building, ConferenceRoom, GithubLabel, Group, Link, User};
 use cio_api::db::Database;
@@ -15,14 +18,41 @@ use cio_api::models::{Applicant, AuthUser, GithubRepo, JournalClubMeeting, Maili
 extern crate serde_json;
 
 #[tokio::main]
-async fn main() -> Result<(), String> {
+async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    let service_address = "0.0.0.0:8888";
+
+    // Set up tracing.
+    //let (tracer, _uninstall) = opentelemetry::exporter::trace::stdout::new_pipeline().install();
+    let (tracer, _uninstall) = opentelemetry_zipkin::new_pipeline()
+        .with_service_name("cio-api")
+        //.with_service_address(service_address.parse().unwrap())
+        .with_collector_endpoint("https://ingest.lightstep.com:443/api/v2/spans")
+        //.with_collector_endpoint("http://localhost:8360/api/v2/spans")
+        .with_trace_config(
+            opentelemetry::sdk::trace::config()
+                .with_default_sampler(opentelemetry::sdk::trace::Sampler::AlwaysOn)
+                .with_resource(opentelemetry::sdk::Resource::new(vec![
+                    opentelemetry::KeyValue::new("lightstep.service_name", "cio-api"),
+                    opentelemetry::KeyValue::new("lightstep.access_token", env::var("LIGHTSTEP_ACCESS_TOKEN").unwrap_or_default()),
+                    //opentelemetry::KeyValue::new("lightstep.access_token", "developer"),
+                ])),
+        )
+        .install()
+        .unwrap();
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let subscriber = tracing_subscriber::Registry::default().with(opentelemetry);
+    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
+
+    let root = span!(Level::TRACE, "app_start", work_units = 2);
+    let _enter = root.enter();
+
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
      * request port 8888.
      */
     let config_dropshot = ConfigDropshot {
-        bind_address: "0.0.0.0:8888".parse().unwrap(),
+        bind_address: service_address.parse().unwrap(),
         request_body_max_bytes: dropshot::RequestBodyMaxBytes(100000000),
     };
 
@@ -103,7 +133,7 @@ async fn main() -> Result<(), String> {
      * Wait for the server to stop.  Note that there's not any code to shut down
      * this server, so we should never get past this point.
      */
-    server.wait_for_shutdown(server_task).await
+    Ok(server.wait_for_shutdown(server_task).await.unwrap())
 }
 
 /**
@@ -145,7 +175,10 @@ impl Context {
     method = GET,
     path = "/",
 }]
+#[instrument]
+#[inline]
 async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<Response<Body>, HttpError> {
+    event!(Level::INFO, "inside my_function!");
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(Response::builder().status(StatusCode::OK).body(Body::from(json!(api_context.schema).to_string())).unwrap())
@@ -158,6 +191,8 @@ async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<Response<Body>, Ht
     method = GET,
     path = "/auth/users",
 }]
+#[instrument]
+#[inline]
 async fn api_get_auth_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
     // TODO: figure out how to share this between threads.
     let db = Database::new();
@@ -172,6 +207,8 @@ async fn api_get_auth_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseO
     method = GET,
     path = "/applicants",
 }]
+#[instrument]
+#[inline]
 async fn api_get_applicants(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
     let db = Database::new();
 
@@ -185,6 +222,8 @@ async fn api_get_applicants(_rqctx: Arc<RequestContext>) -> Result<HttpResponseO
     method = GET,
     path = "/buildings",
 }]
+#[instrument]
+#[inline]
 async fn api_get_buildings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
     let db = Database::new();
 
@@ -198,6 +237,7 @@ async fn api_get_buildings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk
     method = GET,
     path = "/conference_rooms",
 }]
+#[inline]
 async fn api_get_conference_rooms(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<ConferenceRoom>>, HttpError> {
     let db = Database::new();
 
@@ -211,6 +251,8 @@ async fn api_get_conference_rooms(_rqctx: Arc<RequestContext>) -> Result<HttpRes
     method = GET,
     path = "/github/labels",
 }]
+#[instrument]
+#[inline]
 async fn api_get_github_labels(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubLabel>>, HttpError> {
     let db = Database::new();
 
@@ -224,6 +266,8 @@ async fn api_get_github_labels(_rqctx: Arc<RequestContext>) -> Result<HttpRespon
     method = GET,
     path = "/github/repos",
 }]
+#[instrument]
+#[inline]
 async fn api_get_github_repos(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
     let db = Database::new();
 
@@ -237,6 +281,8 @@ async fn api_get_github_repos(_rqctx: Arc<RequestContext>) -> Result<HttpRespons
     method = GET,
     path = "/groups",
 }]
+#[instrument]
+#[inline]
 async fn api_get_groups(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
     let db = Database::new();
 
@@ -250,6 +296,8 @@ async fn api_get_groups(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Ve
     method = GET,
     path = "/journal_club_meetings",
 }]
+#[instrument]
+#[inline]
 async fn api_get_journal_club_meetings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
     let db = Database::new();
 
@@ -263,6 +311,8 @@ async fn api_get_journal_club_meetings(_rqctx: Arc<RequestContext>) -> Result<Ht
     method = GET,
     path = "/links",
 }]
+#[instrument]
+#[inline]
 async fn api_get_links(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
     let db = Database::new();
 
@@ -276,6 +326,8 @@ async fn api_get_links(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec
     method = GET,
     path = "/mailing_list_subscribers",
 }]
+#[instrument]
+#[inline]
 async fn api_get_mailing_list_subscribers(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
     let db = Database::new();
 
@@ -289,6 +341,8 @@ async fn api_get_mailing_list_subscribers(_rqctx: Arc<RequestContext>) -> Result
     method = GET,
     path = "/rfds",
 }]
+#[instrument]
+#[inline]
 async fn api_get_rfds(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
     let db = Database::new();
 
@@ -302,6 +356,8 @@ async fn api_get_rfds(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<
     method = GET,
     path = "/users",
 }]
+#[instrument]
+#[inline]
 async fn api_get_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
     let db = Database::new();
 

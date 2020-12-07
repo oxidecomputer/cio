@@ -605,6 +605,9 @@
           "avatar_url": {
             "type": "string"
           },
+          "email": {
+            "type": "string"
+          },
           "events_url": {
             "type": "string"
           },
@@ -631,6 +634,9 @@
           "login": {
             "type": "string"
           },
+          "name": {
+            "type": "string"
+          },
           "organizations_url": {
             "type": "string"
           },
@@ -650,6 +656,9 @@
             "type": "string"
           },
           "url": {
+            "type": "string"
+          },
+          "username": {
             "type": "string"
           }
         }
@@ -918,7 +927,6 @@
           "git_refs_url",
           "git_tags_url",
           "git_url",
-          "github_id",
           "has_downloads",
           "has_issues",
           "has_pages",
@@ -1068,8 +1076,6 @@
         "required": [
           "id",
           "issue",
-          "issue_date",
-          "meeting_date",
           "title"
         ]
       },

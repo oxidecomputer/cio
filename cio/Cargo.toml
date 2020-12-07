@@ -22,8 +22,9 @@ cloudflare-rs = "^0.6.0"
 csv = "1.1"
 comrak = "0.8"
 diesel = { version = "1.4.5", features = ["serde_json", "postgres", "chrono", "128-column-tables"] }
+diesel-tracing = { version = "^0.1.0", features = ["postgres"] }
 #dropshot = "^0.3.0"
-dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "fix-query" }
+dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "working" }
 futures-util = "0.3"
 google-drive = "^0.1.0"
 gusto-api = "^0.1.1"
@@ -36,6 +37,8 @@ macros = { path = "../macros" }
 nom_pem = "4"
 openapiv3 = "0.3.0"
 openssl = "0.10"
+opentelemetry = { version = "0.10", default-features = false, features = ["trace", "tokio"] }
+opentelemetry-zipkin = { version = "^0.8", features = ["reqwest-client"], default-features = false }
 pandoc = "0.8"
 phonenumber = "0.2"
 regex = "1"
@@ -49,5 +52,10 @@ sheets = "^0.1.0"
 slack_api = "0.23.0"
 tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
 toml = "0.5"
+tracing = "^0.1"
+tracing-attributes = "^0.1"
+tracing-futures = "^0.2"
+tracing-opentelemetry = "^0.9.0"
+tracing-subscriber = { version = "^0.2", features = ["json", "chrono", "registry"] }
 yup-oauth2 = "^4.1.3"
 zip = "0.5"
