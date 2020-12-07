@@ -348,8 +348,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         let old_rfd = db.get_rfd(new_rfd.number);
         let mut old_rfd_state = "".to_string();
         let mut old_rfd_pdf = "".to_string();
-        if old_rfd.is_some() {
-            let o = old_rfd.unwrap();
+        if let Some(o) = old_rfd {
             old_rfd_state = o.state.to_string();
             old_rfd_pdf = o.get_pdf_filename();
         }
