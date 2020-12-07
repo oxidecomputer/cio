@@ -1,3 +1,8 @@
+use std::collections::HashMap;
+use std::env;
+
+use crate::db::Database;
+
 use chrono::offset::Utc;
 use chrono::DateTime;
 use schemars::JsonSchema;
@@ -5,10 +10,257 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::NewMailingListSubscriber;
 
+/// Returns the response from the Mailchimp API with the list of subscribers.
+pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
+    let client = reqwest::Client::new();
+    let per_page = 500;
+    let mut offset = 0;
+
+    let mut members: Vec<MailchimpMember> = Default::default();
+
+    let mut has_more_rows = true;
+    while has_more_rows {
+        let resp = client
+            .get(&format!(
+                "https://us20.api.mailchimp.com/3.0/lists/{}/members?count={}&offset={}",
+                env::var("MAILCHIMP_LIST_ID").unwrap_or_default(),
+                per_page,
+                offset,
+            ))
+            .basic_auth("any_string", Some(env::var("MAILCHIMP_API_KEY").unwrap_or_default()))
+            .send()
+            .await
+            .unwrap();
+
+        let mut r: MailchimpListMembersResponse = resp.json().await.unwrap();
+
+        has_more_rows = r.members.len() > 0;
+        offset = offset + r.members.len();
+
+        members.append(&mut r.members);
+    }
+
+    members
+}
+
+// Sync the mailing_list_subscribers from Mailchimp with our database.
+pub async fn refresh_db_mailing_list_subscribers() {
+    // Initialize our database.
+    let db = Database::new();
+
+    let members = get_all_mailchimp_subscribers().await;
+
+    // Sync subscribers.
+    for member in members {
+        db.upsert_mailing_list_subscriber(&member.into());
+    }
+}
+
+/// The data type for the response to Mailchimp's API for listing members
+/// of a mailing list.
+///
+/// FROM: https://mailchimp.com/developer/api/marketing/list-members/list-members-info/
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct MailchimpListMembersResponse {
+    /// An array of objects, each representing a specific list member.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<MailchimpMember>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub list_id: String,
+    #[serde(default)]
+    pub total_items: i64,
+}
+
+/// The data type for a member of a  Mailchimp mailing list.
+///
+/// FROM: https://mailchimp.com/developer/api/marketing/list-members/get-member-info/
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct MailchimpMember {
+    /// The MD5 hash of the lowercase version of the list member's email address.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    /// Email address for a subscriber.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email_address: String,
+    /// An identifier for the address across all of Mailchimp.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub unique_email_id: String,
+    /// The ID used in the Mailchimp web application.
+    /// View this member in your Mailchimp account at:
+    ///     https://{dc}.admin.mailchimp.com/lists/members/view?id={web_id}.
+    #[serde(default)]
+    pub web_id: i64,
+    /// Type of email this member asked to get ('html' or 'text').
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email_type: String,
+    /// Subscriber's current status.
+    /// Possible values:
+    ///     "subscribed", "unsubscribed", "cleaned", "pending", "transactional", or "archived".
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    /// A subscriber's reason for unsubscribing.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub unsubscribe_reason: String,
+    /// An individual merge var and value for a member.
+    #[serde(default)]
+    pub merge_fields: MailchimpMergeFields,
+    /// The key of this object's properties is the ID of the interest in question.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub interests: HashMap<String, bool>,
+    /// IP address the subscriber signed up from.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ip_signup: String,
+    /*/// The date and time the subscriber signed up for the list in ISO 8601 format.
+    #[serde(default)]
+    pub timestamp_signup: Option<DateTime<Utc>>,*/
+    /// The IP address the subscriber used to confirm their opt-in status.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ip_opt: String,
+    /// The date and time the subscribe confirmed their opt-in status in ISO 8601 format.
+    //#[serde(alias = "timestamp_signup")]
+    pub timestamp_opt: DateTime<Utc>,
+    /// Star rating for this member, between 1 and 5.
+    #[serde(default)]
+    pub star_rating: i32,
+    /// The date and time the member's info was last changed in ISO 8601 format.
+    pub last_changed: DateTime<Utc>,
+    /// If set/detected, the subscriber's language.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub language: String,
+    /// VIP status for subscriber.
+    #[serde(default)]
+    pub vip_status: bool,
+    /// The list member's email client.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email_client: String,
+    /// Subscriber location information.
+    #[serde(default)]
+    pub location: MailchimpLocation,
+    /// The marketing permissions for the subscriber.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub marketing_permissions: Vec<MailchimpMarketingPermissions>,
+    /// The most recent Note added about this member.
+    #[serde(default)]
+    pub last_note: MailchimpLastNote,
+    /// The source from which the subscriber was added to this list.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source: String,
+    /// The number of tags applied to this member.
+    /// Returns up to 50 tags applied to this member. To retrieve all tags see Member Tags.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<MailchimpTag>,
+    /// The list id.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub list_id: String,
+}
+
+impl Into<NewMailingListSubscriber> for MailchimpMember {
+    fn into(self) -> NewMailingListSubscriber {
+        let default_bool = false;
+
+        let mut tags: Vec<String> = Default::default();
+        for t in &self.tags {
+            tags.push(t.name.to_string());
+        }
+
+        NewMailingListSubscriber {
+            email: self.email_address,
+            first_name: self.merge_fields.first_name.to_string(),
+            last_name: self.merge_fields.last_name.to_string(),
+            name: format!("{} {}", self.merge_fields.first_name, self.merge_fields.last_name),
+            company: self.merge_fields.company,
+            interest: self.merge_fields.interest,
+            // Note to next person. Finding these numbers means looking at actual records and the
+            // API response. Don't know of a better way....
+            wants_podcast_updates: *self.interests.get("ff0295f7d1").unwrap_or(&default_bool),
+            wants_newsletter: *self.interests.get("7f57718c10").unwrap_or(&default_bool),
+            wants_product_updates: *self.interests.get("6a6cb58277").unwrap_or(&default_bool),
+            date_added: self.timestamp_opt,
+            date_optin: self.timestamp_opt,
+            date_last_changed: self.last_changed,
+            notes: self.last_note.note,
+            tags,
+            link_to_people: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct MailchimpMergeFields {
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "FNAME")]
+    pub first_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "LNAME")]
+    pub last_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "COMPANY")]
+    pub company: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "INTEREST")]
+    pub interest: String,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct MailchimpLocation {
+    /// The location latitude.
+    #[serde(default)]
+    pub latitude: f64,
+    /// The location longitude.
+    #[serde(default)]
+    pub longitude: f64,
+    /// The time difference in hours from GMT.
+    #[serde(default)]
+    pub gmtoff: i32,
+    /// The offset for timezones where daylight saving time is observed.
+    #[serde(default)]
+    pub dstoff: i32,
+    /// The unique code for the location country.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub country_code: String,
+    /// The timezone for the location.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub time_zone: String,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct MailchimpMarketingPermissions {
+    /// The id for the marketing permission on the list.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub marketing_permission_id: String,
+    /// The text of the marketing permission.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text: String,
+    /// If the subscriber has opted-in to the marketing permission.
+    #[serde(default)]
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct MailchimpLastNote {
+    /// The note id.
+    #[serde(default)]
+    pub note_id: i64,
+    /// The date and time the note was created in ISO 8601 format.
+    #[serde(default)]
+    pub created_at: Option<DateTime<Utc>>,
+    /// The author of the note.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub created_by: String,
+    /// The content of the note.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct MailchimpTag {
+    /// The tag id.
+    #[serde(default)]
+    pub id: i64,
+    /// The name of the tag.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+}
+
 /// The data type for the webhook from Mailchimp.
 ///
-/// Docs:
-/// https://mailchimp.com/developer/guides/sync-audience-data-with-webhooks/#handling-the-webhook-response-in-your-application
+/// FROM: https://mailchimp.com/developer/guides/sync-audience-data-with-webhooks/#handling-the-webhook-response-in-your-application
 #[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct MailchimpWebhook {
     #[serde(rename = "type")]
@@ -154,7 +406,10 @@ pub struct MailchimpWebhookGrouping {
 
 #[cfg(test)]
 mod tests {
-    use crate::mailing_list::MailchimpWebhook;
+    use crate::db::Database;
+    use crate::mailing_list::{refresh_db_mailing_list_subscribers, MailchimpWebhook};
+    use crate::models::MailingListSubscribers;
+
     use serde_qs::Config as QSConfig;
 
     #[test]
@@ -167,5 +422,22 @@ mod tests {
         let webhook: MailchimpWebhook = qs_non_strict.deserialize_bytes(body.as_bytes()).unwrap();
 
         println!("{:#?}", webhook);
+    }
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
+    async fn test_cron_mailing_list_subscribers_refresh_db() {
+        refresh_db_mailing_list_subscribers().await;
+    }
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
+    async fn test_cron_mailing_list_subscribers_airtable() {
+        // Initialize our database.
+        let db = Database::new();
+
+        let mailing_list_subscribers = db.get_mailing_list_subscribers();
+        // Update the mailing list subscribers in airtable.
+        MailingListSubscribers(mailing_list_subscribers).update_airtable().await;
     }
 }

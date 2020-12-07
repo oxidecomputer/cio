@@ -83,3 +83,5 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           INFLUX_DB_URL: ${{ secrets.INFLUX_DB_URL }}
           INFLUX_DB_TOKEN: ${{ secrets.INFLUX_DB_TOKEN }}
+          MAILCHIMP_LIST_ID: ${{ secrets.MAILCHIMP_LIST_ID }}
+          MAILCHIMP_API_KEY: ${{ secrets.MAILCHIMP_API_KEY }}
