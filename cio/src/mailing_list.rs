@@ -34,8 +34,8 @@ pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
 
         let mut r: MailchimpListMembersResponse = resp.json().await.unwrap();
 
-        has_more_rows = r.members.len() > 0;
-        offset = offset + r.members.len();
+        has_more_rows = !r.members.is_empty();
+        offset += r.members.len();
 
         members.append(&mut r.members);
     }
