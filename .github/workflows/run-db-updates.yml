@@ -1,6 +1,6 @@
 on:
   schedule:
-    - cron: "*/60 * * * *"
+    - cron: "0 */6 * * *"
 name: run db updates
 jobs:
   cargotest:
