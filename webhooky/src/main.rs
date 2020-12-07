@@ -6,6 +6,8 @@ pub mod influx;
 extern crate serde_json;
 
 use std::any::Any;
+use std::env;
+use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -17,6 +19,8 @@ use google_drive::GoogleDrive;
 use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tracing::{instrument, span, Level};
+use tracing_subscriber::prelude::*;
 
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
@@ -25,14 +29,41 @@ use cio_api::slack::{get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, get_gsuite_token, github_org};
 
 #[tokio::main]
-async fn main() -> Result<(), String> {
+async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    let service_address = "0.0.0.0:8080";
+
+    // Set up tracing.
+    //let (tracer, _uninstall) = opentelemetry::exporter::trace::stdout::new_pipeline().install();
+    let (tracer, _uninstall) = opentelemetry_zipkin::new_pipeline()
+        .with_service_name("webhooky")
+        //.with_service_address(service_address.parse().unwrap())
+        .with_collector_endpoint("https://ingest.lightstep.com:443/api/v2/spans")
+        //.with_collector_endpoint("http://localhost:8360/api/v2/spans")
+        .with_trace_config(
+            opentelemetry::sdk::trace::config()
+                .with_default_sampler(opentelemetry::sdk::trace::Sampler::AlwaysOn)
+                .with_resource(opentelemetry::sdk::Resource::new(vec![
+                    opentelemetry::KeyValue::new("lightstep.service_name", "webhooky"),
+                    opentelemetry::KeyValue::new("lightstep.access_token", env::var("LIGHTSTEP_ACCESS_TOKEN").unwrap_or_default()),
+                    //opentelemetry::KeyValue::new("lightstep.access_token", "developer"),
+                ])),
+        )
+        .install()
+        .unwrap();
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let subscriber = tracing_subscriber::Registry::default().with(opentelemetry);
+    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
+
+    let root = span!(Level::TRACE, "app_start", work_units = 2);
+    let _enter = root.enter();
+
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
      * request port 8080.
      */
     let config_dropshot = ConfigDropshot {
-        bind_address: "0.0.0.0:8080".parse().unwrap(),
+        bind_address: service_address.parse().unwrap(),
         request_body_max_bytes: dropshot::RequestBodyMaxBytes(100000000),
     };
 
@@ -72,7 +103,8 @@ async fn main() -> Result<(), String> {
 
     // Start the server.
     let server_task = server.run();
-    server.wait_for_shutdown(server_task).await
+    server.wait_for_shutdown(server_task).await.unwrap();
+    Ok(())
 }
 
 /**
@@ -137,6 +169,8 @@ impl Context {
     method = GET,
     path = "/ping",
 }]
+#[instrument]
+#[inline]
 async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
 }
@@ -146,6 +180,8 @@ async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, Htt
     method = POST,
     path = "/github",
 }]
+#[instrument]
+#[inline]
 async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GitHubWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd");
@@ -457,6 +493,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     method = GET,
     path = "/github/ratelimit",
 }]
+#[instrument]
+#[inline]
 async fn github_rate_limit(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
     let github = &api_context.github;
@@ -489,6 +527,8 @@ pub struct GitHubRateLimit {
     method = POST,
     path = "/google/sheets/edit",
 }]
+#[instrument]
+#[inline]
 async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
     println!("[google/sheets/edit]: {}", body.to_string());
@@ -504,6 +544,8 @@ async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_pa
     method = POST,
     path = "/google/sheets/row/create",
 }]
+#[instrument]
+#[inline]
 async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
     println!("[google/sheets/row/create]: {}", body.to_string());
@@ -516,6 +558,8 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
     method = GET,
     path = "/mailchimp",
 }]
+#[instrument]
+#[inline]
 async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("ok".to_string()))
 }
@@ -525,6 +569,8 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResp
     method = POST,
     path = "/mailchimp",
 }]
+#[instrument]
+#[inline]
 async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // TODO: share the database connection in the context.
     let db = Database::new();

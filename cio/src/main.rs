@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServer, RequestContext};
 use hyper::{Body, Response, StatusCode};
-use tracing::{event, instrument, span, Level};
+use tracing::{instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
 use cio_api::configs::{Building, ConferenceRoom, GithubLabel, Group, Link, User};
@@ -133,7 +133,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      * Wait for the server to stop.  Note that there's not any code to shut down
      * this server, so we should never get past this point.
      */
-    Ok(server.wait_for_shutdown(server_task).await.unwrap())
+    server.wait_for_shutdown(server_task).await.unwrap();
+    Ok(())
 }
 
 /**
@@ -178,7 +179,6 @@ impl Context {
 #[instrument]
 #[inline]
 async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<Response<Body>, HttpError> {
-    event!(Level::INFO, "inside my_function!");
     let api_context = Context::from_rqctx(&rqctx);
 
     Ok(Response::builder().status(StatusCode::OK).body(Body::from(json!(api_context.schema).to_string())).unwrap())
