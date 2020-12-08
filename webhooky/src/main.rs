@@ -212,36 +212,36 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     // Save all events to influxdb.
     match event_type {
         EventType::Push => {
-            println!("[{}] {:?}", event_type.name(), event);
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             event.as_influx_push(&api_context.influx, &api_context.github).await;
         }
         EventType::PullRequest => {
-            println!("[{}] {:?}", event_type.name(), event);
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_pull_request();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::PullRequestReviewComment => {
-            println!("[{}] {:?}", event_type.name(), event);
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_pull_request_review_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::Issues => {
-            println!("[{}] {:?}", event_type.name(), event);
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_issue();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::IssueComment => {
-            println!("[{}] {:?}", event_type.name(), event);
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_issue_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckSuite => {
-            println!("[{}] {:?}", event_type.name(), event);
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_check_suite();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckRun => {
-            println!("[{}] {:?}", event_type.name(), event);
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_check_run();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
@@ -249,9 +249,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     }
 
     if event_type != EventType::Push && event_type != EventType::PullRequest {
-        let msg = format!("Aborted, not a `push` or `pull_request` event, got `{}`", event_type);
-        println!("[github]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        event!(Level::INFO, "not a `push` or `pull_request` event, got `{}`", event_type);
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Check if the event came from the rfd repo.
@@ -260,9 +259,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     if repo_name != "rfd" {
         // We only care about the rfd repo push events for now.
         // We can throw this out, log it and return early.
-        let msg = format!("Aborted, `{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
-        println!("[github]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Handle if we got a pull_request.
@@ -270,23 +268,27 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // We only care if the pull request was `opened`.
         if event.action != "opened" {
             // We can throw this out, log it and return early.
-            let msg = format!(
-                "Aborted, `{}` event was to the {} repo, no automations are set up for action `{}` yet",
-                event_type, repo_name, event.action
+            event!(
+                Level::INFO,
+                "`{}` event was to the {} repo, no automations are set up for action `{}` yet",
+                event_type,
+                repo_name,
+                event.action
             );
-            println!("[github]: {}", msg);
-            return Ok(HttpResponseAccepted(msg));
+            return Ok(HttpResponseAccepted("ok".to_string()));
         }
 
         // We have a newly opened pull request.
         // TODO: Let's update the discussion link for the RFD.
 
-        let msg = format!(
+        event!(
+            Level::INFO,
             "`{}` event was to the {} repo with action `{}`, updated discussion link for the RFD",
-            event_type, repo_name, event.action
+            event_type,
+            repo_name,
+            event.action
         );
-        println!("[github]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Now we can continue since we have a push event to the rfd repo.
@@ -294,9 +296,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     if event.commits.is_empty() {
         // `push` even has no commits.
         // We can throw this out, log it and return early.
-        let msg = "Aborted, `push` event has no commits".to_string();
-        println!("[github]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        event!(Level::INFO, "`push` event has no commits");
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -304,9 +305,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     if !commit.distinct {
         // The commit is not distinct.
         // We can throw this out, log it and return early.
-        let msg = format!("Aborted, `push` event commit `{}` is not distinct", commit.id);
-        println!("[github]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        event!(Level::INFO, "`push` event commit `{}` is not distinct", commit.id);
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Ignore any changes that are not to the `rfd/` directory.
@@ -315,9 +315,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        let msg = format!("Aborted, `push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
-        println!("[github]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        event!(Level::INFO, "`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Get the branch name.
@@ -326,9 +325,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     if branch.is_empty() {
         // The branch name is empty.
         // We can throw this out, log it and return early.
-        let msg = "Aborted, `push` event branch name is empty".to_string();
-        println!("[github]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        event!(Level::WARN, "`push` event branch name is empty");
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Iterate over the files and update the RFDs that have been added or
@@ -345,7 +343,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
         // We have a README file that changed, let's parse the RFD and update it
         // in our database.
-        println!("[github] `{}` event -> file {} was modified on branch {}", event_type.name(), file, branch);
+        println!("[/github] `{}` event -> file {} was modified on branch {}", event_type.name(), file, branch);
         // Parse the RFD.
         let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
@@ -404,11 +402,11 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             for pull in pulls {
                 // Check if the pull request is for our branch.
                 let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
-                println!("pull branch: {}", pull_branch);
+                println!("[/github]: pull branch: {}", pull_branch);
 
                 if pull_branch == branch {
                     println!(
-                        "[github] RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                        "[/github]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
                         rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
                     );
 
@@ -420,7 +418,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             // Open a pull request, if we don't already have one.
             if !has_pull {
                 println!(
-                    "[github] RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
+                    "[/github]: RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
                     rfd.number_string, old_rfd_state, rfd.state, branch
                 );
 
@@ -445,7 +443,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // update the state of the RFD in GitHub to show it as `published`.
         if branch == repo.default_branch && rfd.state != "published" {
             println!(
-                "[github] RFD {} is the branch {} but its state is {}, updating it to `published`",
+                "[/github]: RFD {} is the branch {} but its state is {}, updating it to `published`",
                 rfd.number_string, repo.default_branch, old_rfd_state,
             );
 
@@ -480,20 +478,20 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             api_context.drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
 
             println!(
-                "[github] RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive",
+                "[/github]: RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive",
                 rfd.number_string,
                 old_rfd_pdf,
                 rfd.get_pdf_filename()
             );
         }
 
-        println!("[github] RFD {} updated successfully", rfd.number_string);
+        println!("[/github]: RFD {} updated successfully", rfd.number_string);
         break;
     }
 
     // TODO: should we do something if the file gets deleted (?)
 
-    Ok(HttpResponseAccepted("Updated successfully".to_string()))
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /** Get our current GitHub rate limit. */
@@ -540,11 +538,12 @@ pub struct GitHubRateLimit {
 async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
     let event = body_param.into_inner();
-    println!("[google/sheets/edit]: {:?}", event);
+    println!("[/google/sheets/edit]: {:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
+        event!(Level::INFO, "event is not for an application spreadsheet: {:?}", event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -555,13 +554,13 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     // Let's first get the email for this applicant. This is always in column B.
     let mut cell_name = format!("B{}", event.event.range.row_start);
     let email = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
-    println!("[google/sheets/edit]: email: {}", email);
+    println!("[/google/sheets/edit]: email: {}", email);
     // Now let's get the header for the column of the cell that changed.
     // This is always in row 1.
     let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
     cell_name = format!("{}1", colmn.nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
     let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
-    println!("[google/sheets/edit]: column header: {}", column_header);
+    println!("[/google/sheets/edit]: column header: {}", column_header);
 
     // TODO: share the database connection in the context.
     let db = Database::new();
@@ -570,9 +569,10 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let result = db.get_applicant(&email, &event.spreadsheet.id);
     if result.is_none() {
         event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let a = result.unwrap();
-    println!("[google/sheets/edit]: applicant: {:?}", a);
+    println!("[/google/sheets/edit]: applicant: {:?}", a);
 
     // TODO: Now let's update the correct item for them.
 
@@ -583,7 +583,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     //let mut airtable_applicant = new_applicant.clone();
     //airtable_applicant.create_or_update_in_airtable().await;
 
-    println!("[google/sheets/edit]: applicant {} updated successfully", a.email);
+    println!("[/google/sheets/edit]: applicant {} updated successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -662,11 +662,12 @@ pub struct GoogleSpreadsheet {
 async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
     let event = body_param.into_inner();
-    println!("[google/sheets/row/create]: {:?}", event);
+    println!("[/google/sheets/row/create]: {:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
+        event!(Level::INFO, "event is not for an application spreadsheet: {:?}", event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -677,6 +678,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     // TODO: remove this once we know parsing the webhook works.
     if applicant.email.is_empty() {
         event!(Level::WARN, "applicant has an empty email: {:?}", applicant);
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // We add one to the end of the columns to get the column where the email sent verification is.
@@ -691,6 +693,8 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         .await;
 
     if !applicant.sent_email_received {
+        event!(Level::INFO, "applicant is new, sending emails: {:?}", applicant);
+
         // Post to Slack.
         post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
@@ -710,7 +714,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     let mut airtable_applicant = a.clone();
     airtable_applicant.create_or_update_in_airtable().await;
 
-    println!("[google/sheets/row/create]: applicant {} created successfully", a.email);
+    println!("[/google/sheets/row/create]: applicant {} created successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -747,12 +751,11 @@ async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Quer
 
     let event = query_args.into_inner();
 
-    println!("[mailchimp] {:?}", event);
+    println!("[/mailchimp]: event {:?}", event);
 
     if event.webhook_type != *"subscribe" {
-        let msg = format!("Aborted, not a `subscribe` event, got `{}`", event.webhook_type);
-        println!("[mailchimp]: {}", msg);
-        return Ok(HttpResponseAccepted(msg));
+        event!(Level::INFO, "not a `subscribe` event, got `{}`", event.webhook_type);
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Parse the webhook as a new mailing list subscriber.
@@ -769,8 +772,8 @@ async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Quer
     // Send the message to the slack channel.
     post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
 
-    println!("[subscriber] {} created successfully", subscriber.email);
-    Ok(HttpResponseAccepted("Updated successfully".to_string()))
+    println!("[/mailchimp]: subscriber {} created successfully", subscriber.email);
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /// A GitHub organization.
@@ -915,7 +918,8 @@ impl GitHubWebhook {
 
                 if c.sha != commit.id {
                     // We have a problem.
-                    panic!("commit sha mismatch: {} {}", c.sha.to_string(), commit.id.to_string());
+                    event!(Level::WARN, "commit sha mismatch: {} {}", c.sha.to_string(), commit.id.to_string());
+                    return;
                 }
 
                 let push_event = influx::Push {
