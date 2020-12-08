@@ -81,7 +81,7 @@ from(bucket:"github_webhooks")
     pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(&self, q: Q, table: &str) -> String {
         match self.0.query(&q.clone().into_query(table)).await {
             Ok(v) => {
-                println!("successfully updated table `{}`: {:#?}", table, q);
+                println!("successfully updated table `{}`: {:?}", table, q);
                 return v;
             }
             Err(e) => {
