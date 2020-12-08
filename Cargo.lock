@@ -597,7 +597,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#8a1e320df2a6020ff3e4652355a19b130fd9b219"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#ed3dc1ff7791d8f4e7d4586c2f3fe30c4489933e"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -610,7 +610,6 @@ dependencies = [
  "comrak",
  "csv",
  "diesel",
- "diesel-tracing",
  "diffy",
  "dropshot",
  "futures-util",
@@ -969,21 +968,8 @@ dependencies = [
  "byteorder",
  "chrono 0.4.19",
  "diesel_derives",
- "ipnetwork",
- "libc",
  "pq-sys",
  "serde_json",
-]
-
-[[package]]
-name = "diesel-tracing"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdbed0a1930855c7f438d51a14eecba5f38cc1bb9014d45b5b64a1e56c991ba5"
-dependencies = [
- "diesel",
- "ipnetwork",
- "tracing",
 ]
 
 [[package]]
@@ -1860,15 +1846,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47be2f14c678be2fdcab04ab1171db51b2762ce6f0a8ee87c8dd4a04ed216135"
 
 [[package]]
-name = "ipnetwork"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8eca9f51da27bc908ef3dd85c21e1bbba794edaf94d7841e37356275b82d31e"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "itertools"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2034,7 +2011,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#8a1e320df2a6020ff3e4652355a19b130fd9b219"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#ed3dc1ff7791d8f4e7d4586c2f3fe30c4489933e"
 dependencies = [
  "proc-macro2",
  "quote",
