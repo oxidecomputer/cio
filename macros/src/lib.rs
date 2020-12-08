@@ -44,6 +44,8 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
         airtable = quote!(
         impl #new_name {
             /// Push the row to our Airtable workspace.
+            #[tracing::instrument]
+            #[inline]
             pub async fn push_to_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable =
@@ -67,6 +69,8 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             /// Update the record in airtable.
+            #[tracing::instrument]
+            #[inline]
             pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<#new_name>) {
                 // Initialize the Airtable client.
                 let airtable =
@@ -100,6 +104,8 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             /// Update a row in our airtable workspace.
+            #[tracing::instrument]
+            #[inline]
             pub async fn create_or_update_in_airtable(&mut self) {
                 // Check if we already have the row in Airtable.
                 let records = #new_name_plural::get_from_airtable().await;
@@ -119,6 +125,8 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
         pub struct #new_name_plural(pub Vec<#new_name>);
         impl #new_name_plural {
             /// Get the current records from Airtable.
+            #[tracing::instrument]
+            #[inline]
             pub async fn get_from_airtable() -> std::collections::BTreeMap<i32, airtable_api::Record<#new_name>> {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
@@ -141,6 +149,8 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             /// Update Airtable records in a table from a vector.
+            #[tracing::instrument(skip(self))]
+            #[inline]
             pub async fn update_airtable(&self) {
                 let records = #new_name_plural::get_from_airtable().await;
 
@@ -242,6 +252,8 @@ mod tests {
 
         impl DuplicatedItem {
             /// Push the row to our Airtable workspace.
+            #[tracing::instrument]
+            #[inline]
             pub async fn push_to_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable =
@@ -265,6 +277,8 @@ mod tests {
             }
 
             /// Update the record in airtable.
+            #[tracing::instrument]
+            #[inline]
             pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<DuplicatedItem>) {
                 // Initialize the Airtable client.
                 let airtable =
@@ -298,6 +312,8 @@ mod tests {
             }
 
             /// Update a row in our airtable workspace.
+            #[tracing::instrument]
+            #[inline]
             pub async fn create_or_update_in_airtable(&mut self) {
                 // Check if we already have the row in Airtable.
                 let records = DuplicatedItems::get_from_airtable().await;
@@ -317,6 +333,8 @@ mod tests {
         pub struct DuplicatedItems(pub Vec<DuplicatedItem>);
         impl DuplicatedItems {
             /// Get the current records from Airtable.
+            #[tracing::instrument]
+            #[inline]
             pub async fn get_from_airtable() -> std::collections::BTreeMap<i32, airtable_api::Record<DuplicatedItem>> {
                 // Initialize the Airtable client.
                 let airtable = airtable_api::Airtable::new(
@@ -339,6 +357,8 @@ mod tests {
             }
 
             /// Update Airtable records in a table from a vector.
+            #[tracing::instrument(skip(self))]
+            #[inline]
             pub async fn update_airtable(&self) {
                 let records = DuplicatedItems::get_from_airtable().await;
 
