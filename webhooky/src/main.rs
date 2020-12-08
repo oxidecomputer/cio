@@ -37,7 +37,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let service_address = "0.0.0.0:8080";
 
     // Set up tracing.
-    //let (tracer, _uninstall) = opentelemetry::exporter::trace::stdout::new_pipeline().install();
     let (tracer, _uninstall) = opentelemetry_zipkin::new_pipeline()
         .with_service_name("webhooky")
         .with_collector_endpoint("https://ingest.lightstep.com:443/api/v2/spans")
@@ -249,7 +248,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     }
 
     if event_type != EventType::Push && event_type != EventType::PullRequest {
-        event!(Level::INFO, "not a `push` or `pull_request` event, got `{}`", event_type);
+        event!(Level::INFO, "got event type `{}`, no automations are set up for this event type yet", event_type);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
