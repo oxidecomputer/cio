@@ -190,6 +190,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
             Queryable,
             Identifiable,
             Associations,
+            AsChangeset,
             #partial_eq_text
             Clone,
             JsonSchema,
@@ -238,6 +239,7 @@ mod tests {
             Queryable,
             Identifiable,
             Associations,
+            AsChangeset,
             PartialEq,
             Clone,
             JsonSchema,

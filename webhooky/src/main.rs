@@ -537,7 +537,7 @@ pub struct GitHubRateLimit {
 async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
     let event = body_param.into_inner();
-    println!("[/google/sheets/edit]: {:?}", event);
+    event!(Level::DEBUG, "{:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
@@ -554,11 +554,18 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let mut cell_name = format!("B{}", event.event.range.row_start);
     let email = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
     println!("[/google/sheets/edit]: email: {}", email);
+
+    if email.is_empty() {
+        // We can return early, the row does not have an email.
+        event!(Level::WARN, "email cell returned empty for event: {:?}", event);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
     // Now let's get the header for the column of the cell that changed.
     // This is always in row 1.
     let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
     cell_name = format!("{}1", colmn.nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
-    let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
+    let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
     println!("[/google/sheets/edit]: column header: {}", column_header);
 
     // TODO: share the database connection in the context.
@@ -570,17 +577,32 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
-    let a = result.unwrap();
+    let mut a = result.unwrap();
     println!("[/google/sheets/edit]: applicant: {:?}", a);
 
-    // TODO: Now let's update the correct item for them.
+    // Now let's update the correct item for them.
+    if column_header.contains("status") {
+        // Parse the new status.
+        a.status = cio_api::applicant_status::Status::from_str(&event.event.value).unwrap_or_default().to_string();
+    } else if column_header.contains("reflected") {
+        // Update the value reflected.
+        a.value_reflected = event.event.value;
+    } else if column_header.contains("value_violated") {
+        // Update the value violated.
+        a.value_violated = event.event.value;
+        // TODO: update the values in tension.
+    } else {
+        // If this is a field we don't care about, return early.
+        event!(Level::INFO, "column updated was `{}`, no automations set up for that column yet", column_header);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
 
-    // TODO: Update the applicant in the database.
-    //let new_applicant = db.upsert_applicant(a);
+    // Update the applicant in the database.
+    /*let new_applicant = db.upsert_applicant(a);
 
-    // TODO: Update the applicant in airtable.
-    //let mut airtable_applicant = new_applicant.clone();
-    //airtable_applicant.create_or_update_in_airtable().await;
+    //Update the applicant in airtable.
+    let mut airtable_applicant = new_applicant.clone();
+    airtable_applicant.create_or_update_in_airtable().await;*/
 
     println!("[/google/sheets/edit]: applicant {} updated successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -661,7 +683,7 @@ pub struct GoogleSpreadsheet {
 async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
     let event = body_param.into_inner();
-    println!("[/google/sheets/row/create]: {:?}", event);
+    event!(Level::DEBUG, "{:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
@@ -749,8 +771,7 @@ async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Quer
     let db = Database::new();
 
     let event = query_args.into_inner();
-
-    println!("[/mailchimp]: event {:?}", event);
+    event!(Level::DEBUG, "{:?}", event);
 
     if event.webhook_type != *"subscribe" {
         event!(Level::INFO, "not a `subscribe` event, got `{}`", event.webhook_type);

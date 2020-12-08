@@ -86,6 +86,16 @@ impl Database {
 
     #[instrument(skip(self))]
     #[inline]
+    pub fn update_applicant(&self, applicant: &Applicant) -> Applicant {
+        // Update the applicant.
+        diesel::update(applicant)
+            .set(applicant.clone())
+            .get_result::<Applicant>(&self.conn)
+            .unwrap_or_else(|e| panic!("unable to update applicant {}: {}", applicant.id, e))
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
     pub fn get_buildings(&self) -> Vec<Building> {
         buildings::dsl::buildings.order_by(buildings::dsl::id.desc()).load::<Building>(&self.conn).unwrap()
     }
