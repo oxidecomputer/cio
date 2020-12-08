@@ -646,8 +646,15 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         email_send_new_applicant_notification(&sendgrid_client, applicant.clone(), "oxide.computer").await;
     }
 
-    // TODO: send the applicant to the database.
-    // TODO: update airtable.
+    // TODO: share the database connection in the context.
+    let db = Database::new();
+
+    // Send the applicant to the database.
+    let a = db.upsert_applicant(&applicant);
+
+    // Update airtable.
+    let mut airtable_applicant = a.clone();
+    airtable_applicant.create_or_update_in_airtable().await;
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
