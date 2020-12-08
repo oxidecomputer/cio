@@ -537,9 +537,31 @@ pub struct GitHubRateLimit {
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
     let event = body_param.into_inner();
     println!("[google/sheets/edit]: {:?}", event);
+
+    // Ensure this was an applicant and not some other google form!!
+    let role = get_role_from_sheet_id(&event.spreadsheet.id);
+    if role.is_empty() {
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Some value was changed. We need to get two things to update the airtable
+    // and the database:
+    //  - The applicant's email
+    //  - The name of the column that was updated.
+    // Let's first get the email for this applicant. This is always in column B.
+    let mut cell_name = format!("B{}", event.event.range.row_start);
+    let email = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
+    println!("[google/sheets/edit]: email: {}", email);
+    // Now let's get the header for the column of the cell that changed.
+    // This is always in row 1.
+    let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+    cell_name = format!("{}1", colmn.nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
+    let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
+    println!("[google/sheets/edit]: column header: {}", column_header);
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }

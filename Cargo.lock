@@ -582,7 +582,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.7.2",
- "sheets 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack_api",
  "tokio",
  "toml",
@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#93d7d4c0fdafa2b70c0ecf5815a5d631d4463133"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#25b90eb58bda0d9dfe012ff1268858ea8a114e51"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -635,7 +635,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.7.2",
- "sheets 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack_api",
  "tokio",
  "toml",
@@ -815,6 +815,12 @@ name = "cpuid-bool"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8aebca1129a03dc6dc2b127edd729435bbc4a37e1d5f4d7513165089ceb02634"
+
+[[package]]
+name = "cpuid-bool"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcb25d077389e53838a8158c8e99174c5a9d902dee4904320db714f3c653ffba"
 
 [[package]]
 name = "crc32fast"
@@ -2029,7 +2035,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#93d7d4c0fdafa2b70c0ecf5815a5d631d4463133"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#25b90eb58bda0d9dfe012ff1268858ea8a114e51"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2675,11 +2681,11 @@ dependencies = [
 
 [[package]]
 name = "polyval"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3fd900a291ceb8b99799cc8cd3d1d3403a51721e015bc533528b2ceafcc443c"
+checksum = "b4fd92d8e0c06d08525d2e2643cc2b5c80c69ae8eb12c18272d501cd7079ccc0"
 dependencies = [
- "cfg-if 1.0.0",
+ "cpuid-bool 0.2.0",
  "universal-hash",
 ]
 
@@ -3313,7 +3319,7 @@ checksum = "6e7aab86fe2149bad8c507606bdb3f4ef5e7b2380eb92350f56122cca72a42a8"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
- "cpuid-bool",
+ "cpuid-bool 0.1.2",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
@@ -3330,7 +3336,7 @@ dependencies = [
 
 [[package]]
 name = "sheets"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "reqwest",
  "serde",
@@ -3339,9 +3345,9 @@ dependencies = [
 
 [[package]]
 name = "sheets"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19e2585daf4e2113c23c060ee54c549fd1ec434ffa85dd98e1b4fa9ebdd50171"
+checksum = "43cae652c06e31b3c38685c6e8da4199ab593f25bdab94a23793dc69388c66d4"
 dependencies = [
  "reqwest",
  "serde",
@@ -4373,7 +4379,7 @@ dependencies = [
  "sendgrid-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "sheets 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tracing",
  "tracing-attributes",
