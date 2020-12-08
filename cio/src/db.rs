@@ -40,31 +40,35 @@ impl Database {
         applicants::dsl::applicants.order_by(applicants::dsl::id.desc()).load::<Applicant>(&self.conn).unwrap()
     }
 
-    pub fn upsert_applicant(&self, applicant: &NewApplicant) -> Applicant {
-        // See if we already have the applicant in the database.
+    pub fn get_applicant(&self, email: &str, sheet_id: &str) -> Option<Applicant> {
         match applicants::dsl::applicants
-            .filter(applicants::dsl::email.eq(applicant.email.to_string()))
-            .filter(applicants::dsl::sheet_id.eq(applicant.sheet_id.to_string()))
+            .filter(applicants::dsl::email.eq(email.to_string()))
+            .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
             .limit(1)
             .load::<Applicant>(&self.conn)
         {
             Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the applicant in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let a = r.get(0).unwrap();
-
-                    // Update the applicant.
-                    return diesel::update(a)
-                        .set(applicant)
-                        .get_result::<Applicant>(&self.conn)
-                        .unwrap_or_else(|e| panic!("unable to update applicant {}: {}", a.id, e));
+                if !r.is_empty() {
+                    return Some(r.get(0).unwrap().clone());
                 }
             }
             Err(e) => {
-                println!("[db] on err: {:?}; we don't have the applicant in the database, adding it", e);
+                println!("[db] on err: {:?}; we don't have the applicant with email {} and sheet_id {} in the database", email, sheet_id, e);
+                return None;
             }
+        }
+
+        None
+    }
+
+    pub fn upsert_applicant(&self, applicant: &NewApplicant) -> Applicant {
+        // See if we already have the applicant in the database.
+        if let Some(a) = self.get_applicant(&applicant.email, &applicant.sheet_id) {
+            // Update the applicant.
+            return diesel::update(&a)
+                .set(applicant)
+                .get_result::<Applicant>(&self.conn)
+                .unwrap_or_else(|e| panic!("unable to update applicant {}: {}", a.id, e));
         }
 
         diesel::insert_into(applicants::table)
