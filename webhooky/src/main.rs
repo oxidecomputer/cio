@@ -486,6 +486,9 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 rfd.get_pdf_filename()
             );
         }
+
+        println!("[github] RFD {} updated successfully", rfd.number_string);
+        break;
     }
 
     // TODO: should we do something if the file gets deleted (?)
@@ -664,6 +667,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     let mut airtable_applicant = a.clone();
     airtable_applicant.create_or_update_in_airtable().await;
 
+    println!("[applicant] {} created successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -722,6 +726,7 @@ async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Quer
     // Send the message to the slack channel.
     post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
 
+    println!("[subscriber] {} created successfully", subscriber.email);
     Ok(HttpResponseAccepted("Updated successfully".to_string()))
 }
 
