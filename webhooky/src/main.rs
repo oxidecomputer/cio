@@ -7,6 +7,7 @@ extern crate serde_json;
 
 use std::any::Any;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
@@ -20,13 +21,15 @@ use google_drive::GoogleDrive;
 use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use sheets::Sheets;
 use tracing::{instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
+use cio_api::applicants::email_send_new_applicant_notification;
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
-use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
-use cio_api::slack::{get_public_relations_channel_post_url, post_to_channel};
+use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
+use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, get_gsuite_token, github_org};
 
 #[tokio::main]
@@ -116,6 +119,7 @@ struct Context {
     github: Github,
     github_org: String,
     influx: influx::Client,
+    sheets: Sheets,
 }
 
 impl Context {
@@ -125,6 +129,9 @@ impl Context {
     pub async fn new() -> Arc<Context> {
         // Get gsuite token.
         let token = get_gsuite_token().await;
+
+        // Initialize the GSuite sheets client.
+        let sheets = Sheets::new(token.clone());
 
         // Initialize the Google Drive client.
         let drive = GoogleDrive::new(token);
@@ -145,6 +152,7 @@ impl Context {
             github: authenticate_github_jwt(),
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
+            sheets,
         })
     }
 
@@ -603,9 +611,43 @@ pub struct GoogleSpreadsheet {
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
     let event = body_param.into_inner();
     println!("[google/sheets/row/create]: {:?}", event);
+
+    // Parse the applicant out of the row information.
+    let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values);
+    println!("[applicant]: {:?}", applicant);
+
+    // TODO: remove this once we know parsing the webhook works.
+    if applicant.email.is_empty() {
+        panic!("applicant has an empty email");
+    }
+
+    // We add one to the end of the columns to get the column where the email sent verification is.
+    let sent_email_received_column_index = event.event.range.column_end + 1;
+    applicant
+        .expand(
+            &api_context.drive,
+            &api_context.sheets,
+            sent_email_received_column_index.try_into().unwrap(),
+            event.event.range.row_start.try_into().unwrap(),
+        )
+        .await;
+
+    if !applicant.sent_email_received {
+        // Post to Slack.
+        post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
+
+        // Initialize the SendGrid client.
+        let sendgrid_client = sendgrid_api::SendGrid::new_from_env();
+        // Send a company-wide email.
+        email_send_new_applicant_notification(&sendgrid_client, applicant.clone(), "oxide.computer").await;
+    }
+
+    // TODO: send the applicant to the database.
+    // TODO: update airtable.
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }

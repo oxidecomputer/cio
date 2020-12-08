@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7345156d87376b76788e734b25ecd62029ac7bd9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#93d7d4c0fdafa2b70c0ecf5815a5d631d4463133"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2029,7 +2029,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7345156d87376b76788e734b25ecd62029ac7bd9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#93d7d4c0fdafa2b70c0ecf5815a5d631d4463133"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4370,8 +4370,10 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-zipkin",
  "schemars",
+ "sendgrid-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
+ "sheets 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tracing",
  "tracing-attributes",
