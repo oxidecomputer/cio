@@ -25,7 +25,7 @@ use sheets::Sheets;
 use tracing::{instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
-use cio_api::applicants::email_send_new_applicant_notification;
+use cio_api::applicants::{email_send_new_applicant_notification, get_role_from_sheet_id};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
@@ -612,11 +612,15 @@ pub struct GoogleSpreadsheet {
 #[instrument]
 #[inline]
 async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    // TODO: ensure this was an applicant and not some other google form!!
-
     let api_context = Context::from_rqctx(&rqctx);
     let event = body_param.into_inner();
     println!("[google/sheets/row/create]: {:?}", event);
+
+    // Ensure this was an applicant and not some other google form!!
+    let role = get_role_from_sheet_id(&event.spreadsheet.id);
+    if role.is_empty() {
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
 
     // Parse the applicant out of the row information.
     let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values);
