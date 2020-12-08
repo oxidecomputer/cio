@@ -590,7 +590,10 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     } else if column_header.contains("value_violated") {
         // Update the value violated.
         a.value_violated = event.event.value;
-        // TODO: update the values in tension.
+    //} else if column_header.contains("value in tension [1]") {
+    // TODO: update the values in tension.
+    // } else if column_header.contains("value in tension [2]") {
+    // TODO: update the values in tension for 2.
     } else {
         // If this is a field we don't care about, return early.
         event!(Level::INFO, "column updated was `{}`, no automations set up for that column yet", column_header);
@@ -598,11 +601,11 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     }
 
     // Update the applicant in the database.
-    /*let new_applicant = db.upsert_applicant(a);
+    let new_applicant = db.update_applicant(&a);
 
     //Update the applicant in airtable.
     let mut airtable_applicant = new_applicant.clone();
-    airtable_applicant.create_or_update_in_airtable().await;*/
+    airtable_applicant.create_or_update_in_airtable().await;
 
     println!("[/google/sheets/edit]: applicant {} updated successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
