@@ -586,10 +586,10 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         a.status = cio_api::applicant_status::Status::from_str(&event.event.value).unwrap_or_default().to_string();
     } else if column_header.contains("value reflected") {
         // Update the value reflected.
-        a.value_reflected = event.event.value;
+        a.value_reflected = event.event.value.to_lowercase();
     } else if column_header.contains("value violated") {
         // Update the value violated.
-        a.value_violated = event.event.value;
+        a.value_violated = event.event.value.to_lowercase();
     //} else if column_header.contains("value in tension [1]") {
     // TODO: update the values in tension.
     // } else if column_header.contains("value in tension [2]") {
