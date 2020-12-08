@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{stderr, stdout, Write};
 use std::process::Command;
 use std::str::from_utf8;
+use std::str::FromStr;
 
 use airtable_api::{api_key_from_env, Airtable, Record};
 use async_trait::async_trait;
@@ -29,7 +31,7 @@ use crate::airtable::{
     AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP,
     AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
 };
-use crate::applicants::{email_send_received_application, get_file_contents, ApplicantSheetColumns};
+use crate::applicants::{email_send_received_application, get_file_contents, get_role_from_sheet_id, ApplicantSheetColumns};
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc, parse_markdown};
 use crate::schema::{applicants, auth_user_logins, auth_users, github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds as r_f_ds, rfds};
@@ -122,37 +124,63 @@ pub struct NewApplicant {
 }
 
 impl NewApplicant {
-    /// Parse the applicant from a Google Sheets row.
-    pub async fn parse(drive_client: &GoogleDrive, sheets_client: &Sheets, sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String], row_index: usize) -> (Self, bool) {
-        // Parse the time.
-        let time_str = row[columns.timestamp].to_string() + " -08:00";
-        let time = DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z").unwrap().with_timezone(&Utc);
+    /// Parse the sheet columns from single Google Sheets row values.
+    /// This is what we get back from the webhook.
+    pub fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
+        // Fill in the data we know from what we got from the row.
+        let (github, gitlab) = NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
 
+        NewApplicant {
+            submitted_time: NewApplicant::parse_timestamp(&get_value(values, "Timestamp")),
+            role: get_role_from_sheet_id(sheet_id),
+            sheet_id: sheet_id.to_string(),
+            name: get_value(values, "Name"),
+            email: get_value(values, "Email Address"),
+            location: get_value(values, "Location (City, State or Region)"),
+            phone: get_value(values, "Phone Number"),
+            country_code: Default::default(),
+            github,
+            gitlab,
+            linkedin: get_value(values, "LinkedIn profile URL"),
+            portfolio: get_value(values, "Portfolio"),
+            website: get_value(values, "Website"),
+            resume: get_value(values, "Submit your resume (or PDF export of LinkedIn profile)"),
+            materials: get_value(values, "Submit your Oxide candidate materials"),
+            status: Default::default(),
+            sent_email_received: false,
+            value_reflected: Default::default(),
+            value_violated: Default::default(),
+            values_in_tension: Default::default(),
+            resume_contents: Default::default(),
+            materials_contents: Default::default(),
+            work_samples: Default::default(),
+            writing_samples: Default::default(),
+            analysis_samples: Default::default(),
+            presentation_samples: Default::default(),
+            exploratory_samples: Default::default(),
+            question_technically_challenging: Default::default(),
+            question_proud_of: Default::default(),
+            question_happiest: Default::default(),
+            question_unhappiest: Default::default(),
+            question_value_reflected: Default::default(),
+            question_value_violated: Default::default(),
+            question_values_in_tension: Default::default(),
+            question_why_oxide: Default::default(),
+        }
+    }
+
+    /// Parse the applicant from a Google Sheets row, where we also happen to know the columns.
+    /// This is how we get the spreadsheet back from the API.
+    pub fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
         let status = if row.len() > columns.status {
-            let mut s = row[columns.status].trim().to_lowercase();
-
-            if s.contains("next steps") {
-                s = "Next steps".to_string();
-            } else if s.contains("deferred") {
-                s = "Deferred".to_string();
-            } else if s.contains("declined") {
-                s = "Declined".to_string();
-            } else if s.contains("hired") {
-                s = "Hired".to_string();
-            } else if s.contains("contractor") || s.contains("consulting") {
-                s = "Consulting".to_string();
-            } else if s.contains("keeping warm") {
-                s = "Keeping warm".to_string();
-            } else {
-                s = "Needs to be triaged".to_string();
-            }
-
-            s
+            crate::applicant_status::Status::from_str(&row[columns.status]).unwrap_or_default()
         } else {
-            "Needs to be triaged".to_string()
+            crate::applicant_status::Status::NeedsToBeTriaged
         };
+
+        let (github, gitlab) = NewApplicant::parse_github_gitlab(&row[columns.github]);
 
         // If the length of the row is greater than the linkedin column
         // then we have a linkedin.
@@ -212,36 +240,64 @@ impl NewApplicant {
             sent_email_received = false;
         }
 
-        let email = row[columns.email].to_string();
+        let email = row[columns.email].trim().to_string();
+        let location = row[columns.location].trim().to_string();
+        let phone = row[columns.phone].trim().to_string();
+        let resume = row[columns.resume].to_string();
+        let materials = row[columns.materials].to_string();
 
-        let mut is_new_applicant = false;
-
-        // Check if we have sent them an email that we received their application.
-        if !sent_email_received {
-            is_new_applicant = true;
-
-            // Initialize the SendGrid client.
-            let sendgrid_client = SendGrid::new_from_env();
-
-            // Send them an email.
-            email_send_received_application(&sendgrid_client, &email, "oxide.computer").await;
-
-            // Mark the column as true not false.
-            let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-            let rng = format!("{}{}", colmn.nth(columns.sent_email_received).unwrap().to_string(), row_index + 1);
-
-            sheets_client.update_values(sheet_id, &rng, "TRUE".to_string()).await.unwrap();
-
-            println!("[applicant] sent email to {} that we received their application", email);
+        NewApplicant {
+            submitted_time: NewApplicant::parse_timestamp(&row[columns.timestamp]),
+            name: row[columns.name].to_string(),
+            email,
+            location,
+            phone,
+            country_code: Default::default(),
+            github,
+            gitlab,
+            linkedin,
+            portfolio,
+            website,
+            resume,
+            materials,
+            status: status.to_string(),
+            sent_email_received,
+            role: sheet_name.to_string(),
+            sheet_id: sheet_id.to_string(),
+            value_reflected,
+            value_violated,
+            values_in_tension,
+            resume_contents: Default::default(),
+            materials_contents: Default::default(),
+            work_samples: Default::default(),
+            writing_samples: Default::default(),
+            analysis_samples: Default::default(),
+            presentation_samples: Default::default(),
+            exploratory_samples: Default::default(),
+            question_technically_challenging: Default::default(),
+            question_proud_of: Default::default(),
+            question_happiest: Default::default(),
+            question_unhappiest: Default::default(),
+            question_value_reflected: Default::default(),
+            question_value_violated: Default::default(),
+            question_values_in_tension: Default::default(),
+            question_why_oxide: Default::default(),
         }
+    }
 
+    fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
+        // Parse the time.
+        let time_str = timestamp.to_owned() + " -08:00";
+        DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z").unwrap().with_timezone(&Utc)
+    }
+
+    fn parse_github_gitlab(s: &str) -> (String, String) {
         let mut github = "".to_string();
         let mut gitlab = "".to_string();
-        if !row[columns.github].trim().is_empty() {
+        if !s.trim().is_empty() {
             github = format!(
                 "@{}",
-                row[columns.github]
-                    .trim()
+                s.trim()
                     .to_lowercase()
                     .trim_start_matches("https://github.com/")
                     .trim_start_matches("http://github.com/")
@@ -254,22 +310,36 @@ impl NewApplicant {
             if github.contains("https://gitlab.com") {
                 github = "".to_string();
 
-                gitlab = format!(
-                    "@{}",
-                    row[columns.github]
-                        .trim()
-                        .to_lowercase()
-                        .trim_start_matches("https://gitlab.com/")
-                        .trim_start_matches('@')
-                        .trim_end_matches('/')
-                );
+                gitlab = format!("@{}", s.trim().to_lowercase().trim_start_matches("https://gitlab.com/").trim_start_matches('@').trim_end_matches('/'));
             }
         }
 
-        let location = row[columns.location].trim().to_string();
+        (github, gitlab)
+    }
 
-        let mut phone = row[columns.phone].trim().replace(" ", "").replace("-", "").replace("+", "").replace("(", "").replace(")", "");
+    /// Expand the applicants materials and do any automation that needs to be done.
+    pub async fn expand(&mut self, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, row_index: usize) {
+        // Check if we have sent them an email that we received their application.
+        if !self.sent_email_received {
+            // Initialize the SendGrid client.
+            let sendgrid_client = SendGrid::new_from_env();
 
+            // Send them an email.
+            email_send_received_application(&sendgrid_client, &self.email, "oxide.computer").await;
+
+            // Mark the column as true not false.
+            let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+            let rng = format!("{}{}", colmn.nth(sent_email_received_column_index).unwrap().to_string(), row_index);
+
+            sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
+
+            println!("[applicant] sent email to {} that we received their application", self.email);
+        }
+
+        // Cleanup and parse the phone number and country code.
+        let mut phone = self.phone.replace(" ", "").replace("-", "").replace("+", "").replace("(", "").replace(")", "");
+
+        let location = self.location.to_string();
         let mut country = phonenumber::country::US;
         if (location.to_lowercase().contains("uk")
             || location.to_lowercase().contains("london")
@@ -343,14 +413,15 @@ impl NewApplicant {
 
             phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
         }
+        self.phone = phone;
+        self.country_code = country_code;
 
         // Read the file contents.
-        let resume = row[columns.resume].to_string();
-        let materials = row[columns.materials].to_string();
-        let resume_contents = get_file_contents(drive_client, &resume).await;
-        let materials_contents = get_file_contents(drive_client, &materials).await;
+        self.resume_contents = get_file_contents(drive_client, &self.resume).await;
+        self.materials_contents = get_file_contents(drive_client, &self.materials).await;
 
         // Parse the samples and materials.
+        let materials_contents = self.materials_contents.clone();
         let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
         if work_samples.is_empty() {
             work_samples = parse_question(
@@ -375,6 +446,7 @@ impl NewApplicant {
                 }
             }
         }
+        self.work_samples = work_samples;
 
         let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
         if writing_samples.is_empty() {
@@ -391,6 +463,7 @@ impl NewApplicant {
                 }
             }
         }
+        self.writing_samples = writing_samples;
 
         let mut analysis_samples = parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
         if analysis_samples.is_empty() {
@@ -403,6 +476,7 @@ impl NewApplicant {
                 analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
             }
         }
+        self.analysis_samples = analysis_samples;
 
         let mut presentation_samples = parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
         if presentation_samples.is_empty() {
@@ -415,6 +489,7 @@ impl NewApplicant {
                 presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
             }
         }
+        self.presentation_samples = presentation_samples;
 
         let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
         if exploratory_samples.is_empty() {
@@ -427,64 +502,16 @@ impl NewApplicant {
                 exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
             }
         }
+        self.exploratory_samples = exploratory_samples;
 
-        let question_technically_challenging = parse_question(QUESTION_TECHNICALLY_CHALLENGING, QUESTION_WORK_PROUD_OF, &materials_contents);
-
-        let question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
-
-        let question_happiest = parse_question(QUESTION_HAPPIEST_CAREER, QUESTION_UNHAPPIEST_CAREER, &materials_contents);
-
-        let question_unhappiest = parse_question(QUESTION_UNHAPPIEST_CAREER, QUESTION_VALUE_REFLECTED, &materials_contents);
-
-        let question_value_reflected = parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
-
-        let question_value_violated = parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
-
-        let question_values_in_tension = parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
-
-        let question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
-
-        // Build and return the applicant information for the row.
-        (
-            NewApplicant {
-                submitted_time: time,
-                name: row[columns.name].to_string(),
-                email,
-                location,
-                phone,
-                country_code,
-                github,
-                gitlab,
-                linkedin,
-                portfolio,
-                website,
-                resume,
-                materials,
-                status,
-                sent_email_received,
-                role: sheet_name.to_string(),
-                sheet_id: sheet_id.to_string(),
-                value_reflected,
-                value_violated,
-                values_in_tension,
-                resume_contents,
-                materials_contents,
-                work_samples,
-                writing_samples,
-                analysis_samples,
-                presentation_samples,
-                exploratory_samples,
-                question_technically_challenging,
-                question_proud_of,
-                question_happiest,
-                question_unhappiest,
-                question_value_reflected,
-                question_value_violated,
-                question_values_in_tension,
-                question_why_oxide,
-            },
-            is_new_applicant,
-        )
+        self.question_technically_challenging = parse_question(QUESTION_TECHNICALLY_CHALLENGING, QUESTION_WORK_PROUD_OF, &materials_contents);
+        self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
+        self.question_happiest = parse_question(QUESTION_HAPPIEST_CAREER, QUESTION_UNHAPPIEST_CAREER, &materials_contents);
+        self.question_unhappiest = parse_question(QUESTION_UNHAPPIEST_CAREER, QUESTION_VALUE_REFLECTED, &materials_contents);
+        self.question_value_reflected = parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
+        self.question_value_violated = parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
+        self.question_values_in_tension = parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
+        self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
     pub async fn create_github_next_steps_issue(&self, github: &Github, meta_issues: &[Issue]) {
@@ -2018,4 +2045,15 @@ fn truncate(s: &str, max_chars: usize) -> String {
         None => s.to_string(),
         Some((idx, _)) => s[..idx].to_string(),
     }
+}
+
+fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
+    let empty: Vec<String> = Default::default();
+    let a = map.get(key).unwrap_or(&empty);
+
+    if a.is_empty() {
+        return Default::default();
+    }
+
+    a.get(0).unwrap().to_string()
 }

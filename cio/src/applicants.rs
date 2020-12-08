@@ -264,11 +264,18 @@ fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     sheets
 }
 
+pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
+    for (name, id) in get_sheets_map() {
+        if *id == *sheet_id {
+            return name.to_string();
+        }
+    }
+
+    String::new()
+}
+
 /// Return a vector of all the raw applicants and add all the metadata.
 pub async fn get_raw_applicants() -> Vec<NewApplicant> {
-    let mut applicants: Vec<NewApplicant> = Default::default();
-    let sheets = get_sheets_map();
-
     // Get the GSuite token.
     let token = get_gsuite_token().await;
 
@@ -300,7 +307,8 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
-    for (sheet_name, sheet_id) in sheets {
+    let mut applicants: Vec<NewApplicant> = Default::default();
+    for (sheet_name, sheet_id) in get_sheets_map() {
         // Get the values in the sheet.
         let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string()).await.unwrap();
         let values = sheet_values.values.unwrap();
@@ -325,12 +333,13 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
             }
 
             // Parse the applicant out of the row information.
-            let (applicant, is_new_applicant) = NewApplicant::parse(&drive_client, &sheets_client, sheet_name, sheet_id, &columns, &row, row_index).await;
+            let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row);
+            applicant.expand(&drive_client, &sheets_client, columns.sent_email_received, row_index + 1).await;
 
             applicant.create_github_next_steps_issue(&github, &meta_issues).await;
             applicant.create_github_onboarding_issue(&github, &configs_issues).await;
 
-            if is_new_applicant {
+            if !applicant.sent_email_received {
                 // Post to Slack.
                 post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 

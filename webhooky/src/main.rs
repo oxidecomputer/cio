@@ -37,16 +37,13 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     //let (tracer, _uninstall) = opentelemetry::exporter::trace::stdout::new_pipeline().install();
     let (tracer, _uninstall) = opentelemetry_zipkin::new_pipeline()
         .with_service_name("webhooky")
-        //.with_service_address(service_address.parse().unwrap())
         .with_collector_endpoint("https://ingest.lightstep.com:443/api/v2/spans")
-        //.with_collector_endpoint("http://localhost:8360/api/v2/spans")
         .with_trace_config(
             opentelemetry::sdk::trace::config()
                 .with_default_sampler(opentelemetry::sdk::trace::Sampler::AlwaysOn)
                 .with_resource(opentelemetry::sdk::Resource::new(vec![
                     opentelemetry::KeyValue::new("lightstep.service_name", "webhooky"),
                     opentelemetry::KeyValue::new("lightstep.access_token", env::var("LIGHTSTEP_ACCESS_TOKEN").unwrap_or_default()),
-                    //opentelemetry::KeyValue::new("lightstep.access_token", "developer"),
                 ])),
         )
         .install()
