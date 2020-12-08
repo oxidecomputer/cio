@@ -556,6 +556,8 @@ pub struct GoogleSpreadsheetEvent {
     pub auth_mode: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "oldValue", deserialize_with = "deserialize_null_string::deserialize")]
     pub old_value: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub value: String,
     #[serde(default)]
     pub range: GoogleSpreadsheetRange,
     #[serde(default)]
