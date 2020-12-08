@@ -590,10 +590,20 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     } else if column_header.contains("value violated") {
         // Update the value violated.
         a.value_violated = event.event.value.to_lowercase();
-    //} else if column_header.contains("value in tension [1]") {
-    // TODO: update the values in tension.
-    // } else if column_header.contains("value in tension [2]") {
-    // TODO: update the values in tension for 2.
+    } else if column_header.contains("value in tension [1]") {
+        // The person updated the values in tension.
+        // We need to get the other value in tension in the next column to the right.
+        let value_column = event.event.range.column_start + 1;
+        cell_name = format!("{}{}", colmn.nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
+        let value_in_tension_2 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+        a.values_in_tension = vec![value_in_tension_2, event.event.value.to_lowercase()];
+    } else if column_header.contains("value in tension [2]") {
+        // The person updated the values in tension.
+        // We need to get the other value in tension in the next column to the left.
+        let value_column = event.event.range.column_start - 1;
+        cell_name = format!("{}{}", colmn.nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
+        let value_in_tension_1 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+        a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
         // If this is a field we don't care about, return early.
         event!(Level::INFO, "column updated was `{}`, no automations set up for that column yet", column_header);
