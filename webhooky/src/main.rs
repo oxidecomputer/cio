@@ -600,12 +600,12 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // Update the applicant in the database.
-    let new_applicant = db.update_applicant(&a);
-
-    //Update the applicant in airtable.
+    // Update the applicant in airtable.
     let mut airtable_applicant = new_applicant.clone();
     airtable_applicant.create_or_update_in_airtable().await;
+
+    // Update the applicant in the database.
+    let new_applicant = db.update_applicant(&a);
 
     println!("[/google/sheets/edit]: applicant {} updated successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -731,12 +731,12 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     // TODO: share the database connection in the context.
     let db = Database::new();
 
-    // Send the applicant to the database.
-    let a = db.upsert_applicant(&applicant);
-
     // Update airtable.
     let mut airtable_applicant = a.clone();
     airtable_applicant.create_or_update_in_airtable().await;
+
+    // Send the applicant to the database.
+    let a = db.upsert_applicant(&applicant);
 
     println!("[/google/sheets/row/create]: applicant {} created successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
