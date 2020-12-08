@@ -149,6 +149,24 @@ impl Sheets {
         Ok(resp.json().await.unwrap())
     }
 
+    /// Get single cell value.
+    /// The `cell_name` is something like `A1` and what is returned is a string representation of
+    /// the cell's value.
+    pub async fn get_value(&self, sheet_id: &str, cell_name: String) -> Result<String, APIError> {
+        let value_range = self.get_values(sheet_id, cell_name).await.unwrap();
+        let values = value_range.values.unwrap_or_default();
+        if values.is_empty() {
+            return Ok(String::new());
+        }
+        let nested_values = values.get(0).unwrap();
+        if nested_values.is_empty() {
+            return Ok(String::new());
+        }
+        let value = nested_values.get(0).unwrap();
+
+        Ok(value.to_string())
+    }
+
     /// Update values.
     pub async fn update_values(&self, sheet_id: &str, range: &str, value: String) -> Result<UpdateValuesResponse, APIError> {
         // Build the request.
