@@ -563,6 +563,23 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
     println!("[google/sheets/edit]: column header: {}", column_header);
 
+    // TODO: share the database connection in the context.
+    let db = Database::new();
+
+    // Now let's get the applicant from the database so we can update it.
+    let a = db.get_applicant(&email, &event.spreadsheet.id).unwrap();
+    println!("[google/sheets/edit]: applicant: {:?}", a);
+
+    // TODO: Now let's update the correct item for them.
+
+    // TODO: Update the applicant in the database.
+    //let new_applicant = db.upsert_applicant(a);
+
+    // TODO: Update the applicant in airtable.
+    //let mut airtable_applicant = new_applicant.clone();
+    //airtable_applicant.create_or_update_in_airtable().await;
+
+    println!("[google/sheets/edit]: applicant {} updated successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -689,7 +706,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     let mut airtable_applicant = a.clone();
     airtable_applicant.create_or_update_in_airtable().await;
 
-    println!("[applicant] {} created successfully", a.email);
+    println!("[google/sheets/row/create]: applicant {} created successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
