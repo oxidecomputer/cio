@@ -15,12 +15,15 @@ use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repository
 use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
 use reqwest::get;
 use reqwest::Client;
+use tracing::instrument;
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
 use crate::db::Database;
 use crate::models::{GithubRepo, NewRepo};
 
 /// Write a file.
+#[instrument]
+#[inline]
 pub fn write_file(file: PathBuf, contents: String) {
     // create each directory.
     fs::create_dir_all(file.parent().unwrap()).unwrap();
@@ -33,6 +36,8 @@ pub fn write_file(file: PathBuf, contents: String) {
 }
 
 /// Get a GSuite token.
+#[instrument]
+#[inline]
 pub async fn get_gsuite_token() -> AccessToken {
     let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
     // Get the GSuite credentials file.
@@ -82,11 +87,15 @@ pub async fn get_gsuite_token() -> AccessToken {
 }
 
 /// Check if a GitHub issue already exists.
+#[instrument]
+#[inline]
 pub fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> bool {
     issues.iter().any(|i| i.title.contains(search))
 }
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
+#[instrument]
+#[inline]
 pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
     let body = get(&format!("https://github.com/{}.keys", handle)).await.unwrap().text().await.unwrap();
 
@@ -103,6 +112,8 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
 }
 
 /// Authenticate with GitHub.
+#[instrument]
+#[inline]
 pub fn authenticate_github() -> Github {
     // Initialize the github client.
     let github_token = env::var("GITHUB_TOKEN").unwrap();
@@ -118,6 +129,8 @@ pub fn authenticate_github() -> Github {
 }
 
 /// Authenticate GitHub with JSON web token credentials.
+#[instrument]
+#[inline]
 pub fn authenticate_github_jwt() -> Github {
     // Parse our env variables.
     let app_id_str = env::var("GH_APP_ID").unwrap();
@@ -147,11 +160,15 @@ pub fn authenticate_github_jwt() -> Github {
     )
 }
 
+#[instrument]
+#[inline]
 pub fn github_org() -> String {
     env::var("GITHUB_ORG").unwrap()
 }
 
 /// List all the GitHub repositories for our org.
+#[instrument]
+#[inline]
 pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
     let github_repos = github
         .org_repos(github_org())
@@ -169,6 +186,8 @@ pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
 }
 
 /// Sync the repos with our database.
+#[instrument]
+#[inline]
 pub async fn refresh_db_github_repos(github: &Github) {
     let github_repos = list_all_github_repos(github).await;
 
@@ -202,6 +221,8 @@ pub async fn refresh_db_github_repos(github: &Github) {
 /// Create or update a file in a GitHub repository.
 /// If the file does not exist, it will be created.
 /// If the file exists, it will be updated _only if_ the content of the file has changed.
+#[instrument(skip(repo))]
+#[inline]
 pub async fn create_or_update_file_in_github_repo(repo: &Repository, file_path: &str, new_content: Vec<u8>) {
     let content = new_content.trim();
 
@@ -366,6 +387,8 @@ impl SliceExt for Vec<u8> {
     }
 }
 
+#[instrument]
+#[inline]
 pub fn default_date() -> chrono::naive::NaiveDate {
     chrono::naive::NaiveDate::parse_from_str("1970-01-01", "%Y-%m-%d").unwrap()
 }

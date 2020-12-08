@@ -26,6 +26,7 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
+use tracing::instrument;
 
 use crate::airtable::{
     AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP,
@@ -126,6 +127,8 @@ pub struct NewApplicant {
 impl NewApplicant {
     /// Parse the sheet columns from single Google Sheets row values.
     /// This is what we get back from the webhook.
+    #[instrument]
+    #[inline]
     pub fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
         // Fill in the data we know from what we got from the row.
         let (github, gitlab) = NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
@@ -171,6 +174,8 @@ impl NewApplicant {
 
     /// Parse the applicant from a Google Sheets row, where we also happen to know the columns.
     /// This is how we get the spreadsheet back from the API.
+    #[instrument]
+    #[inline]
     pub fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
@@ -285,12 +290,16 @@ impl NewApplicant {
         }
     }
 
+    #[instrument]
+    #[inline]
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
         // Parse the time.
         let time_str = timestamp.to_owned() + " -08:00";
         DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z").unwrap().with_timezone(&Utc)
     }
 
+    #[instrument]
+    #[inline]
     fn parse_github_gitlab(s: &str) -> (String, String) {
         let mut github = "".to_string();
         let mut gitlab = "".to_string();
@@ -318,6 +327,8 @@ impl NewApplicant {
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
+    #[instrument(skip(drive_client, sheets_client))]
+    #[inline]
     pub async fn expand(&mut self, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, row_index: usize) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
@@ -514,6 +525,8 @@ impl NewApplicant {
         self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
+    #[instrument]
+    #[inline]
     pub async fn create_github_next_steps_issue(&self, github: &Github, meta_issues: &[Issue]) {
         // Check if their status is next steps, we only care about folks in the next steps.
         if !self.status.contains("Next steps") {
@@ -570,6 +583,8 @@ cc @jessfraz @sdtuck @bcantrill",
         println!("[applicant]: created hiring issue for {}", self.email);
     }
 
+    #[instrument]
+    #[inline]
     pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue]) {
         // Check if their status is not hired, we only care about hired applicants.
         if !self.status.contains("Hired") {
@@ -616,6 +631,8 @@ cc @jessfraz @sdtuck @bcantrill",
     }
 
     /// Get the human duration of time since the application was submitted.
+    #[instrument]
+    #[inline]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
         if dur.num_seconds() > 0 {
@@ -626,6 +643,8 @@ cc @jessfraz @sdtuck @bcantrill",
     }
 
     /// Convert the applicant into JSON for a Slack message.
+    #[instrument]
+    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
@@ -731,6 +750,8 @@ cc @jessfraz @sdtuck @bcantrill",
 
     /// Get the applicant's information in the form of the body of an email for a
     /// company wide notification that we received a new application.
+    #[instrument]
+    #[inline]
     pub fn as_company_notification_email(&self) -> String {
         let time = self.human_duration();
 
@@ -787,6 +808,8 @@ To view the all the candidates refer to the following Google spreadsheets:
 
 impl Applicant {
     /// Get the human duration of time since the application was submitted.
+    #[instrument]
+    #[inline]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
         if dur.num_seconds() > 0 {
@@ -797,6 +820,8 @@ impl Applicant {
     }
 
     /// Convert the applicant into JSON for a Slack message.
+    #[instrument]
+    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
@@ -901,6 +926,8 @@ impl Applicant {
     }
 }
 
+#[instrument]
+#[inline]
 fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     if materials_contents.is_empty() {
         Default::default()
@@ -1001,6 +1028,8 @@ pub struct NewAuthUser {
 /// Implement updating the Airtable record for a AuthUser.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUser> for AuthUser {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, record: AuthUser) {
         // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
         self.link_to_people = record.link_to_people.clone();
@@ -1010,6 +1039,8 @@ impl UpdateAirtableRecord<AuthUser> for AuthUser {
 
 impl PartialEq for AuthUser {
     // We implement our own here because Airtable has a different data type for the picture.
+    #[instrument]
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.user_id == other.user_id
             && self.last_login == other.last_login
@@ -1073,6 +1104,8 @@ pub struct NewAuthUserLogin {
 /// Implement updating the Airtable record for a AuthUserLogin.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, _record: AuthUserLogin) {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -1126,6 +1159,8 @@ pub struct NewJournalClubMeeting {
 
 impl JournalClubMeeting {
     /// Convert the journal club meeting into JSON as Slack message.
+    #[instrument]
+    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let mut objects: Vec<MessageBlock> = Default::default();
 
@@ -1209,6 +1244,8 @@ impl JournalClubMeeting {
 /// Implement updating the Airtable record for a JournalClubMeeting.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, record: JournalClubMeeting) {
         // Set the papers field, since it is pre-populated as table links.
         self.papers = record.papers;
@@ -1237,6 +1274,8 @@ pub struct NewJournalClubPaper {
 /// Implement updating the Airtable record for a JournalClubPaper.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, _record: JournalClubPaper) {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -1295,6 +1334,8 @@ pub struct NewMailingListSubscriber {
 
 impl NewMailingListSubscriber {
     /// Push the mailing list signup to our Airtable workspace.
+    #[instrument]
+    #[inline]
     pub async fn push_to_airtable(&self) {
         // Initialize the Airtable client.
         let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
@@ -1314,6 +1355,8 @@ impl NewMailingListSubscriber {
     }
 
     /// Get the human duration of time since the signup was fired.
+    #[instrument]
+    #[inline]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.date_added - Utc::now();
         if dur.num_seconds() > 0 {
@@ -1324,6 +1367,8 @@ impl NewMailingListSubscriber {
     }
 
     /// Convert the mailing list signup into JSON as Slack message.
+    #[instrument]
+    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
@@ -1399,6 +1444,8 @@ impl NewMailingListSubscriber {
 }
 
 impl Default for NewMailingListSubscriber {
+    #[instrument]
+    #[inline]
     fn default() -> Self {
         NewMailingListSubscriber {
             email: String::new(),
@@ -1423,6 +1470,8 @@ impl Default for NewMailingListSubscriber {
 /// Implement updating the Airtable record for a MailingListSubscriber.
 #[async_trait]
 impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, record: MailingListSubscriber) {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
@@ -1474,6 +1523,8 @@ pub struct GitHubUser {
 }
 
 impl FromSql<Jsonb, Pg> for GitHubUser {
+    #[instrument]
+    #[inline]
     fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
         let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
         Ok(serde_json::from_value(value).unwrap())
@@ -1591,6 +1642,8 @@ pub mod deserialize_null_string {
 }
 
 impl NewRepo {
+    #[instrument]
+    #[inline]
     pub async fn new(r: Repo) -> Self {
         // TODO: get the languages as well
         // https://docs.rs/hubcaps/0.6.1/hubcaps/repositories/struct.Repo.html
@@ -1761,6 +1814,8 @@ pub struct NewRFD {
 
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
+    #[instrument(skip(repo))]
+    #[inline]
     pub async fn new_from_github(repo: &Repository, branch: &str, file_path: &str, commit_date: DateTime<Utc>) -> Self {
         // Get the file from GitHub.
         let file = repo.content().file(file_path, branch).await.unwrap();
@@ -1805,6 +1860,8 @@ impl NewRFD {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn get_html(content: &str, is_markdown: bool, number_string: &str) -> String {
         let html: String;
         if is_markdown {
@@ -1818,6 +1875,8 @@ impl NewRFD {
         clean_rfd_html_links(&html, number_string)
     }
 
+    #[instrument]
+    #[inline]
     pub fn get_title(content: &str) -> String {
         let mut re = Regex::new(r"(?m)(RFD .*$)").unwrap();
         match re.find(&content) {
@@ -1842,6 +1901,8 @@ impl NewRFD {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn get_state(content: &str) -> String {
         let re = Regex::new(r"(?m)(state:.*$)").unwrap();
         match re.find(&content) {
@@ -1850,6 +1911,8 @@ impl NewRFD {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn get_discussion(content: &str) -> String {
         let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
         match re.find(&content) {
@@ -1858,6 +1921,8 @@ impl NewRFD {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn generate_number_string(number: i32) -> String {
         // Add leading zeros to the number for the number_string.
         let mut number_string = number.to_string();
@@ -1868,18 +1933,26 @@ impl NewRFD {
         number_string
     }
 
+    #[instrument]
+    #[inline]
     pub fn generate_name(number: i32, title: &str) -> String {
         format!("RFD {} {}", number, title)
     }
 
+    #[instrument]
+    #[inline]
     pub fn generate_short_link(number: i32) -> String {
         format!("https://{}.rfd.oxide.computer", number)
     }
 
+    #[instrument]
+    #[inline]
     pub fn generate_rendered_link(number_string: &str) -> String {
         format!("https://rfd.shared.oxide.computer/rfd/{}", number_string)
     }
 
+    #[instrument]
+    #[inline]
     pub fn get_authors(content: &str, is_markdown: bool) -> String {
         if is_markdown {
             // TODO: make work w asciidoc.
@@ -1910,6 +1983,8 @@ impl NewRFD {
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
+    #[instrument]
+    #[inline]
     pub async fn expand(&mut self, github: &Github) {
         // Trim the title.
         self.title = self.title.trim().to_string();
@@ -1960,6 +2035,8 @@ impl NewRFD {
 impl RFD {
     /// Convert an RFD into JSON as Slack message.
     // TODO: make this include more fields
+    #[instrument]
+    #[inline]
     pub fn as_slack_msg(&self) -> String {
         let mut msg = format!("{} (_*{}*_) <{}|github> <{}|rendered>", self.name, self.state, self.short_link, self.rendered_link);
 
@@ -1971,12 +2048,16 @@ impl RFD {
     }
 
     /// Get the filename for the PDF of the RFD.
+    #[instrument]
+    #[inline]
     pub fn get_pdf_filename(&self) -> String {
         format!("RFD {}: {}.pdf", self.number_string, self.title.replace("/", "-").replace("'", "").trim())
     }
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
+    #[instrument(skip(drive_client))]
+    #[inline]
     pub async fn convert_and_upload_pdf(&self, github: &Github, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
@@ -2029,6 +2110,8 @@ impl RFD {
 /// Implement updating the Airtable record for an RFD.
 #[async_trait]
 impl UpdateAirtableRecord<RFD> for RFD {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, record: RFD) {
         // Set the Link to People from the original so it stays intact.
         self.milestones = record.milestones.clone();
@@ -2040,6 +2123,8 @@ impl UpdateAirtableRecord<RFD> for RFD {
     }
 }
 
+#[instrument]
+#[inline]
 fn truncate(s: &str, max_chars: usize) -> String {
     match s.char_indices().nth(max_chars) {
         None => s.to_string(),
@@ -2047,6 +2132,8 @@ fn truncate(s: &str, max_chars: usize) -> String {
     }
 }
 
+#[instrument]
+#[inline]
 fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
     let empty: Vec<String> = Default::default();
     let a = map.get(key).unwrap_or(&empty);

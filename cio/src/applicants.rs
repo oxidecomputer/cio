@@ -11,6 +11,7 @@ use pandoc::OutputKind;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
+use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::NewApplicant;
@@ -42,6 +43,8 @@ pub struct ApplicantSheetColumns {
 
 impl ApplicantSheetColumns {
     /// Parse the sheet columns from Google Sheets values.
+    #[instrument]
+    #[inline]
     pub fn parse(values: &[Vec<String>]) -> Self {
         // Iterate over the columns.
         // TODO: make this less horrible
@@ -110,6 +113,8 @@ impl ApplicantSheetColumns {
 }
 
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
+#[instrument(skip(drive_client))]
+#[inline]
 pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String {
     let id = url.replace("https://drive.google.com/open?id=", "");
 
@@ -227,6 +232,8 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     result.trim().to_string()
 }
 
+#[instrument]
+#[inline]
 fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
     let mut output = env::temp_dir();
     output.push("tempfile.txt");
@@ -255,6 +262,8 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
     result
 }
 
+#[instrument]
+#[inline]
 fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
     sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
@@ -264,6 +273,8 @@ fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     sheets
 }
 
+#[instrument]
+#[inline]
 pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
     for (name, id) in get_sheets_map() {
         if *id == *sheet_id {
@@ -275,6 +286,8 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 }
 
 /// Return a vector of all the raw applicants and add all the metadata.
+#[instrument]
+#[inline]
 pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     // Get the GSuite token.
     let token = get_gsuite_token().await;
@@ -354,6 +367,8 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     applicants
 }
 
+#[instrument(skip(sendgrid))]
+#[inline]
 pub async fn email_send_received_application(sendgrid: &SendGrid, email: &str, domain: &str) {
     // Send the message.
     sendgrid
@@ -373,6 +388,8 @@ Sincerely,
         .await;
 }
 
+#[instrument(skip(sendgrid))]
+#[inline]
 pub async fn email_send_new_applicant_notification(sendgrid: &SendGrid, applicant: NewApplicant, domain: &str) {
     // Create the message.
     let message = applicant.clone().as_company_notification_email();
@@ -391,6 +408,8 @@ pub async fn email_send_new_applicant_notification(sendgrid: &SendGrid, applican
 }
 
 // Sync the applicants with our database.
+#[instrument]
+#[inline]
 pub async fn refresh_db_applicants() {
     let applicants = get_raw_applicants().await;
 

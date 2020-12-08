@@ -12,6 +12,7 @@ use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE};
 use crate::certs::NewCertificate;
@@ -44,6 +45,8 @@ pub struct Config {
 
 impl Config {
     /// Read and decode the config from the files that are passed on the command line.
+    #[instrument]
+    #[inline]
     pub fn read(cli_matches: &ArgMatches) -> Self {
         let files: Vec<String>;
         match cli_matches.values_of("file") {
@@ -201,6 +204,8 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
+    #[instrument]
+    #[inline]
     async fn populate_ssh_keys(&mut self) {
         if self.github.is_empty() {
             // Return early if we don't know their github handle.
@@ -210,6 +215,8 @@ impl UserConfig {
         self.public_ssh_keys = get_github_user_public_ssh_keys(&self.github).await;
     }
 
+    #[instrument]
+    #[inline]
     async fn populate_from_gusto(&mut self) {
         // TODO: actually get the data from Guso once we have credentials.
         let mut street_address = self.home_address_street_1.to_string();
@@ -222,6 +229,8 @@ impl UserConfig {
         );
     }
 
+    #[instrument]
+    #[inline]
     pub async fn expand(&mut self) {
         self.populate_ssh_keys().await;
 
@@ -231,16 +240,22 @@ impl UserConfig {
 
 impl User {
     /// Generate and return the full name for the user.
+    #[instrument]
+    #[inline]
     pub fn full_name(&self) -> String {
         format!("{} {}", self.first_name, self.last_name)
     }
 
     /// Generate the email address for the user.
+    #[instrument]
+    #[inline]
     pub fn email(&self) -> String {
         format!("{}@oxidecomputer.com", self.username)
     }
 
     /// Creates or updates the Slack user based on their user config.
+    #[instrument]
+    #[inline]
     pub async fn to_slack_user(&self) {
         // Authenticate Slack.
         let client = slack_api::requests::default_client().unwrap();
@@ -319,6 +334,8 @@ impl User {
 /// Implement updating the Airtable record for a User.
 #[async_trait]
 impl UpdateAirtableRecord<User> for User {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, _record: User) {
         // Get the current groups in Airtable so we can link to them.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -485,10 +502,14 @@ pub struct GroupConfig {
 }
 
 impl GroupConfig {
+    #[instrument]
+    #[inline]
     pub fn get_link(&self) -> String {
         format!("https://groups.google.com/a/oxidecomputer.com/forum/#!forum/{}", self.name)
     }
 
+    #[instrument]
+    #[inline]
     pub fn expand(&mut self) {
         self.link = self.get_link();
     }
@@ -497,6 +518,8 @@ impl GroupConfig {
 /// Implement updating the Airtable record for a Group.
 #[async_trait]
 impl UpdateAirtableRecord<Group> for Group {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, record: Group) {
         // Make sure we don't mess with the members since that is populated by the Users table.
         self.members = record.members;
@@ -537,6 +560,8 @@ pub struct BuildingConfig {
 }
 
 impl BuildingConfig {
+    #[instrument]
+    #[inline]
     fn expand(&mut self) {
         self.address_formatted = format!("{}\n{}, {} {}, {}", self.street_address, self.city, self.state, self.zipcode, self.country);
     }
@@ -545,6 +570,8 @@ impl BuildingConfig {
 /// Implement updating the Airtable record for a Building.
 #[async_trait]
 impl UpdateAirtableRecord<Building> for Building {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, record: Building) {
         // Make sure we don't mess with the employees since that is populated by the Users table.
         self.employees = record.employees.clone();
@@ -582,6 +609,8 @@ pub struct ResourceConfig {
 /// Implement updating the Airtable record for a ConferenceRoom.
 #[async_trait]
 impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
+    #[instrument]
+    #[inline]
     async fn update_airtable_record(&mut self, _record: ConferenceRoom) {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
@@ -655,6 +684,8 @@ pub struct HuddleConfig {
 }
 
 /// Get the configs from the GitHub repository and parse them.
+#[instrument]
+#[inline]
 pub async fn get_configs_from_repo(github: &Github) -> Config {
     let repo_contents = github.repo(github_org(), "configs").content();
 
@@ -678,6 +709,8 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
     config
 }
 
+#[instrument]
+#[inline]
 pub async fn refresh_db_configs(github: &Github) {
     let configs = get_configs_from_repo(&github).await;
 

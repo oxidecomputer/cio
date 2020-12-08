@@ -22,7 +22,7 @@ use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
-use tracing::{instrument, span, Level};
+use tracing::{event, instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
 use cio_api::applicants::{email_send_new_applicant_notification, get_role_from_sheet_id};
@@ -567,7 +567,11 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let db = Database::new();
 
     // Now let's get the applicant from the database so we can update it.
-    let a = db.get_applicant(&email, &event.spreadsheet.id).unwrap();
+    let result = db.get_applicant(&email, &event.spreadsheet.id);
+    if result.is_none() {
+        event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
+    }
+    let a = result.unwrap();
     println!("[google/sheets/edit]: applicant: {:?}", a);
 
     // TODO: Now let's update the correct item for them.
@@ -668,11 +672,11 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
 
     // Parse the applicant out of the row information.
     let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values);
-    println!("[applicant]: {:?}", applicant);
+    println!("[google/sheets/row/create]: applicant parsed {:?}", applicant);
 
     // TODO: remove this once we know parsing the webhook works.
     if applicant.email.is_empty() {
-        panic!("applicant has an empty email");
+        event!(Level::WARN, "applicant has an empty email: {:?}", applicant);
     }
 
     // We add one to the end of the columns to get the column where the email sent verification is.
@@ -900,6 +904,8 @@ pub struct GitHubWebhook {
 
 impl GitHubWebhook {
     // Push an event for every commit.
+    #[instrument]
+    #[inline]
     pub async fn as_influx_push(&self, influx: &influx::Client, github: &Github) {
         let repo = self.repository.as_ref().unwrap();
 
@@ -932,6 +938,8 @@ impl GitHubWebhook {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn as_influx_pull_request(&self) -> influx::PullRequest {
         influx::PullRequest {
             time: Utc::now(),
@@ -946,6 +954,8 @@ impl GitHubWebhook {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn as_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
         influx::PullRequestReviewComment {
             time: Utc::now(),
@@ -958,6 +968,8 @@ impl GitHubWebhook {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn as_influx_issue(&self) -> influx::Issue {
         influx::Issue {
             time: Utc::now(),
@@ -969,6 +981,8 @@ impl GitHubWebhook {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn as_influx_issue_comment(&self) -> influx::IssueComment {
         influx::IssueComment {
             time: Utc::now(),
@@ -981,6 +995,8 @@ impl GitHubWebhook {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn as_influx_check_suite(&self) -> influx::CheckSuite {
         influx::CheckSuite {
             time: Utc::now(),
@@ -1002,6 +1018,8 @@ impl GitHubWebhook {
         }
     }
 
+    #[instrument]
+    #[inline]
     pub fn as_influx_check_run(&self) -> influx::CheckRun {
         influx::CheckRun {
             time: Utc::now(),
@@ -1074,11 +1092,15 @@ impl GitHubCommit {
     }
 
     /// Return if the commit has any files that were added, modified, or removed.
+    #[instrument]
+    #[inline]
     pub fn has_changed_files(&self) -> bool {
         !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
     }
 }
 
+#[instrument]
+#[inline]
 fn filter(files: &[String], dir: &str) -> Vec<String> {
     let mut in_dir: Vec<String> = Default::default();
     for file in files {

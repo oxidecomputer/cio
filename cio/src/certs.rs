@@ -22,6 +22,7 @@ use macros::db_struct;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_CERTIFICATES_TABLE};
 use crate::core::UpdateAirtableRecord;
@@ -30,6 +31,8 @@ use crate::utils::github_org;
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
+#[instrument]
+#[inline]
 pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
     let email = env::var("CLOUDFLARE_EMAIL").unwrap();
 
@@ -215,12 +218,16 @@ impl NewCertificate {
     /// For a certificate struct, populate the certificate fields for the domain.
     /// This will create the cert from Let's Encrypt and update Cloudflare TXT records for the
     /// verification.
+    #[instrument]
+    #[inline]
     pub async fn populate(&mut self) {
         *self = create_ssl_certificate(&self.domain).await;
     }
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// GitHub, then fill in the rest.
+    #[instrument]
+    #[inline]
     pub async fn populate_from_github(&mut self, github: &Github) {
         let repo = github.repo(github_org(), "configs");
         let cert = repo
@@ -243,6 +250,8 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// disk, then fill in the rest.
+    #[instrument]
+    #[inline]
     pub fn populate_from_disk(&mut self, dir: &str) {
         let path = self.get_path(dir);
 
@@ -256,11 +265,15 @@ impl NewCertificate {
         }
     }
 
+    #[instrument]
+    #[inline]
     fn get_path(&self, dir: &str) -> PathBuf {
         Path::new(dir).join(self.domain.replace("*.", "wildcard."))
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
+    #[instrument]
+    #[inline]
     pub fn save_to_directory(&self, dir: &str) {
         let path = self.get_path(dir);
 
@@ -279,6 +292,8 @@ impl NewCertificate {
     /// issued cert, since it counts _whole_ days.
     ///
     /// It is possible to get negative days for an expired certificate.
+    #[instrument]
+    #[inline]
     pub fn valid_days_left(&self) -> i32 {
         let expires = self.expiration_date();
         let dur = expires - Utc::now();
@@ -287,6 +302,8 @@ impl NewCertificate {
     }
 
     /// Inspect the certificate to get the expiration_date.
+    #[instrument]
+    #[inline]
     pub fn expiration_date(&self) -> DateTime<Utc> {
         // load as x509
         let x509 = X509::from_pem(self.certificate.as_bytes()).expect("from_pem");

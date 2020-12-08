@@ -3,6 +3,7 @@ use std::str::from_utf8;
 use chrono::NaiveDate;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::{NewJournalClubMeeting, NewJournalClubPaper};
@@ -75,6 +76,8 @@ pub mod meeting_date_format {
 }
 
 impl Meeting {
+    #[instrument]
+    #[inline]
     pub fn to_model(&self) -> NewJournalClubMeeting {
         let mut papers: Vec<String> = Default::default();
         for p in &self.papers {
@@ -96,6 +99,8 @@ impl Meeting {
 }
 
 /// Get the journal club meetings from the papers GitHub repo.
+#[instrument]
+#[inline]
 pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
     // Get the contents of the .helpers/meetings.csv file.
     let meetings_csv_content = github
@@ -114,6 +119,8 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
 }
 
 // Sync the journal_club_meetings with our database.
+#[instrument]
+#[inline]
 pub async fn refresh_db_journal_club_meetings(github: &Github) {
     let journal_club_meetings = get_meetings_from_repo(github).await;
 

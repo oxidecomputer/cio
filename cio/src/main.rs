@@ -155,6 +155,8 @@ impl Context {
      * Given `rqctx` (which is provided by Dropshot to all HTTP handler
      * functions), return our application-specific context.
      */
+    #[instrument]
+    #[inline]
     pub fn from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
         let ctx: Arc<dyn Any + Send + Sync + 'static> = Arc::clone(&rqctx.server.private);
         ctx.downcast::<Context>().expect("wrong type for private data")

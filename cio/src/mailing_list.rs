@@ -7,10 +7,13 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::models::NewMailingListSubscriber;
 
 /// Returns the response from the Mailchimp API with the list of subscribers.
+#[instrument]
+#[inline]
 pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
     let client = reqwest::Client::new();
     let per_page = 500;
@@ -43,7 +46,9 @@ pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
     members
 }
 
-// Sync the mailing_list_subscribers from Mailchimp with our database.
+/// Sync the mailing_list_subscribers from Mailchimp with our database.
+#[instrument]
+#[inline]
 pub async fn refresh_db_mailing_list_subscribers() {
     // Initialize our database.
     let db = Database::new();
@@ -155,6 +160,8 @@ pub struct MailchimpMember {
 }
 
 impl Into<NewMailingListSubscriber> for MailchimpMember {
+    #[instrument]
+    #[inline]
     fn into(self) -> NewMailingListSubscriber {
         let default_bool = false;
 
@@ -309,6 +316,8 @@ mod mailchimp_date_format {
 
 impl MailchimpWebhook {
     /// Convert to a signup data type.
+    #[instrument]
+    #[inline]
     pub fn as_subscriber(&self) -> NewMailingListSubscriber {
         let mut signup: NewMailingListSubscriber = Default::default();
 

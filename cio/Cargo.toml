@@ -22,7 +22,6 @@ cloudflare-rs = "^0.6.0"
 csv = "1.1"
 comrak = "0.8"
 diesel = { version = "1.4.5", features = ["serde_json", "postgres", "chrono", "128-column-tables"] }
-diesel-tracing = { version = "^0.1.0", features = ["postgres"] }
 #dropshot = "^0.3.0"
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "working" }
 futures-util = "0.3"

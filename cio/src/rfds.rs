@@ -9,12 +9,15 @@ use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
 use hubcaps::Github;
 use regex::Regex;
+use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::NewRFD;
 use crate::utils::github_org;
 
 /// Get the RFDs from the rfd GitHub repo.
+#[instrument]
+#[inline]
 pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     // Get the contents of the .helpers/rfd.csv file.
     let rfd_csv_content = github
@@ -45,6 +48,8 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
 }
 
 /// Try to get the markdown or asciidoc contents from the repo.
+#[instrument]
+#[inline]
 pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str) -> (String, bool, String) {
     let repo_contents = github.repo(github_org(), "rfd").content();
     let mut is_markdown = false;
@@ -73,10 +78,14 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
     (decoded, is_markdown, sha)
 }
 
+#[instrument]
+#[inline]
 pub fn parse_markdown(content: &str) -> String {
     markdown_to_html(content, &ComrakOptions::default())
 }
 
+#[instrument]
+#[inline]
 pub fn parse_asciidoc(content: &str) -> String {
     let mut path = env::temp_dir();
     path.push("contents.adoc");
@@ -105,6 +114,8 @@ pub fn parse_asciidoc(content: &str) -> String {
     result.to_string()
 }
 
+#[instrument]
+#[inline]
 pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     let mut cleaned = content
         .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
@@ -126,6 +137,8 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
 }
 
 // Sync the rfds with our database.
+#[instrument]
+#[inline]
 pub async fn refresh_db_rfds(github: &Github) {
     let rfds = get_rfds_from_repo(github).await;
 

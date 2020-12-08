@@ -8,6 +8,7 @@ use chrono::DateTime;
 use chrono_humanize::HumanTime;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::{NewAuthUser, NewAuthUserLogin};
@@ -48,6 +49,8 @@ pub struct User {
 
 impl User {
     /// Convert an auth0 user into a NewAuthUser.
+    #[instrument]
+    #[inline]
     pub fn to_auth_user(&self) -> NewAuthUser {
         let mut company: &str = &self.company;
         // Check if we have an Oxide email address.
@@ -109,6 +112,8 @@ pub struct Token {
 }
 
 /// List users.
+#[instrument(skip(db))]
+#[inline]
 pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
     let client = Client::new();
     // Get our token.
@@ -176,6 +181,8 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
 }
 
 // TODO: clean this all up to be an auth0 api library.
+#[instrument]
+#[inline]
 async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec<NewAuthUserLogin> {
     let client = Client::new();
     let resp = client
@@ -218,6 +225,8 @@ async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec
     resp.json::<Vec<NewAuthUserLogin>>().await.unwrap()
 }
 
+#[instrument]
+#[inline]
 async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User> {
     let client = Client::new();
     let resp = client
@@ -241,6 +250,8 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 }
 
 // Sync the auth_users with our database.
+#[instrument]
+#[inline]
 pub async fn refresh_db_auth() {
     // Initialize our database.
     let db = Database::new();

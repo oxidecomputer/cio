@@ -558,7 +558,6 @@ dependencies = [
  "comrak",
  "csv",
  "diesel",
- "diesel-tracing",
  "diffy",
  "dropshot",
  "futures-util",
