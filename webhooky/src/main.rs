@@ -391,12 +391,14 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             event.action
         );
         return Ok(HttpResponseAccepted("ok".to_string()));
+        // End of `pull_request` event.
     }
 
-    // Now we can continue since we have a push event to the rfd repo.
+    // Now we can continue since we have a `push` event to the rfd repo, we have filtered
+    // everything else out.
     // Ensure we have commits.
     if event.commits.is_empty() {
-        // `push` even has no commits.
+        // `push` event has no commits.
         // We can throw this out, log it and return early.
         event!(Level::INFO, "`push` event has no commits");
         return Ok(HttpResponseAccepted("ok".to_string()));
@@ -427,6 +429,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     if branch.is_empty() {
         // The branch name is empty.
         // We can throw this out, log it and return early.
+        // This should never happen, but we won't rule it out because computers.
         event!(Level::WARN, "`push` event branch name is empty");
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -437,6 +440,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     changed_files.append(&mut commit.modified.clone());
     for file in changed_files {
         // If the file is not a README.md or README.adoc, skip it.
+        // There should only be one per repo, so we will break at the end of this,
+        // once we've found one.
         // TODO: handle the updating of images.
         if !file.ends_with("README.md") && !file.ends_with("README.adoc") {
             // Continue through the loop.
