@@ -439,102 +439,119 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     let mut changed_files = commit.added.clone();
     changed_files.append(&mut commit.modified.clone());
     for file in changed_files {
-        // If the file is not a README.md or README.adoc, skip it.
-        // There should only be one per repo, so we will break at the end of this,
-        // once we've found one.
-        // TODO: handle the updating of images.
-        if !file.ends_with("README.md") && !file.ends_with("README.adoc") {
-            // Continue through the loop.
+        // Make sure the file has a prefix of "rfd/".
+        if !file.starts_with("rfd/") {
+            // Continue through the loop early.
+            // We only care if a file change in the rfd/ directory.
             continue;
         }
 
-        // We have a README file that changed, let's parse the RFD and update it
-        // in our database.
-        println!("[/github] `{}` event -> file {} was modified on branch {}", event_type.name(), file, branch);
-        // Parse the RFD.
-        let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
-
-        // Get the old RFD from the database.
-        // DO THIS BEFORE UPDATING THE RFD.
-        // We will need this later to check if the RFD's state changed.
-        let old_rfd = db.get_rfd(new_rfd.number);
-        let mut old_rfd_state = "".to_string();
-        let mut old_rfd_pdf = "".to_string();
-        if let Some(o) = old_rfd {
-            old_rfd_state = o.state.to_string();
-            old_rfd_pdf = o.get_pdf_filename();
+        // Update images for the static site.
+        if file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg") {
+            // Some image for an RFD updated. Let's make sure we have that image in the right place
+            // for the RFD shared site.
+            // First, let's read the file contents.
+            let gh_file = github_repo.content().file(&file, branch).await.unwrap();
+            // Let's write the file contents to the location for the static website.
+            // We replace the `rfd/` path with the `src/public/static/images/` path since
+            // this is where images go for the static website.
+            // TODO: On delete of an image file, we should delete the file.
+            create_or_update_file_in_github_repo(&github_repo, branch, &format!("src/public/static/images/{}", file.trim_start_matches("rfd/")), gh_file.content.to_vec()).await;
+            // We are done so we can continue throught the loop.
+            continue;
         }
 
-        // Update the RFD in the database.
-        let rfd = db.upsert_rfd(&new_rfd);
+        // If the file is a README.md or README.adoc, an RFD doc changed, let's handle it.
+        if file.ends_with("README.md") || file.ends_with("README.adoc") {
+            // We have a README file that changed, let's parse the RFD and update it
+            // in our database.
+            println!("[/github] `{}` event -> file {} was modified on branch {}", event_type.name(), file, branch);
+            // Parse the RFD.
+            let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
-        // Create all the shorturls for the RFD if we need to,
-        // this would be on added files, only.
-        // TODO: fix this.
-        // TODO: see if we can make this faster by doing something better than
-        // dispatching the workflow.
-        github_repo
-            .actions()
-            .workflows()
-            .dispatch(
-                "run-shorturls.yml",
-                &hubcaps::workflows::WorkflowDispatchOptions::builder().reference(repo.default_branch.to_string()).build(),
-            )
-            .await
-            .unwrap_or_else(|e| {
-                println!("[/github]: could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
-                event!(Level::WARN, "could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
-            });
-
-        // Update airtable with the new RFD.
-        let mut airtable_rfd = rfd.clone();
-        airtable_rfd.create_or_update_in_airtable().await;
-
-        // Update the PDFs for the RFD.
-        rfd.convert_and_upload_pdf(&api_context.github, &api_context.drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
-            .await;
-
-        // Check if the RFD state changed from what is currently in the
-        // database.
-        // If the RFD's state was changed to `discussion`, we need to open a PR
-        // for that RFD.
-        // Make sure we are not on the default branch, since then we would not need
-        // a PR. Instead, below, the state of the RFD would be moved to `published`.
-        // TODO: see if we drop events, if we do, we might want to remove the check with
-        // the old state and just do it everytime an RFD is in discussion.
-        if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != repo.default_branch {
-            // First, we need to make sure we don't already have a pull request open.
-            let pulls = github_repo
-                .pulls()
-                .list(&hubcaps::pulls::PullListOptions::builder().state(hubcaps::issues::State::Open).build())
-                .await
-                .unwrap();
-            // Check if any pull requests are from our branch.
-            let mut has_pull = false;
-            for pull in pulls {
-                // Check if the pull request is for our branch.
-                let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
-                println!("[/github]: pull branch: {}", pull_branch);
-
-                if pull_branch == branch {
-                    println!(
-                        "[/github]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
-                        rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
-                    );
-
-                    has_pull = true;
-                    break;
-                }
+            // Get the old RFD from the database.
+            // DO THIS BEFORE UPDATING THE RFD.
+            // We will need this later to check if the RFD's state changed.
+            let old_rfd = db.get_rfd(new_rfd.number);
+            let mut old_rfd_state = "".to_string();
+            let mut old_rfd_pdf = "".to_string();
+            if let Some(o) = old_rfd {
+                old_rfd_state = o.state.to_string();
+                old_rfd_pdf = o.get_pdf_filename();
             }
 
-            // Open a pull request, if we don't already have one.
-            if !has_pull {
-                println!(
-                    "[/github]: RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
-                    rfd.number_string, old_rfd_state, rfd.state, branch
-                );
+            // Update the RFD in the database.
+            let rfd = db.upsert_rfd(&new_rfd);
 
-                github_repo
+            // Create all the shorturls for the RFD if we need to,
+            // this would be on added files, only.
+            // TODO: fix this.
+            // TODO: see if we can make this faster by doing something better than
+            // dispatching the workflow.
+            api_context
+                .github
+                .repo(github_org(), "configs")
+                .actions()
+                .workflows()
+                .dispatch(
+                    "run-shorturls",
+                    &hubcaps::workflows::WorkflowDispatchOptions::builder().reference(repo.default_branch.to_string()).build(),
+                )
+                .await
+                .unwrap_or_else(|e| {
+                    println!("[/github]: could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
+                    event!(Level::WARN, "could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
+                });
+
+            // Update airtable with the new RFD.
+            let mut airtable_rfd = rfd.clone();
+            airtable_rfd.create_or_update_in_airtable().await;
+
+            // Update the PDFs for the RFD.
+            rfd.convert_and_upload_pdf(&api_context.github, &api_context.drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
+                .await;
+
+            // Check if the RFD state changed from what is currently in the
+            // database.
+            // If the RFD's state was changed to `discussion`, we need to open a PR
+            // for that RFD.
+            // Make sure we are not on the default branch, since then we would not need
+            // a PR. Instead, below, the state of the RFD would be moved to `published`.
+            // TODO: see if we drop events, if we do, we might want to remove the check with
+            // the old state and just do it everytime an RFD is in discussion.
+            if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != repo.default_branch {
+                // First, we need to make sure we don't already have a pull request open.
+                let pulls = github_repo
+                    .pulls()
+                    .list(&hubcaps::pulls::PullListOptions::builder().state(hubcaps::issues::State::Open).build())
+                    .await
+                    .unwrap();
+                // Check if any pull requests are from our branch.
+                let mut has_pull = false;
+                for pull in pulls {
+                    // Check if the pull request is for our branch.
+                    let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
+                    println!("[/github]: pull branch: {}", pull_branch);
+
+                    if pull_branch == branch {
+                        println!(
+                            "[/github]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                            rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
+                        );
+
+                        has_pull = true;
+                        break;
+                    }
+                }
+
+                // Open a pull request, if we don't already have one.
+                if !has_pull {
+                    println!(
+                        "[/github]: RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
+                        rfd.number_string, old_rfd_state, rfd.state, branch
+                    );
+
+                    github_repo
                                     .pulls()
                                     .create(&hubcaps::pulls::PullOptions::new(
                 rfd.name.to_string(),
@@ -545,68 +562,68 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                                     .await
                                     .unwrap();
 
-                // We could update the discussion link here, but we will already
-                // trigger a `pull_request` `opened` event, so we might as well let
-                // that do its thing.
+                    // We could update the discussion link here, but we will already
+                    // trigger a `pull_request` `opened` event, so we might as well let
+                    // that do its thing.
+                }
             }
+
+            // If the RFD was merged into the default branch, but the RFD state is not `published`,
+            // update the state of the RFD in GitHub to show it as `published`.
+            if branch == repo.default_branch && rfd.state != "published" {
+                println!(
+                    "[/github]: RFD {} is the branch {} but its state is {}, updating it to `published`",
+                    rfd.number_string, repo.default_branch, old_rfd_state,
+                );
+
+                //  Update the state of the RFD in GitHub to show it as `published`.
+                let mut rfd_mut = rfd.clone();
+                rfd_mut.update_state("published", file.ends_with(".md"));
+
+                // Update the RFD to show the new state in the database.
+                db.update_rfd(&rfd_mut);
+
+                // Update the file in GitHub.
+                // Keep in mind: this push will kick off another webhook.
+                create_or_update_file_in_github_repo(&github_repo, branch, &file, rfd_mut.content.as_bytes().to_vec()).await;
+            }
+
+            // If the title of the RFD changed, delete the old PDF file so it
+            // doesn't linger in GitHub and Google Drive.
+            if old_rfd_pdf != rfd.get_pdf_filename() {
+                let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
+
+                // First get the sha of the old pdf.
+                let old_pdf = github_repo.content().file(&pdf_path, &repo.default_branch).await.unwrap();
+
+                // Delete the old filename from GitHub.
+                github_repo
+                    .content()
+                    .delete(
+                        &pdf_path,
+                        &format!(
+                            "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
+                            old_rfd_pdf
+                        ),
+                        &old_pdf.sha,
+                        &repo.default_branch,
+                    )
+                    .await
+                    .unwrap();
+
+                // Delete the old filename from drive.
+                api_context.drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
+
+                println!(
+                    "[/github]: RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive",
+                    rfd.number_string,
+                    old_rfd_pdf,
+                    rfd.get_pdf_filename()
+                );
+            }
+
+            println!("[/github]: RFD {} updated successfully", rfd.number_string);
         }
-
-        // If the RFD was merged into the default branch, but the RFD state is not `published`,
-        // update the state of the RFD in GitHub to show it as `published`.
-        if branch == repo.default_branch && rfd.state != "published" {
-            println!(
-                "[/github]: RFD {} is the branch {} but its state is {}, updating it to `published`",
-                rfd.number_string, repo.default_branch, old_rfd_state,
-            );
-
-            //  Update the state of the RFD in GitHub to show it as `published`.
-            let mut rfd_mut = rfd.clone();
-            rfd_mut.update_state("published", file.ends_with(".md"));
-
-            // Update the RFD to show the new state in the database.
-            db.update_rfd(&rfd_mut);
-
-            // Update the file in GitHub.
-            // Keep in mind: this push will kick off another webhook.
-            create_or_update_file_in_github_repo(&github_repo, branch, &file, rfd_mut.content.as_bytes().to_vec()).await;
-        }
-
-        // If the title of the RFD changed, delete the old PDF file so it
-        // doesn't linger in GitHub and Google Drive.
-        if old_rfd_pdf != rfd.get_pdf_filename() {
-            let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
-
-            // First get the sha of the old pdf.
-            let old_pdf = github_repo.content().file(&pdf_path, &repo.default_branch).await.unwrap();
-
-            // Delete the old filename from GitHub.
-            github_repo
-                .content()
-                .delete(
-                    &pdf_path,
-                    &format!(
-                        "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
-                        old_rfd_pdf
-                    ),
-                    &old_pdf.sha,
-                    &repo.default_branch,
-                )
-                .await
-                .unwrap();
-
-            // Delete the old filename from drive.
-            api_context.drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
-
-            println!(
-                "[/github]: RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive",
-                rfd.number_string,
-                old_rfd_pdf,
-                rfd.get_pdf_filename()
-            );
-        }
-
-        println!("[/github]: RFD {} updated successfully", rfd.number_string);
-        break;
     }
 
     // TODO: should we do something if the file gets deleted (?)
