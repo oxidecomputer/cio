@@ -2063,6 +2063,9 @@ impl RFD {
         // TODO: make this work even if they have extra spaces.
         self.content = self.content.replacen(&format!("state: {}", self.state), &format!("state: {}", state), 1);
         self.state = state.to_string();
+
+        // Update the state in the github repository.
+        //create_or_update_file_in_github_repo(repo, branch, filepath, &self.content);
     }
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD

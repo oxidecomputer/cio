@@ -322,6 +322,7 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                                         file_path
                                     ),
                                     &item.sha,
+                                    branch,
                                 )
                                 .await
                                 .ok();
