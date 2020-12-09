@@ -148,9 +148,7 @@ pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> S
 
     let replacement = if let Some(v) = re.find(&content) { v.as_str().to_string() } else { String::new() };
 
-    let c = content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1);
-
-    c.to_string()
+    content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1)
 }
 
 #[instrument]
@@ -168,9 +166,7 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
 
     let replacement = if let Some(v) = re.find(&content) { v.as_str().to_string() } else { String::new() };
 
-    let c = content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1);
-
-    c.to_string()
+    content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1)
 }
 
 // Sync the rfds with our database.
