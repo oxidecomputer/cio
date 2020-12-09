@@ -568,8 +568,8 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     // Now let's get the header for the column of the cell that changed.
     // This is always in row 1.
     // These should be zero indexed.
-    let mut colmn = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-    cell_name = format!("{}1", colmn.nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
+    let column_letters = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    cell_name = format!("{}1", column_letters.chars().nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
     let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
     println!("[/google/sheets/edit]: column header: {}", column_header);
 
@@ -583,7 +583,6 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let mut a = result.unwrap();
-    println!("[/google/sheets/edit]: applicant: {:?}", a);
 
     // Now let's update the correct item for them.
     if column_header.contains("status") {
@@ -599,14 +598,16 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         // The person updated the values in tension.
         // We need to get the other value in tension in the next column to the right.
         let value_column = event.event.range.column_start + 1;
-        cell_name = format!("{}{}", colmn.nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
+        cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
+        println!("{}", cell_name);
         let value_in_tension_2 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
         a.values_in_tension = vec![value_in_tension_2, event.event.value.to_lowercase()];
     } else if column_header.contains("value in tension [2]") {
         // The person updated the values in tension.
         // We need to get the other value in tension in the next column to the left.
         let value_column = event.event.range.column_start - 1;
-        cell_name = format!("{}{}", colmn.nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
+        cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
+        println!("{}", cell_name);
         let value_in_tension_1 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
         a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
