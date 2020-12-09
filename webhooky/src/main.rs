@@ -567,7 +567,8 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
 
     // Now let's get the header for the column of the cell that changed.
     // This is always in row 1.
-    let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+    // These should be zero indexed.
+    let mut colmn = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
     cell_name = format!("{}1", colmn.nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
     let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
     println!("[/google/sheets/edit]: column header: {}", column_header);
