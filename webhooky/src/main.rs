@@ -368,7 +368,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             .actions()
             .workflows()
             .dispatch(
-                "run-shorturls",
+                "run-shorturls.yml",
                 &hubcaps::workflows::WorkflowDispatchOptions::builder().reference(repo.default_branch.to_string()).build(),
             )
             .await
