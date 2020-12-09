@@ -320,26 +320,35 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             event!(Level::INFO, "could not find RFD with number `{}` in the database: {:?}", number, event);
             return Ok(HttpResponseAccepted("ok".to_string()));
         }
-        let rfd = result.unwrap();
+        let mut rfd = result.unwrap();
 
         // Okay, now we finally have the RFD.
+        // We need to do two things.
+        //  1. Update the discussion link.
+        //  2. Update the state of the RFD to be in discussion if it is not
+        //      in an acceptable current state. More on this below.
+        let _discussion_link = event.pull_request.html_url;
+        // TODO: update the discussion link.
+
         // A pull request can be open for an RFD if it is in the following states:
         //  - published: a already published RFD is being updated in a pull request.
         //  - discussion: it is in discussion
         //  - ideation: it is in ideation.
-        // We can return early if the pull request is in any of these states.
-        if rfd.state == "discussion" || rfd.state == "published" || rfd.state == "ideation" {
-            event!(Level::INFO, "RFD `{}` is already in state `{}` so we do not need to update it to `discussion`", branch, rfd.state);
-            return Ok(HttpResponseAccepted("ok".to_string()));
+        // We can update the state if it is not currently in an acceptable state.
+        if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
+            // Let's update the discussion link for the RFD.
+            //  Update the state of the RFD in GitHub to show it as `discussion`.
+            rfd.update_state("discussion");
         }
 
-        // Let's update the discussion link for the RFD.
-        //  Update the state of the RFD in GitHub to show it as `discussion`.
-        let mut rfd_mut = rfd.clone();
-        rfd_mut.update_state("discussion");
-
         // Update the RFD to show the new state in the database.
-        db.update_rfd(&rfd_mut);
+        db.update_rfd(&rfd);
+
+        // Now we need to update the file contents in GitHub. To do that we need
+        // to get the path to the file.
+        // TODO: figure out if this is racey and is updating stale contents of the
+        // branch since we are updating from our contents in the database and not from
+        // the contents of the file on GitHub.
 
         // Get the file path from GitHub.
         // We need to figure out whether this file is a README.adoc or README.md
@@ -371,7 +380,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
         // Update the file in GitHub.
         // Keep in mind: this push will kick off another webhook.
-        create_or_update_file_in_github_repo(&github_repo, &branch, &filename, rfd_mut.content.as_bytes().to_vec()).await;
+        create_or_update_file_in_github_repo(&github_repo, &branch, &filename, rfd.content.as_bytes().to_vec()).await;
 
         event!(
             Level::INFO,
