@@ -702,7 +702,12 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let mut a = result.unwrap();
 
     // Now let's update the correct item for them.
-    if column_header.contains("status") {
+    if column_header.contains("have sent email that we received their application?") {
+        // Parse the boolean.
+        if event.event.value.to_lowercase() == "true" {
+            a.sent_email_received = true;
+        }
+    } else if column_header.contains("status") {
         // Parse the new status.
         a.status = cio_api::applicant_status::Status::from_str(&event.event.value).unwrap_or_default().to_string();
     } else if column_header.contains("value reflected") {
