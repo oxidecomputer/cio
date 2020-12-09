@@ -34,7 +34,7 @@ use crate::airtable::{
 };
 use crate::applicants::{email_send_received_application, get_file_contents, get_role_from_sheet_id, ApplicantSheetColumns};
 use crate::core::UpdateAirtableRecord;
-use crate::rfds::{clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc, parse_markdown};
+use crate::rfds::{clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{applicants, auth_user_logins, auth_users, github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds as r_f_ds, rfds};
 use crate::slack::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use crate::utils::{check_if_github_issue_exists, create_or_update_file_in_github_repo, github_org};
@@ -2059,10 +2059,17 @@ impl RFD {
     /// Update an RFDs state.
     #[instrument]
     #[inline]
-    pub fn update_state(&mut self, state: &str) {
-        // TODO: make this work even if they have extra spaces.
-        self.content = self.content.replacen(&format!("state: {}", self.state), &format!("state: {}", state), 1);
+    pub fn update_state(&mut self, state: &str, is_markdown: bool) {
+        self.content = update_state(&self.content, state, is_markdown);
         self.state = state.to_string();
+    }
+
+    /// Update an RFDs discussion link.
+    #[instrument]
+    #[inline]
+    pub fn update_discussion(&mut self, link: &str, is_markdown: bool) {
+        self.content = update_discussion_link(&self.content, link, is_markdown);
+        self.discussion = link.to_string();
     }
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD

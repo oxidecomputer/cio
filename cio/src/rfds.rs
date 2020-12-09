@@ -133,6 +133,46 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     cleaned
 }
 
+#[instrument]
+#[inline]
+pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> String {
+    // TODO: there is probably a better way to do these regexes.
+    let mut re = Regex::new(r"(?m)(:discussion:.*$)").unwrap();
+    // Asciidoc starts with a colon.
+    let mut pre = ":";
+    if is_markdown {
+        // Markdown does not start with a colon.
+        pre = "";
+        re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
+    }
+
+    let replacement = if let Some(v) = re.find(&content) { v.as_str().to_string() } else { String::new() };
+
+    let c = content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1);
+
+    c.to_string()
+}
+
+#[instrument]
+#[inline]
+pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
+    // TODO: there is probably a better way to do these regexes.
+    let mut re = Regex::new(r"(?m)(:state:.*$)").unwrap();
+    // Asciidoc starts with a colon.
+    let mut pre = ":";
+    if is_markdown {
+        // Markdown does not start with a colon.
+        pre = "";
+        re = Regex::new(r"(?m)(state:.*$)").unwrap();
+    }
+
+    let replacement = if let Some(v) = re.find(&content) { v.as_str().to_string() } else { String::new() };
+
+    let c = content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1);
+
+    c.to_string()
+}
+
 // Sync the rfds with our database.
 #[instrument]
 #[inline]
@@ -152,7 +192,7 @@ pub async fn refresh_db_rfds(github: &Github) {
 mod tests {
     use crate::db::Database;
     use crate::models::{NewRFD, RFDs};
-    use crate::rfds::{clean_rfd_html_links, refresh_db_rfds};
+    use crate::rfds::{clean_rfd_html_links, refresh_db_rfds, update_discussion_link, update_state};
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
@@ -266,6 +306,112 @@ sdf
 :discussion: nope"#;
         discussion = NewRFD::get_discussion(&content);
         assert_eq!(expected, discussion);
+    }
+
+    #[test]
+    fn test_update_discussion_link() {
+        let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
+        let mut content = r#"sdfsdf
+sdfsdf
+discussion:   https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+authors: nope"#;
+        let mut result = update_discussion_link(&content, &link, true);
+        let mut expected = r#"sdfsdf
+sdfsdf
+discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+dsfsdf
+sdf
+authors: nope"#;
+        assert_eq!(expected, result);
+
+        content = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+:discussion: nope"#;
+        result = update_discussion_link(&content, &link, false);
+        expected = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+dsfsdf
+sdf
+:discussion: nope"#;
+        assert_eq!(expected, result);
+
+        content = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion:
+dsfsdf
+sdf
+:discussion: nope"#;
+        result = update_discussion_link(&content, &link, false);
+        expected = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+dsfsdf
+sdf
+:discussion: nope"#;
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_update_state() {
+        let state = "discussion";
+        let mut content = r#"sdfsdf
+sdfsdf
+state:   sdfsdfsdf
+dsfsdf
+sdf
+authors: nope"#;
+        let mut result = update_state(&content, &state, true);
+        let mut expected = r#"sdfsdf
+sdfsdf
+state: discussion
+dsfsdf
+sdf
+authors: nope"#;
+        assert_eq!(expected, result);
+
+        content = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state: prediscussion
+dsfsdf
+sdf
+:state: nope"#;
+        result = update_state(&content, &state, false);
+        expected = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state: discussion
+dsfsdf
+sdf
+:state: nope"#;
+        assert_eq!(expected, result);
+
+        content = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state:
+dsfsdf
+sdf
+:state: nope"#;
+        result = update_state(&content, &state, false);
+        expected = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state: discussion
+dsfsdf
+sdf
+:state: nope"#;
+        assert_eq!(expected, result);
     }
 
     #[test]
