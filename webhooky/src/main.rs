@@ -52,7 +52,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         .install()
         .unwrap();
     let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let subscriber = tracing_subscriber::Registry::default().with(opentelemetry);
+    let subscriber = tracing_subscriber::Registry::default()
+        .with(opentelemetry)
+        .with(tracing_subscriber::fmt::layer().with_writer(std::io::stdout));
+iracing-subscriber = { version = "^0.2", features = ["json", "chrono", "registry"] }
     tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
 
     let root = span!(Level::TRACE, "app_start", work_units = 2);
@@ -538,7 +541,6 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 )
                 .await
                 .unwrap_or_else(|e| {
-                    println!("[/github]: could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
                     event!(Level::WARN, "could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
                 });
 

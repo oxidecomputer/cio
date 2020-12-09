@@ -36,7 +36,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         .install()
         .unwrap();
     let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let subscriber = tracing_subscriber::Registry::default().with(opentelemetry);
+    let subscriber = tracing_subscriber::Registry::default()
+        .with(opentelemetry)
+        .with(tracing_subscriber::fmt::layer().with_writer(std::io::stdout));
     tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
 
     let root = span!(Level::TRACE, "app_start", work_units = 2);
