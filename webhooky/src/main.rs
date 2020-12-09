@@ -832,8 +832,9 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // We add one to the end of the columns to get the column where the email sent verification is.
-    let sent_email_received_column_index = event.event.range.column_end + 1;
+    // We do not need to add one to the end of the columns to get the column where the email sent verification is
+    // because google sheets index's at 0, so adding one would put us over, we are just right here.
+    let sent_email_received_column_index = event.event.range.column_end;
     applicant
         .expand(
             &api_context.drive,
