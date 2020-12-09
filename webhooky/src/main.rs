@@ -361,6 +361,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
         // Create all the shorturls for the RFD if we need to,
         // this would be on added files, only.
+        // TODO: fix this.
         // TODO: see if we can make this faster by doing something better than
         // dispatching the workflow.
         github_repo
@@ -371,7 +372,10 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 &hubcaps::workflows::WorkflowDispatchOptions::builder().reference(repo.default_branch.to_string()).build(),
             )
             .await
-            .unwrap();
+            .unwrap_or_else(|e| {
+                println!("[/github]: could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
+                event!(Level::WARN, "could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
+            });
 
         // Update airtable with the new RFD.
         let mut airtable_rfd = rfd.clone();
