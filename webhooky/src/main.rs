@@ -474,6 +474,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                         old_rfd_pdf
                     ),
                     &old_pdf.sha,
+                    &repo.default_branch,
                 )
                 .await
                 .unwrap();
