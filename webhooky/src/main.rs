@@ -434,6 +434,42 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
+    // Iterate over the removed files and remove any images that we no longer
+    // need for the HTML rendered RFD website.
+    for file in commit.removed {
+        // Make sure the file has a prefix of "rfd/".
+        if !file.starts_with("rfd/") {
+            // Continue through the loop early.
+            // We only care if a file change in the rfd/ directory.
+            continue;
+        }
+
+        if is_image(&file) {
+            // Remove the image from the `src/public/static/images` path since we no
+            // longer need it.
+            // We delete these on the default branch ONLY.
+            let website_file = format!("src/public/static/images/{}", file.trim_start_matches("rfd/"));
+
+            // We need to get the current sha for the file we want to delete.
+            let gh_file = github_repo.content().file(&website_file, &repo.default_branch).await.unwrap();
+
+            github_repo
+                .content()
+                .delete(
+                    &website_file,
+                    &format!(
+                        "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
+                        website_file
+                    ),
+                    &gh_file.sha,
+                    &repo.default_branch,
+                )
+                .await
+                .unwrap();
+            event!(Level::INFO, "deleted file `{}` since it was removed in mose recent push for RFD {:?}", website_file, event);
+        }
+    }
+
     // Iterate over the files and update the RFDs that have been added or
     // modified in our database.
     let mut changed_files = commit.added.clone();
@@ -447,7 +483,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         }
 
         // Update images for the static site.
-        if file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg") {
+        if is_image(&file) {
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
@@ -455,8 +491,10 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
             // this is where images go for the static website.
-            // TODO: On delete of an image file, we should delete the file.
-            create_or_update_file_in_github_repo(&github_repo, branch, &format!("src/public/static/images/{}", file.trim_start_matches("rfd/")), gh_file.content.to_vec()).await;
+            // We update these on the default branch ONLY.
+            let website_file = format!("src/public/static/images/{}", file.trim_start_matches("rfd/"));
+            create_or_update_file_in_github_repo(&github_repo, &repo.default_branch, &website_file, gh_file.content.to_vec()).await;
+            event!(Level::INFO, "updated file `{}` since it was modified in mose recent push for RFD {:?}", website_file, event);
             // We are done so we can continue throught the loop.
             continue;
         }
@@ -465,7 +503,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         if file.ends_with("README.md") || file.ends_with("README.adoc") {
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
-            println!("[/github] `{}` event -> file {} was modified on branch {}", event_type.name(), file, branch);
+            event!(Level::INFO, "`{}` event -> file {} was modified on branch {}", event_type.name(), file, branch,);
             // Parse the RFD.
             let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
@@ -482,6 +520,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
             // Update the RFD in the database.
             let rfd = db.upsert_rfd(&new_rfd);
+            event!(Level::INFO, "updated RFD {} in the database", new_rfd.number_string);
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
@@ -506,10 +545,12 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             // Update airtable with the new RFD.
             let mut airtable_rfd = rfd.clone();
             airtable_rfd.create_or_update_in_airtable().await;
+            event!(Level::INFO, "updated airtable for RFD {}", new_rfd.number_string);
 
             // Update the PDFs for the RFD.
             rfd.convert_and_upload_pdf(&api_context.github, &api_context.drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
                 .await;
+            event!(Level::INFO, "updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
             // Check if the RFD state changed from what is currently in the
             // database.
@@ -531,12 +572,17 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 for pull in pulls {
                     // Check if the pull request is for our branch.
                     let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
-                    println!("[/github]: pull branch: {}", pull_branch);
+                    println!("[/github]: pull branch {} branch {}", pull_branch, branch);
 
                     if pull_branch == branch {
-                        println!(
-                            "[/github]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
-                            rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
+                        event!(
+                            Level::INFO,
+                            "RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                            rfd.number_string,
+                            old_rfd_state,
+                            rfd.state,
+                            branch,
+                            pull.html_url
                         );
 
                         has_pull = true;
@@ -546,9 +592,13 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
-                    println!(
-                        "[/github]: RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
-                        rfd.number_string, old_rfd_state, rfd.state, branch
+                    event!(
+                        Level::INFO,
+                        "RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
+                        rfd.number_string,
+                        old_rfd_state,
+                        rfd.state,
+                        branch
                     );
 
                     github_repo
@@ -561,6 +611,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                                             ))
                                     .await
                                     .unwrap();
+                    event!(Level::INFO, "opened pull request for RFD {}", new_rfd.number_string);
 
                     // We could update the discussion link here, but we will already
                     // trigger a `pull_request` `opened` event, so we might as well let
@@ -571,9 +622,12 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             // If the RFD was merged into the default branch, but the RFD state is not `published`,
             // update the state of the RFD in GitHub to show it as `published`.
             if branch == repo.default_branch && rfd.state != "published" {
-                println!(
-                    "[/github]: RFD {} is the branch {} but its state is {}, updating it to `published`",
-                    rfd.number_string, repo.default_branch, old_rfd_state,
+                event!(
+                    Level::INFO,
+                    "RFD {} is the branch {} but its state is {}, updating it to `published`",
+                    rfd.number_string,
+                    repo.default_branch,
+                    old_rfd_state,
                 );
 
                 //  Update the state of the RFD in GitHub to show it as `published`.
@@ -586,6 +640,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 // Update the file in GitHub.
                 // Keep in mind: this push will kick off another webhook.
                 create_or_update_file_in_github_repo(&github_repo, branch, &file, rfd_mut.content.as_bytes().to_vec()).await;
+                event!(Level::INFO, "updated state to `published` for  RFD {}", new_rfd.number_string);
             }
 
             // If the title of the RFD changed, delete the old PDF file so it
@@ -610,19 +665,26 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                     )
                     .await
                     .unwrap();
+                event!(
+                    Level::INFO,
+                    "deleted old pdf file `{}` in GitHub for  RFD {}, new file is `{}`",
+                    &pdf_path,
+                    new_rfd.number_string,
+                    rfd.get_pdf_filename()
+                );
 
                 // Delete the old filename from drive.
                 api_context.drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
-
-                println!(
-                    "[/github]: RFD {} PDF changed name from {} -> {}, deleted old file from GitHub and Google Drive",
-                    rfd.number_string,
-                    old_rfd_pdf,
+                event!(
+                    Level::INFO,
+                    "deleted old pdf file `{}` in Google Drive for RFD {}, new file is `{}`",
+                    &pdf_path,
+                    new_rfd.number_string,
                     rfd.get_pdf_filename()
                 );
             }
 
-            println!("[/github]: RFD {} updated successfully", rfd.number_string);
+            event!(Level::INFO, "RFD {} `push` operations completed", new_rfd.number_string);
         }
     }
 
@@ -691,7 +753,6 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     // Let's first get the email for this applicant. This is always in column B.
     let mut cell_name = format!("B{}", event.event.range.row_start);
     let email = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
-    println!("[/google/sheets/edit]: email: {}", email);
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
@@ -705,7 +766,6 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let column_letters = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     cell_name = format!("{}1", column_letters.chars().nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
     let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
-    println!("[/google/sheets/edit]: column header: {}", column_header);
 
     // TODO: share the database connection in the context.
     let db = Database::new();
@@ -738,7 +798,6 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         // We need to get the other value in tension in the next column to the right.
         let value_column = event.event.range.column_start + 1;
         cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
-        println!("{}", cell_name);
         let value_in_tension_2 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
         a.values_in_tension = vec![value_in_tension_2, event.event.value.to_lowercase()];
     } else if column_header.contains("value in tension [2]") {
@@ -746,7 +805,6 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         // We need to get the other value in tension in the next column to the left.
         let value_column = event.event.range.column_start - 1;
         cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
-        println!("{}", cell_name);
         let value_in_tension_1 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
         a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
@@ -757,12 +815,14 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
 
     // Update the applicant in the database.
     let new_applicant = db.update_applicant(&a);
+    event!(Level::INFO, "applicant {} updated in database", a.email);
 
     // Update the applicant in airtable.
     let mut airtable_applicant = new_applicant.clone();
     airtable_applicant.create_or_update_in_airtable().await;
+    event!(Level::INFO, "applicant {} updated in airtable", a.email);
 
-    println!("[/google/sheets/edit]: applicant {} updated successfully", a.email);
+    event!(Level::INFO, "applicant {} updated successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -852,7 +912,6 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
 
     // Parse the applicant out of the row information.
     let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values);
-    println!("[google/sheets/row/create]: applicant parsed {:?}", applicant);
 
     // TODO: remove this once we know parsing the webhook works.
     if applicant.email.is_empty() {
@@ -889,12 +948,14 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
 
     // Send the applicant to the database.
     let a = db.upsert_applicant(&applicant);
+    event!(Level::INFO, "applicant {} created in database", a.email);
 
     // Update airtable.
     let mut airtable_applicant = a.clone();
     airtable_applicant.create_or_update_in_airtable().await;
+    event!(Level::INFO, "applicant {} created in airtable", a.email);
 
-    println!("[/google/sheets/row/create]: applicant {} created successfully", a.email);
+    event!(Level::INFO, "applicant {} created successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -942,16 +1003,19 @@ async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Quer
 
     // Update the subscriber in the database.
     let subscriber = db.upsert_mailing_list_subscriber(&new_subscriber);
+    event!(Level::INFO, "subscriber {} created in database", subscriber.email);
 
     //  Update airtable with the new subscriber.
     let mut airtable_subscriber = subscriber.clone();
     airtable_subscriber.create_or_update_in_airtable().await;
+    event!(Level::INFO, "subscriber {} created in airtable", subscriber.email);
 
     // Parse the signup into a slack message.
     // Send the message to the slack channel.
     post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
+    event!(Level::INFO, "subscriber {} posted to Slack", subscriber.email);
 
-    println!("[/mailchimp]: subscriber {} created successfully", subscriber.email);
+    event!(Level::INFO, "subscriber {} created successfully", subscriber.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1282,19 +1346,6 @@ impl GitHubCommit {
     }
 }
 
-#[instrument]
-#[inline]
-fn filter(files: &[String], dir: &str) -> Vec<String> {
-    let mut in_dir: Vec<String> = Default::default();
-    for file in files {
-        if file.starts_with(dir) {
-            in_dir.push(file.to_string());
-        }
-    }
-
-    in_dir
-}
-
 /// A GitHub pull request.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
@@ -1488,4 +1539,24 @@ pub mod deserialize_null_string {
 
         Ok(s)
     }
+}
+
+/// Return if the file is an image.
+#[instrument]
+#[inline]
+fn is_image(file: &str) -> bool {
+    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
+}
+
+#[instrument]
+#[inline]
+fn filter(files: &[String], dir: &str) -> Vec<String> {
+    let mut in_dir: Vec<String> = Default::default();
+    for file in files {
+        if file.starts_with(dir) {
+            in_dir.push(file.to_string());
+        }
+    }
+
+    in_dir
 }
