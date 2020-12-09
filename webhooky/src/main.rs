@@ -330,12 +330,6 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // To do both these tasks we need to first get the path of the file on GitHub,
         // so we can update it later, and also find out if it is markdown or not for parsing.
 
-        // Now we need to update the file contents in GitHub. To do that we need
-        // to get the path to the file.
-        // TODO: figure out if this is racey and is updating stale contents of the
-        // branch since we are updating from our contents in the database and not from
-        // the contents of the file on GitHub.
-
         // Get the file path from GitHub.
         // We need to figure out whether this file is a README.adoc or README.md
         // before we update it.
@@ -371,19 +365,22 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // A pull request can be open for an RFD if it is in the following states:
         //  - published: a already published RFD is being updated in a pull request.
         //  - discussion: it is in discussion
-        //  - ideation: it is in ideation.
+        //  - ideation: it is in ideation
         // We can update the state if it is not currently in an acceptable state.
         if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
-            // Let's update the discussion link for the RFD.
             //  Update the state of the RFD in GitHub to show it as `discussion`.
             rfd.update_state("discussion", filename.ends_with(".md"));
         }
 
-        // Update the RFD to show the new state in the database.
+        // Update the RFD to show the new state and link in the database.
         db.update_rfd(&rfd);
 
         // Update the file in GitHub.
         // Keep in mind: this push will kick off another webhook.
+        // TODO: figure out if this is racey and is updating stale contents of the
+        // branch since we are updating from our contents in the database and not from
+        // the contents of the file on GitHub. It _should_ in theory always be up to date since we
+        // update our database on every single push event.
         create_or_update_file_in_github_repo(&github_repo, &branch, &filename, rfd.content.as_bytes().to_vec()).await;
 
         event!(
