@@ -500,7 +500,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // for that RFD.
         // Make sure we are not on the default branch, since then we would not need
         // a PR. Instead, below, the state of the RFD would be moved to `published`.
-        // TODO: see if we drop events if we do we might want to remove the check with
+        // TODO: see if we drop events, if we do, we might want to remove the check with
         // the old state and just do it everytime an RFD is in discussion.
         if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != repo.default_branch {
             // First, we need to make sure we don't already have a pull request open.
@@ -546,7 +546,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                                     .unwrap();
 
                 // We could update the discussion link here, but we will already
-                // trigger a pull request created event, so we might as well let
+                // trigger a `pull_request` `opened` event, so we might as well let
                 // that do its thing.
             }
         }
