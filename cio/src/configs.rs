@@ -687,15 +687,17 @@ pub struct HuddleConfig {
 #[instrument]
 #[inline]
 pub async fn get_configs_from_repo(github: &Github) -> Config {
-    let repo_contents = github.repo(github_org(), "configs").content();
+    let repo = github.repo(github_org(), "configs");
+    let r = repo.get().await.unwrap();
+    let repo_contents = repo.content();
 
-    let files = repo_contents.iter("/configs/", "master").try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap();
+    let files = repo_contents.iter("/configs/", &r.default_branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap();
 
     let mut file_contents = String::new();
     for file in files {
         println!("decoding {}", file.name);
         // Get the contents of the file.
-        let contents = repo_contents.file(&format!("/{}", file.path), "master").await.unwrap();
+        let contents = repo_contents.file(&format!("/{}", file.path), &r.default_branch).await.unwrap();
 
         let decoded = from_utf8(&contents.content).unwrap().trim().to_string();
 

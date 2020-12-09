@@ -634,6 +634,16 @@ impl Database {
 
     #[instrument(skip(self))]
     #[inline]
+    pub fn update_rfd(&self, rfd: &RFD) -> RFD {
+        // Update the rfd.
+        diesel::update(rfd)
+            .set(rfd.clone())
+            .get_result::<RFD>(&self.conn)
+            .unwrap_or_else(|e| panic!("unable to update rfd {}: {}", rfd.id, e))
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
     pub fn get_users(&self) -> Vec<User> {
         users::dsl::users.order_by(users::dsl::id.desc()).load::<User>(&self.conn).unwrap()
     }

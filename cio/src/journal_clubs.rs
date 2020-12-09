@@ -102,11 +102,14 @@ impl Meeting {
 #[instrument]
 #[inline]
 pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
+    let repo = github.repo(github_org(), "papers");
+    let r = repo.get().await.unwrap();
+
     // Get the contents of the .helpers/meetings.csv file.
     let meetings_csv_content = github
         .repo(github_org(), "papers")
         .content()
-        .file("/.helpers/meetings.json", "master")
+        .file("/.helpers/meetings.json", &r.default_branch)
         .await
         .expect("failed to get meetings csv content")
         .content;

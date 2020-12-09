@@ -346,8 +346,9 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // Parse the RFD.
         let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
-        // Get the old RFD from the database. We will need this later to
-        // check if the RFD's state changed.
+        // Get the old RFD from the database.
+        // DO THIS BEFORE UPDATING THE RFD.
+        // We will need this later to check if the RFD's state changed.
         let old_rfd = db.get_rfd(new_rfd.number);
         let mut old_rfd_state = "".to_string();
         let mut old_rfd_pdf = "".to_string();
@@ -389,7 +390,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         // database.
         // If the RFD's state was changed to `discussion`, we need to open a PR
         // for that RFD.
-        // Make sure we are not on the master branch, since then we would not need
+        // Make sure we are not on the default branch, since then we would not need
         // a PR. Instead, below, the state of the RFD would be moved to `published`.
         // TODO: see if we drop events if we do we might want to remove the check with
         // the old state and just do it everytime an RFD is in discussion.

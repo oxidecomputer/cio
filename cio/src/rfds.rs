@@ -19,14 +19,11 @@ use crate::utils::github_org;
 #[instrument]
 #[inline]
 pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
+    let repo = github.repo(github_org(), "rfd");
+    let r = repo.get().await.unwrap();
+
     // Get the contents of the .helpers/rfd.csv file.
-    let rfd_csv_content = github
-        .repo(github_org(), "rfd")
-        .content()
-        .file("/.helpers/rfd.csv", "master")
-        .await
-        .expect("failed to get rfd csv content")
-        .content;
+    let rfd_csv_content = repo.content().file("/.helpers/rfd.csv", &r.default_branch).await.expect("failed to get rfd csv content").content;
     let rfd_csv_string = from_utf8(&rfd_csv_content).unwrap();
 
     // Create the csv reader.

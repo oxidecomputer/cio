@@ -230,14 +230,16 @@ impl NewCertificate {
     #[inline]
     pub async fn populate_from_github(&mut self, github: &Github) {
         let repo = github.repo(github_org(), "configs");
+        let r = repo.get().await.unwrap();
+
         let cert = repo
             .content()
-            .file(&format!("nginx/ssl/{}/fullchain.pem", self.domain.replace("*.", "wildcard.")), "master")
+            .file(&format!("nginx/ssl/{}/fullchain.pem", self.domain.replace("*.", "wildcard.")), &r.default_branch)
             .await
             .unwrap();
         let priv_key = repo
             .content()
-            .file(&format!("nginx/ssl/{}/privkey.pem", self.domain.replace("*.", "wildcard.")), "master")
+            .file(&format!("nginx/ssl/{}/privkey.pem", self.domain.replace("*.", "wildcard.")), &r.default_branch)
             .await
             .unwrap();
 

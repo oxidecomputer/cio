@@ -249,10 +249,11 @@ dependencies = [
 
 [[package]]
 name = "async-std"
-version = "1.7.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7e82538bc65a25dbdff70e4c5439d52f068048ab97cdea0acd73f131594caa1"
+checksum = "8f9f84f1280a2b436a2c77c2582602732b6c2f4321d5494d6e799e6c367859a8"
 dependencies = [
+ "async-channel",
  "async-global-executor",
  "async-io",
  "async-mutex",
@@ -268,7 +269,7 @@ dependencies = [
  "memchr",
  "num_cpus",
  "once_cell",
- "pin-project-lite 0.1.11",
+ "pin-project-lite 0.2.0",
  "pin-utils",
  "slab",
  "wasm-bindgen-futures",
@@ -597,7 +598,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#68e942e287668d63bfc181a6d0d7913640a6d9bd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e176ca0294567277a212f3b88f6c3c08f831cfa6"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1667,7 +1668,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#e92348934c8f7d3b331342191fdc231e0f6d3f52"
+source = "git+https://github.com/jessfraz/hubcaps?branch=actions#775567682b6e81e9f9bc2a87eba55a81d85c4a5f"
 dependencies = [
  "base64 0.12.3",
  "chrono 0.4.19",
@@ -2011,7 +2012,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#68e942e287668d63bfc181a6d0d7913640a6d9bd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e176ca0294567277a212f3b88f6c3c08f831cfa6"
 dependencies = [
  "proc-macro2",
  "quote",

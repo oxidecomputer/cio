@@ -1986,6 +1986,9 @@ impl NewRFD {
     #[instrument]
     #[inline]
     pub async fn expand(&mut self, github: &Github) {
+        let repo = github.repo(github_org(), "rfd");
+        let r = repo.get().await.unwrap();
+
         // Trim the title.
         self.title = self.title.trim().to_string();
 
@@ -2001,8 +2004,8 @@ impl NewRFD {
         self.rendered_link = NewRFD::generate_rendered_link(&self.number_string);
 
         let mut branch = self.number_string.to_string();
-        if self.link.contains("/master/") {
-            branch = "master".to_string();
+        if self.link.contains(&format!("/{}/", r.default_branch)) {
+            branch = r.default_branch.to_string();
         }
 
         // Get the RFD contents from the branch.
@@ -2011,8 +2014,7 @@ impl NewRFD {
         self.content = rfd_content;
         self.sha = sha;
 
-        let repo = github.repo(github_org(), "rfd");
-        if branch == "master" {
+        if branch == r.default_branch {
             // Get the commit date.
             let commits = repo.commits().list(&rfd_dir).await.unwrap();
             let commit = commits.get(0).unwrap();
@@ -2054,6 +2056,15 @@ impl RFD {
         format!("RFD {}: {}.pdf", self.number_string, self.title.replace("/", "-").replace("'", "").trim())
     }
 
+    /// Update an RFDs state.
+    #[instrument]
+    #[inline]
+    pub fn update_state(&mut self, state: &str) {
+        // TODO: make this work even if they have extra spaces.
+        self.content = self.content.replacen(&format!("state: {}", self.state), &format!("state: {}", state), 1);
+        self.state = state.to_string();
+    }
+
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
     #[instrument(skip(drive_client))]
@@ -2061,6 +2072,7 @@ impl RFD {
     pub async fn convert_and_upload_pdf(&self, github: &Github, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
+        let repo = rfd_repo.get().await.unwrap();
 
         let mut path = env::temp_dir();
         path.push(format!("pdfcontents{}.adoc", self.number_string));
@@ -2092,7 +2104,7 @@ impl RFD {
         }
 
         // Create or update the file in the github repository.
-        create_or_update_file_in_github_repo(&rfd_repo, &rfd_path, cmd_output.stdout.clone()).await;
+        create_or_update_file_in_github_repo(&rfd_repo, &repo.default_branch, &rfd_path, cmd_output.stdout.clone()).await;
 
         // Create or update the file in the google_drive.
         drive_client
