@@ -327,22 +327,8 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         //  1. Update the discussion link.
         //  2. Update the state of the RFD to be in discussion if it is not
         //      in an acceptable current state. More on this below.
-        let _discussion_link = event.pull_request.html_url;
-        // TODO: update the discussion link.
-
-        // A pull request can be open for an RFD if it is in the following states:
-        //  - published: a already published RFD is being updated in a pull request.
-        //  - discussion: it is in discussion
-        //  - ideation: it is in ideation.
-        // We can update the state if it is not currently in an acceptable state.
-        if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
-            // Let's update the discussion link for the RFD.
-            //  Update the state of the RFD in GitHub to show it as `discussion`.
-            rfd.update_state("discussion");
-        }
-
-        // Update the RFD to show the new state in the database.
-        db.update_rfd(&rfd);
+        // To do both these tasks we need to first get the path of the file on GitHub,
+        // so we can update it later, and also find out if it is markdown or not for parsing.
 
         // Now we need to update the file contents in GitHub. To do that we need
         // to get the path to the file.
@@ -377,6 +363,24 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         if !filename.contains(&dir) {
             filename = format!("{}/{}", dir, filename);
         }
+
+        // Update the discussion link.
+        let discussion_link = event.pull_request.html_url;
+        rfd.update_discussion(&discussion_link, filename.ends_with(".md"));
+
+        // A pull request can be open for an RFD if it is in the following states:
+        //  - published: a already published RFD is being updated in a pull request.
+        //  - discussion: it is in discussion
+        //  - ideation: it is in ideation.
+        // We can update the state if it is not currently in an acceptable state.
+        if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
+            // Let's update the discussion link for the RFD.
+            //  Update the state of the RFD in GitHub to show it as `discussion`.
+            rfd.update_state("discussion", filename.ends_with(".md"));
+        }
+
+        // Update the RFD to show the new state in the database.
+        db.update_rfd(&rfd);
 
         // Update the file in GitHub.
         // Keep in mind: this push will kick off another webhook.
@@ -555,7 +559,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
             //  Update the state of the RFD in GitHub to show it as `published`.
             let mut rfd_mut = rfd.clone();
-            rfd_mut.update_state("published");
+            rfd_mut.update_state("published", file.ends_with(".md"));
 
             // Update the RFD to show the new state in the database.
             db.update_rfd(&rfd_mut);
