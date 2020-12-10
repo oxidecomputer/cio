@@ -125,8 +125,7 @@ impl Sheets {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("spreadsheets/{}/values/{}",
-                    sheet_id.to_string(), range.to_string()),
+            format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range.to_string()),
             (),
             Some(vec![
                 ("valueRenderOption", "FORMATTED_VALUE".to_string()),
@@ -170,11 +169,7 @@ impl Sheets {
 
     /// Update values.
     pub async fn update_values(&self, sheet_id: &str, range: &str, values: Vec<Vec<String>>, major_dimension: Option<String>) -> Result<UpdateValuesResponse, APIError> {
-        let url = format!(
-            "spreadsheets/{}/values/{}",
-            sheet_id.to_string(),
-            range.to_string()
-        );
+        let url = format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range.to_string());
         // Build the request.
         let request = self.request(
             Method::PUT,

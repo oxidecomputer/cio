@@ -342,7 +342,7 @@ impl NewApplicant {
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
             let rng = format!("{}{}", colmn.nth(sent_email_received_column_index).unwrap().to_string(), row_index);
 
-            sheets_client.update_values(&self.sheet_id, &rng, vec!(vec!("TRUE".to_string())), None).await.unwrap();
+            sheets_client.update_values(&self.sheet_id, &rng, vec![vec!["TRUE".to_string()]], None).await.unwrap();
 
             println!("[applicant] sent email to {} that we received their application", self.email);
         }
