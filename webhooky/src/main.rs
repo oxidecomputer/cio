@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use tracing::{event, instrument, span, Level};
 use tracing_subscriber::prelude::*;
+use tracing_unwrap::{OptionExt, ResultExt};
 
 use cio_api::applicants::{email_send_new_applicant_notification, get_role_from_sheet_id};
 use cio_api::db::Database;
@@ -50,7 +51,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                 ])),
         )
         .install()
-        .unwrap();
+        .unwrap_or_log();
     let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
     let subscriber = tracing_subscriber::Registry::default()
         .with(opentelemetry)
@@ -66,7 +67,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      * request port 8080.
      */
     let config_dropshot = ConfigDropshot {
-        bind_address: service_address.parse().unwrap(),
+        bind_address: service_address.parse().unwrap_or_log(),
         request_body_max_bytes: dropshot::RequestBodyMaxBytes(100000000),
     };
 
@@ -75,7 +76,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      * stderr assuming that it's a terminal.
      */
     let config_logging = ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Info };
-    let log = config_logging.to_logger("webhooky-server").map_err(|error| format!("failed to create logger: {}", error)).unwrap();
+    let log = config_logging
+        .to_logger("webhooky-server")
+        .map_err(|error| format!("failed to create logger: {}", error))
+        .unwrap_or_log();
 
     // Describe the API.
     let mut api = ApiDescription::new();
@@ -84,13 +88,13 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      * specifies the HTTP method and URI path that identify the endpoint,
      * allowing this metadata to live right alongside the handler function.
      */
-    api.register(ping).unwrap();
-    api.register(github_rate_limit).unwrap();
-    api.register(listen_google_sheets_edit_webhooks).unwrap();
-    api.register(listen_google_sheets_row_create_webhooks).unwrap();
-    api.register(listen_github_webhooks).unwrap();
-    api.register(listen_mailchimp_webhooks).unwrap();
-    api.register(ping_mailchimp_webhooks).unwrap();
+    api.register(ping).unwrap_or_log();
+    api.register(github_rate_limit).unwrap_or_log();
+    api.register(listen_google_sheets_edit_webhooks).unwrap_or_log();
+    api.register(listen_google_sheets_row_create_webhooks).unwrap_or_log();
+    api.register(listen_github_webhooks).unwrap_or_log();
+    api.register(listen_mailchimp_webhooks).unwrap_or_log();
+    api.register(ping_mailchimp_webhooks).unwrap_or_log();
 
     /*
      * The functions that implement our API endpoints will share this context.
@@ -102,11 +106,11 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      */
     let mut server = HttpServer::new(&config_dropshot, api, api_context, &log)
         .map_err(|error| format!("failed to start server: {}", error))
-        .unwrap();
+        .unwrap_or_log();
 
     // Start the server.
     let server_task = server.run();
-    server.wait_for_shutdown(server_task).await.unwrap();
+    server.wait_for_shutdown(server_task).await.unwrap_or_log();
     Ok(())
 }
 
@@ -115,13 +119,11 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
  */
 struct Context {
     // TODO: share a database connection here.
-    drive: GoogleDrive,
     drive_rfd_shared_id: String,
     drive_rfd_dir_id: String,
     github: Github,
     github_org: String,
     influx: influx::Client,
-    sheets: Sheets,
 }
 
 impl Context {
@@ -132,29 +134,24 @@ impl Context {
         // Get gsuite token.
         let token = get_gsuite_token().await;
 
-        // Initialize the GSuite sheets client.
-        let sheets = Sheets::new(token.clone());
-
         // Initialize the Google Drive client.
         let drive = GoogleDrive::new(token);
 
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+        let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap_or_log();
         let drive_rfd_shared_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let drive_rfd_dir = drive.get_file_by_name(&drive_rfd_shared_id, "rfds").await.unwrap();
+        let drive_rfd_dir = drive.get_file_by_name(&drive_rfd_shared_id, "rfds").await.unwrap_or_log();
 
         // Create the context.
         Arc::new(Context {
-            drive,
             drive_rfd_shared_id,
-            drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap().id.to_string(),
+            drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap_or_log().id.to_string(),
             github: authenticate_github_jwt(),
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
-            sheets,
         })
     }
 
@@ -192,6 +189,11 @@ async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, Htt
 #[inline]
 async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GitHubWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
+    // Get gsuite token.
+    // We re-get the token here because otherwise it will expire.
+    let token = get_gsuite_token().await;
+    // Initialize the Google Drive client.
+    let drive = GoogleDrive::new(token);
 
     // TODO: share the database connection in the context.
     let db = Database::new();
@@ -204,11 +206,11 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     let req_headers = req.headers();
     let event_type_string = req_headers
         .get("X-GitHub-Event")
-        .unwrap_or(&http::header::HeaderValue::from_str("").unwrap())
+        .unwrap_or(&http::header::HeaderValue::from_str("").unwrap_or_log())
         .to_str()
-        .unwrap()
+        .unwrap_or_log()
         .to_string();
-    let event_type = EventType::from_str(&event_type_string).unwrap();
+    let event_type = EventType::from_str(&event_type_string).unwrap_or_log();
 
     // Save all events to influxdb.
     match event_type {
@@ -255,7 +257,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     }
 
     // Check if the event came from the rfd repo.
-    let repo = event.clone().repository.unwrap();
+    let repo = event.clone().repository.unwrap_or_log();
     let repo_name = repo.name;
     if repo_name != "rfd" {
         // We only care about the rfd repo push events for now.
@@ -322,7 +324,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             event!(Level::INFO, "could not find RFD with number `{}` in the database: {:?}", number, event);
             return Ok(HttpResponseAccepted("ok".to_string()));
         }
-        let mut rfd = result.unwrap();
+        let mut rfd = result.unwrap_or_log();
 
         // Okay, now we finally have the RFD.
         // We need to do two things.
@@ -342,7 +344,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             .iter(&format!("{}/", dir), &repo.default_branch)
             .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
             .await
-            .unwrap();
+            .unwrap_or_log();
         let mut filename = String::new();
         for file in files {
             if file.name.ends_with("README.md") || file.name.ends_with("README.adoc") {
@@ -406,7 +408,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    let mut commit = event.commits.get(0).unwrap().clone();
+    let mut commit = event.commits.get(0).unwrap_or_log().clone();
     // We only care about distinct commits.
     if !commit.distinct {
         // The commit is not distinct.
@@ -453,7 +455,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             let website_file = format!("src/public/static/images/{}", file.trim_start_matches("rfd/"));
 
             // We need to get the current sha for the file we want to delete.
-            let gh_file = github_repo.content().file(&website_file, &repo.default_branch).await.unwrap();
+            let gh_file = github_repo.content().file(&website_file, &repo.default_branch).await.unwrap_or_log();
 
             github_repo
                 .content()
@@ -467,7 +469,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                     &repo.default_branch,
                 )
                 .await
-                .unwrap();
+                .unwrap_or_log();
             event!(Level::INFO, "deleted file `{}` since it was removed in mose recent push for RFD {:?}", website_file, event);
         }
     }
@@ -489,7 +491,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let gh_file = github_repo.content().file(&file, branch).await.unwrap();
+            let gh_file = github_repo.content().file(&file, branch).await.unwrap_or_log();
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
             // this is where images go for the static website.
@@ -507,7 +509,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             // in our database.
             event!(Level::INFO, "`{}` event -> file {} was modified on branch {}", event_type.name(), file, branch,);
             // Parse the RFD.
-            let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
+            let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap_or_log()).await;
 
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
@@ -549,7 +551,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             event!(Level::INFO, "updated airtable for RFD {}", new_rfd.number_string);
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(&api_context.github, &api_context.drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
+            rfd.convert_and_upload_pdf(&api_context.github, &drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
                 .await;
             event!(Level::INFO, "updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
@@ -567,7 +569,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                     .pulls()
                     .list(&hubcaps::pulls::PullListOptions::builder().state(hubcaps::issues::State::Open).build())
                     .await
-                    .unwrap();
+                    .unwrap_or_log();
                 // Check if any pull requests are from our branch.
                 let mut has_pull = false;
                 for pull in pulls {
@@ -611,7 +613,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 Some("Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your document and close this pull request."),
                                             ))
                                     .await
-                                    .unwrap();
+                                    .unwrap_or_log();
                     event!(Level::INFO, "opened pull request for RFD {}", new_rfd.number_string);
 
                     // We could update the discussion link here, but we will already
@@ -650,7 +652,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
                 // First get the sha of the old pdf.
-                let old_pdf = github_repo.content().file(&pdf_path, &repo.default_branch).await.unwrap();
+                let old_pdf = github_repo.content().file(&pdf_path, &repo.default_branch).await.unwrap_or_log();
 
                 // Delete the old filename from GitHub.
                 github_repo
@@ -665,7 +667,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                         &repo.default_branch,
                     )
                     .await
-                    .unwrap();
+                    .unwrap_or_log();
                 event!(
                     Level::INFO,
                     "deleted old pdf file `{}` in GitHub for  RFD {}, new file is `{}`",
@@ -675,7 +677,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 );
 
                 // Delete the old filename from drive.
-                api_context.drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
+                drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap_or_log();
                 event!(
                     Level::INFO,
                     "deleted old pdf file `{}` in Google Drive for RFD {}, new file is `{}`",
@@ -705,7 +707,7 @@ async fn github_rate_limit(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<
     let api_context = Context::from_rqctx(&rqctx);
     let github = &api_context.github;
 
-    let response = github.rate_limit().get().await.unwrap();
+    let response = github.rate_limit().get().await.unwrap_or_log();
     let reset_time = Utc.timestamp(response.resources.core.reset.into(), 0);
 
     let dur = reset_time - Utc::now();
@@ -735,8 +737,13 @@ pub struct GitHubRateLimit {
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    // Get gsuite token.
+    // We re-get the token here since otherwise it will expire.
+    let token = get_gsuite_token().await;
+    // Initialize the GSuite sheets client.
+    let sheets = Sheets::new(token.clone());
+
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
@@ -753,7 +760,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     //  - The name of the column that was updated.
     // Let's first get the email for this applicant. This is always in column B.
     let mut cell_name = format!("B{}", event.event.range.row_start);
-    let email = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
+    let email = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap_or_log();
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
@@ -765,8 +772,8 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     // This is always in row 1.
     // These should be zero indexed.
     let column_letters = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    cell_name = format!("{}1", column_letters.chars().nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
-    let column_header = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+    cell_name = format!("{}1", column_letters.chars().nth(event.event.range.column_start.try_into().unwrap_or_log()).unwrap_or_log().to_string());
+    let column_header = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap_or_log().to_lowercase();
 
     // TODO: share the database connection in the context.
     let db = Database::new();
@@ -777,7 +784,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
-    let mut a = result.unwrap();
+    let mut a = result.unwrap_or_log();
 
     // Now let's update the correct item for them.
     if column_header.contains("have sent email that we received their application?") {
@@ -798,15 +805,23 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         // The person updated the values in tension.
         // We need to get the other value in tension in the next column to the right.
         let value_column = event.event.range.column_start + 1;
-        cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
-        let value_in_tension_2 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+        cell_name = format!(
+            "{}{}",
+            column_letters.chars().nth(value_column.try_into().unwrap_or_log()).unwrap_or_log().to_string(),
+            event.event.range.row_start
+        );
+        let value_in_tension_2 = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap_or_log().to_lowercase();
         a.values_in_tension = vec![value_in_tension_2, event.event.value.to_lowercase()];
     } else if column_header.contains("value in tension [2]") {
         // The person updated the values in tension.
         // We need to get the other value in tension in the next column to the left.
         let value_column = event.event.range.column_start - 1;
-        cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
-        let value_in_tension_1 = api_context.sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+        cell_name = format!(
+            "{}{}",
+            column_letters.chars().nth(value_column.try_into().unwrap_or_log()).unwrap_or_log().to_string(),
+            event.event.range.row_start
+        );
+        let value_in_tension_1 = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap_or_log().to_lowercase();
         a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
         // If this is a field we don't care about, return early.
@@ -899,8 +914,15 @@ pub struct GoogleSpreadsheet {
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    // Get gsuite token.
+    // We re-get the token here since otherwise it will expire.
+    let token = get_gsuite_token().await;
+    // Initialize the GSuite sheets client.
+    let sheets = Sheets::new(token.clone());
+    // Initialize the Google Drive client.
+    let drive = GoogleDrive::new(token);
+
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
@@ -914,7 +936,6 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     // Parse the applicant out of the row information.
     let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values);
 
-    // TODO: remove this once we know parsing the webhook works.
     if applicant.email.is_empty() {
         event!(Level::WARN, "applicant has an empty email: {:?}", applicant);
         return Ok(HttpResponseAccepted("ok".to_string()));
@@ -925,10 +946,10 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     let sent_email_received_column_index = event.event.range.column_end;
     applicant
         .expand(
-            &api_context.drive,
-            &api_context.sheets,
-            sent_email_received_column_index.try_into().unwrap(),
-            event.event.range.row_start.try_into().unwrap(),
+            &drive,
+            &sheets,
+            sent_email_received_column_index.try_into().unwrap_or_log(),
+            event.event.range.row_start.try_into().unwrap_or_log(),
         )
         .await;
 
@@ -1154,11 +1175,11 @@ impl GitHubWebhook {
     #[instrument]
     #[inline]
     pub async fn as_influx_push(&self, influx: &influx::Client, github: &Github) {
-        let repo = self.repository.as_ref().unwrap();
+        let repo = self.repository.as_ref().unwrap_or_log();
 
         for commit in &self.commits {
             if commit.distinct {
-                let c = github.repo(repo.owner.login.to_string(), repo.name.to_string()).commits().get(&commit.id).await.unwrap();
+                let c = github.repo(repo.owner.login.to_string(), repo.name.to_string()).commits().get(&commit.id).await.unwrap_or_log();
 
                 if c.sha != commit.id {
                     // We have a problem.
@@ -1191,7 +1212,7 @@ impl GitHubWebhook {
     pub fn as_influx_pull_request(&self) -> influx::PullRequest {
         influx::PullRequest {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.as_ref().unwrap_or_log().name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             head_reference: self.pull_request.head.commit_ref.to_string(),
@@ -1207,7 +1228,7 @@ impl GitHubWebhook {
     pub fn as_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
         influx::PullRequestReviewComment {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.as_ref().unwrap_or_log().name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             pull_request_number: self.pull_request.number,
@@ -1221,7 +1242,7 @@ impl GitHubWebhook {
     pub fn as_influx_issue(&self) -> influx::Issue {
         influx::Issue {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.as_ref().unwrap_or_log().name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             number: self.number,
@@ -1234,7 +1255,7 @@ impl GitHubWebhook {
     pub fn as_influx_issue_comment(&self) -> influx::IssueComment {
         influx::IssueComment {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.as_ref().unwrap_or_log().name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             issue_number: self.issue.number,
@@ -1248,7 +1269,7 @@ impl GitHubWebhook {
     pub fn as_influx_check_suite(&self) -> influx::CheckSuite {
         influx::CheckSuite {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.as_ref().unwrap_or_log().name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
 
@@ -1271,7 +1292,7 @@ impl GitHubWebhook {
     pub fn as_influx_check_run(&self) -> influx::CheckRun {
         influx::CheckRun {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.as_ref().unwrap_or_log().name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
 
