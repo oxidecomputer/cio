@@ -2053,7 +2053,7 @@ impl RFD {
     #[instrument]
     #[inline]
     pub fn get_pdf_filename(&self) -> String {
-        format!("RFD {}: {}.pdf", self.number_string, self.title.replace("/", "-").replace("'", "").trim())
+        format!("RFD {} {}.pdf", self.number_string, self.title.replace("/", "-").replace("'", "").trim())
     }
 
     /// Update an RFDs state.
