@@ -3384,7 +3384,7 @@ dependencies = [
 
 [[package]]
 name = "slack-chat-api"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",

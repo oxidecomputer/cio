@@ -488,7 +488,7 @@ pub struct UserInvite {
 pub struct APIResponse {
     pub ok: bool,
 
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "members")]
     pub users: Vec<User>,
 }
 

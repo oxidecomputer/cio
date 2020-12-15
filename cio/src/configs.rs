@@ -258,28 +258,24 @@ impl User {
     #[inline]
     pub async fn to_slack_user(&self) {
         // Authenticate Slack.
-        let client = slack_api::requests::default_client().unwrap();
-        let token = env::var("SLACK_TOKEN").unwrap();
+        let slack = Slack::new();
 
         // List all the users.
-        let users_response = slack_api::users::list(&client, &token, &slack_api::users::ListRequest { presence: None }).await.unwrap();
-        let users = users_response.members.unwrap();
+        let users = slack.list_users().await.unwrap();
 
         // Try to find our user, to see if we should update or create them.
         for user in users {
-            let profile = user.clone().profile.unwrap();
-            let is_bot = user.is_bot.unwrap_or_default();
-            if is_bot || profile.email.is_none() {
+            if user.is_bot || user.profile.email.is_empty() {
                 // Continue early, skip the bots.
                 continue;
             }
 
-            let profile_email = profile.email.unwrap();
-            let user_id = user.id.unwrap();
+            let mut profile = user.profile.clone();
 
             if profile_email == self.email() {
                 // We found our user.
                 // Update the user's profile.
+                profile.first_name = self.first_name.to_string();
                 let p = crate::slack::UserProfile {
                     avatar_hash: profile.avatar_hash.unwrap_or_default(),
                     display_name: self.github.to_string(),
