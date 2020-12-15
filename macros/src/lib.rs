@@ -49,7 +49,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
             pub async fn push_to_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable =
-                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), #base_id);
+                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), #base_id, "");
 
                 // Create the record.
                 let record = airtable_api::Record {
@@ -74,7 +74,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
             pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<#new_name>) {
                 // Initialize the Airtable client.
                 let airtable =
-                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), #base_id);
+                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), #base_id, "");
 
                 // Run the custom trait to update the new record from the old record.
                 self.update_airtable_record(existing_record.fields.clone()).await;
@@ -132,6 +132,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
                     #base_id,
+                    "",
                 );
 
                 let result: Vec<airtable_api::Record<#new_name>> = airtable
@@ -259,7 +260,7 @@ mod tests {
             pub async fn push_to_airtable(&self) {
                 // Initialize the Airtable client.
                 let airtable =
-                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS, "");
 
                 // Create the record.
                 let record = airtable_api::Record {
@@ -284,7 +285,7 @@ mod tests {
             pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<DuplicatedItem>) {
                 // Initialize the Airtable client.
                 let airtable =
-                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+                    airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS, "");
 
                 // Run the custom trait to update the new record from the old record.
                 self.update_airtable_record(existing_record.fields.clone()).await;
@@ -342,6 +343,7 @@ mod tests {
                 let airtable = airtable_api::Airtable::new(
                     airtable_api::api_key_from_env(),
                     AIRTABLE_BASE_ID_CUSTOMER_LEADS,
+                    "",
                 );
 
                 let result: Vec<airtable_api::Record<DuplicatedItem>> = airtable

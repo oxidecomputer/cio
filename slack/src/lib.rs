@@ -534,7 +534,7 @@ pub struct User {
     #[serde(default)]
     pub tz_offset: i64,
     #[serde(default)]
-    profile: UserProfile,
+    pub profile: UserProfile,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub locale: String,
 }

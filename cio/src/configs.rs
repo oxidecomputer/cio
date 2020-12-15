@@ -12,6 +12,7 @@ use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use slack_chat_api::Slack;
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE};
@@ -276,40 +277,16 @@ impl User {
                 // We found our user.
                 // Update the user's profile.
                 profile.first_name = self.first_name.to_string();
-                let p = crate::slack::UserProfile {
-                    avatar_hash: profile.avatar_hash.unwrap_or_default(),
-                    display_name: self.github.to_string(),
-                    display_name_normalized: self.github.to_string(),
-                    email: self.email(),
-                    fields: Default::default(),
-                    first_name: self.first_name.to_string(),
-                    guest_channels: profile.guest_channels.unwrap_or_default(),
-                    image_192: profile.image_192.unwrap_or_default(),
-                    image_24: profile.image_24.unwrap_or_default(),
-                    image_32: profile.image_32.unwrap_or_default(),
-                    image_48: profile.image_48.unwrap_or_default(),
-                    image_512: profile.image_512.unwrap_or_default(),
-                    image_72: profile.image_72.unwrap_or_default(),
-                    image_original: profile.image_original.unwrap_or_default(),
-                    last_name: self.last_name.to_string(),
-                    phone: self.recovery_phone.to_string(),
-                    real_name: self.full_name(),
-                    real_name_normalized: self.full_name(),
-                    skype: profile.skype.unwrap_or_default(),
-                    status_emoji: profile.status_emoji.unwrap_or_default(),
-                    status_text: profile.status_text.unwrap_or_default(),
-                    team: profile.team.unwrap_or_default(),
-                    title: profile.title.unwrap_or_default(),
-                };
-
+                profile.display_name = self.github.to_string();
+                profile.display_name_normalized = self.github.to_string();
+                profile.last_name = self.last_name.to_string();
+                profile.phone = self.recovery_phone.to_string();
+                profile.real_name = self.full_name();
+                profile.real_name_normalized = self.full_name();
                 let profile_hash = json!(p).to_string();
-                let req = slack_api::users_profile::SetRequest {
-                    user: Some(&user_id),
-                    profile: Some(&profile_hash),
-                    name: None,
-                    value: None,
-                };
-                slack_api::users_profile::set(&client, &token, &req).await.unwrap();
+
+                // Update the user's profile.
+                slack.update_user_profile(&user.id, profile).await.unwrap();
 
                 // TODO: Figure out rate limit.
                 let rate_limit_sleep = time::Duration::from_secs(10);

@@ -26,6 +26,7 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tracing::instrument;
 
 use crate::airtable::{
@@ -36,7 +37,6 @@ use crate::applicants::{email_send_received_application, get_file_contents, get_
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{applicants, auth_user_logins, auth_users, github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds as r_f_ds, rfds};
-use crate::slack::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use crate::utils::{check_if_github_issue_exists, create_or_update_file_in_github_repo, github_org};
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
@@ -1338,7 +1338,7 @@ impl NewMailingListSubscriber {
     #[inline]
     pub async fn push_to_airtable(&self) {
         // Initialize the Airtable client.
-        let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS);
+        let airtable = Airtable::new(api_key_from_env(), AIRTABLE_BASE_ID_CUSTOMER_LEADS, "");
 
         // Create the record.
         let record = Record {

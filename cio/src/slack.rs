@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::env;
 
-use chrono::offset::Utc;
-use chrono::DateTime;
 use reqwest::{Body, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
