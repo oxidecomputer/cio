@@ -75,7 +75,7 @@ impl Slack {
     /// given a valid API Token and Workspace ID your requests will work.
     pub fn new_from_env() -> Self {
         let token = env::var("SLACK_TOKEN").unwrap();
-        let workspace_id = env::var("SLACK_WORKSPACE_ID").unwrap();
+        let workspace_id = env::var("SLACK_WORKSPACE_ID").unwrap_or_default();
 
         Slack::new(token, workspace_id)
     }
@@ -118,9 +118,7 @@ impl Slack {
     pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
         // TODO: paginate.
-        let mut body: HashMap<&str, &str> = HashMap::new();
-        body.insert("team_id", &self.workspace_id);
-        let request = self.request(Method::POST, "admin.users.list", body, Some(vec![("limit", "100".to_string())]));
+        let request = self.request(Method::GET, "users.list", (), Some(vec![("limit", "100".to_string())]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {

@@ -583,7 +583,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack_api",
+ "slack-chat-api 0.1.0",
  "tokio",
  "toml",
  "tracing",
@@ -3372,6 +3372,19 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 [[package]]
 name = "slack-chat-api"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "836547b9875e9ed15e6bc007974822c9406a1abd319875360257f992b67b5269"
+dependencies = [
+ "chrono 0.4.19",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "slack-chat-api"
+version = "0.1.1"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
