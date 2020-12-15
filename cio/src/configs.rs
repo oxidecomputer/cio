@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::env;
 use std::fs;
 use std::str::from_utf8;
 use std::{thread, time};
@@ -259,7 +258,7 @@ impl User {
     #[inline]
     pub async fn to_slack_user(&self) {
         // Authenticate Slack.
-        let slack = Slack::new();
+        let slack = Slack::new_from_env();
 
         // List all the users.
         let users = slack.list_users().await.unwrap();
@@ -273,7 +272,7 @@ impl User {
 
             let mut profile = user.profile.clone();
 
-            if profile_email == self.email() {
+            if profile.email == self.email() {
                 // We found our user.
                 // Update the user's profile.
                 profile.first_name = self.first_name.to_string();
@@ -283,7 +282,6 @@ impl User {
                 profile.phone = self.recovery_phone.to_string();
                 profile.real_name = self.full_name();
                 profile.real_name_normalized = self.full_name();
-                let profile_hash = json!(p).to_string();
 
                 // Update the user's profile.
                 slack.update_user_profile(&user.id, profile).await.unwrap();
