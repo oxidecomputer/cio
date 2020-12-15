@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.15"
+version = "0.1.16"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -1461,7 +1461,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "chrono 0.4.19",
  "cio-api 0.2.0",

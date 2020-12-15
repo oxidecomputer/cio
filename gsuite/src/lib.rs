@@ -448,6 +448,27 @@ impl GSuite {
         Ok(resp.json().await.unwrap())
     }
 
+    /// Delete a user.
+    /// The `user_key` can be the user's primary email address, alias email address, or unique user ID.
+    /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/users/delete
+    pub async fn delete_user(&self, user_key: &str) -> Result<(), APIError> {
+        // Build the request.
+        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("users/{}", user_key), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(())
+    }
+
     /// Update a user's aliases.
     pub async fn update_user_aliases<A>(&self, user_id: &str, aliases: A)
     where
