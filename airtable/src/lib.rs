@@ -49,6 +49,7 @@ const ENDPOINT: &str = "https://api.airtable.com/v0/";
 pub struct Airtable {
     key: String,
     base_id: String,
+    enterprise_account_id: String,
 
     client: Arc<Client>,
 }
@@ -62,16 +63,20 @@ impl Airtable {
     /// Create a new Airtable client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Base ID your requests will work.
-    pub fn new<K, B>(key: K, base_id: B) -> Self
+    /// You can leave the Enterprise Account ID empty if you are not using the
+    /// Enterprise API features.
+    pub fn new<K, B, E>(key: K, base_id: B, enterprise_account_id: E) -> Self
     where
         K: ToString,
         B: ToString,
+        E: ToString,
     {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
                 key: key.to_string(),
                 base_id: base_id.to_string(),
+                enterprise_account_id: enterprise_account_id.to_string(),
 
                 client: Arc::new(c),
             },
@@ -85,8 +90,9 @@ impl Airtable {
     /// given a valid API Key and Base ID your requests will work.
     pub fn new_from_env() -> Self {
         let base_id = env::var("AIRTABLE_BASE_ID").unwrap();
+        let enterprise_account_id = env::var("AIRTABLE_ENTERPRISE_ACCOUNT_ID").unwrap();
 
-        Airtable::new(api_key_from_env(), base_id)
+        Airtable::new(api_key_from_env(), base_id, enterprise_account_id)
     }
 
     /// Get the currently set API key.
@@ -280,6 +286,50 @@ impl Airtable {
             }
         }
     }
+
+    /// Delete internal user by email.
+    /// This is for an enterprise admin to do only.
+    /// The user must be an internal user, meaning they have an email with the company domain.
+    /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserDeleteUserByEmail
+    pub async fn delete_internal_user_by_email(&self, email: &str) -> Result<(), APIError> {
+        if self.enterprise_account_id.is_empty() {
+            // Return an error early.
+            return Err(APIError {
+                status_code: StatusCode::OK,
+                body: "An enterprise account id is required.".to_string(),
+            });
+        }
+
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            format!("enterpriseAccounts/{}/users", self.enterprise_account_id),
+            (),
+            Some(vec![("email", email.to_string())]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let result: DeleteUserResponse = resp.json().await.unwrap();
+        if !result.errors.is_empty() {
+            return Err(APIError {
+                status_code: StatusCode::OK,
+                body: format!("{:?}", result),
+            });
+        }
+
+        Ok(())
+    }
 }
 
 /// Error type returned by our library.
@@ -340,5 +390,26 @@ pub struct Record<T> {
 pub struct User {
     pub id: String,
     pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+}
+
+/// The response returned from deleting a user.
+/// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserDeleteUserByEmail
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct DeleteUserResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "deletedUsers")]
+    pub deleted_users: Vec<User>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub errors: Vec<ErrorResponse>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ErrorResponse {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
+    pub type_: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub message: String,
 }
