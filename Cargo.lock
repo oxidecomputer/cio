@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.16"
+version = "0.1.17"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -3368,6 +3368,17 @@ name = "slab"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
+
+[[package]]
+name = "slack-api"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.4.19",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "slack_api"

@@ -90,7 +90,7 @@ impl Airtable {
     /// given a valid API Key and Base ID your requests will work.
     pub fn new_from_env() -> Self {
         let base_id = env::var("AIRTABLE_BASE_ID").unwrap();
-        let enterprise_account_id = env::var("AIRTABLE_ENTERPRISE_ACCOUNT_ID").unwrap();
+        let enterprise_account_id = env::var("AIRTABLE_ENTERPRISE_ACCOUNT_ID").unwrap_or_default();
 
         Airtable::new(api_key_from_env(), base_id, enterprise_account_id)
     }
