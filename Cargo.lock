@@ -178,19 +178,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-compression"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb1ff21a63d3262af46b9f33a826a8d134e2d0d9b2179c86034948b732ea8b2a"
-dependencies = [
- "bytes",
- "flate2",
- "futures-core",
- "memchr",
- "pin-project-lite 0.1.11",
-]
-
-[[package]]
 name = "async-executor"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -598,7 +585,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#68ea9b321da07889b94ddb2d5a3024ad54c48fa7"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#586f7cc8a3bbc2dcd53bf90eb341a3f0f5a0b60e"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -635,7 +622,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack_api",
+ "slack-chat-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "toml",
  "tracing",
@@ -2002,7 +1989,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#68ea9b321da07889b94ddb2d5a3024ad54c48fa7"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#586f7cc8a3bbc2dcd53bf90eb341a3f0f5a0b60e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2861,7 +2848,6 @@ version = "0.10.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0718f81a8e14c4dbb3b34cf23dc6aaf9ab8a0dfec160c534b3dbca1aaa21f47c"
 dependencies = [
- "async-compression",
  "base64 0.13.0",
  "bytes",
  "encoding_rs",
@@ -3379,19 +3365,6 @@ dependencies = [
  "reqwest",
  "schemars",
  "serde",
- "serde_json",
-]
-
-[[package]]
-name = "slack_api"
-version = "0.23.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07d3c02beffb13b2ca8f6a946dbdc4ba1c97afecd253d5909dfa9b2631dc5cd4"
-dependencies = [
- "async-trait",
- "reqwest",
- "serde",
- "serde_derive",
  "serde_json",
 ]
 
