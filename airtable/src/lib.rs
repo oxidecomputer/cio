@@ -302,8 +302,8 @@ impl Airtable {
 
         // Build the request.
         let request = self.request(
-            Method::GET,
-            format!("enterpriseAccounts/{}/users", self.enterprise_account_id),
+            Method::DELETE,
+            format!("meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![("email", email.to_string())]),
         );
