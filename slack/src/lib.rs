@@ -7,7 +7,7 @@
  *
  * ```
  * use serde::{Deserialize, Serialize};
- * use slack_api::Slack;
+ * use slack_chat_api::Slack;
  *
  * async fn get_users() {
  *     // Initialize the Slack client.

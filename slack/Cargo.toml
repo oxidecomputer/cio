@@ -1,5 +1,5 @@
 [package]
-name = "slack-api"
+name = "slack-chat-api"
 description = "An API client for Slack"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
