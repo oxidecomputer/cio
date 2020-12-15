@@ -749,6 +749,13 @@ pub async fn refresh_db_configs(github: &Github) {
         db.upsert_link(&link);
     }
 
+    // Get all the users.
+    let db_users = db.get_users();
+    // Create a BTreeMap
+    let mut user_map: BTreeMap<String, User> = Default::default();
+    for u in db_users {
+        user_map.insert(u.username.to_string(), u);
+    }
     // Sync users.
     for (_, mut user) in configs.users {
         user.expand().await;
@@ -757,6 +764,15 @@ pub async fn refresh_db_configs(github: &Github) {
 
         // Update slack user.
         new_user.to_slack_user().await;
+
+        // Remove the user from the BTreeMap.
+        user_map.remove(&user.username);
+    }
+    // Remove any users that should no longer be in the database.
+    // This is found by the remaining users that are in the map since we removed
+    // the existing repos from the map above.
+    for (username, _) in user_map {
+        db.delete_user_by_username(&username);
     }
 
     // Sync certificates.

@@ -677,4 +677,10 @@ impl Database {
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating user failed: {}", e))
     }
+
+    #[instrument(skip(self))]
+    #[inline]
+    pub fn delete_user_by_username(&self, username: &str) {
+        diesel::delete(users::dsl::users.filter(users::dsl::username.eq(username.to_string()))).execute(&self.conn).unwrap();
+    }
 }
