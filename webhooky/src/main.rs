@@ -277,20 +277,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
     // Handle if we got a pull_request.
     if event_type == EventType::PullRequest {
-        // We only care if the pull request was `opened`.
-        if event.action != "opened" {
-            // We can throw this out, log it and return early.
-            event!(
-                Level::INFO,
-                "`{}` event was to the `{}` repo, no automations are set up for action `{}` yet",
-                event_type,
-                repo_name,
-                event.action
-            );
-            return Ok(HttpResponseAccepted("ok".to_string()));
-        }
-
-        // We have a newly opened pull request.
+        // We have a pull request event.
         // Let's get the RFD.
         let branch = event.pull_request.head.commit_ref.to_string();
 
@@ -325,6 +312,40 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             return Ok(HttpResponseAccepted("ok".to_string()));
         }
         let mut rfd = result.unwrap_or_log();
+
+        // Let's make sure the tile of the pull request is what it should be.
+        // The pull request title should be equal to the name of the pull request.
+        if rfd.name != event.pull_request.title {
+            // Update the title of the pull request.
+            github_repo
+                .pulls()
+                .get(event.pull_request.number.try_into().unwrap_or_log())
+                .edit(&hubcaps::pulls::PullEditOptions::builder().title(rfd.name.to_string()).build())
+                .await
+                .unwrap_or_log();
+        }
+
+        // Update the labels for the pull request.
+        let mut labels: Vec<&str> = Default::default();
+        if rfd.state == "discussion" {
+            labels.push(":thought_balloon: discussion");
+        } else if rfd.state == "ideation" {
+            labels.push(":hatching_chick: ideation");
+        }
+        github_repo.pulls().get(event.pull_request.number.try_into().unwrap_or_log()).labels().add(labels).await.unwrap_or_log();
+
+        // We only care if the pull request was `opened`.
+        if event.action != "opened" {
+            // We can throw this out, log it and return early.
+            event!(
+                Level::INFO,
+                "`{}` event was to the `{}` repo, no automations are set up for action `{}` yet",
+                event_type,
+                repo_name,
+                event.action
+            );
+            return Ok(HttpResponseAccepted("ok".to_string()));
+        }
 
         // Okay, now we finally have the RFD.
         // We need to do two things.
