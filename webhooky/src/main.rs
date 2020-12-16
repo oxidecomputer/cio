@@ -341,7 +341,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         let dir = format!("/rfd/{}", branch);
         let files = github_repo
             .content()
-            .iter(&format!("{}/", dir), &repo.default_branch)
+            .iter(&format!("{}/", dir), &branch)
             .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
             .await
             .unwrap_or_log();
