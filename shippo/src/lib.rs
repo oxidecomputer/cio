@@ -135,8 +135,27 @@ impl Shippo {
     /// FROM: https://goshippo.com/docs/reference#shipments-create
     pub async fn create_shipment(&self, ns: NewShipment) -> Result<Shipment, APIError> {
         // Build the request.
-        // TODO: paginate.
-        let request = self.request(Method::GET, "shipments", ns, None);
+        let request = self.request(Method::POST, "shipments", ns, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Get a shipment.
+    /// FROM: https://goshippo.com/docs/reference#shipments-retrieve
+    pub async fn get_shipment(&self, id: &str) -> Result<Shipment, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("shipments/{}", id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
