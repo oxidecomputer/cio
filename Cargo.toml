@@ -9,6 +9,7 @@ members = [
 	"macros",
 	"sendgrid",
 	"sheets",
+	"shippo",
 	"slack",
 	"webhooky",
 	"zoom",
