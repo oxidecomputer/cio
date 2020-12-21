@@ -7,7 +7,7 @@
  *
  * ```
  * use serde::{Deserialize, Serialize};
- * use shippo_chat_api::Shippo;
+ * use shippo::Shippo;
  *
  * async fn get_shipments() {
  *     // Initialize the Shippo client.
@@ -129,6 +129,27 @@ impl Shippo {
         let r: APIResponse = resp.json().await.unwrap();
 
         Ok(r.shipments)
+    }
+
+    /// Create a shipment.
+    /// FROM: https://goshippo.com/docs/reference#shipments-create
+    pub async fn create_shipment(&self, ns: NewShipment) -> Result<Shipment, APIError> {
+        // Build the request.
+        // TODO: paginate.
+        let request = self.request(Method::GET, "shipments", ns, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
     }
 }
 
@@ -291,7 +312,7 @@ pub struct Address {
 
 /// The data type for a parcel.
 /// FROM: https://goshippo.com/docs/reference#parcels
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Parcel {
     /// A Parcel will only be valid when all required values have been sent and
     /// validated successfully.
@@ -299,12 +320,14 @@ pub struct Parcel {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub object_state: String,
     /// Date and time of Parcel creation.
-    pub object_created: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub object_created: Option<DateTime<Utc>>,
     /// Date and time of last Parcel update. Since you cannot update Parcels
     /// after they were created, this time stamp reflects the time when the
     /// Parcel was changed by Shippo's systems for the last time, e.g.,
     /// during sorting the dimensions given.
-    pub object_updated: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub object_updated: Option<DateTime<Utc>>,
     /// Unique identifier of the given Parcel object. This ID is required to
     /// create a Shipment object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -429,6 +452,19 @@ pub struct ServiceLevel {
     /// Further clarification of the service.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub terms: String,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct NewShipment {
+    /// Address object that should be used as sender Address.
+    #[serde(default)]
+    pub address_from: Address,
+    /// Address object that should be used as recipient Address.
+    #[serde(default)]
+    pub address_to: Address,
+    /// Parcel objects to be shipped.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parcels: Vec<Parcel>,
 }
 
 pub mod deserialize_null_string {
