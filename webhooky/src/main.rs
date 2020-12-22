@@ -90,6 +90,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_webhooks).unwrap();
+    api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(ping_mailchimp_webhooks).unwrap();
 
     /*
@@ -1025,11 +1026,35 @@ async fn listen_airtable_shipments_outgoing_create_webhooks(_rqctx: Arc<RequestC
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
-/// A Google Sheet row create event.
+/// An Airtable row create event.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct AirtableRowCreateEvent {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub record_id: String,
+}
+
+/**
+ * Listen for shimpment tracking updated from Shippo.
+ */
+#[endpoint {
+    method = POST,
+    path = "/shippo/tracking/update",
+}]
+#[instrument]
+#[inline]
+async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<ShippoTrackingUpdateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    event!(Level::DEBUG, "{:?}", event);
+    println!("shippo-tracking-update: {:?}", event);
+
+    //event!(Level::INFO, "shipment {} created successfully", a.email);
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// A Shippo tracking update event.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct ShippoTrackingUpdateEvent {
+    // TODO: fill this out
 }
 
 /** Ping endpoint for MailChimp webhooks. */
