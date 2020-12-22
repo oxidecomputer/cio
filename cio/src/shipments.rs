@@ -83,14 +83,26 @@ impl Shipment {
     #[instrument]
     #[inline]
     pub fn parse_from_row(values: &HashMap<String, Vec<String>>) -> Self {
-        let hoodie_size = get_value(values, "Hoodie Size");
-        let fleece_size = get_value(values, "Fleece Size");
+        let hoodie_size = get_value(values, "Hoodie");
+        let fleece_size = get_value(values, "Fleece");
+        let womens_shirt_size = get_value(values, "Women's");
+        let unisex_shirt_size = get_value(values, "Unisex");
+        let kids_shirt_size = get_value(values, "Onesie");
         let mut contents = String::new();
         if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
             contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
         }
         if !fleece_size.is_empty() && !fleece_size.contains("N/A") {
             contents += &format!("1 x Oxide Fleece, Size: {}", fleece_size);
+        }
+        if !womens_shirt_size.is_empty() && !womens_shirt_size.contains("N/A") {
+            contents += &format!("1 x Oxide Women's Shirt, Size: {}", womens_shirt_size);
+        }
+        if !unisex_shirt_size.is_empty() && !unisex_shirt_size.contains("N/A") {
+            contents += &format!("1 x Oxide Unisex Shirt, Size: {}", unisex_shirt_size);
+        }
+        if !kids_shirt_size.is_empty() && !kids_shirt_size.contains("N/A") {
+            contents += &format!("1 x Oxide Kids Shirt, Size: {}", kids_shirt_size);
         }
         Shipment {
             created_time: Shipment::parse_timestamp(&get_value(values, "Timestamp")),

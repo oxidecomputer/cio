@@ -940,7 +940,8 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
         // Check if the event is for a swag spreadsheet.
-        if event.spreadsheet.id != "114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU" {
+        // TODO: put the sheet ids somewhere else so this is not duplicated code.
+        if event.spreadsheet.id != "114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU" && event.spreadsheet.id != "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y" {
             // Return early if not
             event!(Level::INFO, "event is not for an application spreadsheet or a swag spreadsheet: {:?}", event);
             return Ok(HttpResponseAccepted("ok".to_string()));
