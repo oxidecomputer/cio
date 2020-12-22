@@ -15,6 +15,7 @@ pub mod mailing_list;
 pub mod models;
 pub mod rfds;
 pub mod schema;
+pub mod shipments;
 pub mod slack;
 pub mod utils;
 

@@ -25,4 +25,7 @@ pub static AIRTABLE_BASE_ID_PRODUCT_HUDDLE: &str = "appbQqnE3nykcnkbx";
 pub static AIRTABLE_DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
 pub static AIRTABLE_MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";
 
+pub static AIRTABLE_BASE_ID_SHIPMENTS: &str = "appQD9Sitpo8baLZ4";
+pub static AIRTABLE_OUTBOUND_TABLE: &str = "Outbound";
+
 pub static AIRTABLE_GRID_VIEW: &str = "Grid view";
