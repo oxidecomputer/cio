@@ -46,8 +46,14 @@ pub struct Shipment {
     pub tracking_number: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label_link: String,
     #[serde(default)]
     pub reprint_label: bool,
+    #[serde(default)]
+    pub cost: f64,
     #[serde(default)]
     pub schedule_pickup: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -57,6 +63,8 @@ pub struct Shipment {
     pub shipped_time: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub received_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub eta: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub shippo_id: String,
 }
@@ -106,6 +114,10 @@ impl Shipment {
             status: Default::default(),
             tracking_link: Default::default(),
             tracking_number: Default::default(),
+            tracking_status: Default::default(),
+            cost: Default::default(),
+            label_link: Default::default(),
+            eta: None,
         }
     }
 
@@ -233,6 +245,10 @@ impl Shipment {
                 status: Default::default(),
                 tracking_link: Default::default(),
                 tracking_number: Default::default(),
+                tracking_status: Default::default(),
+                cost: Default::default(),
+                label_link: Default::default(),
+                eta: None,
             },
             sent,
         )
