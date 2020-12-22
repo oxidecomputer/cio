@@ -256,6 +256,7 @@ impl Shipment {
             object_id: Default::default(),
             test: Default::default(),
             street2: Default::default(),
+            validation_results: Default::default(),
         };
         // TODO: check if we already have a shipment for this.
         // Create the shippo client.
@@ -278,6 +279,7 @@ impl Shipment {
                     object_id: Default::default(),
                     test: Default::default(),
                     company: Default::default(),
+                    validation_results: Default::default(),
                 },
                 parcels: vec![Parcel {
                     metadata: "Default parcel for swag".to_string(),
@@ -528,7 +530,7 @@ pub async fn refresh_airtable_shipments() {
     for mut shipment in shipments {
         shipment.create_or_update_in_airtable().await;
         // Create the shipment in shippo.
-        shipment.create_or_get_shippo_shipment().await;
+        //shipment.create_or_get_shippo_shipment().await;
     }
 }
 
