@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
 use std::error::Error;
-use std::str::FromStr;
+use std::str::{from_utf8, FromStr};
 use std::sync::Arc;
 
 use chrono::offset::Utc;
@@ -380,6 +380,10 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             filename = format!("{}/{}", dir, filename);
         }
 
+        // We need to get the content fresh first since this is racey.
+        let f = github_repo.content().file(&filename, &branch).await.unwrap();
+        rfd.content = from_utf8(&f.content).unwrap().to_string();
+
         // Update the discussion link.
         let discussion_link = event.pull_request.html_url;
         rfd.update_discussion(&discussion_link, filename.ends_with(".md"));
@@ -399,10 +403,6 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
         // Update the file in GitHub.
         // Keep in mind: this push will kick off another webhook.
-        // TODO: figure out if this is racey and is updating stale contents of the
-        // branch since we are updating from our contents in the database and not from
-        // the contents of the file on GitHub. It _should_ in theory always be up to date since we
-        // update our database on every single push event.
         create_or_update_file_in_github_repo(&github_repo, &branch, &filename, rfd.content.as_bytes().to_vec()).await;
 
         event!(
