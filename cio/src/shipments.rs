@@ -6,6 +6,7 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
+use shippo::{Address, NewShipment, Parcel, Shippo};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_OUTBOUND_TABLE};
@@ -119,11 +120,14 @@ impl Shipment {
 
         // If the length of the row is greater than the country column
         // then we have a country.
-        let country = if row.len() > columns.country && columns.country != 0 {
+        let mut country = if row.len() > columns.country && columns.country != 0 {
             row[columns.country].trim().to_uppercase()
         } else {
             "US".to_string()
         };
+        if country.is_empty() {
+            country = "US".to_string();
+        }
 
         // If the length of the row is greater than the name column
         // then we have a name.
@@ -232,6 +236,68 @@ impl Shipment {
             },
             sent,
         )
+    }
+
+    /// Create or get a shipment in shippo that matches this shipment.
+    #[tracing::instrument]
+    #[inline]
+    pub async fn create_or_get_shippo_shipment(&mut self) {
+        let address_from = Address {
+            company: "Oxide Computer Company".to_string(),
+            name: "The Oxide Shipping Bot".to_string(),
+            street1: "1251 Park Avenue".to_string(),
+            city: "Emeryville".to_string(),
+            state: "CA".to_string(),
+            zip: "94608".to_string(),
+            country: "US".to_string(),
+            phone: "(510) 922-1392".to_string(),
+            email: "packages@oxide.computer".to_string(),
+            is_complete: Default::default(),
+            object_id: Default::default(),
+            test: Default::default(),
+            street2: Default::default(),
+        };
+        // TODO: check if we already have a shipment for this.
+        // Create the shippo client.
+        let shippo_client = Shippo::new_from_env();
+        // Create our shipment.
+        let shipment = shippo_client
+            .create_shipment(NewShipment {
+                address_from,
+                address_to: Address {
+                    name: self.name.to_string(),
+                    street1: self.street_1.to_string(),
+                    street2: self.street_2.to_string(),
+                    city: self.city.to_string(),
+                    state: self.state.to_string(),
+                    zip: self.zipcode.to_string(),
+                    country: self.country.to_string(),
+                    phone: self.phone.to_string(),
+                    email: self.email.to_string(),
+                    is_complete: Default::default(),
+                    object_id: Default::default(),
+                    test: Default::default(),
+                    company: Default::default(),
+                },
+                parcels: vec![Parcel {
+                    metadata: "Default parcel for swag".to_string(),
+                    length: "18.75".to_string(),
+                    width: "14.5".to_string(),
+                    height: "3".to_string(),
+                    distance_unit: "in".to_string(),
+                    weight: "1".to_string(),
+                    mass_unit: "lb".to_string(),
+                    object_id: Default::default(),
+                    object_owner: Default::default(),
+                    object_created: None,
+                    object_updated: None,
+                    object_state: Default::default(),
+                    test: Default::default(),
+                }],
+            })
+            .await
+            .unwrap();
+        println!("shippo {:?}", shipment);
     }
 
     /// Push the row to our Airtable workspace.
@@ -449,6 +515,8 @@ pub async fn refresh_airtable_shipments() {
     let shipments = get_google_sheets_shipments().await;
 
     for mut shipment in shipments {
+        // Create the shipment in shippo.
+        shipment.create_or_get_shippo_shipment().await;
         shipment.create_or_update_in_airtable().await;
     }
 }
