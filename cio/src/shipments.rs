@@ -526,9 +526,9 @@ pub async fn refresh_airtable_shipments() {
     let shipments = get_google_sheets_shipments().await;
 
     for mut shipment in shipments {
-        // Create the shipment in shippo.
-        shipment.create_or_get_shippo_shipment().await;
         shipment.create_or_update_in_airtable().await;
+        // Create the shipment in shippo.
+        //shipment.create_or_get_shippo_shipment().await;
     }
 }
 

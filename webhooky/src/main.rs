@@ -1042,7 +1042,7 @@ pub struct AirtableRowCreateEvent {
 }]
 #[instrument]
 #[inline]
-async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<ShippoTrackingUpdateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
     println!("shippo-tracking-update: {:?}", event);
