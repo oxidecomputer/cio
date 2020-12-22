@@ -81,7 +81,7 @@ impl Shippo {
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(path).unwrap();
 
-        let bt = format!("{} None", self.token);
+        let bt = format!("ShippoToken {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -139,7 +139,7 @@ impl Shippo {
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
-            StatusCode::OK => (),
+            StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
