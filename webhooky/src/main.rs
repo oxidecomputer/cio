@@ -946,7 +946,7 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
         }
 
         // Parse the shipment out of the row information.
-        let shipment = Shipment::parse_from_row(&event.event.named_values);
+        let mut shipment = Shipment::parse_from_row(&event.event.named_values);
         // Create or update the shipment in airtable.
         shipment.create_or_update_in_airtable().await;
 
