@@ -170,6 +170,89 @@ impl Shippo {
 
         Ok(resp.json().await.unwrap())
     }
+
+    /// Create a pickup.
+    /// FROM: https://goshippo.com/docs/reference#pickups-create
+    pub async fn create_pickup(&self, np: NewPickup) -> Result<Pickup, APIError> {
+        // Build the request.
+        let request = self.request(Method::POST, "pickups", np, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Create a shipping label based on a rate.
+    /// FROM: https://goshippo.com/docs/reference#transactions-create
+    pub async fn create_shipping_label_from_rate(&self, nt: NewTransaction) -> Result<Transaction, APIError> {
+        // Build the request.
+        let request = self.request(Method::POST, "transactions", nt, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Get a shipping label.
+    /// FROM: https://goshippo.com/docs/reference#transactions-retrieve
+    pub async fn get_shipping_label(&self, id: &str) -> Result<Transaction, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("transactions/{}", id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// List shiping labels.
+    /// FROM: https://goshippo.com/docs/reference#transactions-list
+    pub async fn list_shipping_labels(&self) -> Result<Vec<Transaction>, APIError> {
+        // Build the request.
+        // TODO: paginate.
+        let request = self.request(Method::GET, "transactions", (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: TransactionsAPIResponse = resp.json().await.unwrap();
+
+        Ok(r.transactions)
+    }
 }
 
 /// Error type returned by our library.
@@ -208,6 +291,18 @@ pub struct APIResponse {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
     pub shipments: Vec<Shipment>,
+}
+
+/// The data type for a transactions API response.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct TransactionsAPIResponse {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub next: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub previous: String,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
+    pub transactions: Vec<Transaction>,
 }
 
 /// The data type for a Shipment.
@@ -484,6 +579,193 @@ pub struct NewShipment {
     /// Parcel objects to be shipped.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub parcels: Vec<Parcel>,
+}
+
+/// The data type for a pickup.
+/// FROM: https://goshippo.com/docs/reference#pickups
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Pickup {
+    /// Unique identifier of the given Pickup object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_id: String,
+    /// Date and time of Pickup creation.
+    pub object_created: DateTime<Utc>,
+    /// Date and time of last Pickup update.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub object_updated: Option<DateTime<Utc>>,
+    /// The object ID of your USPS or DHL Express carrier account.
+    /// You can retrieve this from your Rate requests or our /carrier_accounts endpoint.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub carrier_account: String,
+    /// Location where the parcel(s) will be picked up.
+    #[serde(default)]
+    pub location: Location,
+    /// The transaction(s) object ID(s) for the parcel(s) that need to be picked up.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub transactions: Vec<String>,
+    /// The earliest that you requested your parcels to be ready for pickup.
+    /// Expressed in the timezone specified in the response.
+    pub requested_start_time: DateTime<Utc>,
+    /// The latest that you requested your parcels to be available for pickup.
+    /// Expressed in the timezone specified in the response.
+    pub requested_end_time: DateTime<Utc>,
+    /// The earliest that your parcels will be ready for pickup, confirmed by the carrier.
+    /// Expressed in the timezone specified in the response.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirmed_start_time: Option<DateTime<Utc>>,
+    /// The latest that your parcels will be available for pickup, confirmed by the carrier.
+    /// Expressed in the timezone specified in the response.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirmed_end_time: Option<DateTime<Utc>>,
+    /// The latest time to cancel a pickup.
+    /// Expressed in the timezone specified in the response.
+    /// To cancel a pickup, you will need to contact the carrier directly.
+    /// The ability to cancel a pickup through Shippo may be released in future iterations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cancel_by_time: Option<DateTime<Utc>>,
+    /// Indicates the status of the pickup.
+    /// "PENDING" | "CONFIRMED" | "ERROR" | "CANCELLED"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    /// Pickup's confirmation code returned by the carrier.
+    /// To edit or cancel a pickup, you will need to contact USPS or DHL Express directly
+    /// and provide your confirmation_code.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub confirmation_code: String,
+    /// The pickup time windows will be in the time zone specified here, not UTC.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub timezone: String,
+    /// An array containing strings of any messages generated during validation.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub messages: Vec<String>,
+    /// A string of up to 100 characters that can be filled with any additional
+    /// information you want to attach to the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metadata: String,
+    /// Indicates whether the object has been created in test mode.
+    #[serde(default)]
+    pub is_test: bool,
+}
+
+/// The location data type.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Location {
+    /// Where your parcels will be available for pickup.
+    /// "Security Deck" and "Shipping Dock" are only supported for DHL Express.
+    /// "Front Door" | "Back Door" | "Side Door" | "Knock on Door" | "Ring Bell" | "Mail Room"
+    /// "Office" | "Reception" | "In/At Mailbox" | "Security Deck" | "Shipping Dock" | "Other"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub building_location_type: String,
+    /// The type of building where the pickup is located.
+    /// "apartment" | "building" | "department" | "floor" | "room" | "suite"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub building_type: String,
+    /// Pickup instructions for the courier.
+    /// This is a mandatory field if the building_location_type is “Other”.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub instructions: String,
+    /// The pickup address, which includes your name, company name, street address,
+    /// city, state, zip code, country, phone number, and email address (strings).
+    /// Special characters should not be included in any address element, especially
+    /// name, company, and email.
+    #[serde(default)]
+    pub address: Address,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NewPickup {
+    pub carrier_account: String,
+    pub location: Location,
+    pub transactions: Vec<String>,
+    pub requested_start_time: DateTime<Utc>,
+    pub requested_end_time: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metadata: String,
+}
+
+/// The data type for a transaction.
+/// A transaction is the purchase of a shipping label from a shipping provider for a specific service.
+/// FROM: https://goshippo.com/docs/reference#transactions
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Transaction {
+    /// Unique identifier of the given Transaction object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_id: String,
+    /// Date and time of Transaction creation.
+    pub object_created: DateTime<Utc>,
+    /// Date and time of last Transaction update.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub object_updated: Option<DateTime<Utc>>,
+    /// Username of the user who created the Transaction object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_owner: String,
+    /// Indicates the status of the Transaction.
+    /// "WAITING" | "QUEUED" | "SUCCESS" | "ERROR" | "REFUNDED" | "REFUNDPENDING" | "REFUNDREJECTED"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    /// Indicates the validity of the Transaction object based on the given data,
+    /// regardless of what the corresponding carrier returns.
+    /// "VALID" | "INVALID"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_state: String,
+    /// ID of the Rate object for which a Label has to be obtained.
+    /// Please note that only rates that are not older than 7 days can be purchased
+    /// in order to ensure up-to-date pricing.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub rate: String,
+    /// A string of up to 100 characters that can be filled with any additional information you want to attach to the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metadata: String,
+    /// Specify the label file format for this label.
+    /// If you don't specify this value, the API will default to your default file format that you can set on the settings page.
+    /// "PNG" | "PNG_2.3x7.5" | "PDF" | "PDF_2.3x7.5" | "PDF_4x6" | "PDF_4x8" | "PDF_A4" | "PDF_A6"
+    /// "ZPLII"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label_file_type: String,
+    /// The carrier-specific tracking number that can be used to track the Shipment.
+    /// A value will only be returned if the Rate is for a trackable Shipment and if the Transactions has been processed successfully.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_number: String,
+    /// Indicates the high level status of the shipment: 'UNKNOWN', 'DELIVERED', 'TRANSIT', 'FAILURE', 'RETURNED'.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_status: String,
+    /// A link to track this item on the carrier-provided tracking website.
+    /// A value will only be returned if tracking is available and the carrier provides such a service.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_url_provider: String,
+    /// The estimated time of arrival according to the carrier.
+    pub eta: DateTime<Utc>,
+    /// A URL pointing directly to the label in the format you've set in your settings.
+    /// A value will only be returned if the Transactions has been processed successfully.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label_url: String,
+    /// A URL pointing to the commercial invoice as a 8.5x11 inch PDF file.
+    /// A value will only be returned if the Transactions has been processed successfully and if the shipment is international.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub commercial_invoice_url: String,
+    /// An array containing elements of the following schema:
+    /// - "code" (string): an identifier for the corresponding message (not always available")
+    /// - "message" (string): a publishable message containing further information.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub messages: Vec<String>,
+    /// A URL pointing directly to the QR code in PNG format.
+    /// A value will only be returned if requested using qr_code_requested flag and the carrier provides such an option.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub qr_code_url: String,
+    /// Indicates whether the object has been created in test mode.
+    #[serde(default)]
+    pub test: bool,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct NewTransaction {
+    pub rate: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metadata: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label_file_type: String,
+    #[serde(default)]
+    pub r#async: bool,
 }
 
 pub mod deserialize_null_string {
