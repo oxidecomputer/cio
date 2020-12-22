@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
@@ -8,6 +10,7 @@ use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_OUTBOUND_TABLE};
 use crate::core::UpdateAirtableRecord;
+use crate::models::get_value;
 use crate::utils::get_gsuite_token;
 
 /// The data type for a shippo shipment.
@@ -64,6 +67,45 @@ impl Shipment {
         // Parse the time.
         let time_str = timestamp.to_owned() + " -08:00";
         DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z").unwrap().with_timezone(&Utc)
+    }
+
+    /// Parse the sheet columns from single Google Sheets row values.
+    /// This is what we get back from the webhook.
+    #[instrument]
+    #[inline]
+    pub fn parse_from_row(values: &HashMap<String, Vec<String>>) -> Self {
+        let hoodie_size = get_value(values, "Hoodie Size");
+        let fleece_size = get_value(values, "Fleece Size");
+        let mut contents = String::new();
+        if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
+            contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
+        }
+        if !fleece_size.is_empty() && !fleece_size.contains("N/A") {
+            contents += &format!("1 x Oxide Fleece, Size: {}", fleece_size);
+        }
+        Shipment {
+            created_time: Shipment::parse_timestamp(&get_value(values, "Timestamp")),
+            name: get_value(values, "Name"),
+            email: get_value(values, "Email Address"),
+            phone: get_value(values, "Phone number"),
+            street_1: get_value(values, "Street address line 1"),
+            street_2: get_value(values, "Street address line 2"),
+            city: get_value(values, "City"),
+            state: get_value(values, "State"),
+            zipcode: get_value(values, "Zipcode"),
+            country: get_value(values, "Country"),
+            contents: contents.trim().to_string(),
+            carrier: Default::default(),
+            pickup_date: None,
+            received_time: None,
+            reprint_label: false,
+            schedule_pickup: false,
+            shipped_time: None,
+            shippo_id: Default::default(),
+            status: Default::default(),
+            tracking_link: Default::default(),
+            tracking_number: Default::default(),
+        }
     }
 
     /// Parse the shipment from a Google Sheets row, where we also happen to know the columns.

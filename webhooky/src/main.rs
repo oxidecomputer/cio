@@ -84,6 +84,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
+    api.register(listen_airtable_shipments_outgoing_create_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
@@ -936,7 +937,14 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
-        event!(Level::INFO, "event is not for an application spreadsheet: {:?}", event);
+        // Check if the event is for a swag spreadsheet.
+        if event.spreadsheet.id != "114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU" {
+            // Return early if not
+            event!(Level::INFO, "event is not for an application spreadsheet or a swag spreadsheet: {:?}", event);
+            return Ok(HttpResponseAccepted("ok".to_string()));
+        }
+
+        // Handle if the event is for a swag spreadsheet.
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -990,6 +998,32 @@ pub struct GoogleSpreadsheetRowCreateEvent {
     pub event: GoogleSpreadsheetEvent,
     #[serde(default)]
     pub spreadsheet: GoogleSpreadsheet,
+}
+
+/**
+ * Listen for rows created in our Google Sheets.
+ * These are set up with a Google Apps script on the sheets themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/shipments/outgoing/create",
+}]
+#[instrument]
+#[inline]
+async fn listen_airtable_shipments_outgoing_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    event!(Level::DEBUG, "{:?}", event);
+    println!("airtable-shipments-outgoing-create: {:?}", event);
+
+    //event!(Level::INFO, "shipment {} created successfully", a.email);
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// A Google Sheet row create event.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct AirtableRowCreateEvent {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub record_id: String,
 }
 
 /** Ping endpoint for MailChimp webhooks. */

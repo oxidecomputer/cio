@@ -2153,7 +2153,7 @@ fn truncate(s: &str, max_chars: usize) -> String {
 
 #[instrument]
 #[inline]
-fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
+pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
     let empty: Vec<String> = Default::default();
     let a = map.get(key).unwrap_or(&empty);
 
