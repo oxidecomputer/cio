@@ -78,7 +78,7 @@ impl Shipment {
         // If the length of the row is greater than the country column
         // then we have a country.
         let country = if row.len() > columns.country && columns.country != 0 {
-            row[columns.country].trim().to_lowercase()
+            row[columns.country].trim().to_uppercase()
         } else {
             "US".to_string()
         };
@@ -110,7 +110,7 @@ impl Shipment {
         // If the length of the row is greater than the state column
         // then we have a state.
         let state = if row.len() > columns.state && columns.state != 0 {
-            row[columns.state].trim().to_lowercase()
+            row[columns.state].trim().to_uppercase()
         } else {
             "".to_lowercase()
         };
@@ -118,7 +118,7 @@ impl Shipment {
         // If the length of the row is greater than the city column
         // then we have a city.
         let city = if row.len() > columns.city && columns.city != 0 {
-            row[columns.city].trim().to_lowercase()
+            row[columns.city].trim().to_uppercase()
         } else {
             "".to_lowercase()
         };
@@ -126,7 +126,7 @@ impl Shipment {
         // If the length of the row is greater than the street_1 column
         // then we have a street_1.
         let street_1 = if row.len() > columns.street_1 && columns.street_1 != 0 {
-            row[columns.street_1].trim().to_lowercase()
+            row[columns.street_1].trim().to_uppercase()
         } else {
             "".to_lowercase()
         };
@@ -134,7 +134,7 @@ impl Shipment {
         // If the length of the row is greater than the street_2 column
         // then we have a street_2.
         let street_2 = if row.len() > columns.street_2 && columns.street_2 != 0 {
-            row[columns.street_2].trim().to_lowercase()
+            row[columns.street_2].trim().to_uppercase()
         } else {
             "".to_lowercase()
         };
@@ -142,7 +142,7 @@ impl Shipment {
         // If the length of the row is greater than the hoodie_size column
         // then we have a hoodie_size.
         let hoodie_size = if row.len() > columns.hoodie_size && columns.hoodie_size != 0 {
-            row[columns.hoodie_size].trim().to_lowercase()
+            row[columns.hoodie_size].trim().to_uppercase()
         } else {
             "".to_lowercase()
         };
@@ -150,7 +150,7 @@ impl Shipment {
         // If the length of the row is greater than the fleece_size column
         // then we have a fleece_size.
         let fleece_size = if row.len() > columns.fleece_size && columns.fleece_size != 0 {
-            row[columns.fleece_size].trim().to_lowercase()
+            row[columns.fleece_size].trim().to_uppercase()
         } else {
             "".to_lowercase()
         };
