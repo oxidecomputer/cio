@@ -30,6 +30,7 @@ use cio_api::applicants::{email_send_new_applicant_notification, get_role_from_s
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
+use cio_api::shipments::Shipment;
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
 
@@ -832,7 +833,7 @@ async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_pa
         let value_in_tension_1 = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
         a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
-        // If this is a field we don't care about, return early.
+        // If this is a field wehipmentdon't care about, return early.
         event!(Level::INFO, "column updated was `{}`, no automations set up for that column yet", column_header);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -943,6 +944,11 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
             event!(Level::INFO, "event is not for an application spreadsheet or a swag spreadsheet: {:?}", event);
             return Ok(HttpResponseAccepted("ok".to_string()));
         }
+
+        // Parse the shipment out of the row information.
+        let shipment = Shipment::parse_from_row(&event.event.named_values);
+        // Create or update the shipment in airtable.
+        shipment.create_or_update_in_airtable().await;
 
         // Handle if the event is for a swag spreadsheet.
         return Ok(HttpResponseAccepted("ok".to_string()));
