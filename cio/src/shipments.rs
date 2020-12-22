@@ -213,6 +213,30 @@ impl Shipment {
             "".to_lowercase()
         };
 
+        // If the length of the row is greater than the womens_shirt_size column
+        // then we have a womens_shirt_size.
+        let womens_shirt_size = if row.len() > columns.womens_shirt_size && columns.womens_shirt_size != 0 {
+            row[columns.womens_shirt_size].trim().to_uppercase()
+        } else {
+            "".to_lowercase()
+        };
+
+        // If the length of the row is greater than the unisex_shirt_size column
+        // then we have a unisex_shirt_size.
+        let unisex_shirt_size = if row.len() > columns.unisex_shirt_size && columns.unisex_shirt_size != 0 {
+            row[columns.unisex_shirt_size].trim().to_uppercase()
+        } else {
+            "".to_lowercase()
+        };
+
+        // If the length of the row is greater than the kids_shirt_size column
+        // then we have a kids_shirt_size.
+        let kids_shirt_size = if row.len() > columns.kids_shirt_size && columns.kids_shirt_size != 0 {
+            row[columns.kids_shirt_size].trim().to_uppercase()
+        } else {
+            "".to_lowercase()
+        };
+
         let email = row[columns.email].trim().to_string();
         let mut contents = String::new();
         if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
@@ -220,6 +244,15 @@ impl Shipment {
         }
         if !fleece_size.is_empty() && !fleece_size.contains("N/A") {
             contents += &format!("1 x Oxide Fleece, Size: {}", fleece_size);
+        }
+        if !womens_shirt_size.is_empty() && !womens_shirt_size.contains("N/A") {
+            contents += &format!("1 x Oxide Women's Shirt, Size: {}", womens_shirt_size);
+        }
+        if !unisex_shirt_size.is_empty() && !unisex_shirt_size.contains("N/A") {
+            contents += &format!("1 x Oxide Unisex Shirt, Size: {}", unisex_shirt_size);
+        }
+        if !kids_shirt_size.is_empty() && !kids_shirt_size.contains("N/A") {
+            contents += &format!("1 x Oxide Kids Shirt, Size: {}", kids_shirt_size);
         }
 
         (
@@ -426,6 +459,9 @@ pub struct SwagSheetColumns {
     pub sent: usize,
     pub fleece_size: usize,
     pub hoodie_size: usize,
+    pub womens_shirt_size: usize,
+    pub unisex_shirt_size: usize,
+    pub kids_shirt_size: usize,
 }
 
 impl SwagSheetColumns {
@@ -452,11 +488,20 @@ impl SwagSheetColumns {
             if c.contains("email address") {
                 columns.email = index;
             }
-            if c.contains("fleece size") {
+            if c.contains("fleece") {
                 columns.fleece_size = index;
             }
-            if c.contains("hoodie size") {
+            if c.contains("hoodie") {
                 columns.hoodie_size = index;
+            }
+            if c.contains("women's tee") {
+                columns.womens_shirt_size = index;
+            }
+            if c.contains("unisex tee") {
+                columns.unisex_shirt_size = index;
+            }
+            if c.contains("onesie") {
+                columns.kids_shirt_size = index;
             }
             if c.contains("street address line 1") {
                 columns.street_1 = index;
@@ -497,7 +542,7 @@ pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
 
-    let swag_sheets = vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU"];
+    let swag_sheets = vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU", "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y"];
 
     // Iterate over the Google sheets and get the shipments.
     let mut shipments: Vec<Shipment> = Default::default();
