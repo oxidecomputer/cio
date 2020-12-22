@@ -377,7 +377,18 @@ impl Shipment {
 /// Implement updating the Airtable record for a Shipment.
 #[async_trait]
 impl UpdateAirtableRecord<Shipment> for Shipment {
-    async fn update_airtable_record(&mut self, _record: Shipment) {}
+    async fn update_airtable_record(&mut self, record: Shipment) {
+        self.status = record.status;
+        self.carrier = record.carrier;
+        self.tracking_number = record.tracking_number;
+        self.tracking_link = record.tracking_link;
+        self.reprint_label = record.reprint_label;
+        self.schedule_pickup = record.schedule_pickup;
+        self.pickup_date = record.pickup_date;
+        self.shipped_time = record.shipped_time;
+        self.received_time = record.received_time;
+        self.shippo_id = record.shippo_id;
+    }
 }
 
 /// The data type for a Google Sheet swag columns, we use this when
