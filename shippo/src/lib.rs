@@ -24,6 +24,7 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
+use std::collections::HashMap;
 use std::env;
 use std::error;
 use std::fmt;
@@ -253,6 +254,33 @@ impl Shippo {
 
         Ok(r.transactions)
     }
+
+    /// Register a tracking webhook.
+    /// You can register your webhook(s) for a Shipment (and request the current status at the same time)
+    /// by POSTing to the tracking endpoint. This way Shippo will send HTTP notifications to your
+    /// track_updated webhook(s) whenever the status changes.
+    /// FROM: https://goshippo.com/docs/reference#tracks-create
+    pub async fn register_a_tracking_webhook(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
+        let mut body: HashMap<&str, &str> = HashMap::new();
+        body.insert("tracking_number", tracking_number);
+        body.insert("carrier", carrier);
+
+        // Build the request
+        let request = self.request(Method::POST, "tracks", body, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
 }
 
 /// Error type returned by our library.
@@ -422,6 +450,11 @@ pub struct Address {
     /// Indicates whether the object has been created in test mode.
     #[serde(default)]
     pub test: bool,
+    /// object that contains information regarding if an address had been validated or not. Also
+    /// contains any messages generated during validation. Children keys are is_valid(boolean) and
+    /// messages(array).
+    #[serde(default)]
+    pub validation_results: ValidationResults,
 }
 
 /// The data type for a parcel.
@@ -637,7 +670,7 @@ pub struct Pickup {
     pub timezone: String,
     /// An array containing strings of any messages generated during validation.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub messages: Vec<String>,
+    pub messages: Vec<Message>,
     /// A string of up to 100 characters that can be filled with any additional
     /// information you want to attach to the object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -747,7 +780,7 @@ pub struct Transaction {
     /// - "code" (string): an identifier for the corresponding message (not always available")
     /// - "message" (string): a publishable message containing further information.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub messages: Vec<String>,
+    pub messages: Vec<Message>,
     /// A URL pointing directly to the QR code in PNG format.
     /// A value will only be returned if requested using qr_code_requested flag and the carrier provides such an option.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -766,6 +799,98 @@ pub struct NewTransaction {
     pub label_file_type: String,
     #[serde(default)]
     pub r#async: bool,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Message {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ValidationResults {
+    #[serde(default)]
+    pub is_valid: bool,
+    /// An array containing elements of the following schema:
+    /// - "code" (string): an identifier for the corresponding message (not always available")
+    /// - "message" (string): a publishable message containing further information.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub messages: Vec<Message>,
+}
+
+/// The data type for a tracking status.
+/// Tracking Status objects are used to track shipments.
+/// FROM: https://goshippo.com/docs/reference#tracks
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TrackingStatus {
+    /// Name of the carrier of the shipment to track.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub carrier: String,
+    /// Tracking number to track.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_number: String,
+    /// The sender address with city, state, zip and country information.
+    #[serde(default)]
+    pub address_from: Address,
+    #[serde(default)]
+    /// The recipient address with city, state, zip and country information.
+    pub address_to: Address,
+    /// The object_id of the transaction associated with this tracking object.
+    /// This field is visible only to the object owner of the transaction.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub transaction: String,
+    /// The estimated time of arrival according to the carrier, this might be
+    /// updated by carriers during the life of the shipment.
+    pub eta: DateTime<Utc>,
+    /// The estimated time of arrival according to the carrier at the time the
+    /// shipment first entered the system.
+    pub original_eta: DateTime<Utc>,
+    /// The service level of the shipment as token and full name.
+    #[serde(default)]
+    pub servicelevel: ServiceLevel,
+    /// The latest tracking information of this shipment.
+    pub tracking_status: Status,
+    /// A list of tracking events, following the same structure as `tracking_status`.
+    /// It contains a full history of all tracking statuses, starting with the earlier tracking event first.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tracking_history: Vec<Status>,
+    /// A string of up to 100 characters that can be filled with any additional information you
+    /// want to attach to the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metadata: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Status {
+    /// Indicates the high level status of the shipment.
+    /// 'UNKNOWN' | 'PRE_TRANSIT' | 'TRANSIT' | 'DELIVERED' | 'RETURNED' | 'FAILURE'
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    /// The human-readable description of the status.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status_details: String,
+    /// Date and time when the carrier scanned this tracking event.
+    /// This is displayed in UTC.
+    pub status_date: DateTime<Utc>,
+    /// An object containing zip, city, state and country information of the tracking event.
+    #[serde(default)]
+    pub location: TrackingLocation,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct TrackingLocation {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub zip: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub country: String,
 }
 
 pub mod deserialize_null_string {
