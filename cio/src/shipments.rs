@@ -330,7 +330,10 @@ impl Shipment {
             }
 
             // Register a tracking webhook for this shipment.
-            shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap();
+            shippo_client
+                .register_tracking_webhook(&self.carrier, &self.tracking_number)
+                .await
+                .unwrap_or_else(|e| println!("registering the tracking webhook failed: {:?}", e));
 
             // Return early.
             return;
@@ -472,7 +475,10 @@ impl Shipment {
                 }
 
                 // Register a tracking webhook for this shipment.
-                shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap();
+                shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap_or_else(|e| {
+                    println!("registering the tracking webhook failed: {:?}", e);
+                    Default::default()
+                });
 
                 break;
             }

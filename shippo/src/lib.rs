@@ -849,7 +849,7 @@ pub struct ValidationResults {
 /// The data type for a tracking status.
 /// Tracking Status objects are used to track shipments.
 /// FROM: https://goshippo.com/docs/reference#tracks
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TrackingStatus {
     /// Name of the carrier of the shipment to track.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -873,7 +873,8 @@ pub struct TrackingStatus {
     pub eta: Option<DateTime<Utc>>,
     /// The estimated time of arrival according to the carrier at the time the
     /// shipment first entered the system.
-    pub original_eta: DateTime<Utc>,
+    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    pub original_eta: Option<DateTime<Utc>>,
     /// The service level of the shipment as token and full name.
     #[serde(default)]
     pub servicelevel: ServiceLevel,
@@ -889,7 +890,7 @@ pub struct TrackingStatus {
     pub metadata: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Status {
     /// Indicates the high level status of the shipment.
     /// 'UNKNOWN' | 'PRE_TRANSIT' | 'TRANSIT' | 'DELIVERED' | 'RETURNED' | 'FAILURE'
@@ -900,7 +901,8 @@ pub struct Status {
     pub status_details: String,
     /// Date and time when the carrier scanned this tracking event.
     /// This is displayed in UTC.
-    pub status_date: DateTime<Utc>,
+    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    pub status_date: Option<DateTime<Utc>>,
     /// An object containing zip, city, state and country information of the tracking event.
     #[serde(default)]
     pub location: TrackingLocation,
