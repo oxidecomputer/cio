@@ -2669,6 +2669,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
+name = "printy"
+version = "0.1.0"
+dependencies = [
+ "dropshot",
+ "http",
+ "opentelemetry",
+ "opentelemetry-zipkin",
+ "reqwest",
+ "tokio",
+ "tracing",
+ "tracing-attributes",
+ "tracing-futures",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "proc-macro-hack"
 version = "0.5.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
