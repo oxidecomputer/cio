@@ -951,6 +951,10 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
         let mut shipment = Shipment::parse_from_row(&event.event.named_values);
         // Create or update the shipment in airtable.
         shipment.create_or_update_in_airtable().await;
+        // Create the shipment in shippo.
+        shipment.create_or_get_shippo_shipment().await;
+        // Update airtable again.
+        shipment.create_or_update_in_airtable().await;
 
         // Handle if the event is for a swag spreadsheet.
         return Ok(HttpResponseAccepted("ok".to_string()));
