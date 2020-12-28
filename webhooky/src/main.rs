@@ -1068,9 +1068,21 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // TODO: do something on certain fields.
+    // Get the row from airtable.
+    let mut shipment = Shipment::get_from_airtable(&event.record_id).await;
+    if shipment.reprint_label {
+        // Reprint the label.
+        shipment.print_label().await;
+        event!(Level::INFO, "shipment {} reprinted label", shipment.email);
 
-    //    event!(Level::INFO, "shipment {} updated successfully", shipment.email);
+        // Update the field.
+        shipment.reprint_label = false;
+        // Update airtable again.
+        shipment.create_or_update_in_airtable().await;
+    }
+
+    // TODO: schedule a pickup.
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
