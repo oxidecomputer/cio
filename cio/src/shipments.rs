@@ -560,6 +560,18 @@ impl Shipment {
         // The record does not exist. We need to create it.
         self.push_to_airtable().await;
     }
+
+    /// Get the row in our airtable workspace.
+    #[tracing::instrument]
+    #[inline]
+    pub async fn get_from_airtable(id: &str) -> Self {
+        // Initialize the Airtable client.
+        let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
+
+        let record: airtable_api::Record<Shipment> = airtable.get_record(AIRTABLE_OUTBOUND_TABLE, id).await.unwrap();
+
+        record.fields
+    }
 }
 
 /// Implement updating the Airtable record for a Shipment.
@@ -711,11 +723,9 @@ pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
 
-    let swag_sheets = vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU", "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y"];
-
     // Iterate over the Google sheets and get the shipments.
     let mut shipments: Vec<Shipment> = Default::default();
-    for sheet_id in swag_sheets {
+    for sheet_id in get_shipments_spreadsheets() {
         // Get the values in the sheet.
         let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string()).await.unwrap();
         let values = sheet_values.values.unwrap();
@@ -749,6 +759,13 @@ pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
     }
 
     shipments
+}
+
+// Get the sheadsheets that contain shipments.
+#[instrument]
+#[inline]
+pub fn get_shipments_spreadsheets() -> Vec<String> {
+    vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU".to_string(), "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y".to_string()]
 }
 
 // Sync the shipments with airtable.
