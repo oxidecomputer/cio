@@ -1077,6 +1077,7 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
 
         // Update the field.
         shipment.reprint_label = false;
+        shipment.status = "Label printed".to_string();
         // Update airtable again.
         shipment.create_or_update_in_airtable().await;
     }

@@ -503,6 +503,7 @@ impl Shipment {
 
                 // Print the label.
                 self.print_label().await;
+                self.status = "Label printed".to_string();
 
                 break;
             }
