@@ -10,7 +10,7 @@ use std::str::from_utf8;
 use std::sync::Arc;
 
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, RequestContext, TypedBody};
-use tracing::{event, instrument, span, Level};
+use tracing::{instrument, span, Level};
 use tracing_subscriber::prelude::*;
 use uuid::Uuid;
 
@@ -142,12 +142,12 @@ async fn listen_print_requests(_rqctx: Arc<RequestContext>, body_param: TypedBod
 fn get_rollo_printer() -> String {
     let output = Command::new("lpstat").args(&["-a"]).output().expect("failed to execute process");
     if !output.status.success() {
-        println!("[lpstat] stderr: {:?}\nstdout: {:?}", output.stderr, output.stdout);
+        println!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
         return "".to_string();
     }
 
     let os = from_utf8(&output.stdout).unwrap();
-    let printers = os.trim().split("\n");
+    let printers = os.trim().split('\n');
     for printer in printers {
         if printer.to_lowercase().contains("rollo") {
             let (p, _r) = printer.split_once(' ').unwrap();
@@ -160,6 +160,8 @@ fn get_rollo_printer() -> String {
 
 // Save URL contents to a temporary file.
 // Returns the filepath.
+#[instrument]
+#[inline]
 async fn save_url_to_file(url: String) -> String {
     println!("Getting contents of URL `{}` to print", url);
     let body = reqwest::get(&url).await.unwrap().bytes().await.unwrap();
@@ -182,9 +184,9 @@ fn print_file(printer: &str, file: &str) {
     println!("Sending file `{}` to printer `{}`", file, printer);
     let output = Command::new("lp").args(&["-d", printer, "-o", "media=4.00x6.00\"", file]).output().expect("failed to execute process");
     if !output.status.success() {
-        println!("[lpstat] stderr: {}\nstdout: {}", output.stderr, output.stdout);
+        println!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
         return;
     }
 
-    println!("Printing: {}", output.stdout);
+    println!("Printing: {}", from_utf8(&output.stdout).unwrap());
 }
