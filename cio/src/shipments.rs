@@ -6,7 +6,7 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
-use shippo::{Address, NewShipment, Parcel, Shippo};
+use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_OUTBOUND_TABLE};
@@ -67,6 +67,8 @@ pub struct Shipment {
     pub eta: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub shippo_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub messages: String,
 }
 
 impl Shipment {
@@ -130,6 +132,7 @@ impl Shipment {
             cost: Default::default(),
             label_link: Default::default(),
             eta: None,
+            messages: Default::default(),
         }
     }
 
@@ -294,6 +297,7 @@ impl Shipment {
                 cost: Default::default(),
                 label_link: Default::default(),
                 eta: None,
+                messages: Default::default(),
             },
             sent,
         )
@@ -303,6 +307,37 @@ impl Shipment {
     #[tracing::instrument]
     #[inline]
     pub async fn create_or_get_shippo_shipment(&mut self) {
+        // Create the shippo client.
+        let shippo_client = Shippo::new_from_env();
+
+        // If we already have a shippo id, get the information for the label.
+        if !self.shippo_id.is_empty() {
+            let label = shippo_client.get_shipping_label(&self.shippo_id).await.unwrap();
+
+            // Set the additional fields.
+            self.tracking_number = label.tracking_number;
+            self.tracking_link = label.tracking_url_provider;
+            self.tracking_status = label.tracking_status;
+            self.label_link = label.label_url;
+            self.eta = label.eta;
+            self.shippo_id = label.object_id;
+            // TODO: make a better status.
+            self.status = "Label created".to_string();
+            if label.status != "SUCCESS" {
+                // Print the messages in the messages field.
+                // TODO: make the way it prints more pretty.
+                self.messages = format!("{:?}", label.messages);
+            }
+
+            // Register a tracking webhook for this shipment.
+            shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap();
+
+            // Return early.
+            return;
+        }
+
+        // We need to create the label since we don't have one already.
+        let office_phone = "(510) 922-1392".to_string();
         let address_from = Address {
             company: "Oxide Computer Company".to_string(),
             name: "The Oxide Shipping Bot".to_string(),
@@ -311,7 +346,7 @@ impl Shipment {
             state: "CA".to_string(),
             zip: "94608".to_string(),
             country: "US".to_string(),
-            phone: "(510) 922-1392".to_string(),
+            phone: office_phone.to_string(),
             email: "packages@oxide.computer".to_string(),
             is_complete: Default::default(),
             object_id: Default::default(),
@@ -319,9 +354,50 @@ impl Shipment {
             street2: Default::default(),
             validation_results: Default::default(),
         };
-        // TODO: check if we already have a shipment for this.
-        // Create the shippo client.
-        let shippo_client = Shippo::new_from_env();
+
+        // If this is an international shipment, we need to define our customs
+        // declarations.
+        let mut cd: Option<CustomsDeclaration> = None;
+        if self.country != "US" {
+            let mut cd_inner: CustomsDeclaration = Default::default();
+            // Create customs items for each item in our order.
+            for line in self.contents.lines() {
+                let mut ci: CustomsItem = Default::default();
+                ci.description = line.to_string();
+                let (prefix, _suffix) = line.split_once(" x ").unwrap();
+                // TODO: this will break if more than 9, fix for the future.
+                ci.quantity = prefix.parse().unwrap();
+                ci.net_weight = "0.25".to_string();
+                ci.mass_unit = "lb".to_string();
+                ci.value_amount = "100.00".to_string();
+                ci.value_currency = "USD".to_string();
+                ci.origin_country = "US".to_string();
+                let c = shippo_client.create_customs_item(ci).await.unwrap();
+
+                // Add the item to our array of items.
+                cd_inner.items.push(c.object_id);
+            }
+
+            // Fill out the rest of the customs declaration fields.
+            // TODO: make this modifiable.
+            cd_inner.certify_signer = "Jess Frazelle".to_string();
+            cd_inner.certify = true;
+            cd_inner.non_delivery_option = "RETURN".to_string();
+            cd_inner.contents_type = "GIFT".to_string();
+            cd_inner.contents_explanation = self.contents.to_string();
+            // TODO: I think this needs to change for Canada.
+            cd_inner.eel_pfc = "NOEEI_30_37_a".to_string();
+
+            // Set the customs declarations.
+            cd = Some(cd_inner);
+        }
+
+        // We need a phone number for the shipment.
+        if self.phone.is_empty() {
+            // Use the Oxide office line.
+            self.phone = office_phone;
+        }
+
         // Create our shipment.
         let shipment = shippo_client
             .create_shipment(NewShipment {
@@ -357,10 +433,53 @@ impl Shipment {
                     object_state: Default::default(),
                     test: Default::default(),
                 }],
+                customs_declaration: cd,
             })
             .await
             .unwrap();
-        println!("shippo {:?}", shipment);
+
+        // Now we can create our label from the available rates.
+        // Try to find the rate that is "BESTVALUE" or "CHEAPEST".
+        for rate in shipment.rates {
+            if rate.attributes.contains(&"BESTVALUE".to_string()) || rate.attributes.contains(&"CHEAPEST".to_string()) {
+                // Use this rate.
+                // Create the shipping label.
+                let label = shippo_client
+                    .create_shipping_label_from_rate(NewTransaction {
+                        rate: rate.object_id,
+                        r#async: false,
+                        label_file_type: "".to_string(),
+                        metadata: "".to_string(),
+                    })
+                    .await
+                    .unwrap();
+
+                // Set the additional fields.
+                self.carrier = rate.provider;
+                self.cost = rate.amount_local.parse().unwrap();
+                self.tracking_number = label.tracking_number.to_string();
+                self.tracking_link = label.tracking_url_provider.to_string();
+                self.tracking_status = label.tracking_status.to_string();
+                self.label_link = label.label_url.to_string();
+                self.eta = label.eta;
+                self.shippo_id = label.object_id.to_string();
+                self.status = "Label created".to_string();
+                if label.status != "SUCCESS" {
+                    self.status = label.status.to_string();
+                    // Print the messages in the messages field.
+                    // TODO: make the way it prints more pretty.
+                    self.messages = format!("{:?}", label.messages);
+                }
+
+                // Register a tracking webhook for this shipment.
+                shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap();
+
+                break;
+            }
+        }
+
+        // TODO: do something if we don't find a rate.
+        // However we should always find a rate.
     }
 
     /// Push the row to our Airtable workspace.
@@ -441,16 +560,48 @@ impl Shipment {
 #[async_trait]
 impl UpdateAirtableRecord<Shipment> for Shipment {
     async fn update_airtable_record(&mut self, record: Shipment) {
-        self.status = record.status;
-        self.carrier = record.carrier;
-        self.tracking_number = record.tracking_number;
-        self.tracking_link = record.tracking_link;
-        self.reprint_label = record.reprint_label;
-        self.schedule_pickup = record.schedule_pickup;
-        self.pickup_date = record.pickup_date;
-        self.shipped_time = record.shipped_time;
-        self.received_time = record.received_time;
-        self.shippo_id = record.shippo_id;
+        if self.status.is_empty() {
+            self.status = record.status;
+        }
+        if self.carrier.is_empty() {
+            self.carrier = record.carrier;
+        }
+        if self.tracking_number.is_empty() {
+            self.tracking_number = record.tracking_number;
+        }
+        if self.tracking_link.is_empty() {
+            self.tracking_link = record.tracking_link;
+        }
+        if self.tracking_status.is_empty() {
+            self.tracking_status = record.tracking_status;
+        }
+        if self.label_link.is_empty() {
+            self.label_link = record.label_link;
+        }
+        if !self.reprint_label {
+            self.reprint_label = record.reprint_label;
+        }
+        if !self.schedule_pickup {
+            self.schedule_pickup = record.schedule_pickup;
+        }
+        if self.pickup_date.is_none() {
+            self.pickup_date = record.pickup_date;
+        }
+        if self.shipped_time.is_none() {
+            self.shipped_time = record.shipped_time;
+        }
+        if self.received_time.is_none() {
+            self.received_time = record.received_time;
+        }
+        if self.shippo_id.is_empty() {
+            self.shippo_id = record.shippo_id;
+        }
+        if self.eta.is_none() {
+            self.eta = record.eta;
+        }
+        if self.cost == 0.0 {
+            self.cost = record.cost;
+        }
     }
 }
 
@@ -603,7 +754,9 @@ pub async fn refresh_airtable_shipments() {
     for mut shipment in shipments {
         shipment.create_or_update_in_airtable().await;
         // Create the shipment in shippo.
-        //shipment.create_or_get_shippo_shipment().await;
+        shipment.create_or_get_shippo_shipment().await;
+        // Update airtable again.
+        shipment.create_or_update_in_airtable().await;
     }
 }
 

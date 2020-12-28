@@ -192,6 +192,26 @@ impl Shippo {
         Ok(resp.json().await.unwrap())
     }
 
+    /// Create a customs item.
+    /// FROM: https://goshippo.com/docs/reference#customs-items-create
+    pub async fn create_customs_item(&self, c: CustomsItem) -> Result<CustomsItem, APIError> {
+        // Build the request.
+        let request = self.request(Method::POST, "customs/items/", c, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
     /// Create a shipping label based on a rate.
     /// FROM: https://goshippo.com/docs/reference#transactions-create
     pub async fn create_shipping_label_from_rate(&self, nt: NewTransaction) -> Result<Transaction, APIError> {
@@ -260,7 +280,7 @@ impl Shippo {
     /// by POSTing to the tracking endpoint. This way Shippo will send HTTP notifications to your
     /// track_updated webhook(s) whenever the status changes.
     /// FROM: https://goshippo.com/docs/reference#tracks-create
-    pub async fn register_a_tracking_webhook(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
+    pub async fn register_tracking_webhook(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
         let mut body: HashMap<&str, &str> = HashMap::new();
         body.insert("tracking_number", tracking_number);
         body.insert("carrier", carrier);
@@ -374,8 +394,8 @@ pub struct Shipment {
     /// require this value to be in the future, on a working day, or similar.
     pub shipment_date: DateTime<Utc>,
     /// Customs Declarations object for an international shipment.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub customs_declaration: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customs_declaration: Option<CustomsDeclaration>,
     /// A string of up to 100 characters that can be filled with any additional
     /// information you want to attach to the object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -568,8 +588,8 @@ pub struct Rate {
     /// servicelevel. Please note that this is not binding, but only an average
     /// value as given by the provider. Shippo is not able to guarantee any
     /// transit times.
-    #[serde(default)]
-    pub estimated_days: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub estimated_days: Option<i64>,
     /// Further clarification of the transit times.
     /// Often, this includes notes that the transit time as given in "days"
     /// is only an average, not a guaranteed time.
@@ -612,6 +632,9 @@ pub struct NewShipment {
     /// Parcel objects to be shipped.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub parcels: Vec<Parcel>,
+    /// Customs Declarations object for an international shipment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customs_declaration: Option<CustomsDeclaration>,
 }
 
 /// The data type for a pickup.
@@ -767,14 +790,15 @@ pub struct Transaction {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_url_provider: String,
     /// The estimated time of arrival according to the carrier.
-    pub eta: DateTime<Utc>,
+    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    pub eta: Option<DateTime<Utc>>,
     /// A URL pointing directly to the label in the format you've set in your settings.
     /// A value will only be returned if the Transactions has been processed successfully.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub label_url: String,
     /// A URL pointing to the commercial invoice as a 8.5x11 inch PDF file.
     /// A value will only be returned if the Transactions has been processed successfully and if the shipment is international.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub commercial_invoice_url: String,
     /// An array containing elements of the following schema:
     /// - "code" (string): an identifier for the corresponding message (not always available")
@@ -783,7 +807,7 @@ pub struct Transaction {
     pub messages: Vec<Message>,
     /// A URL pointing directly to the QR code in PNG format.
     /// A value will only be returned if requested using qr_code_requested flag and the carrier provides such an option.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub qr_code_url: String,
     /// Indicates whether the object has been created in test mode.
     #[serde(default)]
@@ -845,7 +869,8 @@ pub struct TrackingStatus {
     pub transaction: String,
     /// The estimated time of arrival according to the carrier, this might be
     /// updated by carriers during the life of the shipment.
-    pub eta: DateTime<Utc>,
+    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    pub eta: Option<DateTime<Utc>>,
     /// The estimated time of arrival according to the carrier at the time the
     /// shipment first entered the system.
     pub original_eta: DateTime<Utc>,
@@ -893,6 +918,144 @@ pub struct TrackingLocation {
     pub country: String,
 }
 
+/// A customs declaration object.
+/// Customs declarations are relevant information, including one or multiple
+/// customs items, you need to provide for customs clearance for your international shipments.
+/// FROM: https://goshippo.com/docs/reference#customs-declarations
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct CustomsDeclaration {
+    /// Unique identifier of the given object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_id: String,
+    /// Username of the user who created the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_owner: String,
+    /// Indicates the validity of the Customs Item.
+    /// "VALID" | "INVALID"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_state: String,
+    /// Exporter reference of an export shipment.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub exporter_reference: String,
+    /// Importer reference of an import shipment.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub importer_reference: String,
+    /// Type of goods of the shipment.
+    /// 'DOCUMENTS' | 'GIFT' | 'SAMPLE' | 'MERCHANDISE' | 'HUMANITARIAN_DONATION'
+    /// 'RETURN_MERCHANDISE' | 'OTHER'
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub contents_type: String,
+    /// Explanation of the type of goods of the shipment.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub contents_explanation: String,
+    /// Invoice reference of the shipment.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub invoice: String,
+    /// License reference of the shipment.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub license: String,
+    /// Certificate reference of the shipment.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub certificate: String,
+    /// Additional notes to be included in the customs declaration.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+    /// EEL / PFC type of the shipment. For most shipments from the US to CA, 'NOEEI_30_36' is applicable; for most other shipments from the US, 'NOEEI_30_37_a' is applicable.
+    /// 'NOEEI_30_37_a' | 'NOEEI_30_37_h' | 'NOEEI_30_37_f' | 'NOEEI_30_36' | 'AES_ITN'
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub eel_pfc: String,
+    /// AES / ITN reference of the shipment.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub aes_itn: String,
+    /// Indicates how the carrier should proceed in case the shipment can't be delivered.
+    /// 'ABANDON' | 'RETURN'
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub non_delivery_option: String,
+    /// Expresses that the certify_signer has provided all information of this customs declaration truthfully.
+    #[serde(default)]
+    pub certify: bool,
+    /// Name of the person who created the customs declaration and is responsible for the validity of all information provided.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub certify_signer: String,
+    /// Disclaimer for the shipment and customs information that have been provided.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub disclaimer: String,
+    /// The incoterm reference of the shipment. FCA available for DHL Express and FedEx only.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub incoterm: String,
+    /// B13A Option details are obtained by filing a B13A Canada Export Declaration via the Canadian Export Reporting System (CERS).
+    /// 'FILED_ELECTRONICALLY' | SUMMARY_REPORTING' | 'NOT_REQUIRED'
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub b13a_filing_option: String,
+    /// Represents: the Proof of Report (POR) Number when b13a_filing_option is FILED_ELECTRONICALLY;
+    /// the Summary ID Number when b13a_filing_option is SUMMARY_REPORTING;
+    /// or the Exemption Number when b13a_filing_option is NOT_REQUIRED.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub b13a_number: String,
+    /// Distinct Parcel content items as Customs Items object_ids.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<String>,
+    /// A string of up to 100 characters that can be filled with any additional information you want to attach to the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metadata: String,
+    /// Indicates whether the object has been created in test mode.
+    #[serde(default)]
+    pub test: bool,
+}
+
+/// A customs item object.
+/// Customs items are distinct items in your international shipment parcel.
+/// FROM: https://goshippo.com/docs/reference#customs-items
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct CustomsItem {
+    /// Unique identifier of the given object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_id: String,
+    /// Username of the user who created the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_owner: String,
+    /// Indicates the validity of the Customs Item.
+    /// "VALID" | "INVALID"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_state: String,
+    /// Text description of your item.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    /// Quantity of this item in the shipment you send. Must be greater than 0.
+    #[serde(default)]
+    pub quantity: i64,
+    /// Total weight of this item, i.e. quantity * weight per item.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub net_weight: String,
+    /// The unit used for net_weight.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub mass_unit: String,
+    /// Total value of this item, i.e. quantity * value per item.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value_amount: String,
+    /// Currency used for value_amount. The official ISO 4217 currency codes are used, e.g. "USD" or "EUR".
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value_currency: String,
+    /// Country of origin of the item. Example: 'US' or 'DE'. All accepted values can be found on the Official ISO Website.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub origin_country: String,
+    /// The tariff number of the item.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tariff_number: String,
+    /// SKU code of the item, which is required by some carriers.
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub sku_code: String,
+    /// Export Control Classification Number, required on some exports from the United States.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub eccn_ear99: String,
+    /// A string of up to 100 characters that can be filled with any additional information you want to attach to the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metadata: String,
+    /// Indicates whether the object has been created in test mode.
+    #[serde(default)]
+    pub test: bool,
+}
+
 pub mod deserialize_null_string {
     use serde::{self, Deserialize, Deserializer};
 
@@ -910,5 +1073,29 @@ pub mod deserialize_null_string {
         let s = String::deserialize(deserializer).unwrap_or_default();
 
         Ok(s)
+    }
+}
+
+pub mod null_date_format {
+    use chrono::{DateTime, TimeZone, Utc};
+    use serde::{self, Deserialize, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap_or_else(|_| "".to_string());
+        if s.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Utc.datetime_from_str(&s, "%+").unwrap()))
     }
 }
