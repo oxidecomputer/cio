@@ -86,6 +86,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
     api.register(listen_airtable_shipments_outgoing_create_webhooks).unwrap();
+    api.register(listen_airtable_shipments_outgoing_edit_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
@@ -1009,8 +1010,8 @@ pub struct GoogleSpreadsheetRowCreateEvent {
 }
 
 /**
- * Listen for rows created in our Google Sheets.
- * These are set up with a Google Apps script on the sheets themselves.
+ * Listen for rows created in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
  */
 #[endpoint {
     method = POST,
@@ -1018,7 +1019,7 @@ pub struct GoogleSpreadsheetRowCreateEvent {
 }]
 #[instrument]
 #[inline]
-async fn listen_airtable_shipments_outgoing_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outgoing_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
     println!("airtable-shipments-outgoing-create: {:?}", event);
@@ -1040,11 +1041,37 @@ async fn listen_airtable_shipments_outgoing_create_webhooks(_rqctx: Arc<RequestC
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
-/// An Airtable row create event.
+/// An Airtable row event.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
-pub struct AirtableRowCreateEvent {
+pub struct AirtableRowEvent {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub record_id: String,
+}
+
+/**
+ * Listen for rows edited in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/shipments/outgoing/edit",
+}]
+#[instrument]
+#[inline]
+async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    event!(Level::DEBUG, "{:?}", event);
+    println!("airtable-shipments-outgoing-edit: {:?}", event);
+
+    if event.record_id.is_empty() {
+        event!(Level::WARN, "Record id is empty");
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // TODO: do something on certain fields.
+
+    //    event!(Level::INFO, "shipment {} updated successfully", shipment.email);
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**
