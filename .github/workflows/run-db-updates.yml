@@ -86,3 +86,4 @@ jobs:
           MAILCHIMP_LIST_ID: ${{ secrets.MAILCHIMP_LIST_ID }}
           MAILCHIMP_API_KEY: ${{ secrets.MAILCHIMP_API_KEY }}
           SHIPPO_API_TOKEN: ${{ secrets.SHIPPO_API_TOKEN }}
+          PRINTER_URL: ${{ secrets.PRINTER_URL }}

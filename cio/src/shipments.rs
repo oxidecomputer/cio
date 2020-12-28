@@ -501,8 +501,8 @@ impl Shipment {
                     Default::default()
                 });
 
-                // TODO: Print the label.
-                // self.print_label().await;
+                // Print the label.
+                self.print_label().await;
 
                 break;
             }
