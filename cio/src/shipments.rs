@@ -349,7 +349,7 @@ impl Shipment {
             }
             if status.tracking_status.status == *"Failure" {
                 self.status = "Failure".to_string();
-                self.messages = status.tracking_status.status_details.to_string();
+                self.messages = status.tracking_status.status_details;
             }
 
             // Return early.
