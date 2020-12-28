@@ -62,7 +62,7 @@ pub struct Shipment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shipped_time: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub received_time: Option<DateTime<Utc>>,
+    pub delivered_time: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub eta: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -120,7 +120,7 @@ impl Shipment {
             contents: contents.trim().to_string(),
             carrier: Default::default(),
             pickup_date: None,
-            received_time: None,
+            delivered_time: None,
             reprint_label: false,
             schedule_pickup: false,
             shipped_time: None,
@@ -285,7 +285,7 @@ impl Shipment {
                 contents: contents.trim().to_string(),
                 carrier: Default::default(),
                 pickup_date: None,
-                received_time: None,
+                delivered_time: None,
                 reprint_label: false,
                 schedule_pickup: false,
                 shipped_time: None,
@@ -321,8 +321,6 @@ impl Shipment {
             self.label_link = label.label_url;
             self.eta = label.eta;
             self.shippo_id = label.object_id;
-            // TODO: make a better status.
-            self.status = "Label created".to_string();
             if label.status != "SUCCESS" {
                 // Print the messages in the messages field.
                 // TODO: make the way it prints more pretty.
@@ -330,10 +328,29 @@ impl Shipment {
             }
 
             // Register a tracking webhook for this shipment.
-            shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap_or_else(|e| {
+            let status = shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap_or_else(|e| {
                 println!("registering the tracking webhook failed: {:?}", e);
                 Default::default()
             });
+
+            // Get the status of the shipment.
+            if status.tracking_status.status == *"TRANSIT" {
+                self.status = "Shipped".to_string();
+                // TODO: get the first date it was maked as in transit and use that as the shipped
+                // time.
+            }
+            if status.tracking_status.status == *"DELIVERED" {
+                self.status = "Delivered".to_string();
+                self.delivered_time = status.tracking_status.status_date;
+            }
+            if status.tracking_status.status == *"RETURNED" {
+                self.status = "Returned".to_string();
+                self.messages = status.tracking_status.status_details.to_string();
+            }
+            if status.tracking_status.status == *"Failure" {
+                self.status = "Failure".to_string();
+                self.messages = status.tracking_status.status_details.to_string();
+            }
 
             // Return early.
             return;
@@ -608,8 +625,8 @@ impl UpdateAirtableRecord<Shipment> for Shipment {
         if self.shipped_time.is_none() {
             self.shipped_time = record.shipped_time;
         }
-        if self.received_time.is_none() {
-            self.received_time = record.received_time;
+        if self.delivered_time.is_none() {
+            self.delivered_time = record.delivered_time;
         }
         if self.shippo_id.is_empty() {
             self.shippo_id = record.shippo_id;
