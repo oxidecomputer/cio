@@ -333,6 +333,10 @@ impl Shipment {
                 Default::default()
             });
 
+            if self.messages.is_empty() {
+                self.messages = status.tracking_status.status_details;
+            }
+
             // Get the status of the shipment.
             if status.tracking_status.status == *"TRANSIT" {
                 self.status = "Shipped".to_string();
@@ -345,11 +349,9 @@ impl Shipment {
             }
             if status.tracking_status.status == *"RETURNED" {
                 self.status = "Returned".to_string();
-                self.messages = status.tracking_status.status_details.to_string();
             }
             if status.tracking_status.status == *"Failure" {
                 self.status = "Failure".to_string();
-                self.messages = status.tracking_status.status_details;
             }
 
             // Return early.
