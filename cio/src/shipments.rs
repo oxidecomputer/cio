@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+use std::env;
 
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
@@ -350,7 +352,7 @@ impl Shipment {
             if status.tracking_status.status == *"RETURNED" {
                 self.status = "Returned".to_string();
             }
-            if status.tracking_status.status == *"Failure" {
+            if status.tracking_status.status == *"FAILURE" {
                 self.status = "Failure".to_string();
             }
 
@@ -499,12 +501,30 @@ impl Shipment {
                     Default::default()
                 });
 
+                // TODO: Print the label.
+                // self.print_label().await;
+
                 break;
             }
         }
 
         // TODO: do something if we don't find a rate.
         // However we should always find a rate.
+    }
+
+    /// Send the label to our printer.
+    #[tracing::instrument]
+    #[inline]
+    pub async fn print_label(&self) {
+        let printer_url = env::var("PRINTER_URL").unwrap();
+        let client = reqwest::Client::new();
+        let resp = client.post(&printer_url).body(json!(self.label_link).to_string()).send().await.unwrap();
+        match resp.status() {
+            StatusCode::ACCEPTED => (),
+            s => {
+                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
+            }
+        };
     }
 
     /// Push the row to our Airtable workspace.
