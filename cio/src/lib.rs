@@ -16,7 +16,9 @@ pub mod models;
 pub mod rfds;
 pub mod schema;
 pub mod shipments;
+pub mod shorturls;
 pub mod slack;
+pub mod templates;
 pub mod utils;
 
 #[macro_use]

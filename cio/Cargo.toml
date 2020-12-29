@@ -28,6 +28,7 @@ futures-util = "0.3"
 google-drive = "^0.1.0"
 gusto-api = "^0.1.1"
 #gusto-api = { path = "../gusto" }
+handlebars = "3"
 html2text = "0.1"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
