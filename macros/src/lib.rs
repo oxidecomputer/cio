@@ -190,7 +190,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // since they don't exist in our vector.
                 for (_, record) in records {
                     // Delete the record from airtable.
-                    airtable.delete_record(#table, record.id).await;
+                    airtable.delete_record(#table, &record.id).await;
                 }
             }
         }
@@ -384,6 +384,13 @@ mod tests {
             #[tracing::instrument(skip(self))]
             #[inline]
             pub async fn update_airtable(&self) {
+                // Initialize the Airtable client.
+                let airtable = airtable_api::Airtable::new(
+                    airtable_api::api_key_from_env(),
+                    AIRTABLE_BASE_ID_CUSTOMER_LEADS,
+                    "",
+                );
+
                 let records = DuplicatedItems::get_from_airtable().await;
 
                 for mut vec_record in self.0.clone() {
@@ -391,6 +398,9 @@ mod tests {
                     match records.get(&vec_record.id) {
                         Some(r) => {
                             vec_record.update_in_airtable(&mut r.clone()).await;
+
+                            // Remove it from the map.
+                            records.remove(&vec_record.id);
                         }
                         None => {
                             // We do not have the record in Airtable, let's create it.
@@ -400,8 +410,18 @@ mod tests {
                                 "[airtable] id={} created in Airtable",
                                 vec_record.id
                             );
+
+                            // Remove it from the map.
+                            records.remove(&vec_record.id);
                         }
                     }
+                }
+
+                // Iterate over the records remaining and remove them from airtable
+                // since they don't exist in our vector.
+                for (_, record) in records {
+                    // Delete the record from airtable.
+                    airtable.delete_record(AIRTABLE_RFD_TABLE, &record.id).await;
                 }
             }
         }

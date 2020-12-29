@@ -216,7 +216,7 @@ impl Airtable {
     }
 
     /// Delete record from a table.
-    pub async fn delete_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<(), APIError> {
+    pub async fn delete_record(&self, table: &str, record_id: &str) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(Method::DELETE, table.to_string(), (), Some(vec![("records[]", record_id.to_string())]));
 
