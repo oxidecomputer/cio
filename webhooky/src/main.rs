@@ -31,6 +31,7 @@ use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
+use cio_api::shorturls::generate_shorturls_for_rfds;
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
 
@@ -547,22 +548,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            // TODO: fix this.
-            // TODO: see if we can make this faster by doing something better than
-            // dispatching the workflow.
-            api_context
-                .github
-                .repo(github_org(), "configs")
-                .actions()
-                .workflows()
-                .dispatch(
-                    "run-shorturls",
-                    &hubcaps::workflows::WorkflowDispatchOptions::builder().reference(repo.default_branch.to_string()).build(),
-                )
-                .await
-                .unwrap_or_else(|e| {
-                    event!(Level::WARN, "could not triggger workflow for RFD {}: {}", new_rfd.number_string, e);
-                });
+            generate_shorturls_for_rfds(&api_context.github.repo(github_org(), "configs")).await;
 
             // Update airtable with the new RFD.
             let mut airtable_rfd = rfd.clone();
