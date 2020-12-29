@@ -26,7 +26,7 @@ use sheets::Sheets;
 use tracing::{event, instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
-use cio_api::applicants::{email_send_new_applicant_notification, get_role_from_sheet_id};
+use cio_api::applicants::get_role_from_sheet_id;
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
@@ -973,15 +973,13 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
         .await;
 
     if !applicant.sent_email_received {
-        event!(Level::INFO, "applicant is new, sending emails: {:?}", applicant);
+        event!(Level::INFO, "applicant is new, sending internal notifications: {:?}", applicant);
 
         // Post to Slack.
         post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
-        // Initialize the SendGrid client.
-        let sendgrid_client = sendgrid_api::SendGrid::new_from_env();
         // Send a company-wide email.
-        email_send_new_applicant_notification(&sendgrid_client, applicant.clone()).await;
+        applicant.send_email_internally().await;
     }
 
     // TODO: share the database connection in the context.

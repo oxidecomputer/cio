@@ -586,7 +586,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#40785f8fb6e16f8e12a40159e78b4b34b7552d38"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7724a90d149da307b1ee07ef99d2b849fe572bae"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1992,7 +1992,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#40785f8fb6e16f8e12a40159e78b4b34b7552d38"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7724a90d149da307b1ee07ef99d2b849fe572bae"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4360,7 +4360,6 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-zipkin",
  "schemars",
- "sendgrid-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
