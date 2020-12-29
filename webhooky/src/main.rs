@@ -33,7 +33,7 @@ use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
-use cio_api::shorturls::generate_shorturls_for_rfds;
+use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
 
@@ -206,6 +206,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     let event_type = EventType::from_str(&event_type_string).unwrap();
 
     // Save all events to influxdb.
+    // Filter by event type any actions we can rule out for all repos.
     match event_type {
         EventType::Push => {
             event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
@@ -215,7 +216,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             if event.commits.is_empty() {
                 // `push` event has no commits.
                 // We can throw this out, log it and return early.
-                event!(Level::INFO, "`push` event has no commits");
+                event!(Level::INFO, "`push` event has no commits: {:?}", event);
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
 
@@ -225,6 +226,17 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 // The commit is not distinct.
                 // We can throw this out, log it and return early.
                 event!(Level::INFO, "`push` event commit `{}` is not distinct", commit.id);
+                return Ok(HttpResponseAccepted("ok".to_string()));
+            }
+
+            // Get the branch name.
+            let branch = event.refv.trim_start_matches("refs/heads/");
+            // Make sure we have a branch.
+            if branch.is_empty() {
+                // The branch name is empty.
+                // We can throw this out, log it and return early.
+                // This should never happen, but we won't rule it out because computers.
+                event!(Level::WARN, "`push` event branch name is empty: {:?}", event);
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
         }
@@ -274,6 +286,11 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             }
             _ => (),
         },
+        Repo::Configs => {
+            if let EventType::Push = event_type {
+                return handle_configs_push(api_context, &repo, event).await;
+            }
+        }
         _ => {
             // We can throw this out, log it and return early.
             event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
@@ -1051,6 +1068,13 @@ impl GitHubCommit {
     pub fn has_changed_files(&self) -> bool {
         !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
     }
+
+    /// Return if a specific file was added, modified, or removed in a commit.
+    #[instrument]
+    #[inline]
+    pub fn file_changed(&self, file: &str) -> bool {
+        self.added.contains(&file.to_string()) || self.modified.contains(&file.to_string()) || self.removed.contains(&file.to_string())
+    }
 }
 
 /// A GitHub pull request.
@@ -1276,7 +1300,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &GithubRepo, e
     let db = Database::new();
 
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd");
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
 
     // Let's get the RFD.
     let branch = event.pull_request.head.commit_ref.to_string();
@@ -1414,13 +1438,13 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
     let db = Database::new();
 
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd");
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
 
-    // Ignore any changes that are not to the `rfd/` directory.
-    let dir = "rfd/";
+    // Ignore any changes that are not to the `configs/` directory.
+    let dir = "configs/";
     commit.filter_files_by_path(dir);
     if !commit.has_changed_files() {
         // No files changed that we care about.
@@ -1431,14 +1455,6 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
 
     // Get the branch name.
     let branch = event.refv.trim_start_matches("refs/heads/");
-    // Make sure we have a branch.
-    if branch.is_empty() {
-        // The branch name is empty.
-        // We can throw this out, log it and return early.
-        // This should never happen, but we won't rule it out because computers.
-        event!(Level::WARN, "`push` event branch name is empty");
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
 
     // Iterate over the removed files and remove any images that we no longer
     // need for the HTML rendered RFD website.
@@ -1531,6 +1547,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
             generate_shorturls_for_rfds(&api_context.github.repo(&api_context.github_org, "configs")).await;
+            event!(Level::INFO, "generated shorturls for the rfds");
 
             // Update airtable with the new RFD.
             let mut airtable_rfd = rfd.clone();
@@ -1679,6 +1696,51 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
     }
 
     // TODO: should we do something if the file gets deleted (?)
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// Handle a `push` event for the configs repo.
+#[instrument(skip(api_context))]
+#[inline]
+async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+    // Get the repo.
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
+
+    // Get the commit.
+    let mut commit = event.commits.get(0).unwrap().clone();
+
+    // Ignore any changes that are not to the `rfd/` directory.
+    let dir = "rfd/";
+    commit.filter_files_by_path(dir);
+    if !commit.has_changed_files() {
+        // No files changed that we care about.
+        // We can throw this out, log it and return early.
+        event!(Level::INFO, "`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Get the branch name.
+    let branch = event.refv.trim_start_matches("refs/heads/");
+    // Make sure this is to the default branch, we don't care about anything else.
+    if branch != repo.default_branch {
+        // We can throw this out, log it and return early.
+        event!(
+            Level::INFO,
+            "`push` event commit `{}` is to the branch `{}` not the default branch `{}`",
+            commit.id,
+            branch,
+            repo.default_branch
+        );
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Check if the links.toml file changed.
+    if commit.file_changed("configs/links.toml") {
+        // We need to update the shortups for the configs links.
+        generate_shorturls_for_configs_links(&github_repo).await;
+        event!(Level::INFO, "generated shorturls for the configs links");
+    }
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
