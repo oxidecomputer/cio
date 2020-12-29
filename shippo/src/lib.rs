@@ -290,6 +290,7 @@ impl Shippo {
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
+            StatusCode::OK => (),
             StatusCode::CREATED => (),
             s => {
                 return Err(APIError {

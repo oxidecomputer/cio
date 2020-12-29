@@ -570,7 +570,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.7",
  "slack-chat-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "toml",
@@ -623,7 +623,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.7",
  "slack-chat-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "toml",
@@ -3337,6 +3337,8 @@ checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 [[package]]
 name = "shippo"
 version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9191b743a40558a4e4bf56fa51742540aaef7d94d4afcf2ba5e9e73bc41b055"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -3347,9 +3349,7 @@ dependencies = [
 
 [[package]]
 name = "shippo"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9191b743a40558a4e4bf56fa51742540aaef7d94d4afcf2ba5e9e73bc41b055"
+version = "0.1.8"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
