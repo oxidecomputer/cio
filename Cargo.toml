@@ -12,6 +12,7 @@ members = [
 	"sheets",
 	"shippo",
 	"slack",
+	"tailscale",
 	"webhooky",
 	"zoom",
 ]

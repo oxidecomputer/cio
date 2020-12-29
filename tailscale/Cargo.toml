@@ -1,12 +1,12 @@
 [package]
-name = "shippo"
-description = "An API client for Shippo"
-version = "0.1.11"
+name = "tailscale"
+description = "An API client for Tailscale"
+version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
-documentation = "https://docs.rs/shippo"
+documentation = "https://docs.rs/tailscale"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }

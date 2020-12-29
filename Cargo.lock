@@ -3718,6 +3718,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tailscale"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.4.19",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "take_mut"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
