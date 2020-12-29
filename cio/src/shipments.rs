@@ -6,6 +6,7 @@ use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use reqwest::StatusCode;
+use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
@@ -513,6 +514,11 @@ impl Shipment {
                 self.print_label().await;
                 self.status = "Label printed".to_string();
 
+                // Send an email to the recipient with their tracking link.
+                self.send_email_to_recipient().await;
+                // Send an email to us that we need to package the shipment.
+                self.send_email_internally().await;
+
                 break;
             }
         }
@@ -619,6 +625,105 @@ impl Shipment {
         let record: airtable_api::Record<Shipment> = airtable.get_record(AIRTABLE_OUTBOUND_TABLE, id).await.unwrap();
 
         record.fields
+    }
+
+    /// Format address.
+    #[tracing::instrument]
+    #[inline]
+    pub fn format_address(&self) -> String {
+        let mut street = self.street_1.to_string();
+        if !self.street_2.is_empty() {
+            street = format!("{}\n{}", self.street_1, self.street_2);
+        }
+
+        format!("{}\n{}, {} {} {}", street, self.city, self.state, self.zipcode, self.country)
+    }
+
+    /// Send an email to the recipient with their tracking code and information.
+    #[tracing::instrument]
+    #[inline]
+    pub async fn send_email_to_recipient(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                "Your package from the Oxide Computer Company is on the way!".to_string(),
+                format!(
+                    "Below is the information for your package:
+
+**Contents:**
+{}
+
+**Address to:**
+{}
+{}
+
+**Tracking link:**
+{}
+
+If you have any questions or concerns, please respond to this email!
+Have a splendid day!
+
+xoxo,
+  The Oxide Shipping Bot",
+                    self.contents,
+                    self.name,
+                    self.format_address(),
+                    self.tracking_link
+                ),
+                vec![self.email.to_string()],
+                vec!["packages@oxide.computer".to_string()],
+                vec![],
+                "packages@oxide.computer".to_string(),
+            )
+            .await;
+    }
+
+    /// Send an email internally that we need to package the shipment.
+    #[tracing::instrument]
+    #[inline]
+    pub async fn send_email_internally(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("Shipment to {} is ready to be packaged", self.name),
+                format!(
+                    "Below is the information the package:
+
+**Contents:**
+{}
+
+**Address to:**
+{}
+{}
+
+**Tracking link:**
+{}
+
+The label should already be printed in the big conference room. Please take the
+label and affix it to the package with the specified contents. It can then be dropped off
+for {}.
+
+As always, the Airtable with all the shipments lives at:
+https://airtable-shipments.corp.oxide.computer.
+
+xoxo,
+  The Oxide Shipping Bot",
+                    self.contents,
+                    self.name,
+                    self.format_address(),
+                    self.tracking_link,
+                    self.carrier,
+                ),
+                vec!["packages@oxide.computer".to_string()],
+                vec![],
+                vec![],
+                "packages@oxide.computer".to_string(),
+            )
+            .await;
     }
 }
 
