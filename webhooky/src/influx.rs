@@ -799,6 +799,17 @@ pub struct CheckRun {
     pub github_id: i64,
 }
 
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#repository
+#[derive(InfluxDbWriteable, Clone, Debug)]
+pub struct Repository {
+    pub time: DateTime<Utc>,
+    #[tag]
+    pub repo_name: String,
+    #[tag]
+    pub sender: String,
+    pub action: String,
+}
+
 #[cfg(test)]
 mod tests {
     use crate::influx::Client;

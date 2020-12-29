@@ -33,9 +33,9 @@ use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
-use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_rfds};
+use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
-use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
+use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org, refresh_db_github_repos};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
@@ -269,6 +269,14 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_check_run();
             api_context.influx.query(influx_event, event_type.name()).await;
+        }
+        EventType::Repository => {
+            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            let influx_event = event.as_influx_repository();
+            api_context.influx.query(influx_event, event_type.name()).await;
+
+            // Now let's handle the event.
+            return handle_repository_event(api_context, event).await;
         }
         _ => (),
     }
@@ -1013,6 +1021,17 @@ impl GitHubWebhook {
             github_id: self.check_run.id,
         }
     }
+
+    #[instrument]
+    #[inline]
+    pub fn as_influx_repository(&self) -> influx::Repository {
+        influx::Repository {
+            time: Utc::now(),
+            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            sender: self.sender.login.to_string(),
+            action: self.action.to_string(),
+        }
+    }
 }
 
 /// A GitHub commit.
@@ -1741,6 +1760,22 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
         generate_shorturls_for_configs_links(&github_repo).await;
         event!(Level::INFO, "generated shorturls for the configs links");
     }
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// Handle the `repository` event for all repos.
+#[instrument(skip(api_context))]
+#[inline]
+async fn handle_repository_event(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+    // Refresh all the database github repos.
+    // TODO: since we know only one repo changed we don't need to refresh them all,
+    // make this a bit better.
+    refresh_db_github_repos(&api_context.github).await;
+
+    // Update the short urls for all the repos.
+    generate_shorturls_for_repos(&api_context.github.repo(&api_context.github_org, "configs")).await;
+    event!(Level::INFO, "generated shorturls for all the GitHub repos");
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
