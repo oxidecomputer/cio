@@ -21,6 +21,9 @@ use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthentica
 use crate::db::Database;
 use crate::models::{GithubRepo, NewRepo};
 
+pub static DOMAIN: &str = "oxide.computer";
+pub static GSUITE_DOMAIN: &str = "oxidecomputer.com";
+
 /// Write a file.
 #[instrument]
 #[inline]

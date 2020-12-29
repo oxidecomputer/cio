@@ -19,7 +19,7 @@ use crate::certs::NewCertificate;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
-use crate::utils::{get_github_user_public_ssh_keys, github_org};
+use crate::utils::{get_github_user_public_ssh_keys, github_org, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -250,7 +250,7 @@ impl User {
     #[instrument]
     #[inline]
     pub fn email(&self) -> String {
-        format!("{}@oxidecomputer.com", self.username)
+        format!("{}@{}", self.username, GSUITE_DOMAIN)
     }
 
     /// Creates or updates the Slack user based on their user config.
@@ -476,7 +476,7 @@ impl GroupConfig {
     #[instrument]
     #[inline]
     pub fn get_link(&self) -> String {
-        format!("https://groups.google.com/a/oxidecomputer.com/forum/#!forum/{}", self.name)
+        format!("https://groups.google.com/a/{}/forum/#!forum/{}", GSUITE_DOMAIN, self.name)
     }
 
     #[instrument]
