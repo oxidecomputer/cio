@@ -18,6 +18,7 @@ use crate::models::{NewAuthUser, NewAuthUserLogin};
 pub struct User {
     pub user_id: String,
     pub email: String,
+    #[serde(default)]
     pub email_verified: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub username: String,

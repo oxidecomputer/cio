@@ -994,6 +994,7 @@ pub struct NewAuthUser {
     pub username: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
+    #[serde(default)]
     pub email_verified: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub picture: String,
