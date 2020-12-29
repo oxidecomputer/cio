@@ -190,7 +190,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // since they don't exist in our vector.
                 for (_, record) in records {
                     // Delete the record from airtable.
-                    airtable.delete_record(#table, &record.id).await;
+                    airtable.delete_record(#table, &record.id).await.unwrap();
                 }
             }
         }
@@ -421,7 +421,7 @@ mod tests {
                 // since they don't exist in our vector.
                 for (_, record) in records {
                     // Delete the record from airtable.
-                    airtable.delete_record(AIRTABLE_RFD_TABLE, &record.id).await;
+                    airtable.delete_record(AIRTABLE_RFD_TABLE, &record.id).await.unwrap();
                 }
             }
         }
