@@ -636,12 +636,6 @@ impl UpdateAirtableRecord<Shipment> for Shipment {
         if self.label_link.is_empty() {
             self.label_link = record.label_link;
         }
-        if !self.reprint_label {
-            self.reprint_label = record.reprint_label;
-        }
-        if !self.schedule_pickup {
-            self.schedule_pickup = record.schedule_pickup;
-        }
         if self.pickup_date.is_none() {
             self.pickup_date = record.pickup_date;
         }
