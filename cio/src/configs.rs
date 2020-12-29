@@ -14,10 +14,10 @@ use macros::db_struct;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
-use tracing::instrument;
+use tracing::{event, instrument, Level};
 
 use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
-use crate::certs::NewCertificate;
+use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
@@ -695,44 +695,10 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
     config
 }
 
-#[instrument]
+/// Sync our users with our database and then update Airtable from the database.
+#[instrument(skip(db))]
 #[inline]
-pub async fn refresh_db_configs(github: &Github) {
-    let configs = get_configs_from_repo(&github).await;
-
-    // Initialize our database.
-    let db = Database::new();
-
-    // Sync buildings.
-    for (_, mut building) in configs.buildings {
-        building.expand();
-
-        db.upsert_building(&building);
-    }
-
-    // Sync conference rooms.
-    for (_, room) in configs.resources {
-        db.upsert_conference_room(&room);
-    }
-
-    // Sync GitHub labels.
-    for label in configs.labels {
-        db.upsert_github_label(&label);
-    }
-
-    // Sync groups.
-    for (_, mut group) in configs.groups {
-        group.expand();
-
-        db.upsert_group(&group);
-    }
-
-    // Sync links.
-    for (name, mut link) in configs.links {
-        link.name = name;
-        db.upsert_link(&link);
-    }
-
+pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
     // Get all the users.
     let db_users = db.get_users();
     // Create a BTreeMap
@@ -741,7 +707,7 @@ pub async fn refresh_db_configs(github: &Github) {
         user_map.insert(u.username.to_string(), u);
     }
     // Sync users.
-    for (_, mut user) in configs.users {
+    for (_, mut user) in users {
         user.expand().await;
 
         let new_user = db.upsert_user(&user);
@@ -758,13 +724,204 @@ pub async fn refresh_db_configs(github: &Github) {
     for (username, _) in user_map {
         db.delete_user_by_username(&username);
     }
+    event!(Level::INFO, "updated configs users in the database");
+
+    // Update users in airtable.
+    let users = db.get_users();
+    Users(users).update_airtable().await;
+}
+
+/// Sync our buildings with our database and then update Airtable from the database.
+#[instrument(skip(db))]
+#[inline]
+pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>) {
+    // Get all the buildings.
+    let db_buildings = db.get_buildings();
+    // Create a BTreeMap
+    let mut building_map: BTreeMap<String, Building> = Default::default();
+    for u in db_buildings {
+        building_map.insert(u.name.to_string(), u);
+    }
+    // Sync buildings.
+    for (_, mut building) in buildings {
+        building.expand();
+
+        db.upsert_building(&building);
+
+        // Remove the building from the BTreeMap.
+        building_map.remove(&building.name);
+    }
+    // Remove any buildings that should no longer be in the database.
+    // This is found by the remaining buildings that are in the map since we removed
+    // the existing repos from the map above.
+    for (name, _) in building_map {
+        db.delete_building_by_name(&name);
+    }
+    event!(Level::INFO, "updated configs buildings in the database");
+
+    // Update buildings in airtable.
+    let buildings = db.get_buildings();
+    Buildings(buildings).update_airtable().await;
+}
+
+/// Sync our conference_rooms with our database and then update Airtable from the database.
+#[instrument(skip(db))]
+#[inline]
+pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>) {
+    // Get all the conference_rooms.
+    let db_conference_rooms = db.get_conference_rooms();
+    // Create a BTreeMap
+    let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
+    for u in db_conference_rooms {
+        conference_room_map.insert(u.name.to_string(), u);
+    }
+    // Sync conference_rooms.
+    for (_, conference_room) in conference_rooms {
+        db.upsert_conference_room(&conference_room);
+
+        // Remove the conference_room from the BTreeMap.
+        conference_room_map.remove(&conference_room.name);
+    }
+    // Remove any conference_rooms that should no longer be in the database.
+    // This is found by the remaining conference_rooms that are in the map since we removed
+    // the existing repos from the map above.
+    for (name, _) in conference_room_map {
+        db.delete_conference_room_by_name(&name);
+    }
+    event!(Level::INFO, "updated configs conference_rooms in the database");
+
+    // Update conference_rooms in airtable.
+    let conference_rooms = db.get_conference_rooms();
+    ConferenceRooms(conference_rooms).update_airtable().await;
+}
+
+/// Sync our groups with our database and then update Airtable from the database.
+#[instrument(skip(db))]
+#[inline]
+pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
+    // Get all the groups.
+    let db_groups = db.get_groups();
+    // Create a BTreeMap
+    let mut group_map: BTreeMap<String, Group> = Default::default();
+    for u in db_groups {
+        group_map.insert(u.name.to_string(), u);
+    }
+    // Sync groups.
+    for (_, mut group) in groups {
+        group.expand();
+
+        db.upsert_group(&group);
+
+        // Remove the group from the BTreeMap.
+        group_map.remove(&group.name);
+    }
+    // Remove any groups that should no longer be in the database.
+    // This is found by the remaining groups that are in the map since we removed
+    // the existing repos from the map above.
+    for (name, _) in group_map {
+        db.delete_group_by_name(&name);
+    }
+    event!(Level::INFO, "updated configs groups in the database");
+
+    // Update groups in airtable.
+    let groups = db.get_groups();
+    Groups(groups).update_airtable().await;
+}
+
+/// Sync our links with our database and then update Airtable from the database.
+#[instrument(skip(db))]
+#[inline]
+pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
+    // Get all the links.
+    let db_links = db.get_links();
+    // Create a BTreeMap
+    let mut link_map: BTreeMap<String, Link> = Default::default();
+    for u in db_links {
+        link_map.insert(u.name.to_string(), u);
+    }
+    // Sync links.
+    for (name, mut link) in links {
+        link.name = name;
+        db.upsert_link(&link);
+
+        // Remove the link from the BTreeMap.
+        link_map.remove(&link.name);
+    }
+    // Remove any links that should no longer be in the database.
+    // This is found by the remaining links that are in the map since we removed
+    // the existing repos from the map above.
+    for (name, _) in link_map {
+        db.delete_link_by_name(&name);
+    }
+    event!(Level::INFO, "updated configs links in the database");
+
+    // Update links in airtable.
+    let links = db.get_links();
+    Links(links).update_airtable().await;
+}
+
+/// Sync our certificates with our database and then update Airtable from the database.
+#[instrument(skip(db))]
+#[inline]
+pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>) {
+    // Get all the certificates.
+    let db_certificates = db.get_certificates();
+    // Create a BTreeMap
+    let mut certificate_map: BTreeMap<String, Certificate> = Default::default();
+    for u in db_certificates {
+        certificate_map.insert(u.domain.to_string(), u);
+    }
+    // Sync certificates.
+    for (_, mut certificate) in certificates {
+        certificate.populate_from_github(github).await;
+        db.upsert_certificate(&certificate);
+
+        // Remove the certificate from the BTreeMap.
+        certificate_map.remove(&certificate.domain);
+    }
+    // Remove any certificates that should no longer be in the database.
+    // This is found by the remaining certificates that are in the map since we removed
+    // the existing repos from the map above.
+    for (domain, _) in certificate_map {
+        db.delete_certificate_by_domain(&domain);
+    }
+    event!(Level::INFO, "updated configs certificates in the database");
+
+    // Update certificates in airtable.
+    let certificates = db.get_certificates();
+    Certificates(certificates).update_airtable().await;
+}
+
+#[instrument]
+#[inline]
+pub async fn refresh_db_configs_and_airtable(github: &Github) {
+    let configs = get_configs_from_repo(github).await;
+
+    // Initialize our database.
+    let db = Database::new();
+
+    // Sync buildings.
+    sync_buildings(&db, configs.buildings).await;
+
+    // Sync conference rooms.
+    sync_conference_rooms(&db, configs.resources).await;
+
+    // Sync GitHub labels.
+    for label in configs.labels {
+        db.upsert_github_label(&label);
+    }
+
+    // Sync groups.
+    sync_groups(&db, configs.groups).await;
+
+    // Sync links.
+    sync_links(&db, configs.links).await;
+
+    // Sync users.
+    sync_users(&db, configs.users).await;
 
     // Sync certificates.
-    for (_, mut cert) in configs.certificates {
-        cert.populate_from_github(github).await;
-
-        db.upsert_certificate(&cert);
-    }
+    sync_certificates(&db, github, configs.certificates).await;
 }
 
 /// Update the tables for the config files in the meta repository.
@@ -793,43 +950,14 @@ pub async fn update_tables_in_meta(github: &Github) {
 
 #[cfg(test)]
 mod tests {
-    use crate::certs::Certificates;
-    use crate::configs::{refresh_db_configs, update_tables_in_meta, Buildings, ConferenceRooms, Groups, Links, Users};
-    use crate::db::Database;
+    use crate::configs::{refresh_db_configs_and_airtable, update_tables_in_meta};
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_configs() {
         let github = authenticate_github_jwt();
-        refresh_db_configs(&github).await;
-
-        // Initialize our database.
-        let db = Database::new();
-
-        let users = db.get_users();
-        // Update users in airtable.
-        Users(users).update_airtable().await;
-
-        let groups = db.get_groups();
-        // Update groups in Airtable.
-        Groups(groups).update_airtable().await;
-
-        let buildings = db.get_buildings();
-        // Update buildings in Airtable.
-        Buildings(buildings).update_airtable().await;
-
-        let conference_rooms = db.get_conference_rooms();
-        // Update conference rooms in Airtable.
-        ConferenceRooms(conference_rooms).update_airtable().await;
-
-        let certificates = db.get_certificates();
-        // Update certificates in Airtable.
-        Certificates(certificates).update_airtable().await;
-
-        let links = db.get_links();
-        // Update links in Airtable.
-        Links(links).update_airtable().await;
+        refresh_db_configs_and_airtable(&github).await;
     }
 
     #[ignore]

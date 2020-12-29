@@ -136,6 +136,12 @@ impl Database {
 
     #[instrument(skip(self))]
     #[inline]
+    pub fn delete_building_by_name(&self, name: &str) {
+        diesel::delete(buildings::dsl::buildings.filter(buildings::dsl::name.eq(name.to_string()))).execute(&self.conn).unwrap();
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
     pub fn get_certificates(&self) -> Vec<Certificate> {
         certificates::dsl::certificates.order_by(certificates::dsl::id.desc()).load::<Certificate>(&self.conn).unwrap()
     }
@@ -172,6 +178,14 @@ impl Database {
             .values(certificate)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating certificate failed: {}", e))
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
+    pub fn delete_certificate_by_domain(&self, domain: &str) {
+        diesel::delete(certificates::dsl::certificates.filter(certificates::dsl::domain.eq(domain.to_string())))
+            .execute(&self.conn)
+            .unwrap();
     }
 
     #[instrument(skip(self))]
@@ -215,6 +229,14 @@ impl Database {
             .values(conference_room)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating conference_room failed: {}", e))
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
+    pub fn delete_conference_room_by_name(&self, name: &str) {
+        diesel::delete(conference_rooms::dsl::conference_rooms.filter(conference_rooms::dsl::name.eq(name.to_string())))
+            .execute(&self.conn)
+            .unwrap();
     }
 
     #[instrument(skip(self))]
@@ -427,6 +449,12 @@ impl Database {
 
     #[instrument(skip(self))]
     #[inline]
+    pub fn delete_group_by_name(&self, name: &str) {
+        diesel::delete(groups::dsl::groups.filter(groups::dsl::name.eq(name.to_string()))).execute(&self.conn).unwrap();
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
     pub fn get_journal_club_meetings(&self) -> Vec<JournalClubMeeting> {
         journal_club_meetings::dsl::journal_club_meetings
             .order_by(journal_club_meetings::dsl::id.desc())
@@ -545,6 +573,12 @@ impl Database {
             .values(link)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating link failed: {}", e))
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
+    pub fn delete_link_by_name(&self, name: &str) {
+        diesel::delete(links::dsl::links.filter(links::dsl::name.eq(name.to_string()))).execute(&self.conn).unwrap();
     }
 
     #[instrument(skip(self))]
