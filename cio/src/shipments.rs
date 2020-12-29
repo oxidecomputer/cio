@@ -122,7 +122,7 @@ impl Shipment {
             street_2: get_value(values, "Street address line 2").to_uppercase(),
             city: get_value(values, "City").to_uppercase(),
             state: get_value(values, "State").to_uppercase(),
-            zipcode: get_value(values, "Zipcode"),
+            zipcode: get_value(values, "Zipcode").to_uppercase(),
             country,
             contents: contents.trim().to_string(),
             carrier: Default::default(),
@@ -182,7 +182,7 @@ impl Shipment {
         // If the length of the row is greater than the zipcode column
         // then we have a zipcode.
         let zipcode = if row.len() > columns.zipcode && columns.zipcode != 0 {
-            row[columns.zipcode].trim().to_lowercase()
+            row[columns.zipcode].trim().to_uppercase()
         } else {
             "".to_lowercase()
         };
