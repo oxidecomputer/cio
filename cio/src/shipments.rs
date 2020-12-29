@@ -673,7 +673,7 @@ xoxo,
                     self.tracking_link
                 ),
                 vec![self.email.to_string()],
-                vec![format!("packages@{}", DOMAIN)],
+                vec![],
                 vec![],
                 format!("packages@{}", DOMAIN),
             )
