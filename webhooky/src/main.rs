@@ -30,7 +30,7 @@ use tracing::{event, instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
 use cio_api::applicants::get_role_from_sheet_id;
-use cio_api::configs::{get_configs_from_repo, Buildings, Groups, User, Users};
+use cio_api::configs::{get_configs_from_repo, Buildings, Groups, Links, User, Users};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
@@ -1775,7 +1775,9 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
         generate_shorturls_for_configs_links(&github_repo).await;
         event!(Level::INFO, "generated shorturls for the configs links");
 
-        // TODO: sync links with airtable.
+        // Update links in airtable.
+        let links = db.get_links();
+        Links(links).update_airtable().await;
     }
 
     // Check if the users.toml file changed.
@@ -1816,7 +1818,7 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     if commit.file_changed("configs/buildings.toml") {
         // Sync buildings.
         for (_, mut building) in configs.buildings {
-            //building.expand();
+            building.expand();
 
             db.upsert_building(&building);
         }
