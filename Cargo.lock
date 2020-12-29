@@ -571,7 +571,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "toml",
@@ -587,7 +587,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#89cc7e79b565f198b7b78d11d12b0dea046ad73b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#309c311e384c21c5b08382e1ebc98a1a333ca73d"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -625,7 +625,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "toml",
@@ -2008,7 +2008,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#89cc7e79b565f198b7b78d11d12b0dea046ad73b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#309c311e384c21c5b08382e1ebc98a1a333ca73d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3358,7 +3358,7 @@ checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 
 [[package]]
 name = "shippo"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -3369,9 +3369,9 @@ dependencies = [
 
 [[package]]
 name = "shippo"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc54deef2a1f48f1494e213fef3bdca4ebcd28c5d6a09f70c825768344a79791"
+checksum = "7e401da82b99ea1ee4914b0f7beea71b952ee76f97f2436493410460d348387c"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -4385,7 +4385,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tracing",
  "tracing-attributes",
