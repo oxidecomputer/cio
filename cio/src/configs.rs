@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fs;
 use std::str::from_utf8;
 use std::{thread, time};
@@ -7,6 +8,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
+use handlebars::Handlebars;
 use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
@@ -19,7 +21,8 @@ use crate::certs::NewCertificate;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
-use crate::utils::{get_github_user_public_ssh_keys, github_org, GSUITE_DOMAIN};
+use crate::templates::{TEMPLATE_TABLE_GROUPS, TEMPLATE_TABLE_LINKS, TEMPLATE_TABLE_PEOPLE};
+use crate::utils::{create_or_update_file_in_github_repo, get_github_user_public_ssh_keys, github_org, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -754,10 +757,34 @@ pub async fn refresh_db_configs(github: &Github) {
     }
 }
 
+/// Update the tables for the config files in the meta repository.
+pub async fn update_tables_in_meta(github: &Github) {
+    let configs = get_configs_from_repo(&github).await;
+
+    // Initialize handlebars.
+    let handlebars = Handlebars::new();
+
+    // Create the tables hashmap.
+    let mut tables: HashMap<&str, &str> = HashMap::new();
+    tables.insert(TEMPLATE_TABLE_GROUPS, "/directory/groups/README.md");
+    tables.insert(TEMPLATE_TABLE_LINKS, "/links/README.md");
+    tables.insert(TEMPLATE_TABLE_PEOPLE, "/directory/people/README.md");
+
+    // Get the meta repository.
+    let repo = github.repo(github_org(), "meta");
+
+    for (template, path) in tables {
+        let rendered = handlebars.render_template(template, &configs).unwrap();
+
+        // TODO: actually get the main branch from the GitHub API in case it changes in the future.
+        create_or_update_file_in_github_repo(&repo, "master", path, rendered.as_bytes().to_vec()).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::certs::Certificates;
-    use crate::configs::{refresh_db_configs, Buildings, ConferenceRooms, Groups, Users};
+    use crate::configs::{refresh_db_configs, update_tables_in_meta, Buildings, ConferenceRooms, Groups, Users};
     use crate::db::Database;
     use crate::utils::authenticate_github_jwt;
 
@@ -789,5 +816,12 @@ mod tests {
         let certificates = db.get_certificates();
         // Update certificates in Airtable.
         Certificates(certificates).update_airtable().await;
+    }
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
+    async fn test_cron_configs_tables() {
+        let github = authenticate_github_jwt();
+        update_tables_in_meta(&github).await;
     }
 }
