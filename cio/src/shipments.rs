@@ -108,6 +108,11 @@ impl Shipment {
         if !kids_shirt_size.is_empty() && !kids_shirt_size.contains("N/A") {
             contents += &format!("1 x Oxide Kids Shirt, Size: {}", kids_shirt_size);
         }
+
+        let mut country = get_value(values, "Country");
+        if country.is_empty() {
+            country = "US".to_string();
+        }
         Shipment {
             created_time: Shipment::parse_timestamp(&get_value(values, "Timestamp")),
             name: get_value(values, "Name"),
@@ -118,7 +123,7 @@ impl Shipment {
             city: get_value(values, "City"),
             state: get_value(values, "State"),
             zipcode: get_value(values, "Zipcode"),
-            country: get_value(values, "Country"),
+            country,
             contents: contents.trim().to_string(),
             carrier: Default::default(),
             pickup_date: None,
