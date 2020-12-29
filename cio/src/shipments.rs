@@ -500,6 +500,9 @@ impl Shipment {
                     self.messages = format!("{:?}", label.messages);
                 }
 
+                // Save it in Airtable here, in case one of the below steps fails.
+                self.create_or_update_in_airtable().await;
+
                 // Register a tracking webhook for this shipment.
                 shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap_or_else(|e| {
                     println!("registering the tracking webhook failed: {:?}", e);
