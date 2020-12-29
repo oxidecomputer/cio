@@ -153,6 +153,13 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
             #[tracing::instrument(skip(self))]
             #[inline]
             pub async fn update_airtable(&self) {
+                // Initialize the Airtable client.
+                let airtable = airtable_api::Airtable::new(
+                    airtable_api::api_key_from_env(),
+                    #base_id,
+                    "",
+                );
+
                 let records = #new_name_plural::get_from_airtable().await;
 
                 for mut vec_record in self.0.clone() {
@@ -182,6 +189,8 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // Iterate over the records remaining and remove them from airtable
                 // since they don't exist in our vector.
                 for (_, record) in records {
+                    // Delete the record from airtable.
+                    airtable.delete_record(#table, record.id).await;
                 }
             }
         }
