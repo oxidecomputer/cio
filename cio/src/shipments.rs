@@ -88,10 +88,10 @@ impl Shipment {
     #[inline]
     pub fn parse_from_row(values: &HashMap<String, Vec<String>>) -> Self {
         let hoodie_size = get_value(values, "Hoodie");
-        let fleece_size = get_value(values, "Fleece");
-        let womens_shirt_size = get_value(values, "Women's");
-        let unisex_shirt_size = get_value(values, "Unisex");
-        let kids_shirt_size = get_value(values, "Onesie");
+        let fleece_size = get_value(values, "Patagonia Fleece");
+        let womens_shirt_size = get_value(values, "Women's Tee");
+        let unisex_shirt_size = get_value(values, "Unisex Tee");
+        let kids_shirt_size = get_value(values, "Onesie / Toddler / Youth Sizes");
         let mut contents = String::new();
         if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
             contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
@@ -118,10 +118,10 @@ impl Shipment {
             name: get_value(values, "Name"),
             email: get_value(values, "Email Address"),
             phone: get_value(values, "Phone number"),
-            street_1: get_value(values, "Street address line 1"),
-            street_2: get_value(values, "Street address line 2"),
-            city: get_value(values, "City"),
-            state: get_value(values, "State"),
+            street_1: get_value(values, "Street address line 1").to_uppercase(),
+            street_2: get_value(values, "Street address line 2").to_uppercase(),
+            city: get_value(values, "City").to_uppercase(),
+            state: get_value(values, "State").to_uppercase(),
             zipcode: get_value(values, "Zipcode"),
             country,
             contents: contents.trim().to_string(),
@@ -132,7 +132,7 @@ impl Shipment {
             schedule_pickup: false,
             shipped_time: None,
             shippo_id: Default::default(),
-            status: Default::default(),
+            status: "Queued".to_string(),
             tracking_link: Default::default(),
             tracking_number: Default::default(),
             tracking_status: Default::default(),
