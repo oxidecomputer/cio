@@ -586,7 +586,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#deb545560417fc727c7232f8986a4d6b39dd236b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#1e4e1555f41b4b7c70645198a0ce3a6921c376ed"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1992,7 +1992,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#deb545560417fc727c7232f8986a4d6b39dd236b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#1e4e1555f41b4b7c70645198a0ce3a6921c376ed"
 dependencies = [
  "proc-macro2",
  "quote",
