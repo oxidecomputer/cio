@@ -51,7 +51,8 @@ serde_qs = "0.7"
 sheets = "^0.1.0"
 shippo = "^0.1.12"
 #shippo = { path = "../shippo" }
-slack-chat-api = "^0.1.0"
+#slack-chat-api = "^0.1.0"
+slack-chat-api = { path = "../slack" }
 tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
 toml = "0.5"
 tracing = "^0.1"
