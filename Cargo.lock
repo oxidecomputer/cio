@@ -586,7 +586,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1e4e1555f41b4b7c70645198a0ce3a6921c376ed"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#425c1a5e4642d876c96c42a97eb4136d936708e9"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1992,7 +1992,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1e4e1555f41b4b7c70645198a0ce3a6921c376ed"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#425c1a5e4642d876c96c42a97eb4136d936708e9"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4364,6 +4364,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tracing",
  "tracing-attributes",
