@@ -16,7 +16,7 @@ use tracing::instrument;
 use crate::db::Database;
 use crate::models::NewApplicant;
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org};
+use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, DOMAIN};
 
 /// The data type for a Google Sheet applicant columns, we use this when
 /// parsing the Google Sheets for applicants.
@@ -357,7 +357,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
                 post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
                 // Send a company-wide email.
-                email_send_new_applicant_notification(&sendgrid_client, applicant.clone(), "oxide.computer").await;
+                email_send_new_applicant_notification(&sendgrid_client, applicant.clone()).await;
             }
 
             applicants.push(applicant);
@@ -369,7 +369,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
 
 #[instrument(skip(sendgrid))]
 #[inline]
-pub async fn email_send_received_application(sendgrid: &SendGrid, email: &str, domain: &str) {
+pub async fn email_send_received_application(sendgrid: &SendGrid, email: &str) {
     // Send the message.
     sendgrid
         .send_mail(
@@ -381,16 +381,16 @@ Sincerely,
   The Oxide Team"
                 .to_string(),
             vec![email.to_string()],
-            vec![format!("careers@{}", domain)],
+            vec![format!("careers@{}", DOMAIN)],
             vec![],
-            format!("careers@{}", domain),
+            format!("careers@{}", DOMAIN),
         )
         .await;
 }
 
 #[instrument(skip(sendgrid))]
 #[inline]
-pub async fn email_send_new_applicant_notification(sendgrid: &SendGrid, applicant: NewApplicant, domain: &str) {
+pub async fn email_send_new_applicant_notification(sendgrid: &SendGrid, applicant: NewApplicant) {
     // Create the message.
     let message = applicant.clone().as_company_notification_email();
 
@@ -399,10 +399,10 @@ pub async fn email_send_new_applicant_notification(sendgrid: &SendGrid, applican
         .send_mail(
             format!("New Application: {}", applicant.name),
             message,
-            vec![format!("all@{}", domain)],
+            vec![format!("all@{}", DOMAIN)],
             vec![],
             vec![],
-            format!("applications@{}", domain),
+            format!("applications@{}", DOMAIN),
         )
         .await;
 }

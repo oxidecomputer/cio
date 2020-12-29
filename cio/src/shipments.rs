@@ -15,7 +15,7 @@ use tracing::instrument;
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_OUTBOUND_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::models::get_value;
-use crate::utils::get_gsuite_token;
+use crate::utils::{get_gsuite_token, DOMAIN};
 
 /// The data type for a shippo shipment.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -377,7 +377,7 @@ impl Shipment {
             zip: "94608".to_string(),
             country: "US".to_string(),
             phone: office_phone.to_string(),
-            email: "packages@oxide.computer".to_string(),
+            email: format!("packages@{}", DOMAIN),
             is_complete: Default::default(),
             object_id: Default::default(),
             test: Default::default(),
@@ -673,9 +673,9 @@ xoxo,
                     self.tracking_link
                 ),
                 vec![self.email.to_string()],
-                vec!["packages@oxide.computer".to_string()],
+                vec![format!("packages@{}", DOMAIN)],
                 vec![],
-                "packages@oxide.computer".to_string(),
+                format!("packages@{}", DOMAIN),
             )
             .await;
     }
@@ -718,10 +718,10 @@ xoxo,
                     self.tracking_link,
                     self.carrier,
                 ),
-                vec!["packages@oxide.computer".to_string()],
+                vec![format!("packages@{}", DOMAIN)],
                 vec![],
                 vec![],
-                "packages@oxide.computer".to_string(),
+                format!("packages@{}", DOMAIN),
             )
             .await;
     }

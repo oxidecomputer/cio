@@ -336,7 +336,7 @@ impl NewApplicant {
             let sendgrid_client = SendGrid::new_from_env();
 
             // Send them an email.
-            email_send_received_application(&sendgrid_client, &self.email, "oxide.computer").await;
+            email_send_received_application(&sendgrid_client, &self.email).await;
 
             // Mark the column as true not false.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
