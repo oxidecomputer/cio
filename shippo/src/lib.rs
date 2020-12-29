@@ -905,9 +905,11 @@ pub struct Status {
     /// This is displayed in UTC.
     #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
     pub status_date: Option<DateTime<Utc>>,
+    /* TODO: this comes thru the api as "null" we need to write some custom deserializer for it so
+     * we don't panic
     /// An object containing zip, city, state and country information of the tracking event.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub location: Option<TrackingLocation>,
+    #[serde(default)]
+    pub location: TrackingLocation,*/
 }
 
 #[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
