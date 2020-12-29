@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
 use tracing::instrument;
 
-use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE};
+use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
 use crate::certs::NewCertificate;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -536,7 +536,7 @@ pub struct BuildingConfig {
 impl BuildingConfig {
     #[instrument]
     #[inline]
-    fn expand(&mut self) {
+    pub fn expand(&mut self) {
         self.address_formatted = format!("{}\n{}, {} {}, {}", self.street_address, self.city, self.state, self.zipcode, self.country);
     }
 }
@@ -606,6 +606,8 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
 #[db_struct {
     new_name = "Link",
+    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    table = "AIRTABLE_LINKS_TABLE",
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "links"]
@@ -617,6 +619,14 @@ pub struct LinkConfig {
     pub link: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a Link.
+#[async_trait]
+impl UpdateAirtableRecord<Link> for Link {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, record: Link) {}
 }
 
 /// The data type for a label. These become GitHub labels for all the repositories
@@ -816,6 +826,10 @@ mod tests {
         let certificates = db.get_certificates();
         // Update certificates in Airtable.
         Certificates(certificates).update_airtable().await;
+
+        let links = db.get_links();
+        // Update links in Airtable.
+        Links(links).update_airtable().await;
     }
 
     #[ignore]

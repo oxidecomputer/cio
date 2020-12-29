@@ -8,6 +8,7 @@ pub mod influx;
 extern crate serde_json;
 
 use std::any::Any;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
@@ -29,6 +30,7 @@ use tracing::{event, instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
 use cio_api::applicants::get_role_from_sheet_id;
+use cio_api::configs::{get_configs_from_repo, Buildings, Groups, User, Users};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
@@ -1723,6 +1725,9 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
 #[instrument(skip(api_context))]
 #[inline]
 async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+    // TODO: share the database connection in the context.
+    let db = Database::new();
+
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
 
@@ -1754,12 +1759,91 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
+    // Get the configs from our repo.
+    let configs = get_configs_from_repo(&api_context.github).await;
+
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") {
-        // We need to update the shortups for the configs links.
+        // Update our links in the database.
+        for (name, mut link) in configs.links {
+            link.name = name;
+            db.upsert_link(&link);
+        }
+        event!(Level::INFO, "updated configs links in the database");
+
+        // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&github_repo).await;
         event!(Level::INFO, "generated shorturls for the configs links");
+
+        // TODO: sync links with airtable.
     }
+
+    // Check if the users.toml file changed.
+    if commit.file_changed("configs/users.toml") {
+        // Get all the users.
+        let db_users = db.get_users();
+        // Create a BTreeMap
+        let mut user_map: BTreeMap<String, User> = Default::default();
+        for u in db_users {
+            user_map.insert(u.username.to_string(), u);
+        }
+        // Sync users.
+        for (_, mut user) in configs.users {
+            user.expand().await;
+
+            let new_user = db.upsert_user(&user);
+
+            // Update slack user.
+            new_user.to_slack_user().await;
+
+            // Remove the user from the BTreeMap.
+            user_map.remove(&user.username);
+        }
+        // Remove any users that should no longer be in the database.
+        // This is found by the remaining users that are in the map since we removed
+        // the existing repos from the map above.
+        for (username, _) in user_map {
+            db.delete_user_by_username(&username);
+        }
+        event!(Level::INFO, "updated configs users in the database");
+
+        // Update users in airtable.
+        let users = db.get_users();
+        Users(users).update_airtable().await;
+    }
+
+    // Check if the buildings.toml file changed.
+    if commit.file_changed("configs/buildings.toml") {
+        // Sync buildings.
+        for (_, mut building) in configs.buildings {
+            //building.expand();
+
+            db.upsert_building(&building);
+        }
+        event!(Level::INFO, "updated configs buildings in the database");
+
+        // Update buildings in Airtable.
+        let buildings = db.get_buildings();
+        Buildings(buildings).update_airtable().await;
+    }
+
+    // Check if the groups.toml file changed.
+    if commit.file_changed("configs/groups.toml") {
+        // Sync groups.
+        for (_, mut group) in configs.groups {
+            group.expand();
+
+            db.upsert_group(&group);
+        }
+        event!(Level::INFO, "updated configs groups in the database");
+
+        // Update groups in Airtable.
+        let groups = db.get_groups();
+        Groups(groups).update_airtable().await;
+    }
+
+    // TODO: do certificates, conference rooms, etc.
+    // TODO: make sure when we update airtable we remove anyone who does not exist in the database.
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }

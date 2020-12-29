@@ -9,6 +9,7 @@ pub static AIRTABLE_EMPLOYEES_TABLE: &str = "Employees";
 pub static AIRTABLE_GROUPS_TABLE: &str = "Groups";
 pub static AIRTABLE_BUILDINGS_TABLE: &str = "Buildings";
 pub static AIRTABLE_CONFERENCE_ROOMS_TABLE: &str = "Conference Rooms";
+pub static AIRTABLE_LINKS_TABLE: &str = "Links";
 
 pub static AIRTABLE_BASE_ID_MISC: &str = "appfWJK9kBNwnavG2";
 pub static AIRTABLE_CERTIFICATES_TABLE: &str = "Certificates";
