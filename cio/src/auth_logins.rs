@@ -298,5 +298,10 @@ mod tests {
         let auth_user_logins = db.get_auth_user_logins();
         // Update auth user logins in airtable.
         AuthUserLogins(auth_user_logins).update_airtable().await;
+
+        // Update the auth users again after.
+        let auth_users = db.get_auth_users();
+        // Update auth users in airtable.
+        AuthUsers(auth_users).update_airtable().await;
     }
 }
