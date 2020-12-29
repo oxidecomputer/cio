@@ -981,7 +981,7 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
         // Initialize the SendGrid client.
         let sendgrid_client = sendgrid_api::SendGrid::new_from_env();
         // Send a company-wide email.
-        email_send_new_applicant_notification(&sendgrid_client, applicant.clone(), "oxide.computer").await;
+        email_send_new_applicant_notification(&sendgrid_client, applicant.clone()).await;
     }
 
     // TODO: share the database connection in the context.
