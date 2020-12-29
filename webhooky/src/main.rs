@@ -1,6 +1,8 @@
 #![allow(clippy::field_reassign_with_default)]
 pub mod event_types;
 use crate::event_types::EventType;
+pub mod repos;
+use crate::repos::Repo;
 pub mod influx;
 #[macro_use]
 extern crate serde_json;
@@ -208,6 +210,23 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         EventType::Push => {
             event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
             event.as_influx_push(&api_context.influx, &api_context.github).await;
+
+            // Ensure we have commits.
+            if event.commits.is_empty() {
+                // `push` event has no commits.
+                // We can throw this out, log it and return early.
+                event!(Level::INFO, "`push` event has no commits");
+                return Ok(HttpResponseAccepted("ok".to_string()));
+            }
+
+            let commit = event.commits.get(0).unwrap().clone();
+            // We only care about distinct commits.
+            if !commit.distinct {
+                // The commit is not distinct.
+                // We can throw this out, log it and return early.
+                event!(Level::INFO, "`push` event commit `{}` is not distinct", commit.id);
+                return Ok(HttpResponseAccepted("ok".to_string()));
+            }
         }
         EventType::PullRequest => {
             event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
@@ -242,20 +261,25 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         _ => (),
     }
 
-    if event_type != EventType::Push && event_type != EventType::PullRequest {
-        event!(Level::INFO, "got event type `{}`, no automations are set up for this event type yet", event_type);
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Check if the event came from the rfd repo.
+    // Run the correct handler function based on the event type and repo.
     let repo = event.clone().repository.unwrap();
-    if repo.name == "rfd" {
-        // We only care about the rfd repo push events for now.
-        return handle_rfd_repo(api_context, &repo, event_type, event).await;
+    let repo_name = Repo::from_str(&repo.name).unwrap();
+    match repo_name {
+        Repo::RFD => match event_type {
+            EventType::Push => {
+                return handle_rfd_push(api_context, &repo, event).await;
+            }
+            EventType::PullRequest => {
+                return handle_rfd_pull_request(api_context, &repo, event).await;
+            }
+            _ => (),
+        },
+        _ => {
+            // We can throw this out, log it and return early.
+            event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
+        }
     }
 
-    // We can throw this out, log it and return early.
-    event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo.name);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1244,9 +1268,142 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
     in_dir
 }
 
+/// Handle a `pull_request` event for the rfd repo.
 #[instrument(skip(api_context))]
 #[inline]
-async fn handle_rfd_repo(api_context: Arc<Context>, repo: &GithubRepo, event_type: EventType, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+    // TODO: share the database connection in the context.
+    let db = Database::new();
+
+    // Get the repo.
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd");
+
+    // Let's get the RFD.
+    let branch = event.pull_request.head.commit_ref.to_string();
+
+    // Check if we somehow had a pull request opened from the default branch.
+    // This should never happen, but let's check regardless.
+    if branch == repo.default_branch {
+        // Return early.
+        event!(Level::INFO, "event was to the default branch `{}`, we don't care: {:?}", repo.default_branch, event);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // The branch should be equivalent to the number in the database.
+    // Let's try to get the RFD from that.
+    let number = branch.trim_start_matches('0').parse::<i32>().unwrap_or_default();
+    // Make sure we actually have a number.
+    if number == 0 {
+        // Return early.
+        event!(Level::INFO, "event was to the branch `{}`, which is not a number so it cannot be an RFD: {:?}", branch, event);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Try to get the RFD from the database.
+    let result = db.get_rfd(number);
+    if result.is_none() {
+        event!(Level::INFO, "could not find RFD with number `{}` in the database: {:?}", number, event);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+    let mut rfd = result.unwrap();
+
+    // Let's make sure the tile of the pull request is what it should be.
+    // The pull request title should be equal to the name of the pull request.
+    if rfd.name != event.pull_request.title {
+        // Update the title of the pull request.
+        github_repo
+            .pulls()
+            .get(event.pull_request.number.try_into().unwrap())
+            .edit(&hubcaps::pulls::PullEditOptions::builder().title(rfd.name.to_string()).build())
+            .await
+            .unwrap();
+    }
+
+    // Update the labels for the pull request.
+    let mut labels: Vec<&str> = Default::default();
+    if rfd.state == "discussion" {
+        labels.push(":thought_balloon: discussion");
+    } else if rfd.state == "ideation" {
+        labels.push(":hatching_chick: ideation");
+    }
+    github_repo.pulls().get(event.pull_request.number.try_into().unwrap()).labels().add(labels).await.unwrap();
+
+    // We only care if the pull request was `opened`.
+    if event.action != "opened" {
+        // We can throw this out, log it and return early.
+        event!(Level::INFO, "no automations are set up for action `{}` yet", event.action);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Okay, now we finally have the RFD.
+    // We need to do two things.
+    //  1. Update the discussion link.
+    //  2. Update the state of the RFD to be in discussion if it is not
+    //      in an acceptable current state. More on this below.
+    // To do both these tasks we need to first get the path of the file on GitHub,
+    // so we can update it later, and also find out if it is markdown or not for parsing.
+
+    // Get the file path from GitHub.
+    // We need to figure out whether this file is a README.adoc or README.md
+    // before we update it.
+    // Let's get the contents of the directory from GitHub.
+    let dir = format!("/rfd/{}", branch);
+    let files = github_repo
+        .content()
+        .iter(&format!("{}/", dir), &branch)
+        .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
+        .await
+        .unwrap();
+    let mut filename = String::new();
+    for file in files {
+        if file.name.ends_with("README.md") || file.name.ends_with("README.adoc") {
+            filename = file.name;
+            break;
+        }
+    }
+    // Ensure we found a file.
+    if filename.is_empty() {
+        event!(Level::WARN, "could not find README.[md,adoc] in the directory `{}` for RFD `{}`", dir, branch);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+    // Add our path prefix if we need it.
+    if !filename.contains(&dir) {
+        filename = format!("{}/{}", dir, filename);
+    }
+
+    // We need to get the content fresh first since this is racey.
+    let f = github_repo.content().file(&filename, &branch).await.unwrap();
+    rfd.content = from_utf8(&f.content).unwrap().to_string();
+
+    // Update the discussion link.
+    let discussion_link = event.pull_request.html_url;
+    rfd.update_discussion(&discussion_link, filename.ends_with(".md"));
+
+    // A pull request can be open for an RFD if it is in the following states:
+    //  - published: a already published RFD is being updated in a pull request.
+    //  - discussion: it is in discussion
+    //  - ideation: it is in ideation
+    // We can update the state if it is not currently in an acceptable state.
+    if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
+        //  Update the state of the RFD in GitHub to show it as `discussion`.
+        rfd.update_state("discussion", filename.ends_with(".md"));
+    }
+
+    // Update the RFD to show the new state and link in the database.
+    db.update_rfd(&rfd);
+
+    // Update the file in GitHub.
+    // Keep in mind: this push will kick off another webhook.
+    create_or_update_file_in_github_repo(&github_repo, &branch, &filename, rfd.content.as_bytes().to_vec()).await;
+
+    event!(Level::INFO, "updated discussion link for RFD {}", rfd.number_string,);
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// Handle a `push` event for the rfd repo.
+#[instrument(skip(api_context))]
+#[inline]
+async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here because otherwise it will expire.
     let token = get_gsuite_token().await;
@@ -1259,168 +1416,8 @@ async fn handle_rfd_repo(api_context: Arc<Context>, repo: &GithubRepo, event_typ
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd");
 
-    // Handle if we got a pull_request.
-    if event_type == EventType::PullRequest {
-        // We have a pull request event.
-        // Let's get the RFD.
-        let branch = event.pull_request.head.commit_ref.to_string();
-
-        // Check if we somehow had a pull request opened from the default branch.
-        // This should never happen, but let's check regardless.
-        if branch == repo.default_branch {
-            // Return early.
-            event!(Level::INFO, "`{}` event was to the default branch `{}`, we don't care: {:?}", event_type, repo.default_branch, event);
-            return Ok(HttpResponseAccepted("ok".to_string()));
-        }
-
-        // The branch should be equivalent to the number in the database.
-        // Let's try to get the RFD from that.
-        let number = branch.trim_start_matches('0').parse::<i32>().unwrap_or_default();
-        // Make sure we actually have a number.
-        if number == 0 {
-            // Return early.
-            event!(
-                Level::INFO,
-                "`{}` event was to the branch `{}`, which is not a number so it cannot be an RFD: {:?}",
-                event_type,
-                branch,
-                event
-            );
-            return Ok(HttpResponseAccepted("ok".to_string()));
-        }
-
-        // Try to get the RFD from the database.
-        let result = db.get_rfd(number);
-        if result.is_none() {
-            event!(Level::INFO, "could not find RFD with number `{}` in the database: {:?}", number, event);
-            return Ok(HttpResponseAccepted("ok".to_string()));
-        }
-        let mut rfd = result.unwrap();
-
-        // Let's make sure the tile of the pull request is what it should be.
-        // The pull request title should be equal to the name of the pull request.
-        if rfd.name != event.pull_request.title {
-            // Update the title of the pull request.
-            github_repo
-                .pulls()
-                .get(event.pull_request.number.try_into().unwrap())
-                .edit(&hubcaps::pulls::PullEditOptions::builder().title(rfd.name.to_string()).build())
-                .await
-                .unwrap();
-        }
-
-        // Update the labels for the pull request.
-        let mut labels: Vec<&str> = Default::default();
-        if rfd.state == "discussion" {
-            labels.push(":thought_balloon: discussion");
-        } else if rfd.state == "ideation" {
-            labels.push(":hatching_chick: ideation");
-        }
-        github_repo.pulls().get(event.pull_request.number.try_into().unwrap()).labels().add(labels).await.unwrap();
-
-        // We only care if the pull request was `opened`.
-        if event.action != "opened" {
-            // We can throw this out, log it and return early.
-            event!(
-                Level::INFO,
-                "`{}` event was to the `{}` repo, no automations are set up for action `{}` yet",
-                event_type,
-                repo.name,
-                event.action
-            );
-            return Ok(HttpResponseAccepted("ok".to_string()));
-        }
-
-        // Okay, now we finally have the RFD.
-        // We need to do two things.
-        //  1. Update the discussion link.
-        //  2. Update the state of the RFD to be in discussion if it is not
-        //      in an acceptable current state. More on this below.
-        // To do both these tasks we need to first get the path of the file on GitHub,
-        // so we can update it later, and also find out if it is markdown or not for parsing.
-
-        // Get the file path from GitHub.
-        // We need to figure out whether this file is a README.adoc or README.md
-        // before we update it.
-        // Let's get the contents of the directory from GitHub.
-        let dir = format!("/rfd/{}", branch);
-        let files = github_repo
-            .content()
-            .iter(&format!("{}/", dir), &branch)
-            .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
-            .await
-            .unwrap();
-        let mut filename = String::new();
-        for file in files {
-            if file.name.ends_with("README.md") || file.name.ends_with("README.adoc") {
-                filename = file.name;
-                break;
-            }
-        }
-        // Ensure we found a file.
-        if filename.is_empty() {
-            event!(Level::WARN, "could not find README.[md,adoc] in the directory `{}` for RFD `{}`", dir, branch);
-            return Ok(HttpResponseAccepted("ok".to_string()));
-        }
-        // Add our path prefix if we need it.
-        if !filename.contains(&dir) {
-            filename = format!("{}/{}", dir, filename);
-        }
-
-        // We need to get the content fresh first since this is racey.
-        let f = github_repo.content().file(&filename, &branch).await.unwrap();
-        rfd.content = from_utf8(&f.content).unwrap().to_string();
-
-        // Update the discussion link.
-        let discussion_link = event.pull_request.html_url;
-        rfd.update_discussion(&discussion_link, filename.ends_with(".md"));
-
-        // A pull request can be open for an RFD if it is in the following states:
-        //  - published: a already published RFD is being updated in a pull request.
-        //  - discussion: it is in discussion
-        //  - ideation: it is in ideation
-        // We can update the state if it is not currently in an acceptable state.
-        if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
-            //  Update the state of the RFD in GitHub to show it as `discussion`.
-            rfd.update_state("discussion", filename.ends_with(".md"));
-        }
-
-        // Update the RFD to show the new state and link in the database.
-        db.update_rfd(&rfd);
-
-        // Update the file in GitHub.
-        // Keep in mind: this push will kick off another webhook.
-        create_or_update_file_in_github_repo(&github_repo, &branch, &filename, rfd.content.as_bytes().to_vec()).await;
-
-        event!(
-            Level::INFO,
-            "`{}` event was to the {} repo with action `{}`, updated discussion link for the RFD",
-            event_type,
-            repo.name,
-            event.action
-        );
-        return Ok(HttpResponseAccepted("ok".to_string()));
-        // End of `pull_request` event.
-    }
-
-    // Now we can continue since we have a `push` event to the rfd repo, we have filtered
-    // everything else out.
-    // Ensure we have commits.
-    if event.commits.is_empty() {
-        // `push` event has no commits.
-        // We can throw this out, log it and return early.
-        event!(Level::INFO, "`push` event has no commits");
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
+    // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
-    // We only care about distinct commits.
-    if !commit.distinct {
-        // The commit is not distinct.
-        // We can throw this out, log it and return early.
-        event!(Level::INFO, "`push` event commit `{}` is not distinct", commit.id);
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
 
     // Ignore any changes that are not to the `rfd/` directory.
     let dir = "rfd/";
@@ -1512,7 +1509,7 @@ async fn handle_rfd_repo(api_context: Arc<Context>, repo: &GithubRepo, event_typ
         if file.ends_with("README.md") || file.ends_with("README.adoc") {
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
-            event!(Level::INFO, "`{}` event -> file {} was modified on branch {}", event_type.name(), file, branch,);
+            event!(Level::INFO, "`push` event -> file {} was modified on branch {}", file, branch,);
             // Parse the RFD.
             let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
