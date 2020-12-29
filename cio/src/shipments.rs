@@ -116,7 +116,7 @@ impl Shipment {
         Shipment {
             created_time: Shipment::parse_timestamp(&get_value(values, "Timestamp")),
             name: get_value(values, "Name"),
-            email: get_value(values, "Email Address"),
+            email: get_value(values, "Email Address").to_lowercase(),
             phone: get_value(values, "Phone number"),
             street_1: get_value(values, "Street address line 1").to_uppercase(),
             street_2: get_value(values, "Street address line 2").to_uppercase(),
@@ -259,7 +259,7 @@ impl Shipment {
             "".to_lowercase()
         };
 
-        let email = row[columns.email].trim().to_string();
+        let email = row[columns.email].trim().to_lowercase();
         let mut contents = String::new();
         if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
             contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
