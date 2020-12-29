@@ -17,10 +17,7 @@
  *     // List the devices.
  *     let devices = tailscale.list_devices().await.unwrap();
  *
- *     // Iterate over the devices.
- *     for device in devices {
- *         println!("{:?}", device);
- *     }
+ *     println!("{:?}", devices);
  * }
  * ```
  */
