@@ -160,7 +160,7 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
                     "",
                 );
 
-                let records = #new_name_plural::get_from_airtable().await;
+                let mut records = #new_name_plural::get_from_airtable().await;
 
                 for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.
@@ -391,7 +391,7 @@ mod tests {
                     "",
                 );
 
-                let records = DuplicatedItems::get_from_airtable().await;
+                let mut records = DuplicatedItems::get_from_airtable().await;
 
                 for mut vec_record in self.0.clone() {
                     // See if we have it in our Airtable records.

@@ -10,7 +10,7 @@ documentation = "https://docs.rs/cio-api"
 
 [dependencies]
 acme-lib = "^0.8.0"
-airtable-api = "^0.1.18"
+airtable-api = "^0.1.19"
 async-trait = "^0.1.0"
 base64 = "0.12"
 diffy = "^0.2.0"
