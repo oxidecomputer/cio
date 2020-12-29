@@ -853,20 +853,20 @@ pub struct ValidationResults {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TrackingStatus {
     /// Name of the carrier of the shipment to track.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub carrier: String,
     /// Tracking number to track.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub tracking_number: String,
     /// The sender address with city, state, zip and country information.
     #[serde(default)]
     pub address_from: Address,
-    #[serde(default)]
     /// The recipient address with city, state, zip and country information.
+    #[serde(default)]
     pub address_to: Address,
     /// The object_id of the transaction associated with this tracking object.
     /// This field is visible only to the object owner of the transaction.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub transaction: String,
     /// The estimated time of arrival according to the carrier, this might be
     /// updated by carriers during the life of the shipment.
@@ -887,7 +887,7 @@ pub struct TrackingStatus {
     pub tracking_history: Vec<Status>,
     /// A string of up to 100 characters that can be filled with any additional information you
     /// want to attach to the object.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub metadata: String,
 }
 
@@ -895,10 +895,10 @@ pub struct TrackingStatus {
 pub struct Status {
     /// Indicates the high level status of the shipment.
     /// 'UNKNOWN' | 'PRE_TRANSIT' | 'TRANSIT' | 'DELIVERED' | 'RETURNED' | 'FAILURE'
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub status: String,
     /// The human-readable description of the status.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub status_details: String,
     /// Date and time when the carrier scanned this tracking event.
     /// This is displayed in UTC.
@@ -911,13 +911,13 @@ pub struct Status {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TrackingLocation {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub city: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub zip: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub country: String,
 }
 
