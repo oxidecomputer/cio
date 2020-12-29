@@ -180,6 +180,8 @@ async fn save_url_to_file(url: String) -> String {
 }
 
 // Print the file.
+#[instrument]
+#[inline]
 fn print_file(printer: &str, file: &str) {
     println!("Sending file `{}` to printer `{}`", file, printer);
     let output = Command::new("lp").args(&["-d", printer, "-o", "media=4.00x6.00\"", file]).output().expect("failed to execute process");
