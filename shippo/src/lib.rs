@@ -301,7 +301,7 @@ impl Shippo {
             }
         };
 
-        Ok(resp.json().await.unwrap())
+        Ok(resp.json().await.unwrap_or_default())
     }
 }
 
