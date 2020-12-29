@@ -33,11 +33,11 @@ use crate::airtable::{
     AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP,
     AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, AIRTABLE_RFD_TABLE,
 };
-use crate::applicants::{email_send_received_application, get_file_contents, get_role_from_sheet_id, ApplicantSheetColumns};
+use crate::applicants::{get_file_contents, get_role_from_sheet_id, ApplicantSheetColumns};
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{applicants, auth_user_logins, auth_users, github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds as r_f_ds, rfds};
-use crate::utils::{check_if_github_issue_exists, create_or_update_file_in_github_repo, github_org};
+use crate::utils::{check_if_github_issue_exists, create_or_update_file_in_github_repo, github_org, DOMAIN};
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -170,6 +170,51 @@ impl NewApplicant {
             question_values_in_tension: Default::default(),
             question_why_oxide: Default::default(),
         }
+    }
+
+    /// Send an email to the applicant that we recieved their application.
+    #[instrument]
+    #[inline]
+    pub async fn send_email_recieved_application_to_applicant(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                "Oxide Computer Company Application Received!".to_string(),
+                "Thank you for submitting your application materials! We really appreciate all
+the time and thought everyone puts into their application. We will be in touch
+within the next couple weeks with more information.
+Sincerely,
+  The Oxide Team"
+                    .to_string(),
+                vec![self.email.to_string()],
+                vec![format!("careers@{}", DOMAIN)],
+                vec![],
+                format!("careers@{}", DOMAIN),
+            )
+            .await;
+    }
+
+    /// Send an email internally that we have a new application.
+    #[instrument]
+    #[inline]
+    pub async fn send_email_internally(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("New Application: {}", self.name),
+                self.as_company_notification_email(),
+                vec![format!("all@{}", DOMAIN)],
+                vec![],
+                vec![],
+                format!("applications@{}", DOMAIN),
+            )
+            .await;
     }
 
     /// Parse the applicant from a Google Sheets row, where we also happen to know the columns.
@@ -332,11 +377,8 @@ impl NewApplicant {
     pub async fn expand(&mut self, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, row_index: usize) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
-            // Initialize the SendGrid client.
-            let sendgrid_client = SendGrid::new_from_env();
-
             // Send them an email.
-            email_send_received_application(&sendgrid_client, &self.email).await;
+            self.send_email_recieved_application_to_applicant().await;
 
             // Mark the column as true not false.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();

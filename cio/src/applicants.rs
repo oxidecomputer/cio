@@ -8,7 +8,6 @@ use google_drive::GoogleDrive;
 use html2text::from_read;
 use hubcaps::issues::{IssueListOptions, State};
 use pandoc::OutputKind;
-use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use tracing::instrument;
@@ -16,7 +15,7 @@ use tracing::instrument;
 use crate::db::Database;
 use crate::models::NewApplicant;
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, DOMAIN};
+use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org};
 
 /// The data type for a Google Sheet applicant columns, we use this when
 /// parsing the Google Sheets for applicants.
@@ -316,8 +315,6 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
         .await
         .unwrap();
 
-    let sendgrid_client = SendGrid::new_from_env();
-
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
     let mut applicants: Vec<NewApplicant> = Default::default();
@@ -357,7 +354,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
                 post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
                 // Send a company-wide email.
-                email_send_new_applicant_notification(&sendgrid_client, applicant.clone()).await;
+                applicant.send_email_internally().await;
             }
 
             applicants.push(applicant);
@@ -365,46 +362,6 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     }
 
     applicants
-}
-
-#[instrument(skip(sendgrid))]
-#[inline]
-pub async fn email_send_received_application(sendgrid: &SendGrid, email: &str) {
-    // Send the message.
-    sendgrid
-        .send_mail(
-            "Oxide Computer Company Application Received!".to_string(),
-            "Thank you for submitting your application materials! We really appreciate all
-the time and thought everyone puts into their application. We will be in touch
-within the next couple weeks with more information.
-Sincerely,
-  The Oxide Team"
-                .to_string(),
-            vec![email.to_string()],
-            vec![format!("careers@{}", DOMAIN)],
-            vec![],
-            format!("careers@{}", DOMAIN),
-        )
-        .await;
-}
-
-#[instrument(skip(sendgrid))]
-#[inline]
-pub async fn email_send_new_applicant_notification(sendgrid: &SendGrid, applicant: NewApplicant) {
-    // Create the message.
-    let message = applicant.clone().as_company_notification_email();
-
-    // Send the message.
-    sendgrid
-        .send_mail(
-            format!("New Application: {}", applicant.name),
-            message,
-            vec![format!("all@{}", DOMAIN)],
-            vec![],
-            vec![],
-            format!("applications@{}", DOMAIN),
-        )
-        .await;
 }
 
 // Sync the applicants with our database.
