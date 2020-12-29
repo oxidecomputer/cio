@@ -570,7 +570,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.8",
+ "shippo 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "toml",
@@ -586,7 +586,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4bbd77ee458d75dae7a5a69776ef9e7074d37fa0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e758f9c39434e2cc728603ac4b21b5b2eb4a8c5a"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -623,7 +623,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.8",
+ "shippo 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "toml",
@@ -1992,7 +1992,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4bbd77ee458d75dae7a5a69776ef9e7074d37fa0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e758f9c39434e2cc728603ac4b21b5b2eb4a8c5a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3336,9 +3336,7 @@ checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 
 [[package]]
 name = "shippo"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7de8a01c34844c32af81df2cd224966a60f0318e9d22060e2b444768e8a8e873"
+version = "0.1.9"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -3350,6 +3348,8 @@ dependencies = [
 [[package]]
 name = "shippo"
 version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f3d0da4ffed52686866f34ac1a51fb56aa808b0bf6ab129eecdfb55531ededa"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
