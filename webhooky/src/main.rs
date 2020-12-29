@@ -1022,7 +1022,6 @@ pub struct GoogleSpreadsheetRowCreateEvent {
 async fn listen_airtable_shipments_outgoing_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
-    println!("airtable-shipments-outgoing-create: {:?}", event);
 
     if event.record_id.is_empty() {
         event!(Level::WARN, "Record id is empty");
@@ -1061,7 +1060,6 @@ pub struct AirtableRowEvent {
 async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
-    println!("airtable-shipments-outgoing-edit: {:?}", event);
 
     if event.record_id.is_empty() {
         event!(Level::WARN, "Record id is empty");
