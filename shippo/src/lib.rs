@@ -34,6 +34,7 @@ use std::sync::Arc;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Shippo API.
@@ -414,7 +415,7 @@ pub struct Shipment {
 
 /// The data type for an address.
 /// FROM: https://goshippo.com/docs/reference#addresses
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct Address {
     /// Unique identifier of the given Address object. This ID is required to
     /// create a Shipment object.
@@ -605,7 +606,7 @@ pub struct Rate {
 }
 
 /// The service level data type.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct ServiceLevel {
     /// Name of the Rate's servicelevel, e.g. "International Priority" or
     /// "Standard Post".
@@ -826,7 +827,7 @@ pub struct NewTransaction {
     pub r#async: bool,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct Message {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub source: String,
@@ -836,7 +837,7 @@ pub struct Message {
     pub text: String,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct ValidationResults {
     #[serde(default)]
     pub is_valid: bool,
@@ -850,7 +851,7 @@ pub struct ValidationResults {
 /// The data type for a tracking status.
 /// Tracking Status objects are used to track shipments.
 /// FROM: https://goshippo.com/docs/reference#tracks
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct TrackingStatus {
     /// Name of the carrier of the shipment to track.
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
@@ -891,7 +892,7 @@ pub struct TrackingStatus {
     pub metadata: String,
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, JsonSchema, Serialize, Deserialize)]
 pub struct Status {
     /// Indicates the high level status of the shipment.
     /// 'UNKNOWN' | 'PRE_TRANSIT' | 'TRANSIT' | 'DELIVERED' | 'RETURNED' | 'FAILURE'
@@ -905,11 +906,11 @@ pub struct Status {
     #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
     pub status_date: Option<DateTime<Utc>>,
     /// An object containing zip, city, state and country information of the tracking event.
-    #[serde(default)]
-    pub location: TrackingLocation,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<TrackingLocation>,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct TrackingLocation {
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub city: String,
