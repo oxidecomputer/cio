@@ -160,6 +160,9 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
                     match records.get(&vec_record.id) {
                         Some(r) => {
                             vec_record.update_in_airtable(&mut r.clone()).await;
+
+                            // Remove it from the map.
+                            records.remove(&vec_record.id);
                         }
                         None => {
                             // We do not have the record in Airtable, let's create it.
@@ -169,8 +172,16 @@ fn do_db_struct(attr: TokenStream, item: TokenStream) -> TokenStream {
                                 "[airtable] id={} created in Airtable",
                                 vec_record.id
                             );
+
+                            // Remove it from the map.
+                            records.remove(&vec_record.id);
                         }
                     }
+                }
+
+                // Iterate over the records remaining and remove them from airtable
+                // since they don't exist in our vector.
+                for (_, record) in records {
                 }
             }
         }

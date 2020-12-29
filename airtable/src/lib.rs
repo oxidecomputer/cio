@@ -215,6 +215,25 @@ impl Airtable {
         Ok(record)
     }
 
+    /// Delete record from a table.
+    pub async fn delete_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<(), APIError> {
+        // Build the request.
+        let request = self.request(Method::DELETE, table.to_string(), (), Some(vec![("records[]", record_id.to_string())]));
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
+    }
+
     /// Bulk create records in a table.
     ///
     /// Due to limitations on the Airtable API, you can only bulk create 10
