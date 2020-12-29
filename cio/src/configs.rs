@@ -794,7 +794,7 @@ pub async fn update_tables_in_meta(github: &Github) {
 #[cfg(test)]
 mod tests {
     use crate::certs::Certificates;
-    use crate::configs::{refresh_db_configs, update_tables_in_meta, Buildings, ConferenceRooms, Groups, Users};
+    use crate::configs::{refresh_db_configs, update_tables_in_meta, Buildings, ConferenceRooms, Groups, Links, Users};
     use crate::db::Database;
     use crate::utils::authenticate_github_jwt;
 

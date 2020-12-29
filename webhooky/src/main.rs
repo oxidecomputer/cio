@@ -1806,6 +1806,8 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
         // the existing repos from the map above.
         for (username, _) in user_map {
             db.delete_user_by_username(&username);
+
+            // TODO: delete them from gsuite.
         }
         event!(Level::INFO, "updated configs users in the database");
 
