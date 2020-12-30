@@ -851,7 +851,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     // Iterate over the users already in GSuite.
     for u in gsuite_users {
         // Get the shorthand username and match it against our existing users.
-        let username = u.primary_email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN));
+        let username = u.primary_email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN)).to_string();
 
         // Check if we have that user already in our settings.
         let user: User;
@@ -884,7 +884,6 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         event!(Level::INFO, "updated user in gsuite: {}", username);
     }
 
-    println!("{:?}", user_map);
     // Create any remaining users from the database that we do not have in GSuite.
     for (username, user) in user_map {
         // Create the user.

@@ -215,7 +215,11 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         match google_groups.get(g) {
             Some(val) => group = val,
             // Continue through the loop and we will add the user later.
-            None => panic!("google group {} does not exist so cannot add user {}", g, user.email()),
+            None => {
+                println!("google group {} does not exist so cannot add user {}", g, user.email());
+                event!(Level::WARN, "google group {} does not exist so cannot add user {}", g, user.email());
+                continue;
+            }
         }
 
         let mut role = "MEMBER";

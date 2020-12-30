@@ -550,7 +550,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -606,7 +606,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.8 (git+https://github.com/oxidecomputer/cio)",
+ "gsuite-api 0.1.8",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1447,20 +1447,6 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5dd22e1cf97a744e725fa00541c954dc2a6af7e6842c4fbd2fca4b1750c3375"
-dependencies = [
- "chrono 0.4.19",
- "rand",
- "reqwest",
- "serde",
- "serde_json",
- "yup-oauth2",
-]
-
-[[package]]
-name = "gsuite-api"
-version = "0.1.8"
 source = "git+https://github.com/oxidecomputer/cio?branch=master#56503a4317fe8093c6991e00b0b1988f832789d9"
 dependencies = [
  "chrono 0.4.19",
@@ -1474,6 +1460,20 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.9"
+dependencies = [
+ "chrono 0.4.19",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "yup-oauth2",
+]
+
+[[package]]
+name = "gsuite-api"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff9eb14f50070077e44437809ccfc3bed1665f9afdf37fa089afeceb5cd2ab8b"
 dependencies = [
  "chrono 0.4.19",
  "rand",
