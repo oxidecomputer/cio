@@ -121,7 +121,9 @@ impl Tailscale {
             }
         };
 
-        Ok(resp.json().await.unwrap())
+        let r: APIResponse = resp.json().await.unwrap();
+
+        Ok(r.devices)
     }
 }
 
@@ -149,6 +151,13 @@ impl error::Error for APIError {
         // Generic error, underlying cause isn't tracked.
         None
     }
+}
+
+/// The data type for an API response.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct APIResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub devices: Vec<Device>,
 }
 
 /// The data type for a device.

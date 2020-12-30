@@ -172,7 +172,7 @@ pub static TEMPLATE_CLOUDFLARE_TERRAFORM: &str = r#"{{#each this}}
 resource "cloudflare_record" "{{terraformize this.name}}_{{this.subdomain}}_oxide_computer" {
   zone_id  = var.zone_id-oxide_computer
   name     = "{{this.name}}.{{this.subdomain}}.oxide.computer"
-  value    = {{this.ip}}
+  value    = {{{this.ip}}}
   type     = "A"
   ttl      = 1
   priority = 0

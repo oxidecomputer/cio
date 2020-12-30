@@ -87,3 +87,5 @@ jobs:
           MAILCHIMP_API_KEY: ${{ secrets.MAILCHIMP_API_KEY }}
           SHIPPO_API_TOKEN: ${{ secrets.SHIPPO_API_TOKEN }}
           PRINTER_URL: ${{ secrets.PRINTER_URL }}
+          TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
+          TAILSCALE_DOMAIN: ${{ secrets.TAILSCALE_DOMAIN }}
