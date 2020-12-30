@@ -1724,9 +1724,6 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
 #[instrument(skip(api_context))]
 #[inline]
 async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
-    // TODO: share the database connection in the context.
-    let db = Database::new();
-
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
 
@@ -1764,7 +1761,7 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") {
         // Update our links in the database.
-        //sync_links(&db, configs.links).await;
+        sync_links(configs.links).await;
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&github_repo).await;
@@ -1772,29 +1769,29 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     }
 
     // Check if the users.toml file changed.
-    /* if commit.file_changed("configs/users.toml") {
-        sync_users(&db, configs.users).await;
+    if commit.file_changed("configs/users.toml") {
+        sync_users(configs.users).await;
     }
 
     // Check if the buildings.toml file changed.
     if commit.file_changed("configs/buildings.toml") {
-        sync_buildings(&db, configs.buildings).await;
+        sync_buildings(configs.buildings).await;
     }
 
     // Check if the resources.toml file changed.
     if commit.file_changed("configs/resources.toml") {
-        sync_conference_rooms(&db, configs.resources).await;
+        sync_conference_rooms(configs.resources).await;
     }
 
     // Check if the groups.toml file changed.
     if commit.file_changed("configs/groups.toml") {
-        sync_groups(&db, configs.groups).await;
+        sync_groups(configs.groups).await;
     }
 
     // Check if the certificates.toml file changed.
     if commit.file_changed("configs/certificates.toml") {
-        sync_certificates(&db, &api_context.github, configs.certificates).await;
-    }*/
+        sync_certificates(&api_context.github, configs.certificates).await;
+    }
 
     // TODO: do huddles, labels, github-outside-collaborators, etc.
 
