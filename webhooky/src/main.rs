@@ -330,6 +330,12 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     let api_context = Context::from_rqctx(&rqctx);
     let github = &api_context.github;
 
+    // Get gsuite token.
+    // We re-get the token here since otherwise it will expire.
+    let token = get_gsuite_token().await;
+    // Initialize the Google Drive client.
+    let drive = GoogleDrive::new(token);
+
     // TODO: share the database connection in the context.
     let db = Database::new();
 
@@ -342,6 +348,10 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     let mut rfd = result.unwrap();
     // Update the RFD.
     rfd.expand(github).await;
+    event!(Level::INFO, "updated  RFD {}", rfd.number_string);
+
+    rfd.convert_and_upload_pdf(github, &drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id).await;
+    event!(Level::INFO, "updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
     db.update_rfd(&rfd);
