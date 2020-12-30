@@ -696,9 +696,12 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
 }
 
 /// Sync our users with our database and then update Airtable from the database.
-#[instrument(skip(db))]
+#[instrument]
 #[inline]
-pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
+pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
+    // Initialize our database.
+    let db = Database::new();
+
     // Get all the users.
     let db_users = db.get_users();
     // Create a BTreeMap
@@ -732,9 +735,12 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
-#[instrument(skip(db))]
+#[instrument]
 #[inline]
-pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>) {
+pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
+    // Initialize our database.
+    let db = Database::new();
+
     // Get all the buildings.
     let db_buildings = db.get_buildings();
     // Create a BTreeMap
@@ -765,9 +771,12 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
-#[instrument(skip(db))]
+#[instrument]
 #[inline]
-pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>) {
+pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceConfig>) {
+    // Initialize our database.
+    let db = Database::new();
+
     // Get all the conference_rooms.
     let db_conference_rooms = db.get_conference_rooms();
     // Create a BTreeMap
@@ -796,9 +805,12 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
-#[instrument(skip(db))]
+#[instrument]
 #[inline]
-pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
+pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
+    // Initialize our database.
+    let db = Database::new();
+
     // Get all the groups.
     let db_groups = db.get_groups();
     // Create a BTreeMap
@@ -829,9 +841,12 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 }
 
 /// Sync our links with our database and then update Airtable from the database.
-#[instrument(skip(db))]
+#[instrument]
 #[inline]
-pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
+pub async fn sync_links(links: BTreeMap<String, LinkConfig>) {
+    // Initialize our database.
+    let db = Database::new();
+
     // Get all the links.
     let db_links = db.get_links();
     // Create a BTreeMap
@@ -861,9 +876,12 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
-#[instrument(skip(db))]
+#[instrument]
 #[inline]
-pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>) {
+pub async fn sync_certificates(github: &Github, certificates: BTreeMap<String, NewCertificate>) {
+    // Initialize our database.
+    let db = Database::new();
+
     // Get all the certificates.
     let db_certificates = db.get_certificates();
     // Create a BTreeMap
@@ -901,10 +919,10 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     let db = Database::new();
 
     // Sync buildings.
-    sync_buildings(&db, configs.buildings).await;
+    sync_buildings(configs.buildings).await;
 
     // Sync conference rooms.
-    sync_conference_rooms(&db, configs.resources).await;
+    sync_conference_rooms(configs.resources).await;
 
     // Sync GitHub labels.
     for label in configs.labels {
@@ -912,16 +930,16 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     }
 
     // Sync groups.
-    sync_groups(&db, configs.groups).await;
+    sync_groups(configs.groups).await;
 
     // Sync links.
-    sync_links(&db, configs.links).await;
+    sync_links(configs.links).await;
 
     // Sync users.
-    sync_users(&db, configs.users).await;
+    sync_users(configs.users).await;
 
     // Sync certificates.
-    sync_certificates(&db, github, configs.certificates).await;
+    sync_certificates(github, configs.certificates).await;
 }
 
 /// Update the tables for the config files in the meta repository.
