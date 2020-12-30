@@ -858,6 +858,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         // Update the user with the settings from the config for the user.
         let gsuite_user = update_gsuite_user(&u, &user, false).await;
 
+        println!("{:?}", gsuite_user);
         gsuite.update_user(&gsuite_user).await.unwrap();
 
         update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
