@@ -1,6 +1,6 @@
 use hubcaps::repositories::Repository;
 use serde::Serialize;
-use tailscale::Tailscale;
+use tailscale_api::Tailscale;
 use tracing::instrument;
 
 use crate::db::Database;
@@ -134,9 +134,11 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
             continue;
         }
 
+        let hostname = device.hostname.to_lowercase();
+
         let l = ShortUrl {
-            name: device.hostname.to_string(),
-            description: format!("Route for Tailscale IP for {}", device.hostname),
+            name: hostname.to_string(),
+            description: format!("Route for Tailscale IP for {}", hostname),
             link: Default::default(),
             ip: json!(device.addresses.get(0).unwrap()).to_string(),
             subdomain: subdomain.to_string(),

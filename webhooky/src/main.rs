@@ -686,10 +686,12 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
 }]
 #[instrument]
 #[inline]
-async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<shippo::TrackingStatus>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
     println!("shippo-tracking-update: {:?}", event);
+    let body: shippo::TrackingStatus = serde_json::from_str(&event.to_string()).unwrap();
+    println!("shippo-tracking-update parsed: {:?}", body);
 
     //event!(Level::INFO, "shipment {} tracking status updated successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
