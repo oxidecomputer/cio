@@ -1105,7 +1105,7 @@ pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceCo
 
         // Update the resource with the given settings.
         gsuite
-            .update_calendar_resource(&r)
+            .update_calendar_resource(&new_r)
             .await
             .unwrap_or_else(|e| panic!("updating conference room {} in gsuite failed: {}", id, e));
 
@@ -1124,7 +1124,7 @@ pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceCo
         let new_r = update_gsuite_calendar_resource(&r, &resource, &id);
 
         gsuite
-            .create_calendar_resource(&r)
+            .create_calendar_resource(&new_r)
             .await
             .unwrap_or_else(|e| panic!("creating conference room {} in gsuite failed: {}", id, e));
 

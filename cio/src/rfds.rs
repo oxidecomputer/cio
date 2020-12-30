@@ -79,10 +79,16 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
     for file in repo_contents.iter(dir, branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
         if is_image(&file.name) {
             // Get the contents of the image.
-            let contents = repo_contents.file(&file.path, branch).await.unwrap();
-            let new_path = file.path.replace("rfd/", "src/public/static/images/");
-            // Make sure we have this file in the static images dir on the master branch.
-            create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, contents.content.to_vec()).await;
+            match repo_contents.file(&file.path, branch).await {
+                Ok(contents) => {
+                    let new_path = file.path.replace("rfd/", "src/public/static/images/");
+                    // Make sure we have this file in the static images dir on the master branch.
+                    create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, contents.content.to_vec()).await;
+                }
+                Err(e) => {
+                    println!("[rfd] getting file contents for {} failed: {}", file.path, e);
+                }
+            }
         }
     }
 
