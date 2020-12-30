@@ -10,6 +10,7 @@ use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
 use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser};
+use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
@@ -788,6 +789,44 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
     config
 }
 
+/// Sync GitHub outside collaborators with our configs.
+#[instrument]
+#[inline]
+pub async fn sync_github_outside_collaborators(github: &Github, outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>) {
+    let github_org = github_org();
+
+    // Add the outside contributors to the specified repos.
+    for (name, outside_collaborators_config) in outside_collaborators {
+        event!(Level::INFO, "Running configuration for outside collaborators: {}", name);
+        for repo in &outside_collaborators_config.repos {
+            // Get the repository collaborators interface from hubcaps.
+            let repo_collaborators = github.repo(github_org.to_string(), repo.to_string()).collaborators();
+
+            let mut perm = Permissions::Pull;
+            if outside_collaborators_config.perm == "push" {
+                perm = Permissions::Push;
+            }
+
+            // Iterate over the users.
+            for user in &outside_collaborators_config.users {
+                if !repo_collaborators.is_collaborator(&user).await.unwrap_or(false) {
+                    // Add the collaborator.
+                    match repo_collaborators.add(&user, &perm).await {
+                        Ok(_) => {
+                            event!(Level::INFO, "[{}] added user {} as a collaborator ({}) on repo {}", name, user, perm, repo);
+                        }
+                        Err(e) => event!(Level::WARN, "[{}] adding user {} as a collaborator ({}) on repo {} FAILED: {}", name, user, perm, repo, e),
+                    }
+                } else {
+                    event!(Level::INFO, "[{}] user {} is already a collaborator ({}) on repo {}", name, user, perm, repo);
+                }
+            }
+        }
+
+        event!(Level::INFO, "Successfully ran configuration for outside collaborators: {}", name);
+    }
+}
+
 /// Sync our users with our database and then update Airtable from the database.
 #[instrument]
 #[inline]
@@ -1378,6 +1417,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     let db = Database::new();
 
     // Sync buildings.
+    // Syncing buildings must happen before we sync conference rooms.
     sync_buildings(configs.buildings).await;
 
     // Sync conference rooms.
@@ -1400,6 +1440,9 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync certificates.
     sync_certificates(github, configs.certificates).await;
+
+    // Sync github outside collaborators.
+    sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
 }
 
 #[cfg(test)]
