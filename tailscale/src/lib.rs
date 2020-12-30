@@ -8,7 +8,7 @@
  *
  * ```
  * use serde::{Deserialize, Serialize};
- * use tailscale::Tailscale;
+ * use tailscale_api::Tailscale;
  *
  * async fn get_devices() {
  *     // Initialize the Tailscale client.
