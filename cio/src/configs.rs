@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::str::from_utf8;
 use std::{thread, time};
@@ -8,6 +9,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
+use gsuite_api::{GSuite, Group as GSuiteGroup, User as GSuiteUser};
 use handlebars::Handlebars;
 use hubcaps::Github;
 use macros::db_struct;
@@ -21,9 +23,10 @@ use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRT
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
+use crate::gsuite::{update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
 use crate::templates::{TEMPLATE_TABLE_GROUPS, TEMPLATE_TABLE_LINKS, TEMPLATE_TABLE_PEOPLE};
-use crate::utils::{create_or_update_file_in_github_repo, get_github_user_public_ssh_keys, github_org, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::{create_or_update_file_in_github_repo, get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -315,7 +318,7 @@ impl User {
     /// Send an email to the new user about their account.
     #[instrument]
     #[inline]
-    async fn email_send_new_user(&self, password: &str) {
+    async fn send_email_new_user(&self, password: &str) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
         let github_org = github_org();
@@ -352,13 +355,13 @@ administrator, who is cc-ed on this email. Spoiler alert it's Jess...
 jess@{}. If you want other email aliases, let Jess know as well.
 
 You can find more onboarding information in GitHub:
-https://github.com/oxidecomputer/meta/blob/master/general/onboarding.md
+https://github.com/{}/meta/blob/master/general/onboarding.md
 You can find information about internal processes and applications at:
-https://github.com/oxidecomputer/meta/blob/master/general/README.md
+https://github.com/{}/meta/blob/master/general/README.md
 
 As a first contribution to one of our repos, you should add yourself to the
-website: https://github.com/oxidecomputer/website#team-members or add a book
-to our internal library: https://github.com/oxidecomputer/library
+website: https://github.com/{}/website#team-members or add a book
+to our internal library: https://github.com/{}/library
 
 xoxo,
   The GSuite/GitHub Bot",
@@ -371,7 +374,11 @@ xoxo,
                     self.github,
                     github_org,
                     github_org,
-                    DOMAIN
+                    DOMAIN,
+                    github_org,
+                    github_org,
+                    github_org,
+                    github_org,
                 ),
                 vec![self.recovery_email.to_string()],
                 vec![self.email(), format!("jess@{}", DOMAIN)],
@@ -779,6 +786,23 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     // Initialize our database.
     let db = Database::new();
 
+    // Get everything we need to authenticate with GSuite.
+    // Initialize the GSuite gsuite client.
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token().await;
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+
+    // Get the existing GSuite users.
+    let gsuite_users = gsuite.list_users().await.unwrap();
+
+    // Get the GSuite groups.
+    let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
+    let groups = gsuite.list_groups().await.unwrap();
+    for g in groups {
+        // Add the group to our map.
+        gsuite_groups.insert(g.name.to_string(), g);
+    }
+
     // Get all the users.
     let db_users = db.get_users();
     // Create a BTreeMap
@@ -790,6 +814,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     for (_, mut user) in users {
         user.expand().await;
 
+        // Update or create the user in the database.
         let new_user = db.upsert_user(&user);
 
         // Update slack user.
@@ -802,9 +827,72 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, _) in user_map {
+        // Delete the user from the database.
         db.delete_user_by_username(&username);
+
+        // TODO: Delete the user from GSuite.
     }
     event!(Level::INFO, "updated configs users in the database");
+
+    // Update the users in GSuite.
+    // Get all the users.
+    let db_users = db.get_users();
+    // Create a BTreeMap
+    let mut user_map: BTreeMap<String, User> = Default::default();
+    for u in db_users {
+        user_map.insert(u.username.to_string(), u);
+    }
+    // Iterate over the users already in GSuite.
+    for u in gsuite_users {
+        // Get the shorthand username and match it against our existing users.
+        let username = u.primary_email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN)).replace(".", "-");
+
+        // Check if we have that user already in our settings.
+        let user: User;
+        match user_map.get(&username) {
+            Some(val) => user = val.clone(),
+            // Continue through the loop and we will add the user later.
+            None => continue,
+        }
+
+        // Update the user with the settings from the config for the user.
+        let gsuite_user = update_gsuite_user(&u, &user, false).await;
+
+        gsuite.update_user(&gsuite_user).await.unwrap();
+
+        update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
+
+        // Add the user to their teams and groups.
+        update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
+
+        // Remove the user from the user map and continue.
+        // This allows us to add all the remaining new user after.
+        user_map.remove(&username);
+
+        event!(Level::INFO, "updated user in gsuite: {}", username);
+    }
+
+    // Create any remaining users from the database that we do not have in GSuite.
+    for (username, user) in user_map {
+        // Create the user.
+        let u: GSuiteUser = Default::default();
+
+        // The last argument here tell us to create a password!
+        // Make sure it is set to true.
+        let gsuite_user = update_gsuite_user(&u, &user, true).await;
+
+        gsuite.create_user(&gsuite_user).await.unwrap();
+
+        // Send an email to the new user.
+        // Do this here in case another step fails.
+        user.send_email_new_user(&gsuite_user.password).await;
+        event!(Level::INFO, "created new user in gsuite: {}", username);
+
+        update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
+
+        // Add the user to their teams and groups.
+        update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
+    }
 
     // Update users in airtable.
     let users = db.get_users();

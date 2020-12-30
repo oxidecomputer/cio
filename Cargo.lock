@@ -550,6 +550,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -587,7 +588,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#2865ab63f59de62f6a6f4ebe5c0c2ca395098670"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#82c37c12eaff37bdc0d6c93a5ea4d7e933b37eee"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1443,10 +1444,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "chrono 0.4.19",
- "cio-api 0.2.0",
  "rand",
  "reqwest",
  "serde",
@@ -2008,7 +2008,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#2865ab63f59de62f6a6f4ebe5c0c2ca395098670"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#82c37c12eaff37bdc0d6c93a5ea4d7e933b37eee"
 dependencies = [
  "proc-macro2",
  "quote",

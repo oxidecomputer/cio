@@ -68,11 +68,6 @@ use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::Value;
 use yup_oauth2::AccessToken;
 
-#[macro_use]
-extern crate serde_json;
-
-use cio_api::configs::{BuildingConfig, ResourceConfig, UserConfig};
-
 /// The endpoint for the GSuite Directory API.
 const DIRECTORY_ENDPOINT: &str = "https://www.googleapis.com/admin/directory/v1/";
 
@@ -1107,168 +1102,6 @@ pub struct User {
     pub websites: Vec<UserWebsite>,
 }
 
-impl User {
-    /// Update a user.
-    pub async fn update(mut self, user: &UserConfig, domain: &str, change_password: bool) -> User {
-        // TODO(cbiffle): use &mut self instead of consume-and-return
-        // Set the settings for the user.
-        self.name = UserName {
-            full_name: format!("{} {}", user.first_name, user.last_name),
-            given_name: user.first_name.to_string(),
-            family_name: user.last_name.to_string(),
-        };
-
-        if !user.recovery_email.is_empty() {
-            // Set the recovery email for the user.
-            self.recovery_email = user.recovery_email.to_string();
-
-            // Check if we have a home email set for the user and update it.
-            let mut has_home_email = false;
-            for (index, email) in self.emails.iter().enumerate() {
-                if email.typev == "home" {
-                    // Update the set home email.
-                    self.emails[index].address = user.recovery_email.to_string();
-                    // Break the loop early.
-                    has_home_email = true;
-                    break;
-                }
-            }
-
-            if !has_home_email {
-                // Set the home email for the user.
-                self.emails.push(UserEmail {
-                    custom_type: "".to_string(),
-                    typev: "home".to_string(),
-                    address: user.recovery_email.to_string(),
-                    primary: false,
-                });
-            }
-        }
-
-        if !user.recovery_phone.is_empty() {
-            // Set the recovery phone for the user.
-            self.recovery_phone = user.recovery_phone.to_string();
-
-            // Set the home phone for the user.
-            self.phones = vec![UserPhone {
-                custom_type: "".to_string(),
-                typev: "home".to_string(),
-                value: user.recovery_phone.to_string(),
-                primary: true,
-            }];
-        }
-
-        self.primary_email = format!("{}@{}", user.username, domain);
-
-        if change_password {
-            // Since we are creating a new user, we want to change their password
-            // at the next login.
-            self.change_password_at_next_login = true;
-            // Generate a password for the user.
-            let password = generate_password();
-            self.password = password;
-        }
-
-        // Set the user's address if we have one.
-        if !user.home_address_street_1.is_empty() {
-            // TODO: this code is duplicated in configs.rs find a way to make it DRY.
-            let mut street_address = user.home_address_street_1.to_string();
-            if !user.home_address_street_2.is_empty() {
-                street_address = format!("{}\n{}", user.home_address_street_1, user.home_address_street_2,);
-            }
-            self.addresses = vec![UserAddress {
-                country: user.home_address_country.to_string(),
-                // TODO: fix this when we have an employee from another country.
-                country_code: "US".to_string(),
-                custom_type: "".to_string(),
-                extended_address: "".to_string(),
-                formatted: user.home_address_formatted.to_string(),
-                locality: user.home_address_city.to_string(),
-                po_box: "".to_string(),
-                postal_code: user.home_address_zipcode.to_string(),
-                primary: true,
-                region: user.home_address_state.to_string(),
-                // Indicates if the user-supplied address was formatted. Formatted addresses are
-                // not currently supported.
-                // FROM: https://developers.google.com/admin-sdk/directory/v1/reference/users#resource
-                // TODO: figure out when this is supported and what it means
-                source_is_structured: false,
-                street_address,
-                typev: "home".to_string(),
-            }];
-        }
-
-        // Include the user in the global address list
-        self.include_in_global_address_list = true;
-
-        if !user.gender.is_empty() {
-            self.gender = Some(UserGender {
-                address_me_as: "".to_string(),
-                custom_gender: "".to_string(),
-                typev: user.gender.to_string(),
-            });
-        }
-
-        if !user.building.is_empty() {
-            self.locations = vec![UserLocation {
-                area: "".to_string(),
-                building_id: user.building.to_string(),
-                custom_type: "".to_string(),
-                desk_code: "".to_string(),
-                floor_name: "1".to_string(),
-                floor_section: "".to_string(),
-                typev: "desk".to_string(),
-            }];
-        }
-
-        // Set their GitHub SSH Keys to their Google SSH Keys.
-        for k in &user.public_ssh_keys {
-            self.ssh_public_keys.push(UserSSHKey {
-                key: k.to_string(),
-                expiration_time_usec: None,
-                // fingerprint is a read-only property so make sure it is empty
-                fingerprint: "".to_string(),
-            });
-        }
-
-        // Set the IM field for matrix.
-        // TODO: once we migrate to slack update or add to this.
-        if !user.chat.is_empty() {
-            self.ims = vec![UserInstantMessenger {
-                custom_protocol: "matrix".to_string(),
-                custom_type: "".to_string(),
-                im: user.chat.to_string(),
-                primary: true,
-                protocol: "custom_protocol".to_string(),
-                typev: "work".to_string(),
-            }];
-        }
-
-        // Set the custom schemas.
-        self.custom_schemas = HashMap::new();
-        let mut contact: HashMap<String, Value> = HashMap::new();
-        contact.insert("Start_Date".to_string(), json!(user.start_date));
-
-        // Set the GitHub username.
-        if !user.github.is_empty() {
-            contact.insert("GitHub_Username".to_string(), json!(user.github.to_string()));
-        }
-        self.custom_schemas.insert("Contact".to_string(), UserCustomProperties(Some(contact)));
-
-        // Get the AWS Role information.
-        if !user.aws_role.is_empty() {
-            let mut aws_role: HashMap<String, Value> = HashMap::new();
-            let mut aws_type: HashMap<String, String> = HashMap::new();
-            aws_type.insert("type".to_string(), "work".to_string());
-            aws_type.insert("value".to_string(), user.aws_role.to_string());
-            aws_role.insert("Role".to_string(), json!(vec![aws_type]));
-            self.custom_schemas.insert("Amazon_Web_Services".to_string(), UserCustomProperties(Some(aws_role)));
-        }
-
-        self
-    }
-}
-
 /// A user's address.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserAddress {
@@ -1632,7 +1465,7 @@ pub struct CalendarResource {
     pub user_visible_description: String,
 }
 
-impl CalendarResource {
+/*impl CalendarResource {
     /// Update a calendar resource.
     pub fn update(mut self, resource: &ResourceConfig, id: &str) -> CalendarResource {
         // TODO(cbiffle): the consume-and-return self pattern here complicates
@@ -1650,7 +1483,7 @@ impl CalendarResource {
 
         self
     }
-}
+}*/
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct CalendarResources {
@@ -1719,7 +1552,7 @@ pub struct Building {
     pub description: String,
 }
 
-impl Building {
+/*impl Building {
     /// Update a building.
     pub fn update(mut self, building: &BuildingConfig, id: &str) -> Building {
         // TOOD(cbiffle): use &mut self instead of consume-and-return
@@ -1739,7 +1572,7 @@ impl Building {
 
         self
     }
-}
+}*/
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Buildings {
