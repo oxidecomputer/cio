@@ -1822,7 +1822,7 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(configs.users).await;
+        sync_users(&api_context.github, configs.users).await;
     }
 
     // Check if the buildings.toml file changed.
