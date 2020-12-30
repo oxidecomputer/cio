@@ -364,6 +364,9 @@ As a first contribution to one of our repos, you should add yourself to the
 website: https://github.com/{}/website#team-members or add a book
 to our internal library: https://github.com/{}/library
 
+We use Airtable for storing just about everything. You can login with SSO after
+setting up your email at: https://airtable.com/sso/login. Poke around :)
+
 xoxo,
   The GSuite/GitHub Bot",
                     self.first_name,
