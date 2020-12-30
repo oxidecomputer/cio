@@ -226,11 +226,16 @@ pub async fn refresh_db_github_repos(github: &Github) {
 /// If the file exists, it will be updated _only if_ the content of the file has changed.
 #[instrument(skip(repo))]
 #[inline]
-pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &str, file_path: &str, new_content: Vec<u8>) {
+pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &str, path: &str, new_content: Vec<u8>) {
     let content = new_content.trim();
-
+    // Add the starting "/" so this works.
+    // TODO: figure out why it doesn't work without it.
+    let mut file_path = path.to_string();
+    if !path.starts_with('/') {
+        file_path = "/".to_owned() + path;
+    }
     // Try to get the content for the file from the repo.
-    match repo.content().file(file_path, branch).await {
+    match repo.content().file(&file_path, branch).await {
         Ok(file) => {
             let file_content: Vec<u8> = file.content.into();
             let decoded = file_content.trim();
@@ -257,9 +262,10 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
             }
 
             // We need to update the file. Ignore failure.
-            repo.content()
+            match repo
+                .content()
                 .update(
-                    file_path,
+                    &file_path,
                     &content,
                     &format!(
                         "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
@@ -269,7 +275,13 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                     branch,
                 )
                 .await
-                .ok();
+            {
+                Ok(_) => (),
+                Err(e) => {
+                    println!("[github content] updating file at {} on branch {} failed: {}", file_path, branch, e);
+                    return;
+                }
+            }
 
             println!("[github content] Updated file at {}", file_path);
         }
@@ -288,7 +300,7 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                         // TODO: make this less awful.
                         // Get all the items in the directory and try to find our file and get the sha
                         // for it so we can update it.
-                        let mut path = PathBuf::from(file_path);
+                        let mut path = PathBuf::from(&file_path);
                         path.pop();
 
                         for item in repo.content().iter(path.to_str().unwrap(), branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
@@ -316,9 +328,10 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                             }
 
                             // We can actually update the file since we have the sha.
-                            repo.content()
+                            match repo
+                                .content()
                                 .update(
-                                    file_path,
+                                    &file_path,
                                     &content,
                                     &format!(
                                         "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
@@ -328,7 +341,13 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                                     branch,
                                 )
                                 .await
-                                .ok();
+                            {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    println!("[github content] updating file at {} on branch {} failed: {}", file_path, branch, e);
+                                    return;
+                                }
+                            }
 
                             println!("[github content] Updated file at {}", file_path);
 
@@ -343,9 +362,10 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
             }
 
             // Create the file in the repo. Ignore failure.
-            repo.content()
+            match repo
+                .content()
                 .create(
-                    file_path,
+                    &file_path,
                     &content,
                     &format!(
                         "Creating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
@@ -354,7 +374,13 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                     branch,
                 )
                 .await
-                .ok();
+            {
+                Ok(_) => (),
+                Err(e) => {
+                    println!("[github content] creating file at {} on branch {} failed: {}", file_path, branch, e);
+                    return;
+                }
+            }
 
             println!("[github content] Created file at {}", file_path);
         }

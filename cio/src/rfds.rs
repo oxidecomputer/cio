@@ -78,19 +78,36 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
     // Get all the images in the branch and make sure they are in the images directory on master.
     for file in repo_contents.iter(dir, branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
         if is_image(&file.name) {
+            let new_path = file.path.replace("rfd/", "src/public/static/images/");
+
             // Get the contents of the image.
             match repo_contents.file(&file.path, branch).await {
                 Ok(contents) => {
-                    let mut new_path = file.path.replace("rfd/", "src/public/static/images/");
-                    if !new_path.starts_with('/') {
-                        new_path = "/".to_owned() + &new_path;
-                    }
                     // Make sure we have this file in the static images dir on the master branch.
                     create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, contents.content.to_vec()).await;
                 }
-                Err(e) => {
-                    println!("[rfd] getting file contents for {} failed: {}", file.path, e);
-                }
+                Err(e) => match e {
+                    hubcaps::errors::Error::Fault { code: _, ref error } => {
+                        if error.message.contains("too_large") {
+                            // The file is too big for us to get it's contents through this API.
+                            // The error suggests we use the Git Data API but we need the file sha for
+                            // that.
+                            // We have the sha we can see if the files match using the
+                            // Git Data API.
+                            let blob = repo.git().blob(&file.sha).await.unwrap();
+                            // Base64 decode the contents.
+                            // TODO: move this logic to hubcaps.
+                            let v = blob.content.replace("\n", "");
+                            let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
+                            // Make sure we have this file in the static images dir on the master branch.
+                            create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, decoded.to_vec()).await;
+
+                            continue;
+                        }
+                        println!("[rfd] getting file contents for {} failed: {}", file.path, e);
+                    }
+                    _ => println!("[rfd] getting file contents for {} failed: {}", file.path, e),
+                },
             }
         }
     }
