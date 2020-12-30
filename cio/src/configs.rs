@@ -361,8 +361,13 @@ As a first contribution to one of our repos, you should add yourself to the
 website: https://github.com/{}/website#team-members or add a book
 to our internal library: https://github.com/{}/library
 
-We use Airtable for storing just about everything. You can login with SSO after
-setting up your email at: https://airtable.com/sso/login. Poke around :)
+We use Airtable for storing just about everything. You can login with single
+sign-on (SSO) after setting up your email at:
+https://airtable.com/sso/login. Poke around :)
+
+We have both a Riot server and a Slack for chat. Josh (josh@oxide.computer) can get
+you set up with an account on the Riot server. You can use SSO to login to the Slack
+at https://oxidecomputer.slack.com.
 
 xoxo,
   The GSuite/GitHub Bot",
