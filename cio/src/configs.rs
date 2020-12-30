@@ -846,6 +846,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     for u in db_users {
         user_map.insert(u.username.to_string(), u);
     }
+    println!("{:?}", user_map);
     // Iterate over the users already in GSuite.
     for u in gsuite_users {
         // Get the shorthand username and match it against our existing users.
@@ -868,7 +869,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         // Update the user with the settings from the config for the user.
         let gsuite_user = update_gsuite_user(&u, &user, false).await;
 
-        gsuite.update_user(&gsuite_user).await.unwrap();
+        gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} failed: {}", username, e));
 
         update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
 
@@ -892,7 +893,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         let gsuite_user = update_gsuite_user(&u, &user, true).await;
 
         println!("creating user: {}", username);
-        gsuite.create_user(&gsuite_user).await.unwrap();
+        gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} failed: {}", username, e));
 
         // Send an email to the new user.
         // Do this here in case another step fails.
@@ -1057,7 +1058,7 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
         }
         updated_group.aliases = aliases;
 
-        gsuite.update_group(&updated_group).await.unwrap();
+        gsuite.update_group(&updated_group).await.unwrap_or_else(|e| panic!("updating group {} failed: {}", name, e));
 
         update_group_aliases(&gsuite, &updated_group).await;
 
@@ -1088,7 +1089,7 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
         }
         g.aliases = aliases;
 
-        let new_group: GSuiteGroup = gsuite.create_group(&g).await.unwrap();
+        let new_group: GSuiteGroup = gsuite.create_group(&g).await.unwrap_or_else(|e| panic!("creating group {} failed: {}", name, e));
 
         update_group_aliases(&gsuite, &new_group).await;
 
