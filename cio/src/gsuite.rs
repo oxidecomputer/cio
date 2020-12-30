@@ -2,8 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use gsuite_api::{
-    generate_password, Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail,
-    UserGender, UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
+    generate_password, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
 };
 use serde_json::Value;
 use tracing::{event, instrument, Level};

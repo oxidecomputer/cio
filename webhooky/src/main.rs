@@ -1768,6 +1768,13 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
         event!(Level::INFO, "generated shorturls for the configs links");
     }
 
+    // Check if the groups.toml file changed.
+    // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
+    // added a new group to GSuite.
+    if commit.file_changed("configs/groups.toml") {
+        sync_groups(configs.groups).await;
+    }
+
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
         sync_users(configs.users).await;
@@ -1781,11 +1788,6 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     // Check if the resources.toml file changed.
     if commit.file_changed("configs/resources.toml") {
         sync_conference_rooms(configs.resources).await;
-    }
-
-    // Check if the groups.toml file changed.
-    if commit.file_changed("configs/groups.toml") {
-        sync_groups(configs.groups).await;
     }
 
     // Check if the certificates.toml file changed.
