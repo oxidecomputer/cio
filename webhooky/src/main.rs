@@ -29,7 +29,7 @@ use tracing::{event, instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
 use cio_api::applicants::get_role_from_sheet_id;
-use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_groups, sync_links, sync_users};
+use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
@@ -1841,7 +1841,13 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
         sync_certificates(&api_context.github, configs.certificates).await;
     }
 
-    // TODO: do huddles, labels, github-outside-collaborators, etc.
+    // Check if the github-outside-collaborators.toml file changed.
+    if commit.file_changed("configs/github-outside-collaborators.toml") {
+        // Sync github outside collaborators.
+        sync_github_outside_collaborators(&api_context.github, configs.github_outside_collaborators).await;
+    }
+
+    // TODO: do huddles, labels, etc.
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
