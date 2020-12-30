@@ -24,6 +24,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
+use crate::templates::generate_terraform_files_for_aws_and_github;
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
@@ -790,7 +791,10 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
 /// Sync our users with our database and then update Airtable from the database.
 #[instrument]
 #[inline]
-pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
+pub async fn sync_users(github: &Github, users: BTreeMap<String, UserConfig>) {
+    // Generate the terraform files for teams.
+    generate_terraform_files_for_aws_and_github(github, users.clone()).await;
+
     // Initialize our database.
     let db = Database::new();
 
@@ -1392,7 +1396,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_links(configs.links).await;
 
     // Sync users.
-    sync_users(configs.users).await;
+    sync_users(github, configs.users).await;
 
     // Sync certificates.
     sync_certificates(github, configs.certificates).await;
