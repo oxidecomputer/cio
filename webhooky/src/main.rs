@@ -98,6 +98,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(listen_mailchimp_webhooks).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(ping_mailchimp_webhooks).unwrap();
+    api.register(trigger_rfd_update_by_number).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
@@ -333,7 +334,9 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>) -> Result<Http
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let mut rfd = result.unwrap();
-    // rfd.expand();
+    // Update the RFD.
+    rfd.expand(github).await;
+
     // Save the rfd back to our database.
     db.update_rfd(&rfd);
 
