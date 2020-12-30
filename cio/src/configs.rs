@@ -831,9 +831,11 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     for (username, _) in user_map {
         // Delete the user from the database.
         db.delete_user_by_username(&username);
+        event!(Level::INFO, "deleted user from database: {}", username);
 
         // TODO: Delete the user from our Airtable account.
         // TODO: Delete the user from GSuite.
+        event!(Level::INFO, "deleted user from gsuite: {}", username);
         // TODO: Delete the user from Slack.
     }
     event!(Level::INFO, "updated configs users in the database");
@@ -846,11 +848,10 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     for u in db_users {
         user_map.insert(u.username.to_string(), u);
     }
-    println!("{:?}", user_map);
     // Iterate over the users already in GSuite.
     for u in gsuite_users {
         // Get the shorthand username and match it against our existing users.
-        let username = u.primary_email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN)).replace(".", "-");
+        let username = u.primary_email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN));
 
         // Check if we have that user already in our settings.
         let user: User;
@@ -883,6 +884,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         event!(Level::INFO, "updated user in gsuite: {}", username);
     }
 
+    println!("{:?}", user_map);
     // Create any remaining users from the database that we do not have in GSuite.
     for (username, user) in user_map {
         // Create the user.
@@ -892,7 +894,6 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         // Make sure it is set to true.
         let gsuite_user = update_gsuite_user(&u, &user, true).await;
 
-        println!("creating user: {}", username);
         gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} failed: {}", username, e));
 
         // Send an email to the new user.
@@ -995,12 +996,7 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
     // Get the GSuite groups.
-    let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
-    let ggroups = gsuite.list_groups().await.unwrap();
-    for g in ggroups {
-        // Add the group to our map.
-        gsuite_groups.insert(g.name.to_string(), g);
-    }
+    let gsuite_groups = gsuite.list_groups().await.unwrap();
 
     // Get all the groups.
     let db_groups = db.get_groups();
@@ -1023,6 +1019,10 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
     // the existing repos from the map above.
     for (name, _) in group_map {
         db.delete_group_by_name(&name);
+        event!(Level::INFO, "deleted group from database: {}", name);
+
+        // TODO: remove the group from GSuite.
+        event!(Level::INFO, "deleted group from gsuite: {}", name);
     }
     event!(Level::INFO, "updated configs groups in the database");
 
@@ -1035,7 +1035,9 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
         group_map.insert(u.name.to_string(), u);
     }
     // Iterate over the groups already in GSuite.
-    for (name, g) in gsuite_groups {
+    for g in gsuite_groups {
+        let name = g.name.to_string();
+
         // Check if we already have this group in our database.
         let group = if let Some(val) = group_map.get(&name) {
             val

@@ -376,6 +376,27 @@ impl GSuite {
         Ok(())
     }
 
+    /// Delete a group.
+    /// The `group_key` can be the group's email address, group alias, or the unique group ID.
+    /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/groups/delete
+    pub async fn delete_group(&self, group_key: &str) -> Result<(), APIError> {
+        // Build the request.
+        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("groups/{}", group_key), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(())
+    }
+
     /// List users.
     pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
@@ -573,6 +594,26 @@ impl GSuite {
         Ok(())
     }
 
+    /// Delete a calendar resource.
+    /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/resources.calendars/delete
+    pub async fn delete_calendar_resource(&self, id: &str) -> Result<(), APIError> {
+        // Build the request.
+        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("customer/{}/resources/calendars/{}", self.customer, id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(())
+    }
+
     /// List buildings.
     pub async fn list_buildings(&self) -> Result<Vec<Building>, APIError> {
         // Build the request.
@@ -624,6 +665,26 @@ impl GSuite {
     pub async fn create_building(&self, building: &Building) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(DIRECTORY_ENDPOINT, Method::POST, &format!("customer/{}/resources/buildings", self.customer), building, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(())
+    }
+
+    /// Delete a building.
+    /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/resources.buildings/delete
+    pub async fn delete_building(&self, id: &str) -> Result<(), APIError> {
+        // Build the request.
+        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("customer/{}/resources/buildings/{}", self.customer, id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
