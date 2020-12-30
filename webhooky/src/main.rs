@@ -285,26 +285,28 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     }
 
     // Run the correct handler function based on the event type and repo.
-    let repo = event.clone().repository.unwrap();
-    let repo_name = Repo::from_str(&repo.name).unwrap();
-    match repo_name {
-        Repo::RFD => match event_type {
-            EventType::Push => {
-                return handle_rfd_push(api_context, &repo, event).await;
+    if event.repository.is_some() {
+        let repo = event.clone().repository.unwrap();
+        let repo_name = Repo::from_str(&repo.name).unwrap();
+        match repo_name {
+            Repo::RFD => match event_type {
+                EventType::Push => {
+                    return handle_rfd_push(api_context, &repo, event).await;
+                }
+                EventType::PullRequest => {
+                    return handle_rfd_pull_request(api_context, &repo, event).await;
+                }
+                _ => (),
+            },
+            Repo::Configs => {
+                if let EventType::Push = event_type {
+                    return handle_configs_push(api_context, &repo, event).await;
+                }
             }
-            EventType::PullRequest => {
-                return handle_rfd_pull_request(api_context, &repo, event).await;
+            _ => {
+                // We can throw this out, log it and return early.
+                event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
             }
-            _ => (),
-        },
-        Repo::Configs => {
-            if let EventType::Push = event_type {
-                return handle_configs_push(api_context, &repo, event).await;
-            }
-        }
-        _ => {
-            // We can throw this out, log it and return early.
-            event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
         }
     }
 
