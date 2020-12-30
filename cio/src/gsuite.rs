@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use std::{thread, time};
 
 use gsuite_api::{
-    generate_password, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
+    generate_password, Building as GSuiteBuilding, BuildingAddress, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger,
+    UserLocation, UserName, UserPhone, UserSSHKey,
 };
 use serde_json::Value;
 use tracing::{event, instrument, Level};
 
-use crate::configs::{Group, User};
+use crate::configs::{Building, Group, User};
 use crate::utils::GSUITE_DOMAIN;
 
 /// Update a GSuite user.
@@ -321,26 +322,26 @@ pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group) {
     event!(Level::INFO, "updated gsuite groups settings {}", group.name);
 }
 
-/*impl Building {
-    /// Update a building.
-    pub fn update(mut self, building: &BuildingConfig, id: &str) -> Building {
-        self.id = id.to_string();
-        self.name = building.name.to_string();
-        self.description = building.description.to_string();
-        self.address = BuildingAddress {
-            address_lines: vec![building.street_address.to_string()],
-            locality: building.city.to_string(),
-            administrative_area: building.state.to_string(),
-            postal_code: building.zipcode.to_string(),
-            region_code: building.country.to_string(),
-            language_code: "en".to_string(),
-            sublocality: "".to_string(),
-        };
-        self.floor_names = building.floors.clone();
+/// Update a building in GSuite.
+pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str) -> GSuiteBuilding {
+    let mut gsuite_building = b.clone();
 
-        self
-    }
-}*/
+    gsuite_building.id = id.to_string();
+    gsuite_building.name = building.name.to_string();
+    gsuite_building.description = building.description.to_string();
+    gsuite_building.address = BuildingAddress {
+        address_lines: vec![building.street_address.to_string()],
+        locality: building.city.to_string(),
+        administrative_area: building.state.to_string(),
+        postal_code: building.zipcode.to_string(),
+        region_code: building.country.to_string(),
+        language_code: "en".to_string(),
+        sublocality: "".to_string(),
+    };
+    gsuite_building.floor_names = building.floors.clone();
+
+    gsuite_building
+}
 
 /*impl CalendarResource {
     /// Update a calendar resource.

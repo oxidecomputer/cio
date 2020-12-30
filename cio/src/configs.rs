@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
-use gsuite_api::{GSuite, Group as GSuiteGroup, User as GSuiteUser};
+use gsuite_api::{Building as GSuiteBuilding, GSuite, Group as GSuiteGroup, User as GSuiteUser};
 use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
@@ -22,7 +22,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRT
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_user, update_user_aliases, update_user_google_groups};
+use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -790,7 +790,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     let db = Database::new();
 
     // Get everything we need to authenticate with GSuite.
-    // Initialize the GSuite gsuite client.
+    // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token().await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
@@ -935,6 +935,15 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
 #[instrument]
 #[inline]
 pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
+    // Get everything we need to authenticate with GSuite.
+    // Initialize the GSuite client.
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token().await;
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+
+    // Get the existing google buildings.
+    let gsuite_buildings = gsuite.list_buildings().await.unwrap();
+
     // Initialize our database.
     let db = Database::new();
 
@@ -958,9 +967,67 @@ pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
     // This is found by the remaining buildings that are in the map since we removed
     // the existing repos from the map above.
     for (name, _) in building_map {
+        println!("deleting building {} from the database, gsuite, etc", name);
+
         db.delete_building_by_name(&name);
+        event!(Level::INFO, "deleted building from database: {}", name);
+
+        // Delete the building from GSuite.
+        //gsuite.delete_building(&name).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
+        event!(Level::INFO, "deleted building from gsuite: {}", name);
     }
     event!(Level::INFO, "updated configs buildings in the database");
+
+    // Update the buildings in GSuite.
+    // Get all the buildings.
+    let db_buildings = db.get_buildings();
+    // Create a BTreeMap
+    let mut building_map: BTreeMap<String, Building> = Default::default();
+    for u in db_buildings {
+        building_map.insert(u.name.to_string(), u);
+    }
+    for b in gsuite_buildings {
+        let id = b.id.to_string();
+
+        // Check if we have that building already in our database.
+        let building: Building;
+        match building_map.get(&id) {
+            Some(val) => building = val.clone(),
+            None => {
+                // If the building does not exist in our map we need to delete
+                // them from GSuite.
+                println!("deleting building {} from gsuite", id);
+                //gsuite.delete_building(&id).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
+
+                event!(Level::INFO, "deleted building from gsuite: {}", id);
+                continue;
+            }
+        }
+
+        // Update the building with the settings from the database for the building.
+        let new_b = update_gsuite_building(&b, &building, &id);
+
+        // Update the building with the given settings.
+        gsuite.update_building(&new_b).await.unwrap_or_else(|e| panic!("updating building {} in gsuite failed: {}", id, e));
+
+        // Remove the building from the database map and continue.
+        // This allows us to add all the remaining new building after.
+        building_map.remove(&id);
+
+        event!(Level::INFO, "updated building from gsuite: {}", id);
+    }
+
+    // Create any remaining buildings from the database that we do not have in GSuite.
+    for (id, building) in building_map {
+        // Create the building.
+        let b: GSuiteBuilding = Default::default();
+
+        let new_b = update_gsuite_building(&b, &building, &id);
+
+        gsuite.create_building(&new_b).await.unwrap_or_else(|e| panic!("creating building {} in gsuite failed: {}", id, e));
+
+        event!(Level::INFO, "created building from gsuite: {}", id);
+    }
 
     // Update buildings in airtable.
     let buildings = db.get_buildings();
@@ -1009,7 +1076,7 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
     let db = Database::new();
 
     // Get everything we need to authenticate with GSuite.
-    // Initialize the GSuite gsuite client.
+    // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token().await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
