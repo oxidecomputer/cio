@@ -1465,8 +1465,8 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
 
-    // Ignore any changes that are not to the `configs/` directory.
-    let dir = "configs/";
+    // Ignore any changes that are not to the `rfd/` directory.
+    let dir = "rfd/";
     commit.filter_files_by_path(dir);
     if !commit.has_changed_files() {
         // No files changed that we care about.
@@ -1732,8 +1732,8 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
 
-    // Ignore any changes that are not to the `rfd/` directory.
-    let dir = "rfd/";
+    // Ignore any changes that are not to the `configs/` directory.
+    let dir = "configs/";
     commit.filter_files_by_path(dir);
     if !commit.has_changed_files() {
         // No files changed that we care about.

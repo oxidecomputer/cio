@@ -89,3 +89,4 @@ jobs:
           PRINTER_URL: ${{ secrets.PRINTER_URL }}
           TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
           TAILSCALE_DOMAIN: ${{ secrets.TAILSCALE_DOMAIN }}
+          AIRTABLE_ENTERPRISE_ACCOUNT_ID: ${{ secrets.AIRTABLE_ENTERPRISE_ACCOUNT_ID }}

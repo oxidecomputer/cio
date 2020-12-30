@@ -5,6 +5,7 @@ use std::fs;
 use std::str::from_utf8;
 use std::{thread, time};
 
+use airtable_api::Airtable;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
@@ -805,6 +806,9 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         gsuite_groups.insert(g.name.to_string(), g);
     }
 
+    // Initialize the Airtable client.
+    let airtable = Airtable::new_from_env();
+
     // Get all the users.
     let db_users = db.get_users();
     // Create a BTreeMap
@@ -829,14 +833,26 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, _) in user_map {
+        println!("deleting user {} from the database, gsuite, airtable, etc", username);
+        let email = format!("{}@{}", username, GSUITE_DOMAIN);
+
         // Delete the user from the database.
         db.delete_user_by_username(&username);
         event!(Level::INFO, "deleted user from database: {}", username);
 
-        // TODO: Delete the user from our Airtable account.
-        // TODO: Delete the user from GSuite.
+        // Delete the user from our Airtable account.
+        airtable
+            .delete_internal_user_by_email(&email)
+            .await
+            .unwrap_or_else(|e| panic!("deleting user {} from airtable failed: {}", username, e));
+        event!(Level::INFO, "deleted user from airtable: {}", username);
+
+        // Delete the user from GSuite.
+        gsuite.delete_user(&email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
         event!(Level::INFO, "deleted user from gsuite: {}", username);
+
         // TODO: Delete the user from Slack.
+        event!(Level::INFO, "deleted user from slack: {}", username);
     }
     event!(Level::INFO, "updated configs users in the database");
 
@@ -858,9 +874,13 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         match user_map.get(&username) {
             Some(val) => user = val.clone(),
             None => {
-                // TODO: if the user does not exist in our map we need to delete
+                // If the user does not exist in our map we need to delete
                 // them from GSuite.
                 println!("deleting user {} from gsuite", username);
+                gsuite
+                    .delete_user(&format!("{}@{}", username, GSUITE_DOMAIN))
+                    .await
+                    .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
 
                 event!(Level::INFO, "deleted user from gsuite: {}", username);
                 continue;
@@ -870,7 +890,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         // Update the user with the settings from the config for the user.
         let gsuite_user = update_gsuite_user(&u, &user, false).await;
 
-        gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} failed: {}", username, e));
+        gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
 
         update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
 
@@ -893,7 +913,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         // Make sure it is set to true.
         let gsuite_user = update_gsuite_user(&u, &user, true).await;
 
-        gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} failed: {}", username, e));
+        gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
 
         // Send an email to the new user.
         // Do this here in case another step fails.
@@ -1017,10 +1037,17 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
     for (name, _) in group_map {
+        println!("deleting group {} from the database, gsuite, etc", name);
+
+        // Delete the group from the database.
         db.delete_group_by_name(&name);
         event!(Level::INFO, "deleted group from database: {}", name);
 
-        // TODO: remove the group from GSuite.
+        // Remove the group from GSuite.
+        gsuite
+            .delete_group(&format!("{}@{}", name, GSUITE_DOMAIN))
+            .await
+            .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
         event!(Level::INFO, "deleted group from gsuite: {}", name);
     }
     event!(Level::INFO, "updated configs groups in the database");
@@ -1041,9 +1068,13 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
         let group = if let Some(val) = group_map.get(&name) {
             val
         } else {
-            // TODO: If the group does not exist in our map we need to delete
+            // If the group does not exist in our map we need to delete
             // group from GSuite.
             println!("deleting group {} from gsuite", name);
+            gsuite
+                .delete_group(&format!("{}@{}", name, GSUITE_DOMAIN))
+                .await
+                .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
             event!(Level::INFO, "deleted group from gsuite: {}", name);
             continue;
         };
@@ -1059,7 +1090,7 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
         }
         updated_group.aliases = aliases;
 
-        gsuite.update_group(&updated_group).await.unwrap_or_else(|e| panic!("updating group {} failed: {}", name, e));
+        gsuite.update_group(&updated_group).await.unwrap_or_else(|e| panic!("updating group {} in gsuite failed: {}", name, e));
 
         update_group_aliases(&gsuite, &updated_group).await;
 
@@ -1090,7 +1121,7 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
         }
         g.aliases = aliases;
 
-        let new_group: GSuiteGroup = gsuite.create_group(&g).await.unwrap_or_else(|e| panic!("creating group {} failed: {}", name, e));
+        let new_group: GSuiteGroup = gsuite.create_group(&g).await.unwrap_or_else(|e| panic!("creating group {} in gsuite failed: {}", name, e));
 
         update_group_aliases(&gsuite, &new_group).await;
 
