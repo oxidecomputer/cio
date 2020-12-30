@@ -703,6 +703,8 @@ pub struct LinkConfig {
     pub link: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub short_link: String,
 }
 
 /// Implement updating the Airtable record for a Link.
@@ -1022,7 +1024,9 @@ pub async fn sync_links(links: BTreeMap<String, LinkConfig>) {
     }
     // Sync links.
     for (name, mut link) in links {
-        link.name = name;
+        link.name = name.to_string();
+        link.short_link = format!("https://{}.corp.{}", name, DOMAIN);
+
         db.upsert_link(&link);
 
         // Remove the link from the BTreeMap.

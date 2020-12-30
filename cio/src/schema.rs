@@ -266,6 +266,7 @@ table! {
         description -> Varchar,
         link -> Varchar,
         aliases -> Array<Text>,
+        short_link -> Varchar,
     }
 }
 
