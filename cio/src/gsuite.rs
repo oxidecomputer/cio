@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use std::{thread, time};
 
 use gsuite_api::{
-    generate_password, Building as GSuiteBuilding, BuildingAddress, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger,
-    UserLocation, UserName, UserPhone, UserSSHKey,
+    generate_password, Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties,
+    UserEmail, UserGender, UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
 };
 use serde_json::Value;
 use tracing::{event, instrument, Level};
 
-use crate::configs::{Building, Group, User};
+use crate::configs::{Building, ConferenceRoom, Group, User};
 use crate::utils::GSUITE_DOMAIN;
 
 /// Update a GSuite user.
@@ -323,6 +323,8 @@ pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group) {
 }
 
 /// Update a building in GSuite.
+#[instrument]
+#[inline]
 pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str) -> GSuiteBuilding {
     let mut gsuite_building = b.clone();
 
@@ -343,20 +345,22 @@ pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str)
     gsuite_building
 }
 
-/*impl CalendarResource {
-    /// Update a calendar resource.
-    pub fn update(mut self, resource: &ResourceConfig, id: &str) -> CalendarResource {
-        self.id = id.to_string();
-        self.typev = resource.typev.to_string();
-        self.name = resource.name.to_string();
-        self.building_id = resource.building.to_string();
-        self.description = resource.description.to_string();
-        self.user_visible_description = resource.description.to_string();
-        self.capacity = Some(resource.capacity);
-        self.floor_name = resource.floor.to_string();
-        self.floor_section = resource.section.to_string();
-        self.category = "CONFERENCE_ROOM".to_string();
+/// Update a calendar resource.
+#[instrument]
+#[inline]
+pub fn update_gsuite_calendar_resource(c: &GSuiteCalendarResource, resource: &ConferenceRoom, id: &str) -> GSuiteCalendarResource {
+    let mut gsuite_conference_room = c.clone();
 
-        self
-    }
-}*/
+    gsuite_conference_room.id = id.to_string();
+    gsuite_conference_room.typev = resource.typev.to_string();
+    gsuite_conference_room.name = resource.name.to_string();
+    gsuite_conference_room.building_id = resource.building.to_string();
+    gsuite_conference_room.description = resource.description.to_string();
+    gsuite_conference_room.user_visible_description = resource.description.to_string();
+    gsuite_conference_room.capacity = Some(resource.capacity);
+    gsuite_conference_room.floor_name = resource.floor.to_string();
+    gsuite_conference_room.floor_section = resource.section.to_string();
+    gsuite_conference_room.category = "CONFERENCE_ROOM".to_string();
+
+    gsuite_conference_room
+}

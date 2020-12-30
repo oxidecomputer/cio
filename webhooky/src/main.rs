@@ -1810,6 +1810,7 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     }
 
     // Check if the buildings.toml file changed.
+    // Buildings needs to be synchronized _before_ we move on to conference rooms.
     if commit.file_changed("configs/buildings.toml") {
         sync_buildings(configs.buildings).await;
     }

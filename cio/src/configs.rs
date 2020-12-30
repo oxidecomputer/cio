@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
-use gsuite_api::{Building as GSuiteBuilding, GSuite, Group as GSuiteGroup, User as GSuiteUser};
+use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser};
 use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
@@ -22,7 +22,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRT
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_user, update_user_aliases, update_user_google_groups};
+use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -1041,6 +1041,15 @@ pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceCo
     // Initialize our database.
     let db = Database::new();
 
+    // Get everything we need to authenticate with GSuite.
+    // Initialize the GSuite client.
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token().await;
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+
+    // Get the existing GSuite calendar resources.
+    let g_suite_calendar_resources = gsuite.list_calendar_resources().await.unwrap();
+
     // Get all the conference_rooms.
     let db_conference_rooms = db.get_conference_rooms();
     // Create a BTreeMap
@@ -1059,9 +1068,68 @@ pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceCo
     // This is found by the remaining conference_rooms that are in the map since we removed
     // the existing repos from the map above.
     for (name, _) in conference_room_map {
+        println!("deleting conference room {} from the database", name);
         db.delete_conference_room_by_name(&name);
+        event!(Level::INFO, "deleted conference room from the database: {}", name);
     }
     event!(Level::INFO, "updated configs conference_rooms in the database");
+
+    // Update the conference_rooms in GSuite.
+    // Get all the conference_rooms.
+    let db_conference_rooms = db.get_conference_rooms();
+    // Create a BTreeMap
+    let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
+    for u in db_conference_rooms {
+        conference_room_map.insert(u.name.to_string(), u);
+    }
+    for r in g_suite_calendar_resources {
+        let id = r.name.to_string();
+
+        // Check if we have that resource already in our database.
+        let resource: ConferenceRoom;
+        match conference_room_map.get(&id) {
+            Some(val) => resource = val.clone(),
+            None => {
+                // If the conference room does not exist in our map we need to delete
+                // it from GSuite.
+                println!("deleting conference room {} from gsuite", id);
+                //gsuite.delete_calendar_resource(&r.id).await.unwrap_or_else(|e| panic!("deleting conference room {} from gsuite failed: {}", id, e));
+
+                event!(Level::INFO, "deleted conference room from gsuite: {}", id);
+                continue;
+            }
+        }
+
+        // Update the resource with the settings from the database for the resource.
+        let new_r = update_gsuite_calendar_resource(&r, &resource, &r.id);
+
+        // Update the resource with the given settings.
+        gsuite
+            .update_calendar_resource(&r)
+            .await
+            .unwrap_or_else(|e| panic!("updating conference room {} in gsuite failed: {}", id, e));
+
+        // Remove the resource from the database map and continue.
+        // This allows us to add all the remaining new resource after.
+        conference_room_map.remove(&id);
+
+        event!(Level::INFO, "updated conference room in gsuite: {}", id);
+    }
+
+    // Create any remaining resources from the database that we do not have in GSuite.
+    for (id, resource) in conference_room_map {
+        // Create the resource.
+        let r: GSuiteCalendarResource = Default::default();
+
+        let new_r = update_gsuite_calendar_resource(&r, &resource, &id);
+
+        gsuite
+            .create_calendar_resource(&r)
+            .await
+            .unwrap_or_else(|e| panic!("creating conference room {} in gsuite failed: {}", id, e));
+
+        event!(Level::INFO, "created conference room in gsuite: {}", id);
+    }
 
     // Update conference_rooms in airtable.
     let conference_rooms = db.get_conference_rooms();
