@@ -7,13 +7,14 @@ use std::str::from_utf8;
 
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
+use futures_util::TryStreamExt;
 use hubcaps::Github;
 use regex::Regex;
 use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::NewRFD;
-use crate::utils::github_org;
+use crate::utils::{create_or_update_file_in_github_repo, github_org};
 
 /// Get the RFDs from the rfd GitHub repo.
 #[instrument]
@@ -48,7 +49,9 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
 #[instrument]
 #[inline]
 pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str) -> (String, bool, String) {
-    let repo_contents = github.repo(github_org(), "rfd").content();
+    let repo = github.repo(github_org(), "rfd");
+    let r = repo.get().await.unwrap();
+    let repo_contents = repo.content();
     let mut is_markdown = false;
     let decoded: String;
     let sha: String;
@@ -69,6 +72,17 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
 
             decoded = from_utf8(&contents.content).unwrap().trim().to_string();
             sha = contents.sha;
+        }
+    }
+
+    // Get all the images in the branch and make sure they are in the images directory on master.
+    for file in repo_contents.iter(dir, branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
+        if is_image(&file.name) {
+            // Get the contents of the image.
+            let contents = repo_contents.file(&file.path, branch).await.unwrap();
+            let new_path = file.path.replace("rfd/", "src/public/static/images/");
+            // Make sure we have this file in the static images dir on the master branch.
+            create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, contents.content.to_vec()).await;
         }
     }
 
@@ -109,6 +123,13 @@ pub fn parse_asciidoc(content: &str) -> String {
     }
 
     result.to_string()
+}
+
+/// Return if the file is an image.
+#[instrument]
+#[inline]
+pub fn is_image(file: &str) -> bool {
+    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg") || file.ends_with(".odg") || file.ends_with(".gv")
 }
 
 #[instrument]
