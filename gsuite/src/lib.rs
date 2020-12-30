@@ -1191,6 +1191,7 @@ pub struct UserInstantMessenger {
     pub custom_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub im: String,
+    #[serde(default)]
     pub primary: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub protocol: String,
@@ -1465,26 +1466,6 @@ pub struct CalendarResource {
     pub user_visible_description: String,
 }
 
-/*impl CalendarResource {
-    /// Update a calendar resource.
-    pub fn update(mut self, resource: &ResourceConfig, id: &str) -> CalendarResource {
-        // TODO(cbiffle): the consume-and-return self pattern here complicates
-        // things; use &mut self
-        self.id = id.to_string();
-        self.typev = resource.typev.to_string();
-        self.name = resource.name.to_string();
-        self.building_id = resource.building.to_string();
-        self.description = resource.description.to_string();
-        self.user_visible_description = resource.description.to_string();
-        self.capacity = Some(resource.capacity);
-        self.floor_name = resource.floor.to_string();
-        self.floor_section = resource.section.to_string();
-        self.category = "CONFERENCE_ROOM".to_string();
-
-        self
-    }
-}*/
-
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct CalendarResources {
     /// Token used to access next page of this result.
@@ -1551,28 +1532,6 @@ pub struct Building {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
 }
-
-/*impl Building {
-    /// Update a building.
-    pub fn update(mut self, building: &BuildingConfig, id: &str) -> Building {
-        // TOOD(cbiffle): use &mut self instead of consume-and-return
-        self.id = id.to_string();
-        self.name = building.name.to_string();
-        self.description = building.description.to_string();
-        self.address = BuildingAddress {
-            address_lines: vec![building.street_address.to_string()],
-            locality: building.city.to_string(),
-            administrative_area: building.state.to_string(),
-            postal_code: building.zipcode.to_string(),
-            region_code: building.country.to_string(),
-            language_code: "en".to_string(),
-            sublocality: "".to_string(),
-        };
-        self.floor_names = building.floors.clone();
-
-        self
-    }
-}*/
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Buildings {

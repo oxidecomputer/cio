@@ -23,7 +23,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRT
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::gsuite::{update_gsuite_user, update_user_aliases, update_user_google_groups};
+use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
 use crate::templates::{TEMPLATE_TABLE_GROUPS, TEMPLATE_TABLE_LINKS, TEMPLATE_TABLE_PEOPLE};
 use crate::utils::{create_or_update_file_in_github_repo, get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
@@ -832,7 +832,9 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         // Delete the user from the database.
         db.delete_user_by_username(&username);
 
+        // TODO: Delete the user from our Airtable account.
         // TODO: Delete the user from GSuite.
+        // TODO: Delete the user from Slack.
     }
     event!(Level::INFO, "updated configs users in the database");
 
@@ -853,14 +855,19 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         let user: User;
         match user_map.get(&username) {
             Some(val) => user = val.clone(),
-            // Continue through the loop and we will add the user later.
-            None => continue,
+            None => {
+                // TODO: if the user does not exist in our map we need to delete
+                // them from GSuite.
+                println!("deleting user {} from gsuite", username);
+
+                event!(Level::INFO, "deleted user from gsuite: {}", username);
+                continue;
+            }
         }
 
         // Update the user with the settings from the config for the user.
         let gsuite_user = update_gsuite_user(&u, &user, false).await;
 
-        println!("{:?}", gsuite_user);
         gsuite.update_user(&gsuite_user).await.unwrap();
 
         update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
@@ -884,6 +891,7 @@ pub async fn sync_users(users: BTreeMap<String, UserConfig>) {
         // Make sure it is set to true.
         let gsuite_user = update_gsuite_user(&u, &user, true).await;
 
+        println!("creating user: {}", username);
         gsuite.create_user(&gsuite_user).await.unwrap();
 
         // Send an email to the new user.
@@ -979,6 +987,20 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
     // Initialize our database.
     let db = Database::new();
 
+    // Get everything we need to authenticate with GSuite.
+    // Initialize the GSuite gsuite client.
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token().await;
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+
+    // Get the GSuite groups.
+    let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
+    let ggroups = gsuite.list_groups().await.unwrap();
+    for g in ggroups {
+        // Add the group to our map.
+        gsuite_groups.insert(g.name.to_string(), g);
+    }
+
     // Get all the groups.
     let db_groups = db.get_groups();
     // Create a BTreeMap
@@ -1002,6 +1024,79 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
         db.delete_group_by_name(&name);
     }
     event!(Level::INFO, "updated configs groups in the database");
+
+    // Update the groups in GSuite.
+    // Get all the groups.
+    let db_groups = db.get_groups();
+    // Create a BTreeMap
+    let mut group_map: BTreeMap<String, Group> = Default::default();
+    for u in db_groups {
+        group_map.insert(u.name.to_string(), u);
+    }
+    // Iterate over the groups already in GSuite.
+    for (name, g) in gsuite_groups {
+        // Check if we already have this group in our database.
+        let group = if let Some(val) = group_map.get(&name) {
+            val
+        } else {
+            // TODO: If the group does not exist in our map we need to delete
+            // group from GSuite.
+            println!("deleting group {} from gsuite", name);
+            event!(Level::INFO, "deleted group from gsuite: {}", name);
+            continue;
+        };
+
+        // Update the group with the settings from the database for the group.
+        let mut updated_group: GSuiteGroup = g.clone();
+        updated_group.description = group.description.to_string();
+
+        // Write the group aliases.
+        let mut aliases: Vec<String> = Default::default();
+        for alias in &group.aliases {
+            aliases.push(format!("{}@{}", alias, GSUITE_DOMAIN));
+        }
+        updated_group.aliases = aliases;
+
+        gsuite.update_group(&updated_group).await.unwrap();
+
+        update_group_aliases(&gsuite, &updated_group).await;
+
+        // Update the groups settings.
+        update_google_group_settings(&gsuite, &group).await;
+
+        // Remove the group from the database map and continue.
+        // This allows us to add all the remaining new groups after.
+        group_map.remove(&name);
+
+        event!(Level::INFO, "updated group in gsuite: {}", name);
+    }
+
+    // Create any remaining groups from the database  that we do not have in GSuite.
+    for (name, group) in group_map {
+        // Create the group.
+        let mut g: GSuiteGroup = Default::default();
+
+        // TODO: Make this more DRY since it is repeated above as well.
+        g.name = group.name.to_string();
+        g.email = format!("{}@{}", group.name, GSUITE_DOMAIN);
+        g.description = group.description.to_string();
+
+        // Write the group aliases.
+        let mut aliases: Vec<String> = Default::default();
+        for alias in &group.aliases {
+            aliases.push(format!("{}@{}", alias, GSUITE_DOMAIN));
+        }
+        g.aliases = aliases;
+
+        let new_group: GSuiteGroup = gsuite.create_group(&g).await.unwrap();
+
+        update_group_aliases(&gsuite, &new_group).await;
+
+        // Update the groups settings.
+        update_google_group_settings(&gsuite, &group).await;
+
+        event!(Level::INFO, "created group in gsuite: {}", name);
+    }
 
     // Update groups in airtable.
     let groups = db.get_groups();
@@ -1114,6 +1209,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     }
 
     // Sync groups.
+    // Syncing groups must happen before we sync the users.
     sync_groups(configs.groups).await;
 
     // Sync links.

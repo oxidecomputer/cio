@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::{thread, time};
 
 use gsuite_api::{
     generate_password, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
@@ -7,7 +8,7 @@ use gsuite_api::{
 use serde_json::Value;
 use tracing::{event, instrument, Level};
 
-use crate::configs::User;
+use crate::configs::{Group, User};
 use crate::utils::GSUITE_DOMAIN;
 
 /// Update a GSuite user.
@@ -126,6 +127,8 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     }
 
     // Set their GitHub SSH Keys to their Google SSH Keys.
+    // Clear out their existing keys first.
+    gsuite_user.ssh_public_keys = Default::default();
     for k in &user.public_ssh_keys {
         gsuite_user.ssh_public_keys.push(UserSSHKey {
             key: k.to_string(),
@@ -138,14 +141,24 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     // Set the IM field for matrix.
     // TODO: once we migrate to slack update or add to this.
     if !user.chat.is_empty() {
-        gsuite_user.ims = vec![UserInstantMessenger {
-            custom_protocol: "matrix".to_string(),
-            custom_type: "".to_string(),
-            im: user.chat.to_string(),
-            primary: true,
-            protocol: "custom_protocol".to_string(),
-            typev: "work".to_string(),
-        }];
+        gsuite_user.ims = vec![
+            UserInstantMessenger {
+                custom_protocol: "matrix".to_string(),
+                custom_type: "".to_string(),
+                im: user.chat.to_string(),
+                primary: true,
+                protocol: "custom_protocol".to_string(),
+                typev: "work".to_string(),
+            },
+            UserInstantMessenger {
+                custom_protocol: "slack".to_string(),
+                custom_type: "".to_string(),
+                im: format!("@{}", user.github),
+                primary: false,
+                protocol: "custom_protocol".to_string(),
+                typev: "work".to_string(),
+            },
+        ];
     }
 
     // Set the custom schemas.
@@ -249,3 +262,96 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         event!(Level::INFO, "removed {} from gsuite group {}", user.email(), group.name);
     }
 }
+
+/// Update a group's aliases in GSuite to match our configuration files.
+#[instrument(skip(gsuite))]
+#[inline]
+pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
+    if g.aliases.is_empty() {
+        // return early
+        return;
+    }
+
+    // Update the user's aliases.
+    gsuite.update_group_aliases(&g.email, g.aliases.clone()).await;
+    event!(Level::INFO, "updated gsuite group aliases: {}", g.email);
+}
+
+/// Update a group's settings in GSuite to match our configuration files.
+#[instrument(skip(gsuite))]
+#[inline]
+pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group) {
+    // Get the current group settings.
+    let email = format!("{}@{}", group.name, GSUITE_DOMAIN);
+    let mut result = gsuite.get_group_settings(&email).await;
+    if result.is_err() {
+        // Try again.
+        thread::sleep(time::Duration::from_secs(1));
+        result = gsuite.get_group_settings(&email).await;
+    }
+    let mut settings = result.unwrap();
+
+    // Update the groups settings.
+    settings.email = email;
+    settings.name = group.name.to_string();
+    settings.description = group.description.to_string();
+    settings.allow_external_members = group.allow_external_members.to_string();
+    settings.allow_web_posting = group.allow_web_posting.to_string();
+    settings.is_archived = group.is_archived.to_string();
+    settings.who_can_discover_group = group.who_can_discover_group.to_string();
+    settings.who_can_join = group.who_can_join.to_string();
+    settings.who_can_moderate_members = group.who_can_moderate_members.to_string();
+    settings.who_can_post_message = group.who_can_post_message.to_string();
+    settings.who_can_view_group = group.who_can_view_group.to_string();
+    settings.who_can_view_membership = group.who_can_view_membership.to_string();
+    settings.who_can_contact_owner = "ALL_IN_DOMAIN_CAN_CONTACT".to_string();
+
+    // Update the group with the given settings.
+    let result2 = gsuite.update_group_settings(&settings).await;
+    if result2.is_err() {
+        // Try again.
+        thread::sleep(time::Duration::from_secs(1));
+        gsuite.update_group_settings(&settings).await.unwrap();
+    }
+
+    event!(Level::INFO, "updated gsuite groups settings {}", group.name);
+}
+
+/*impl Building {
+    /// Update a building.
+    pub fn update(mut self, building: &BuildingConfig, id: &str) -> Building {
+        self.id = id.to_string();
+        self.name = building.name.to_string();
+        self.description = building.description.to_string();
+        self.address = BuildingAddress {
+            address_lines: vec![building.street_address.to_string()],
+            locality: building.city.to_string(),
+            administrative_area: building.state.to_string(),
+            postal_code: building.zipcode.to_string(),
+            region_code: building.country.to_string(),
+            language_code: "en".to_string(),
+            sublocality: "".to_string(),
+        };
+        self.floor_names = building.floors.clone();
+
+        self
+    }
+}*/
+
+/*impl CalendarResource {
+    /// Update a calendar resource.
+    pub fn update(mut self, resource: &ResourceConfig, id: &str) -> CalendarResource {
+        self.id = id.to_string();
+        self.typev = resource.typev.to_string();
+        self.name = resource.name.to_string();
+        self.building_id = resource.building.to_string();
+        self.description = resource.description.to_string();
+        self.user_visible_description = resource.description.to_string();
+        self.capacity = Some(resource.capacity);
+        self.floor_name = resource.floor.to_string();
+        self.floor_section = resource.section.to_string();
+        self.category = "CONFERENCE_ROOM".to_string();
+
+        self
+    }
+}*/
