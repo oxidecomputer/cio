@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::str::from_utf8;
@@ -11,7 +10,6 @@ use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
 use gsuite_api::{GSuite, Group as GSuiteGroup, User as GSuiteUser};
-use handlebars::Handlebars;
 use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
@@ -26,8 +24,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
-use crate::templates::{TEMPLATE_TABLE_GROUPS, TEMPLATE_TABLE_LINKS, TEMPLATE_TABLE_PEOPLE};
-use crate::utils::{create_or_update_file_in_github_repo, get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -1258,33 +1255,9 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_certificates(github, configs.certificates).await;
 }
 
-/// Update the tables for the config files in the meta repository.
-pub async fn update_tables_in_meta(github: &Github) {
-    let configs = get_configs_from_repo(&github).await;
-
-    // Initialize handlebars.
-    let handlebars = Handlebars::new();
-
-    // Create the tables hashmap.
-    let mut tables: HashMap<&str, &str> = HashMap::new();
-    tables.insert(TEMPLATE_TABLE_GROUPS, "/directory/groups/README.md");
-    tables.insert(TEMPLATE_TABLE_LINKS, "/links/README.md");
-    tables.insert(TEMPLATE_TABLE_PEOPLE, "/directory/people/README.md");
-
-    // Get the meta repository.
-    let repo = github.repo(github_org(), "meta");
-    let r = repo.get().await.unwrap();
-
-    for (template, path) in tables {
-        let rendered = handlebars.render_template(template, &configs).unwrap();
-
-        create_or_update_file_in_github_repo(&repo, &r.default_branch, path, rendered.as_bytes().to_vec()).await;
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::configs::{refresh_db_configs_and_airtable, update_tables_in_meta};
+    use crate::configs::refresh_db_configs_and_airtable;
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
@@ -1292,12 +1265,5 @@ mod tests {
     async fn test_cron_configs() {
         let github = authenticate_github_jwt();
         refresh_db_configs_and_airtable(&github).await;
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_configs_tables() {
-        let github = authenticate_github_jwt();
-        update_tables_in_meta(&github).await;
     }
 }
