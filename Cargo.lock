@@ -574,6 +574,7 @@ dependencies = [
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tailscale",
  "tokio",
  "toml",
  "tracing",

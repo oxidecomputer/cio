@@ -1,9 +1,10 @@
 use hubcaps::repositories::Repository;
 use serde::Serialize;
+use tailscale::Tailscale;
 use tracing::instrument;
 
 use crate::db::Database;
-use crate::templates::generate_nginx_and_terraform_files_for_shorturls;
+use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
 use crate::utils::{authenticate_github_jwt, github_org};
 
 /// Generate the files for the GitHub repository short URLs.
@@ -24,6 +25,7 @@ pub async fn generate_shorturls_for_repos(repo: &Repository) {
             name: repo.name.to_string(),
             description: format!("The GitHub repository at {}/{}", repo.owner.login.to_string(), repo.name.to_string()),
             link: repo.html_url.to_string(),
+            ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
             aliases: Default::default(),
             discussion: Default::default(),
@@ -53,6 +55,7 @@ pub async fn generate_shorturls_for_rfds(repo: &Repository) {
             name: rfd.number.to_string(),
             description: format!("RFD {} {}", rfd.number_string, rfd.title),
             link: rfd.link,
+            ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
             aliases: Default::default(),
             discussion: rfd.discussion,
@@ -88,6 +91,7 @@ pub async fn generate_shorturls_for_configs_links(repo: &Repository) {
             name: link.name.to_string(),
             description: link.description,
             link: link.link,
+            ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
             aliases: Default::default(),
             discussion: Default::default(),
@@ -110,7 +114,45 @@ pub async fn generate_shorturls_for_configs_links(repo: &Repository) {
     generate_nginx_and_terraform_files_for_shorturls(repo, links).await;
 }
 
-/// Update all the short URLs.
+/// Generate the cloudflare terraform files for the tailscale devices.
+#[instrument(skip(repo))]
+#[inline]
+pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
+    let subdomain = "internal";
+    // Initialize the array of links.
+    let mut links: Vec<ShortUrl> = Default::default();
+
+    // Initialize the Tailscale API.
+    let tailscale = Tailscale::new_from_env();
+    // Get the devices.
+    let devices = tailscale.list_devices().await.unwrap();
+
+    // Create the array of links.
+    for device in devices {
+        if device.addresses.is_empty() || device.hostname.is_empty() {
+            // Continue early.
+            continue;
+        }
+
+        let l = ShortUrl {
+            name: device.hostname.to_string(),
+            description: format!("Route for Tailscale IP for {}", device.hostname),
+            link: Default::default(),
+            ip: json!(device.addresses.get(0).unwrap()).to_string(),
+            subdomain: subdomain.to_string(),
+            aliases: Default::default(),
+            discussion: Default::default(),
+        };
+
+        // Add the link.
+        links.push(l.clone());
+    }
+
+    // Generate the files for the links.
+    generate_terraform_files_for_shorturls(repo, links).await;
+}
+
+/// Update all the short URLs and DNS.
 #[instrument]
 #[inline]
 pub async fn refresh_shorturls() {
@@ -120,6 +162,7 @@ pub async fn refresh_shorturls() {
     generate_shorturls_for_repos(&repo).await;
     generate_shorturls_for_rfds(&repo).await;
     generate_shorturls_for_configs_links(&repo).await;
+    generate_dns_for_tailscale_devices(&repo).await;
 }
 
 /// The data type for a short URL that will be used in a template.
@@ -129,6 +172,7 @@ pub struct ShortUrl {
     pub name: String,
     pub description: String,
     pub link: String,
+    pub ip: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]

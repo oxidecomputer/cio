@@ -65,6 +65,29 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(repo: &Repository,
 
     create_or_update_file_in_github_repo(repo, &r.default_branch, &nginx_paths_file, nginx_paths_rendered.as_bytes().to_vec()).await;
 
+    generate_terraform_files_for_shorturls(repo, shorturls).await;
+}
+
+/// Generate terraform files for shorturls.
+/// This function saves the generated files in the GitHub repository, in the
+/// given path.
+#[instrument(skip(repo))]
+#[inline]
+pub async fn generate_terraform_files_for_shorturls(repo: &Repository, shorturls: Vec<ShortUrl>) {
+    if shorturls.is_empty() {
+        println!("no shorturls in array");
+        return;
+    }
+
+    let r = repo.get().await.unwrap();
+
+    // Initialize handlebars.
+    let mut handlebars = Handlebars::new();
+    handlebars.register_helper("terraformize", Box::new(terraform_name_helper));
+
+    // Get the subdomain from the first link.
+    let subdomain = shorturls[0].subdomain.to_string();
+
     // Generate the terraform file.
     let terraform_file = format!("/terraform/cloudflare/generated.{}.oxide.computer.tf", subdomain);
     // Add a warning to the top of the file that it should _never_
@@ -149,7 +172,7 @@ pub static TEMPLATE_CLOUDFLARE_TERRAFORM: &str = r#"{{#each this}}
 resource "cloudflare_record" "{{terraformize this.name}}_{{this.subdomain}}_oxide_computer" {
   zone_id  = var.zone_id-oxide_computer
   name     = "{{this.name}}.{{this.subdomain}}.oxide.computer"
-  value    = var.maverick_ip
+  value    = {{this.ip}}
   type     = "A"
   ttl      = 1
   priority = 0
