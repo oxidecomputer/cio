@@ -2167,6 +2167,59 @@ impl RFD {
             fs::remove_file(path).unwrap();
         }
     }
+
+    /// Expand the fields in the RFD.
+    /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
+    /// TODO: this code is copied from NewRFD, find a more DRY way to do this.
+    #[instrument]
+    #[inline]
+    pub async fn expand(&mut self, github: &Github) {
+        let repo = github.repo(github_org(), "rfd");
+        let r = repo.get().await.unwrap();
+
+        // Trim the title.
+        self.title = self.title.trim().to_string();
+
+        // Add leading zeros to the number for the number_string.
+        self.number_string = NewRFD::generate_number_string(self.number);
+
+        // Set the full name.
+        self.name = NewRFD::generate_name(self.number, &self.title);
+
+        // Set the short_link.
+        self.short_link = NewRFD::generate_short_link(self.number);
+        // Set the rendered_link.
+        self.rendered_link = NewRFD::generate_rendered_link(&self.number_string);
+
+        let mut branch = self.number_string.to_string();
+        if self.link.contains(&format!("/{}/", r.default_branch)) {
+            branch = r.default_branch.to_string();
+        }
+
+        // Get the RFD contents from the branch.
+        let rfd_dir = format!("/rfd/{}", self.number_string);
+        let (rfd_content, is_markdown, sha) = get_rfd_contents_from_repo(github, &branch, &rfd_dir).await;
+        self.content = rfd_content;
+        self.sha = sha;
+
+        if branch == r.default_branch {
+            // Get the commit date.
+            let commits = repo.commits().list(&rfd_dir).await.unwrap();
+            let commit = commits.get(0).unwrap();
+            self.commit_date = commit.commit.author.date;
+        } else {
+            // Get the branch.
+            let commit = repo.commits().get(&branch).await.unwrap();
+            // TODO: we should not have to duplicate this code below
+            // but the references were mad...
+            self.commit_date = commit.commit.author.date;
+        }
+
+        // Parse the HTML.
+        self.html = NewRFD::get_html(&self.content, is_markdown, &self.number_string);
+
+        self.authors = NewRFD::get_authors(&self.content, is_markdown);
+    }
 }
 
 /// Implement updating the Airtable record for an RFD.

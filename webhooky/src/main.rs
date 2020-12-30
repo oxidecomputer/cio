@@ -33,6 +33,7 @@ use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates,
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
+use cio_api::rfds::is_image;
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
@@ -305,6 +306,36 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
         }
     }
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Trigger an update for an RFD. */
+#[endpoint {
+    method = POST,
+    path = "/rfd/num",
+}]
+async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let num_string = String::from("num");
+    let num = num_string.parse::<i32>().unwrap_or_else(|e| panic!("invalid i32 `{}`: {}", num_string, e));
+    event!(Level::INFO, "Triggering an update for RFD number `{}`", num);
+
+    let api_context = Context::from_rqctx(&rqctx);
+    let github = &api_context.github;
+
+    // TODO: share the database connection in the context.
+    let db = Database::new();
+
+    let result = db.get_rfd(num);
+    if result.is_none() {
+        // Return early, we couldn't find an RFD.
+        event!(Level::WARN, "No RFD was found with number `{}`", num);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+    let mut rfd = result.unwrap();
+    // rfd.expand();
+    // Save the rfd back to our database.
+    db.update_rfd(&rfd);
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1294,13 +1325,6 @@ pub mod deserialize_null_string {
     }
 }
 
-/// Return if the file is an image.
-#[instrument]
-#[inline]
-fn is_image(file: &str) -> bool {
-    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
-}
-
 #[instrument]
 #[inline]
 fn filter(files: &[String], dir: &str) -> Vec<String> {
@@ -1492,7 +1516,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
             // Remove the image from the `src/public/static/images` path since we no
             // longer need it.
             // We delete these on the default branch ONLY.
-            let website_file = format!("src/public/static/images/{}", file.trim_start_matches("rfd/"));
+            let website_file = file.replace("rfd/", "src/public/static/images/");
 
             // We need to get the current sha for the file we want to delete.
             let gh_file = github_repo.content().file(&website_file, &repo.default_branch).await.unwrap();
@@ -1535,8 +1559,8 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
             // this is where images go for the static website.
-            // We update these on the default branch ONLY.
-            let website_file = format!("src/public/static/images/{}", file.trim_start_matches("rfd/"));
+            // We update these on the default branch ONLY
+            let website_file = file.replace("rfd/", "src/public/static/images/");
             create_or_update_file_in_github_repo(&github_repo, &repo.default_branch, &website_file, gh_file.content.to_vec()).await;
             event!(Level::INFO, "updated file `{}` since it was modified in mose recent push for RFD {:?}", website_file, event);
             // We are done so we can continue throught the loop.
