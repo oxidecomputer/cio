@@ -311,7 +311,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct RFDPathParams {
     num: i32,
 }
@@ -321,6 +321,8 @@ struct RFDPathParams {
     method = POST,
     path = "/rfd/{num}",
 }]
+#[instrument(skip(path_params))]
+#[inline]
 async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: Path<RFDPathParams>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let num = path_params.into_inner().num;
     event!(Level::INFO, "Triggering an update for RFD number `{}`", num);
