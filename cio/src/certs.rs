@@ -27,7 +27,7 @@ use tracing::instrument;
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_CERTIFICATES_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::schema::certificates;
-use crate::utils::github_org;
+use crate::utils::{create_or_update_file_in_github_repo, github_org};
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
@@ -232,16 +232,8 @@ impl NewCertificate {
         let repo = github.repo(github_org(), "configs");
         let r = repo.get().await.unwrap();
 
-        let cert = repo
-            .content()
-            .file(&format!("nginx/ssl/{}/fullchain.pem", self.domain.replace("*.", "wildcard.")), &r.default_branch)
-            .await
-            .unwrap();
-        let priv_key = repo
-            .content()
-            .file(&format!("nginx/ssl/{}/privkey.pem", self.domain.replace("*.", "wildcard.")), &r.default_branch)
-            .await
-            .unwrap();
+        let cert = repo.content().file(&self.get_github_path("fullchain.pem"), &r.default_branch).await.unwrap();
+        let priv_key = repo.content().file(&self.get_github_path("privkey.pem"), &r.default_branch).await.unwrap();
 
         self.certificate = from_utf8(&cert.content).unwrap().to_string();
         self.private_key = from_utf8(&priv_key.content).unwrap().to_string();
@@ -273,6 +265,12 @@ impl NewCertificate {
         Path::new(dir).join(self.domain.replace("*.", "wildcard."))
     }
 
+    #[instrument]
+    #[inline]
+    fn get_github_path(&self, file: &str) -> String {
+        format!("/nginx/ssl/{}/{}", self.domain.replace("*.", "wildcard."), file)
+    }
+
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
     #[instrument]
     #[inline]
@@ -285,6 +283,18 @@ impl NewCertificate {
         // Write the files.
         fs::write(path.join("fullchain.pem"), self.certificate.as_bytes()).unwrap();
         fs::write(path.join("privkey.pem"), self.private_key.as_bytes()).unwrap();
+    }
+
+    /// Saves the fullchain certificate and privkey to the configs github repo.
+    #[instrument]
+    #[inline]
+    pub async fn save_to_github_repo(&self, github: &Github) {
+        let repo = github.repo(github_org(), "configs");
+        let r = repo.get().await.unwrap();
+
+        // Write the files.
+        create_or_update_file_in_github_repo(&repo, &r.default_branch, &self.get_github_path("fullchain.pem"), self.certificate.as_bytes().to_vec()).await;
+        create_or_update_file_in_github_repo(&repo, &r.default_branch, &self.get_github_path("privkey.pem"), self.private_key.as_bytes().to_vec()).await;
     }
 
     /// Inspect the certificate to count the number of (whole) valid days left.

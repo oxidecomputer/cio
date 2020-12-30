@@ -12,6 +12,7 @@ use handlebars::Handlebars;
 use hubcaps::Github;
 use macros::db_struct;
 use schemars::JsonSchema;
+use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
 use tracing::{event, instrument, Level};
@@ -22,7 +23,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
 use crate::templates::{TEMPLATE_TABLE_GROUPS, TEMPLATE_TABLE_LINKS, TEMPLATE_TABLE_PEOPLE};
-use crate::utils::{create_or_update_file_in_github_repo, get_github_user_public_ssh_keys, github_org, GSUITE_DOMAIN};
+use crate::utils::{create_or_update_file_in_github_repo, get_github_user_public_ssh_keys, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -239,6 +240,13 @@ impl UserConfig {
 
         self.populate_from_gusto().await;
     }
+
+    /// Generate the email address for the user.
+    #[instrument]
+    #[inline]
+    pub fn email(&self) -> String {
+        format!("{}@{}", self.username, GSUITE_DOMAIN)
+    }
 }
 
 impl User {
@@ -302,6 +310,75 @@ impl User {
 
         println!("could not find user: {}", self.username);
         // TODO: Send an invite to the user.
+    }
+
+    /// Send an email to the new user about their account.
+    #[instrument]
+    #[inline]
+    async fn email_send_new_user(&self, password: &str) {
+        // Initialize the SendGrid client.
+        let sendgrid = SendGrid::new_from_env();
+        let github_org = github_org();
+
+        // Get the user's aliases if they have one.
+        let aliases = self.aliases.join(", ");
+
+        // Send the message.
+        sendgrid
+            .send_mail(
+                format!("Your New Email Account: {}", self.email()),
+                format!(
+                    "Yoyoyo {},
+
+We have set up your account on mail.corp.{}. Details for accessing
+are below. You will be required to reset your password the next time you login.
+
+Website for Login: https://mail.corp.{}
+Email: {}
+Password: {}
+Aliases: {}
+
+Make sure you set up two-factor authentication for your account, or in one week
+you will be locked out.
+
+Your GitHub @{} has been added to our organization (https://github.com/{})
+and various teams within it. GitHub should have sent an email with instructions on
+accepting the invitation to our organization to the email you used
+when you signed up for GitHub. Or you can alternatively accept our invitation
+by going to https://github.com/{}.
+
+If you have any questions or your email does not work please email your
+administrator, who is cc-ed on this email. Spoiler alert it's Jess...
+jess@{}. If you want other email aliases, let Jess know as well.
+
+You can find more onboarding information in GitHub:
+https://github.com/oxidecomputer/meta/blob/master/general/onboarding.md
+You can find information about internal processes and applications at:
+https://github.com/oxidecomputer/meta/blob/master/general/README.md
+
+As a first contribution to one of our repos, you should add yourself to the
+website: https://github.com/oxidecomputer/website#team-members or add a book
+to our internal library: https://github.com/oxidecomputer/library
+
+xoxo,
+  The GSuite/GitHub Bot",
+                    self.first_name,
+                    DOMAIN,
+                    DOMAIN,
+                    self.email(),
+                    password,
+                    aliases,
+                    self.github,
+                    github_org,
+                    github_org,
+                    DOMAIN
+                ),
+                vec![self.recovery_email.to_string()],
+                vec![self.email(), format!("jess@{}", DOMAIN)],
+                vec![],
+                format!("admin@{}", DOMAIN),
+            )
+            .await;
     }
 }
 
@@ -892,6 +969,20 @@ pub async fn sync_certificates(github: &Github, certificates: BTreeMap<String, N
     // Sync certificates.
     for (_, mut certificate) in certificates {
         certificate.populate_from_github(github).await;
+
+        // If the cert is going to expire in less than 7 days, renew it.
+        // Otherwise, return early.
+        if certificate.valid_days_left > 7 {
+            println!("cert {} is valid for {} more days, skipping", certificate.domain, certificate.valid_days_left);
+        } else {
+            // Populate the certificate.
+            certificate.populate().await;
+
+            // Save the certificate to disk.
+            certificate.save_to_github_repo(github).await;
+        }
+
+        // Update the database.
         db.upsert_certificate(&certificate);
 
         // Remove the certificate from the BTreeMap.
@@ -957,12 +1048,12 @@ pub async fn update_tables_in_meta(github: &Github) {
 
     // Get the meta repository.
     let repo = github.repo(github_org(), "meta");
+    let r = repo.get().await.unwrap();
 
     for (template, path) in tables {
         let rendered = handlebars.render_template(template, &configs).unwrap();
 
-        // TODO: actually get the main branch from the GitHub API in case it changes in the future.
-        create_or_update_file_in_github_repo(&repo, "master", path, rendered.as_bytes().to_vec()).await;
+        create_or_update_file_in_github_repo(&repo, &r.default_branch, path, rendered.as_bytes().to_vec()).await;
     }
 }
 

@@ -36,6 +36,8 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(repo: &Repository,
         return;
     }
 
+    let r = repo.get().await.unwrap();
+
     // Initialize handlebars.
     let mut handlebars = Handlebars::new();
     handlebars.register_helper("terraformize", Box::new(terraform_name_helper));
@@ -51,8 +53,7 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(repo: &Repository,
     // Add the vim formating string.
     nginx_rendered += "# vi: ft=nginx";
 
-    // TODO: actually get the main branch from the GitHub API in case it changes in the future.
-    create_or_update_file_in_github_repo(repo, "master", &nginx_file, nginx_rendered.as_bytes().to_vec()).await;
+    create_or_update_file_in_github_repo(repo, &r.default_branch, &nginx_file, nginx_rendered.as_bytes().to_vec()).await;
 
     // Generate the paths nginx file.
     let nginx_paths_file = format!("/nginx/conf.d/generated.{}.paths.oxide.computer.conf", subdomain);
@@ -62,8 +63,7 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(repo: &Repository,
     // Add the vim formating string.
     nginx_paths_rendered += "# vi: ft=nginx";
 
-    // TODO: actually get the main branch from the GitHub API in case it changes in the future.
-    create_or_update_file_in_github_repo(repo, "master", &nginx_paths_file, nginx_paths_rendered.as_bytes().to_vec()).await;
+    create_or_update_file_in_github_repo(repo, &r.default_branch, &nginx_paths_file, nginx_paths_rendered.as_bytes().to_vec()).await;
 
     // Generate the terraform file.
     let terraform_file = format!("/terraform/cloudflare/generated.{}.oxide.computer.tf", subdomain);
@@ -71,8 +71,7 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(repo: &Repository,
     // be edited by hand and generate it.
     let terraform_rendered = TEMPLATE_WARNING.to_owned() + &handlebars.render_template(&TEMPLATE_CLOUDFLARE_TERRAFORM, &shorturls).unwrap();
 
-    // TODO: actually get the main branch from the GitHub API in case it changes in the future.
-    create_or_update_file_in_github_repo(repo, "master", &terraform_file, terraform_rendered.as_bytes().to_vec()).await;
+    create_or_update_file_in_github_repo(repo, &r.default_branch, &terraform_file, terraform_rendered.as_bytes().to_vec()).await;
 }
 
 /// The warning for files that we automatically generate so folks don't edit them
