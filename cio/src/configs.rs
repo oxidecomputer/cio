@@ -973,7 +973,7 @@ pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
         event!(Level::INFO, "deleted building from database: {}", name);
 
         // Delete the building from GSuite.
-        //gsuite.delete_building(&name).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
+        gsuite.delete_building(&name).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
         event!(Level::INFO, "deleted building from gsuite: {}", name);
     }
     event!(Level::INFO, "updated configs buildings in the database");
@@ -997,7 +997,7 @@ pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
                 // If the building does not exist in our map we need to delete
                 // them from GSuite.
                 println!("deleting building {} from gsuite", id);
-                //gsuite.delete_building(&id).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
+                gsuite.delete_building(&id).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
 
                 event!(Level::INFO, "deleted building from gsuite: {}", id);
                 continue;
@@ -1093,7 +1093,10 @@ pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceCo
                 // If the conference room does not exist in our map we need to delete
                 // it from GSuite.
                 println!("deleting conference room {} from gsuite", id);
-                //gsuite.delete_calendar_resource(&r.id).await.unwrap_or_else(|e| panic!("deleting conference room {} from gsuite failed: {}", id, e));
+                gsuite
+                    .delete_calendar_resource(&r.id)
+                    .await
+                    .unwrap_or_else(|e| panic!("deleting conference room {} with id {} from gsuite failed: {}", id, r.id, e));
 
                 event!(Level::INFO, "deleted conference room from gsuite: {}", id);
                 continue;
