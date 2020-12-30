@@ -18,7 +18,7 @@ use std::sync::Arc;
 use chrono::offset::Utc;
 use chrono::{DateTime, TimeZone};
 use chrono_humanize::HumanTime;
-use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, Query, RequestContext, TypedBody};
+use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, Path, Query, RequestContext, TypedBody};
 use futures_util::TryStreamExt;
 use google_drive::GoogleDrive;
 use hubcaps::Github;
@@ -311,14 +311,18 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+#[derive(Deserialize, JsonSchema)]
+struct RFDPathParams {
+    num: i32,
+}
+
 /** Trigger an update for an RFD. */
 #[endpoint {
     method = POST,
-    path = "/rfd/num",
+    path = "/rfd/{num}",
 }]
-async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let num_string = String::from("num");
-    let num = num_string.parse::<i32>().unwrap_or_else(|e| panic!("invalid i32 `{}`: {}", num_string, e));
+async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: Path<RFDPathParams>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let num = path_params.into_inner().num;
     event!(Level::INFO, "Triggering an update for RFD number `{}`", num);
 
     let api_context = Context::from_rqctx(&rqctx);
