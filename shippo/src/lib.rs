@@ -499,6 +499,13 @@ pub struct Address {
     pub validation_results: ValidationResults,
 }
 
+impl Address {
+    pub fn formatted(&self) -> String {
+        let street = format!("{}\n{}", self.street1, self.street2);
+        format!("{}\n{}, {} {} {}", street.trim(), self.city, self.state, self.zip, self.country).trim().to_string()
+    }
+}
+
 /// The data type for a parcel.
 /// FROM: https://goshippo.com/docs/reference#parcels
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
