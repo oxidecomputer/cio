@@ -147,7 +147,7 @@ pub fn parse_markdown(content: &str) -> String {
 #[instrument]
 #[inline]
 pub fn is_image(file: &str) -> bool {
-    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg") || file.ends_with(".odg") || file.ends_with(".gv")
+    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
 }
 
 #[instrument]
