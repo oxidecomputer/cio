@@ -27,7 +27,7 @@ pub static GSUITE_DOMAIN: &str = "oxidecomputer.com";
 /// Write a file.
 #[instrument]
 #[inline]
-pub fn write_file(file: PathBuf, contents: String) {
+pub fn write_file(file: &PathBuf, contents: &str) {
     // create each directory.
     fs::create_dir_all(file.parent().unwrap()).unwrap();
 

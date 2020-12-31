@@ -1608,7 +1608,10 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
             }
 
             // Update the RFD in the database.
-            let rfd = db.upsert_rfd(&new_rfd);
+            let mut rfd = db.upsert_rfd(&new_rfd);
+            // Update all the fields for the RFD.
+            rfd.expand(&api_context.github).await;
+            db.update_rfd(&rfd);
             event!(Level::INFO, "updated RFD {} in the database", new_rfd.number_string);
 
             // Create all the shorturls for the RFD if we need to,

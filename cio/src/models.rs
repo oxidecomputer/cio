@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{stderr, stdout, Write};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::from_utf8;
 use std::str::FromStr;
@@ -36,9 +37,9 @@ use crate::airtable::{
 };
 use crate::applicants::{get_file_contents, get_role_from_sheet_id, ApplicantSheetColumns};
 use crate::core::UpdateAirtableRecord;
-use crate::rfds::{clean_rfd_html_links, get_rfd_contents_from_repo, parse_asciidoc, parse_markdown, update_discussion_link, update_state};
+use crate::rfds::{clean_rfd_html_links, get_images_in_branch, get_rfd_contents_from_repo, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{applicants, auth_user_logins, auth_users, github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds as r_f_ds, rfds};
-use crate::utils::{check_if_github_issue_exists, create_or_update_file_in_github_repo, github_org, DOMAIN};
+use crate::utils::{check_if_github_issue_exists, create_or_update_file_in_github_repo, github_org, write_file, DOMAIN};
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -1945,20 +1946,19 @@ impl NewRFD {
         // Parse the discussion from the contents.
         let discussion = NewRFD::get_discussion(&content);
 
-        let is_markdown = file_path.ends_with(".md");
-
         NewRFD {
             number,
-            number_string: number_string.to_string(),
-            title: title.to_string(),
-            name: NewRFD::generate_name(number, &title),
+            number_string,
+            title,
+            name: Default::default(),
             state,
             link: file.html_url,
-            short_link: NewRFD::generate_short_link(number),
-            rendered_link: NewRFD::generate_rendered_link(&number_string),
+            short_link: Default::default(),
+            rendered_link: Default::default(),
             discussion,
-            authors: NewRFD::get_authors(&content, is_markdown),
-            html: NewRFD::get_html(&content, is_markdown, &number_string),
+            authors: Default::default(),
+            // We parse this below.
+            html: Default::default(),
             content,
             sha: file.sha,
             commit_date,
@@ -1967,21 +1967,6 @@ impl NewRFD {
             // Only exists in Airtable,
             relevant_components: Default::default(),
         }
-    }
-
-    #[instrument]
-    #[inline]
-    pub fn get_html(content: &str, is_markdown: bool, number_string: &str) -> String {
-        let html: String;
-        if is_markdown {
-            // Parse the markdown.
-            html = parse_markdown(&content);
-        } else {
-            // Parse the acsiidoc.
-            html = parse_asciidoc(&content);
-        }
-
-        clean_rfd_html_links(&html, number_string)
     }
 
     #[instrument]
@@ -2089,61 +2074,73 @@ impl NewRFD {
             None => Default::default(),
         }
     }
-
-    /// Expand the fields in the RFD.
-    /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    #[instrument]
-    #[inline]
-    pub async fn expand(&mut self, github: &Github) {
-        let repo = github.repo(github_org(), "rfd");
-        let r = repo.get().await.unwrap();
-
-        // Trim the title.
-        self.title = self.title.trim().to_string();
-
-        // Add leading zeros to the number for the number_string.
-        self.number_string = NewRFD::generate_number_string(self.number);
-
-        // Set the full name.
-        self.name = NewRFD::generate_name(self.number, &self.title);
-
-        // Set the short_link.
-        self.short_link = NewRFD::generate_short_link(self.number);
-        // Set the rendered_link.
-        self.rendered_link = NewRFD::generate_rendered_link(&self.number_string);
-
-        let mut branch = self.number_string.to_string();
-        if self.link.contains(&format!("/{}/", r.default_branch)) {
-            branch = r.default_branch.to_string();
-        }
-
-        // Get the RFD contents from the branch.
-        let rfd_dir = format!("/rfd/{}", self.number_string);
-        let (rfd_content, is_markdown, sha) = get_rfd_contents_from_repo(github, &branch, &rfd_dir).await;
-        self.content = rfd_content;
-        self.sha = sha;
-
-        if branch == r.default_branch {
-            // Get the commit date.
-            let commits = repo.commits().list(&rfd_dir).await.unwrap();
-            let commit = commits.get(0).unwrap();
-            self.commit_date = commit.commit.author.date;
-        } else {
-            // Get the branch.
-            let commit = repo.commits().get(&branch).await.unwrap();
-            // TODO: we should not have to duplicate this code below
-            // but the references were mad...
-            self.commit_date = commit.commit.author.date;
-        }
-
-        // Parse the HTML.
-        self.html = NewRFD::get_html(&self.content, is_markdown, &self.number_string);
-
-        self.authors = NewRFD::get_authors(&self.content, is_markdown);
-    }
 }
 
 impl RFD {
+    #[instrument(skip(repo))]
+    #[inline]
+    pub async fn get_html(&self, repo: &Repository, branch: &str, is_markdown: bool) -> String {
+        let html: String;
+        if is_markdown {
+            // Parse the markdown.
+            html = parse_markdown(&self.content);
+        } else {
+            // Parse the acsiidoc.
+            html = self.parse_asciidoc(repo, branch).await;
+        }
+
+        clean_rfd_html_links(&html, &self.number_string)
+    }
+
+    #[instrument(skip(repo))]
+    #[inline]
+    pub async fn parse_asciidoc(&self, repo: &Repository, branch: &str) -> String {
+        let dir = format!("rfd/{}", self.number_string);
+
+        // Create the temporary directory.
+        let mut path = env::temp_dir();
+        path.push("asciidoc-temp/");
+        let pparent = path.clone();
+        let parent = pparent.as_path().to_str().unwrap().trim_end_matches('/');
+        path.push("contents.adoc");
+
+        // Write the contents to a temporary file.
+        write_file(&path, &self.content);
+
+        // If the file contains inline images, we need to save those images locally.
+        // TODO: we don't need to save all the images, only the inline ones, clean this up
+        // eventually.
+        if self.content.contains("[opts=inline]") {
+            let images = get_images_in_branch(repo, &dir, branch).await;
+            for image in images {
+                // Save the image to our temporary directory.
+                let image_path = format!("{}/{}", parent, image.path.replace(&dir, "").trim_start_matches('/'));
+
+                write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap());
+            }
+        }
+
+        let cmd_output = Command::new("asciidoctor").args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()]).output().unwrap();
+
+        let result = if cmd_output.status.success() {
+            from_utf8(&cmd_output.stdout).unwrap()
+        } else {
+            println!("[rfds] running asciidoctor failed:");
+            stdout().write_all(&cmd_output.stdout).unwrap();
+            stderr().write_all(&cmd_output.stderr).unwrap();
+
+            Default::default()
+        };
+
+        // Delete the parent directory.
+        let pdir = Path::new(parent);
+        if pdir.exists() && pdir.is_dir() {
+            fs::remove_dir_all(pdir).unwrap();
+        }
+
+        result.to_string()
+    }
+
     /// Convert an RFD into JSON as Slack message.
     // TODO: make this include more fields
     #[instrument]
@@ -2236,7 +2233,6 @@ impl RFD {
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    /// TODO: this code is copied from NewRFD, find a more DRY way to do this.
     #[instrument]
     #[inline]
     pub async fn expand(&mut self, github: &Github) {
@@ -2282,7 +2278,7 @@ impl RFD {
         }
 
         // Parse the HTML.
-        self.html = NewRFD::get_html(&self.content, is_markdown, &self.number_string);
+        self.html = self.get_html(&repo, &branch, is_markdown).await;
 
         self.authors = NewRFD::get_authors(&self.content, is_markdown);
     }

@@ -1,13 +1,10 @@
 use std::collections::BTreeMap;
-use std::env;
-use std::fs;
-use std::io::{stderr, stdout, Write};
-use std::process::Command;
 use std::str::from_utf8;
 
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
 use futures_util::TryStreamExt;
+use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use regex::Regex;
 use tracing::instrument;
@@ -33,10 +30,7 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     // Create the BTreeMap of RFDs.
     let mut rfds: BTreeMap<i32, NewRFD> = Default::default();
     for r in csv_reader.deserialize() {
-        let mut rfd: NewRFD = r.unwrap();
-
-        // Expand the fields in the RFD.
-        rfd.expand(github).await;
+        let rfd: NewRFD = r.unwrap();
 
         // Add this to our BTreeMap.
         rfds.insert(rfd.number, rfd);
@@ -76,15 +70,30 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
     }
 
     // Get all the images in the branch and make sure they are in the images directory on master.
-    for file in repo_contents.iter(dir, branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
-        if is_image(&file.name) {
-            let new_path = file.path.replace("rfd/", "src/public/static/images/");
+    let images = get_images_in_branch(&repo, dir, branch).await;
+    for image in images {
+        let new_path = image.path.replace("rfd/", "src/public/static/images/");
+        // Make sure we have this file in the static images dir on the master branch.
+        create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, image.content.to_vec()).await;
+    }
 
+    (decoded, is_markdown, sha)
+}
+
+// Get all the images in a specific directory of a GitHub branch.
+#[instrument(skip(repo))]
+#[inline]
+pub async fn get_images_in_branch(repo: &Repository, dir: &str, branch: &str) -> Vec<hubcaps::content::File> {
+    let mut files: Vec<hubcaps::content::File> = Default::default();
+
+    // Get all the images in the branch and make sure they are in the images directory on master.
+    for file in repo.content().iter(dir, branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
+        if is_image(&file.name) {
             // Get the contents of the image.
-            match repo_contents.file(&file.path, branch).await {
-                Ok(contents) => {
-                    // Make sure we have this file in the static images dir on the master branch.
-                    create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, contents.content.to_vec()).await;
+            match repo.content().file(&file.path, branch).await {
+                Ok(f) => {
+                    // Push the file to our vector.
+                    files.push(f);
                 }
                 Err(e) => match e {
                     hubcaps::errors::Error::Fault { code: _, ref error } => {
@@ -99,8 +108,21 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
                             // TODO: move this logic to hubcaps.
                             let v = blob.content.replace("\n", "");
                             let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
-                            // Make sure we have this file in the static images dir on the master branch.
-                            create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, decoded.to_vec()).await;
+
+                            // Push the new file.
+                            files.push(hubcaps::content::File {
+                                encoding: hubcaps::content::Encoding::Base64,
+                                size: file.size,
+                                name: file.name,
+                                path: file.path,
+                                content: hubcaps::content::DecodedContents(decoded.to_vec()),
+                                sha: file.sha,
+                                url: file.url,
+                                git_url: file.git_url,
+                                html_url: file.html_url,
+                                download_url: file.download_url.unwrap_or_default(),
+                                _links: file._links,
+                            });
 
                             continue;
                         }
@@ -112,43 +134,13 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
         }
     }
 
-    (decoded, is_markdown, sha)
+    files
 }
 
 #[instrument]
 #[inline]
 pub fn parse_markdown(content: &str) -> String {
     markdown_to_html(content, &ComrakOptions::default())
-}
-
-#[instrument]
-#[inline]
-pub fn parse_asciidoc(content: &str) -> String {
-    let mut path = env::temp_dir();
-    path.push("contents.adoc");
-
-    // Write the contents to a temporary file.
-    let mut file = fs::File::create(path.clone()).unwrap();
-    file.write_all(content.as_bytes()).unwrap();
-
-    let cmd_output = Command::new("asciidoctor").args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()]).output().unwrap();
-
-    let result = if cmd_output.status.success() {
-        from_utf8(&cmd_output.stdout).unwrap()
-    } else {
-        println!("[rfds] running asciidoctor failed:");
-        stdout().write_all(&cmd_output.stdout).unwrap();
-        stderr().write_all(&cmd_output.stderr).unwrap();
-
-        Default::default()
-    };
-
-    // Delete our temporary file.
-    if path.exists() && !path.is_dir() {
-        fs::remove_file(path).unwrap();
-    }
-
-    result.to_string()
 }
 
 /// Return if the file is an image.
@@ -227,7 +219,14 @@ pub async fn refresh_db_rfds(github: &Github) {
 
     // Sync rfds.
     for (_, rfd) in rfds {
-        db.upsert_rfd(&rfd);
+        let mut new_rfd = db.upsert_rfd(&rfd);
+
+        // Expand the fields in the RFD.
+        new_rfd.expand(github).await;
+
+        // Update the RFD again.
+        // We do this so the expand functions are only one place.
+        db.update_rfd(&new_rfd);
     }
 }
 
