@@ -932,11 +932,9 @@ pub struct Status {
     /// This is displayed in UTC.
     #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
     pub status_date: Option<DateTime<Utc>>,
-    /* TODO: this comes thru the api as "null" we need to write some custom deserializer for it so
-     * we don't panic
     /// An object containing zip, city, state and country information of the tracking event.
     #[serde(default)]
-    pub location: TrackingLocation,*/
+    pub location: TrackingLocation,
 }
 
 #[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
@@ -949,6 +947,12 @@ pub struct TrackingLocation {
     pub zip: String,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub country: String,
+}
+
+impl TrackingLocation {
+    pub fn formatted(&self) -> String {
+        format!("{}, {} {} {}", self.city, self.state, self.zip, self.country).trim().to_string()
+    }
 }
 
 /// A customs declaration object.
