@@ -3397,7 +3397,7 @@ dependencies = [
 
 [[package]]
 name = "shippo"
-version = "0.1.15"
+version = "0.1.17"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
