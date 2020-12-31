@@ -50,6 +50,8 @@ pub struct Shipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub oxide_tracking_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_status: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub label_link: String,
@@ -135,6 +137,7 @@ impl Shipment {
             shippo_id: Default::default(),
             status: "Queued".to_string(),
             tracking_link: Default::default(),
+            oxide_tracking_link: Default::default(),
             tracking_number: Default::default(),
             tracking_status: Default::default(),
             cost: Default::default(),
@@ -300,6 +303,7 @@ impl Shipment {
                 shippo_id: Default::default(),
                 status: Default::default(),
                 tracking_link: Default::default(),
+                oxide_tracking_link: Default::default(),
                 tracking_number: Default::default(),
                 tracking_status: Default::default(),
                 cost: Default::default(),
@@ -309,6 +313,12 @@ impl Shipment {
             },
             sent,
         )
+    }
+
+    #[tracing::instrument]
+    #[inline]
+    pub fn oxide_tracking_link(&self) -> String {
+        format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
@@ -334,6 +344,7 @@ impl Shipment {
                 // TODO: make the way it prints more pretty.
                 self.messages = format!("{:?}", label.messages);
             }
+            self.oxide_tracking_link = self.oxide_tracking_link();
 
             // Register a tracking webhook for this shipment.
             let status = shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap_or_else(|e| {
@@ -500,6 +511,7 @@ impl Shipment {
                     // TODO: make the way it prints more pretty.
                     self.messages = format!("{:?}", label.messages);
                 }
+                self.oxide_tracking_link = self.oxide_tracking_link();
 
                 // Save it in Airtable here, in case one of the below steps fails.
                 self.create_or_update_in_airtable().await;
