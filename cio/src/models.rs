@@ -2116,7 +2116,7 @@ impl RFD {
                 // Save the image to our temporary directory.
                 let image_path = format!("{}/{}", parent, image.path.replace(&dir, "").trim_start_matches('/'));
 
-                write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap());
+                write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap_or_default());
             }
         }
 
