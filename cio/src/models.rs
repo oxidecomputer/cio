@@ -577,9 +577,7 @@ Sincerely,
         // Check if their status is next steps, we only care about folks in the next steps.
         if !self.status.contains("Next steps") {
             // Make sure we don't already ahve an issue for them.
-            if issue.is_some() {
-                let i = issue.unwrap();
-
+            if let Some(i) = issue {
                 // Delete the "next steps" issue from the "meta" repository.
                 // This is because they are no longer in "next steps".
                 let repo = github.repo(github_org(), "meta");
@@ -708,9 +706,7 @@ cc @jessfraz @sdtuck @bcantrill",
         println!("[applicant]: created onboarding issue for {}", self.email);
 
         // Delete the "next steps" issue from the "meta" repository.
-        let meta_issue = check_if_github_issue_exists(&meta_issues, &self.name);
-        if meta_issue.is_some() {
-            let mi = meta_issue.unwrap();
+        if let Some(mi) = check_if_github_issue_exists(&meta_issues, &self.name) {
             let repo = github.repo(github_org(), "meta");
 
             // Comment on the issue that this person is now set to be onboarded.
