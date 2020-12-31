@@ -150,12 +150,15 @@ impl error::Error for APIError {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AddressComponent {
     /// The full text description or name of the address component as returned by the Geocoder.
+    #[serde(default)]
     long_name: String,
     /// An abbreviated textual name for the address component, if available.
     /// For example, an address component for the state of Alaska may have a long_name of "Alaska" and a short_name of "AK" using the 2-letter postal abbreviation.
+    #[serde(default)]
     short_name: String,
     /// The type of the address component.
-    types: Vec<Type>,
+    #[serde(default)]
+    types: Vec<String>,
 }
 
 /// Position information
@@ -205,6 +208,16 @@ impl Display for FormattedAddress {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct ReplyResult {
+    #[serde(default)]
+    error_message: String,
+    #[serde(default)]
+    results: Vec<Reply>,
+    #[serde(default)]
+    status: String,
+}
+
 /// A reply from the Google geocoding API
 #[derive(Debug, Clone, Deserialize)]
 pub struct Reply {
@@ -230,149 +243,9 @@ pub struct Reply {
 
     /// The type of the returned result. This array contains a set of zero or more tags identifying the type of feature returned in the result. For example, a geocode of "Chicago" returns "locality" which indicates that "Chicago" is a city, and also returns "political" which indicates it is a political entity.
     #[serde(default)]
-    pub types: Vec<Type>,
+    pub types: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
-struct ReplyResult {
-    error_message: Option<String>,
-    results: Vec<Reply>,
-    status: String,
-}
-
-/// The type of an address (eg street, intersection, etc)
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Type {
-    /// Indicates a precise street address.
-    StreetAddress,
-
-    /// Indicates a named route (such as "US 101").
-    Route,
-
-    /// Indicates a major intersection, usually of two major roads.
-    Intersection,
-
-    /// Indicates a political entity.
-    /// Usually, this type indicates a polygon of some civil administration.
-    Political,
-
-    /// Indicates the national political entity,
-    /// and is typically the highest order type returned by the Geocoder.
-    Country,
-
-    /// Indicates a first-order civil entity below the country level.
-    /// Within the United States, these administrative levels are states.
-    /// Not all nations exhibit these administrative levels.
-    /// In most cases, administrative_area_level_1 short names will closely match
-    /// ISO 3166-2 subdivisions and other widely circulated lists;
-    /// however this is not guaranteed as our geocoding results are based
-    /// on a variety of signals and location data.
-    #[serde(rename = "administrative_area_level_1")]
-    AdministrativeAreaLevel1,
-
-    /// Indicates a second-order civil entity below the country level.
-    /// Within the United States, these administrative levels are counties.
-    /// Not all nations exhibit these administrative levels.
-    #[serde(rename = "administrative_area_level_2")]
-    AdministrativeAreaLevel2,
-
-    /// Indicates a third-order civil entity below the country level.
-    /// This type indicates a minor civil division.
-    /// Not all nations exhibit these administrative levels.
-    #[serde(rename = "administrative_area_level_3")]
-    AdministrativeAreaLevel3,
-
-    /// Indicates a fourth-order civil entity below the country level.
-    /// This type indicates a minor civil division.
-    /// Not all nations exhibit these administrative levels.
-    #[serde(rename = "administrative_area_level_4")]
-    AdministrativeAreaLevel4,
-
-    /// Indicates a fifth-order civil entity below the country level.
-    /// This type indicates a minor civil division.
-    /// Not all nations exhibit these administrative levels.
-    #[serde(rename = "administrative_area_level_5")]
-    AdministrativeAreaLevel5,
-
-    /// Indicates a commonly-used alternative name for the entity.
-    ColloquialArea,
-
-    /// Indicates an incorporated city or town political entity.
-    Locality,
-
-    /// Indicates a specific type of Japanese locality,
-    /// to facilitate distinction between multiple locality components within a Japanese address.
-    Ward,
-
-    /// Indicates a first-order civil entity below a locality.
-    /// For some locations may receive one of the additional types:
-    /// sublocality_level_1 to sublocality_level_5.
-    /// Each sublocality level is a civil entity.
-    /// Larger numbers indicate a smaller geographic area.
-    Sublocality,
-
-    /// Indicates a named neighborhood
-    Neighborhood,
-
-    /// Indicates a named location, usually a building or collection of buildings with a common name
-    Premise,
-
-    /// Indicates a first-order entity below a named location,
-    /// usually a singular building within a collection of buildings with a common name
-    Subpremise,
-
-    /// Indicates a postal code as used to address postal mail within the country.
-    PostalCode,
-
-    /// Indicates a prominent natural feature.
-    NaturalFeature,
-
-    /// Indicates an airport.
-    Airport,
-
-    /// Indicates a named park.
-    Park,
-
-    /// Indicates a named point of interest.
-    /// Typically, these "POI"s are prominent local entities
-    /// that don't easily fit in another category, such as "Empire State Building"
-    /// or "Statue of Liberty."
-    PointOfInterest,
-
-    /// Indicates the floor of a building address.
-    Floor,
-
-    /// Typically indicates a place that has not yet been categorized.
-    Establishment,
-
-    /// Indicates a parking lot or parking structure.
-    Parking,
-
-    /// Indicates a specific postal box.
-    PostBox,
-
-    /// Indicates a grouping of geographic areas, such as locality and sublocality,
-    /// used for mailing addresses in some countries.
-    PostalTown,
-
-    /// Indicates the room of a building address.
-    Room,
-
-    /// Indicates the precise street number.
-    StreetNumber,
-
-    /// Indicate the location of a bus stop.
-    BusStation,
-
-    /// Indicate the location of a train station.
-    TrainStation,
-
-    /// Indicate the location of a public transit station.
-    TransitStation,
-}
-
-///
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct Viewport {
     /// Northeast corner of the bounding box
