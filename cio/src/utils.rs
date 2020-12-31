@@ -92,8 +92,14 @@ pub async fn get_gsuite_token() -> AccessToken {
 /// Check if a GitHub issue already exists.
 #[instrument]
 #[inline]
-pub fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> bool {
-    issues.iter().any(|i| i.title.contains(search))
+pub fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> Option<Issue> {
+    for i in issues {
+        if i.title.contains(search) {
+            return Some(i.clone());
+        }
+    }
+
+    None
 }
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.

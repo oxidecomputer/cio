@@ -16,6 +16,7 @@ use diesel::pg::Pg;
 use diesel::serialize::{self, Output, ToSql};
 use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
+use hubcaps::comments::CommentOptions;
 use hubcaps::issues::{Issue, IssueOptions};
 use hubcaps::repositories::{Repo, Repository};
 use hubcaps::Github;
@@ -570,14 +571,46 @@ Sincerely,
     #[instrument]
     #[inline]
     pub async fn create_github_next_steps_issue(&self, github: &Github, meta_issues: &[Issue]) {
+        // Check if we already have an issue for this user.
+        let issue = check_if_github_issue_exists(&meta_issues, &self.name);
+
         // Check if their status is next steps, we only care about folks in the next steps.
         if !self.status.contains("Next steps") {
+            // Make sure we don't already ahve an issue for them.
+            if issue.is_some() {
+                let i = issue.unwrap();
+
+                // Delete the "next steps" issue from the "meta" repository.
+                // This is because they are no longer in "next steps".
+                let repo = github.repo(github_org(), "meta");
+
+                // Comment on the issue that this person is now set to be onboarded.
+                repo.issue(i.id)
+                    .comments()
+                    .create(&CommentOptions {
+                        body: format!("Closing issue automatically since the applicant is now status: `{}`", self.status,),
+                    })
+                    .await
+                    .unwrap();
+
+                // Close the issue.
+                repo.issue(i.id)
+                    .edit(&IssueOptions {
+                        title: i.title.to_string(),
+                        body: Default::default(),
+                        assignee: Default::default(),
+                        labels: Default::default(),
+                        milestone: Default::default(),
+                        state: Some("closed".to_string()),
+                    })
+                    .await
+                    .unwrap();
+            }
+            // Return early.
             return;
         }
 
-        // Check if we already have an issue for this user.
-        let exists = check_if_github_issue_exists(&meta_issues, &self.name);
-        if exists {
+        if issue.is_some() {
             // Return early we don't want to update the issue because it will overwrite
             // any changes we made.
             return;
@@ -618,6 +651,7 @@ cc @jessfraz @sdtuck @bcantrill",
                 assignee: Some("jessfraz".to_string()),
                 labels,
                 milestone: Default::default(),
+                state: Default::default(),
             })
             .await
             .unwrap();
@@ -627,14 +661,15 @@ cc @jessfraz @sdtuck @bcantrill",
 
     #[instrument]
     #[inline]
-    pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue]) {
+    pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue], meta_issues: &[Issue]) {
         // Check if their status is not hired, we only care about hired applicants.
         if !self.status.contains("Hired") {
             return;
         }
+
         // Check if we already have an issue for this user.
-        let exists = check_if_github_issue_exists(&configs_issues, &self.name);
-        if exists {
+        let issue = check_if_github_issue_exists(&configs_issues, &self.name);
+        if issue.is_some() {
             // Return early we don't want to update the issue because it will overwrite
             // any changes we made.
             return;
@@ -656,7 +691,7 @@ cc @jessfraz @sdtuck @bcantrill",
         );
 
         // Create the issue.
-        github
+        let new_issue = github
             .repo(github_org(), "configs")
             .issues()
             .create(&IssueOptions {
@@ -665,11 +700,46 @@ cc @jessfraz @sdtuck @bcantrill",
                 assignee: Some("jessfraz".to_string()),
                 labels,
                 milestone: Default::default(),
+                state: Default::default(),
             })
             .await
             .unwrap();
 
         println!("[applicant]: created onboarding issue for {}", self.email);
+
+        // Delete the "next steps" issue from the "meta" repository.
+        let meta_issue = check_if_github_issue_exists(&meta_issues, &self.name);
+        if meta_issue.is_some() {
+            let mi = meta_issue.unwrap();
+            let repo = github.repo(github_org(), "meta");
+
+            // Comment on the issue that this person is now set to be onboarded.
+            repo.issue(mi.id)
+                .comments()
+                .create(&CommentOptions {
+                    body: format!(
+                        "Closing issue automatically since the applicant is set to be onboarded.
+The onboarding issue is: {}/configs@{}",
+                        github_org(),
+                        new_issue.id
+                    ),
+                })
+                .await
+                .unwrap();
+
+            // Close the issue.
+            repo.issue(mi.id)
+                .edit(&IssueOptions {
+                    title: mi.title.to_string(),
+                    body: Default::default(),
+                    assignee: Default::default(),
+                    labels: Default::default(),
+                    milestone: Default::default(),
+                    state: Some("closed".to_string()),
+                })
+                .await
+                .unwrap();
+        }
     }
 
     /// Get the human duration of time since the application was submitted.

@@ -347,7 +347,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
             applicant.expand(&drive_client, &sheets_client, columns.sent_email_received, row_index + 1).await;
 
             applicant.create_github_next_steps_issue(&github, &meta_issues).await;
-            applicant.create_github_onboarding_issue(&github, &configs_issues).await;
+            applicant.create_github_onboarding_issue(&github, &configs_issues, &meta_issues).await;
 
             if !applicant.sent_email_received {
                 // Post to Slack.
