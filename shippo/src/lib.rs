@@ -250,7 +250,18 @@ impl Shippo {
             }
         };
 
-        Ok(resp.json().await.unwrap())
+        let status = &resp.status();
+
+        match &resp.json::<Transaction>().await {
+            Ok(v) => return Ok(v.clone()),
+            Err(e) => {
+                return Err(APIError {
+                    status_code: *status,
+                    // TODO: somehow get the body
+                    body: format!("{}", e),
+                });
+            }
+        }
     }
 
     /// List shiping labels.
