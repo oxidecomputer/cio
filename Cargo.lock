@@ -572,7 +572,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.17",
+ "shippo 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
@@ -589,7 +589,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a528a54b1d590f7ee0c6ea722121fb3a094f4b66"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#27500b80503a6409dd8c3a9fb46eef7ed80624d8"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -628,7 +628,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.17",
+ "shippo 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
@@ -2034,7 +2034,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a528a54b1d590f7ee0c6ea722121fb3a094f4b66"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#27500b80503a6409dd8c3a9fb46eef7ed80624d8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3384,9 +3384,7 @@ checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 
 [[package]]
 name = "shippo"
-version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba1ba62a7e897a2e9e797b19c8c13f684c24590d9431dfc4450e6db863287651"
+version = "0.1.18"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -3398,6 +3396,8 @@ dependencies = [
 [[package]]
 name = "shippo"
 version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d996731fc77315b35cf448abfae7b961c10686d70057fe106e31174ccf5bc0c"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -3571,9 +3571,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.5.1"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae524f056d7d770e174287294f562e95044c68e88dec909a00d2094805db9d75"
+checksum = "1a55ca5f3b68e41c979bf8c46a6f1da892ca4db8f94023ce0bd32407573b1ac0"
 
 [[package]]
 name = "socket2"
@@ -4433,7 +4433,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.17",
+ "shippo 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tracing",
  "tracing-attributes",
