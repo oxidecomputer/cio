@@ -303,6 +303,26 @@ impl Shippo {
 
         Ok(resp.json().await.unwrap_or_default())
     }
+
+    /// Request the tracking status of a shipment by sending a GET request.
+    /// FROM: https://goshippo.com/docs/reference#tracks-retrieve
+    pub async fn get_tracking_status(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
+        // Build the request
+        let request = self.request(Method::GET, &format!("tracks/{}/{}", carrier, tracking_number), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap_or_default())
+    }
 }
 
 /// Error type returned by our library.
