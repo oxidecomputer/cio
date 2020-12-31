@@ -5,6 +5,7 @@ members = [
 	"drive",
 	"giphy",
 	"gsuite",
+	"google-geocode",
 	"gusto",
 	"macros",
 	"printy",

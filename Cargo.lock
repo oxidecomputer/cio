@@ -572,7 +572,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.12",
  "slack-chat-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
@@ -628,7 +628,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.12",
  "slack-chat-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
@@ -1443,6 +1443,15 @@ dependencies = [
  "reqwest",
  "serde",
  "yup-oauth2",
+]
+
+[[package]]
+name = "google-geocode"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3376,6 +3385,8 @@ checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 [[package]]
 name = "shippo"
 version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f5cb99826fd85215520c99cf2ed3286ff21c5010a074284cdd3de4efd389d3a"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -3386,9 +3397,7 @@ dependencies = [
 
 [[package]]
 name = "shippo"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f5cb99826fd85215520c99cf2ed3286ff21c5010a074284cdd3de4efd389d3a"
+version = "0.1.13"
 dependencies = [
  "chrono 0.4.19",
  "reqwest",
@@ -4424,7 +4433,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.12",
  "tokio",
  "tracing",
  "tracing-attributes",
