@@ -41,6 +41,10 @@ use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_re
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    // Initialize sentry.
+    let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
+    let _guard = sentry::init(sentry_dsn);
+
     let service_address = "0.0.0.0:8080";
 
     // Set up tracing.
