@@ -577,20 +577,25 @@ Sincerely,
 
         // Check if their status is next steps, we only care about folks in the next steps.
         if !self.status.contains("Next steps") {
-            // Make sure we don't already ahve an issue for them.
+            // Make sure we don't already have an issue for them.
             if let Some(i) = issue {
+                if i.state == "open" {
+                    // We only care if the issue is still opened.
+                    return;
+                }
+
                 // Delete the "next steps" issue from the "meta" repository.
                 // This is because they are no longer in "next steps".
                 let repo = github.repo(github_org(), "meta");
 
                 // Comment on the issue that this person is now set to be onboarded.
-                repo.issue(i.id)
+                repo.issue(i.number)
                     .comments()
                     .create(&CommentOptions {
                         body: format!("Closing issue automatically since the applicant is now status: `{}`", self.status,),
                     })
                     .await
-                    .unwrap();
+                    .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
 
                 // Close the issue.
                 repo.issue(i.id)
@@ -603,7 +608,7 @@ Sincerely,
                         state: Some("closed".to_string()),
                     })
                     .await
-                    .unwrap();
+                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.id, e));
             }
             // Return early.
             return;
@@ -708,6 +713,11 @@ cc @jessfraz @sdtuck @bcantrill",
 
         // Delete the "next steps" issue from the "meta" repository.
         if let Some(mi) = check_if_github_issue_exists(&meta_issues, &self.name) {
+            if mi.state == "open" {
+                // We only care if the issue is still opened.
+                return;
+            }
+
             let repo = github.repo(github_org(), "meta");
 
             // Comment on the issue that this person is now set to be onboarded.
@@ -716,9 +726,9 @@ cc @jessfraz @sdtuck @bcantrill",
                 .create(&CommentOptions {
                     body: format!(
                         "Closing issue automatically since the applicant is set to be onboarded.
-The onboarding issue is: {}/configs@{}",
+The onboarding issue is: {}/configs#{}",
                         github_org(),
-                        new_issue.id
+                        new_issue.number
                     ),
                 })
                 .await
