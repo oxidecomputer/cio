@@ -8,6 +8,10 @@ license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/google-drive"
 
+[features]
+default = []
+rustls = ["reqwest/rustls"]
+
 [dependencies]
 bytes = "0.5"
 reqwest = { version = "0.10", features = ["json"] }

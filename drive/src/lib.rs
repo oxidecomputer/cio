@@ -50,7 +50,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::Bytes;
-use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use reqwest::{header, Body, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use yup_oauth2::AccessToken;
 
@@ -81,9 +81,10 @@ impl GoogleDrive {
         &self.token
     }
 
-    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>, content: &[u8], mime_type: &str) -> Request
+    fn request<B, C>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>, content: Option<FileUploadContent<C>>, mime_type: &str) -> Request
     where
         B: Serialize,
+        C: Into<Body>,
     {
         // Get the url.
         let url = if !path.starts_with("http") {
@@ -118,10 +119,12 @@ impl GoogleDrive {
         if method == Method::POST && path == "files" {
             // We are likely uploading a file so add the right headers.
             headers.append(header::HeaderName::from_static("X-Upload-Content-Type"), header::HeaderValue::from_static("application/octet-stream"));
-            headers.append(
-                header::HeaderName::from_static("X-Upload-Content-Length"),
-                header::HeaderValue::from_bytes(format!("{}", content.len()).as_bytes()).unwrap(),
-            );
+            if let Some(ref content) = content {
+                headers.append(
+                    header::HeaderName::from_static("X-Upload-Content-Length"),
+                    header::HeaderValue::from_bytes(format!("{}", content.data_length).as_bytes()).unwrap(),
+                );
+            }
         }
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
@@ -134,14 +137,13 @@ impl GoogleDrive {
         }
 
         // Add the body, this is to ensure our GET and DELETE calls succeed.
-        if method != Method::GET && method != Method::DELETE && content.is_empty() {
+        if method != Method::GET && method != Method::DELETE && content.is_none() {
             rb = rb.json(&body);
         }
 
-        if content.len() > 1 {
-            let b = Bytes::copy_from_slice(content);
-            // We are uploading a file so add that as the body.
-            rb = rb.body(b);
+        // We are uploading a file so add that as the body.
+        if let Some(content) = content {
+            rb = rb.body(content.data);
         }
 
         // Build the request.
@@ -156,8 +158,8 @@ impl GoogleDrive {
             format!("files/{}", id),
             (),
             Some(vec![("supportsAllDrives", "true".to_string()), ("alt", "media".to_string())]),
-            &[],
-            "",
+            Option::<FileUploadContent<&[u8]>>::None,
+            ""
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -177,7 +179,7 @@ impl GoogleDrive {
     /// Get a file's contents by it's ID. Only works for Google Docs.
     pub async fn get_file_contents_by_id(&self, id: &str) -> Result<String, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, format!("files/{}/export", id), (), Some(vec![("mimeType", "text/plain".to_string())]), &[], "");
+        let request = self.request(Method::GET, format!("files/{}/export", id), (), Some(vec![("mimeType", "text/plain".to_string())]), Option::<FileUploadContent<&[u8]>>::None, "");
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -197,7 +199,7 @@ impl GoogleDrive {
     /// Get a file by it's ID.
     pub async fn get_file_by_id(&self, id: &str) -> Result<File, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, format!("files/{}", id), (), Some(vec![("supportsAllDrives", "true".to_string())]), &[], "");
+        let request = self.request(Method::GET, format!("files/{}", id), (), Some(vec![("supportsAllDrives", "true".to_string())]), Option::<FileUploadContent<&[u8]>>::None, "");
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -228,8 +230,8 @@ impl GoogleDrive {
                 ("driveId", drive_id.to_string()),
                 ("q", format!("name = '{}'", name)),
             ]),
-            &[],
-            "",
+            Option::<FileUploadContent<&[u8]>>::None,
+            ""
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -252,7 +254,7 @@ impl GoogleDrive {
     /// List drives.
     pub async fn list_drives(&self) -> Result<Vec<Drive>, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, "drives".to_string(), (), Some(vec![("useDomainAdminAccess", "true".to_string())]), &[], "");
+        let request = self.request(Method::GET, "drives".to_string(), (), Some(vec![("useDomainAdminAccess", "true".to_string())]), Option::<FileUploadContent<&[u8]>>::None, "");
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -306,7 +308,7 @@ impl GoogleDrive {
             "files".to_string(),
             file,
             Some(vec![("supportsAllDrives", "true".to_string()), ("includeItemsFromAllDrives", "true".to_string())]),
-            &[],
+            Option::<FileUploadContent<&[u8]>>::None,
             folder_mime_type,
         );
 
@@ -331,7 +333,10 @@ impl GoogleDrive {
     /// Create or update a file in a drive.
     /// If the file already exists, it will update it.
     /// If the file does not exist, it will create it.
-    pub async fn create_or_upload_file(&self, drive_id: &str, parent_id: &str, name: &str, mime_type: &str, contents: &[u8]) -> Result<(), APIError> {
+    pub async fn create_or_upload_file<B>(&self, drive_id: &str, parent_id: &str, name: &str, mime_type: &str, contents: FileUploadContent<B>) -> Result<(), APIError>
+    where
+        B: Into<Body>,
+    {
         // Create the file.
         let mut f: File = Default::default();
         let mut method = Method::POST;
@@ -370,7 +375,7 @@ impl GoogleDrive {
                 ("supportsAllDrives", "true".to_string()),
                 ("includeItemsFromAllDrives", "true".to_string()),
             ]),
-            &[],
+            Option::<FileUploadContent<&[u8]>>::None,
             "",
         );
 
@@ -389,7 +394,7 @@ impl GoogleDrive {
         let location = resp.headers().get("Location").unwrap().to_str().unwrap();
 
         // Now upload the file to that location.
-        let request = self.request(Method::PUT, location.to_string(), (), None, contents, mime_type);
+        let request = self.request(Method::PUT, location.to_string(), (), None, Some(contents), mime_type);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -417,7 +422,7 @@ impl GoogleDrive {
 
         let file = files.get(0).unwrap().clone();
         // Make the request.
-        let request = self.request(Method::DELETE, format!("files/{}", file.id), (), Some(vec![("includeItemsFromAllDrives", "true".to_string())]), &[], "");
+        let request = self.request(Method::DELETE, format!("files/{}", file.id), (), Some(vec![("includeItemsFromAllDrives", "true".to_string())]), Option::<FileUploadContent<&[u8]>>::None, "");
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -701,6 +706,49 @@ pub struct DriveCapabilities {
     #[serde(rename = "canEdit")]
     pub can_edit: Option<bool>,
 }
+
+/// File content for uploading.
+///
+/// Supports big files over stream:
+/// ```
+/// use tokio_util::{ codec::{ FramedRead, BytesCodec }};
+/// 
+/// let path = Path::new(&file_path_str);
+/// let file_name = path
+///     .file_name()
+///     .expect("Google drive Invalid file path")
+///     .to_str()
+///     .expect("Path convert failed");
+/// let file = File::open(path).await?;
+/// let file_length = file.metadata().await?.len();
+/// let reader = FramedRead::new(file, BytesCodec::new());
+/// let stream = Body::wrap_stream(reader);
+///
+/// let contents = FileUploadContent::new(file_length, stream);
+/// client
+///     .create_or_upload_file(&app_params.target_drive_id, &app_params.target_folder_id, file_name, "application/octet-stream", contents)
+///     .await?;
+/// ```
+#[derive(Clone)]
+pub struct FileUploadContent<C>
+where
+    C: Into<Body>,
+{
+    data_length: u64,
+    data: C,
+}
+impl<C> FileUploadContent<C>
+where
+    C: Into<Body> 
+{
+    pub fn new(data_length: u64, data: C) -> Self{
+        FileUploadContent{
+            data_length,
+            data
+        }
+    }
+}
+
 
 /// A file.
 ///
