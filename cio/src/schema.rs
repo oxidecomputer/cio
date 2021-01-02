@@ -292,6 +292,18 @@ table! {
 }
 
 table! {
+    page_views (id) {
+        id -> Int4,
+        time -> Timestamptz,
+        domain -> Varchar,
+        path -> Varchar,
+        user_email -> Varchar,
+        page_link -> Varchar,
+        link_to_auth_user -> Array<Text>,
+    }
+}
+
+table! {
     rfds (id) {
         id -> Int4,
         number -> Int4,
@@ -359,6 +371,7 @@ allow_tables_to_appear_in_same_query!(
     journal_club_papers,
     links,
     mailing_list_subscribers,
+    page_views,
     rfds,
     users,
 );

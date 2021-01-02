@@ -3,6 +3,7 @@ pub static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 pub static AIRTABLE_CUSTOMER_INTERACTIONS_TABLE: &str = "Interactions";
 pub static AIRTABLE_AUTH_USERS_TABLE: &str = "Auth Users";
 pub static AIRTABLE_AUTH_USER_LOGINS_TABLE: &str = "Auth User Logins";
+pub static AIRTABLE_PAGE_VIEWS_TABLE: &str = "Page Views";
 
 pub static AIRTABLE_BASE_ID_DIRECTORY: &str = "appzV7RV5yJH6VFbL";
 pub static AIRTABLE_EMPLOYEES_TABLE: &str = "Employees";
