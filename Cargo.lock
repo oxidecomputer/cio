@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#b1243c8264c02e1567f3cb4ead703dce7496d2fe"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6d32fa6a9903570135c619a933cf901dbab36cd2"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2067,7 +2067,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#b1243c8264c02e1567f3cb4ead703dce7496d2fe"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6d32fa6a9903570135c619a933cf901dbab36cd2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2491,9 +2491,9 @@ dependencies = [
 
 [[package]]
 name = "pandoc"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af139ba672c1360a15eb8abd1008a40a58c0e2ebdf695a8de6f2d90af4193d92"
+checksum = "c60f2dfdd972f848893692dd5ee62422220f2299fd62428ef01f71bebfd5b8f2"
 dependencies = [
  "itertools",
 ]
