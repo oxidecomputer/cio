@@ -779,11 +779,11 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResp
 }]
 #[instrument]
 #[inline]
-async fn listen_analytics_page_view_webhooks(_rqctx: Arc<RequestContext>, query_args: Query<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_analytics_page_view_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // TODO: share the database connection in the context.
     let db = Database::new();
 
-    let mut event = query_args.into_inner();
+    let mut event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
     // Expand the page_view.
