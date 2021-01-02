@@ -1097,6 +1097,7 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
         "user_id",
         "last_login",
         "email_verified",
+        "email",
         "link_to_auth_user_logins",
         "link_to_page_views",
         "last_application_accessed",

@@ -796,6 +796,10 @@ async fn listen_analytics_page_view_webhooks(_rqctx: Arc<RequestContext>, body_p
     //  Update airtable with the new page_view.
     let mut airtable_pv = pv.clone();
     airtable_pv.create_or_update_in_airtable().await;
+    // To the call to airtable twice, once is to create it, the second is to
+    // link it to the auth users.
+    // TODO: clean this up.
+    airtable_pv.create_or_update_in_airtable().await;
     event!(Level::INFO, "page_view `{} | {}` created in airtable", pv.page_link, pv.user_email);
 
     event!(Level::INFO, "page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
