@@ -231,9 +231,13 @@ impl UserConfig {
             street_address = format!("{}\n{}", self.home_address_street_1, self.home_address_street_2,);
         }
         self.home_address_formatted = format!(
-            "{}\n{}, {} {}, {}",
+            "{}\n{}, {} {} {}",
             street_address, self.home_address_city, self.home_address_state, self.home_address_zipcode, self.home_address_country
-        );
+        )
+        .trim()
+        .trim_matches(',')
+        .trim()
+        .to_string();
     }
 
     #[instrument]
