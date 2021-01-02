@@ -91,6 +91,7 @@ impl User {
             link_to_people: Default::default(),
             last_application_accessed: Default::default(),
             link_to_auth_user_logins: Default::default(),
+            link_to_page_views: Default::default(),
         }
     }
 }
@@ -268,6 +269,7 @@ pub async fn refresh_db_auth() {
 
 #[cfg(test)]
 mod tests {
+    use crate::analytics::PageViews;
     use crate::auth_logins::refresh_db_auth;
     use crate::db::Database;
     use crate::models::{AuthUserLogins, AuthUsers};
@@ -303,5 +305,9 @@ mod tests {
         let auth_users = db.get_auth_users();
         // Update auth users in airtable.
         AuthUsers(auth_users).update_airtable().await;
+
+        let page_views = db.get_page_views();
+        // Update auth user logins in airtable.
+        PageViews(page_views).update_airtable().await;
     }
 }

@@ -63,6 +63,7 @@ table! {
         logins_count -> Int4,
         link_to_people -> Array<Text>,
         link_to_auth_user_logins -> Array<Text>,
+        link_to_page_views -> Array<Text>,
     }
 }
 

@@ -4,6 +4,7 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use tracing::instrument;
 
+use crate::analytics::{NewPageView, PageView};
 use crate::certs::{Certificate, NewCertificate};
 use crate::configs::{Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig, LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig};
 use crate::models::{
@@ -12,7 +13,7 @@ use crate::models::{
 };
 use crate::schema::{
     applicants, auth_user_logins, auth_users, buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links,
-    mailing_list_subscribers, rfds, users,
+    mailing_list_subscribers, page_views, rfds, users,
 };
 
 pub struct Database {
@@ -622,6 +623,47 @@ impl Database {
             .values(mailing_list_subscriber)
             .get_result(&self.conn)
             .unwrap_or_else(|e| panic!("creating mailing_list_subscriber failed: {}", e))
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
+    pub fn get_page_views(&self) -> Vec<PageView> {
+        page_views::dsl::page_views.order_by(page_views::dsl::id.desc()).load::<PageView>(&self.conn).unwrap()
+    }
+
+    #[instrument(skip(self))]
+    #[inline]
+    pub fn upsert_page_view(&self, page_view: &NewPageView) -> PageView {
+        // See if we already have the page_view in the database.
+        match page_views::dsl::page_views
+            .filter(page_views::dsl::time.eq(page_view.time))
+            .filter(page_views::dsl::user_email.eq(page_view.user_email.to_string()))
+            .limit(1)
+            .load::<PageView>(&self.conn)
+        {
+            Ok(r) => {
+                if r.is_empty() {
+                    // We don't have the page_view in the database so we need to add it.
+                    // That will happen below.
+                } else {
+                    let u = r.get(0).unwrap();
+
+                    // Update the page_view.
+                    return diesel::update(u)
+                        .set(page_view)
+                        .get_result::<PageView>(&self.conn)
+                        .unwrap_or_else(|e| panic!("unable to update page_view {}: {}", u.id, e));
+                }
+            }
+            Err(e) => {
+                println!("[db] on err: {:?}; we don't have the page_view in the database, adding it", e);
+            }
+        }
+
+        diesel::insert_into(page_views::table)
+            .values(page_view)
+            .get_result(&self.conn)
+            .unwrap_or_else(|e| panic!("creating page_view failed: {}", e))
     }
 
     #[instrument(skip(self))]

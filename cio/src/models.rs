@@ -1098,6 +1098,7 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
         "last_login",
         "email_verified",
         "link_to_auth_user_logins",
+        "link_to_page_views",
         "last_application_accessed",
         "company",
     ],
@@ -1144,6 +1145,9 @@ pub struct NewAuthUser {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_auth_user_logins: Vec<String>,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_page_views: Vec<String>,
 }
 
 /// Implement updating the Airtable record for a AuthUser.
@@ -1155,6 +1159,7 @@ impl UpdateAirtableRecord<AuthUser> for AuthUser {
         // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
         self.link_to_people = record.link_to_people.clone();
         self.link_to_auth_user_logins = record.link_to_auth_user_logins;
+        self.link_to_page_views = record.link_to_page_views;
     }
 }
 

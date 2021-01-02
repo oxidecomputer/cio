@@ -20,5 +20,6 @@ CREATE TABLE auth_users (
     last_ip VARCHAR NOT NULL,
     logins_count INTEGER NOT NULL,
     link_to_people TEXT [] NOT NULL,
-    link_to_auth_user_logins TEXT [] NOT NULL
+    link_to_auth_user_logins TEXT [] NOT NULL,
+    link_to_page_views TEXT [] NOT NULL
 )
