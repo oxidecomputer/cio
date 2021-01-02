@@ -690,8 +690,9 @@ Personal Email: {}
 Twitter: [TWITTER HANDLE]
 GitHub: {}
 Phone: {}
+Location: {}
 cc @jessfraz @sdtuck @bcantrill",
-            self.email, self.github, self.phone,
+            self.email, self.github, self.phone, self.location,
         );
 
         // Create the issue.
