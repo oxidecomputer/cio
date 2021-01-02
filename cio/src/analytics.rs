@@ -59,3 +59,20 @@ impl NewPageView {
         self.page_link = format!("https://{}/{}", self.domain, self.path.trim_start_matches('/'));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::analytics::PageViews;
+    use crate::db::Database;
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
+    async fn test_cron_page_views_airtable() {
+        // Initialize our database.
+        let db = Database::new();
+
+        let page_views = db.get_page_views();
+        // Update auth user logins in airtable.
+        PageViews(page_views).update_airtable().await;
+    }
+}
