@@ -579,7 +579,7 @@ Sincerely,
         if !self.status.contains("Next steps") {
             // Make sure we don't already have an issue for them.
             if let Some(i) = issue {
-                if i.state == "open" {
+                if i.state != "open" {
                     // We only care if the issue is still opened.
                     return;
                 }
@@ -598,7 +598,7 @@ Sincerely,
                     .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
 
                 // Close the issue.
-                repo.issue(i.id)
+                repo.issue(i.number)
                     .edit(&IssueOptions {
                         title: i.title.to_string(),
                         body: Default::default(),
@@ -608,7 +608,7 @@ Sincerely,
                         state: Some("closed".to_string()),
                     })
                     .await
-                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.id, e));
+                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
             }
             // Return early.
             return;
@@ -713,7 +713,7 @@ cc @jessfraz @sdtuck @bcantrill",
 
         // Delete the "next steps" issue from the "meta" repository.
         if let Some(mi) = check_if_github_issue_exists(&meta_issues, &self.name) {
-            if mi.state == "open" {
+            if mi.state != "open" {
                 // We only care if the issue is still opened.
                 return;
             }
@@ -721,7 +721,7 @@ cc @jessfraz @sdtuck @bcantrill",
             let repo = github.repo(github_org(), "meta");
 
             // Comment on the issue that this person is now set to be onboarded.
-            repo.issue(mi.id)
+            repo.issue(mi.number)
                 .comments()
                 .create(&CommentOptions {
                     body: format!(
@@ -735,7 +735,7 @@ The onboarding issue is: {}/configs#{}",
                 .unwrap();
 
             // Close the issue.
-            repo.issue(mi.id)
+            repo.issue(mi.number)
                 .edit(&IssueOptions {
                     title: mi.title.to_string(),
                     body: Default::default(),
