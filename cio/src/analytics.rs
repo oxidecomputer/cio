@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use macros::db_struct;
+use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -10,10 +10,10 @@ use crate::core::UpdateAirtableRecord;
 use crate::models::AuthUsers;
 use crate::schema::page_views;
 
-#[db_struct {
-    new_name = "PageView",
-    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
-    table = "AIRTABLE_PAGE_VIEWS_TABLE",
+#[db {
+    new_struct_name = "PageView",
+    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_table = "AIRTABLE_PAGE_VIEWS_TABLE"
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "page_views"]
@@ -27,8 +27,6 @@ pub struct NewPageView {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_auth_user: Vec<String>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub airtable_record_id: String,
 }
 
 /// Implement updating the Airtable record for a PageView.

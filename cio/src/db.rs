@@ -42,7 +42,7 @@ impl Database {
     }
 
     /// Returns a connection from the pool.
-    fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
+    pub fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
         self.pool.get().unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
     }
 
