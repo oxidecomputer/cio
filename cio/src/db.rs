@@ -1,7 +1,9 @@
 use std::env;
+use std::sync::Arc;
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::r2d2;
 use tracing::instrument;
 
 use crate::analytics::{NewPageView, PageView};
@@ -17,16 +19,17 @@ use crate::schema::{
 };
 
 pub struct Database {
-    conn: PgConnection,
+    pool: Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>,
 }
 
 impl Default for Database {
     fn default() -> Self {
         let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
 
-        Database {
-            conn: PgConnection::establish(&database_url).unwrap_or_else(|e| panic!("error connecting to {}: {}", database_url, e)),
-        }
+        let manager = r2d2::ConnectionManager::new(&database_url);
+        let pool = r2d2::Pool::builder().max_size(15).build(manager).unwrap();
+
+        Database { pool: Arc::new(pool) }
     }
 }
 
@@ -38,10 +41,15 @@ impl Database {
         Default::default()
     }
 
+    /// Returns a connection from the pool.
+    fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
+        self.pool.get().unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
+    }
+
     #[instrument(skip(self))]
     #[inline]
     pub fn get_applicants(&self) -> Vec<Applicant> {
-        applicants::dsl::applicants.order_by(applicants::dsl::id.desc()).load::<Applicant>(&self.conn).unwrap()
+        applicants::dsl::applicants.order_by(applicants::dsl::id.desc()).load::<Applicant>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
@@ -51,7 +59,7 @@ impl Database {
             .filter(applicants::dsl::email.eq(email.to_string()))
             .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
             .limit(1)
-            .load::<Applicant>(&self.conn)
+            .load::<Applicant>(&self.conn())
         {
             Ok(r) => {
                 if !r.is_empty() {
@@ -75,13 +83,13 @@ impl Database {
             // Update the applicant.
             return diesel::update(&a)
                 .set(applicant)
-                .get_result::<Applicant>(&self.conn)
+                .get_result::<Applicant>(&self.conn())
                 .unwrap_or_else(|e| panic!("unable to update applicant {}: {}", a.id, e));
         }
 
         diesel::insert_into(applicants::table)
             .values(applicant)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating applicant failed: {}", e))
     }
 
@@ -91,14 +99,14 @@ impl Database {
         // Update the applicant.
         diesel::update(applicant)
             .set(applicant.clone())
-            .get_result::<Applicant>(&self.conn)
+            .get_result::<Applicant>(&self.conn())
             .unwrap_or_else(|e| panic!("unable to update applicant {}: {}", applicant.id, e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_buildings(&self) -> Vec<Building> {
-        buildings::dsl::buildings.order_by(buildings::dsl::id.desc()).load::<Building>(&self.conn).unwrap()
+        buildings::dsl::buildings.order_by(buildings::dsl::id.desc()).load::<Building>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
@@ -108,7 +116,7 @@ impl Database {
         match buildings::dsl::buildings
             .filter(buildings::dsl::name.eq(building.name.to_string()))
             .limit(1)
-            .load::<Building>(&self.conn)
+            .load::<Building>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -120,7 +128,7 @@ impl Database {
                     // Update the building.
                     return diesel::update(b)
                         .set(building)
-                        .get_result::<Building>(&self.conn)
+                        .get_result::<Building>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update building {}: {}", b.id, e));
                 }
             }
@@ -131,20 +139,22 @@ impl Database {
 
         diesel::insert_into(buildings::table)
             .values(building)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating building failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn delete_building_by_name(&self, name: &str) {
-        diesel::delete(buildings::dsl::buildings.filter(buildings::dsl::name.eq(name.to_string()))).execute(&self.conn).unwrap();
+        diesel::delete(buildings::dsl::buildings.filter(buildings::dsl::name.eq(name.to_string())))
+            .execute(&self.conn())
+            .unwrap();
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_certificates(&self) -> Vec<Certificate> {
-        certificates::dsl::certificates.order_by(certificates::dsl::id.desc()).load::<Certificate>(&self.conn).unwrap()
+        certificates::dsl::certificates.order_by(certificates::dsl::id.desc()).load::<Certificate>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
@@ -154,7 +164,7 @@ impl Database {
         match certificates::dsl::certificates
             .filter(certificates::dsl::domain.eq(certificate.domain.to_string()))
             .limit(1)
-            .load::<Certificate>(&self.conn)
+            .load::<Certificate>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -166,7 +176,7 @@ impl Database {
                     // Update the certificate.
                     return diesel::update(b)
                         .set(certificate)
-                        .get_result::<Certificate>(&self.conn)
+                        .get_result::<Certificate>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update certificate {}: {}", b.id, e));
                 }
             }
@@ -177,7 +187,7 @@ impl Database {
 
         diesel::insert_into(certificates::table)
             .values(certificate)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating certificate failed: {}", e))
     }
 
@@ -185,7 +195,7 @@ impl Database {
     #[inline]
     pub fn delete_certificate_by_domain(&self, domain: &str) {
         diesel::delete(certificates::dsl::certificates.filter(certificates::dsl::domain.eq(domain.to_string())))
-            .execute(&self.conn)
+            .execute(&self.conn())
             .unwrap();
     }
 
@@ -194,7 +204,7 @@ impl Database {
     pub fn get_conference_rooms(&self) -> Vec<ConferenceRoom> {
         conference_rooms::dsl::conference_rooms
             .order_by(conference_rooms::dsl::id.desc())
-            .load::<ConferenceRoom>(&self.conn)
+            .load::<ConferenceRoom>(&self.conn())
             .unwrap()
     }
 
@@ -205,7 +215,7 @@ impl Database {
         match conference_rooms::dsl::conference_rooms
             .filter(conference_rooms::dsl::name.eq(conference_room.name.to_string()))
             .limit(1)
-            .load::<ConferenceRoom>(&self.conn)
+            .load::<ConferenceRoom>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -217,7 +227,7 @@ impl Database {
                     // Update the conference_room.
                     return diesel::update(c)
                         .set(conference_room)
-                        .get_result::<ConferenceRoom>(&self.conn)
+                        .get_result::<ConferenceRoom>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update conference_room {}: {}", c.id, e));
                 }
             }
@@ -228,7 +238,7 @@ impl Database {
 
         diesel::insert_into(conference_rooms::table)
             .values(conference_room)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating conference_room failed: {}", e))
     }
 
@@ -236,14 +246,14 @@ impl Database {
     #[inline]
     pub fn delete_conference_room_by_name(&self, name: &str) {
         diesel::delete(conference_rooms::dsl::conference_rooms.filter(conference_rooms::dsl::name.eq(name.to_string())))
-            .execute(&self.conn)
+            .execute(&self.conn())
             .unwrap();
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_auth_users(&self) -> Vec<AuthUser> {
-        auth_users::dsl::auth_users.order_by(auth_users::dsl::id.desc()).load::<AuthUser>(&self.conn).unwrap()
+        auth_users::dsl::auth_users.order_by(auth_users::dsl::id.desc()).load::<AuthUser>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
@@ -253,7 +263,7 @@ impl Database {
         match auth_users::dsl::auth_users
             .filter(auth_users::dsl::user_id.eq(auth_user.user_id.to_string()))
             .limit(1)
-            .load::<AuthUser>(&self.conn)
+            .load::<AuthUser>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -265,7 +275,7 @@ impl Database {
                     // Update the auth_user.
                     return diesel::update(a)
                         .set(auth_user)
-                        .get_result::<AuthUser>(&self.conn)
+                        .get_result::<AuthUser>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update auth_user {}: {}", a.id, e));
                 }
             }
@@ -276,7 +286,7 @@ impl Database {
 
         diesel::insert_into(auth_users::table)
             .values(auth_user)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating auth_user failed: {}", e))
     }
 
@@ -285,7 +295,7 @@ impl Database {
     pub fn get_auth_user_logins(&self) -> Vec<AuthUserLogin> {
         auth_user_logins::dsl::auth_user_logins
             .order_by(auth_user_logins::dsl::id.desc())
-            .load::<AuthUserLogin>(&self.conn)
+            .load::<AuthUserLogin>(&self.conn())
             .unwrap()
     }
 
@@ -297,7 +307,7 @@ impl Database {
             .filter(auth_user_logins::dsl::user_id.eq(auth_user_login.user_id.to_string()))
             .filter(auth_user_logins::dsl::date.eq(auth_user_login.date))
             .limit(1)
-            .load::<AuthUserLogin>(&self.conn)
+            .load::<AuthUserLogin>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -309,7 +319,7 @@ impl Database {
                     // Update the auth_user_login.
                     return diesel::update(a)
                         .set(auth_user_login)
-                        .get_result::<AuthUserLogin>(&self.conn)
+                        .get_result::<AuthUserLogin>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update auth_user_login {}: {}", a.id, e));
                 }
             }
@@ -320,14 +330,14 @@ impl Database {
 
         diesel::insert_into(auth_user_logins::table)
             .values(auth_user_login)
-            .get_result::<AuthUserLogin>(&self.conn)
+            .get_result::<AuthUserLogin>(&self.conn())
             .unwrap_or_else(|e| panic!("creating auth_user_login failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_github_labels(&self) -> Vec<GithubLabel> {
-        github_labels::dsl::github_labels.order_by(github_labels::dsl::id.desc()).load::<GithubLabel>(&self.conn).unwrap()
+        github_labels::dsl::github_labels.order_by(github_labels::dsl::id.desc()).load::<GithubLabel>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
@@ -337,7 +347,7 @@ impl Database {
         match github_labels::dsl::github_labels
             .filter(github_labels::dsl::name.eq(github_label.name.to_string()))
             .limit(1)
-            .load::<GithubLabel>(&self.conn)
+            .load::<GithubLabel>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -349,7 +359,7 @@ impl Database {
                     // Update the github_label.
                     return diesel::update(label)
                         .set(github_label)
-                        .get_result::<GithubLabel>(&self.conn)
+                        .get_result::<GithubLabel>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update github_label {}: {}", label.id, e));
                 }
             }
@@ -360,14 +370,14 @@ impl Database {
 
         diesel::insert_into(github_labels::table)
             .values(github_label)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating github_label failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_github_repos(&self) -> Vec<GithubRepo> {
-        github_repos::dsl::github_repos.order_by(github_repos::dsl::id.desc()).load::<GithubRepo>(&self.conn).unwrap()
+        github_repos::dsl::github_repos.order_by(github_repos::dsl::id.desc()).load::<GithubRepo>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
@@ -377,7 +387,7 @@ impl Database {
         match github_repos::dsl::github_repos
             .filter(github_repos::dsl::full_name.eq(github_repo.full_name.to_string()))
             .limit(1)
-            .load::<GithubRepo>(&self.conn)
+            .load::<GithubRepo>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -389,7 +399,7 @@ impl Database {
                     // Update the github_repo.
                     return diesel::update(a)
                         .set(github_repo)
-                        .get_result::<GithubRepo>(&self.conn)
+                        .get_result::<GithubRepo>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update github_repo {}: {}", a.id, e));
                 }
             }
@@ -400,7 +410,7 @@ impl Database {
 
         diesel::insert_into(github_repos::table)
             .values(github_repo)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating github_repo failed: {}", e))
     }
 
@@ -408,21 +418,21 @@ impl Database {
     #[inline]
     pub fn delete_github_repo_by_name(&self, name: &str) {
         diesel::delete(github_repos::dsl::github_repos.filter(github_repos::dsl::name.eq(name.to_string())))
-            .execute(&self.conn)
+            .execute(&self.conn())
             .unwrap();
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_groups(&self) -> Vec<Group> {
-        groups::dsl::groups.order_by(groups::dsl::id.desc()).load::<Group>(&self.conn).unwrap()
+        groups::dsl::groups.order_by(groups::dsl::id.desc()).load::<Group>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn upsert_group(&self, group: &GroupConfig) -> Group {
         // See if we already have the group in the database.
-        match groups::dsl::groups.filter(groups::dsl::name.eq(group.name.to_string())).limit(1).load::<Group>(&self.conn) {
+        match groups::dsl::groups.filter(groups::dsl::name.eq(group.name.to_string())).limit(1).load::<Group>(&self.conn()) {
             Ok(r) => {
                 if r.is_empty() {
                     // We don't have the group in the database so we need to add it.
@@ -433,7 +443,7 @@ impl Database {
                     // Update the group.
                     return diesel::update(g)
                         .set(group)
-                        .get_result::<Group>(&self.conn)
+                        .get_result::<Group>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update group {}: {}", g.id, e));
                 }
             }
@@ -444,14 +454,14 @@ impl Database {
 
         diesel::insert_into(groups::table)
             .values(group)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating group failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn delete_group_by_name(&self, name: &str) {
-        diesel::delete(groups::dsl::groups.filter(groups::dsl::name.eq(name.to_string()))).execute(&self.conn).unwrap();
+        diesel::delete(groups::dsl::groups.filter(groups::dsl::name.eq(name.to_string()))).execute(&self.conn()).unwrap();
     }
 
     #[instrument(skip(self))]
@@ -459,7 +469,7 @@ impl Database {
     pub fn get_journal_club_meetings(&self) -> Vec<JournalClubMeeting> {
         journal_club_meetings::dsl::journal_club_meetings
             .order_by(journal_club_meetings::dsl::id.desc())
-            .load::<JournalClubMeeting>(&self.conn)
+            .load::<JournalClubMeeting>(&self.conn())
             .unwrap()
     }
 
@@ -470,7 +480,7 @@ impl Database {
         match journal_club_meetings::dsl::journal_club_meetings
             .filter(journal_club_meetings::dsl::issue.eq(journal_club_meeting.issue.to_string()))
             .limit(1)
-            .load::<JournalClubMeeting>(&self.conn)
+            .load::<JournalClubMeeting>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -482,7 +492,7 @@ impl Database {
                     // Update the journal_club_meeting.
                     return diesel::update(a)
                         .set(journal_club_meeting)
-                        .get_result::<JournalClubMeeting>(&self.conn)
+                        .get_result::<JournalClubMeeting>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update journal_club_meeting {}: {}", a.id, e));
                 }
             }
@@ -493,7 +503,7 @@ impl Database {
 
         diesel::insert_into(journal_club_meetings::table)
             .values(journal_club_meeting)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating journal_club_meeting failed: {}", e))
     }
 
@@ -502,7 +512,7 @@ impl Database {
     pub fn get_journal_club_papers(&self) -> Vec<JournalClubPaper> {
         journal_club_papers::dsl::journal_club_papers
             .order_by(journal_club_papers::dsl::id.desc())
-            .load::<JournalClubPaper>(&self.conn)
+            .load::<JournalClubPaper>(&self.conn())
             .unwrap()
     }
 
@@ -513,7 +523,7 @@ impl Database {
         match journal_club_papers::dsl::journal_club_papers
             .filter(journal_club_papers::dsl::link.eq(journal_club_paper.link.to_string()))
             .limit(1)
-            .load::<JournalClubPaper>(&self.conn)
+            .load::<JournalClubPaper>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -525,7 +535,7 @@ impl Database {
                     // Update the journal_club_paper.
                     return diesel::update(a)
                         .set(journal_club_paper)
-                        .get_result::<JournalClubPaper>(&self.conn)
+                        .get_result::<JournalClubPaper>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update journal_club_paper {}: {}", a.id, e));
                 }
             }
@@ -536,21 +546,21 @@ impl Database {
 
         diesel::insert_into(journal_club_papers::table)
             .values(journal_club_paper)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating journal_club_paper failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_links(&self) -> Vec<Link> {
-        links::dsl::links.order_by(links::dsl::id.desc()).load::<Link>(&self.conn).unwrap()
+        links::dsl::links.order_by(links::dsl::id.desc()).load::<Link>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn upsert_link(&self, link: &LinkConfig) -> Link {
         // See if we already have the link in the database.
-        match links::dsl::links.filter(links::dsl::name.eq(link.name.to_string())).limit(1).load::<Link>(&self.conn) {
+        match links::dsl::links.filter(links::dsl::name.eq(link.name.to_string())).limit(1).load::<Link>(&self.conn()) {
             Ok(r) => {
                 if r.is_empty() {
                     // We don't have the link in the database so we need to add it.
@@ -561,7 +571,7 @@ impl Database {
                     // Update the link.
                     return diesel::update(l)
                         .set(link)
-                        .get_result::<Link>(&self.conn)
+                        .get_result::<Link>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update link {}: {}", l.id, e));
                 }
             }
@@ -572,14 +582,14 @@ impl Database {
 
         diesel::insert_into(links::table)
             .values(link)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating link failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn delete_link_by_name(&self, name: &str) {
-        diesel::delete(links::dsl::links.filter(links::dsl::name.eq(name.to_string()))).execute(&self.conn).unwrap();
+        diesel::delete(links::dsl::links.filter(links::dsl::name.eq(name.to_string()))).execute(&self.conn()).unwrap();
     }
 
     #[instrument(skip(self))]
@@ -587,7 +597,7 @@ impl Database {
     pub fn get_mailing_list_subscribers(&self) -> Vec<MailingListSubscriber> {
         mailing_list_subscribers::dsl::mailing_list_subscribers
             .order_by(mailing_list_subscribers::dsl::id.desc())
-            .load::<MailingListSubscriber>(&self.conn)
+            .load::<MailingListSubscriber>(&self.conn())
             .unwrap()
     }
 
@@ -598,7 +608,7 @@ impl Database {
         match mailing_list_subscribers::dsl::mailing_list_subscribers
             .filter(mailing_list_subscribers::dsl::email.eq(mailing_list_subscriber.email.to_string()))
             .limit(1)
-            .load::<MailingListSubscriber>(&self.conn)
+            .load::<MailingListSubscriber>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -610,7 +620,7 @@ impl Database {
                     // Update the mailing_list_subscriber.
                     return diesel::update(m)
                         .set(mailing_list_subscriber)
-                        .get_result::<MailingListSubscriber>(&self.conn)
+                        .get_result::<MailingListSubscriber>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update mailing_list_subscriber {}: {}", m.id, e));
                 }
             }
@@ -621,14 +631,14 @@ impl Database {
 
         diesel::insert_into(mailing_list_subscribers::table)
             .values(mailing_list_subscriber)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating mailing_list_subscriber failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_page_views(&self) -> Vec<PageView> {
-        page_views::dsl::page_views.order_by(page_views::dsl::id.desc()).load::<PageView>(&self.conn).unwrap()
+        page_views::dsl::page_views.order_by(page_views::dsl::id.desc()).load::<PageView>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
@@ -639,7 +649,7 @@ impl Database {
             .filter(page_views::dsl::time.eq(page_view.time))
             .filter(page_views::dsl::user_email.eq(page_view.user_email.to_string()))
             .limit(1)
-            .load::<PageView>(&self.conn)
+            .load::<PageView>(&self.conn())
         {
             Ok(r) => {
                 if r.is_empty() {
@@ -651,7 +661,7 @@ impl Database {
                     // Update the page_view.
                     return diesel::update(u)
                         .set(page_view)
-                        .get_result::<PageView>(&self.conn)
+                        .get_result::<PageView>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update page_view {}: {}", u.id, e));
                 }
             }
@@ -662,20 +672,20 @@ impl Database {
 
         diesel::insert_into(page_views::table)
             .values(page_view)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating page_view failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_rfds(&self) -> Vec<RFD> {
-        rfds::dsl::rfds.order_by(rfds::dsl::id.desc()).load::<RFD>(&self.conn).unwrap()
+        rfds::dsl::rfds.order_by(rfds::dsl::id.desc()).load::<RFD>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_rfd(&self, number: i32) -> Option<RFD> {
-        match rfds::dsl::rfds.filter(rfds::dsl::number.eq(number)).limit(1).load::<RFD>(&self.conn) {
+        match rfds::dsl::rfds.filter(rfds::dsl::number.eq(number)).limit(1).load::<RFD>(&self.conn()) {
             Ok(r) => {
                 if !r.is_empty() {
                     return Some(r.get(0).unwrap().clone());
@@ -698,13 +708,13 @@ impl Database {
             // Update the rfd.
             return diesel::update(&r)
                 .set(rfd)
-                .get_result::<RFD>(&self.conn)
+                .get_result::<RFD>(&self.conn())
                 .unwrap_or_else(|e| panic!("unable to update rfd {}: {}", r.id, e));
         }
 
         diesel::insert_into(rfds::table)
             .values(rfd)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating rfd failed: {}", e))
     }
 
@@ -714,21 +724,21 @@ impl Database {
         // Update the rfd.
         diesel::update(rfd)
             .set(rfd.clone())
-            .get_result::<RFD>(&self.conn)
+            .get_result::<RFD>(&self.conn())
             .unwrap_or_else(|e| panic!("unable to update rfd {}: {}", rfd.id, e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn get_users(&self) -> Vec<User> {
-        users::dsl::users.order_by(users::dsl::id.desc()).load::<User>(&self.conn).unwrap()
+        users::dsl::users.order_by(users::dsl::id.desc()).load::<User>(&self.conn()).unwrap()
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn upsert_user(&self, user: &UserConfig) -> User {
         // See if we already have the user in the database.
-        match users::dsl::users.filter(users::dsl::username.eq(user.username.to_string())).limit(1).load::<User>(&self.conn) {
+        match users::dsl::users.filter(users::dsl::username.eq(user.username.to_string())).limit(1).load::<User>(&self.conn()) {
             Ok(r) => {
                 if r.is_empty() {
                     // We don't have the user in the database so we need to add it.
@@ -739,7 +749,7 @@ impl Database {
                     // Update the user.
                     return diesel::update(u)
                         .set(user)
-                        .get_result::<User>(&self.conn)
+                        .get_result::<User>(&self.conn())
                         .unwrap_or_else(|e| panic!("unable to update user {}: {}", u.id, e));
                 }
             }
@@ -750,13 +760,13 @@ impl Database {
 
         diesel::insert_into(users::table)
             .values(user)
-            .get_result(&self.conn)
+            .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating user failed: {}", e))
     }
 
     #[instrument(skip(self))]
     #[inline]
     pub fn delete_user_by_username(&self, username: &str) {
-        diesel::delete(users::dsl::users.filter(users::dsl::username.eq(username.to_string()))).execute(&self.conn).unwrap();
+        diesel::delete(users::dsl::users.filter(users::dsl::username.eq(username.to_string()))).execute(&self.conn()).unwrap();
     }
 }

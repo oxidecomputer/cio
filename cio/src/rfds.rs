@@ -32,8 +32,9 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     for r in csv_reader.deserialize() {
         let mut rfd: NewRFD = r.unwrap();
 
+        // TODO: this whole thing is a mess jessfraz needs to cleanup
         rfd.number_string = NewRFD::generate_number_string(rfd.number);
-        rfd.name = NewRFD::generate_name();
+        rfd.name = NewRFD::generate_name(rfd.number, &rfd.title);
 
         // Add this to our BTreeMap.
         rfds.insert(rfd.number, rfd);
