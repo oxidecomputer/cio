@@ -715,6 +715,12 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
+    // Use a variable to track whether or not we need to update Airtable at the end.
+    // Sometimes we will do nothing and we shouldn't waste the time to update Airtable,
+    // or worse if we maybe updated when another function was updating.
+    // So we make sure to only update Airtable if we know we should.
+    let mut update_airtable = false;
+
     // Get the row from airtable.
     let mut shipment = Shipment::get_from_airtable(&event.record_id).await;
     if shipment.reprint_label {
@@ -725,11 +731,27 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
         // Update the field.
         shipment.reprint_label = false;
         shipment.status = "Label printed".to_string();
-        // Update airtable again.
-        shipment.create_or_update_in_airtable().await;
+
+        update_airtable = true;
+    }
+
+    if shipment.resend_email_to_recipient {
+        // Resend the email to the recipient.
+        shipment.send_email_to_recipient().await;
+        event!(Level::INFO, "resent the shipment email to the recipient {}", shipment.email);
+
+        // Update the field.
+        shipment.resend_email_to_recipient = false;
+
+        update_airtable = true;
     }
 
     // TODO: schedule a pickup.
+
+    if update_airtable {
+        // Update airtable again.
+        shipment.create_or_update_in_airtable().await;
+    }
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
