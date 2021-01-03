@@ -17,7 +17,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::models::get_value;
 use crate::utils::{get_gsuite_token, DOMAIN};
 
-/// The data type for a shippo shipment.
+/// The data type for a internal shipment.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Shipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -57,6 +57,8 @@ pub struct Shipment {
     pub label_link: String,
     #[serde(default)]
     pub reprint_label: bool,
+    #[serde(default)]
+    pub resend_email_to_recipient: bool,
     #[serde(default)]
     pub cost: f64,
     #[serde(default)]
@@ -133,6 +135,7 @@ impl Shipment {
             delivered_time: None,
             reprint_label: false,
             schedule_pickup: false,
+            resend_email_to_recipient: false,
             shipped_time: None,
             shippo_id: Default::default(),
             status: "Queued".to_string(),
@@ -299,6 +302,7 @@ impl Shipment {
                 delivered_time: None,
                 reprint_label: false,
                 schedule_pickup: false,
+                resend_email_to_recipient: false,
                 shipped_time: None,
                 shippo_id: Default::default(),
                 status: Default::default(),
