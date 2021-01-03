@@ -598,17 +598,7 @@ Sincerely,
                     .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
 
                 // Close the issue.
-                repo.issue(i.number)
-                    .edit(&IssueOptions {
-                        title: i.title.to_string(),
-                        body: Default::default(),
-                        assignee: Default::default(),
-                        labels: Default::default(),
-                        milestone: Default::default(),
-                        state: Some("closed".to_string()),
-                    })
-                    .await
-                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
+                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
             }
             // Return early.
             return;
@@ -736,17 +726,7 @@ The onboarding issue is: {}/configs#{}",
                 .unwrap();
 
             // Close the issue.
-            repo.issue(mi.number)
-                .edit(&IssueOptions {
-                    title: mi.title.to_string(),
-                    body: Default::default(),
-                    assignee: Default::default(),
-                    labels: Default::default(),
-                    milestone: Default::default(),
-                    state: Some("closed".to_string()),
-                })
-                .await
-                .unwrap();
+            repo.issue(mi.number).close().await.unwrap();
         }
     }
 

@@ -1438,7 +1438,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &GithubRepo, e
     }
     let mut rfd = result.unwrap();
 
-    // Let's make sure the tile of the pull request is what it should be.
+    // Let's make sure the title of the pull request is what it should be.
     // The pull request title should be equal to the name of the pull request.
     if rfd.name != event.pull_request.title {
         // Update the title of the pull request.

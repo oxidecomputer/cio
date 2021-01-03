@@ -33,6 +33,7 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
         let mut rfd: NewRFD = r.unwrap();
 
         rfd.number_string = NewRFD::generate_number_string(rfd.number);
+        rfd.name = NewRFD::generate_name();
 
         // Add this to our BTreeMap.
         rfds.insert(rfd.number, rfd);
