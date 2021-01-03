@@ -134,6 +134,7 @@ struct Context {
     github: Github,
     github_org: String,
     influx: influx::Client,
+    db: Database,
 }
 
 impl Context {
@@ -162,6 +163,7 @@ impl Context {
             github: authenticate_github_jwt(),
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
+            db: Database::new(),
         })
     }
 
@@ -337,15 +339,13 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
 
     let api_context = Context::from_rqctx(&rqctx);
     let github = &api_context.github;
+    let db = &api_context.db;
 
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
     let token = get_gsuite_token().await;
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
-
-    // TODO: share the database connection in the context.
-    let db = Database::new();
 
     let result = db.get_rfd(num);
     if result.is_none() {
@@ -408,12 +408,15 @@ pub struct GitHubRateLimit {
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
     let token = get_gsuite_token().await;
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
+
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
@@ -445,9 +448,6 @@ async fn listen_google_sheets_edit_webhooks(_rqctx: Arc<RequestContext>, body_pa
     let column_letters = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     cell_name = format!("{}1", column_letters.chars().nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
     let column_header = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
-
-    // TODO: share the database connection in the context.
-    let db = Database::new();
 
     // Now let's get the applicant from the database so we can update it.
     let result = db.get_applicant(&email, &event.spreadsheet.id);
@@ -577,7 +577,7 @@ pub struct GoogleSpreadsheet {
 }]
 #[instrument]
 #[inline]
-async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
     let token = get_gsuite_token().await;
@@ -585,6 +585,9 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
     let sheets = Sheets::new(token.clone());
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
+
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
@@ -633,9 +636,6 @@ async fn listen_google_sheets_row_create_webhooks(_rqctx: Arc<RequestContext>, b
         // Send a company-wide email.
         applicant.send_email_internally().await;
     }
-
-    // TODO: share the database connection in the context.
-    let db = Database::new();
 
     // Send the applicant to the database.
     let a = db.upsert_applicant(&applicant);
@@ -779,9 +779,9 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResp
 }]
 #[instrument]
 #[inline]
-async fn listen_analytics_page_view_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    // TODO: share the database connection in the context.
-    let db = Database::new();
+async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     let mut event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
@@ -813,9 +813,9 @@ async fn listen_analytics_page_view_webhooks(_rqctx: Arc<RequestContext>, body_p
 }]
 #[instrument]
 #[inline]
-async fn listen_mailchimp_webhooks(_rqctx: Arc<RequestContext>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    // TODO: share the database connection in the context.
-    let db = Database::new();
+async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     let event = query_args.into_inner();
     event!(Level::DEBUG, "{:?}", event);
@@ -1403,8 +1403,7 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
 #[instrument(skip(api_context))]
 #[inline]
 async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
-    // TODO: share the database connection in the context.
-    let db = Database::new();
+    let db = &api_context.db;
 
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
@@ -1541,8 +1540,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
 
-    // TODO: share the database connection in the context.
-    let db = Database::new();
+    let db = &api_context.db;
 
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
