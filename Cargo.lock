@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1fe86c08b8fb16e33d903c7aa099ad97a26081a5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d3fdf82328bd519970ba9ac22d65ec6535ac079c"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2077,7 +2077,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1fe86c08b8fb16e33d903c7aa099ad97a26081a5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d3fdf82328bd519970ba9ac22d65ec6535ac079c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3495,7 +3495,7 @@ dependencies = [
  "dtoa",
  "linked-hash-map",
  "serde",
- "yaml-rust 0.4.4",
+ "yaml-rust 0.4.5",
 ]
 
 [[package]]
@@ -4761,9 +4761,9 @@ checksum = "e66366e18dc58b46801afbf2ca7661a9f59cc8c5962c29892b6039b4f86fa992"
 
 [[package]]
 name = "yaml-rust"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39f0c922f1a334134dc2f7a8b67dc5d25f0735263feec974345ff706bcf20b0d"
+checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
 ]
