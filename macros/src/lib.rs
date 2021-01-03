@@ -543,8 +543,9 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             let new_record = records.get(0).unwrap();
 
             // Now we have the id we need to update the database.
-            self.airtable_record_id = new_record.id;
-            self.update_in_db();
+            self.airtable_record_id = new_record.id.to_string();
+            // TODO: we should use our pool of connections.
+            self.update_in_db(crate::db::Database::new());
         }
 
         /// Update the record in Airtable.
@@ -556,23 +557,25 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // weird if we aren't nit picky about this.
             self.update_airtable_record(existing_record.fields.clone()).await;
 
+            // If we do not have an airtable_record_id set in the database for this record, we are
+            // going to want to set it.
+            // TODO: Eventually we can remove this logic, when everything is migrated.
+            if self.airtable_record_id.is_empty() {
+                self.airtable_record_id = existing_record.id.to_string();
+                // Now let's update the database.
+                // TODO: use our pool of connections.
+                self.update_in_db(crate::db::Database::new());
+                // Now we know in the future that we will have the right airtable_record_id and can
+                // update more easily.
+            }
+
             // If the Airtable record and the record that was passed in are the same, then we can return early since
             // we do not need to update it in Airtable.
             // We do this after we update the record so that any fields that are links to other
             // tables match as well and this can return true even if we have linked records.
-            if self.clone() == existing_record.fields.clone() {
+            if self == existing_record.fields {
                 println!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
                 return;
-            }
-
-            // If we do not have an airtable_record_id set in the database for this record, we are
-            // going to want to set it.
-            if self.airtable_record_id.is_empty() {
-                self.airtable_record_id = existing_record.id;
-                // Now let's update the database.
-                self.update_in_db();
-                // Now we know in the future that we will have the right airtable_record_id and can
-                // update more easily.
             }
 
             existing_record.fields = self.clone();
