@@ -27,6 +27,8 @@ pub struct NewPageView {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_auth_user: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_record_id: String,
 }
 
 /// Implement updating the Airtable record for a PageView.

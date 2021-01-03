@@ -301,6 +301,7 @@ table! {
         user_email -> Varchar,
         page_link -> Varchar,
         link_to_auth_user -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 
