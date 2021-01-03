@@ -139,7 +139,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
  * Application-specific context (state shared by handler functions)
  */
 struct Context {
-    // TODO: share a database connection here.
+    db: Database,
     schema: openapiv3::OpenAPI,
 }
 
@@ -148,7 +148,7 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(schema: openapiv3::OpenAPI) -> Arc<Context> {
-        let api_context = Context { schema };
+        let api_context = Context { schema, db: Database::new() };
 
         Arc::new(api_context)
     }
@@ -193,9 +193,9 @@ async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<Response<Body>, Ht
 }]
 #[instrument]
 #[inline]
-async fn api_get_auth_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
-    // TODO: figure out how to share this between threads.
-    let db = Database::new();
+async fn api_get_auth_users(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_auth_users()))
 }
@@ -209,8 +209,9 @@ async fn api_get_auth_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseO
 }]
 #[instrument]
 #[inline]
-async fn api_get_applicants(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
-    let db = Database::new();
+async fn api_get_applicants(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_applicants()))
 }
@@ -224,8 +225,9 @@ async fn api_get_applicants(_rqctx: Arc<RequestContext>) -> Result<HttpResponseO
 }]
 #[instrument]
 #[inline]
-async fn api_get_buildings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
-    let db = Database::new();
+async fn api_get_buildings(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_buildings()))
 }
@@ -238,8 +240,9 @@ async fn api_get_buildings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk
     path = "/conference_rooms",
 }]
 #[inline]
-async fn api_get_conference_rooms(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<ConferenceRoom>>, HttpError> {
-    let db = Database::new();
+async fn api_get_conference_rooms(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<ConferenceRoom>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_conference_rooms()))
 }
@@ -253,8 +256,9 @@ async fn api_get_conference_rooms(_rqctx: Arc<RequestContext>) -> Result<HttpRes
 }]
 #[instrument]
 #[inline]
-async fn api_get_github_labels(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubLabel>>, HttpError> {
-    let db = Database::new();
+async fn api_get_github_labels(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubLabel>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_github_labels()))
 }
@@ -268,8 +272,9 @@ async fn api_get_github_labels(_rqctx: Arc<RequestContext>) -> Result<HttpRespon
 }]
 #[instrument]
 #[inline]
-async fn api_get_github_repos(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
-    let db = Database::new();
+async fn api_get_github_repos(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_github_repos()))
 }
@@ -283,8 +288,9 @@ async fn api_get_github_repos(_rqctx: Arc<RequestContext>) -> Result<HttpRespons
 }]
 #[instrument]
 #[inline]
-async fn api_get_groups(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
-    let db = Database::new();
+async fn api_get_groups(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_groups()))
 }
@@ -298,8 +304,9 @@ async fn api_get_groups(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Ve
 }]
 #[instrument]
 #[inline]
-async fn api_get_journal_club_meetings(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
-    let db = Database::new();
+async fn api_get_journal_club_meetings(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_journal_club_meetings()))
 }
@@ -313,8 +320,9 @@ async fn api_get_journal_club_meetings(_rqctx: Arc<RequestContext>) -> Result<Ht
 }]
 #[instrument]
 #[inline]
-async fn api_get_links(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
-    let db = Database::new();
+async fn api_get_links(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_links()))
 }
@@ -328,8 +336,9 @@ async fn api_get_links(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec
 }]
 #[instrument]
 #[inline]
-async fn api_get_mailing_list_subscribers(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
-    let db = Database::new();
+async fn api_get_mailing_list_subscribers(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_mailing_list_subscribers()))
 }
@@ -343,8 +352,9 @@ async fn api_get_mailing_list_subscribers(_rqctx: Arc<RequestContext>) -> Result
 }]
 #[instrument]
 #[inline]
-async fn api_get_rfds(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
-    let db = Database::new();
+async fn api_get_rfds(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_rfds()))
 }
@@ -358,8 +368,9 @@ async fn api_get_rfds(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<
 }]
 #[instrument]
 #[inline]
-async fn api_get_users(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
-    let db = Database::new();
+async fn api_get_users(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+    let db = &api_context.db;
 
     Ok(HttpResponseOk(db.get_users()))
 }

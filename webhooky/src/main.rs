@@ -128,7 +128,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
  * Application-specific context (state shared by handler functions)
  */
 struct Context {
-    // TODO: share a database connection here.
     drive_rfd_shared_id: String,
     drive_rfd_dir_id: String,
     github: Github,

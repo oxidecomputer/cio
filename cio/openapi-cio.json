@@ -447,6 +447,13 @@
               "type": "string"
             }
           },
+          "link_to_page_views": {
+            "description": "link to another table in Airtable",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "link_to_people": {
             "description": "link to another table in Airtable",
             "type": "array",
@@ -492,7 +499,6 @@
         },
         "required": [
           "created_at",
-          "email_verified",
           "id",
           "last_login",
           "logins_count",
@@ -1100,6 +1106,9 @@
           },
           "name": {
             "description": "name will not be used in config files.",
+            "type": "string"
+          },
+          "short_link": {
             "type": "string"
           }
         },
