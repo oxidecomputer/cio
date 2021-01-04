@@ -768,11 +768,13 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
 async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     let body: shippo::TrackingStatus = serde_json::from_str(&event.to_string()).unwrap_or_default();
+    event!(Level::INFO, "shipment parsed: {:?}", body);
 
     if body.address_from.street1.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
-        Ok(HttpResponseAccepted("ok".to_string()))
+        event!(Level::WARN, "too early to get any information about the shipment");
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     println!("shippo-tracking-update parsed: {:?}", body);
