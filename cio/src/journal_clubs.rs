@@ -3,7 +3,7 @@ use std::str::from_utf8;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use hubcaps::Github;
-use macros::db_struct;
+use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -17,10 +17,13 @@ use crate::schema::{journal_club_meetings, journal_club_papers};
 use crate::utils::github_org;
 
 /// The data type for a NewJournalClubMeeting.
-#[db_struct {
-    new_name = "JournalClubMeeting",
-    base_id = "AIRTABLE_BASE_ID_MISC",
-    table = "AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE",
+#[db {
+    new_struct_name = "JournalClubMeeting",
+    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_table = "AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE",
+    match_on = {
+        "issue" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
 #[table_name = "journal_club_meetings"]
@@ -145,10 +148,13 @@ impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
 }
 
 /// The data type for a NewJournalClubPaper.
-#[db_struct {
-    new_name = "JournalClubPaper",
-    base_id = "AIRTABLE_BASE_ID_MISC",
-    table = "AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE",
+#[db {
+    new_struct_name = "JournalClubPaper",
+    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_table = "AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE",
+    match_on = {
+        "link" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
 #[table_name = "journal_club_papers"]

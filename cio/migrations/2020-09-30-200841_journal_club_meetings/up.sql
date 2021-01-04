@@ -7,5 +7,6 @@ CREATE TABLE journal_club_meetings (
     meeting_date DATE NOT NULL,
     coordinator VARCHAR NOT NULL,
     state VARCHAR NOT NULL,
-    recording VARCHAR NOT NULL
+    recording VARCHAR NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

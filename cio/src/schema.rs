@@ -255,6 +255,7 @@ table! {
         coordinator -> Varchar,
         state -> Varchar,
         recording -> Varchar,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -265,6 +266,7 @@ table! {
         link -> Varchar,
         meeting -> Varchar,
         link_to_meeting -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 
