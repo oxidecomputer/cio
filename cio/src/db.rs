@@ -6,11 +6,10 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
+use crate::applicants::{Applicant, NewApplicant};
 use crate::certs::{Certificate, NewCertificate};
 use crate::configs::{Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig, LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig};
-use crate::models::{
-    Applicant, GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewApplicant, NewJournalClubMeeting, NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD,
-};
+use crate::models::{GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewJournalClubMeeting, NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD};
 use crate::schema::{
     applicants, buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links, mailing_list_subscribers, rfds, users,
 };

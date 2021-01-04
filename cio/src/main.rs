@@ -10,10 +10,11 @@ use hyper::{Body, Response, StatusCode};
 use tracing::{instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
+use cio_api::applicants::Applicant;
 use cio_api::auth_logins::{AuthUser, AuthUsers};
 use cio_api::configs::{Building, ConferenceRoom, GithubLabel, Group, Link, User};
 use cio_api::db::Database;
-use cio_api::models::{Applicant, GithubRepo, JournalClubMeeting, MailingListSubscriber, RFD};
+use cio_api::models::{GithubRepo, JournalClubMeeting, MailingListSubscriber, RFD};
 
 #[macro_use]
 extern crate serde_json;

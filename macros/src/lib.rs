@@ -702,6 +702,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             ).await.unwrap();
 
             println!("[airtable] id={} updated", self.id);
+            println!("[airtable] updated_records {:?}", records);
 
             records.get(0).unwrap().clone()
         }
