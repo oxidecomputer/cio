@@ -446,7 +446,7 @@ pub async fn refresh_auth_users_and_logins(db: Database) {
 
 #[cfg(test)]
 mod tests {
-    use crate::auth_logins::{refresh_auth_users_and_logins, AuthUserLogins, AuthUses};
+    use crate::auth_logins::{refresh_auth_users_and_logins, AuthUserLogins, AuthUsers};
     use crate::db::Database;
 
     #[ignore]
