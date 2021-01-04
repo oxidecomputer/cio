@@ -15,7 +15,8 @@ use cio_api::auth_logins::{AuthUser, AuthUsers};
 use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, GithubLabel, GithubLabels, Group, Groups, Link, Links, User, Users};
 use cio_api::db::Database;
 use cio_api::journal_clubs::{JournalClubMeeting, JournalClubMeetings};
-use cio_api::models::{GithubRepo, MailingListSubscriber, RFD};
+use cio_api::mailing_list::{MailingListSubscriber, MailingListSubscribers};
+use cio_api::models::{GithubRepo, RFD};
 
 #[macro_use]
 extern crate serde_json;
@@ -343,7 +344,7 @@ async fn api_get_mailing_list_subscribers(rqctx: Arc<RequestContext>) -> Result<
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_mailing_list_subscribers()))
+    Ok(HttpResponseOk(MailingListSubscribers::get_from_db(db).0))
 }
 
 /**

@@ -1,15 +1,188 @@
 use std::collections::HashMap;
 use std::env;
 
-use crate::db::Database;
-
+use crate::core::UpdateAirtableRecord;
+use async_trait::async_trait;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use chrono_humanize::HumanTime;
+use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tracing::instrument;
 
-use crate::models::NewMailingListSubscriber;
+use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE};
+use crate::db::Database;
+use crate::schema::mailing_list_subscribers;
+
+/// The data type for a MailingListSubscriber.
+#[db {
+    new_struct_name = "MailingListSubscriber",
+    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_table = "AIRTABLE_MAILING_LIST_SIGNUPS_TABLE",
+    match_on = {
+        "email" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "mailing_list_subscribers"]
+pub struct NewMailingListSubscriber {
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub first_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_name: String,
+    /// (generated) name is a combination of first_name and last_name.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub company: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub interest: String,
+    #[serde(default)]
+    pub wants_podcast_updates: bool,
+    #[serde(default)]
+    pub wants_newsletter: bool,
+    #[serde(default)]
+    pub wants_product_updates: bool,
+    pub date_added: DateTime<Utc>,
+    pub date_optin: DateTime<Utc>,
+    pub date_last_changed: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_people: Vec<String>,
+}
+
+impl NewMailingListSubscriber {
+    /// Get the human duration of time since the signup was fired.
+    #[instrument]
+    #[inline]
+    pub fn human_duration(&self) -> HumanTime {
+        let mut dur = self.date_added - Utc::now();
+        if dur.num_seconds() > 0 {
+            dur = -dur;
+        }
+
+        HumanTime::from(dur)
+    }
+
+    /// Convert the mailing list signup into JSON as Slack message.
+    #[instrument]
+    #[inline]
+    pub fn as_slack_msg(&self) -> Value {
+        let time = self.human_duration();
+
+        let msg = format!("*{}* <mailto:{}|{}>", self.name, self.email, self.email);
+
+        let mut interest: MessageBlock = Default::default();
+        if !self.interest.is_empty() {
+            interest = MessageBlock {
+                block_type: MessageBlockType::Section,
+                text: Some(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("\n>{}", self.interest),
+                }),
+                elements: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            };
+        }
+
+        let updates = format!(
+            "podcast updates: _{}_ | newsletter: _{}_ | product updates: _{}_",
+            self.wants_podcast_updates, self.wants_newsletter, self.wants_product_updates,
+        );
+
+        let mut context = "".to_string();
+        if !self.company.is_empty() {
+            context += &format!("works at {} | ", self.company);
+        }
+        context += &format!("subscribed to mailing list {}", time);
+
+        json!(FormattedMessage {
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: msg,
+                    }),
+                    elements: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                interest,
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: updates,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: context,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                }
+            ],
+        })
+    }
+}
+
+impl Default for NewMailingListSubscriber {
+    #[instrument]
+    #[inline]
+    fn default() -> Self {
+        NewMailingListSubscriber {
+            email: String::new(),
+            first_name: String::new(),
+            last_name: String::new(),
+            name: String::new(),
+            company: String::new(),
+            interest: String::new(),
+            wants_podcast_updates: false,
+            wants_newsletter: false,
+            wants_product_updates: false,
+            date_added: Utc::now(),
+            date_optin: Utc::now(),
+            date_last_changed: Utc::now(),
+            notes: String::new(),
+            tags: Default::default(),
+            link_to_people: Default::default(),
+        }
+    }
+}
+
+/// Implement updating the Airtable record for a MailingListSubscriber.
+#[async_trait]
+impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, record: MailingListSubscriber) {
+        // Set the link_to_people from the original so it stays intact.
+        self.link_to_people = record.link_to_people;
+    }
+}
 
 /// Returns the response from the Mailchimp API with the list of subscribers.
 #[instrument]
@@ -47,17 +220,15 @@ pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
 }
 
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn refresh_db_mailing_list_subscribers() {
-    // Initialize our database.
-    let db = Database::new();
-
+pub async fn refresh_db_mailing_list_subscribers(db: &Database) {
     let members = get_all_mailchimp_subscribers().await;
 
     // Sync subscribers.
     for member in members {
-        db.upsert_mailing_list_subscriber(&member.into());
+        let ns: NewMailingListSubscriber = member.into();
+        ns.upsert(db).await;
     }
 }
 
@@ -416,8 +587,7 @@ pub struct MailchimpWebhookGrouping {
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
-    use crate::mailing_list::{refresh_db_mailing_list_subscribers, MailchimpWebhook};
-    use crate::models::MailingListSubscribers;
+    use crate::mailing_list::{refresh_db_mailing_list_subscribers, MailchimpWebhook, MailingListSubscribers};
 
     use serde_qs::Config as QSConfig;
 
@@ -435,18 +605,11 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_mailing_list_subscribers_refresh_db() {
-        refresh_db_mailing_list_subscribers().await;
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_mailing_list_subscribers_airtable() {
+    async fn test_cron_mailing_list_subscribers() {
         // Initialize our database.
         let db = Database::new();
 
-        let mailing_list_subscribers = db.get_mailing_list_subscribers();
-        // Update the mailing list subscribers in airtable.
-        MailingListSubscribers(mailing_list_subscribers).update_airtable().await;
+        refresh_db_mailing_list_subscribers(&db).await;
+        MailingListSubscribers::get_from_db(&db).update_airtable().await;
     }
 }

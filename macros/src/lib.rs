@@ -548,9 +548,13 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // Let's also update this record in Airtable.
             let new_airtable_record = record.upsert_in_airtable().await;
 
-            // Now we have the id we need to update the database.
-            record.airtable_record_id = new_airtable_record.id.to_string();
-            record.update_in_db(db)
+            if record.airtable_record_id.is_empty(){
+                // Now we have the id we need to update the database.
+                record.airtable_record_id = new_airtable_record.id.to_string();
+                return record.update_in_db(db);
+            }
+
+            record
         }
 
         /// Create or update the record in the database.

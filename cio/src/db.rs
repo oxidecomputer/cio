@@ -6,8 +6,8 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
-use crate::models::{GithubRepo, MailingListSubscriber, NewMailingListSubscriber, NewRFD, NewRepo, RFD};
-use crate::schema::{github_repos, mailing_list_subscribers, rfds};
+use crate::models::{GithubRepo, NewRFD, NewRepo, RFD};
+use crate::schema::{github_repos, rfds};
 
 pub struct Database {
     pool: Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>,
@@ -81,49 +81,6 @@ impl Database {
         diesel::delete(github_repos::dsl::github_repos.filter(github_repos::dsl::name.eq(name.to_string())))
             .execute(&self.conn())
             .unwrap();
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_mailing_list_subscribers(&self) -> Vec<MailingListSubscriber> {
-        mailing_list_subscribers::dsl::mailing_list_subscribers
-            .order_by(mailing_list_subscribers::dsl::id.desc())
-            .load::<MailingListSubscriber>(&self.conn())
-            .unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_mailing_list_subscriber(&self, mailing_list_subscriber: &NewMailingListSubscriber) -> MailingListSubscriber {
-        // See if we already have the mailing_list_subscriber in the database.
-        match mailing_list_subscribers::dsl::mailing_list_subscribers
-            .filter(mailing_list_subscribers::dsl::email.eq(mailing_list_subscriber.email.to_string()))
-            .limit(1)
-            .load::<MailingListSubscriber>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the mailing_list_subscriber in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let m = r.get(0).unwrap();
-
-                    // Update the mailing_list_subscriber.
-                    return diesel::update(m)
-                        .set(mailing_list_subscriber)
-                        .get_result::<MailingListSubscriber>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update mailing_list_subscriber {}: {}", m.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the mailing_list_subscriber in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(mailing_list_subscribers::table)
-            .values(mailing_list_subscriber)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating mailing_list_subscriber failed: {}", e))
     }
 
     #[instrument(skip(self))]

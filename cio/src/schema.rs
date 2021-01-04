@@ -300,6 +300,7 @@ table! {
         notes -> Text,
         tags -> Array<Text>,
         link_to_people -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 
