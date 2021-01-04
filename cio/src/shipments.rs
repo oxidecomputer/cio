@@ -361,15 +361,13 @@ impl Shipment {
             }
 
             // Get the status of the shipment.
-            if status.tracking_status.status == *"TRANSIT" {
+            if status.tracking_status.status == *"TRANSIT" || status.tracking_status.status == "IN_TRANSIT" {
                 if self.status != *"Shipped" {
                     // Send an email to the recipient with their tracking link.
                     // Wait until it is in transit to do this.
                     self.send_email_to_recipient().await;
                     // We make sure it only does this one time.
                     // Set the shipped date as this first date.
-                    // TODO: get the first date it was maked as in transit and use that as the shipped
-                    // time.
                     self.shipped_time = status.tracking_status.status_date;
                 }
 
@@ -384,6 +382,21 @@ impl Shipment {
             }
             if status.tracking_status.status == *"FAILURE" {
                 self.status = "Failure".to_string();
+            }
+
+            // Iterate over the tracking history and set the shipped_time.
+            // Get the first date it was maked as in transit and use that as the shipped
+            // time.
+            for h in status.tracking_history {
+                if h.status == *"TRANSIT" {
+                    if let Some(shipped_time) = h.status_date {
+                        let current_shipped_time = if let Some(s) = self.shipped_time { s } else { Utc::now() };
+
+                        if shipped_time < current_shipped_time {
+                            self.shipped_time = Some(shipped_time);
+                        }
+                    }
+                }
             }
 
             // Return early.
