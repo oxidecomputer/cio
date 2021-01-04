@@ -1672,7 +1672,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(&api_context.github.repo(&api_context.github_org, "configs")).await;
+            generate_shorturls_for_rfds(&db, &api_context.github.repo(&api_context.github_org, "configs")).await;
             event!(Level::INFO, "generated shorturls for the rfds");
 
             // Update airtable with the new RFD.
@@ -1870,7 +1870,7 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
         sync_links(&api_context.db, configs.links).await;
 
         // We need to update the short URLs for the links.
-        generate_shorturls_for_configs_links(&github_repo).await;
+        generate_shorturls_for_configs_links(&api_context.db, &github_repo).await;
         event!(Level::INFO, "generated shorturls for the configs links");
     }
 
@@ -1923,7 +1923,7 @@ async fn handle_repository_event(api_context: Arc<Context>, event: GitHubWebhook
     refresh_db_github_repos(&api_context.github).await;
 
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(&api_context.github.repo(&api_context.github_org, "configs")).await;
+    generate_shorturls_for_repos(&api_context.db, &api_context.github.repo(&api_context.github_org, "configs")).await;
     event!(Level::INFO, "generated shorturls for all the GitHub repos");
 
     Ok(HttpResponseAccepted("ok".to_string()))
