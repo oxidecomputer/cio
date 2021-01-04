@@ -435,12 +435,12 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 // Sync the auth_users with our database.
 #[instrument(skip(db))]
 #[inline]
-pub async fn refresh_auth_users_and_logins(db: Database) {
-    let auth_users = get_auth_users("oxide".to_string(), &db).await;
+pub async fn refresh_auth_users_and_logins(db: &Database) {
+    let auth_users = get_auth_users("oxide".to_string(), db).await;
 
     // Sync auth users.
     for auth_user in auth_users {
-        auth_user.upsert(&db).await;
+        auth_user.upsert(db).await;
     }
 }
 
@@ -455,7 +455,7 @@ mod tests {
         // Initialize our database.
         let db = Database::new();
 
-        refresh_auth_users_and_logins().await;
+        refresh_auth_users_and_logins(&db).await;
 
         // Update auth user and auth user logins in airtable.
         AuthUsers::get_from_db(&db).update_airtable().await;
