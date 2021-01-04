@@ -490,7 +490,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         let t: Type = syn::parse_str(&type_).unwrap();
         filter = quote!(#filter.filter(#db_schema::dsl::#f.eq(#f.clone())));
         args = quote!(#args,#f: #t);
-        function_args = quote!(#function_args self.#f,);
+        function_args = quote!(#function_args self.#f.clone(),);
     }
 
     // Get the original struct information.
@@ -512,27 +512,39 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Create a new record in the database.
         #[instrument(skip(db))]
         #[inline]
-        pub fn create_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
-            diesel::insert_into(crate::schema::#db_schema::table)
+        pub async fn create_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
+            let mut new_record: #new_struct_name = diesel::insert_into(crate::schema::#db_schema::table)
                 .values(self)
                 .get_result(&db.conn())
-                .unwrap_or_else(|e| panic!("creating record {:?} failed: {}", self, e))
+                .unwrap_or_else(|e| panic!("creating record {:?} failed: {}", self, e));
+
+            // Let's also create this record in Airtable.
+            let new_airtable_record = new_record.create_in_airtable().await;
+
+            // Now we have the id we need to update the database.
+            new_record.airtable_record_id = new_airtable_record.id.to_string();
+            new_record.update_in_db(db).await
         }
 
         /// Create or update the record in the database.
         #[instrument(skip(db))]
         #[inline]
-        pub fn upsert_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
+        pub async fn upsert_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
             // See if we already have the record in the database.
             if let Some(r) = #new_struct_name::get_from_db(db, #function_args) {
                 // Update the record.
-                return diesel::update(&r)
+                let mut record = diesel::update(&r)
                     .set(self)
                     .get_result::<#new_struct_name>(&db.conn())
                     .unwrap_or_else(|e| panic!("unable to update record {}: {}", r.id, e));
+
+                // Let's also update this record in Airtable.
+                record.upsert_in_airtable().await;
+
+                return record;
             }
 
-            self.create_in_db(db)
+            self.create_in_db(db).await
         }
     }
 
@@ -540,12 +552,17 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Update the record in the database.
         #[instrument(skip(db))]
         #[inline]
-        pub fn update_in_db(&self, db: &crate::db::Database) -> Self {
+        pub async fn update_in_db(&self, db: &crate::db::Database) -> Self {
             // Update the record.
-            diesel::update(self)
+            let mut record = diesel::update(self)
                 .set(self.clone())
                 .get_result::<#new_struct_name>(&db.conn())
-                .unwrap_or_else(|e| panic!("[db] unable to update record {}: {}", self.id, e))
+                .unwrap_or_else(|e| panic!("[db] unable to update record {}: {}", self.id, e));
+
+            // Let's also update this record in Airtable.
+            record.upsert_in_airtable().await;
+
+            record
         }
 
         /// Get a record from the database.
@@ -567,13 +584,17 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             None
         }
 
+        /// Delete a record from the database.
         #[instrument(skip(db))]
         #[inline]
-        pub fn delete_from_db(&self, &db: crate::db::Database) {
+        pub async fn delete_from_db(&self, db: &crate::db::Database) {
             diesel::delete(
                 crate::schema::#db_schema::dsl::#db_schema.filter(
                     crate::schema::#db_schema::dsl::id.eq(self.id)))
                     .execute(&db.conn()).unwrap();
+
+            // Let's also delete the record from Airtable.
+            self.delete_from_airtable().await;
         }
 
         /// Create the Airtable client.
@@ -595,7 +616,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Create the row in the Airtable base.
         #[tracing::instrument]
         #[inline]
-        pub async fn create_in_airtable(&mut self) {
+        pub async fn create_in_airtable(&mut self) -> airtable_api::Record<#new_struct_name> {
             // Create the record.
             let record = airtable_api::Record {
                 id: "".to_string(),
@@ -611,35 +632,18 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             println!("[airtable] created new row: {:?}", self);
 
-            // Get the first record back.
-            let new_record = records.get(0).unwrap();
-
-            // Now we have the id we need to update the database.
-            self.airtable_record_id = new_record.id.to_string();
-            // TODO: we should use our pool of connections.
-            self.update_in_db(&crate::db::Database::new());
+            // Return the first record back.
+            records.get(0).unwrap().clone()
         }
 
         /// Update the record in Airtable.
         #[tracing::instrument]
         #[inline]
-        pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<#new_struct_name>) {
+        pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<#new_struct_name>) -> airtable_api::Record<#new_struct_name> {
             // Run the custom trait to update the new record from the old record.
             // We do this because where we join Airtable tables, things tend to get a little
             // weird if we aren't nit picky about this.
             self.update_airtable_record(existing_record.fields.clone()).await;
-
-            // If we do not have an airtable_record_id set in the database for this record, we are
-            // going to want to set it.
-            // TODO: Eventually we can remove this logic, when everything is migrated.
-            if self.airtable_record_id.is_empty() {
-                self.airtable_record_id = existing_record.id.to_string();
-                // Now let's update the database.
-                // TODO: use our pool of connections.
-                self.update_in_db(&crate::db::Database::new());
-                // Now we know in the future that we will have the right airtable_record_id and can
-                // update more easily.
-            }
 
             // If the Airtable record and the record that was passed in are the same, then we can return early since
             // we do not need to update it in Airtable.
@@ -647,18 +651,20 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // tables match as well and this can return true even if we have linked records.
             if *self == existing_record.fields {
                 println!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
-                return;
+                return existing_record.clone();
             }
 
             existing_record.fields = self.clone();
 
             // Send the updated record to Airtable.
-            #new_struct_name::airtable().update_records(
+            let records : Vec<airtable_api::Record<#new_struct_name>> = #new_struct_name::airtable().update_records(
                 &#new_struct_name::airtable_table(),
                 vec![existing_record.clone()],
             ).await.unwrap();
 
             println!("[airtable] id={} updated", self.id);
+
+            records.get(0).unwrap().clone()
         }
 
         /// Get the existing record in Airtable that matches this id.
@@ -675,7 +681,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Create or update a row in the Airtable base.
         #[tracing::instrument]
         #[inline]
-        pub async fn upsert_in_airtable(&mut self) {
+        pub async fn upsert_in_airtable(&mut self) -> airtable_api::Record<#new_struct_name> {
             // First check if we have an `airtable_record_id` for this record.
             // If we do we can move ahead faster.
             if !self.airtable_record_id.is_empty() {
@@ -693,20 +699,40 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             let records = #new_struct_name_plural::get_from_airtable().await;
             for (id, record) in records {
                 if self.id == id {
-                    self.update_in_airtable(&mut record.clone()).await;
-
-                    return;
+                    return self.update_in_airtable(&mut record.clone()).await;
                 }
             }
 
             // We've tried everything to find the record in our existing Airtable but it is not
             // there. We need to create it.
-            self.create_in_airtable().await;
+            self.create_in_airtable().await
+        }
+
+        /// Delete a record from Airtable.
+        #[instrument]
+        #[inline]
+        pub async fn delete_from_airtable(&self) {
+            if !self.airtable_record_id.is_empty() {
+                // Delete the record from airtable.
+                #new_struct_name::airtable().delete_record(&#new_struct_name::airtable_table(), &self.airtable_record_id).await.unwrap();
+            }
         }
     }
 
     pub struct #new_struct_name_plural(pub Vec<#new_struct_name>);
     impl #new_struct_name_plural {
+        /// Get the current records for this type from the database.
+        #[tracing::instrument(skip(db))]
+        #[inline]
+        pub fn get_from_db(db: &crate::db::Database) -> Self {
+            #new_struct_name_plural(
+                crate::schema::#db_schema::dsl::#db_schema
+                    .order_by(crate::schema::#db_schema::dsl::id.desc())
+                    .load::<#new_struct_name>(&db.conn())
+                    .unwrap()
+            )
+        }
+
         /// Get the current records for this type from Airtable.
         #[tracing::instrument]
         #[inline]
@@ -723,18 +749,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             records
-        }
-
-        /// Get the current records for this type from the database.
-        #[tracing::instrument(skip(db))]
-        #[inline]
-        pub fn get_from_db(db: crate::db::Database) -> Self {
-            #new_struct_name_plural(
-                crate::schema::#db_schema::dsl::#db_schema
-                    .order_by(crate::schema::#db_schema::dsl::id.desc())
-                    .load::<#new_struct_name>(&db.conn())
-                    .unwrap()
-            )
         }
 
         /// Update Airtable records in a table from a vector.
