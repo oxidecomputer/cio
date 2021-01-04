@@ -509,60 +509,86 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     use diesel::prelude::*;
 
     impl NewPageView {
-        /// Create a new record in the database.
+        /// Create a new record in the database and Airtable.
         #[instrument(skip(db))]
         #[inline]
-        pub async fn create_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
-            let mut new_record: #new_struct_name = diesel::insert_into(crate::schema::#db_schema::table)
-                .values(self)
-                .get_result(&db.conn())
-                .unwrap_or_else(|e| panic!("creating record {:?} failed: {}", self, e));
+        pub async fn create(&self, db: &crate::db::Database) -> #new_struct_name {
+            let mut new_record = self.create_in_db(db);
 
             // Let's also create this record in Airtable.
             let new_airtable_record = new_record.create_in_airtable().await;
 
             // Now we have the id we need to update the database.
             new_record.airtable_record_id = new_airtable_record.id.to_string();
-            new_record.update_in_db(db).await
+            new_record.update_in_db(db)
+        }
+
+        /// Create a new record in the database.
+        #[instrument(skip(db))]
+        #[inline]
+        pub fn create_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
+            diesel::insert_into(crate::schema::#db_schema::table)
+                .values(self)
+                .get_result(&db.conn())
+                .unwrap_or_else(|e| panic!("creating record {:?} failed: {}", self, e))
+        }
+
+        /// Create or update the record in the database and Airtable.
+        #[instrument(skip(db))]
+        #[inline]
+        pub async fn upsert(&self, db: &crate::db::Database) -> #new_struct_name {
+            let mut record = self.upsert_in_db(db);
+
+            // Let's also update this record in Airtable.
+            let new_airtable_record = record.upsert_in_airtable().await;
+
+            // Now we have the id we need to update the database.
+            record.airtable_record_id = new_airtable_record.id.to_string();
+            record.update_in_db(db)
         }
 
         /// Create or update the record in the database.
         #[instrument(skip(db))]
         #[inline]
-        pub async fn upsert_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
+        pub fn upsert_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
             // See if we already have the record in the database.
             if let Some(r) = #new_struct_name::get_from_db(db, #function_args) {
                 // Update the record.
-                let mut record = diesel::update(&r)
+                return diesel::update(&r)
                     .set(self)
                     .get_result::<#new_struct_name>(&db.conn())
                     .unwrap_or_else(|e| panic!("unable to update record {}: {}", r.id, e));
-
-                // Let's also update this record in Airtable.
-                record.upsert_in_airtable().await;
-
-                return record;
             }
 
-            self.create_in_db(db).await
+            self.create_in_db(db)
         }
     }
 
     impl #new_struct_name {
+        /// Update the record in the database and Airtable.
+        #[instrument(skip(db))]
+        #[inline]
+        pub async fn update(&self, db: &crate::db::Database) -> Self {
+            // Update the record.
+            let mut record = self.update_in_db(db);
+
+            // Let's also update this record in Airtable.
+            let new_airtable_record = record.upsert_in_airtable().await;
+
+            // Now we have the id we need to update the database.
+            record.airtable_record_id = new_airtable_record.id.to_string();
+            record.update_in_db(db)
+        }
+
         /// Update the record in the database.
         #[instrument(skip(db))]
         #[inline]
-        pub async fn update_in_db(&self, db: &crate::db::Database) -> Self {
+        pub fn update_in_db(&self, db: &crate::db::Database) -> Self {
             // Update the record.
-            let mut record = diesel::update(self)
+            diesel::update(self)
                 .set(self.clone())
                 .get_result::<#new_struct_name>(&db.conn())
-                .unwrap_or_else(|e| panic!("[db] unable to update record {}: {}", self.id, e));
-
-            // Let's also update this record in Airtable.
-            record.upsert_in_airtable().await;
-
-            record
+                .unwrap_or_else(|e| panic!("[db] unable to update record {}: {}", self.id, e))
         }
 
         /// Get a record from the database.
@@ -584,17 +610,24 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             None
         }
 
+        /// Delete a record from the dataabase and Airtable.
+        #[instrument(skip(db))]
+        #[inline]
+        pub async fn delete(&self, db: &crate::db::Database) {
+            self.delete_from_db(db);
+
+            // Let's also delete the record from Airtable.
+            self.delete_from_airtable().await;
+        }
+
         /// Delete a record from the database.
         #[instrument(skip(db))]
         #[inline]
-        pub async fn delete_from_db(&self, db: &crate::db::Database) {
+        pub fn delete_from_db(&self, db: &crate::db::Database) {
             diesel::delete(
                 crate::schema::#db_schema::dsl::#db_schema.filter(
                     crate::schema::#db_schema::dsl::id.eq(self.id)))
                     .execute(&db.conn()).unwrap();
-
-            // Let's also delete the record from Airtable.
-            self.delete_from_airtable().await;
         }
 
         /// Create the Airtable client.
