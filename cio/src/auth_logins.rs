@@ -433,7 +433,7 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 }
 
 // Sync the auth_users with our database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
 pub async fn refresh_auth_users_and_logins(db: Database) {
     let auth_users = get_auth_users("oxide".to_string(), &db).await;
