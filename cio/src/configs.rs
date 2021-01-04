@@ -4,7 +4,6 @@ use std::fs;
 use std::str::from_utf8;
 use std::{thread, time};
 
-use airtable_api::Airtable;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
@@ -886,11 +885,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         gsuite_groups.insert(g.name.to_string(), g);
     }
 
-    // Initialize the Airtable client.
-    let airtable = Airtable::new_from_env();
-
     // Get all the users.
-    let db_users = db.get_users();
+    let db_users = Users::get_from_db(db);
     // Create a BTreeMap
     let mut user_map: BTreeMap<String, User> = Default::default();
     for u in db_users {
@@ -901,7 +897,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         user.expand().await;
 
         // Update or create the user in the database.
-        let new_user = db.upsert_user(&user);
+        let new_user = user.upsert(db).await;
 
         // Update slack user.
         new_user.to_slack_user().await;
@@ -912,20 +908,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // Remove any users that should no longer be in the database.
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
-    for (username, _) in user_map {
+    for (username, user) in user_map {
         println!("deleting user {} from the database, gsuite, airtable, etc", username);
         let email = format!("{}@{}", username, GSUITE_DOMAIN);
 
-        // Delete the user from the database.
-        db.delete_user_by_username(&username);
-        event!(Level::INFO, "deleted user from database: {}", username);
-
-        // Delete the user from our Airtable account.
-        airtable
-            .delete_internal_user_by_email(&email)
-            .await
-            .unwrap_or_else(|e| panic!("deleting user {} from airtable failed: {}", username, e));
-        event!(Level::INFO, "deleted user from airtable: {}", username);
+        // Delete the user from the database and Airtable.
+        user.delete(db).await;
 
         // Delete the user from GSuite.
         gsuite.delete_user(&email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
@@ -938,7 +926,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
     // Update the users in GSuite.
     // Get all the users.
-    let db_users = db.get_users();
+    let db_users = Users::get_from_db(db);
     // Create a BTreeMap
     let mut user_map: BTreeMap<String, User> = Default::default();
     for u in db_users {
@@ -1007,8 +995,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     }
 
     // Update users in airtable.
-    let users = db.get_users();
-    Users(users).update_airtable().await;
+    Users::get_from_db(db).update_airtable().await;
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
@@ -1025,7 +1012,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     let gsuite_buildings = gsuite.list_buildings().await.unwrap();
 
     // Get all the buildings.
-    let db_buildings = db.get_buildings();
+    let db_buildings = Buildings::get_from_db(db);
     // Create a BTreeMap
     let mut building_map: BTreeMap<String, Building> = Default::default();
     for u in db_buildings {
@@ -1035,7 +1022,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     for (_, mut building) in buildings {
         building.expand();
 
-        db.upsert_building(&building);
+        building.upsert(db).await;
 
         // Remove the building from the BTreeMap.
         building_map.remove(&building.name);
@@ -1043,11 +1030,10 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     // Remove any buildings that should no longer be in the database.
     // This is found by the remaining buildings that are in the map since we removed
     // the existing repos from the map above.
-    for (name, _) in building_map {
+    for (name, building) in building_map {
         println!("deleting building {} from the database, gsuite, etc", name);
 
-        db.delete_building_by_name(&name);
-        event!(Level::INFO, "deleted building from database: {}", name);
+        building.delete(db).await;
 
         // Delete the building from GSuite.
         gsuite.delete_building(&name).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
@@ -1057,7 +1043,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 
     // Update the buildings in GSuite.
     // Get all the buildings.
-    let db_buildings = db.get_buildings();
+    let db_buildings = Buildings::get_from_db(db);
     // Create a BTreeMap
     let mut building_map: BTreeMap<String, Building> = Default::default();
     for u in db_buildings {
@@ -1107,8 +1093,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     }
 
     // Update buildings in airtable.
-    let buildings = db.get_buildings();
-    Buildings(buildings).update_airtable().await;
+    Buildings::get_from_db(db).update_airtable().await;
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
@@ -1125,7 +1110,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     let g_suite_calendar_resources = gsuite.list_calendar_resources().await.unwrap();
 
     // Get all the conference_rooms.
-    let db_conference_rooms = db.get_conference_rooms();
+    let db_conference_rooms = ConferenceRooms::get_from_db(db);
     // Create a BTreeMap
     let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
     for u in db_conference_rooms {
@@ -1133,7 +1118,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     }
     // Sync conference_rooms.
     for (_, conference_room) in conference_rooms {
-        db.upsert_conference_room(&conference_room);
+        conference_room.upsert(db).await;
 
         // Remove the conference_room from the BTreeMap.
         conference_room_map.remove(&conference_room.name);
@@ -1141,16 +1126,15 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     // Remove any conference_rooms that should no longer be in the database.
     // This is found by the remaining conference_rooms that are in the map since we removed
     // the existing repos from the map above.
-    for (name, _) in conference_room_map {
+    for (name, room) in conference_room_map {
         println!("deleting conference room {} from the database", name);
-        db.delete_conference_room_by_name(&name);
-        event!(Level::INFO, "deleted conference room from the database: {}", name);
+        room.delete(db).await;
     }
     event!(Level::INFO, "updated configs conference_rooms in the database");
 
     // Update the conference_rooms in GSuite.
     // Get all the conference_rooms.
-    let db_conference_rooms = db.get_conference_rooms();
+    let db_conference_rooms = ConferenceRooms::get_from_db(db);
     // Create a BTreeMap
     let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
     for u in db_conference_rooms {
@@ -1209,8 +1193,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     }
 
     // Update conference_rooms in airtable.
-    let conference_rooms = db.get_conference_rooms();
-    ConferenceRooms(conference_rooms).update_airtable().await;
+    ConferenceRooms::get_from_db(db).update_airtable().await;
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
@@ -1227,7 +1210,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     let gsuite_groups = gsuite.list_groups().await.unwrap();
 
     // Get all the groups.
-    let db_groups = db.get_groups();
+    let db_groups = Groups::get_from_db(db);
     // Create a BTreeMap
     let mut group_map: BTreeMap<String, Group> = Default::default();
     for u in db_groups {
@@ -1237,7 +1220,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     for (_, mut group) in groups {
         group.expand();
 
-        db.upsert_group(&group);
+        group.upsert(db).await;
 
         // Remove the group from the BTreeMap.
         group_map.remove(&group.name);
@@ -1245,12 +1228,11 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     // Remove any groups that should no longer be in the database.
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
-    for (name, _) in group_map {
+    for (name, group) in group_map {
         println!("deleting group {} from the database, gsuite, etc", name);
 
-        // Delete the group from the database.
-        db.delete_group_by_name(&name);
-        event!(Level::INFO, "deleted group from database: {}", name);
+        // Delete the group from the database and Airtable.
+        group.delete(db).await;
 
         // Remove the group from GSuite.
         gsuite
@@ -1263,7 +1245,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 
     // Update the groups in GSuite.
     // Get all the groups.
-    let db_groups = db.get_groups();
+    let db_groups = Groups::get_from_db(db);
     // Create a BTreeMap
     let mut group_map: BTreeMap<String, Group> = Default::default();
     for u in db_groups {
@@ -1341,8 +1323,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     }
 
     // Update groups in airtable.
-    let groups = db.get_groups();
-    Groups(groups).update_airtable().await;
+    Groups::get_from_db(db).update_airtable().await;
 }
 
 /// Sync our links with our database and then update Airtable from the database.
@@ -1350,7 +1331,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 #[inline]
 pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
     // Get all the links.
-    let db_links = db.get_links();
+    let db_links = Links::get_from_db(db);
     // Create a BTreeMap
     let mut link_map: BTreeMap<String, Link> = Default::default();
     for u in db_links {
@@ -1361,7 +1342,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
         link.name = name.to_string();
         link.short_link = format!("https://{}.corp.{}", name, DOMAIN);
 
-        db.upsert_link(&link);
+        link.upsert(db).await;
 
         // Remove the link from the BTreeMap.
         link_map.remove(&link.name);
@@ -1369,14 +1350,13 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
     // Remove any links that should no longer be in the database.
     // This is found by the remaining links that are in the map since we removed
     // the existing repos from the map above.
-    for (name, _) in link_map {
-        db.delete_link_by_name(&name);
+    for (_, link) in link_map {
+        link.delete(db).await;
     }
     event!(Level::INFO, "updated configs links in the database");
 
     // Update links in airtable.
-    let links = db.get_links();
-    Links(links).update_airtable().await;
+    Links::get_from_db(db).update_airtable().await;
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
@@ -1384,7 +1364,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
 #[inline]
 pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>) {
     // Get all the certificates.
-    let db_certificates = db.get_certificates();
+    let db_certificates = Certificates::get_from_db(db);
     // Create a BTreeMap
     let mut certificate_map: BTreeMap<String, Certificate> = Default::default();
     for u in db_certificates {
@@ -1406,8 +1386,8 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
             certificate.save_to_github_repo(github).await;
         }
 
-        // Update the database.
-        db.upsert_certificate(&certificate);
+        // Update the database and Airtable.
+        certificate.upsert(db).await;
 
         // Remove the certificate from the BTreeMap.
         certificate_map.remove(&certificate.domain);
@@ -1415,14 +1395,13 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     // Remove any certificates that should no longer be in the database.
     // This is found by the remaining certificates that are in the map since we removed
     // the existing repos from the map above.
-    for (domain, _) in certificate_map {
-        db.delete_certificate_by_domain(&domain);
+    for (_, cert) in certificate_map {
+        cert.delete(db).await;
     }
     event!(Level::INFO, "updated configs certificates in the database");
 
     // Update certificates in airtable.
-    let certificates = db.get_certificates();
-    Certificates(certificates).update_airtable().await;
+    Certificates::get_from_db(db).update_airtable().await;
 }
 
 #[instrument]
@@ -1442,8 +1421,9 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync GitHub labels.
     for label in configs.labels {
-        db.upsert_github_label(&label);
+        label.upsert(&db).await;
     }
+    GithubLabels::get_from_db(&db).update_airtable().await;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.

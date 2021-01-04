@@ -3,6 +3,7 @@ use serde::Serialize;
 use tailscale_api::Tailscale;
 use tracing::instrument;
 
+use crate::configs::Links;
 use crate::db::Database;
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
 use crate::utils::{authenticate_github_jwt, github_org};
@@ -80,7 +81,7 @@ pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Reposito
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the config.
-    let configs_links = db.get_links();
+    let configs_links = Links::get_from_db(db);
 
     // Create the array of links.
     for link in configs_links {

@@ -6,10 +6,8 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
-use crate::certs::{Certificate, NewCertificate};
-use crate::configs::{Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig, LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig};
 use crate::models::{GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewJournalClubMeeting, NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD};
-use crate::schema::{buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links, mailing_list_subscribers, rfds, users};
+use crate::schema::{github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds};
 
 pub struct Database {
     pool: Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>,
@@ -35,193 +33,6 @@ impl Database {
     /// Returns a connection from the pool.
     pub fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
         self.pool.get().unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_buildings(&self) -> Vec<Building> {
-        buildings::dsl::buildings.order_by(buildings::dsl::id.desc()).load::<Building>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_building(&self, building: &BuildingConfig) -> Building {
-        // See if we already have the building in the database.
-        match buildings::dsl::buildings
-            .filter(buildings::dsl::name.eq(building.name.to_string()))
-            .limit(1)
-            .load::<Building>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the building in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let b = r.get(0).unwrap();
-
-                    // Update the building.
-                    return diesel::update(b)
-                        .set(building)
-                        .get_result::<Building>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update building {}: {}", b.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the building in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(buildings::table)
-            .values(building)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating building failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn delete_building_by_name(&self, name: &str) {
-        diesel::delete(buildings::dsl::buildings.filter(buildings::dsl::name.eq(name.to_string())))
-            .execute(&self.conn())
-            .unwrap();
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_certificates(&self) -> Vec<Certificate> {
-        certificates::dsl::certificates.order_by(certificates::dsl::id.desc()).load::<Certificate>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_certificate(&self, certificate: &NewCertificate) -> Certificate {
-        // See if we already have the certificate in the database.
-        match certificates::dsl::certificates
-            .filter(certificates::dsl::domain.eq(certificate.domain.to_string()))
-            .limit(1)
-            .load::<Certificate>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the certificate in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let b = r.get(0).unwrap();
-
-                    // Update the certificate.
-                    return diesel::update(b)
-                        .set(certificate)
-                        .get_result::<Certificate>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update certificate {}: {}", b.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the certificate in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(certificates::table)
-            .values(certificate)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating certificate failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn delete_certificate_by_domain(&self, domain: &str) {
-        diesel::delete(certificates::dsl::certificates.filter(certificates::dsl::domain.eq(domain.to_string())))
-            .execute(&self.conn())
-            .unwrap();
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_conference_rooms(&self) -> Vec<ConferenceRoom> {
-        conference_rooms::dsl::conference_rooms
-            .order_by(conference_rooms::dsl::id.desc())
-            .load::<ConferenceRoom>(&self.conn())
-            .unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_conference_room(&self, conference_room: &ResourceConfig) -> ConferenceRoom {
-        // See if we already have the conference_room in the database.
-        match conference_rooms::dsl::conference_rooms
-            .filter(conference_rooms::dsl::name.eq(conference_room.name.to_string()))
-            .limit(1)
-            .load::<ConferenceRoom>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the conference_room in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let c = r.get(0).unwrap();
-
-                    // Update the conference_room.
-                    return diesel::update(c)
-                        .set(conference_room)
-                        .get_result::<ConferenceRoom>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update conference_room {}: {}", c.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the conference_room in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(conference_rooms::table)
-            .values(conference_room)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating conference_room failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn delete_conference_room_by_name(&self, name: &str) {
-        diesel::delete(conference_rooms::dsl::conference_rooms.filter(conference_rooms::dsl::name.eq(name.to_string())))
-            .execute(&self.conn())
-            .unwrap();
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_github_labels(&self) -> Vec<GithubLabel> {
-        github_labels::dsl::github_labels.order_by(github_labels::dsl::id.desc()).load::<GithubLabel>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_github_label(&self, github_label: &LabelConfig) -> GithubLabel {
-        // See if we already have the github_label in the database.
-        match github_labels::dsl::github_labels
-            .filter(github_labels::dsl::name.eq(github_label.name.to_string()))
-            .limit(1)
-            .load::<GithubLabel>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the github_label in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let label = r.get(0).unwrap();
-
-                    // Update the github_label.
-                    return diesel::update(label)
-                        .set(github_label)
-                        .get_result::<GithubLabel>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update github_label {}: {}", label.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the github_label in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(github_labels::table)
-            .values(github_label)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating github_label failed: {}", e))
     }
 
     #[instrument(skip(self))]
@@ -270,48 +81,6 @@ impl Database {
         diesel::delete(github_repos::dsl::github_repos.filter(github_repos::dsl::name.eq(name.to_string())))
             .execute(&self.conn())
             .unwrap();
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_groups(&self) -> Vec<Group> {
-        groups::dsl::groups.order_by(groups::dsl::id.desc()).load::<Group>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_group(&self, group: &GroupConfig) -> Group {
-        // See if we already have the group in the database.
-        match groups::dsl::groups.filter(groups::dsl::name.eq(group.name.to_string())).limit(1).load::<Group>(&self.conn()) {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the group in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let g = r.get(0).unwrap();
-
-                    // Update the group.
-                    return diesel::update(g)
-                        .set(group)
-                        .get_result::<Group>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update group {}: {}", g.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the group in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(groups::table)
-            .values(group)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating group failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn delete_group_by_name(&self, name: &str) {
-        diesel::delete(groups::dsl::groups.filter(groups::dsl::name.eq(name.to_string()))).execute(&self.conn()).unwrap();
     }
 
     #[instrument(skip(self))]
@@ -398,48 +167,6 @@ impl Database {
             .values(journal_club_paper)
             .get_result(&self.conn())
             .unwrap_or_else(|e| panic!("creating journal_club_paper failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_links(&self) -> Vec<Link> {
-        links::dsl::links.order_by(links::dsl::id.desc()).load::<Link>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_link(&self, link: &LinkConfig) -> Link {
-        // See if we already have the link in the database.
-        match links::dsl::links.filter(links::dsl::name.eq(link.name.to_string())).limit(1).load::<Link>(&self.conn()) {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the link in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let l = r.get(0).unwrap();
-
-                    // Update the link.
-                    return diesel::update(l)
-                        .set(link)
-                        .get_result::<Link>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update link {}: {}", l.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the link in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(links::table)
-            .values(link)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating link failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn delete_link_by_name(&self, name: &str) {
-        diesel::delete(links::dsl::links.filter(links::dsl::name.eq(name.to_string()))).execute(&self.conn()).unwrap();
     }
 
     #[instrument(skip(self))]
@@ -535,47 +262,5 @@ impl Database {
             .set(rfd.clone())
             .get_result::<RFD>(&self.conn())
             .unwrap_or_else(|e| panic!("unable to update rfd {}: {}", rfd.id, e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_users(&self) -> Vec<User> {
-        users::dsl::users.order_by(users::dsl::id.desc()).load::<User>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_user(&self, user: &UserConfig) -> User {
-        // See if we already have the user in the database.
-        match users::dsl::users.filter(users::dsl::username.eq(user.username.to_string())).limit(1).load::<User>(&self.conn()) {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the user in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let u = r.get(0).unwrap();
-
-                    // Update the user.
-                    return diesel::update(u)
-                        .set(user)
-                        .get_result::<User>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update user {}: {}", u.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the user in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(users::table)
-            .values(user)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating user failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn delete_user_by_username(&self, username: &str) {
-        diesel::delete(users::dsl::users.filter(users::dsl::username.eq(username.to_string()))).execute(&self.conn()).unwrap();
     }
 }

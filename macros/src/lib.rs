@@ -763,6 +763,22 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 
     pub struct #new_struct_name_plural(pub Vec<#new_struct_name>);
+
+    impl IntoIterator for #new_struct_name_plural {
+        type Item = #new_struct_name;
+        type IntoIter = std::vec::IntoIter<Self::Item>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self.0.into_iter()
+        }
+    }
+
+    impl Into<Vec<#new_struct_name>> for #new_struct_name_plural {
+        fn into(self) -> Vec<#new_struct_name> {
+            self.0
+        }
+    }
+
     impl #new_struct_name_plural {
         /// Get the current records for this type from the database.
         #[tracing::instrument(skip(db))]

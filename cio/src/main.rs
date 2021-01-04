@@ -12,7 +12,7 @@ use tracing_subscriber::prelude::*;
 
 use cio_api::applicants::{Applicant, Applicants};
 use cio_api::auth_logins::{AuthUser, AuthUsers};
-use cio_api::configs::{Building, ConferenceRoom, GithubLabel, Group, Link, User};
+use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, GithubLabel, GithubLabels, Group, Groups, Link, Links, User, Users};
 use cio_api::db::Database;
 use cio_api::models::{GithubRepo, JournalClubMeeting, MailingListSubscriber, RFD};
 
@@ -231,7 +231,7 @@ async fn api_get_buildings(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_buildings()))
+    Ok(HttpResponseOk(Buildings::get_from_db(db).0))
 }
 
 /**
@@ -246,7 +246,7 @@ async fn api_get_conference_rooms(rqctx: Arc<RequestContext>) -> Result<HttpResp
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_conference_rooms()))
+    Ok(HttpResponseOk(ConferenceRooms::get_from_db(db).0))
 }
 
 /**
@@ -262,7 +262,7 @@ async fn api_get_github_labels(rqctx: Arc<RequestContext>) -> Result<HttpRespons
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_github_labels()))
+    Ok(HttpResponseOk(GithubLabels::get_from_db(db).0))
 }
 
 /**
@@ -294,7 +294,7 @@ async fn api_get_groups(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_groups()))
+    Ok(HttpResponseOk(Groups::get_from_db(db).0))
 }
 
 /**
@@ -326,7 +326,7 @@ async fn api_get_links(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_links()))
+    Ok(HttpResponseOk(Links::get_from_db(db).0))
 }
 
 /**
@@ -374,5 +374,5 @@ async fn api_get_users(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_users()))
+    Ok(HttpResponseOk(Users::get_from_db(db).0))
 }
