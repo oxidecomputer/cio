@@ -362,13 +362,18 @@ impl Shipment {
 
             // Get the status of the shipment.
             if status.tracking_status.status == *"TRANSIT" {
-                // Send an email to the recipient with their tracking link.
-                // Wait until it is in transit to do this.
-                self.send_email_to_recipient().await;
+                if self.status != "Shipped" {
+                    // Send an email to the recipient with their tracking link.
+                    // Wait until it is in transit to do this.
+                    self.send_email_to_recipient().await;
+                    // We make sure it only does this one time.
+                    // Set the shipped date as this first date.
+                    // TODO: get the first date it was maked as in transit and use that as the shipped
+                    // time.
+                    self.shipped_time = status.tracking_status.status_date;
+                }
 
                 self.status = "Shipped".to_string();
-                // TODO: get the first date it was maked as in transit and use that as the shipped
-                // time.
             }
             if status.tracking_status.status == *"DELIVERED" {
                 self.status = "Delivered".to_string();
