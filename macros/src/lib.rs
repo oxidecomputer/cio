@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 extern crate proc_macro;
 
 use inflector::Inflector;
@@ -5,7 +7,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
-use syn::{Field, ItemStruct};
+use syn::{Field, ItemStruct, Type};
 
 #[derive(Deserialize, Debug)]
 struct Metadata {
@@ -451,6 +453,8 @@ struct Params {
     /// If so, we will not add the derive method PartialEq to the new struct.
     #[serde(default)]
     custom_partial_eq: bool,
+    /// The struct item and type that we will filter on to find unique database entries.
+    match_on: HashMap<String, String>,
 }
 
 #[proc_macro_attribute]
@@ -477,6 +481,18 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         db_schema = format_ident!("{}s", params.new_struct_name.to_lowercase());
     }
 
+    // Let's create the database filter.
+    let mut filter = quote!();
+    let mut args = quote!();
+    let mut function_args = quote!();
+    for (field, type_) in params.match_on {
+        let f = format_ident!("{}", field);
+        let t: Type = syn::parse_str(&type_).unwrap();
+        filter = quote!(#filter.filter(#db_schema::dsl::#f.eq(#f.clone())));
+        args = quote!(#args,#f: #t);
+        function_args = quote!(#function_args self.#f,);
+    }
+
     // Get the original struct information.
     let og_struct: ItemStruct = syn::parse2(item.clone()).unwrap();
     let mut fields: Vec<&Field> = Default::default();
@@ -488,20 +504,76 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     let airtable_base_id = format_ident!("{}", params.airtable_base_id);
     let airtable_table = format_ident!("{}", params.airtable_table);
 
-    let airtable = quote!(
+    let airtable = quote! {
     // Import what we need from diesel so the database queries work.
     use diesel::prelude::*;
+
+    impl NewPageView {
+        /// Create a new record in the database.
+        #[instrument(skip(db))]
+        #[inline]
+        pub fn create_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
+            diesel::insert_into(crate::schema::#db_schema::table)
+                .values(self)
+                .get_result(&db.conn())
+                .unwrap_or_else(|e| panic!("creating record {:?} failed: {}", self, e))
+        }
+
+        /// Create or update the record in the database.
+        #[instrument(skip(db))]
+        #[inline]
+        pub fn upsert_in_db(&self, db: &crate::db::Database) -> #new_struct_name {
+            // See if we already have the record in the database.
+            if let Some(r) = #new_struct_name::get_from_db(db, #function_args) {
+                // Update the record.
+                return diesel::update(&r)
+                    .set(self)
+                    .get_result::<#new_struct_name>(&db.conn())
+                    .unwrap_or_else(|e| panic!("unable to update record {}: {}", r.id, e));
+            }
+
+            self.create_in_db(db)
+        }
+    }
 
     impl #new_struct_name {
         /// Update the record in the database.
         #[instrument(skip(db))]
         #[inline]
-        pub fn update_in_db(&self, db: crate::db::Database) -> Self {
+        pub fn update_in_db(&self, db: &crate::db::Database) -> Self {
             // Update the record.
             diesel::update(self)
                 .set(self.clone())
                 .get_result::<#new_struct_name>(&db.conn())
                 .unwrap_or_else(|e| panic!("[db] unable to update record {}: {}", self.id, e))
+        }
+
+        /// Get a record from the database.
+        #[tracing::instrument(skip(db))]
+        #[inline]
+        pub fn get_from_db(db: &crate::db::Database#args) -> Option<Self> {
+            match #db_schema::dsl::#db_schema#filter.limit(1).load::<#new_struct_name>(&db.conn()) {
+                Ok(r) => {
+                    if !r.is_empty() {
+                        return Some(r.get(0).unwrap().clone());
+                    }
+                }
+                Err(e) => {
+                    println!("[db] we don't have the record in the database: {}", e);
+                    return None;
+                }
+            }
+
+            None
+        }
+
+        #[instrument(skip(db))]
+        #[inline]
+        pub fn delete_from_db(&self, &db: crate::db::Database) {
+            diesel::delete(
+                crate::schema::#db_schema::dsl::#db_schema.filter(
+                    crate::schema::#db_schema::dsl::id.eq(self.id)))
+                    .execute(&db.conn()).unwrap();
         }
 
         /// Create the Airtable client.
@@ -545,7 +617,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // Now we have the id we need to update the database.
             self.airtable_record_id = new_record.id.to_string();
             // TODO: we should use our pool of connections.
-            self.update_in_db(crate::db::Database::new());
+            self.update_in_db(&crate::db::Database::new());
         }
 
         /// Update the record in Airtable.
@@ -564,7 +636,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 self.airtable_record_id = existing_record.id.to_string();
                 // Now let's update the database.
                 // TODO: use our pool of connections.
-                self.update_in_db(crate::db::Database::new());
+                self.update_in_db(&crate::db::Database::new());
                 // Now we know in the future that we will have the right airtable_record_id and can
                 // update more easily.
             }
@@ -573,7 +645,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // we do not need to update it in Airtable.
             // We do this after we update the record so that any fields that are links to other
             // tables match as well and this can return true even if we have linked records.
-            if self == existing_record.fields {
+            if *self == existing_record.fields {
                 println!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
                 return;
             }
@@ -600,10 +672,10 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
 
-        /// Update a row in our airtable workspace.
+        /// Create or update a row in the Airtable base.
         #[tracing::instrument]
         #[inline]
-        pub async fn create_or_update_in_airtable(&mut self) {
+        pub async fn upsert_in_airtable(&mut self) {
             // First check if we have an `airtable_record_id` for this record.
             // If we do we can move ahead faster.
             if !self.airtable_record_id.is_empty() {
@@ -702,7 +774,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
     }
-                );
+    };
 
     // Does this struct have a custom PartialEq function?
     let mut partial_eq_text = Default::default();
@@ -738,24 +810,3 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     );
     new_struct
 }
-
-/*
-        /// Get a record from the database.
-        #[tracing::instrument]
-        #[inline]
-        pub async fn get_from_db(db: crate::db::Database, #db_match_on: #db_match_on_type) -> Option<Self> {
-            match #db_schema::dsl::#db_schema.filter(#db_schema::dsl::#db_match_on.eq(#db_match_on)).limit(1).load::<#new_struct_name>(&db.conn()) {
-                Ok(r) => {
-                    if !r.is_empty() {
-                        return Some(r.get(0).unwrap().clone());
-                    }
-                }
-                Err(e) => {
-                    println!("[db] we don't have the record `{:?}` in the database: {}", #db_match_on, e);
-                    return None;
-                }
-            }
-
-            None
-        }
-*/

@@ -13,7 +13,11 @@ use crate::schema::page_views;
 #[db {
     new_struct_name = "PageView",
     airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
-    airtable_table = "AIRTABLE_PAGE_VIEWS_TABLE"
+    airtable_table = "AIRTABLE_PAGE_VIEWS_TABLE",
+    match_on = {
+        "time" = "DateTime<Utc>",
+        "user_email" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "page_views"]
