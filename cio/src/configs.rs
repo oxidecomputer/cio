@@ -315,7 +315,7 @@ impl User {
             }
         }
 
-        println!("could not find user: {}", self.username);
+        println!("could not find slack user: {}", self.username);
         // TODO: Send an invite to the user.
     }
 
