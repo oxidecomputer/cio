@@ -376,7 +376,7 @@ you set up with an account on the Riot server. You can use SSO to login to the S
 at https://oxidecomputer.slack.com.
 
 xoxo,
-  The GSuite/GitHub Bot",
+  The Onboarding Bot",
                     self.first_name,
                     DOMAIN,
                     DOMAIN,
