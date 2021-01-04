@@ -14,7 +14,7 @@ use cio_api::applicants::{Applicant, Applicants};
 use cio_api::auth_logins::{AuthUser, AuthUsers};
 use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, GithubLabel, GithubLabels, Group, Groups, Link, Links, User, Users};
 use cio_api::db::Database;
-use cio_api::journal_clubs::JournalClubMeeting;
+use cio_api::journal_clubs::{JournalClubMeeting, JournalClubMeetings};
 use cio_api::models::{GithubRepo, MailingListSubscriber, RFD};
 
 #[macro_use]
@@ -311,7 +311,7 @@ async fn api_get_journal_club_meetings(rqctx: Arc<RequestContext>) -> Result<Htt
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_journal_club_meetings()))
+    Ok(HttpResponseOk(JournalClubMeetings::get_from_db(db).0))
 }
 
 /**

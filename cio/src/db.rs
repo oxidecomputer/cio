@@ -6,9 +6,8 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
-use crate::journal_clubs::{JournalClubMeeting, JournalClubPaper, NewJournalClubMeeting, NewJournalClubPaper};
 use crate::models::{GithubRepo, MailingListSubscriber, NewMailingListSubscriber, NewRFD, NewRepo, RFD};
-use crate::schema::{github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds};
+use crate::schema::{github_repos, mailing_list_subscribers, rfds};
 
 pub struct Database {
     pool: Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>,
@@ -82,92 +81,6 @@ impl Database {
         diesel::delete(github_repos::dsl::github_repos.filter(github_repos::dsl::name.eq(name.to_string())))
             .execute(&self.conn())
             .unwrap();
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_journal_club_meetings(&self) -> Vec<JournalClubMeeting> {
-        journal_club_meetings::dsl::journal_club_meetings
-            .order_by(journal_club_meetings::dsl::id.desc())
-            .load::<JournalClubMeeting>(&self.conn())
-            .unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_journal_club_meeting(&self, journal_club_meeting: &NewJournalClubMeeting) -> JournalClubMeeting {
-        // See if we already have the journal_club_meeting in the database.
-        match journal_club_meetings::dsl::journal_club_meetings
-            .filter(journal_club_meetings::dsl::issue.eq(journal_club_meeting.issue.to_string()))
-            .limit(1)
-            .load::<JournalClubMeeting>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the journal_club_meeting in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let a = r.get(0).unwrap();
-
-                    // Update the journal_club_meeting.
-                    return diesel::update(a)
-                        .set(journal_club_meeting)
-                        .get_result::<JournalClubMeeting>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update journal_club_meeting {}: {}", a.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the journal_club_meeting in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(journal_club_meetings::table)
-            .values(journal_club_meeting)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating journal_club_meeting failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_journal_club_papers(&self) -> Vec<JournalClubPaper> {
-        journal_club_papers::dsl::journal_club_papers
-            .order_by(journal_club_papers::dsl::id.desc())
-            .load::<JournalClubPaper>(&self.conn())
-            .unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_journal_club_paper(&self, journal_club_paper: &NewJournalClubPaper) -> JournalClubPaper {
-        // See if we already have the journal_club_paper in the database.
-        match journal_club_papers::dsl::journal_club_papers
-            .filter(journal_club_papers::dsl::link.eq(journal_club_paper.link.to_string()))
-            .limit(1)
-            .load::<JournalClubPaper>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the journal_club_paper in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let a = r.get(0).unwrap();
-
-                    // Update the journal_club_paper.
-                    return diesel::update(a)
-                        .set(journal_club_paper)
-                        .get_result::<JournalClubPaper>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update journal_club_paper {}: {}", a.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the journal_club_paper in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(journal_club_papers::table)
-            .values(journal_club_paper)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating journal_club_paper failed: {}", e))
     }
 
     #[instrument(skip(self))]

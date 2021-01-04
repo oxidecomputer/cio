@@ -304,22 +304,19 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
 }
 
 // Sync the journal_club_meetings with our database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn refresh_db_journal_club_meetings(github: &Github) {
+pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github) {
     let journal_club_meetings = get_meetings_from_repo(github).await;
-
-    // Initialize our database.
-    let db = Database::new();
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {
-        db.upsert_journal_club_meeting(&journal_club_meeting.to_model());
+        journal_club_meeting.to_model().upsert(db).await;
 
         // Upsert the papers.
         for mut journal_club_paper in journal_club_meeting.papers {
             journal_club_paper.meeting = journal_club_meeting.issue.to_string();
-            db.upsert_journal_club_paper(&journal_club_paper);
+            journal_club_paper.upsert(db).await;
         }
     }
 }
@@ -332,30 +329,13 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_journal_club_meetings() {
+    async fn test_cron_journal_club_meetings_and_papers() {
         let github = authenticate_github_jwt();
-        refresh_db_journal_club_meetings(&github).await;
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_journal_club_meetings_airtable() {
-        // Initialize our database.
         let db = Database::new();
 
-        let journal_club_meetings = db.get_journal_club_meetings();
-        // Update journal club meetings in airtable.
-        JournalClubMeetings(journal_club_meetings).update_airtable().await;
-    }
+        refresh_db_journal_club_meetings(&db, &github).await;
 
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_journal_club_papers_airtable() {
-        // Initialize our database.
-        let db = Database::new();
-
-        let journal_club_papers = db.get_journal_club_papers();
-        // Update journal club papers in airtable.
-        JournalClubPapers(journal_club_papers).update_airtable().await;
+        JournalClubPapers::get_from_db(&db).update_airtable().await;
+        JournalClubMeetings::get_from_db(&db).update_airtable().await;
     }
 }

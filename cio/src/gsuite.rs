@@ -210,7 +210,10 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
 #[inline]
 pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_groups: BTreeMap<String, GSuiteGroup>) {
     // Iterate over the groups and add the user as a member to it.
+    println!("u.g {:?}", user.groups);
     for g in &user.groups {
+        println!("g {:?}", g);
+
         // Make sure the group exists.
         let group: &GSuiteGroup;
         match google_groups.get(g) {
