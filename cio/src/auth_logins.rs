@@ -2,17 +2,190 @@ use std::collections::HashMap;
 use std::env;
 use std::{thread, time};
 
+use async_trait::async_trait;
 use chrono::naive::NaiveDateTime;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
+use macros::db_struct;
 use reqwest::{Client, StatusCode};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
+use crate::airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS};
+use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::models::{NewAuthUser, NewAuthUserLogin};
+use crate::schema::{auth_user_logins, auth_users};
 use crate::utils::{DOMAIN, GSUITE_DOMAIN};
+
+/// The data type for an NewAuthUser.
+#[db_struct {
+    new_name = "AuthUser",
+    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    table = "AIRTABLE_AUTH_USERS_TABLE",
+    custom_partial_eq = true,
+    airtable_fields = [
+        "id",
+        "link_to_people",
+        "logins_count",
+        "updated_at",
+        "created_at",
+        "user_id",
+        "last_login",
+        "email_verified",
+        "email",
+        "link_to_auth_user_logins",
+        "link_to_page_views",
+        "last_application_accessed",
+        "company",
+    ],
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "auth_users"]
+pub struct NewAuthUser {
+    pub user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub nickname: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub username: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default)]
+    pub email_verified: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub picture: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub company: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub blog: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
+    #[serde(default)]
+    pub phone_verified: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub locale: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub login_provider: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub last_login: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_application_accessed: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_ip: String,
+    pub logins_count: i32,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_people: Vec<String>,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_auth_user_logins: Vec<String>,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_page_views: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a AuthUser.
+#[async_trait]
+impl UpdateAirtableRecord<AuthUser> for AuthUser {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, record: AuthUser) {
+        // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
+        self.link_to_people = record.link_to_people.clone();
+        self.link_to_auth_user_logins = record.link_to_auth_user_logins;
+        self.link_to_page_views = record.link_to_page_views;
+    }
+}
+
+impl PartialEq for AuthUser {
+    // We implement our own here because Airtable has a different data type for the picture.
+    #[instrument]
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.user_id == other.user_id
+            && self.last_login == other.last_login
+            && self.logins_count == other.logins_count
+            && self.last_application_accessed == other.last_application_accessed
+            && self.company == other.company
+    }
+}
+
+/// The data type for a NewAuthUserLogin.
+#[db_struct {
+    new_name = "AuthUserLogin",
+    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    table = "AIRTABLE_AUTH_USER_LOGINS_TABLE",
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
+#[table_name = "auth_user_logins"]
+pub struct NewAuthUserLogin {
+    pub date: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
+    pub typev: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub connection: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub connection_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub client_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub client_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ip: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub hostname: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub audience: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scope: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub strategy: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub strategy_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub log_id: String,
+    #[serde(default, alias = "isMobile")]
+    pub is_mobile: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_agent: String,
+    /// link to another table in Airtable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_auth_user: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a AuthUserLogin.
+#[async_trait]
+impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, _record: AuthUserLogin) {
+        // Get the current auth users in Airtable so we can link to it.
+        // TODO: make this more dry so we do not call it every single damn time.
+        let auth_users = AuthUsers::get_from_airtable().await;
+
+        // Iterate over the auth_users and see if we find a match.
+        for (_id, auth_user_record) in auth_users {
+            if auth_user_record.fields.user_id == self.user_id {
+                // Set the link_to_auth_user to the right user.
+                self.link_to_auth_user = vec![auth_user_record.id];
+                // Break the loop and return early.
+                break;
+            }
+        }
+    }
+}
 
 /// The data type for an Auth0 user.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -270,8 +443,8 @@ pub async fn refresh_db_auth() {
 #[cfg(test)]
 mod tests {
     use crate::auth_logins::refresh_db_auth;
+    use crate::auth_logins::{AuthUserLogins, AuthUsers};
     use crate::db::Database;
-    use crate::models::{AuthUserLogins, AuthUsers};
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]

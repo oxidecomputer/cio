@@ -6,11 +6,11 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
+use crate::auth_logins::{AuthUser, AuthUserLogin, NewAuthUser, NewAuthUserLogin};
 use crate::certs::{Certificate, NewCertificate};
 use crate::configs::{Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig, LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig};
 use crate::models::{
-    Applicant, AuthUser, AuthUserLogin, GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewApplicant, NewAuthUser, NewAuthUserLogin, NewJournalClubMeeting,
-    NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD,
+    Applicant, GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewApplicant, NewJournalClubMeeting, NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD,
 };
 use crate::schema::{
     applicants, auth_user_logins, auth_users, buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links,
@@ -32,8 +32,6 @@ impl Default for Database {
     }
 }
 
-// TODO: more gracefully handle errors
-// TODO: possibly generate all this boilerplate as well.
 impl Database {
     /// Establish a connection to the database.
     pub fn new() -> Database {

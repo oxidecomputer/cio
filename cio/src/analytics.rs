@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_PAGE_VIEWS_TABLE};
+use crate::auth_logins::AuthUsers;
 use crate::core::UpdateAirtableRecord;
-use crate::models::AuthUsers;
 use crate::schema::page_views;
 
 #[db {
