@@ -435,10 +435,7 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 // Sync the auth_users with our database.
 #[instrument]
 #[inline]
-pub async fn refresh_auth_users_and_logins() {
-    // Initialize our database.
-    let db = Database::new();
-
+pub async fn refresh_auth_users_and_logins(db: Database) {
     let auth_users = get_auth_users("oxide".to_string(), &db).await;
 
     // Sync auth users.
@@ -449,11 +446,19 @@ pub async fn refresh_auth_users_and_logins() {
 
 #[cfg(test)]
 mod tests {
-    use crate::auth_logins::refresh_auth_users_and_logins;
+    use crate::auth_logins::{refresh_auth_users_and_logins, AuthUserLogins, AuthUses};
+    use crate::db::Database;
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_auth_users_and_logins_refresh() {
+        // Initialize our database.
+        let db = Database::new();
+
         refresh_auth_users_and_logins().await;
+
+        // Update auth user and auth user logins in airtable.
+        AuthUsers::get_from_db(&db).update_airtable().await;
+        AuthUserLogins::get_from_db(&db).update_airtable().await;
     }
 }
