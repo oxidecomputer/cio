@@ -362,6 +362,10 @@ impl Shipment {
 
             // Get the status of the shipment.
             if status.tracking_status.status == *"TRANSIT" {
+                // Send an email to the recipient with their tracking link.
+                // Wait until it is in transit to do this.
+                self.send_email_to_recipient().await;
+
                 self.status = "Shipped".to_string();
                 // TODO: get the first date it was maked as in transit and use that as the shipped
                 // time.
@@ -530,8 +534,6 @@ impl Shipment {
                 self.print_label().await;
                 self.status = "Label printed".to_string();
 
-                // Send an email to the recipient with their tracking link.
-                self.send_email_to_recipient().await;
                 // Send an email to us that we need to package the shipment.
                 self.send_email_internally().await;
 
