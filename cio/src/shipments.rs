@@ -362,7 +362,7 @@ impl Shipment {
 
             // Get the status of the shipment.
             if status.tracking_status.status == *"TRANSIT" {
-                if self.status != "Shipped" {
+                if self.status != *"Shipped" {
                     // Send an email to the recipient with their tracking link.
                     // Wait until it is in transit to do this.
                     self.send_email_to_recipient().await;
