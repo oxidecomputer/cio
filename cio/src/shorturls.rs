@@ -8,13 +8,12 @@ use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generat
 use crate::utils::{authenticate_github_jwt, github_org};
 
 /// Generate the files for the GitHub repository short URLs.
-#[instrument(skip(repo))]
+#[instrument(skip(db, repo))]
 #[inline]
-pub async fn generate_shorturls_for_repos(repo: &Repository) {
+pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
     let subdomain = "git";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
-    let db = Database::new();
 
     // Get the github repos from the database.
     let repos = db.get_github_repos();
@@ -40,13 +39,12 @@ pub async fn generate_shorturls_for_repos(repo: &Repository) {
 }
 
 /// Generate the files for the RFD short URLs.
-#[instrument(skip(repo))]
+#[instrument(skip(db, repo))]
 #[inline]
-pub async fn generate_shorturls_for_rfds(repo: &Repository) {
+pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository) {
     let subdomain = "rfd";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
-    let db = Database::new();
 
     // Get the rfds from the database.
     let rfds = db.get_rfds();
@@ -74,13 +72,12 @@ pub async fn generate_shorturls_for_rfds(repo: &Repository) {
 }
 
 /// Generate the files for the configs links.
-#[instrument(skip(repo))]
+#[instrument(skip(db, repo))]
 #[inline]
-pub async fn generate_shorturls_for_configs_links(repo: &Repository) {
+pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Repository) {
     let subdomain = "corp";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
-    let db = Database::new();
 
     // Get the config.
     let configs_links = db.get_links();
@@ -161,9 +158,11 @@ pub async fn refresh_shorturls() {
     let github = authenticate_github_jwt();
     let repo = github.repo(github_org(), "configs");
 
-    generate_shorturls_for_repos(&repo).await;
-    generate_shorturls_for_rfds(&repo).await;
-    generate_shorturls_for_configs_links(&repo).await;
+    let db = Database::new();
+
+    generate_shorturls_for_repos(&db, &repo).await;
+    generate_shorturls_for_rfds(&db, &repo).await;
+    generate_shorturls_for_configs_links(&db, &repo).await;
     generate_dns_for_tailscale_devices(&repo).await;
 }
 

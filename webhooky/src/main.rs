@@ -1867,7 +1867,7 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") {
         // Update our links in the database.
-        sync_links(configs.links).await;
+        sync_links(&api_context.db, configs.links).await;
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&github_repo).await;
@@ -1878,28 +1878,28 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
     // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
     // added a new group to GSuite.
     if commit.file_changed("configs/groups.toml") {
-        sync_groups(configs.groups).await;
+        sync_groups(&api_context.db, configs.groups).await;
     }
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.github, configs.users).await;
+        sync_users(&api_context.db, &api_context.github, configs.users).await;
     }
 
     // Check if the buildings.toml file changed.
     // Buildings needs to be synchronized _before_ we move on to conference rooms.
     if commit.file_changed("configs/buildings.toml") {
-        sync_buildings(configs.buildings).await;
+        sync_buildings(&api_context.db, configs.buildings).await;
     }
 
     // Check if the resources.toml file changed.
     if commit.file_changed("configs/resources.toml") {
-        sync_conference_rooms(configs.resources).await;
+        sync_conference_rooms(&api_context.db, configs.resources).await;
     }
 
     // Check if the certificates.toml file changed.
     if commit.file_changed("configs/certificates.toml") {
-        sync_certificates(&api_context.github, configs.certificates).await;
+        sync_certificates(&api_context.db, &api_context.github, configs.certificates).await;
     }
 
     // Check if the github-outside-collaborators.toml file changed.
