@@ -30,10 +30,11 @@ use tracing_subscriber::prelude::*;
 
 use cio_api::analytics::NewPageView;
 use cio_api::applicants::get_role_from_sheet_id;
+use cio_api::applicants::{Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
-use cio_api::models::{GitHubUser, GithubRepo, NewApplicant, NewRFD};
+use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
 use cio_api::rfds::is_image;
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
@@ -449,7 +450,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let column_header = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
 
     // Now let's get the applicant from the database so we can update it.
-    let result = db.get_applicant(&email, &event.spreadsheet.id);
+    let result = Applicant::get_from_db(&db, email.to_string(), event.spreadsheet.id.to_string());
     if result.is_none() {
         event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
         return Ok(HttpResponseAccepted("ok".to_string()));
@@ -491,16 +492,10 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // Update the applicant in the database.
-    let new_applicant = db.update_applicant(&a);
-    event!(Level::INFO, "applicant {} updated in database", a.email);
+    // Update the applicant in the database and Airtable.
+    let new_applicant = a.update(db).await;
 
-    // Update the applicant in airtable.
-    let mut airtable_applicant = new_applicant.clone();
-    airtable_applicant.create_or_update_in_airtable().await;
-    event!(Level::INFO, "applicant {} updated in airtable", a.email);
-
-    event!(Level::INFO, "applicant {} updated successfully", a.email);
+    event!(Level::INFO, "applicant {} updated successfully", new_applicant.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -636,14 +631,8 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         applicant.send_email_internally().await;
     }
 
-    // Send the applicant to the database.
-    let a = db.upsert_applicant(&applicant);
-    event!(Level::INFO, "applicant {} created in database", a.email);
-
-    // Update airtable.
-    let mut airtable_applicant = a.clone();
-    airtable_applicant.create_or_update_in_airtable().await;
-    event!(Level::INFO, "applicant {} created in airtable", a.email);
+    // Send the applicant to the database and Airtable.
+    let a = applicant.upsert(db).await;
 
     event!(Level::INFO, "applicant {} created successfully", a.email);
     Ok(HttpResponseAccepted("ok".to_string()))
