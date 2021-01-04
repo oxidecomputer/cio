@@ -75,8 +75,7 @@ mod tests {
         // Initialize our database.
         let db = Database::new();
 
-        let page_views = db.get_page_views();
         // Update auth user logins in airtable.
-        PageViews(page_views).update_airtable().await;
+        PageViews::get_from_db(&db).update_airtable().await;
     }
 }
