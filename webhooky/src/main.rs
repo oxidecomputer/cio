@@ -810,18 +810,8 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_pa
     // Expand the page_view.
     event.set_page_link();
 
-    // Add the page_view to the database.
-    let pv = db.upsert_page_view(&event);
-    event!(Level::INFO, "page_view `{} | {}` created in database", pv.page_link, pv.user_email);
-
-    //  Update airtable with the new page_view.
-    let mut airtable_pv = pv.clone();
-    airtable_pv.create_or_update_in_airtable().await;
-    // To the call to airtable twice, once is to create it, the second is to
-    // link it to the auth users.
-    // TODO: clean this up.
-    airtable_pv.create_or_update_in_airtable().await;
-    event!(Level::INFO, "page_view `{} | {}` created in airtable", pv.page_link, pv.user_email);
+    // Add the page_view to the database and Airttable.
+    let pv = event.create(db).await;
 
     event!(Level::INFO, "page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
     Ok(HttpResponseAccepted("ok".to_string()))
