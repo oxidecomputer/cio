@@ -1,13 +1,189 @@
 use std::str::from_utf8;
 
+use async_trait::async_trait;
 use chrono::NaiveDate;
 use hubcaps::Github;
+use macros::db_struct;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tracing::instrument;
 
+use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE};
+use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::models::{NewJournalClubMeeting, NewJournalClubPaper};
+use crate::schema::{journal_club_meetings, journal_club_papers};
 use crate::utils::github_org;
+
+/// The data type for a NewJournalClubMeeting.
+#[db_struct {
+    new_name = "JournalClubMeeting",
+    base_id = "AIRTABLE_BASE_ID_MISC",
+    table = "AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE",
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
+#[table_name = "journal_club_meetings"]
+pub struct NewJournalClubMeeting {
+    pub title: String,
+    pub issue: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub papers: Vec<String>,
+    #[serde(
+        default = "crate::utils::default_date",
+        deserialize_with = "crate::journal_clubs::meeting_date_format::deserialize",
+        serialize_with = "crate::journal_clubs::meeting_date_format::serialize"
+    )]
+    pub issue_date: NaiveDate,
+    #[serde(
+        default = "crate::utils::default_date",
+        deserialize_with = "crate::journal_clubs::meeting_date_format::deserialize",
+        serialize_with = "crate::journal_clubs::meeting_date_format::serialize"
+    )]
+    pub meeting_date: NaiveDate,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub coordinator: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub recording: String,
+}
+
+impl JournalClubMeeting {
+    /// Convert the journal club meeting into JSON as Slack message.
+    #[instrument]
+    #[inline]
+    pub fn as_slack_msg(&self) -> Value {
+        let mut objects: Vec<MessageBlock> = Default::default();
+
+        objects.push(MessageBlock {
+            block_type: MessageBlockType::Section,
+            text: Some(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!("<{}|*{}*>", self.issue, self.title),
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        });
+
+        let mut text = format!(
+            "<https://github.com/{}|@{}> | issue date: {} | status: *{}*",
+            self.coordinator,
+            self.coordinator,
+            self.issue_date.format("%m/%d/%Y"),
+            self.state
+        );
+        let meeting_date = self.meeting_date.format("%m/%d/%Y").to_string();
+        if meeting_date != *"01/01/1969" {
+            text += &format!(" | meeting date: {}", meeting_date);
+        }
+        objects.push(MessageBlock {
+            block_type: MessageBlockType::Context,
+            elements: vec![MessageBlockText {
+                text_type: MessageType::Markdown,
+                text,
+            }],
+            text: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        });
+
+        if !self.recording.is_empty() {
+            objects.push(MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: vec![MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("<{}|Meeting recording>", self.recording),
+                }],
+                text: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            });
+        }
+
+        for paper in self.papers.clone() {
+            let p: NewJournalClubPaper = serde_json::from_str(&paper).unwrap();
+
+            let mut title = p.title.to_string();
+            if p.title == self.title {
+                title = "Paper".to_string();
+            }
+            objects.push(MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: vec![MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!("<{}|{}>", p.link, title),
+                }],
+                text: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            });
+        }
+
+        json!(FormattedMessage {
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: objects,
+        })
+    }
+}
+
+/// Implement updating the Airtable record for a JournalClubMeeting.
+#[async_trait]
+impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, record: JournalClubMeeting) {
+        // Set the papers field, since it is pre-populated as table links.
+        self.papers = record.papers;
+    }
+}
+
+/// The data type for a NewJournalClubPaper.
+#[db_struct {
+    new_name = "JournalClubPaper",
+    base_id = "AIRTABLE_BASE_ID_MISC",
+    table = "AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE",
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
+#[table_name = "journal_club_papers"]
+pub struct NewJournalClubPaper {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub meeting: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_meeting: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a JournalClubPaper.
+#[async_trait]
+impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, _record: JournalClubPaper) {
+        // Get the current journal club meetings in Airtable so we can link to it.
+        // TODO: make this more dry so we do not call it every single damn time.
+        let journal_club_meetings = JournalClubMeetings::get_from_airtable().await;
+
+        // Iterate over the journal_club_meetings and see if we find a match.
+        for (_id, meeting_record) in journal_club_meetings {
+            if meeting_record.fields.issue == self.meeting {
+                // Set the link_to_meeting to the right meeting.
+                self.link_to_meeting = vec![meeting_record.id];
+                // Break the loop and return early.
+                break;
+            }
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Meeting {
@@ -145,8 +321,7 @@ pub async fn refresh_db_journal_club_meetings(github: &Github) {
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
-    use crate::journal_clubs::refresh_db_journal_club_meetings;
-    use crate::models::{JournalClubMeetings, JournalClubPapers};
+    use crate::journal_clubs::{refresh_db_journal_club_meetings, JournalClubMeetings, JournalClubPapers};
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]

@@ -14,7 +14,8 @@ use cio_api::applicants::{Applicant, Applicants};
 use cio_api::auth_logins::{AuthUser, AuthUsers};
 use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, GithubLabel, GithubLabels, Group, Groups, Link, Links, User, Users};
 use cio_api::db::Database;
-use cio_api::models::{GithubRepo, JournalClubMeeting, MailingListSubscriber, RFD};
+use cio_api::journal_clubs::JournalClubMeeting;
+use cio_api::models::{GithubRepo, MailingListSubscriber, RFD};
 
 #[macro_use]
 extern crate serde_json;

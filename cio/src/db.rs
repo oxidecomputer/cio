@@ -6,7 +6,8 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
-use crate::models::{GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewJournalClubMeeting, NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD};
+use crate::journal_clubs::{JournalClubMeeting, JournalClubPaper, NewJournalClubMeeting, NewJournalClubPaper};
+use crate::models::{GithubRepo, MailingListSubscriber, NewMailingListSubscriber, NewRFD, NewRepo, RFD};
 use crate::schema::{github_repos, journal_club_meetings, journal_club_papers, mailing_list_subscribers, rfds};
 
 pub struct Database {
