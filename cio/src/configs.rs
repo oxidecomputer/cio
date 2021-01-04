@@ -832,14 +832,11 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 }
 
 /// Sync our users with our database and then update Airtable from the database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn sync_users(github: &Github, users: BTreeMap<String, UserConfig>) {
+pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>) {
     // Generate the terraform files for teams.
     generate_terraform_files_for_aws_and_github(github, users.clone()).await;
-
-    // Initialize our database.
-    let db = Database::new();
 
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
@@ -984,9 +981,9 @@ pub async fn sync_users(github: &Github, users: BTreeMap<String, UserConfig>) {
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
+pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
@@ -995,9 +992,6 @@ pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
 
     // Get the existing google buildings.
     let gsuite_buildings = gsuite.list_buildings().await.unwrap();
-
-    // Initialize our database.
-    let db = Database::new();
 
     // Get all the buildings.
     let db_buildings = db.get_buildings();
@@ -1087,12 +1081,9 @@ pub async fn sync_buildings(buildings: BTreeMap<String, BuildingConfig>) {
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceConfig>) {
-    // Initialize our database.
-    let db = Database::new();
-
+pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
@@ -1192,12 +1183,9 @@ pub async fn sync_conference_rooms(conference_rooms: BTreeMap<String, ResourceCo
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
-    // Initialize our database.
-    let db = Database::new();
-
+pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
@@ -1327,12 +1315,9 @@ pub async fn sync_groups(groups: BTreeMap<String, GroupConfig>) {
 }
 
 /// Sync our links with our database and then update Airtable from the database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn sync_links(links: BTreeMap<String, LinkConfig>) {
-    // Initialize our database.
-    let db = Database::new();
-
+pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
     // Get all the links.
     let db_links = db.get_links();
     // Create a BTreeMap
@@ -1364,12 +1349,9 @@ pub async fn sync_links(links: BTreeMap<String, LinkConfig>) {
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn sync_certificates(github: &Github, certificates: BTreeMap<String, NewCertificate>) {
-    // Initialize our database.
-    let db = Database::new();
-
+pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>) {
     // Get all the certificates.
     let db_certificates = db.get_certificates();
     // Create a BTreeMap
@@ -1422,10 +1404,10 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    sync_buildings(configs.buildings).await;
+    sync_buildings(&db, configs.buildings).await;
 
     // Sync conference rooms.
-    sync_conference_rooms(configs.resources).await;
+    sync_conference_rooms(&db, configs.resources).await;
 
     // Sync GitHub labels.
     for label in configs.labels {
@@ -1434,16 +1416,16 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
-    sync_groups(configs.groups).await;
+    sync_groups(&db, configs.groups).await;
 
     // Sync links.
-    sync_links(configs.links).await;
+    sync_links(&db, configs.links).await;
 
     // Sync users.
-    sync_users(github, configs.users).await;
+    sync_users(&db, github, configs.users).await;
 
     // Sync certificates.
-    sync_certificates(github, configs.certificates).await;
+    sync_certificates(&db, github, configs.certificates).await;
 
     // Sync github outside collaborators.
     sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
