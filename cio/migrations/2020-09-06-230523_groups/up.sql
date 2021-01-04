@@ -13,5 +13,6 @@ CREATE TABLE groups (
     who_can_moderate_members VARCHAR NOT NULL,
     who_can_post_message VARCHAR NOT NULL,
     who_can_view_group VARCHAR NOT NULL,
-    who_can_view_membership VARCHAR NOT NULL
+    who_can_view_membership VARCHAR NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

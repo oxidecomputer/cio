@@ -12,14 +12,17 @@ use futures_util::stream::TryStreamExt;
 use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser};
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
-use macros::db_struct;
+use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
 use tracing::{event, instrument, Level};
 
-use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
+use crate::airtable::{
+    AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BASE_ID_MISC, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GITHUB_LABELS_TABLE, AIRTABLE_GROUPS_TABLE,
+    AIRTABLE_LINKS_TABLE,
+};
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -82,10 +85,13 @@ impl Config {
 }
 
 /// The data type for a user.
-#[db_struct {
-    new_name = "User",
-    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
-    table = "AIRTABLE_EMPLOYEES_TABLE",
+#[db {
+    new_struct_name = "User",
+    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_table = "AIRTABLE_EMPLOYEES_TABLE",
+    match_on = {
+        "username" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "users"]
@@ -445,10 +451,13 @@ impl UpdateAirtableRecord<User> for User {
 }
 
 /// The data type for a group. This applies to Google Groups.
-#[db_struct {
-    new_name = "Group",
-    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
-    table = "AIRTABLE_GROUPS_TABLE",
+#[db {
+    new_struct_name = "Group",
+    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_table = "AIRTABLE_GROUPS_TABLE",
+    match_on = {
+        "name" = "String",
+    },
 }]
 #[derive(Debug, Default, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "groups"]
@@ -597,10 +606,13 @@ impl UpdateAirtableRecord<Group> for Group {
 }
 
 /// The data type for a building.
-#[db_struct {
-    new_name = "Building",
-    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
-    table = "AIRTABLE_BUILDINGS_TABLE",
+#[db {
+    new_struct_name = "Building",
+    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_table = "AIRTABLE_BUILDINGS_TABLE",
+    match_on = {
+        "name" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "buildings"]
@@ -652,10 +664,13 @@ impl UpdateAirtableRecord<Building> for Building {
 
 /// The data type for a resource. These are conference rooms that people can book
 /// through GSuite or Zoom.
-#[db_struct {
-    new_name = "ConferenceRoom",
-    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
-    table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
+#[db {
+    new_struct_name = "ConferenceRoom",
+    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
+    match_on = {
+        "name" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "conference_rooms"]
@@ -700,10 +715,13 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
 
 /// The data type for a link. These get turned into short links like
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
-#[db_struct {
-    new_name = "Link",
-    base_id = "AIRTABLE_BASE_ID_DIRECTORY",
-    table = "AIRTABLE_LINKS_TABLE",
+#[db {
+    new_struct_name = "Link",
+    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_table = "AIRTABLE_LINKS_TABLE",
+    match_on = {
+        "name" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "links"]
@@ -729,8 +747,13 @@ impl UpdateAirtableRecord<Link> for Link {
 
 /// The data type for a label. These become GitHub labels for all the repositories
 /// in our organization.
-#[db_struct {
-    new_name = "GithubLabel",
+#[db {
+    new_struct_name = "GithubLabel",
+    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_table = "AIRTABLE_GITHUB_LABELS_TABLE",
+    match_on = {
+        "name" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "github_labels"]
@@ -738,6 +761,14 @@ pub struct LabelConfig {
     pub name: String,
     pub description: String,
     pub color: String,
+}
+
+/// Implement updating the Airtable record for a GithubLabel.
+#[async_trait]
+impl UpdateAirtableRecord<GithubLabel> for GithubLabel {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, _record: GithubLabel) {}
 }
 
 /// The data type for GitHub outside collaborators to repositories.

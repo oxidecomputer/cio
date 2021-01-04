@@ -10,5 +10,6 @@ CREATE TABLE buildings (
     address_formatted VARCHAR NOT NULL,
     floors TEXT [] NOT NULL,
     employees TEXT [] NOT NULL,
-    conference_rooms TEXT [] NOT NULL
+    conference_rooms TEXT [] NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

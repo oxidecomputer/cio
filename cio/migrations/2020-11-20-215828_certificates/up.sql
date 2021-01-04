@@ -4,5 +4,6 @@ CREATE TABLE certificates (
     certificate TEXT NOT NULL,
     private_key TEXT NOT NULL,
     valid_days_left INTEGER NOT NULL,
-    expiration_date DATE NOT NULL
+    expiration_date DATE NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

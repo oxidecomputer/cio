@@ -4,5 +4,6 @@ CREATE TABLE links (
     description VARCHAR NOT NULL,
     link VARCHAR NOT NULL,
     aliases TEXT [] NOT NULL,
-    short_link VARCHAR NOT NULL
+    short_link VARCHAR NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

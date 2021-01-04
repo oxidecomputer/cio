@@ -18,7 +18,7 @@ use cloudflare::framework::{
     Environment, HttpApiClientConfig,
 };
 use hubcaps::Github;
-use macros::db_struct;
+use macros::db;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -195,10 +195,13 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
 }
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
-#[db_struct {
-    new_name = "Certificate",
-    base_id = "AIRTABLE_BASE_ID_MISC",
-    table = "AIRTABLE_CERTIFICATES_TABLE",
+#[db {
+    new_struct_name = "Certificate",
+    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_table = "AIRTABLE_CERTIFICATES_TABLE",
+    match_on = {
+        "domain" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "certificates"]

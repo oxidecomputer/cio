@@ -110,6 +110,7 @@ table! {
         floors -> Array<Text>,
         employees -> Array<Text>,
         conference_rooms -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -121,6 +122,7 @@ table! {
         private_key -> Text,
         valid_days_left -> Int4,
         expiration_date -> Date,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -135,6 +137,7 @@ table! {
         capacity -> Int4,
         floor -> Varchar,
         section -> Varchar,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -144,6 +147,7 @@ table! {
         name -> Varchar,
         description -> Varchar,
         color -> Varchar,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -236,6 +240,7 @@ table! {
         who_can_post_message -> Varchar,
         who_can_view_group -> Varchar,
         who_can_view_membership -> Varchar,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -271,6 +276,7 @@ table! {
         link -> Varchar,
         aliases -> Array<Text>,
         short_link -> Varchar,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -359,6 +365,7 @@ table! {
         start_date -> Date,
         birthday -> Date,
         public_ssh_keys -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 

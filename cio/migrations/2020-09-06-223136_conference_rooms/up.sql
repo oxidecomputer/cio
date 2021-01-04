@@ -7,5 +7,6 @@ CREATE TABLE conference_rooms (
     link_to_building TEXT [] NOT NULL,
     capacity INTEGER NOT NULL,
     floor VARCHAR NOT NULL,
-    section VARCHAR NOT NULL
+    section VARCHAR NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )
