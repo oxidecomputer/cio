@@ -14,7 +14,7 @@ use html2text::from_read;
 use hubcaps::comments::CommentOptions;
 use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use hubcaps::Github;
-use macros::db_struct;
+use macros::db;
 use pandoc::OutputKind;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -45,10 +45,14 @@ static QUESTION_VALUES_IN_TENSION: &str =
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
 /// The data type for a NewApplicant.
-#[db_struct {
-    new_name = "Applicant",
-    base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
-    table = "AIRTABLE_APPLICATIONS_TABLE",
+#[db {
+    new_struct_name = "Applicant",
+    airtable_base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
+    airtable_table = "AIRTABLE_APPLICATIONS_TABLE",
+    match_on = {
+        "email" = "String",
+        "sheet_id" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "applicants"]
@@ -1402,17 +1406,14 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
 }
 
 // Sync the applicants with our database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn refresh_db_applicants() {
+pub async fn refresh_db_applicants(db: &Database) {
     let applicants = get_raw_applicants().await;
-
-    // Initialize our database.
-    let db = Database::new();
 
     // Sync applicants.
     for applicant in applicants {
-        db.upsert_applicant(&applicant);
+        applicant.upsert(db).await;
     }
 }
 
@@ -1424,17 +1425,10 @@ mod tests {
     #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_applicants() {
-        refresh_db_applicants().await;
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_applicants_airtable() {
-        // Initialize our database.
         let db = Database::new();
+        refresh_db_applicants(&db).await;
 
-        let applicants = db.get_applicants();
-        // Update applicants in airtable.
-        Applicants(applicants).update_airtable().await;
+        // Update Airtable.
+        Applicants::get_from_db(&db).update_airtable().await;
     }
 }

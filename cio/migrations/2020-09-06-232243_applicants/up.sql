@@ -34,5 +34,6 @@ CREATE TABLE applicants (
     question_value_reflected TEXT NOT NULL,
     question_value_violated TEXT NOT NULL,
     question_values_in_tension TEXT NOT NULL,
-    question_why_oxide TEXT NOT NULL
+    question_why_oxide TEXT NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

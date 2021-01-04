@@ -6,13 +6,10 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
-use crate::applicants::{Applicant, NewApplicant};
 use crate::certs::{Certificate, NewCertificate};
 use crate::configs::{Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig, LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig};
 use crate::models::{GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewJournalClubMeeting, NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD};
-use crate::schema::{
-    applicants, buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links, mailing_list_subscribers, rfds, users,
-};
+use crate::schema::{buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links, mailing_list_subscribers, rfds, users};
 
 pub struct Database {
     pool: Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>,
@@ -38,63 +35,6 @@ impl Database {
     /// Returns a connection from the pool.
     pub fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
         self.pool.get().unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_applicants(&self) -> Vec<Applicant> {
-        applicants::dsl::applicants.order_by(applicants::dsl::id.desc()).load::<Applicant>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_applicant(&self, email: &str, sheet_id: &str) -> Option<Applicant> {
-        match applicants::dsl::applicants
-            .filter(applicants::dsl::email.eq(email.to_string()))
-            .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
-            .limit(1)
-            .load::<Applicant>(&self.conn())
-        {
-            Ok(r) => {
-                if !r.is_empty() {
-                    return Some(r.get(0).unwrap().clone());
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the applicant with email {} and sheet_id {} in the database", email, sheet_id, e);
-                return None;
-            }
-        }
-
-        None
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_applicant(&self, applicant: &NewApplicant) -> Applicant {
-        // See if we already have the applicant in the database.
-        if let Some(a) = self.get_applicant(&applicant.email, &applicant.sheet_id) {
-            // Update the applicant.
-            return diesel::update(&a)
-                .set(applicant)
-                .get_result::<Applicant>(&self.conn())
-                .unwrap_or_else(|e| panic!("unable to update applicant {}: {}", a.id, e));
-        }
-
-        diesel::insert_into(applicants::table)
-            .values(applicant)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating applicant failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn update_applicant(&self, applicant: &Applicant) -> Applicant {
-        // Update the applicant.
-        diesel::update(applicant)
-            .set(applicant.clone())
-            .get_result::<Applicant>(&self.conn())
-            .unwrap_or_else(|e| panic!("unable to update applicant {}: {}", applicant.id, e))
     }
 
     #[instrument(skip(self))]

@@ -10,7 +10,7 @@ use hyper::{Body, Response, StatusCode};
 use tracing::{instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
-use cio_api::applicants::Applicant;
+use cio_api::applicants::{Applicant, Applicants};
 use cio_api::auth_logins::{AuthUser, AuthUsers};
 use cio_api::configs::{Building, ConferenceRoom, GithubLabel, Group, Link, User};
 use cio_api::db::Database;
@@ -215,7 +215,7 @@ async fn api_get_applicants(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_applicants()))
+    Ok(HttpResponseOk(Applicants::get_from_db(db).0))
 }
 
 /**
