@@ -1453,7 +1453,12 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &GithubRepo, e
             .get(event.pull_request.number.try_into().unwrap())
             .edit(&hubcaps::pulls::PullEditOptions::builder().title(rfd.name.to_string()).build())
             .await
-            .unwrap();
+            .unwrap_or_else(|e| {
+                panic!(
+                    "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
+                    event.pull_request.title, rfd.name, event.pull_request.number, e
+                )
+            });
     }
 
     // Update the labels for the pull request.
