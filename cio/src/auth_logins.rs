@@ -7,7 +7,7 @@ use chrono::naive::NaiveDateTime;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
-use macros::db_struct;
+use macros::db;
 use reqwest::{Client, StatusCode};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -20,10 +20,10 @@ use crate::schema::{auth_user_logins, auth_users};
 use crate::utils::{DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for an NewAuthUser.
-#[db_struct {
-    new_name = "AuthUser",
-    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
-    table = "AIRTABLE_AUTH_USERS_TABLE",
+#[db {
+    new_struct_name = "AuthUser",
+    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_table = "AIRTABLE_AUTH_USERS_TABLE",
     custom_partial_eq = true,
     airtable_fields = [
         "id",
@@ -40,6 +40,9 @@ use crate::utils::{DOMAIN, GSUITE_DOMAIN};
         "last_application_accessed",
         "company",
     ],
+    match_on = {
+        "user_id" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "auth_users"]
@@ -115,10 +118,14 @@ impl PartialEq for AuthUser {
 }
 
 /// The data type for a NewAuthUserLogin.
-#[db_struct {
-    new_name = "AuthUserLogin",
-    base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
-    table = "AIRTABLE_AUTH_USER_LOGINS_TABLE",
+#[db {
+    new_struct_name = "AuthUserLogin",
+    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_table = "AIRTABLE_AUTH_USER_LOGINS_TABLE",
+    match_on = {
+        "user_id" = "String",
+        "date" = "DateTime<Utc>",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
 #[table_name = "auth_user_logins"]
@@ -349,7 +356,7 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
         // Update our database with all the auth_user_logins.
         for mut auth_user_login in auth_user_logins {
             auth_user_login.email = user.email.to_string();
-            db.upsert_auth_user_login(&auth_user_login);
+            auth_user_login.upsert(db).await;
         }
     }
 
@@ -428,7 +435,7 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 // Sync the auth_users with our database.
 #[instrument]
 #[inline]
-pub async fn refresh_db_auth() {
+pub async fn refresh_auth_users_and_logins() {
     // Initialize our database.
     let db = Database::new();
 
@@ -436,45 +443,17 @@ pub async fn refresh_db_auth() {
 
     // Sync auth users.
     for auth_user in auth_users {
-        db.upsert_auth_user(&auth_user);
+        auth_user.upsert(&db).await;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::auth_logins::refresh_db_auth;
-    use crate::auth_logins::{AuthUserLogins, AuthUsers};
-    use crate::db::Database;
+    use crate::auth_logins::refresh_auth_users_and_logins;
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_auth_refresh_db() {
-        refresh_db_auth().await;
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_auth_users_airtable() {
-        // Initialize our database.
-        let db = Database::new();
-
-        let auth_users = db.get_auth_users();
-        // Update auth users in airtable.
-        AuthUsers(auth_users).update_airtable().await;
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_auth_user_logins_airtable() {
-        // Initialize our database.
-        let db = Database::new();
-
-        let auth_user_logins = db.get_auth_user_logins();
-        // Update auth user logins in airtable.
-        AuthUserLogins(auth_user_logins).update_airtable().await;
-
-        let auth_user_logins = db.get_auth_user_logins();
-        // Update auth user logins in airtable.
-        AuthUserLogins(auth_user_logins).update_airtable().await;
+    async fn test_cron_auth_users_and_logins_refresh() {
+        refresh_auth_users_and_logins().await;
     }
 }

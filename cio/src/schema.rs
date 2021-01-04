@@ -64,6 +64,7 @@ table! {
         link_to_people -> Array<Text>,
         link_to_auth_user_logins -> Array<Text>,
         link_to_page_views -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -90,6 +91,7 @@ table! {
         is_mobile -> Bool,
         user_agent -> Varchar,
         link_to_auth_user -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 

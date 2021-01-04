@@ -6,15 +6,13 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
-use crate::auth_logins::{AuthUser, AuthUserLogin, NewAuthUser, NewAuthUserLogin};
 use crate::certs::{Certificate, NewCertificate};
 use crate::configs::{Building, BuildingConfig, ConferenceRoom, GithubLabel, Group, GroupConfig, LabelConfig, Link, LinkConfig, ResourceConfig, User, UserConfig};
 use crate::models::{
     Applicant, GithubRepo, JournalClubMeeting, JournalClubPaper, MailingListSubscriber, NewApplicant, NewJournalClubMeeting, NewJournalClubPaper, NewMailingListSubscriber, NewRFD, NewRepo, RFD,
 };
 use crate::schema::{
-    applicants, auth_user_logins, auth_users, buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links,
-    mailing_list_subscribers, rfds, users,
+    applicants, buildings, certificates, conference_rooms, github_labels, github_repos, groups, journal_club_meetings, journal_club_papers, links, mailing_list_subscribers, rfds, users,
 };
 
 pub struct Database {
@@ -245,90 +243,6 @@ impl Database {
         diesel::delete(conference_rooms::dsl::conference_rooms.filter(conference_rooms::dsl::name.eq(name.to_string())))
             .execute(&self.conn())
             .unwrap();
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_auth_users(&self) -> Vec<AuthUser> {
-        auth_users::dsl::auth_users.order_by(auth_users::dsl::id.desc()).load::<AuthUser>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_auth_user(&self, auth_user: &NewAuthUser) -> AuthUser {
-        // See if we already have the auth_user in the database.
-        match auth_users::dsl::auth_users
-            .filter(auth_users::dsl::user_id.eq(auth_user.user_id.to_string()))
-            .limit(1)
-            .load::<AuthUser>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the auth_user in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let a = r.get(0).unwrap();
-
-                    // Update the auth_user.
-                    return diesel::update(a)
-                        .set(auth_user)
-                        .get_result::<AuthUser>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update auth_user {}: {}", a.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the auth_user in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(auth_users::table)
-            .values(auth_user)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating auth_user failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_auth_user_logins(&self) -> Vec<AuthUserLogin> {
-        auth_user_logins::dsl::auth_user_logins
-            .order_by(auth_user_logins::dsl::id.desc())
-            .load::<AuthUserLogin>(&self.conn())
-            .unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_auth_user_login(&self, auth_user_login: &NewAuthUserLogin) -> AuthUserLogin {
-        // See if we already have the auth_user_login in the database.
-        match auth_user_logins::dsl::auth_user_logins
-            .filter(auth_user_logins::dsl::user_id.eq(auth_user_login.user_id.to_string()))
-            .filter(auth_user_logins::dsl::date.eq(auth_user_login.date))
-            .limit(1)
-            .load::<AuthUserLogin>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the auth_user_login in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let a = r.get(0).unwrap();
-
-                    // Update the auth_user_login.
-                    return diesel::update(a)
-                        .set(auth_user_login)
-                        .get_result::<AuthUserLogin>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update auth_user_login {}: {}", a.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the auth_user_login in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(auth_user_logins::table)
-            .values(auth_user_login)
-            .get_result::<AuthUserLogin>(&self.conn())
-            .unwrap_or_else(|e| panic!("creating auth_user_login failed: {}", e))
     }
 
     #[instrument(skip(self))]

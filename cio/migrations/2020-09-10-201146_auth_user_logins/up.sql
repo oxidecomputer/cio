@@ -19,5 +19,6 @@ CREATE TABLE auth_user_logins (
     log_id VARCHAR NOT NULL UNIQUE,
     is_mobile BOOLEAN NOT NULL DEFAULT 'f',
     user_agent VARCHAR NOT NULL,
-    link_to_auth_user TEXT [] NOT NULL
+    link_to_auth_user TEXT [] NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

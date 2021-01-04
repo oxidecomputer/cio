@@ -21,5 +21,6 @@ CREATE TABLE auth_users (
     logins_count INTEGER NOT NULL,
     link_to_people TEXT [] NOT NULL,
     link_to_auth_user_logins TEXT [] NOT NULL,
-    link_to_page_views TEXT [] NOT NULL
+    link_to_page_views TEXT [] NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )
