@@ -225,70 +225,19 @@ pub async fn refresh_db_github_repos(db: &Database, github: &Github) {
     }
 }
 
-/// Create or update a file in a GitHub repository.
-/// If the file does not exist, it will be created.
-/// If the file exists, it will be updated _only if_ the content of the file has changed.
-#[instrument(skip(repo))]
-#[inline]
-pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &str, path: &str, new_content: Vec<u8>) {
-    let content = new_content.trim();
+/// Get a files content from a repo.
+/// It returns a tuple of the bytes of the file content and the sha of the file.
+pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &str) -> (Vec<u8>, String) {
     // Add the starting "/" so this works.
     // TODO: figure out why it doesn't work without it.
     let mut file_path = path.to_string();
     if !path.starts_with('/') {
         file_path = "/".to_owned() + path;
     }
+
     // Try to get the content for the file from the repo.
     match repo.content().file(&file_path, branch).await {
-        Ok(file) => {
-            let file_content: Vec<u8> = file.content.into();
-            let decoded = file_content.trim();
-
-            // Compare the content to the decoded content and see if we need to update them.
-            if content == decoded {
-                // They are the same so we can return early, we do not need to update the
-                // file.
-                println!("[github content] File contents at {} are the same, no update needed", file_path);
-                return;
-            }
-
-            // When the pdfs are generated they change the modified time that is
-            // encoded in the file. We want to get that diff and see if it is
-            // the only change so that we are not always updating those files.
-            let diff = diffy::create_patch_bytes(&decoded, &content);
-            let bdiff = diff.to_bytes();
-            let str_diff = from_utf8(&bdiff).unwrap_or("");
-            if str_diff.contains("-/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("+/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("@@ -5,8 +5,8 @@") {
-                // The binary contents are the same so we can return early.
-                // The only thing that changed was the modified time and creation date.
-                println!("[github content] File contents at {} are the same, no update needed", file_path);
-                return;
-            }
-
-            // We need to update the file. Ignore failure.
-            match repo
-                .content()
-                .update(
-                    &file_path,
-                    &content,
-                    &format!(
-                        "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
-                        file_path
-                    ),
-                    &file.sha,
-                    branch,
-                )
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => {
-                    println!("[github content] updating file at {} on branch {} failed: {}", file_path, branch, e);
-                    return;
-                }
-            }
-
-            println!("[github content] Updated file at {}", file_path);
-        }
+        Ok(file) => return (file.content.into(), file.sha),
         Err(e) => {
             match e {
                 hubcaps::errors::Error::RateLimit { reset } => {
@@ -301,7 +250,6 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                         // The file is too big for us to get it's contents through this API.
                         // The error suggests we use the Git Data API but we need the file sha for
                         // that.
-                        // TODO: make this less awful.
                         // Get all the items in the directory and try to find our file and get the sha
                         // for it so we can update it.
                         let mut path = PathBuf::from(&file_path);
@@ -321,74 +269,107 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
                             // TODO: move this logic to hubcaps.
                             let v = blob.content.replace("\n", "");
                             let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
-                            let decoded_content = decoded.trim();
-
-                            // Compare the content to the decoded content and see if we need to update them.
-                            if content == decoded_content {
-                                // They are the same so we can return early, we do not need to update the
-                                // file.
-                                println!("[github content] File contents at {} are the same, no update needed", file_path);
-                                return;
-                            }
-
-                            // We can actually update the file since we have the sha.
-                            match repo
-                                .content()
-                                .update(
-                                    &file_path,
-                                    &content,
-                                    &format!(
-                                        "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
-                                        file_path
-                                    ),
-                                    &item.sha,
-                                    branch,
-                                )
-                                .await
-                            {
-                                Ok(_) => (),
-                                Err(e) => {
-                                    println!("[github content] updating file at {} on branch {} failed: {}", file_path, branch, e);
-                                    return;
-                                }
-                            }
-
-                            println!("[github content] Updated file at {}", file_path);
-
-                            // We can break the loop now.
-                            break;
+                            return (decoded.trim(), item.sha.to_string());
                         }
-
-                        return;
                     }
                 }
-                _ => println!("[github content] Getting the file at {} failed: {:?}", file_path, e),
-            }
-
-            // Create the file in the repo. Ignore failure.
-            match repo
-                .content()
-                .create(
-                    &file_path,
-                    &content,
-                    &format!(
-                        "Creating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
-                        file_path
-                    ),
-                    branch,
-                )
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => {
-                    println!("[github content] creating file at {} on branch {} failed: {}", file_path, branch, e);
-                    return;
+                _ => {
+                    println!("[github content] Getting the file at {} on branch {} failed: {:?}", file_path, branch, e);
                 }
             }
-
-            println!("[github content] Created file at {}", file_path);
         }
     }
+
+    // By default return nothing. This only happens if we could not get the file for some reason.
+    return (vec![], "".to_string());
+}
+
+/// Create or update a file in a GitHub repository.
+/// If the file does not exist, it will be created.
+/// If the file exists, it will be updated _only if_ the content of the file has changed.
+#[instrument(skip(repo))]
+#[inline]
+pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &str, path: &str, new_content: Vec<u8>) {
+    let content = new_content.trim();
+    // Add the starting "/" so this works.
+    // TODO: figure out why it doesn't work without it.
+    let mut file_path = path.to_string();
+    if !path.starts_with('/') {
+        file_path = "/".to_owned() + path;
+    }
+
+    // Try to get the content for the file from the repo.
+    let (existing_content, sha) = get_file_content_from_repo(repo, branch, path).await;
+
+    if !existing_content.is_empty() {
+        if content == existing_content {
+            // They are the same so we can return early, we do not need to update the
+            // file.
+            println!("[github content] File contents at {} are the same, no update needed", file_path);
+            return;
+        }
+
+        // When the pdfs are generated they change the modified time that is
+        // encoded in the file. We want to get that diff and see if it is
+        // the only change so that we are not always updating those files.
+        let diff = diffy::create_patch_bytes(&existing_content, &content);
+        let bdiff = diff.to_bytes();
+        let str_diff = from_utf8(&bdiff).unwrap_or("");
+        if str_diff.contains("-/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("+/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("@@ -5,8 +5,8 @@") {
+            // The binary contents are the same so we can return early.
+            // The only thing that changed was the modified time and creation date.
+            println!("[github content] File contents at {} are the same, no update needed", file_path);
+            return;
+        }
+
+        // We need to update the file. Ignore failure.
+        match repo
+            .content()
+            .update(
+                &file_path,
+                &content,
+                &format!(
+                    "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
+                    file_path
+                ),
+                &sha,
+                branch,
+            )
+            .await
+        {
+            Ok(_) => (),
+            Err(e) => {
+                println!("[github content] updating file at {} on branch {} failed: {}", file_path, branch, e);
+                return;
+            }
+        }
+
+        println!("[github content] Updated file at {}", file_path);
+        return;
+    }
+
+    // Create the file in the repo. Ignore failure.
+    match repo
+        .content()
+        .create(
+            &file_path,
+            &content,
+            &format!(
+                "Creating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
+                file_path
+            ),
+            branch,
+        )
+        .await
+    {
+        Ok(_) => (),
+        Err(e) => {
+            println!("[github content] creating file at {} on branch {} failed: {}", file_path, branch, e);
+            return;
+        }
+    }
+
+    println!("[github content] Created file at {}", file_path);
 }
 
 trait SliceExt {
