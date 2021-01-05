@@ -6,8 +6,8 @@ use diesel::prelude::*;
 use diesel::r2d2;
 use tracing::instrument;
 
-use crate::models::{GithubRepo, NewRFD, NewRepo, RFD};
-use crate::schema::{github_repos, rfds};
+use crate::models::{NewRFD, RFD};
+use crate::schema::rfds;
 
 pub struct Database {
     pool: Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>,
@@ -33,54 +33,6 @@ impl Database {
     /// Returns a connection from the pool.
     pub fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
         self.pool.get().unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn get_github_repos(&self) -> Vec<GithubRepo> {
-        github_repos::dsl::github_repos.order_by(github_repos::dsl::id.desc()).load::<GithubRepo>(&self.conn()).unwrap()
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn upsert_github_repo(&self, github_repo: &NewRepo) -> GithubRepo {
-        // See if we already have the github_repo in the database.
-        match github_repos::dsl::github_repos
-            .filter(github_repos::dsl::full_name.eq(github_repo.full_name.to_string()))
-            .limit(1)
-            .load::<GithubRepo>(&self.conn())
-        {
-            Ok(r) => {
-                if r.is_empty() {
-                    // We don't have the github_repo in the database so we need to add it.
-                    // That will happen below.
-                } else {
-                    let a = r.get(0).unwrap();
-
-                    // Update the github_repo.
-                    return diesel::update(a)
-                        .set(github_repo)
-                        .get_result::<GithubRepo>(&self.conn())
-                        .unwrap_or_else(|e| panic!("unable to update github_repo {}: {}", a.id, e));
-                }
-            }
-            Err(e) => {
-                println!("[db] on err: {:?}; we don't have the github_repo in the database, adding it", e);
-            }
-        }
-
-        diesel::insert_into(github_repos::table)
-            .values(github_repo)
-            .get_result(&self.conn())
-            .unwrap_or_else(|e| panic!("creating github_repo failed: {}", e))
-    }
-
-    #[instrument(skip(self))]
-    #[inline]
-    pub fn delete_github_repo_by_name(&self, name: &str) {
-        diesel::delete(github_repos::dsl::github_repos.filter(github_repos::dsl::name.eq(name.to_string())))
-            .execute(&self.conn())
-            .unwrap();
     }
 
     #[instrument(skip(self))]

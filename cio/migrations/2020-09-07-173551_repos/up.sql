@@ -65,5 +65,6 @@
     archived BOOLEAN NOT NULL DEFAULT 'f',
     pushed_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL
+    updated_at TIMESTAMPTZ NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )

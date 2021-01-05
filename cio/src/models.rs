@@ -16,13 +16,13 @@ use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
 use hubcaps::repositories::{Repo, Repository};
 use hubcaps::Github;
-use macros::db_struct;
+use macros::{db, db_struct};
 use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::airtable::{AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_RFD_TABLE};
+use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GITHUB_REPOS_TABLE, AIRTABLE_RFD_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_images_in_branch, get_rfd_contents_from_repo, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{github_repos, rfds as r_f_ds, rfds};
@@ -89,8 +89,13 @@ impl ToSql<Jsonb, Pg> for GitHubUser {
 }
 
 /// The data type for a GitHub repository.
-#[db_struct {
-    new_name = "GithubRepo",
+#[db {
+    new_struct_name = "GithubRepo",
+    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_table = "AIRTABLE_GITHUB_REPOS_TABLE",
+    match_on = {
+        "github_id" = "String",
+    },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "github_repos"]
@@ -169,6 +174,14 @@ pub struct NewRepo {
     pub created_at: DateTime<Utc>,
     #[serde(deserialize_with = "crate::configs::null_date_format::deserialize")]
     pub updated_at: DateTime<Utc>,
+}
+
+/// Implement updating the Airtable record for a GithubRepo.
+#[async_trait]
+impl UpdateAirtableRecord<GithubRepo> for GithubRepo {
+    #[instrument]
+    #[inline]
+    async fn update_airtable_record(&mut self, _record: GithubRepo) {}
 }
 
 pub mod deserialize_null_string {

@@ -19,7 +19,7 @@ use tracing::instrument;
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
 use crate::db::Database;
-use crate::models::{GithubRepo, NewRepo};
+use crate::models::{GithubRepo, GithubRepos, NewRepo};
 
 pub static DOMAIN: &str = "oxide.computer";
 pub static GSUITE_DOMAIN: &str = "oxidecomputer.com";
@@ -195,16 +195,14 @@ pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
 }
 
 /// Sync the repos with our database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn refresh_db_github_repos(github: &Github) {
+pub async fn refresh_db_github_repos(db: &Database, github: &Github) {
     let github_repos = list_all_github_repos(github).await;
 
-    // Initialize our database.
-    let db = Database::new();
-
     // Get all the repos.
-    let db_repos = db.get_github_repos();
+    let db_repos = GithubRepos::get_from_db(db);
+
     // Create a BTreeMap
     let mut repo_map: BTreeMap<String, GithubRepo> = Default::default();
     for r in db_repos {
@@ -213,7 +211,7 @@ pub async fn refresh_db_github_repos(github: &Github) {
 
     // Sync github_repos.
     for github_repo in github_repos {
-        db.upsert_github_repo(&github_repo);
+        github_repo.upsert(db).await;
 
         // Remove the repo from the map.
         repo_map.remove(&github_repo.name);
@@ -222,8 +220,8 @@ pub async fn refresh_db_github_repos(github: &Github) {
     // Remove any repos that should no longer be in the database.
     // This is found by the remaining repos that are in the map since we removed
     // the existing repos from the map above.
-    for (name, _) in repo_map {
-        db.delete_github_repo_by_name(&name);
+    for (_, repo) in repo_map {
+        repo.delete(db).await;
     }
 }
 
@@ -427,13 +425,20 @@ pub fn default_date() -> chrono::naive::NaiveDate {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::authenticate_github_jwt;
-    use crate::utils::refresh_db_github_repos;
+    use crate::db::Database;
+    use crate::models::GithubRepos;
+    use crate::utils::{authenticate_github_jwt, refresh_db_github_repos};
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_github_repos() {
         let github = authenticate_github_jwt();
-        refresh_db_github_repos(&github).await;
+
+        // Initialize our database.
+        let db = Database::new();
+
+        refresh_db_github_repos(&db, &github).await;
+
+        GithubRepos::get_from_db(&db).update_airtable().await;
     }
 }

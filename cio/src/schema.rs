@@ -220,6 +220,7 @@ table! {
         pushed_at -> Timestamptz,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        airtable_record_id -> Varchar,
     }
 }
 

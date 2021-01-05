@@ -5,6 +5,7 @@ use tracing::instrument;
 
 use crate::configs::Links;
 use crate::db::Database;
+use crate::models::GithubRepos;
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
 use crate::utils::{authenticate_github_jwt, github_org};
 
@@ -17,7 +18,7 @@ pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the github repos from the database.
-    let repos = db.get_github_repos();
+    let repos = GithubRepos::get_from_db(db);
 
     // Create the array of links.
     for repo in repos {

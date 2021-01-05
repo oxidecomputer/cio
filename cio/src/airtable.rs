@@ -16,8 +16,8 @@ pub static AIRTABLE_BASE_ID_MISC: &str = "appfWJK9kBNwnavG2";
 pub static AIRTABLE_CERTIFICATES_TABLE: &str = "Certificates";
 pub static AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE: &str = "Journal Club Meetings";
 pub static AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE: &str = "Journal Club Papers";
-pub static AIRTABLE_GITHUB_LABELS_TABLE: &str = "Github Labels";
-pub static AIRTABLE_GITHUB_REPOS_TABLE: &str = "Github Repos";
+pub static AIRTABLE_GITHUB_LABELS_TABLE: &str = "GitHub Labels";
+pub static AIRTABLE_GITHUB_REPOS_TABLE: &str = "GitHub Repos";
 
 pub static AIRTABLE_BASE_ID_RACK_ROADMAP: &str = "appvAEzcMvB2QNboC";
 pub static AIRTABLE_RFD_TABLE: &str = "RFDs";
