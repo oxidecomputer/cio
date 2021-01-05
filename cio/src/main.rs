@@ -280,7 +280,7 @@ async fn api_get_github_repos(rqctx: Arc<RequestContext>) -> Result<HttpResponse
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(GithubRepos::get_from_db(db).0)))
+    Ok(HttpResponseOk(GithubRepos::get_from_db(db).0))
 }
 
 /**

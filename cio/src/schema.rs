@@ -155,7 +155,7 @@ table! {
     github_repos (id) {
         id -> Int4,
         github_id -> Varchar,
-        owner -> Jsonb,
+        owner -> Varchar,
         name -> Varchar,
         full_name -> Varchar,
         description -> Varchar,

@@ -1,7 +1,7 @@
  CREATE TABLE github_repos (
     id SERIAL PRIMARY KEY,
     github_id VARCHAR NOT NULL UNIQUE,
-    owner JSONB NOT NULL,
+    owner VARCHAR NOT NULL,
     name VARCHAR NOT NULL UNIQUE,
     full_name VARCHAR NOT NULL UNIQUE,
     description VARCHAR NOT NULL,
