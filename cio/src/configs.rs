@@ -380,6 +380,8 @@ We have both a Riot server and a Slack for chat. Josh (josh@oxide.computer) can 
 you set up with an account on the Riot server. You can use SSO to login to the Slack
 at https://oxidecomputer.slack.com.
 
+Lastly, be sure to order yourself some swag: https://swag-family.corp.oxide.computer
+
 xoxo,
   The Onboarding Bot",
                     self.first_name,
