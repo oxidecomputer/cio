@@ -1640,7 +1640,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let (gh_file_content, _) = get_file_content_from_repo(&github_repo, &file, branch).await.unwrap();
+            let (gh_file_content, _) = get_file_content_from_repo(&github_repo, &file, branch).await;
 
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
