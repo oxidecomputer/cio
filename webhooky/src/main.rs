@@ -1503,7 +1503,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
         .iter(&format!("{}/", dir), &branch)
         .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
         .await
-        .unwrap();
+        .unwrap_or_else(|e| panic!("getting directory {} content for RFD on branch {} failed: {}", dir, branch, e));
     let mut filename = String::new();
     for file in files {
         if file.name.ends_with("README.md") || file.name.ends_with("README.adoc") {
@@ -1522,7 +1522,11 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     }
 
     // We need to get the content fresh first since this is racey.
-    let f = github_repo.content().file(&filename, &branch).await.unwrap();
+    let f = github_repo
+        .content()
+        .file(&filename, &branch)
+        .await
+        .unwrap_or_else(|e| panic!("getting repo content at filename {} on branch {} failed: {}", filename, branch, e));
     rfd.content = from_utf8(&f.content).unwrap().to_string();
 
     // Update the discussion link.
