@@ -39,7 +39,7 @@ use cio_api::rfds::is_image;
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
-use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
+use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_contents_from_repo, get_gsuite_token, github_org};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
@@ -1602,22 +1602,24 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             let website_file = file.replace("rfd/", "src/public/static/images/");
 
             // We need to get the current sha for the file we want to delete.
-            let gh_file = github_repo.content().file(&website_file, &event.repository.default_branch).await.unwrap();
+            let (_, gh_file_sha) = get_file_contents_from_repo(&github_repo, &website_file, &event.repository.default_branch).await;
 
-            github_repo
-                .content()
-                .delete(
-                    &website_file,
-                    &format!(
-                        "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
-                        website_file
-                    ),
-                    &gh_file.sha,
-                    &event.repository.default_branch,
-                )
-                .await
-                .unwrap();
-            event!(Level::INFO, "deleted file `{}` since it was removed in mose recent push for RFD {:?}", website_file, event);
+            if !gh_file_sha.is_empty() {
+                github_repo
+                    .content()
+                    .delete(
+                        &website_file,
+                        &format!(
+                            "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
+                            website_file
+                        ),
+                        &gh_file_sha,
+                        &event.repository.default_branch,
+                    )
+                    .await
+                    .unwrap();
+                event!(Level::INFO, "deleted file `{}` since it was removed in mose recent push for RFD {:?}", website_file, event);
+            }
         }
     }
 
@@ -1638,13 +1640,14 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let gh_file = github_repo.content().file(&file, branch).await.unwrap();
+            let (gh_file_content, _) = get_file_contents_from_repo(&github_repo, &file, branch).await.unwrap();
+
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
             // this is where images go for the static website.
             // We update these on the default branch ONLY
             let website_file = file.replace("rfd/", "src/public/static/images/");
-            create_or_update_file_in_github_repo(&github_repo, &event.repository.default_branch, &website_file, gh_file.content.to_vec()).await;
+            create_or_update_file_in_github_repo(&github_repo, &event.repository.default_branch, &website_file, gh_file_content).await;
             event!(Level::INFO, "updated file `{}` since it was modified in mose recent push for RFD {:?}", website_file, event);
             // We are done so we can continue throught the loop.
             continue;
@@ -1788,29 +1791,31 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                 let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
                 // First get the sha of the old pdf.
-                let old_pdf = github_repo.content().file(&pdf_path, &event.repository.default_branch).await.unwrap();
+                let (_, old_pdf_sha) = get_file_contents_from_repo(&github_repo, &pdf_path, &event.repository.default_branch).await;
 
-                // Delete the old filename from GitHub.
-                github_repo
-                    .content()
-                    .delete(
+                if !old_pdf_sha.is_empty() {
+                    // Delete the old filename from GitHub.
+                    github_repo
+                        .content()
+                        .delete(
+                            &pdf_path,
+                            &format!(
+                                "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
+                                old_rfd_pdf
+                            ),
+                            &old_pdf_sha,
+                            &event.repository.default_branch,
+                        )
+                        .await
+                        .unwrap();
+                    event!(
+                        Level::INFO,
+                        "deleted old pdf file `{}` in GitHub for  RFD {}, new file is `{}`",
                         &pdf_path,
-                        &format!(
-                            "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
-                            old_rfd_pdf
-                        ),
-                        &old_pdf.sha,
-                        &event.repository.default_branch,
-                    )
-                    .await
-                    .unwrap();
-                event!(
-                    Level::INFO,
-                    "deleted old pdf file `{}` in GitHub for  RFD {}, new file is `{}`",
-                    &pdf_path,
-                    new_rfd.number_string,
-                    rfd.get_pdf_filename()
-                );
+                        new_rfd.number_string,
+                        rfd.get_pdf_filename()
+                    );
+                }
 
                 // Delete the old filename from drive.
                 drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
