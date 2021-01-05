@@ -836,13 +836,7 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query
     let new_subscriber = event.as_subscriber();
 
     // Update the subscriber in the database.
-    let subscriber = db.upsert_mailing_list_subscriber(&new_subscriber);
-    event!(Level::INFO, "subscriber {} created in database", subscriber.email);
-
-    //  Update airtable with the new subscriber.
-    let mut airtable_subscriber = subscriber.clone();
-    airtable_subscriber.create_or_update_in_airtable().await;
-    event!(Level::INFO, "subscriber {} created in airtable", subscriber.email);
+    let subscriber = new_subscriber.upsert(db).await;
 
     // Parse the signup into a slack message.
     // Send the message to the slack channel.
