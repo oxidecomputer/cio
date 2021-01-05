@@ -425,6 +425,7 @@ impl NewRFD {
 
         // Parse the RFD title from the contents.
         let title = NewRFD::get_title(&content);
+        let name = NewRFD::generate_name(number, &title);
 
         // Parse the state from the contents.
         let state = NewRFD::get_state(&content);
@@ -436,7 +437,7 @@ impl NewRFD {
             number,
             number_string,
             title,
-            name: Default::default(),
+            name,
             state,
             link: file.html_url,
             short_link: Default::default(),
