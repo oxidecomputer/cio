@@ -188,7 +188,7 @@ pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
 
     let mut repos: Vec<NewRepo> = Default::default();
     for r in github_repos {
-        repos.push(NewRepo::new(r).await);
+        repos.push(NewRepo::new(r));
     }
 
     repos

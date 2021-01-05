@@ -34,12 +34,12 @@ use cio_api::applicants::{Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
-use cio_api::models::{GitHubUser, GithubRepo, NewRFD};
+use cio_api::models::{GitHubUser, NewRFD, NewRepo};
 use cio_api::rfds::is_image;
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
-use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org, refresh_db_github_repos};
+use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
@@ -907,7 +907,7 @@ pub struct GitHubWebhook {
     /// The `repository` where the event occurred. Webhook payloads contain the
     /// `repository` property when the event occurs from activity in a repository.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub repository: Option<GithubRepo>,
+    pub repository: Option<hubcaps::repositories::Repo>,
     /// Webhook payloads contain the `organization` object when the webhook is
     /// configured for an organization or the event occurs from activity in a
     /// repository owned by an organization.
@@ -1403,7 +1403,7 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
 /// Handle a `pull_request` event for the rfd repo.
 #[instrument(skip(api_context))]
 #[inline]
-async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &hubcaps::repositories::Repo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
     // Get the repo.
@@ -1539,7 +1539,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &GithubRepo, e
 /// Handle a `push` event for the rfd repo.
 #[instrument(skip(api_context))]
 #[inline]
-async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories::Repo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here because otherwise it will expire.
     let token = get_gsuite_token().await;
@@ -1817,7 +1817,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &GithubRepo, event: Gi
 /// Handle a `push` event for the configs repo.
 #[instrument(skip(api_context))]
 #[inline]
-async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_configs_push(api_context: Arc<Context>, repo: &hubcaps::repositories::Repo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
 
@@ -1905,11 +1905,11 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &GithubRepo, event
 #[instrument(skip(api_context))]
 #[inline]
 async fn handle_repository_event(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
-    // Refresh all the database github repos.
+    let nr = NewRepo::new(event.repository.unwrap());
+    nr.upsert(&api_context.db).await;
+
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
-    refresh_db_github_repos(&api_context.github).await;
-
     // Update the short urls for all the repos.
     generate_shorturls_for_repos(&api_context.db, &api_context.github.repo(&api_context.github_org, "configs")).await;
     event!(Level::INFO, "generated shorturls for all the GitHub repos");

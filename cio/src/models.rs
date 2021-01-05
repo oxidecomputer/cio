@@ -260,7 +260,7 @@ pub mod deserialize_null_string {
 impl NewRepo {
     #[instrument]
     #[inline]
-    pub async fn new(r: Repo) -> Self {
+    pub fn new(r: Repo) -> Self {
         // TODO: get the languages as well
         // https://docs.rs/hubcaps/0.6.1/hubcaps/repositories/struct.Repo.html
 

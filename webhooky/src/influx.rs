@@ -113,7 +113,7 @@ from(bucket:"github_webhooks")
 
         // For each repo, get information on the pull requests.
         for repo in repos {
-            let r = github.repo(repo.owner.login, repo.name.to_string());
+            let r = github.repo(repo.owner, repo.name.to_string());
             let issues = r
                 .issues()
                 .iter(&hubcaps::issues::IssueListOptions::builder().state(hubcaps::issues::State::All).per_page(100).build())
@@ -224,7 +224,7 @@ from(bucket:"github_webhooks")
 
             let repo_name = repo.name.to_string();
 
-            let r = github.repo(repo.owner.login.to_string(), repo_name.to_string());
+            let r = github.repo(repo.owner.to_string(), repo_name.to_string());
 
             // TODO: iterate over all the branches
             // Do we need to do this??
@@ -356,7 +356,7 @@ from(bucket:"github_webhooks")
 
                         if check_suite.app.id == 0 {
                             // Continue early.
-                            println!("[warn]: app id for check suite is 0 for https://github.com/{}/{}/commits/{}", repo.owner.login, repo.name, c.sha);
+                            println!("[warn]: app id for check suite is 0 for https://github.com/{}/{}/commits/{}", repo.owner, repo.name, c.sha);
                             continue;
                         }
 
@@ -532,7 +532,7 @@ from(bucket:"github_webhooks")
         for repo in repos {
             let repo_name = repo.name.to_string();
 
-            let r = github.repo(repo.owner.login.to_string(), repo.name.to_string());
+            let r = github.repo(repo.owner.to_string(), repo.name.to_string());
 
             let pulls = r
                 .pulls()
