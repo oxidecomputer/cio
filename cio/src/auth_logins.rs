@@ -458,7 +458,7 @@ mod tests {
         refresh_auth_users_and_logins(&db).await;
 
         // Update auth user and auth user logins in airtable.
-        AuthUsers::get_from_db(&db).update_airtable().await;
         AuthUserLogins::get_from_db(&db).update_airtable().await;
+        AuthUsers::get_from_db(&db).update_airtable().await;
     }
 }
