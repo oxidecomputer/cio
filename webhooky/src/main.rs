@@ -39,7 +39,7 @@ use cio_api::rfds::is_image;
 use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
-use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_contents_from_repo, get_gsuite_token, github_org};
+use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
@@ -1602,7 +1602,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             let website_file = file.replace("rfd/", "src/public/static/images/");
 
             // We need to get the current sha for the file we want to delete.
-            let (_, gh_file_sha) = get_file_contents_from_repo(&github_repo, &website_file, &event.repository.default_branch).await;
+            let (_, gh_file_sha) = get_file_content_from_repo(&github_repo, &website_file, &event.repository.default_branch).await;
 
             if !gh_file_sha.is_empty() {
                 github_repo
@@ -1640,7 +1640,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let (gh_file_content, _) = get_file_contents_from_repo(&github_repo, &file, branch).await.unwrap();
+            let (gh_file_content, _) = get_file_content_from_repo(&github_repo, &file, branch).await.unwrap();
 
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
@@ -1791,7 +1791,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                 let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
                 // First get the sha of the old pdf.
-                let (_, old_pdf_sha) = get_file_contents_from_repo(&github_repo, &pdf_path, &event.repository.default_branch).await;
+                let (_, old_pdf_sha) = get_file_content_from_repo(&github_repo, &pdf_path, &event.repository.default_branch).await;
 
                 if !old_pdf_sha.is_empty() {
                     // Delete the old filename from GitHub.
