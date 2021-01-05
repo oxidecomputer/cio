@@ -293,22 +293,22 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     }
 
     // Run the correct handler function based on the event type and repo.
-    if event.repository.is_some() {
-        let repo = event.clone().repository.unwrap();
+    if !event.repository.name.is_empty() {
+        let repo = &event.repository;
         let repo_name = Repo::from_str(&repo.name).unwrap();
         match repo_name {
             Repo::RFD => match event_type {
                 EventType::Push => {
-                    return handle_rfd_push(api_context, &repo, event).await;
+                    return handle_rfd_push(api_context, event).await;
                 }
                 EventType::PullRequest => {
-                    return handle_rfd_pull_request(api_context, &repo, event).await;
+                    return handle_rfd_pull_request(api_context, event).await;
                 }
                 _ => (),
             },
             Repo::Configs => {
                 if let EventType::Push = event_type {
-                    return handle_configs_push(api_context, &repo, event).await;
+                    return handle_configs_push(api_context, event).await;
                 }
             }
             _ => {
@@ -906,8 +906,8 @@ pub struct GitHubWebhook {
     pub sender: GitHubUser,
     /// The `repository` where the event occurred. Webhook payloads contain the
     /// `repository` property when the event occurs from activity in a repository.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub repository: Option<hubcaps::repositories::Repo>,
+    #[serde(default)]
+    pub repository: GitHubRepo,
     /// Webhook payloads contain the `organization` object when the webhook is
     /// configured for an organization or the event occurs from activity in a
     /// repository owned by an organization.
@@ -976,12 +976,26 @@ pub struct GitHubWebhook {
     pub check_run: GitHubCheckRun,
 }
 
+/// A GitHub repository.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
+#[derive(Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubRepo {
+    #[serde(default)]
+    pub owner: GitHubUser,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub full_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub default_branch: String,
+}
+
 impl GitHubWebhook {
     // Push an event for every commit.
     #[instrument]
     #[inline]
     pub async fn as_influx_push(&self, influx: &influx::Client, github: &Github) {
-        let repo = self.repository.as_ref().unwrap();
+        let repo = &self.repository;
 
         for commit in &self.commits {
             if commit.distinct {
@@ -1018,7 +1032,7 @@ impl GitHubWebhook {
     pub fn as_influx_pull_request(&self) -> influx::PullRequest {
         influx::PullRequest {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             head_reference: self.pull_request.head.commit_ref.to_string(),
@@ -1034,7 +1048,7 @@ impl GitHubWebhook {
     pub fn as_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
         influx::PullRequestReviewComment {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             pull_request_number: self.pull_request.number,
@@ -1048,7 +1062,7 @@ impl GitHubWebhook {
     pub fn as_influx_issue(&self) -> influx::Issue {
         influx::Issue {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             number: self.number,
@@ -1061,7 +1075,7 @@ impl GitHubWebhook {
     pub fn as_influx_issue_comment(&self) -> influx::IssueComment {
         influx::IssueComment {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             issue_number: self.issue.number,
@@ -1075,7 +1089,7 @@ impl GitHubWebhook {
     pub fn as_influx_check_suite(&self) -> influx::CheckSuite {
         influx::CheckSuite {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
 
@@ -1098,7 +1112,7 @@ impl GitHubWebhook {
     pub fn as_influx_check_run(&self) -> influx::CheckRun {
         influx::CheckRun {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
 
@@ -1123,7 +1137,7 @@ impl GitHubWebhook {
     pub fn as_influx_repository(&self) -> influx::Repository {
         influx::Repository {
             time: Utc::now(),
-            repo_name: self.repository.as_ref().unwrap().name.to_string(),
+            repo_name: self.repository.name.to_string(),
             sender: self.sender.login.to_string(),
             action: self.action.to_string(),
         }
@@ -1403,20 +1417,20 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
 /// Handle a `pull_request` event for the rfd repo.
 #[instrument(skip(api_context))]
 #[inline]
-async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &hubcaps::repositories::Repo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
 
     // Let's get the RFD.
     let branch = event.pull_request.head.commit_ref.to_string();
 
     // Check if we somehow had a pull request opened from the default branch.
     // This should never happen, but let's check regardless.
-    if branch == repo.default_branch {
+    if branch == event.repository.default_branch {
         // Return early.
-        event!(Level::INFO, "event was to the default branch `{}`, we don't care: {:?}", repo.default_branch, event);
+        event!(Level::INFO, "event was to the default branch `{}`, we don't care: {:?}", event.repository.default_branch, event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -1449,8 +1463,8 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &hubcaps::repo
             .await
             .unwrap_or_else(|e| {
                 panic!(
-                    "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
-                    event.pull_request.title, rfd.name, event.pull_request.number, e
+                    "unable to update title of pull request from `{}` to `{}` for pr#{}: {}, {:?} {}",
+                    event.pull_request.title, rfd.name, event.pull_request.number, e, rfd, number
                 )
             });
     }
@@ -1539,7 +1553,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, repo: &hubcaps::repo
 /// Handle a `push` event for the rfd repo.
 #[instrument(skip(api_context))]
 #[inline]
-async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories::Repo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here because otherwise it will expire.
     let token = get_gsuite_token().await;
@@ -1549,7 +1563,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
     let db = &api_context.db;
 
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -1584,7 +1598,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
             let website_file = file.replace("rfd/", "src/public/static/images/");
 
             // We need to get the current sha for the file we want to delete.
-            let gh_file = github_repo.content().file(&website_file, &repo.default_branch).await.unwrap();
+            let gh_file = github_repo.content().file(&website_file, &event.repository.default_branch).await.unwrap();
 
             github_repo
                 .content()
@@ -1595,7 +1609,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
                         website_file
                     ),
                     &gh_file.sha,
-                    &repo.default_branch,
+                    &event.repository.default_branch,
                 )
                 .await
                 .unwrap();
@@ -1626,7 +1640,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
             // this is where images go for the static website.
             // We update these on the default branch ONLY
             let website_file = file.replace("rfd/", "src/public/static/images/");
-            create_or_update_file_in_github_repo(&github_repo, &repo.default_branch, &website_file, gh_file.content.to_vec()).await;
+            create_or_update_file_in_github_repo(&github_repo, &event.repository.default_branch, &website_file, gh_file.content.to_vec()).await;
             event!(Level::INFO, "updated file `{}` since it was modified in mose recent push for RFD {:?}", website_file, event);
             // We are done so we can continue throught the loop.
             continue;
@@ -1681,7 +1695,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
             // a PR. Instead, below, the state of the RFD would be moved to `published`.
             // TODO: see if we drop events, if we do, we might want to remove the check with
             // the old state and just do it everytime an RFD is in discussion.
-            if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != repo.default_branch {
+            if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != event.repository.default_branch {
                 // First, we need to make sure we don't already have a pull request open.
                 let pulls = github_repo
                     .pulls()
@@ -1727,7 +1741,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
                                     .create(&hubcaps::pulls::PullOptions::new(
                 rfd.name.to_string(),
                 format!("{}:{}", api_context.github_org,branch),
-                repo.default_branch.to_string(),
+                event.repository.default_branch.to_string(),
                 Some("Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your document and close this pull request."),
                                             ))
                                     .await
@@ -1742,12 +1756,12 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
 
             // If the RFD was merged into the default branch, but the RFD state is not `published`,
             // update the state of the RFD in GitHub to show it as `published`.
-            if branch == repo.default_branch && rfd.state != "published" {
+            if branch == event.repository.default_branch && rfd.state != "published" {
                 event!(
                     Level::INFO,
                     "RFD {} is the branch {} but its state is {}, updating it to `published`",
                     rfd.number_string,
-                    repo.default_branch,
+                    event.repository.default_branch,
                     old_rfd_state,
                 );
 
@@ -1770,7 +1784,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
                 let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
                 // First get the sha of the old pdf.
-                let old_pdf = github_repo.content().file(&pdf_path, &repo.default_branch).await.unwrap();
+                let old_pdf = github_repo.content().file(&pdf_path, &event.repository.default_branch).await.unwrap();
 
                 // Delete the old filename from GitHub.
                 github_repo
@@ -1782,7 +1796,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
                             old_rfd_pdf
                         ),
                         &old_pdf.sha,
-                        &repo.default_branch,
+                        &event.repository.default_branch,
                     )
                     .await
                     .unwrap();
@@ -1817,9 +1831,9 @@ async fn handle_rfd_push(api_context: Arc<Context>, repo: &hubcaps::repositories
 /// Handle a `push` event for the configs repo.
 #[instrument(skip(api_context))]
 #[inline]
-async fn handle_configs_push(api_context: Arc<Context>, repo: &hubcaps::repositories::Repo, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_configs_push(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), repo.name.to_string());
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -1837,14 +1851,14 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &hubcaps::reposito
     // Get the branch name.
     let branch = event.refv.trim_start_matches("refs/heads/");
     // Make sure this is to the default branch, we don't care about anything else.
-    if branch != repo.default_branch {
+    if branch != event.repository.default_branch {
         // We can throw this out, log it and return early.
         event!(
             Level::INFO,
             "`push` event commit `{}` is to the branch `{}` not the default branch `{}`",
             commit.id,
             branch,
-            repo.default_branch
+            event.repository.default_branch
         );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1905,7 +1919,8 @@ async fn handle_configs_push(api_context: Arc<Context>, repo: &hubcaps::reposito
 #[instrument(skip(api_context))]
 #[inline]
 async fn handle_repository_event(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let nr = NewRepo::new(event.repository.unwrap());
+    let repo = &api_context.github.repo(event.repository.owner.login, event.repository.name).get().await.unwrap();
+    let nr = NewRepo::new(repo.clone());
     nr.upsert(&api_context.db).await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
