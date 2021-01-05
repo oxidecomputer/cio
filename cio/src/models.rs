@@ -107,66 +107,119 @@ pub struct NewRepo {
     pub full_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
+    #[serde(default)]
     pub private: bool,
+    #[serde(default)]
     pub fork: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub html_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub archive_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub assignees_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub blobs_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub branches_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub clone_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub collaborators_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub comments_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub commits_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub compare_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub contents_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub contributors_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub deployments_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub downloads_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub events_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub forks_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub git_commits_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub git_refs_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub git_tags_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub git_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub hooks_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub issue_comment_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub issue_events_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub issues_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub keys_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub labels_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub languages_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub merges_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub milestones_url: String,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub mirror_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notifications_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub pulls_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub releases_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub ssh_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub stargazers_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub statuses_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub subscribers_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub subscription_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub svn_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tags_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub teams_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub trees_url: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub homepage: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub language: String,
+    #[serde(default)]
     pub forks_count: i32,
     pub stargazers_count: i32,
+    #[serde(default)]
     pub watchers_count: i32,
+    #[serde(default)]
     pub size: i32,
     pub default_branch: String,
+    #[serde(default)]
     pub open_issues_count: i32,
+    #[serde(default)]
     pub has_issues: bool,
+    #[serde(default)]
     pub has_wiki: bool,
+    #[serde(default)]
     pub has_pages: bool,
+    #[serde(default)]
     pub has_downloads: bool,
+    #[serde(default)]
     pub archived: bool,
     #[serde(deserialize_with = "crate::configs::null_date_format::deserialize")]
     pub pushed_at: DateTime<Utc>,
