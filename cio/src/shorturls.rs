@@ -147,6 +147,22 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
 
         // Add the link.
         links.push(l.clone());
+
+        if hostname == "cio-api" {
+            // Alias this to "api" as well.
+            let l = ShortUrl {
+                name: "api".to_string(),
+                description: format!("Route for Tailscale IP for {}", "api"),
+                link: Default::default(),
+                ip: json!(device.addresses.get(0).unwrap()).to_string(),
+                subdomain: subdomain.to_string(),
+                aliases: Default::default(),
+                discussion: Default::default(),
+            };
+
+            // Add the link.
+            links.push(l.clone());
+        }
     }
 
     // Generate the files for the links.
