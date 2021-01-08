@@ -756,7 +756,10 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
 #[inline]
 async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
-    let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_default();
+    let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
+        println!("decoding event body `{}` failed: {}", event.to_string(), e);
+        Default::default()
+    });
     event!(Level::INFO, "shipment parsed: {:?}", body);
 
     if body.data.address_from.street1.is_empty() {
@@ -775,6 +778,7 @@ async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, bod
 /// A Shippo tracking update event.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct ShippoTrackingUpdateEvent {
+    #[serde(default)]
     pub data: shippo::TrackingStatus,
 }
 
