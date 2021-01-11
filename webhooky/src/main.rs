@@ -512,8 +512,8 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
-    //new_applicant.create_github_next_steps_issue(&github, &meta_issues).await;
-    //  new_applicant.create_github_onboarding_issue(&github, &configs_issues, &meta_issues).await;
+    new_applicant.create_github_next_steps_issue(&github, &meta_issues).await;
+    new_applicant.create_github_onboarding_issue(&github, &configs_issues, &meta_issues).await;
 
     event!(Level::INFO, "applicant {} updated successfully", new_applicant.email);
     Ok(HttpResponseAccepted("ok".to_string()))
