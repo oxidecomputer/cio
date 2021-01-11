@@ -76,6 +76,8 @@ pub struct Shipment {
     pub shippo_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub messages: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
 }
 
 impl Shipment {
@@ -147,6 +149,7 @@ impl Shipment {
             label_link: Default::default(),
             eta: None,
             messages: Default::default(),
+            notes: Default::default(),
         }
     }
 
@@ -314,6 +317,7 @@ impl Shipment {
                 label_link: Default::default(),
                 eta: None,
                 messages: Default::default(),
+                notes: Default::default(),
             },
             sent,
         )
@@ -802,6 +806,9 @@ impl UpdateAirtableRecord<Shipment> for Shipment {
         }
         if self.cost == 0.0 {
             self.cost = record.cost;
+        }
+        if self.notes.is_empty() {
+            self.notes = record.notes;
         }
     }
 }
