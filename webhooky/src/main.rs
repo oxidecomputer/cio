@@ -21,6 +21,7 @@ use chrono_humanize::HumanTime;
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, Path, Query, RequestContext, TypedBody};
 use futures_util::TryStreamExt;
 use google_drive::GoogleDrive;
+use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -417,6 +418,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
 
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
+    let github = &api_context.github;
 
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
@@ -494,6 +496,24 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
 
     // Update the applicant in the database and Airtable.
     let new_applicant = a.update(db).await;
+
+    // Get all the hiring issues on the meta repository.
+    let meta_issues = github
+        .repo(github_org(), "meta")
+        .issues()
+        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+        .await
+        .unwrap();
+
+    // Get all the hiring issues on the configs repository.
+    let configs_issues = github
+        .repo(github_org(), "configs")
+        .issues()
+        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+        .await
+        .unwrap();
+    //new_applicant.create_github_next_steps_issue(&github, &meta_issues).await;
+    //  new_applicant.create_github_onboarding_issue(&github, &configs_issues, &meta_issues).await;
 
     event!(Level::INFO, "applicant {} updated successfully", new_applicant.email);
     Ok(HttpResponseAccepted("ok".to_string()))

@@ -41,7 +41,7 @@ impl FromStr for Status {
     #[instrument]
     #[inline]
     fn from_str(status: &str) -> Result<Self, Self::Err> {
-        let s = status.to_lowercase();
+        let s = status.to_lowercase().trim().to_string();
 
         if s.contains("next steps") {
             Ok(Status::NextSteps)

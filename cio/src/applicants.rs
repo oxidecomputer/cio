@@ -565,167 +565,6 @@ Sincerely,
         self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
-    #[instrument]
-    #[inline]
-    pub async fn create_github_next_steps_issue(&self, github: &Github, meta_issues: &[Issue]) {
-        // Check if we already have an issue for this user.
-        let issue = check_if_github_issue_exists(&meta_issues, &self.name);
-
-        // Check if their status is next steps, we only care about folks in the next steps.
-        if !self.status.contains("Next steps") {
-            // Make sure we don't already have an issue for them.
-            if let Some(i) = issue {
-                if i.state != "open" {
-                    // We only care if the issue is still opened.
-                    return;
-                }
-
-                // Delete the "next steps" issue from the "meta" repository.
-                // This is because they are no longer in "next steps".
-                let repo = github.repo(github_org(), "meta");
-
-                // Comment on the issue that this person is now set to be onboarded.
-                repo.issue(i.number)
-                    .comments()
-                    .create(&CommentOptions {
-                        body: format!("Closing issue automatically since the applicant is now status: `{}`", self.status,),
-                    })
-                    .await
-                    .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
-
-                // Close the issue.
-                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
-            }
-            // Return early.
-            return;
-        }
-
-        if issue.is_some() {
-            // Return early we don't want to update the issue because it will overwrite
-            // any changes we made.
-            return;
-        }
-
-        // Create an issue for the applicant.
-        let title = format!("Hiring: {}", self.name);
-        let labels = vec!["hiring".to_string()];
-        let body = format!(
-            "- [ ] Schedule follow up meetings
-- [ ] Schedule sync to discuss
-
-## Candidate Information
-
-Submitted Date: {}
-Email: {}
-Phone: {}
-Location: {}
-GitHub: {}
-Resume: {}
-Oxide Candidate Materials: {}
-
-## Reminder
-
-To view the all the candidates refer to the Airtable workspace: https://airtable-applicants.corp.oxide.computer
-
-cc @jessfraz @sdtuck @bcantrill",
-            self.submitted_time, self.email, self.phone, self.location, self.github, self.resume, self.materials
-        );
-
-        // Create the issue.
-        github
-            .repo(github_org(), "meta")
-            .issues()
-            .create(&IssueOptions {
-                title,
-                body: Some(body),
-                assignee: Some("jessfraz".to_string()),
-                labels,
-                milestone: Default::default(),
-                state: Default::default(),
-            })
-            .await
-            .unwrap();
-
-        println!("[applicant]: created hiring issue for {}", self.email);
-    }
-
-    #[instrument]
-    #[inline]
-    pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue], meta_issues: &[Issue]) {
-        // Check if their status is not hired, we only care about hired applicants.
-        if !self.status.contains("Hired") {
-            return;
-        }
-
-        // Check if we already have an issue for this user.
-        let issue = check_if_github_issue_exists(&configs_issues, &self.name);
-        if issue.is_some() {
-            // Return early we don't want to update the issue because it will overwrite
-            // any changes we made.
-            return;
-        }
-
-        // Create an issue for the applicant.
-        let title = format!("Onboarding: {}", self.name);
-        let labels = vec!["hiring".to_string()];
-        let body = format!(
-            "- [ ] Add to users.toml
-- [ ] Add to matrix chat
-Start Date: [START DATE (ex. Monday, January 20th, 2020)]
-Personal Email: {}
-Twitter: [TWITTER HANDLE]
-GitHub: {}
-Phone: {}
-Location: {}
-cc @jessfraz @sdtuck @bcantrill",
-            self.email, self.github, self.phone, self.location,
-        );
-
-        // Create the issue.
-        let new_issue = github
-            .repo(github_org(), "configs")
-            .issues()
-            .create(&IssueOptions {
-                title,
-                body: Some(body),
-                assignee: Some("jessfraz".to_string()),
-                labels,
-                milestone: Default::default(),
-                state: Default::default(),
-            })
-            .await
-            .unwrap();
-
-        println!("[applicant]: created onboarding issue for {}", self.email);
-
-        // Delete the "next steps" issue from the "meta" repository.
-        if let Some(mi) = check_if_github_issue_exists(&meta_issues, &self.name) {
-            if mi.state != "open" {
-                // We only care if the issue is still opened.
-                return;
-            }
-
-            let repo = github.repo(github_org(), "meta");
-
-            // Comment on the issue that this person is now set to be onboarded.
-            repo.issue(mi.number)
-                .comments()
-                .create(&CommentOptions {
-                    body: format!(
-                        "Closing issue automatically since the applicant is set to be onboarded.
-The onboarding issue is: https://github.com/{}/configs#{}",
-                        github_org(),
-                        new_issue.number
-                    ),
-                })
-                .await
-                .unwrap();
-
-            // Close the issue.
-            repo.issue(mi.number).close().await.unwrap();
-        }
-    }
-
     /// Get the human duration of time since the application was submitted.
     #[instrument]
     #[inline]
@@ -1019,6 +858,167 @@ impl Applicant {
                 }
             ]
         })
+    }
+
+    #[instrument]
+    #[inline]
+    pub async fn create_github_next_steps_issue(&self, github: &Github, meta_issues: &[Issue]) {
+        // Check if we already have an issue for this user.
+        let issue = check_if_github_issue_exists(&meta_issues, &self.name);
+
+        // Check if their status is next steps, we only care about folks in the next steps.
+        if !self.status.contains("Next steps") {
+            // Make sure we don't already have an issue for them.
+            if let Some(i) = issue {
+                if i.state != "open" {
+                    // We only care if the issue is still opened.
+                    return;
+                }
+
+                // Delete the "next steps" issue from the "meta" repository.
+                // This is because they are no longer in "next steps".
+                let repo = github.repo(github_org(), "meta");
+
+                // Comment on the issue that this person is now set to be onboarded.
+                repo.issue(i.number)
+                    .comments()
+                    .create(&CommentOptions {
+                        body: format!("Closing issue automatically since the applicant is now status: `{}`", self.status,),
+                    })
+                    .await
+                    .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
+
+                // Close the issue.
+                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
+            }
+            // Return early.
+            return;
+        }
+
+        if issue.is_some() {
+            // Return early we don't want to update the issue because it will overwrite
+            // any changes we made.
+            return;
+        }
+
+        // Create an issue for the applicant.
+        let title = format!("Hiring: {}", self.name);
+        let labels = vec!["hiring".to_string()];
+        let body = format!(
+            "- [ ] Schedule follow up meetings
+- [ ] Schedule sync to discuss
+
+## Candidate Information
+
+Submitted Date: {}
+Email: {}
+Phone: {}
+Location: {}
+GitHub: {}
+Resume: {}
+Oxide Candidate Materials: {}
+
+## Reminder
+
+To view the all the candidates refer to the Airtable workspace: https://airtable-applicants.corp.oxide.computer
+
+cc @jessfraz @sdtuck @bcantrill",
+            self.submitted_time, self.email, self.phone, self.location, self.github, self.resume, self.materials
+        );
+
+        // Create the issue.
+        github
+            .repo(github_org(), "meta")
+            .issues()
+            .create(&IssueOptions {
+                title,
+                body: Some(body),
+                assignee: Some("jessfraz".to_string()),
+                labels,
+                milestone: Default::default(),
+                state: Default::default(),
+            })
+            .await
+            .unwrap();
+
+        println!("[applicant]: created hiring issue for {}", self.email);
+    }
+
+    #[instrument]
+    #[inline]
+    pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue], meta_issues: &[Issue]) {
+        // Check if their status is not hired, we only care about hired applicants.
+        if !self.status.contains("Hired") {
+            return;
+        }
+
+        // Check if we already have an issue for this user.
+        let issue = check_if_github_issue_exists(&configs_issues, &self.name);
+        if issue.is_some() {
+            // Return early we don't want to update the issue because it will overwrite
+            // any changes we made.
+            return;
+        }
+
+        // Create an issue for the applicant.
+        let title = format!("Onboarding: {}", self.name);
+        let labels = vec!["hiring".to_string()];
+        let body = format!(
+            "- [ ] Add to users.toml
+- [ ] Add to matrix chat
+Start Date: [START DATE (ex. Monday, January 20th, 2020)]
+Personal Email: {}
+Twitter: [TWITTER HANDLE]
+GitHub: {}
+Phone: {}
+Location: {}
+cc @jessfraz @sdtuck @bcantrill",
+            self.email, self.github, self.phone, self.location,
+        );
+
+        // Create the issue.
+        let new_issue = github
+            .repo(github_org(), "configs")
+            .issues()
+            .create(&IssueOptions {
+                title,
+                body: Some(body),
+                assignee: Some("jessfraz".to_string()),
+                labels,
+                milestone: Default::default(),
+                state: Default::default(),
+            })
+            .await
+            .unwrap();
+
+        println!("[applicant]: created onboarding issue for {}", self.email);
+
+        // Delete the "next steps" issue from the "meta" repository.
+        if let Some(mi) = check_if_github_issue_exists(&meta_issues, &self.name) {
+            if mi.state != "open" {
+                // We only care if the issue is still opened.
+                return;
+            }
+
+            let repo = github.repo(github_org(), "meta");
+
+            // Comment on the issue that this person is now set to be onboarded.
+            repo.issue(mi.number)
+                .comments()
+                .create(&CommentOptions {
+                    body: format!(
+                        "Closing issue automatically since the applicant is set to be onboarded.
+The onboarding issue is: https://github.com/{}/configs#{}",
+                        github_org(),
+                        new_issue.number
+                    ),
+                })
+                .await
+                .unwrap();
+
+            // Close the issue.
+            repo.issue(mi.number).close().await.unwrap();
+        }
     }
 }
 
@@ -1338,24 +1338,6 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     // Initialize the GSuite sheets client.
     let drive_client = GoogleDrive::new(token.clone());
 
-    let github = authenticate_github_jwt();
-
-    // Get all the hiring issues on the meta repository.
-    let meta_issues = github
-        .repo(github_org(), "meta")
-        .issues()
-        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
-        .await
-        .unwrap();
-
-    // Get all the hiring issues on the configs repository.
-    let configs_issues = github
-        .repo(github_org(), "configs")
-        .issues()
-        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
-        .await
-        .unwrap();
-
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
     let mut applicants: Vec<NewApplicant> = Default::default();
@@ -1387,9 +1369,6 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
             let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row);
             applicant.expand(&drive_client, &sheets_client, columns.sent_email_received, row_index + 1).await;
 
-            applicant.create_github_next_steps_issue(&github, &meta_issues).await;
-            applicant.create_github_onboarding_issue(&github, &configs_issues, &meta_issues).await;
-
             if !applicant.sent_email_received {
                 // Post to Slack.
                 post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
@@ -1411,9 +1390,30 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
 pub async fn refresh_db_applicants(db: &Database) {
     let applicants = get_raw_applicants().await;
 
+    let github = authenticate_github_jwt();
+
+    // Get all the hiring issues on the meta repository.
+    let meta_issues = github
+        .repo(github_org(), "meta")
+        .issues()
+        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+        .await
+        .unwrap();
+
+    // Get all the hiring issues on the configs repository.
+    let configs_issues = github
+        .repo(github_org(), "configs")
+        .issues()
+        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+        .await
+        .unwrap();
+
     // Sync applicants.
     for applicant in applicants {
-        applicant.upsert(db).await;
+        let new_applicant = applicant.upsert(db).await;
+
+        new_applicant.create_github_next_steps_issue(&github, &meta_issues).await;
+        new_applicant.create_github_onboarding_issue(&github, &configs_issues, &meta_issues).await;
     }
 }
 
