@@ -1425,7 +1425,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     let db = &api_context.db;
 
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
+    let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd".to_string());
 
     // Let's get the RFD.
     let branch = event.pull_request.head.commit_ref.to_string();
