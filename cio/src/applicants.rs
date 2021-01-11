@@ -713,7 +713,7 @@ cc @jessfraz @sdtuck @bcantrill",
                 .create(&CommentOptions {
                     body: format!(
                         "Closing issue automatically since the applicant is set to be onboarded.
-The onboarding issue is: {}/configs#{}",
+The onboarding issue is: https://github.com/{}/configs#{}",
                         github_org(),
                         new_issue.number
                     ),
