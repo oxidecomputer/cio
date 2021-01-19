@@ -37,7 +37,7 @@ use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, NewRFD, NewRepo};
 use cio_api::rfds::is_image;
-use cio_api::shipments::{get_shipments_spreadsheets, Shipment};
+use cio_api::shipments::{get_shipments_spreadsheets, NewInboundShipment, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
@@ -785,10 +785,11 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
+    let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
     // Get the row from airtable.
-    let mut record = Shipment::get_from_airtable(&event.record_id).await;
+    let record = Shipment::get_from_airtable(&event.record_id).await;
 
     let mut new_shipment = NewInboundShipment {
         carrier: record.carrier,
@@ -807,11 +808,11 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     new_shipment.expand().await;
     let mut shipment = new_shipment.upsert_in_db(&db);
     if shipment.airtable_record_id.is_empty() {
-        shipment.airtable_record_id = record.id;
+        shipment.airtable_record_id = event.record_id;
     }
     shipment.update(&db).await;
 
-    event!(Level::INFO, "shipment {} created successfully", shipment.email);
+    event!(Level::INFO, "inbound shipment {} updated successfully", shipment.tracking_number);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
