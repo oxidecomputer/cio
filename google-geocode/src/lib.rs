@@ -116,7 +116,10 @@ impl Geocode {
         };
 
         let r: ReplyResult = resp.json().await.unwrap();
-        Ok(r.results.get(0).unwrap_or_default().clone())
+        if r.results.is_empty() {
+            Default::default()
+        }
+        Ok(r.results.get(0).unwrap().clone())
     }
 }
 
