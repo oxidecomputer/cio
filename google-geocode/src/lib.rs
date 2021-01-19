@@ -116,7 +116,7 @@ impl Geocode {
         };
 
         let r: ReplyResult = resp.json().await.unwrap();
-        Ok(r.results.get(0).unwrap().clone())
+        Ok(r.results.get(0).unwrap_or_default().clone())
     }
 }
 
@@ -208,7 +208,7 @@ impl Display for FormattedAddress {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 struct ReplyResult {
     #[serde(default)]
     error_message: String,
