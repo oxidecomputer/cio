@@ -93,19 +93,77 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
 }
 
 impl NewInboundShipment {
+    #[tracing::instrument]
+    #[inline]
+    pub fn oxide_tracking_link(&self) -> String {
+        format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
+    }
+
+    // Get the tracking link for the provider.
+    #[instrument]
+    #[inline]
+    fn tracking_link(&mut self) {
+        let carrier = self.carrier.to_lowercase();
+
+        if carrier == "usps" {
+            self.tracking_link = format!("https://tools.usps.com/go/TrackConfirmAction_input?origTrackNum={}", self.tracking_number);
+        } else if carrier == "ups" {
+            self.tracking_link = format!("https://www.ups.com/track?tracknum={}", self.tracking_number);
+        } else if carrier == "fedex" {
+            self.tracking_link = format!("https://www.fedex.com/apps/fedextrack/?tracknumbers={}", self.tracking_number);
+        } else if carrier == "dhl" {
+            // TODO: not sure if this one is correct.
+            self.tracking_link = format!("https://www.dhl.com/en/express/tracking.html?AWB={}", self.tracking_number);
+        }
+    }
+
     /// Get the details about the shipment from the tracking API.
+    #[tracing::instrument]
+    #[inline]
     pub async fn expand(&mut self) {
         // Create the shippo client.
         let shippo = Shippo::new_from_env();
 
-        let mut carrier = self.carrier.to_string();
-        if self.carrier.to_lowercase() == "dhl" {
+        let mut carrier = self.carrier.to_lowercase().to_string();
+        if carrier == "dhl" {
             carrier = "dhl_express".to_string();
         }
 
         // Get the tracking status for the shipment and fill in the details.
         let ts = shippo.get_tracking_status(&carrier, &self.tracking_number).await.unwrap_or_default();
-        println!("{:?}", ts);
+        self.tracking_number = ts.tracking_number.to_string();
+        self.tracking_status = ts.tracking_status.status.to_string();
+        self.tracking_link();
+
+        self.oxide_tracking_link = self.oxide_tracking_link();
+
+        /*
+        // Register a tracking webhook for this shipment.
+        let status = shippo_client.register_tracking_webhook(&carrier, &self.tracking_number).await.unwrap_or_else(|e| {
+            println!("registering the tracking webhook failed: {:?}", e);
+            Default::default()
+        });*/
+
+        self.messages = ts.tracking_status.status_details;
+
+        // Iterate over the tracking history and set the shipped_time.
+        // Get the first date it was maked as in transit and use that as the shipped
+        // time.
+        for h in ts.tracking_history {
+            if h.status == *"TRANSIT" {
+                if let Some(shipped_time) = h.status_date {
+                    let current_shipped_time = if let Some(s) = self.shipped_time { s } else { Utc::now() };
+
+                    if shipped_time < current_shipped_time {
+                        self.shipped_time = Some(shipped_time);
+                    }
+                }
+            }
+        }
+
+        if ts.tracking_status.status == *"DELIVERED" {
+            self.delivered_time = ts.tracking_status.status_date;
+        }
     }
 }
 
