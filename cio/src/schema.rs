@@ -241,8 +241,6 @@ table! {
         who_can_post_message -> Varchar,
         who_can_view_group -> Varchar,
         who_can_view_membership -> Varchar,
-        link -> Varchar,
-        members -> Nullable<Array<Text>>,
         airtable_record_id -> Varchar,
     }
 }

@@ -876,6 +876,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         )]
         pub struct #new_struct_name {
             // This has to be the first field.
+            #[serde(default)]
             pub id: i32,
             #(#fields),*,
             // This has to be the last field, due to the schemas.

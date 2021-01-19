@@ -5,21 +5,35 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use macros::db;
 use reqwest::StatusCode;
+use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 use tracing::instrument;
 
-use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_OUTBOUND_TABLE};
+use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE};
 use crate::core::UpdateAirtableRecord;
+use crate::db::Database;
 use crate::models::get_value;
+use crate::schema::inbound_shipments;
 use crate::utils::{get_gsuite_token, DOMAIN};
 
 /// The data type for an inbound shipment.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct InboundShipment {
+#[db {
+    new_struct_name = "InboundShipment",
+    airtable_base_id = "AIRTABLE_BASE_ID_SHIPMENTS",
+    airtable_table = "AIRTABLE_INBOUND_TABLE",
+    match_on = {
+        "tracking_number" = "String",
+        "carrier" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "inbound_shipments"]
+pub struct NewInboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub carrier: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -75,6 +89,23 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
         if self.notes.is_empty() {
             self.notes = record.notes;
         }
+    }
+}
+
+impl NewInboundShipment {
+    /// Get the details about the shipment from the tracking API.
+    pub async fn expand(&mut self) {
+        // Create the shippo client.
+        let shippo = Shippo::new_from_env();
+
+        let mut carrier = self.carrier.to_string();
+        if self.carrier.to_lowercase() == "dhl" {
+            carrier = "dhl_express".to_string();
+        }
+
+        // Get the tracking status for the shipment and fill in the details.
+        let ts = shippo.get_tracking_status(&carrier, &self.tracking_number).await.unwrap_or_default();
+        println!("{:?}", ts);
     }
 }
 
@@ -1034,13 +1065,44 @@ pub async fn refresh_airtable_shipments() {
     }
 }
 
+// Sync the inbound shipments.
+#[instrument]
+#[inline]
+pub async fn refresh_inbound_shipments() {
+    let db = Database::new();
+    let is = InboundShipments::get_from_airtable().await;
+
+    for (_, record) in is {
+        let mut new_shipment = NewInboundShipment {
+            carrier: record.fields.carrier,
+            tracking_number: record.fields.tracking_number,
+            tracking_status: record.fields.tracking_status,
+            name: record.fields.name,
+            notes: record.fields.notes,
+            delivered_time: record.fields.delivered_time,
+            shipped_time: record.fields.shipped_time,
+            eta: record.fields.eta,
+            messages: record.fields.messages,
+            oxide_tracking_link: record.fields.oxide_tracking_link,
+            tracking_link: record.fields.tracking_link,
+        };
+        new_shipment.expand().await;
+        let mut shipment = new_shipment.upsert_in_db(&db);
+        if shipment.airtable_record_id.is_empty() {
+            shipment.airtable_record_id = record.id;
+        }
+        shipment.update(&db).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::shipments::refresh_airtable_shipments;
+    use crate::shipments::{refresh_airtable_shipments, refresh_inbound_shipments};
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_cron_shipments() {
+        refresh_inbound_shipments().await;
         refresh_airtable_shipments().await;
     }
 }

@@ -11,5 +11,5 @@ CREATE TABLE inbound_shipments (
     messages VARCHAR NOT NULL,
     name VARCHAR NOT NULL,
     notes VARCHAR NOT NULL,
-    airtable_record_id VARCHAR NOT NULL
+    airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )
