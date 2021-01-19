@@ -117,7 +117,10 @@ impl Geocode {
 
         let r: ReplyResult = resp.json().await.unwrap();
         if r.results.is_empty() {
-            Default::default()
+            return Err(APIError {
+                status_code: StatusCode::NOT_FOUND,
+                body: "".to_string(),
+            });
         }
         Ok(r.results.get(0).unwrap().clone())
     }
