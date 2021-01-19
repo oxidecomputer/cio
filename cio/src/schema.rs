@@ -337,6 +337,25 @@ table! {
 }
 
 table! {
+    recorded_meetings (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        start_time -> Timestamptz,
+        end_time -> Timestamptz,
+        video -> Varchar,
+        chat_log -> Varchar,
+        is_recurring -> Bool,
+        attendees -> Text,
+        transcript -> Text,
+        google_event_id -> Varchar,
+        event_link -> Varchar,
+        location -> Varchar,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     rfds (id) {
         id -> Int4,
         number -> Int4,
@@ -407,6 +426,7 @@ allow_tables_to_appear_in_same_query!(
     links,
     mailing_list_subscribers,
     page_views,
+    recorded_meetings,
     rfds,
     users,
 );

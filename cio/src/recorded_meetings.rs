@@ -14,8 +14,8 @@ pub struct NewRecordedMeeting {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub video: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -79,8 +79,8 @@ pub async fn refresh_recorded_meetings() {
                 let meeting = NewRecordedMeeting {
                     name: event.summary.to_string(),
                     description: event.description.to_string(),
-                    start: event.start.date_time.unwrap(),
-                    end: event.end.date_time.unwrap(),
+                    start_time: event.start.date_time.unwrap(),
+                    end_time: event.end.date_time.unwrap(),
                     video,
                     chat_log,
                     is_recurring: !event.recurring_event_id.is_empty(),
