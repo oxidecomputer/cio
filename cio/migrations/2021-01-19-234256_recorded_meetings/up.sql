@@ -7,7 +7,7 @@ CREATE TABLE recorded_meetings (
 	video VARCHAR NOT NULL,
 	chat_log VARCHAR NOT NULL,
     is_recurring BOOLEAN NOT NULL DEFAULT 'f',
-	attendees TEXT NOT NULL,
+	attendees TEXT [] NOT NULL,
 	transcript TEXT NOT NULL,
 	google_event_id VARCHAR NOT NULL,
 	event_link VARCHAR NOT NULL,

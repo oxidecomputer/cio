@@ -346,7 +346,7 @@ table! {
         video -> Varchar,
         chat_log -> Varchar,
         is_recurring -> Bool,
-        attendees -> Text,
+        attendees -> Array<Text>,
         transcript -> Text,
         google_event_id -> Varchar,
         event_link -> Varchar,

@@ -576,7 +576,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.10",
+ "gsuite-api 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -615,7 +615,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ce16b5edc34d6bbdae56a0d288d0bf9b71892791"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#919b664d4df95c66173520dc2e876db18ba8e276"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -632,7 +632,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.9",
+ "gsuite-api 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1480,9 +1480,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff9eb14f50070077e44437809ccfc3bed1665f9afdf37fa089afeceb5cd2ab8b"
+version = "0.1.10"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1495,6 +1493,8 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4fd88f4275fa9518e4042c38e63144ffef76918d5b3ce18e4b51a61a79bf750"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2059,7 +2059,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ce16b5edc34d6bbdae56a0d288d0bf9b71892791"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#919b664d4df95c66173520dc2e876db18ba8e276"
 dependencies = [
  "Inflector",
  "proc-macro2",

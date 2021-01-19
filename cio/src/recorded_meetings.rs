@@ -3,12 +3,27 @@ use std::env;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use gsuite_api::GSuite;
+use macros::db;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
+use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_RECORDED_MEETINGS_TABLE};
+use crate::db::Database;
+use crate::schema::recorded_meetings;
 use crate::utils::{get_gsuite_token, GSUITE_DOMAIN};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// The data type for a recorded meeting.
+#[db {
+    new_struct_name = "RecordedMeeting",
+    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_table = "AIRTABLE_RECORDED_MEETINGS_TABLE",
+    match_on = {
+        "google_event_id" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "recorded_meetings"]
 pub struct NewRecordedMeeting {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -38,6 +53,7 @@ pub struct NewRecordedMeeting {
 #[instrument]
 #[inline]
 pub async fn refresh_recorded_meetings() {
+    let db = Database::new();
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token().await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
