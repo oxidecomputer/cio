@@ -791,6 +791,12 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     // Get the row from airtable.
     let record = Shipment::get_from_airtable(&event.record_id).await;
 
+    if record.tracking_number.is_empty() || record.carrier.is_empty() {
+        // Return early, we don't care.
+        event!(Level::WARN, "tracking_number and carrier are empty, ignoring");
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
     let mut new_shipment = NewInboundShipment {
         carrier: record.carrier,
         tracking_number: record.tracking_number,

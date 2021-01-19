@@ -1132,6 +1132,11 @@ pub async fn refresh_inbound_shipments() {
     let is = InboundShipments::get_from_airtable().await;
 
     for (_, record) in is {
+        if record.fields.carrier.is_empty() || record.fields.tracking_number.is_empty() {
+            // Ignore it, it's a blank record.
+            continue;
+        }
+
         let mut new_shipment = NewInboundShipment {
             carrier: record.fields.carrier,
             tracking_number: record.fields.tracking_number,
