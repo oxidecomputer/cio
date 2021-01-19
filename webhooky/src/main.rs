@@ -97,8 +97,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
-    api.register(listen_airtable_shipments_outgoing_create_webhooks).unwrap();
-    api.register(listen_airtable_shipments_outgoing_edit_webhooks).unwrap();
+    api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
+    api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
+    api.register(listen_airtable_shipments_outbound_edit_webhooks).unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
@@ -673,11 +674,11 @@ pub struct GoogleSpreadsheetRowCreateEvent {
  */
 #[endpoint {
     method = POST,
-    path = "/airtable/shipments/outgoing/create",
+    path = "/airtable/shipments/outbound/create",
 }]
 #[instrument]
 #[inline]
-async fn listen_airtable_shipments_outgoing_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
@@ -711,11 +712,11 @@ pub struct AirtableRowEvent {
  */
 #[endpoint {
     method = POST,
-    path = "/airtable/shipments/outgoing/edit",
+    path = "/airtable/shipments/outbound/edit",
 }]
 #[instrument]
 #[inline]
-async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
@@ -762,6 +763,55 @@ async fn listen_airtable_shipments_outgoing_edit_webhooks(_rqctx: Arc<RequestCon
         shipment.create_or_update_in_airtable().await;
     }
 
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for rows created in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/shipments/inbound/create",
+}]
+#[instrument]
+#[inline]
+async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    event!(Level::DEBUG, "{:?}", event);
+
+    if event.record_id.is_empty() {
+        event!(Level::WARN, "Record id is empty");
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    let db = &api_context.db;
+
+    // Get the row from airtable.
+    let mut record = Shipment::get_from_airtable(&event.record_id).await;
+
+    let mut new_shipment = NewInboundShipment {
+        carrier: record.carrier,
+        tracking_number: record.tracking_number,
+        tracking_status: record.tracking_status,
+        name: record.name,
+        notes: record.notes,
+        delivered_time: record.delivered_time,
+        shipped_time: record.shipped_time,
+        eta: record.eta,
+        messages: record.messages,
+        oxide_tracking_link: record.oxide_tracking_link,
+        tracking_link: record.tracking_link,
+    };
+
+    new_shipment.expand().await;
+    let mut shipment = new_shipment.upsert_in_db(&db);
+    if shipment.airtable_record_id.is_empty() {
+        shipment.airtable_record_id = record.id;
+    }
+    shipment.update(&db).await;
+
+    event!(Level::INFO, "shipment {} created successfully", shipment.email);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
