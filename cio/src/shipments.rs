@@ -134,6 +134,7 @@ impl NewInboundShipment {
         self.tracking_number = ts.tracking_number.to_string();
         self.tracking_status = ts.tracking_status.status.to_string();
         self.tracking_link();
+        self.eta = ts.eta;
 
         self.oxide_tracking_link = self.oxide_tracking_link();
 
