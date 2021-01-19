@@ -241,6 +241,26 @@ table! {
         who_can_post_message -> Varchar,
         who_can_view_group -> Varchar,
         who_can_view_membership -> Varchar,
+        link -> Varchar,
+        members -> Nullable<Array<Text>>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
+    inbound_shipments (id) {
+        id -> Int4,
+        tracking_number -> Varchar,
+        carrier -> Varchar,
+        tracking_link -> Varchar,
+        oxide_tracking_link -> Varchar,
+        tracking_status -> Varchar,
+        shipped_time -> Nullable<Timestamptz>,
+        delivered_time -> Nullable<Timestamptz>,
+        eta -> Nullable<Timestamptz>,
+        messages -> Varchar,
+        name -> Varchar,
+        notes -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
@@ -383,6 +403,7 @@ allow_tables_to_appear_in_same_query!(
     github_labels,
     github_repos,
     groups,
+    inbound_shipments,
     journal_club_meetings,
     journal_club_papers,
     links,
