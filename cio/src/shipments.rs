@@ -17,6 +17,67 @@ use crate::core::UpdateAirtableRecord;
 use crate::models::get_value;
 use crate::utils::{get_gsuite_token, DOMAIN};
 
+/// The data type for an inbound shipment.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct InboundShipment {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub carrier: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_number: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub oxide_tracking_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tracking_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shipped_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivered_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub eta: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub messages: String,
+
+    /// These fields are filled in by the Airtable and should not be edited by the
+    /// API updating.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+}
+
+/// Implement updating the Airtable record for a an InboundShipment.
+#[async_trait]
+impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
+    async fn update_airtable_record(&mut self, record: InboundShipment) {
+        if self.carrier.is_empty() {
+            self.carrier = record.carrier;
+        }
+        if self.tracking_number.is_empty() {
+            self.tracking_number = record.tracking_number;
+        }
+        if self.tracking_link.is_empty() {
+            self.tracking_link = record.tracking_link;
+        }
+        if self.tracking_status.is_empty() {
+            self.tracking_status = record.tracking_status;
+        }
+        if self.shipped_time.is_none() {
+            self.shipped_time = record.shipped_time;
+        }
+        if self.delivered_time.is_none() {
+            self.delivered_time = record.delivered_time;
+        }
+        if self.eta.is_none() {
+            self.eta = record.eta;
+        }
+        if self.notes.is_empty() {
+            self.notes = record.notes;
+        }
+    }
+}
+
 /// The data type for a internal shipment.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Shipment {
