@@ -15,6 +15,7 @@ pub mod gsuite;
 pub mod journal_clubs;
 pub mod mailing_list;
 pub mod models;
+pub mod recorded_meetings;
 pub mod rfds;
 pub mod schema;
 pub mod shipments;

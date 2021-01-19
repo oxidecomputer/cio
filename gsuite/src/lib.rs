@@ -58,6 +58,7 @@ use std::error;
 use std::fmt;
 use std::sync::Arc;
 
+use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use rand::distributions::Alphanumeric;
@@ -73,6 +74,9 @@ const DIRECTORY_ENDPOINT: &str = "https://www.googleapis.com/admin/directory/v1/
 
 /// Endpoint for the Google Groups settings API.
 const GROUPS_SETTINGS_ENDPOINT: &str = "https://www.googleapis.com/groups/v1/groups/";
+
+/// Endpoint for the Google Calendar API.
+const CALENDAR_ENDPOINT: &str = "https://www.googleapis.com/calendar/v3/";
 
 /// Entrypoint for interacting with the GSuite APIs.
 pub struct GSuite {
@@ -699,6 +703,56 @@ impl GSuite {
 
         Ok(())
     }
+
+    /// List calendars for a user.
+    pub async fn list_calendars(&self) -> Result<Vec<Calendar>, APIError> {
+        // Build the request.
+        let request = self.request(CALENDAR_ENDPOINT, Method::GET, "users/me/calendarList", (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        let value: Calendars = resp.json().await.unwrap();
+
+        Ok(value.items)
+    }
+
+    /// List past events on a calendar.
+    pub async fn list_past_calendar_events(&self, calendar_id: &str) -> Result<Vec<CalendarEvent>, APIError> {
+        // Build the request.
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::GET,
+            &format!("calendars/{}/events", calendar_id),
+            (),
+            Some(&[("singleEvents", "true"), ("maxResults", "2500"), ("timeMax", &Utc::now().to_rfc3339())]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        let value: CalendarEvents = resp.json().await.unwrap();
+
+        Ok(value.items)
+    }
 }
 
 /// Error type returned by our library.
@@ -731,6 +785,166 @@ impl error::Error for APIError {
 /// when we set up their account.
 pub fn generate_password() -> String {
     thread_rng().sample_iter(&Alphanumeric).take(30).collect()
+}
+
+/// A list of calendars.
+/// FROM: https://developers.google.com/calendar/v3/reference/calendarList/list
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct Calendars {
+    /// Token used to access next page of this result.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    pub next_page_token: String,
+    /// Token used at a later point in time to retrieve only the entries that have changed since
+    /// this result was returned. Omitted if further results are available, in which case
+    /// nextPageToken is provided.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextSyncToken")]
+    pub next_sync_token: String,
+    /// Kind of resource this is.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    /// ETag of the resource.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// Event that triggered this response (only used in case of Push Response)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_event: String,
+    /// List of group objects.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<Calendar>,
+}
+
+/// A calendar.
+/// FROM: https://developers.google.com/calendar/v3/reference/calendarList#resource
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct Calendar {
+    /// Kind of resource this is.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    /// ETag of the resource.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub summary: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub location: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "timeZone")]
+    pub time_zone: String,
+}
+
+/// A list of calendar events.
+/// FROM: https://developers.google.com/calendar/v3/reference/events/list
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct CalendarEvents {
+    /// Token used to access next page of this result.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    pub next_page_token: String,
+    /// Token used at a later point in time to retrieve only the entries that have changed since
+    /// this result was returned. Omitted if further results are available, in which case
+    /// nextPageToken is provided.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextSyncToken")]
+    pub next_sync_token: String,
+    /// Kind of resource this is.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    /// ETag of the resource.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    /// Event that triggered this response (only used in case of Push Response)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_event: String,
+    /// List of group objects.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<CalendarEvent>,
+}
+
+/// A calendar event.
+/// FROM: https://developers.google.com/calendar/v3/reference/events#resource
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CalendarEvent {
+    /// Kind of resource this is.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    /// ETag of the resource.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "htmlLink")]
+    pub html_link: String,
+    pub created: DateTime<Utc>,
+    pub updated: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub summary: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub location: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recurringEventId")]
+    pub recurring_event_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub transparency: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub visibility: String,
+    #[serde(default)]
+    pub sequence: i64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attendees: Vec<Attendee>,
+    pub start: Date,
+    pub end: Date,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<Attachment>,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct Date {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "timeZone")]
+    pub time_zone: String,
+    #[serde(default)]
+    pub date: Option<NaiveDate>,
+    #[serde(default, rename = "dateTime")]
+    pub date_time: Option<DateTime<Utc>>,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct Attendee {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "displayName")]
+    pub display_name: String,
+    #[serde(default)]
+    pub organizer: bool,
+    #[serde(default)]
+    pub resource: bool,
+    #[serde(default)]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "responseStatus")]
+    pub response_status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub comment: String,
+    #[serde(default, rename = "additionalGuests")]
+    pub additional_guests: i64,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct Attachment {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "fileUrl")]
+    pub file_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "mimeType")]
+    pub mime_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "iconLink")]
+    pub icon_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "fileId")]
+    pub file_id: String,
 }
 
 /// A Google group.

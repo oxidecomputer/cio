@@ -75,6 +75,7 @@ pub async fn get_gsuite_token() -> AccessToken {
             "https://www.googleapis.com/auth/admin.directory.group",
             "https://www.googleapis.com/auth/admin.directory.resource.calendar",
             "https://www.googleapis.com/auth/admin.directory.user",
+            "https://www.googleapis.com/auth/calendar",
             "https://www.googleapis.com/auth/apps.groups.settings",
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive",
