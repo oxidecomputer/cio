@@ -45,7 +45,7 @@ pandoc = "0.8"
 phonenumber = "0.2"
 regex = "1"
 reqwest = { version = "0.10", features = ["json"] }
-revai = { path = "../revai" }
+revai = { version = "0.1.0" }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "^0.1.0"
 serde = { version = "1.0", features = ["derive"] }

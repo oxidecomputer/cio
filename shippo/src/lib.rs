@@ -513,7 +513,11 @@ pub struct Address {
 impl Address {
     pub fn formatted(&self) -> String {
         let street = format!("{}\n{}", self.street1, self.street2);
-        format!("{}\n{}, {} {} {}", street.trim(), self.city, self.state, self.zip, self.country)
+        let mut zip = self.zip.to_string();
+        if self.country == "US" && zip.len() > 5 {
+            zip.insert(5, '-');
+        }
+        format!("{}\n{}, {} {} {}", street.trim(), self.city, self.state, zip, self.country)
             .trim()
             .trim_matches(',')
             .trim()
@@ -966,7 +970,11 @@ pub struct TrackingLocation {
 
 impl TrackingLocation {
     pub fn formatted(&self) -> String {
-        format!("{}, {} {} {}", self.city, self.state, self.zip, self.country).trim().trim_matches(',').trim().to_string()
+        let mut zip = self.zip.to_string();
+        if self.country == "US" && zip.len() > 5 {
+            zip.insert(5, '-');
+        }
+        format!("{}, {} {} {}", self.city, self.state, zip, self.country).trim().trim_matches(',').trim().to_string()
     }
 }
 
