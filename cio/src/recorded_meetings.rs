@@ -157,8 +157,8 @@ pub async fn refresh_recorded_meetings() {
                 }
 
                 let meeting = NewRecordedMeeting {
-                    name: event.summary.to_string(),
-                    description: event.description.to_string(),
+                    name: event.summary.trim().to_string(),
+                    description: event.description.trim().to_string(),
                     start_time: event.start.date_time.unwrap(),
                     end_time: event.end.date_time.unwrap(),
                     video,
