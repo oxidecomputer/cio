@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_RECORDED_MEETINGS_TABLE};
+use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::truncate;
@@ -101,8 +102,11 @@ pub async fn refresh_recorded_meetings() {
                 let mut attendees: Vec<String> = Default::default();
                 for attendee in event.attendees {
                     attendees.push(attendee.email.to_string());
-                    if attendee.organizer {
-                        owner = attendee.email.to_string();
+                    if attendee.organizer && attendee.email.ends_with(GSUITE_DOMAIN) {
+                        // Make sure the person is still a user.
+                        if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                            owner = attendee.email.to_string()
+                        }
                     }
                 }
 
@@ -121,6 +125,8 @@ pub async fn refresh_recorded_meetings() {
                     // Continue early, we don't care.
                     continue;
                 }
+
+                println!("owner: {}", owner);
 
                 let delegated_token = get_gsuite_token(&owner).await;
                 let drive_client = GoogleDrive::new(delegated_token);
