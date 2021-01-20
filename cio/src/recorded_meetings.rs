@@ -61,7 +61,11 @@ pub struct NewRecordedMeeting {
 /// Implement updating the Airtable record for a RecordedMeeting.
 #[async_trait]
 impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
-    async fn update_airtable_record(&mut self, _record: RecordedMeeting) {}
+    async fn update_airtable_record(&mut self, record: RecordedMeeting) {
+        if !record.transcript_id.is_empty() {
+            self.transcript_id = record.transcript_id;
+        }
+    }
 }
 
 /// Sync the recorded meetings.
@@ -171,7 +175,7 @@ pub async fn refresh_recorded_meetings() {
                     if db_meeting.transcript.is_empty() {
                         // Now let's try to get the transcript.
                         let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
-                        db_meeting.transcript = transcript;
+                        db_meeting.transcript = transcript.trim().to_string();
                         db_meeting.update(&db).await;
                     }
                 }
