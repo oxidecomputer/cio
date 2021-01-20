@@ -101,7 +101,9 @@ pub async fn refresh_recorded_meetings() {
                 let mut owner = "".to_string();
                 let mut attendees: Vec<String> = Default::default();
                 for attendee in event.attendees {
-                    attendees.push(attendee.email.to_string());
+                    if !attendee.resource {
+                        attendees.push(attendee.email.to_string());
+                    }
                     if attendee.organizer && attendee.email.ends_with(GSUITE_DOMAIN) {
                         // Make sure the person is still a user.
                         if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
