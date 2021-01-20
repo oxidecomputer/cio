@@ -106,6 +106,8 @@ pub async fn refresh_recorded_meetings() {
                         // Make sure the person is still a user.
                         if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
                             owner = attendee.email.to_string()
+                        } else {
+                            owner = "catchall@oxidecomputer.com".to_string();
                         }
                     }
                 }
