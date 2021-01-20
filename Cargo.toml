@@ -9,6 +9,7 @@ members = [
 	"gusto",
 	"macros",
 	"printy",
+	"revai",
 	"sendgrid",
 	"sheets",
 	"shippo",

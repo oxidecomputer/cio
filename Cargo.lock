@@ -3041,6 +3041,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "revai"
+version = "0.1.0"
+dependencies = [
+ "bytes 0.5.6",
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ring"
 version = "0.16.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"

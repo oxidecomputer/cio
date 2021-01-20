@@ -1,8 +1,8 @@
 /*!
  * A rust library for interacting with the Geocode API.
  *
- * For more information, the Geocode API is still in beta. Once the docs are
- * online, we need to link to them.
+ * For more information, the Geocode API documentation is available at:
+ * https://developers.google.com/maps/documentation/geocoding/overview
  *
  * Example:
  *
@@ -14,7 +14,7 @@
  *     // Initialize the Geocode client.
  *     let geocode = Geocode::new_from_env();
  *
- *     // List the devices.
+ *     // Get geolocation data.
  *     let g = geocode.get("some address").await.unwrap();
  *
  *     println!("{:?}", g);
