@@ -128,8 +128,6 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
-                println!("owner: {}", owner);
-
                 let delegated_token = get_gsuite_token(&owner).await;
                 let drive_client = GoogleDrive::new(delegated_token);
 
