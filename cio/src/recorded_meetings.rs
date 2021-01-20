@@ -15,6 +15,7 @@ use tracing::instrument;
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_RECORDED_MEETINGS_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
+use crate::models::truncate;
 use crate::schema::recorded_meetings;
 use crate::utils::{get_gsuite_token, GSUITE_DOMAIN};
 
@@ -175,7 +176,7 @@ pub async fn refresh_recorded_meetings() {
                     if db_meeting.transcript.is_empty() {
                         // Now let's try to get the transcript.
                         let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
-                        db_meeting.transcript = transcript.trim().to_string();
+                        db_meeting.transcript = truncate(transcript.trim(), 100000);
                         db_meeting.update(&db).await;
                     }
                 }
