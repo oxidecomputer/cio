@@ -873,7 +873,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
     // Get the existing GSuite users.
@@ -1007,7 +1007,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
     // Get the existing google buildings.
@@ -1105,7 +1105,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
     // Get the existing GSuite calendar resources.
@@ -1205,7 +1205,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
     // Get the GSuite groups.

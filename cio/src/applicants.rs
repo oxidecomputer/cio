@@ -1330,7 +1330,7 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 #[inline]
 pub async fn get_raw_applicants() -> Vec<NewApplicant> {
     // Get the GSuite token.
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());

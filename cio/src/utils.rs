@@ -41,7 +41,7 @@ pub fn write_file(file: &PathBuf, contents: &str) {
 /// Get a GSuite token.
 #[instrument]
 #[inline]
-pub async fn get_gsuite_token() -> AccessToken {
+pub async fn get_gsuite_token(subject: &str) -> AccessToken {
     let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
     // Get the GSuite credentials file.
     let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or_default();
@@ -61,7 +61,10 @@ pub async fn get_gsuite_token() -> AccessToken {
         gsuite_credential_file = file_path.to_str().unwrap().to_string();
     }
 
-    let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
+    let mut gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
+    if !subject.is_empty() {
+        gsuite_subject = subject.to_string();
+    }
     let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
     let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
         .subject(gsuite_subject.to_string())

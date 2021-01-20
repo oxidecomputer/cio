@@ -75,9 +75,8 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 pub async fn refresh_recorded_meetings() {
     let db = Database::new();
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
-    let drive_client = GoogleDrive::new(token);
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -98,9 +97,13 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
+                let mut owner = "".to_string();
                 let mut attendees: Vec<String> = Default::default();
                 for attendee in event.attendees {
                     attendees.push(attendee.email.to_string());
+                    if attendee.organizer {
+                        owner = attendee.email.to_string();
+                    }
                 }
 
                 let mut video = "".to_string();
@@ -118,6 +121,9 @@ pub async fn refresh_recorded_meetings() {
                     // Continue early, we don't care.
                     continue;
                 }
+
+                let delegated_token = get_gsuite_token(&owner).await;
+                let drive_client = GoogleDrive::new(delegated_token);
 
                 // If we have a chat log, we should download it.
                 let mut chat_log = "".to_string();

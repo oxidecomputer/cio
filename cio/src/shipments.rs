@@ -1059,7 +1059,7 @@ impl SwagSheetColumns {
 #[inline]
 pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
     // Get the GSuite token.
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
