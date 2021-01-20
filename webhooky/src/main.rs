@@ -145,7 +145,7 @@ impl Context {
      */
     pub async fn new() -> Arc<Context> {
         // Get gsuite token.
-        let token = get_gsuite_token().await;
+        let token = get_gsuite_token("").await;
 
         // Initialize the Google Drive client.
         let drive = GoogleDrive::new(token);
@@ -345,7 +345,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
 
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
 
@@ -413,7 +413,7 @@ pub struct GitHubRateLimit {
 async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
 
@@ -595,7 +595,7 @@ pub struct GoogleSpreadsheet {
 async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
     // Initialize the Google Drive client.
@@ -1641,7 +1641,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
 async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here because otherwise it will expire.
-    let token = get_gsuite_token().await;
+    let token = get_gsuite_token("").await;
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
 
