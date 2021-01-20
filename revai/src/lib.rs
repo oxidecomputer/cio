@@ -14,7 +14,7 @@
  *     // Initialize the RevAI client.
  *     let revai = RevAI::new_from_env();
  *
- *     let transcript = rev_ai.get_transcript("some_id").await.unwrap();
+ *     let transcript = revai.get_transcript("some_id").await.unwrap();
  *
  *     println!("{}", transcript);
  * }
@@ -34,7 +34,7 @@ use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the RevAI API.
-const ENDPOINT: &str = "https://api.rev.ai/speechtotext/v1";
+const ENDPOINT: &str = "https://api.rev.ai/speechtotext/v1/";
 
 /// Entrypoint for interacting with the RevAI API.
 pub struct RevAI {
@@ -78,7 +78,9 @@ impl RevAI {
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        if method != Method::POST {
+            headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        }
         if path.ends_with("/transcript") {
             // Get the plain text transcript
             headers.append(header::ACCEPT, header::HeaderValue::from_static("text/plain"));
@@ -86,7 +88,7 @@ impl RevAI {
             headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
         }
 
-        let mut rb = self.client.request(method, url).headers(headers).basic_auth(&self.key, Some(""));
+        let mut rb = self.client.request(method, url).headers(headers).bearer_auth(&self.key);
 
         match query {
             None => (),
@@ -106,9 +108,11 @@ impl RevAI {
 
     /// Create a job.
     pub async fn create_job(&self, bytes: Bytes) -> Result<Job, APIError> {
-        let form = Form::new().part("media", reqwest::multipart::Part::bytes(bytes.to_vec()));
+        let form = Form::new()
+            .part("media", reqwest::multipart::Part::bytes(bytes.to_vec()).mime_str("video/mp4").unwrap().file_name("testing.mp4"))
+            .text("options", "{}");
         // Build the request.
-        let request = self.request(Method::POST, "/jobs", Some(form), None);
+        let request = self.request(Method::POST, "jobs", Some(form), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -127,7 +131,7 @@ impl RevAI {
     /// Get a transcript from a job ID.
     pub async fn get_transcript(&self, id: &str) -> Result<String, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("/jobs/{}/transcript", id), None, None);
+        let request = self.request(Method::GET, &format!("jobs/{}/transcript", id), None, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -180,5 +184,19 @@ pub struct Job {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub type_: String,
     #[serde(default)]
+    pub delete_after_seconds: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JobOptions {
+    pub skip_diarization: bool,
+    pub skip_punctuation: bool,
+    pub remove_disfluencies: bool,
+    pub filter_profanity: bool,
+    pub speaker_channels_count: i64,
+    pub metadata: String,
+    pub callback_url: String,
+    pub custom_vocabulary_id: String,
+    pub language: String,
     pub delete_after_seconds: i64,
 }

@@ -1,10 +1,13 @@
 use std::env;
+use std::str::from_utf8;
 
 use async_trait::async_trait;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use google_drive::GoogleDrive;
 use gsuite_api::GSuite;
 use macros::db;
+use revai::RevAI;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -36,6 +39,8 @@ pub struct NewRecordedMeeting {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub video: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub chat_log_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub chat_log: String,
     #[serde(default)]
     pub is_recurring: bool,
@@ -43,6 +48,8 @@ pub struct NewRecordedMeeting {
     pub attendees: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub transcript: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub transcript_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub google_event_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -64,7 +71,9 @@ pub async fn refresh_recorded_meetings() {
     let db = Database::new();
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token().await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+    let drive_client = GoogleDrive::new(token);
+    let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -90,13 +99,13 @@ pub async fn refresh_recorded_meetings() {
                 }
 
                 let mut video = "".to_string();
-                let mut chat_log = "".to_string();
+                let mut chat_log_link = "".to_string();
                 for attachment in event.attachments {
                     if attachment.mime_type == "video/mp4" && attachment.title.starts_with(&event.summary) {
                         video = attachment.file_url.to_string();
                     }
                     if attachment.mime_type == "text/plain" && attachment.title.starts_with(&event.summary) {
-                        chat_log = attachment.file_url.to_string();
+                        chat_log_link = attachment.file_url.to_string();
                     }
                 }
 
@@ -105,23 +114,67 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
+                // If we have a chat log, we should download it.
+                let mut chat_log = "".to_string();
+                if !chat_log_link.is_empty() {
+                    // Download the file.
+                    let contents = drive_client
+                        .download_file_by_id(&chat_log_link.trim_start_matches("https://drive.google.com/open?id="))
+                        .await
+                        .unwrap_or_default();
+                    chat_log = from_utf8(&contents).unwrap_or_default().trim().to_string();
+                }
+
                 let meeting = NewRecordedMeeting {
                     name: event.summary.to_string(),
                     description: event.description.to_string(),
                     start_time: event.start.date_time.unwrap(),
                     end_time: event.end.date_time.unwrap(),
                     video,
+                    chat_log_link,
                     chat_log,
                     is_recurring: !event.recurring_event_id.is_empty(),
                     attendees,
                     transcript: "".to_string(),
+                    transcript_id: "".to_string(),
                     location: event.location.to_string(),
                     google_event_id: event.id.to_string(),
                     event_link: event.html_link.to_string(),
                 };
 
                 // Upsert the meeting in the database.
-                meeting.upsert(&db).await;
+                let mut db_meeting = meeting.upsert(&db).await;
+                // Check if we have a transcript id.
+                if db_meeting.transcript_id.is_empty() {
+                    // If we don't have a transcript ID, let's post the video to be
+                    // transcribed.
+                    // Try to download the video.
+                    let contents = drive_client
+                        .download_file_by_id(&db_meeting.video.trim_start_matches("https://drive.google.com/open?id="))
+                        .await
+                        .unwrap_or_default();
+
+                    // Make sure the contents aren't empty.
+                    if contents.is_empty() {
+                        // Continue early.
+                        continue;
+                    }
+
+                    // Now let's upload it to rev.ai so it can start a job.
+                    let job = revai.create_job(contents).await.unwrap();
+                    // Set the transcript id.
+                    db_meeting.transcript_id = job.id.to_string();
+                    db_meeting.update(&db).await;
+                } else {
+                    // We have a transcript id, let's try and get the transcript if we don't have
+                    // it already.
+                    if db_meeting.transcript.is_empty() {
+                        // Now let's try to get the transcript.
+                        let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
+                        db_meeting.transcript = transcript;
+                        db_meeting.update(&db).await;
+                    }
+                }
             }
         }
     }
