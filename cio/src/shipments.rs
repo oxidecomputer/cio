@@ -61,7 +61,7 @@ pub struct NewInboundShipment {
     pub notes: String,
 }
 
-/// Implement updating the Airtable record for a an InboundShipment.
+/// Implement updating the Airtable record for an InboundShipment.
 #[async_trait]
 impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
     async fn update_airtable_record(&mut self, record: InboundShipment) {

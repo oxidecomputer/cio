@@ -1,5 +1,6 @@
 use std::env;
 
+use async_trait::async_trait;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use gsuite_api::GSuite;
@@ -9,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_RECORDED_MEETINGS_TABLE};
+use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::recorded_meetings;
 use crate::utils::{get_gsuite_token, GSUITE_DOMAIN};
@@ -22,7 +24,7 @@ use crate::utils::{get_gsuite_token, GSUITE_DOMAIN};
         "google_event_id" = "String",
     },
 }]
-#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "recorded_meetings"]
 pub struct NewRecordedMeeting {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -47,6 +49,12 @@ pub struct NewRecordedMeeting {
     pub event_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
+}
+
+/// Implement updating the Airtable record for a RecordedMeeting.
+#[async_trait]
+impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
+    async fn update_airtable_record(&mut self, _record: RecordedMeeting) {}
 }
 
 /// Sync the recorded meetings.
@@ -87,9 +95,14 @@ pub async fn refresh_recorded_meetings() {
                     if attachment.mime_type == "video/mp4" && attachment.title.starts_with(&event.summary) {
                         video = attachment.file_url.to_string();
                     }
-                    if attachment.mime_type == "text_plain" && attachment.title.starts_with(&event.summary) {
+                    if attachment.mime_type == "text/plain" && attachment.title.starts_with(&event.summary) {
                         chat_log = attachment.file_url.to_string();
                     }
+                }
+
+                if video.is_empty() {
+                    // Continue early, we don't care.
+                    continue;
                 }
 
                 let meeting = NewRecordedMeeting {
@@ -107,10 +120,13 @@ pub async fn refresh_recorded_meetings() {
                     event_link: event.html_link.to_string(),
                 };
 
-                println!("{:?}", meeting);
+                // Upsert the meeting in the database.
+                meeting.upsert(&db).await;
             }
         }
     }
+
+    RecordedMeetings::get_from_db(&db).update_airtable().await;
 }
 
 #[cfg(test)]
