@@ -75,6 +75,8 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 #[inline]
 pub async fn refresh_recorded_meetings() {
     let db = Database::new();
+    RecordedMeetings::get_from_db(&db).update_airtable().await;
+
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
@@ -197,8 +199,6 @@ pub async fn refresh_recorded_meetings() {
             }
         }
     }
-
-    RecordedMeetings::get_from_db(&db).update_airtable().await;
 }
 
 #[cfg(test)]
