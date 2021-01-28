@@ -35,7 +35,7 @@ use cio_api::applicants::{Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users};
 use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
-use cio_api::models::{GitHubUser, NewRFD, NewRepo};
+use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rfds::is_image;
 use cio_api::shipments::{get_shipments_spreadsheets, NewInboundShipment, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
@@ -349,7 +349,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
 
-    let result = db.get_rfd(num);
+    let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
         event!(Level::WARN, "No RFD was found with number `{}`", num);
@@ -364,7 +364,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     event!(Level::INFO, "updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
-    db.update_rfd(&rfd);
+    rfd.update(db).await;
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1526,7 +1526,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     }
 
     // Try to get the RFD from the database.
-    let result = db.get_rfd(number);
+    let result = RFD::get_from_db(db, number);
     if result.is_none() {
         event!(Level::INFO, "could not find RFD with number `{}` in the database: {:?}", number, event);
         return Ok(HttpResponseAccepted("ok".to_string()));
@@ -1625,7 +1625,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     }
 
     // Update the RFD to show the new state and link in the database.
-    db.update_rfd(&rfd);
+    rfd.update(db).await;
 
     // Update the file in GitHub.
     // Keep in mind: this push will kick off another webhook.
@@ -1745,7 +1745,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
             // We will need this later to check if the RFD's state changed.
-            let old_rfd = db.get_rfd(new_rfd.number);
+            let old_rfd = RFD::get_from_db(db, new_rfd.number);
             let mut old_rfd_state = "".to_string();
             let mut old_rfd_pdf = "".to_string();
             if let Some(o) = old_rfd {
@@ -1754,25 +1754,22 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             }
 
             // Update the RFD in the database.
-            let mut rfd = db.upsert_rfd(&new_rfd);
+            let mut rfd = new_rfd.upsert(db).await;
             // Update all the fields for the RFD.
             rfd.expand(&api_context.github).await;
-            db.update_rfd(&rfd);
+            rfd.update(db).await;
             event!(Level::INFO, "updated RFD {} in the database", new_rfd.number_string);
+            event!(Level::INFO, "updated airtable for RFD {}", new_rfd.number_string);
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
             generate_shorturls_for_rfds(&db, &api_context.github.repo(&api_context.github_org, "configs")).await;
             event!(Level::INFO, "generated shorturls for the rfds");
 
-            // Update airtable with the new RFD.
-            let mut airtable_rfd = rfd.clone();
-            airtable_rfd.create_or_update_in_airtable().await;
-            event!(Level::INFO, "updated airtable for RFD {}", new_rfd.number_string);
-
             // Update the PDFs for the RFD.
             rfd.convert_and_upload_pdf(&api_context.github, &drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
                 .await;
+            rfd.update(db).await;
             event!(Level::INFO, "updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
             // Check if the RFD state changed from what is currently in the
@@ -1858,7 +1855,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                 rfd_mut.update_state("published", file.ends_with(".md"));
 
                 // Update the RFD to show the new state in the database.
-                db.update_rfd(&rfd_mut);
+                rfd_mut.update(db).await;
 
                 // Update the file in GitHub.
                 // Keep in mind: this push will kick off another webhook.
