@@ -699,7 +699,6 @@ impl RFD {
 
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
-        self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", github_org(), rfd_path);
 
         let cmd_output = Command::new("asciidoctor-pdf")
             .args(&["-o", "-", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
@@ -784,6 +783,11 @@ impl RFD {
         self.html = self.get_html(&repo, &branch, is_markdown).await;
 
         self.authors = NewRFD::get_authors(&self.content, is_markdown);
+
+        // Set the pdf link
+        let file_name = self.get_pdf_filename();
+        let rfd_path = format!("/pdfs/{}", file_name);
+        self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", github_org(), rfd_path);
     }
 }
 
