@@ -4,7 +4,6 @@ use std::str::from_utf8;
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
 use futures_util::TryStreamExt;
-use google_drive::GoogleDrive;
 use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use regex::Regex;
@@ -12,7 +11,7 @@ use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::NewRFD;
-use crate::utils::{create_or_update_file_in_github_repo, get_gsuite_token, github_org};
+use crate::utils::{create_or_update_file_in_github_repo, github_org};
 
 /// Get the RFDs from the rfd GitHub repo.
 #[instrument]
@@ -229,22 +228,8 @@ pub async fn refresh_db_rfds(github: &Github) {
         // Expand the fields in the RFD.
         new_rfd.expand(github).await;
 
-        // Get gsuite token.
-        let token = get_gsuite_token("").await;
-
-        // Initialize the Google Drive client.
-        let drive = GoogleDrive::new(token);
-
-        // Figure out where our directory is.
-        // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
-        let drive_rfd_shared_id = shared_drive.id.to_string();
-
-        // Get the directory by the name.
-        let drive_rfd_dir = drive.get_file_by_name(&drive_rfd_shared_id, "rfds").await.unwrap();
-
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(github, &drive, &drive_rfd_shared_id, &drive_rfd_dir.get(0).unwrap().id).await;
+        new_rfd.convert_and_upload_pdf(github).await;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.

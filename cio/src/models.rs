@@ -26,7 +26,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRT
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_images_in_branch, get_rfd_contents_from_repo, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{github_repos, rfds as r_f_ds, rfds};
-use crate::utils::{create_or_update_file_in_github_repo, github_org, write_file};
+use crate::utils::{create_or_update_file_in_github_repo, get_gsuite_token, github_org, write_file};
 
 /// The data type for a GitHub user.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize)]
@@ -676,9 +676,9 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    #[instrument(skip(drive_client))]
+    #[instrument]
     #[inline]
-    pub async fn convert_and_upload_pdf(&mut self, github: &Github, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) {
+    pub async fn convert_and_upload_pdf(&mut self, github: &Github) {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
         let repo = rfd_repo.get().await.unwrap();
@@ -715,9 +715,24 @@ impl RFD {
         // Create or update the file in the github repository.
         create_or_update_file_in_github_repo(&rfd_repo, &repo.default_branch, &rfd_path, cmd_output.stdout.clone()).await;
 
+        // Get gsuite token.
+        let token = get_gsuite_token("").await;
+
+        // Initialize the Google Drive client.
+        let drive_client = GoogleDrive::new(token);
+
+        // Figure out where our directory is.
+        // It should be in the shared drive : "Automated Documents"/"rfds"
+        let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
+        let drive_id = shared_drive.id.to_string();
+
+        // Get the directory by the name.
+        let drive_rfd_dir = drive_client.get_file_by_name(&drive_id, "rfds").await.unwrap();
+        let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
+
         // Create or update the file in the google_drive.
         drive_client
-            .create_or_upload_file(drive_id, parent_id, &file_name, "application/pdf", &cmd_output.stdout)
+            .create_or_upload_file(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
             .await
             .unwrap();
 
@@ -727,9 +742,9 @@ impl RFD {
         }
 
         // Get the file in drive.
-        let files = drive_client.get_file_by_name(drive_id, &file_name).await.unwrap();
+        let files = drive_client.get_file_by_name(&drive_id, &file_name).await.unwrap();
         if !files.is_empty() {
-            self.pdf_link_google_drive = files.get(0).unwrap().web_view_link.to_string();
+            self.pdf_link_google_drive = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
         }
     }
 
