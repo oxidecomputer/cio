@@ -376,6 +376,9 @@ table! {
         commit_date -> Timestamptz,
         milestones -> Array<Text>,
         relevant_components -> Array<Text>,
+        pdf_link_github -> Varchar,
+        pdf_link_google_drive -> Varchar,
+        airtable_record_id -> Varchar,
     }
 }
 

@@ -16,7 +16,7 @@ use diesel::sql_types::Jsonb;
 use google_drive::GoogleDrive;
 use hubcaps::repositories::{Repo, Repository};
 use hubcaps::Github;
-use macros::{db, db_struct};
+use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -356,10 +356,13 @@ impl NewRepo {
 }
 
 /// The data type for an RFD.
-#[db_struct {
-    new_name = "RFD",
-    base_id = "AIRTABLE_BASE_ID_RACK_ROADMAP",
-    table = "AIRTABLE_RFD_TABLE",
+#[db {
+    new_struct_name = "RFD",
+    airtable_base_id = "AIRTABLE_BASE_ID_RACK_ROADMAP",
+    airtable_table = "AIRTABLE_RFD_TABLE",
+    match_on = {
+        "number" = "i32",
+    }
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "rfds"]
@@ -406,6 +409,10 @@ pub struct NewRFD {
     /// relevant_components only exist in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub relevant_components: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub pdf_link_github: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub pdf_link_google_drive: String,
 }
 
 impl NewRFD {
@@ -453,6 +460,8 @@ impl NewRFD {
             milestones: Default::default(),
             // Only exists in Airtable,
             relevant_components: Default::default(),
+            pdf_link_github: Default::default(),
+            pdf_link_google_drive: Default::default(),
         }
     }
 
@@ -669,7 +678,7 @@ impl RFD {
     /// repository.
     #[instrument(skip(drive_client))]
     #[inline]
-    pub async fn convert_and_upload_pdf(&self, github: &Github, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) {
+    pub async fn convert_and_upload_pdf(&mut self, github: &Github, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
         let repo = rfd_repo.get().await.unwrap();
@@ -690,6 +699,7 @@ impl RFD {
 
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
+        self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", github_org(), rfd_path);
 
         let cmd_output = Command::new("asciidoctor-pdf")
             .args(&["-o", "-", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
@@ -715,6 +725,12 @@ impl RFD {
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {
             fs::remove_file(path).unwrap();
+        }
+
+        // Get the file in drive.
+        let files = drive_client.get_file_by_name(drive_id, &file_name).await.unwrap();
+        if !files.is_empty() {
+            self.pdf_link_google_drive = files.get(0).unwrap().web_view_link.to_string();
         }
     }
 

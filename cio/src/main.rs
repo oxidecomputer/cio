@@ -16,7 +16,7 @@ use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, Git
 use cio_api::db::Database;
 use cio_api::journal_clubs::{JournalClubMeeting, JournalClubMeetings};
 use cio_api::mailing_list::{MailingListSubscriber, MailingListSubscribers};
-use cio_api::models::{GithubRepo, GithubRepos, RFD};
+use cio_api::models::{GithubRepo, GithubRepos, RFDs, RFD};
 
 #[macro_use]
 extern crate serde_json;
@@ -360,7 +360,7 @@ async fn api_get_rfds(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<R
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(db.get_rfds()))
+    Ok(HttpResponseOk(RFDs::get_from_db(db).0))
 }
 
 /**

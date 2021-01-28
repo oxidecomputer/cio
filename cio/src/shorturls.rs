@@ -5,7 +5,7 @@ use tracing::instrument;
 
 use crate::configs::Links;
 use crate::db::Database;
-use crate::models::GithubRepos;
+use crate::models::{GithubRepos, RFDs};
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
 use crate::utils::{authenticate_github_jwt, github_org};
 
@@ -49,7 +49,7 @@ pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository) {
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the rfds from the database.
-    let rfds = db.get_rfds();
+    let rfds = RFDs::get_from_db(db);
     for rfd in rfds {
         let mut link = ShortUrl {
             name: rfd.number.to_string(),

@@ -15,5 +15,8 @@ CREATE TABLE rfds (
     sha VARCHAR NOT NULL,
     commit_date TIMESTAMPTZ NOT NULL,
     milestones TEXT [] NOT NULL,
-    relevant_complaints TEXT [] NOT NULL
+    relevant_components TEXT [] NOT NULL,
+    pdf_link_github VARCHAR NOT NULL,
+    pdf_link_google_drive VARCHAR NOT NULL,
+    airtable_record_id VARCHAR NOT NULL
 )
