@@ -132,7 +132,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
  */
 struct Context {
     drive_rfd_shared_id: String,
-    drive_rfd_dir_id: String,
     github: Github,
     github_org: String,
     influx: influx::Client,
@@ -153,15 +152,11 @@ impl Context {
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
         let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
-        let drive_rfd_shared_id = shared_drive.id.to_string();
-
-        // Get the directory by the name.
-        let drive_rfd_dir = drive.get_file_by_name(&drive_rfd_shared_id, "rfds").await.unwrap();
+        let drive_rfd_shared_id = shared_drive.id;
 
         // Create the context.
         Arc::new(Context {
             drive_rfd_shared_id,
-            drive_rfd_dir_id: drive_rfd_dir.get(0).unwrap().id.to_string(),
             github: authenticate_github_jwt(),
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
@@ -343,12 +338,6 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     let github = &api_context.github;
     let db = &api_context.db;
 
-    // Get gsuite token.
-    // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token("").await;
-    // Initialize the Google Drive client.
-    let drive = GoogleDrive::new(token);
-
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
@@ -360,7 +349,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     rfd.expand(github).await;
     event!(Level::INFO, "updated  RFD {}", rfd.number_string);
 
-    rfd.convert_and_upload_pdf(github, &drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id).await;
+    rfd.convert_and_upload_pdf(github).await;
     event!(Level::INFO, "updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
@@ -1767,8 +1756,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             event!(Level::INFO, "generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(&api_context.github, &drive, &api_context.drive_rfd_shared_id, &api_context.drive_rfd_dir_id)
-                .await;
+            rfd.convert_and_upload_pdf(&api_context.github).await;
             rfd.update(db).await;
             event!(Level::INFO, "updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
