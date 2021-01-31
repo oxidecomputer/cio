@@ -42,7 +42,7 @@ pub struct DiscussionTopic {
     pub topic: String,
     #[serde(rename = "Submitter")]
     pub submitter: AirtableUser,
-    #[serde(rename = "Priority")]
+    #[serde(rename = "Priority", skip_serializing_if = "String::is_empty", default)]
     pub priority: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Notes")]
     pub notes: String,
