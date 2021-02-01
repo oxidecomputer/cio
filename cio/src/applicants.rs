@@ -354,6 +354,7 @@ Sincerely,
                     .trim_start_matches("https://github.com/")
                     .trim_start_matches("http://github.com/")
                     .trim_start_matches("https://www.github.com/")
+                    .trim_start_matches("http://www.github.com/")
                     .trim_start_matches('@')
                     .trim_end_matches('/')
             );
