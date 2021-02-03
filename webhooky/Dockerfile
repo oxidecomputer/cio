@@ -2,7 +2,7 @@
 # Cargo Build Stage
 # ------------------------------------------------------------------------------
 
-FROM rust:nightly as cargo-build
+FROM rustlang/rust:nightly as cargo-build
 
 ENV DEBIAN_FRONTEND=noninteractive
 
