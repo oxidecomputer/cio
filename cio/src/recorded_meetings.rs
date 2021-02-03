@@ -71,7 +71,7 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
             self.transcript = record.transcript;
         }
 
-        self.transcript = truncate(self.transcript, 100000);
+        self.transcript = truncate(&self.transcript, 100000);
     }
 }
 
