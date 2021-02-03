@@ -67,6 +67,9 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
         if !record.transcript_id.is_empty() {
             self.transcript_id = record.transcript_id;
         }
+        if !record.transcript.is_empty() {
+            self.transcript = record.transcript;
+        }
     }
 }
 
@@ -160,7 +163,7 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
-                let meeting = NewRecordedMeeting {
+                let mut meeting = NewRecordedMeeting {
                     name: event.summary.trim().to_string(),
                     description: event.description.trim().to_string(),
                     start_time: event.start.date_time.unwrap(),
@@ -177,10 +180,27 @@ pub async fn refresh_recorded_meetings() {
                     event_link: event.html_link.to_string(),
                 };
 
+                // Let's try to get the meeting.
+                let existing = RecordedMeeting::get_from_db(&db, event.id.to_string());
+                if let Some(m) = existing {
+                    // Update the meeting.
+                    meeting.transcript = m.transcript.to_string();
+                    meeting.transcript_id = m.transcript_id.to_string();
+
+                    // Get it from Airtable.
+                    let existing_airtable = m.get_existing_airtable_record().await;
+                    if meeting.transcript.is_empty() {
+                        meeting.transcript = existing_airtable.fields.transcript.to_string();
+                    }
+                    if meeting.transcript_id.is_empty() {
+                        meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
+                    }
+                }
+
                 // Upsert the meeting in the database.
                 let mut db_meeting = meeting.upsert(&db).await;
                 // Check if we have a transcript id.
-                if db_meeting.transcript_id.is_empty() {
+                if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
                     // If we don't have a transcript ID, let's post the video to be
                     // transcribed.
                     // Now let's upload it to rev.ai so it can start a job.
@@ -196,6 +216,9 @@ pub async fn refresh_recorded_meetings() {
                         let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
                         db_meeting.transcript = truncate(transcript.trim(), 100000);
                         db_meeting.update(&db).await;
+                    } else {
+                        // You are here.
+                        println!("{:?}", db_meeting);
                     }
                 }
             }

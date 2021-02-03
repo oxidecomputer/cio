@@ -2,13 +2,11 @@
 # Cargo Build Stage
 # ------------------------------------------------------------------------------
 
-FROM rust:latest as cargo-build
+FROM rust:nightly as cargo-build
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/src/webhooky
-
-RUN rustup default nightly
 
 COPY . .
 
