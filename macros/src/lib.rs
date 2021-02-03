@@ -302,13 +302,14 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         #[tracing::instrument]
         #[inline]
         pub async fn upsert_in_airtable(&mut self) -> airtable_api::Record<#new_struct_name> {
+            let mut mut_self = self.clone();
             // First check if we have an `airtable_record_id` for this record.
             // If we do we can move ahead faster.
             if !self.airtable_record_id.is_empty() {
                 let mut existing_record: airtable_api::Record<#new_struct_name> = self.get_existing_airtable_record().await;
 
                 // Return the result from the update.
-                return self.update_in_airtable(&mut existing_record).await;
+                return mut_self.update_in_airtable(&mut existing_record).await;
             }
 
             // Since we don't know the airtable record id, we need to find it by looking
@@ -319,7 +320,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             let records = #new_struct_name_plural::get_from_airtable().await;
             for (id, record) in records {
                 if self.id == id {
-                    return self.update_in_airtable(&mut record.clone()).await;
+                    return mut_self.update_in_airtable(&mut record.clone()).await;
                 }
             }
 
