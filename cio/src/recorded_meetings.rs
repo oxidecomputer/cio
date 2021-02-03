@@ -80,7 +80,7 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 #[inline]
 pub async fn refresh_recorded_meetings() {
     let db = Database::new();
-    //RecordedMeetings::get_from_db(&db).update_airtable().await;
+    RecordedMeetings::get_from_db(&db).update_airtable().await;
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
@@ -197,8 +197,6 @@ pub async fn refresh_recorded_meetings() {
                     if meeting.transcript_id.is_empty() {
                         meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
                     }
-                    // You are here.
-                    println!("{:?}", meeting);
                 }
 
                 // Upsert the meeting in the database.
