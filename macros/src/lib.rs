@@ -255,22 +255,23 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Update the record in Airtable.
         #[tracing::instrument]
         #[inline]
-        pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<#new_struct_name>) -> airtable_api::Record<#new_struct_name> {
+        pub async fn update_in_airtable(&self, existing_record: &mut airtable_api::Record<#new_struct_name>) -> airtable_api::Record<#new_struct_name> {
+            let mut mut_self = self.clone();
             // Run the custom trait to update the new record from the old record.
             // We do this because where we join Airtable tables, things tend to get a little
             // weird if we aren't nit picky about this.
-            self.update_airtable_record(existing_record.fields.clone()).await;
+            mut_self.update_airtable_record(existing_record.fields.clone()).await;
 
             // If the Airtable record and the record that was passed in are the same, then we can return early since
             // we do not need to update it in Airtable.
             // We do this after we update the record so that any fields that are links to other
             // tables match as well and this can return true even if we have linked records.
-            if *self == existing_record.fields {
+            if mut_self == existing_record.fields {
                 println!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
                 return existing_record.clone();
             }
 
-            existing_record.fields = self.clone();
+            existing_record.fields = mut_self;
 
             // Send the updated record to Airtable.
             let records : Vec<airtable_api::Record<#new_struct_name>> = #new_struct_name::airtable().update_records(
