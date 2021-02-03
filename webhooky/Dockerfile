@@ -8,6 +8,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/src/webhooky
 
+RUN rustup update
+
 COPY . .
 
 WORKDIR /usr/src/webhooky/webhooky

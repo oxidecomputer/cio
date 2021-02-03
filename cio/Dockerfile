@@ -8,6 +8,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/src/cio-api
 
+RUN rustup update
+
 COPY . .
 
 WORKDIR /usr/src/cio-api/cio
