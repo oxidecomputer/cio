@@ -70,6 +70,8 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
         if !record.transcript.is_empty() {
             self.transcript = record.transcript;
         }
+
+        self.transcript = truncate(self.transcript, 100000);
     }
 }
 
@@ -78,7 +80,7 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 #[inline]
 pub async fn refresh_recorded_meetings() {
     let db = Database::new();
-    RecordedMeetings::get_from_db(&db).update_airtable().await;
+    //RecordedMeetings::get_from_db(&db).update_airtable().await;
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
@@ -195,6 +197,8 @@ pub async fn refresh_recorded_meetings() {
                     if meeting.transcript_id.is_empty() {
                         meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
                     }
+                    // You are here.
+                    println!("{:?}", meeting);
                 }
 
                 // Upsert the meeting in the database.
@@ -214,11 +218,8 @@ pub async fn refresh_recorded_meetings() {
                     if db_meeting.transcript.is_empty() {
                         // Now let's try to get the transcript.
                         let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
-                        db_meeting.transcript = truncate(transcript.trim(), 100000);
+                        db_meeting.transcript = transcript.trim().to_string();
                         db_meeting.update(&db).await;
-                    } else {
-                        // You are here.
-                        println!("{:?}", db_meeting);
                     }
                 }
             }
