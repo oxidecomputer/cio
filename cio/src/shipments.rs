@@ -35,9 +35,9 @@ use crate::utils::{get_gsuite_token, DOMAIN};
 #[table_name = "inbound_shipments"]
 pub struct NewInboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub carrier: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_number: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub carrier: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
