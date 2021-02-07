@@ -2,13 +2,13 @@
 # Cargo Build Stage
 # ------------------------------------------------------------------------------
 
-FROM rustlang/rust:nightly as cargo-build
+FROM rust:latest as cargo-build
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/src/cio-api
 
-RUN rustup update
+RUN rustup default nightly
 
 COPY . .
 
