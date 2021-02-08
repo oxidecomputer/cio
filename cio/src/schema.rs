@@ -1,4 +1,19 @@
 table! {
+    applicant_interviews (id) {
+        id -> Int4,
+        start_time -> Timestamptz,
+        end_time -> Timestamptz,
+        name -> Varchar,
+        email -> Varchar,
+        interviewers -> Array<Text>,
+        google_event_id -> Varchar,
+        event_link -> Varchar,
+        link_to_applicant -> Array<Text>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     applicants (id) {
         id -> Int4,
         name -> Varchar,
@@ -397,25 +412,26 @@ table! {
         twitter -> Varchar,
         groups -> Array<Text>,
         is_group_admin -> Bool,
-        is_system_account -> Bool,
         building -> Varchar,
-        link_to_building -> Array<Text>,
-        aws_role -> Varchar,
-        home_address_street_1 -> Varchar,
-        home_address_street_2 -> Varchar,
-        home_address_city -> Varchar,
-        home_address_state -> Varchar,
-        home_address_zipcode -> Varchar,
-        home_address_country -> Varchar,
+        aws_role -> Nullable<Varchar>,
+        home_address_street_1 -> Nullable<Varchar>,
+        home_address_street_2 -> Nullable<Varchar>,
+        home_address_city -> Nullable<Varchar>,
+        home_address_state -> Nullable<Varchar>,
+        home_address_zipcode -> Nullable<Varchar>,
+        home_address_country -> Nullable<Varchar>,
+        start_date -> Nullable<Date>,
+        public_ssh_keys -> Nullable<Array<Text>>,
+        is_system_account -> Bool,
         home_address_formatted -> Varchar,
-        start_date -> Date,
-        birthday -> Date,
-        public_ssh_keys -> Array<Text>,
+        link_to_building -> Nullable<Array<Text>>,
+        birthday -> Nullable<Date>,
         airtable_record_id -> Varchar,
     }
 }
 
 allow_tables_to_appear_in_same_query!(
+    applicant_interviews,
     applicants,
     auth_user_logins,
     auth_users,
