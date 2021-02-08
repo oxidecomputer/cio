@@ -12,6 +12,7 @@ pub mod configs;
 pub mod core;
 pub mod db;
 pub mod gsuite;
+pub mod interviews;
 pub mod journal_clubs;
 pub mod mailing_list;
 pub mod models;

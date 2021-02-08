@@ -1,3 +1,5 @@
+use std::env;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use gsuite_api::GSuite;
@@ -6,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::airtable::{AIRTABLE_BASE_ID_HIRING, AIRTABLE_INTERVIEWS_TABLE};
+use crate::airtable::{AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_INTERVIEWS_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::applicant_interviews;
@@ -14,7 +16,7 @@ use crate::utils::{get_gsuite_token, GSUITE_DOMAIN};
 
 #[db {
     new_struct_name = "ApplicantInterview",
-    airtable_base_id = "AIRTABLE_BASE_ID_HIRING",
+    airtable_base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
     airtable_table = "AIRTABLE_INTERVIEWS_TABLE",
     match_on = {
         "start_time" = "DateTime<Utc>",
@@ -30,7 +32,7 @@ pub struct NewApplicantInterview {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
-    #[serde(default, skip_serializing_if = "Vec:is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interviewers: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub google_event_id: String,
@@ -65,7 +67,7 @@ pub async fn refresh_interviews() {
     // Iterate over the calendars.
     for calendar in calendars {
         // Ignore any calandar that is not the interviews calendar.
-        if calendar.name != "Interviews" {
+        if calendar.summary != "Interviews" {
             continue;
         }
 
@@ -76,7 +78,7 @@ pub async fn refresh_interviews() {
 
         for event in events {
             // Create the interview event.
-            let mut interview = ApplicantInterview {
+            let mut interview = NewApplicantInterview {
                 start_time: event.start.date_time.unwrap(),
                 end_time: event.end.date_time.unwrap(),
 
@@ -103,6 +105,8 @@ pub async fn refresh_interviews() {
                 interview.name = attendee.display_name.to_string();
                 interview.email = attendee.email.to_string();
             }
+
+            interview.upsert(&db).await;
         }
     }
 
