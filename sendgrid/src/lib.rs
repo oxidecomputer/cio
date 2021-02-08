@@ -266,8 +266,7 @@ impl Message {
     pub fn add_content(mut self, c: Content) -> Message {
         match self.content {
             None => {
-                let mut content = Vec::new();
-                content.push(c);
+                let content = vec![c];
                 self.content = Some(content);
             }
             Some(ref mut content) => content.push(c),
@@ -285,8 +284,7 @@ impl Message {
     pub fn add_attachment(mut self, a: Attachment) -> Message {
         match self.attachments {
             None => {
-                let mut attachments = Vec::new();
-                attachments.push(a);
+                let attachments = vec![a];
                 self.attachments = Some(attachments);
             }
             Some(ref mut attachments) => attachments.push(a),
@@ -349,8 +347,7 @@ impl Personalization {
     pub fn add_cc(mut self, cc: Email) -> Personalization {
         match self.cc {
             None => {
-                let mut ccs = Vec::new();
-                ccs.push(cc);
+                let ccs = vec![cc];
                 self.cc = Some(ccs);
             }
             Some(ref mut c) => {
@@ -364,8 +361,7 @@ impl Personalization {
     pub fn add_bcc(mut self, bcc: Email) -> Personalization {
         match self.bcc {
             None => {
-                let mut bccs = Vec::new();
-                bccs.push(bcc);
+                let bccs = vec![bcc];
                 self.bcc = Some(bccs);
             }
             Some(ref mut b) => {

@@ -3,7 +3,7 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::ops::Add;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::from_utf8;
 use std::thread;
 use std::time;
@@ -27,12 +27,12 @@ pub static GSUITE_DOMAIN: &str = "oxidecomputer.com";
 /// Write a file.
 #[instrument]
 #[inline]
-pub fn write_file(file: &PathBuf, contents: &str) {
+pub fn write_file(file: &Path, contents: &str) {
     // create each directory.
     fs::create_dir_all(file.parent().unwrap()).unwrap();
 
     // Write to the file.
-    let mut f = fs::File::create(file.clone()).unwrap();
+    let mut f = fs::File::create(file.to_path_buf()).unwrap();
     f.write_all(contents.as_bytes()).unwrap();
 
     println!("wrote file: {}", file.to_str().unwrap());
