@@ -358,6 +358,11 @@ Sincerely,
                     .trim_start_matches('@')
                     .trim_end_matches('/')
             );
+
+            if github == "@" {
+                github = "".to_string();
+            }
+
             // Some people put a gitlab URL in the github form input,
             // parse those accordingly.
             if github.contains("https://gitlab.com") {
