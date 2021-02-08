@@ -266,7 +266,7 @@ pub async fn send_rfd_changelog() {
         .send_mail(
             format!("RFD changelog for the week from {}", week_format),
             changelog,
-            vec![format!("jess@{}", DOMAIN)],
+            vec![format!("all@{}", DOMAIN)],
             vec![],
             vec![],
             format!("rfds@{}", DOMAIN),
