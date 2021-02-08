@@ -8,11 +8,12 @@ use futures_util::TryStreamExt;
 use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use regex::Regex;
+use sendgrid_api::SendGrid;
 use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::{NewRFD, RFDs};
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, github_org};
+use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, github_org, DOMAIN};
 
 /// Get the RFDs from the rfd GitHub repo.
 #[instrument]
@@ -244,19 +245,33 @@ pub async fn send_rfd_changelog() {
     let db = Database::new();
     let github = authenticate_github_jwt();
     let seven_days_ago = Utc::now() - Duration::days(7);
+    let week_format = format!("from {} to {}", seven_days_ago.format("%m-%d-%Y"), Utc::now().format("%m-%d-%Y"));
 
-    let mut changelog = format!("Changes to RFDs for the week from {} to {}:\n\n", seven_days_ago.format("%m-%d-%Y"), Utc::now().format("%m-%d-%Y"));
+    let mut changelog = format!("Changes to RFDs for the week {}:\n\n", week_format);
 
     // Iterate over the RFDs.
     let rfds = RFDs::get_from_db(&db);
     for rfd in rfds {
         let changes = rfd.get_weekly_changelog(&github, seven_days_ago).await;
         if !changes.is_empty() {
-            changelog += &format!("{} {}\n{}\n", rfd.name, rfd.short_link, changes);
+            changelog += &format!("\n{} {}\n{}", rfd.name, rfd.short_link, changes);
         }
     }
 
-    println!("{}", changelog);
+    // Initialize the SendGrid clVient.
+    let sendgrid_client = SendGrid::new_from_env();
+
+    // Send the message.
+    sendgrid_client
+        .send_mail(
+            format!("RFD changelog for the week from {}", week_format),
+            changelog,
+            vec![format!("jess@{}", DOMAIN)],
+            vec![],
+            vec![],
+            format!("rfds@{}", DOMAIN),
+        )
+        .await;
 }
 
 #[cfg(test)]
@@ -275,7 +290,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_rfds_changelog() {
+    async fn test_monday_cron_rfds_changelog() {
         send_rfd_changelog().await;
     }
 

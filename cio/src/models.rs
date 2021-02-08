@@ -667,9 +667,11 @@ impl RFD {
         // Get the commits from the last seven days to the file.
         let commits = repo.commits().list(&format!("/rfd/{}/", self.number_string), &branch, Some(since)).await.unwrap();
 
-        println!("commits: {:?}", commits);
         for commit in commits {
-            changelog += &format!("\t- {} \"{}\" by @{} -> {}\n", commit.sha, commit.commit.message, commit.author.login, commit.url);
+            let message: Vec<&str> = commit.commit.message.lines().collect();
+            if !message.is_empty() {
+                changelog += &format!("\t- \"{}\" by @{}\n\t\t{}\n", message[0], commit.author.login, commit.url);
+            }
         }
 
         changelog
