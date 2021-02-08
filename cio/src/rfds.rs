@@ -247,7 +247,7 @@ pub async fn send_rfd_changelog() {
     let seven_days_ago = Utc::now() - Duration::days(7);
     let week_format = format!("from {} to {}", seven_days_ago.format("%m-%d-%Y"), Utc::now().format("%m-%d-%Y"));
 
-    let mut changelog = format!("Changes to RFDs for the week {}:\n\n", week_format);
+    let mut changelog = format!("Changes to RFDs for the week {}:\n", week_format);
 
     // Iterate over the RFDs.
     let rfds = RFDs::get_from_db(&db);

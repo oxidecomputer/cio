@@ -670,7 +670,7 @@ impl RFD {
         for commit in commits {
             let message: Vec<&str> = commit.commit.message.lines().collect();
             if !message.is_empty() {
-                changelog += &format!("\t- \"{}\" by @{}\n\t\t{}\n", message[0], commit.author.login, commit.url);
+                changelog += &format!("\t- \"{}\" by @{}\n\t\thttps://github.com/oxidecomputer/rfd/commit/{}\n", message[0], commit.author.login, commit.sha);
             }
         }
 
