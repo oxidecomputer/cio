@@ -651,6 +651,30 @@ impl RFD {
         msg
     }
 
+    /// Get a changelog for the RFD.
+    #[instrument]
+    #[inline]
+    pub async fn get_weekly_changelog(&self, github: &Github, since: DateTime<Utc>) -> String {
+        let repo = github.repo(github_org(), "rfd");
+        let r = repo.get().await.unwrap();
+        let mut changelog = String::new();
+
+        let mut branch = self.number_string.to_string();
+        if self.link.contains(&format!("/{}/", r.default_branch)) {
+            branch = r.default_branch.to_string();
+        }
+
+        // Get the commits from the last seven days to the file.
+        let commits = repo.commits().list(&format!("/rfd/{}/", self.number_string), &branch, Some(since)).await.unwrap();
+
+        println!("commits: {:?}", commits);
+        for commit in commits {
+            changelog += &format!("\t- {} \"{}\" by @{} -> {}\n", commit.sha, commit.commit.message, commit.author.login, commit.url);
+        }
+
+        changelog
+    }
+
     /// Get the filename for the PDF of the RFD.
     #[instrument]
     #[inline]
@@ -783,7 +807,7 @@ impl RFD {
 
         if branch == r.default_branch {
             // Get the commit date.
-            let commits = repo.commits().list(&rfd_dir).await.unwrap();
+            let commits = repo.commits().list(&rfd_dir, "", None).await.unwrap();
             let commit = commits.get(0).unwrap();
             self.commit_date = commit.commit.author.date;
         } else {

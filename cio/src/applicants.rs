@@ -357,7 +357,9 @@ Sincerely,
                     .trim_start_matches("http://www.github.com/")
                     .trim_start_matches('@')
                     .trim_end_matches('/')
-            );
+            )
+            .trim()
+            .to_string();
 
             if github == "@" {
                 github = "".to_string();

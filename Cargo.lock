@@ -616,7 +616,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#c6c14bc6561326f5a901b7b87fb81bd9d44227ac"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fa1a24dc2bef9533ce88d170b077fe4e44def906"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1716,7 +1716,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#d149b4becff8d2ae581992bac8c84bf40f2c9923"
+source = "git+https://github.com/jessfraz/hubcaps?branch=actions#04e3190d776f1b45ab22564b14c3204990a19831"
 dependencies = [
  "base64 0.12.3",
  "chrono",
@@ -2072,7 +2072,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#c6c14bc6561326f5a901b7b87fb81bd9d44227ac"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fa1a24dc2bef9533ce88d170b077fe4e44def906"
 dependencies = [
  "Inflector",
  "proc-macro2",
