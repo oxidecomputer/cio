@@ -25,6 +25,7 @@ pub static AIRTABLE_RFD_TABLE: &str = "RFDs";
 
 pub static AIRTABLE_BASE_ID_RECURITING_APPLICATIONS: &str = "appIw5FNBqWTXFTeV";
 pub static AIRTABLE_APPLICATIONS_TABLE: &str = "Applicants";
+pub static AIRTABLE_INTERVIEWS_TABLE: &str = "Interviews";
 
 pub static AIRTABLE_BASE_ID_PRODUCT_HUDDLE: &str = "appbQqnE3nykcnkbx";
 pub static AIRTABLE_DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
