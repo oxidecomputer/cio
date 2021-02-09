@@ -211,16 +211,16 @@ pub async fn compile_packets(db: &Database) {
     let interviews = ApplicantInterviews::get_from_db(&db);
 
     // Let's group the interviewers into each interview.
-    let mut interviewers: HashMap<String, Vec<User>> = HashMap::new();
+    let mut interviewers: HashMap<String, Vec<(User, DateTime<Utc>, DateTime<Utc>)>> = HashMap::new();
     for interview in interviews.clone() {
-        let mut existing: Vec<User> = Default::default();
+        let mut existing: Vec<(User, DateTime<Utc>, DateTime<Utc>)> = Default::default();
         if let Some(v) = interviewers.get(&interview.email) {
             existing = v.clone();
         }
         for interviewer in interview.interviewers {
             let username = interviewer.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').trim().to_string();
             let user = User::get_from_db(db, username.to_string()).unwrap();
-            existing.push(user);
+            existing.push((user, interview.start_time, interview.end_time));
             interviewers.insert(interview.email.to_string(), existing.clone());
         }
     }
@@ -233,8 +233,13 @@ pub async fn compile_packets(db: &Database) {
 
         // Create the cover page.
         let mut user_html = "".to_string();
-        for i in itrs.clone() {
-            user_html += &format!("<tr><td>{}</td></tr>", i.full_name());
+        for (i, start_time, end_time) in itrs.clone() {
+            user_html += &format!(
+                "<tr><td>{}</td><td>{} - {}</td></tr>",
+                i.full_name(),
+                start_time.format("%A, %B %e from %l:%M%P"),
+                end_time.format("%l:%M%P %Z")
+            );
         }
         let cover_html = format!(
             r#"<html>
@@ -293,7 +298,7 @@ The Oxide Team
         args.push(cover_output.to_str().unwrap().to_string());
 
         // Iterate over the interviewees and add their packet to our list of packets.
-        for i in itrs {
+        for (i, start_time, end_time) in itrs {
             let username = i.username.to_string();
 
             // Generate a header for the interviewee.
@@ -301,7 +306,16 @@ The Oxide Team
             html_path.push(format!("{}-{}.html", email.to_string(), username));
             let mut file = fs::File::create(&html_path).unwrap();
             // TODO: add the date and time and the real name here.
-            file.write_all(&format!("<html><body><table><tr><td><h1>{}</h1></table></html>", i.full_name()).as_bytes()).unwrap();
+            file.write_all(
+                &format!(
+                    "<html><body><table><tr><td><h1>{}</h1></td></tr><tr><td><p>{} - {}</p></td></tr></table></html>",
+                    i.full_name(),
+                    start_time.format("%A, %B %e from %l:%M%P"),
+                    end_time.format("%l:%M%P %Z")
+                )
+                .as_bytes(),
+            )
+            .unwrap();
             let mut header_output = env::temp_dir();
             header_output.push(format!("{}-{}.pdf", email.to_string(), username));
             // Convert it to a PDF with pandoc.
