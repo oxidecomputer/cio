@@ -340,6 +340,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
+    #[derive(Clone)]
     pub struct #new_struct_name_plural(pub Vec<#new_struct_name>);
 
     impl IntoIterator for #new_struct_name_plural {
