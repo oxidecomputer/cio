@@ -137,7 +137,7 @@ pub async fn refresh_interviews() {
                 .iter_mut()
                 .for_each(|x| *x = x.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').to_string());
 
-            interview = format!("{} ({})", name, interviewers.join(", "));
+            interview.name = format!("{} ({})", name, interviewers.join(", "));
 
             interview.upsert(&db).await;
         }
