@@ -120,6 +120,9 @@ pub struct NewApplicant {
     pub question_values_in_tension: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub question_why_oxide: String,
+    /// Airtable fields.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interviews: Vec<String>,
 }
 
 impl NewApplicant {
@@ -167,6 +170,7 @@ impl NewApplicant {
             question_value_violated: Default::default(),
             question_values_in_tension: Default::default(),
             question_why_oxide: Default::default(),
+            interviews: Default::default(),
         }
     }
 
@@ -330,6 +334,7 @@ Sincerely,
             question_value_violated: Default::default(),
             question_values_in_tension: Default::default(),
             question_why_oxide: Default::default(),
+            interviews: Default::default(),
         }
     }
 
@@ -1063,7 +1068,9 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 /// Implement updating the Airtable record for an Applicant.
 #[async_trait]
 impl UpdateAirtableRecord<Applicant> for Applicant {
-    async fn update_airtable_record(&mut self, _record: Applicant) {}
+    async fn update_airtable_record(&mut self, record: Applicant) {
+        self.interviews = record.interviews;
+    }
 }
 
 /// The data type for a Google Sheet applicant columns, we use this when
@@ -1312,7 +1319,7 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
 
 #[instrument]
 #[inline]
-fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
+pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
     sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
     sheets.insert("Product Engineering and Design", "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI");

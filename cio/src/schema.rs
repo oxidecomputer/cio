@@ -51,6 +51,7 @@ table! {
         question_value_violated -> Text,
         question_values_in_tension -> Text,
         question_why_oxide -> Text,
+        interviews -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }

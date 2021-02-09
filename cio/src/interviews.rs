@@ -9,18 +9,18 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_INTERVIEWS_TABLE};
+use crate::applicants::{get_sheets_map, Applicant};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::applicant_interviews;
-use crate::utils::{get_gsuite_token, GSUITE_DOMAIN};
+use crate::utils::{get_gsuite_token, DOMAIN, GSUITE_DOMAIN};
 
 #[db {
     new_struct_name = "ApplicantInterview",
     airtable_base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
     airtable_table = "AIRTABLE_INTERVIEWS_TABLE",
     match_on = {
-        "start_time" = "DateTime<Utc>",
-        "email" = "String",
+        "google_event_id" = "String",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -59,7 +59,7 @@ pub async fn refresh_interviews() {
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let mut gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
 
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -74,7 +74,7 @@ pub async fn refresh_interviews() {
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
         println!("Getting events for {}", calendar.id);
-        let events = gsuite.list_past_calendar_events(&calendar.id).await.unwrap();
+        let events = gsuite.list_calendar_events(&calendar.id).await.unwrap();
 
         for event in events {
             // Create the interview event.
@@ -93,17 +93,35 @@ pub async fn refresh_interviews() {
 
             for attendee in event.attendees {
                 // Skip the organizer, this is the Interviews calendar.
-                if attendee.organizer {
+                if attendee.organizer || attendee.email.ends_with("@group.calendar.google.com") {
                     continue;
                 }
-                if attendee.email.ends_with(GSUITE_DOMAIN) {
+
+                let end = &format!("({})", attendee.display_name);
+                // Sometimes Dave uses his personal email, find a better way to do this other than
+                // a one-off.
+                if attendee.email.ends_with(GSUITE_DOMAIN) || attendee.email.ends_with(DOMAIN) || event.summary.ends_with(end) || attendee.email.starts_with("dave.pacheco") {
                     // This is the interviewer.
-                    interview.interviewers = vec![attendee.email.to_string()];
+                    let mut email = attendee.email.to_string();
+                    if attendee.email.starts_with("dave.pacheco") {
+                        email = format!("dave@{}", GSUITE_DOMAIN);
+                    }
+                    interview.interviewers.push(email.to_string());
                     continue;
                 }
+
                 // It must be the person being interviewed.
-                interview.name = attendee.display_name.to_string();
+                // See if we can get the Applicant record ID for them.
                 interview.email = attendee.email.to_string();
+            }
+
+            for (_, sheet_id) in get_sheets_map() {
+                let applicant = Applicant::get_from_db(&db, interview.email.to_string(), sheet_id.to_string());
+                if let Some(a) = applicant {
+                    interview.link_to_applicant = vec![a.airtable_record_id];
+                    interview.name = a.name.to_string();
+                    break;
+                }
             }
 
             interview.upsert(&db).await;

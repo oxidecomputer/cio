@@ -726,6 +726,34 @@ impl GSuite {
         Ok(value.items)
     }
 
+    /// List events on a calendar.
+    pub async fn list_calendar_events(&self, calendar_id: &str) -> Result<Vec<CalendarEvent>, APIError> {
+        // Build the request.
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::GET,
+            &format!("calendars/{}/events", calendar_id),
+            (),
+            Some(&[("singleEvents", "true"), ("maxResults", "2500")]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        let value: CalendarEvents = resp.json().await.unwrap();
+
+        Ok(value.items)
+    }
+
     /// List past events on a calendar.
     pub async fn list_past_calendar_events(&self, calendar_id: &str) -> Result<Vec<CalendarEvent>, APIError> {
         // Build the request.

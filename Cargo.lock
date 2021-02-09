@@ -576,7 +576,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.10",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
