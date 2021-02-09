@@ -17,11 +17,11 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_INTERVIEWS_TABLE};
-use crate::applicants::{get_sheets_map, Applicant};
+use crate::applicants::Applicant;
 use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::{applicant_interviews, users};
+use crate::schema::{applicant_interviews, applicants, users};
 use crate::utils::{get_gsuite_token, DOMAIN, GSUITE_DOMAIN};
 
 #[db {
@@ -141,20 +141,20 @@ pub async fn refresh_interviews(db: &Database) {
                 interview.email = attendee.email.to_string();
             }
 
-            for (_, sheet_id) in get_sheets_map() {
-                let applicant = Applicant::get_from_db(&db, interview.email.to_string(), sheet_id.to_string());
-                if let Some(a) = applicant {
-                    if a.name.is_empty() {
-                        // Sometimes we get back an empty name somehow...?
-                        continue;
-                    }
-                    interview.applicant = vec![a.airtable_record_id];
-                    interview.name = a.name.to_string();
-                    break;
-                }
+            if let Ok(a) = applicants::dsl::applicants
+                .filter(applicants::dsl::email.eq(interview.email.to_string()))
+                .first::<Applicant>(&db.conn())
+            {
+                interview.applicant = vec![a.airtable_record_id];
+                interview.name = a.name.to_string();
             }
 
             let name = interview.name.to_string();
+            if name.is_empty() {
+                // Continue early.
+                continue;
+            }
+
             let mut interviewers = interview.interviewers.clone();
             interviewers
                 .iter_mut()
@@ -167,11 +167,11 @@ pub async fn refresh_interviews(db: &Database) {
                 // We only care about interviews where the candidate has interviewers.
                 continue;
             }
-            interview.upsert(&db).await;
+            interview.upsert(db).await;
         }
     }
 
-    ApplicantInterviews::get_from_db(&db).update_airtable().await;
+    ApplicantInterviews::get_from_db(db).update_airtable().await;
 }
 
 /// Compile interview packets for each interviewee.
@@ -194,7 +194,7 @@ pub async fn compile_packets(db: &Database) {
 
     // Iterate over each user we have in gsuite and download their materials
     // locally.
-    let employees = Users::get_from_db(&db);
+    let employees = Users::get_from_db(db);
     for employee in employees {
         if employee.is_system_account {
             continue;
@@ -202,15 +202,11 @@ pub async fn compile_packets(db: &Database) {
 
         // Get their application materials.
         let mut materials_url = "".to_string();
-        for (_, sheet_id) in get_sheets_map() {
-            let applicant = Applicant::get_from_db(&db, employee.recovery_email.to_string(), sheet_id.to_string());
-            if let Some(a) = applicant {
-                materials_url = a.materials;
-                if !materials_url.is_empty() {
-                    // Sometimes we get back an empty materials url somehow...?
-                    break;
-                }
-            }
+        if let Ok(a) = applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(employee.recovery_email.to_string()))
+            .first::<Applicant>(&db.conn())
+        {
+            materials_url = a.materials;
         }
 
         if materials_url.is_empty() {
@@ -222,7 +218,7 @@ pub async fn compile_packets(db: &Database) {
         download_materials(&drive_client, &materials_url, &employee.username).await;
     }
 
-    let interviews = ApplicantInterviews::get_from_db(&db);
+    let interviews = ApplicantInterviews::get_from_db(db);
 
     // Let's group the interviewers into each interview.
     let mut interviewers: HashMap<String, Vec<(User, DateTime<Tz>, DateTime<Tz>)>> = HashMap::new();
@@ -364,29 +360,23 @@ The Oxide Team
 
     // Concatenate all the files.
     for (applicant_email, packet_args) in packets {
-        for (_, sheet_id) in get_sheets_map() {
-            let a = Applicant::get_from_db(&db, applicant_email.to_string(), sheet_id.to_string());
-            if let Some(mut applicant) = a {
-                if !applicant.name.is_empty() {
-                    // Sometimes we get back an empty name somehow...?
-                    continue;
-                }
+        if let Ok(mut applicant) = applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(applicant_email.to_string()))
+            .first::<Applicant>(&db.conn())
+        {
+            let filename = format!("Interview Packet - {}.pdf", applicant.name);
 
-                let filename = format!("Interview Packet - {}.pdf", applicant.name);
+            let buffer = combine_pdfs(packet_args);
 
-                let buffer = combine_pdfs(packet_args);
+            // Create or update the file in the google_drive.
+            drive_client.create_or_upload_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
 
-                // Create or update the file in the google_drive.
-                drive_client.create_or_upload_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
-
-                // Get the file in drive.
-                let files = drive_client.get_file_by_name(&drive_id, &filename).await.unwrap();
-                if !files.is_empty() {
-                    applicant.interview_packet = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
-                }
-                applicant.update(&db).await;
-                break;
+            // Get the file in drive.
+            let files = drive_client.get_file_by_name(&drive_id, &filename).await.unwrap();
+            if !files.is_empty() {
+                applicant.interview_packet = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
             }
+            applicant.update(db).await;
         }
     }
 }
@@ -576,7 +566,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
     // If no "Catalog" found abort
     if catalog_object.is_none() {
-        println!("[merge-pdfs] atalog root not found.");
+        println!("[merge-pdfs] catalog root not found.");
 
         return Default::default();
     }
@@ -619,10 +609,8 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
     //Set all bookmarks to the PDF Object tree then set the Outlines to the Bookmark content map.
     if let Some(n) = document.build_outline() {
-        if let Ok(x) = document.get_object_mut(catalog_object.0) {
-            if let Object::Dictionary(ref mut dict) = x {
-                dict.set("Outlines", Object::Reference(n));
-            }
+        if let Ok(Object::Dictionary(ref mut dict)) = document.get_object_mut(catalog_object.0) {
+            dict.set("Outlines", Object::Reference(n));
         }
     }
 
@@ -643,7 +631,7 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_interviews() {
         let db = Database::new();
-        refresh_interviews(&db).await;
+        //refresh_interviews(&db).await;
         compile_packets(&db).await;
     }
 }
