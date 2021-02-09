@@ -1,3 +1,4 @@
+#![allow(clippy::from_over_into)]
 use std::str::from_utf8;
 
 use async_trait::async_trait;
@@ -57,9 +58,7 @@ impl JournalClubMeeting {
     #[instrument]
     #[inline]
     pub fn as_slack_msg(&self) -> Value {
-        let mut objects: Vec<MessageBlock> = Default::default();
-
-        objects.push(MessageBlock {
+        let mut objects = vec![MessageBlock {
             block_type: MessageBlockType::Section,
             text: Some(MessageBlockText {
                 text_type: MessageType::Markdown,
@@ -69,7 +68,7 @@ impl JournalClubMeeting {
             accessory: Default::default(),
             block_id: Default::default(),
             fields: Default::default(),
-        });
+        }];
 
         let mut text = format!(
             "<https://github.com/{}|@{}> | issue date: {} | status: *{}*",

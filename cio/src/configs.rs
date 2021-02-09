@@ -1,3 +1,4 @@
+#![allow(clippy::from_over_into)]
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;

@@ -1,3 +1,4 @@
+#![allow(clippy::from_over_into)]
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use macros::db;

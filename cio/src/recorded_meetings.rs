@@ -1,3 +1,4 @@
+#![allow(clippy::from_over_into)]
 use std::env;
 use std::str::from_utf8;
 

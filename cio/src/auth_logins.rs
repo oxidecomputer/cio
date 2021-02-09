@@ -1,3 +1,4 @@
+#![allow(clippy::from_over_into)]
 use std::collections::HashMap;
 use std::env;
 use std::{thread, time};
