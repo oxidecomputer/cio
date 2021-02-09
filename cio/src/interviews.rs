@@ -627,7 +627,7 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_interviews() {
         let db = Database::new();
-        //refresh_interviews(&db).await;
+        refresh_interviews(&db).await;
         compile_packets(&db).await;
     }
 }
