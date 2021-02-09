@@ -244,6 +244,8 @@ pub async fn compile_packets(db: &Database) {
                 interview.start_time.with_timezone(&chrono_tz::US::Pacific),
                 interview.end_time.with_timezone(&chrono_tz::US::Pacific),
             ));
+            // Sort the interviewers by the meeting start_time.
+            existing.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
             interviewers.insert(interview.email.to_string(), existing.clone());
         }
     }
