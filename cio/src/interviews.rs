@@ -98,7 +98,7 @@ pub async fn refresh_interviews() {
                 }
 
                 let end = &format!("({})", attendee.display_name);
-                // Sometimes Dave and Nils use their personal email, find a better way to do this other than
+                // TODO: Sometimes Dave and Nils use their personal email, find a better way to do this other than
                 // a one-off.
                 if attendee.email.ends_with(GSUITE_DOMAIN)
                     || attendee.email.ends_with(DOMAIN)
@@ -131,12 +131,13 @@ pub async fn refresh_interviews() {
                 }
             }
 
+            let name = interview.name.to_string();
             let mut interviewers = interview.interviewers.clone();
             interviewers
                 .iter_mut()
                 .for_each(|x| *x = x.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').to_string());
 
-            interview.name += &format!(" ({})", interviewers.join(", "));
+            interview = format!("{} ({})", name, interviewers.join(", "));
 
             interview.upsert(&db).await;
         }
