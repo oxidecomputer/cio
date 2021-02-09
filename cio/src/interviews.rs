@@ -229,20 +229,22 @@ pub async fn compile_packets(db: &Database) {
         }
         for interviewer in interview.interviewers {
             let username = interviewer.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').trim().to_string();
-            let u = User::get_from_db(db, username.to_string());
-            if u.is_none() {
-                // Likeley means the person quit or no longer works here.
-                continue;
+            if let Ok(user) = users::dsl::users
+                .filter(users::dsl::username.eq(username.to_string()))
+                .or_filter(users::dsl::aliases.contains(vec![username.to_string()]))
+                .first::<User>(&db.conn())
+            {
+                existing.push((
+                    user,
+                    interview.start_time.with_timezone(&chrono_tz::US::Pacific),
+                    interview.end_time.with_timezone(&chrono_tz::US::Pacific),
+                ));
+                // Sort the interviewers by the meeting start_time.
+                existing.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+                interviewers.insert(interview.email.to_string(), existing.clone());
+            } else {
+                println!("[interviews] {} not found in database", username);
             }
-            let user = u.unwrap();
-            existing.push((
-                user,
-                interview.start_time.with_timezone(&chrono_tz::US::Pacific),
-                interview.end_time.with_timezone(&chrono_tz::US::Pacific),
-            ));
-            // Sort the interviewers by the meeting start_time.
-            existing.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-            interviewers.insert(interview.email.to_string(), existing.clone());
         }
     }
 
