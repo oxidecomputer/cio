@@ -248,23 +248,23 @@ pub async fn compile_packets(db: &Database) {
 
     // So we have everyone's materials stored locally @ /{temp_dir}/{username}.pdf.
     // Let's compile the materials for candidates into one file.
-    let mut packets: HashMap<String, Vec<String>> = HashMap::new();
+    let mut packets: HashMap<String, (Applicant, Vec<String>)> = HashMap::new();
     for (email, itrs) in interviewers {
-        let mut args: Vec<String> = Default::default();
-
-        // Create the cover page.
-        let mut user_html = "".to_string();
-        for (i, start_time, end_time) in itrs.clone() {
-            user_html += &format!(
-                "<tr><td>{}</td><td>{} - {}</td></tr>",
-                i.full_name(),
-                start_time.format("%A, %B %e from %l:%M%P"),
-                end_time.format("%l:%M%P %Z")
-            );
-        }
-        let cover_html = format!(
-            r#"<html>
+        if let Ok(applicant) = applicants::dsl::applicants.filter(applicants::dsl::email.eq(email.to_string())).first::<Applicant>(&db.conn()) {
+            // Create the cover page.
+            let mut user_html = "".to_string();
+            for (i, start_time, end_time) in itrs.clone() {
+                user_html += &format!(
+                    "<tr><td>{}</td><td>{} - {}</td></tr>",
+                    i.full_name(),
+                    start_time.format("%A, %B %e from %l:%M%P"),
+                    end_time.format("%l:%M%P %Z")
+                );
+            }
+            let cover_html = format!(
+                r#"<html>
 <body>
+<p>{},</p>
 <p>
 Thank you for your interest in Oxide!  We have enjoyed reading the materials
 you submitted to Oxide, and we are looking forward to having more conversations
@@ -299,85 +299,83 @@ Sincerely,<br>
 The Oxide Team
 </body>
 </html>"#,
-            user_html
-        );
+                applicant.name, user_html
+            );
 
-        // Generate a cover for the packet.
-        let mut cover_path = env::temp_dir();
-        cover_path.push(format!("{}.html", email.to_string()));
-        let mut file = fs::File::create(&cover_path).unwrap();
-        file.write_all(&cover_html.as_bytes()).unwrap();
-        let mut cover_output = env::temp_dir();
-        cover_output.push(format!("{}.pdf", email.to_string()));
-        // Convert it to a PDF with pandoc.
-        let mut pandoc = pandoc::new();
-        pandoc.add_input(&cover_path);
-        pandoc.set_output(OutputKind::File(cover_output.clone()));
-        pandoc.execute().unwrap();
-
-        // Add the header to our string.
-        args.push(cover_output.to_str().unwrap().to_string());
-
-        // Iterate over the interviewees and add their packet to our list of packets.
-        for (i, start_time, end_time) in itrs {
-            let username = i.username.to_string();
-
-            // Generate a header for the interviewee.
-            let mut html_path = env::temp_dir();
-            html_path.push(format!("{}-{}.html", email.to_string(), username));
-            let mut file = fs::File::create(&html_path).unwrap();
-            // TODO: add the date and time and the real name here.
-            file.write_all(
-                &format!(
-                    "<html><body><table><tr><td><h1>{}</h1></td></tr><tr><td><p>{} - {}</p></td></tr></table></html>",
-                    i.full_name(),
-                    start_time.format("%A, %B %e from %l:%M%P"),
-                    end_time.format("%l:%M%P %Z")
-                )
-                .as_bytes(),
-            )
-            .unwrap();
-            let mut header_output = env::temp_dir();
-            header_output.push(format!("{}-{}.pdf", email.to_string(), username));
+            // Generate a cover for the packet.
+            let mut cover_path = env::temp_dir();
+            cover_path.push(format!("{}.html", email.to_string()));
+            let mut file = fs::File::create(&cover_path).unwrap();
+            file.write_all(&cover_html.as_bytes()).unwrap();
+            let mut cover_output = env::temp_dir();
+            cover_output.push(format!("{}.pdf", email.to_string()));
             // Convert it to a PDF with pandoc.
             let mut pandoc = pandoc::new();
-            pandoc.add_input(&html_path);
-            pandoc.set_output(OutputKind::File(header_output.clone()));
+            pandoc.add_input(&cover_path);
+            pandoc.set_output(OutputKind::File(cover_output.clone()));
             pandoc.execute().unwrap();
 
-            // Add the header to our string.
-            args.push(header_output.to_str().unwrap().to_string());
+            // Add the header to our strings.
+            let mut args = vec![cover_output.to_str().unwrap().to_string()];
 
-            // Get the path to the materials.
-            let mut materials = env::temp_dir();
-            materials.push(format!("{}.pdf", username));
-            args.push(materials.to_str().unwrap().to_string());
+            // Iterate over the interviewees and add their packet to our list of packets.
+            for (i, start_time, end_time) in itrs {
+                let username = i.username.to_string();
+
+                // Generate a header for the interviewee.
+                let mut html_path = env::temp_dir();
+                html_path.push(format!("{}-{}.html", email.to_string(), username));
+                let mut file = fs::File::create(&html_path).unwrap();
+                // TODO: add the date and time and the real name here.
+                file.write_all(
+                    &format!(
+                        "<html><body><table><tr><td><h1>{}</h1></td></tr><tr><td><p>{} - {}</p></td></tr></table></html>",
+                        i.full_name(),
+                        start_time.format("%A, %B %e from %l:%M%P"),
+                        end_time.format("%l:%M%P %Z")
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
+                let mut header_output = env::temp_dir();
+                header_output.push(format!("{}-{}.pdf", email.to_string(), username));
+                // Convert it to a PDF with pandoc.
+                let mut pandoc = pandoc::new();
+                pandoc.add_input(&html_path);
+                pandoc.set_output(OutputKind::File(header_output.clone()));
+                pandoc.execute().unwrap();
+
+                // Add the header to our string.
+                args.push(header_output.to_str().unwrap().to_string());
+
+                // Get the path to the materials.
+                let mut materials = env::temp_dir();
+                materials.push(format!("{}.pdf", username));
+                args.push(materials.to_str().unwrap().to_string());
+            }
 
             // Push it onto our array.
-            packets.insert(email.to_string(), args.to_vec());
+            packets.insert(email.to_string(), (applicant.clone(), args.to_vec()));
         }
     }
 
     // Concatenate all the files.
-    for (applicant_email, packet_args) in packets {
-        if let Ok(mut applicant) = applicants::dsl::applicants
-            .filter(applicants::dsl::email.eq(applicant_email.to_string()))
-            .first::<Applicant>(&db.conn())
-        {
-            let filename = format!("Interview Packet - {}.pdf", applicant.name);
+    for (a, packet_args) in packets.values() {
+        let mut applicant = a.clone();
 
-            let buffer = combine_pdfs(packet_args);
+        let filename = format!("Interview Packet - {}.pdf", applicant.name);
 
-            // Create or update the file in the google_drive.
-            drive_client.create_or_upload_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
+        let buffer = combine_pdfs(packet_args.to_vec());
 
-            // Get the file in drive.
-            let files = drive_client.get_file_by_name(&drive_id, &filename).await.unwrap();
-            if !files.is_empty() {
-                applicant.interview_packet = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
-            }
-            applicant.update(db).await;
+        // Create or update the file in the google_drive.
+        drive_client.create_or_upload_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
+
+        // Get the file in drive.
+        let files = drive_client.get_file_by_name(&drive_id, &filename).await.unwrap();
+        if !files.is_empty() {
+            applicant.interview_packet = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
         }
+        applicant.update(db).await;
     }
 }
 
