@@ -98,13 +98,20 @@ pub async fn refresh_interviews() {
                 }
 
                 let end = &format!("({})", attendee.display_name);
-                // Sometimes Dave uses his personal email, find a better way to do this other than
+                // Sometimes Dave and Nils use their personal email, find a better way to do this other than
                 // a one-off.
-                if attendee.email.ends_with(GSUITE_DOMAIN) || attendee.email.ends_with(DOMAIN) || event.summary.ends_with(end) || attendee.email.starts_with("dave.pacheco") {
+                if attendee.email.ends_with(GSUITE_DOMAIN)
+                    || attendee.email.ends_with(DOMAIN)
+                    || event.summary.ends_with(end)
+                    || attendee.email.starts_with("dave.pacheco")
+                    || attendee.email.starts_with("nils.nieuwejaar")
+                {
                     // This is the interviewer.
                     let mut email = attendee.email.to_string();
                     if attendee.email.starts_with("dave.pacheco") {
                         email = format!("dave@{}", GSUITE_DOMAIN);
+                    } else if attendee.email.starts_with("nils") {
+                        email = format!("nils@{}", GSUITE_DOMAIN);
                     }
                     interview.interviewers.push(email.to_string());
                     continue;
