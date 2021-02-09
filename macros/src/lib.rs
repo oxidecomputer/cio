@@ -193,6 +193,17 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             None
         }
 
+        /// Get the row in our airtable workspace.
+        #[tracing::instrument]
+        #[inline]
+        pub async fn get_from_airtable(id: &str) -> Self {
+            let record = #new_struct_name::airtable()
+                .get_record(&#new_struct_name::airtable_table(), id)
+                .await.unwrap();
+
+            record.fields
+        }
+
         /// Delete a record from the dataabase and Airtable.
         #[instrument(skip(db))]
         #[inline]

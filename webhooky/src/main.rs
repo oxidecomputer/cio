@@ -37,7 +37,7 @@ use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rfds::is_image;
-use cio_api::shipments::{get_shipments_spreadsheets, NewInboundShipment, Shipment};
+use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
@@ -778,7 +778,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     let db = &api_context.db;
 
     // Get the row from airtable.
-    let record = Shipment::get_from_airtable(&event.record_id).await;
+    let record = InboundShipment::get_from_airtable(&event.record_id).await;
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
