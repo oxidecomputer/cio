@@ -473,7 +473,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_interviews() {
+    async fn test_interviews() {
         let db = Database::new();
         refresh_interviews(&db).await;
         compile_packets(&db).await;
