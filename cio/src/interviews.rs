@@ -132,7 +132,9 @@ pub async fn refresh_interviews() {
             }
 
             let mut interviewers = interview.interviewers.clone();
-            interviewers.iter_mut().for_each(|x| *x = x.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).to_string());
+            interviewers
+                .iter_mut()
+                .for_each(|x| *x = x.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').to_string());
 
             interview.name += &format!(" ({})", interviewers.join(", "));
 
