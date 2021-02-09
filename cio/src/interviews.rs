@@ -6,6 +6,7 @@ use std::io::{copy, Write};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 use google_drive::GoogleDrive;
 use gsuite_api::GSuite;
 use lopdf::{Bookmark, Document, Object, ObjectId};
@@ -143,6 +144,10 @@ pub async fn refresh_interviews(db: &Database) {
             for (_, sheet_id) in get_sheets_map() {
                 let applicant = Applicant::get_from_db(&db, interview.email.to_string(), sheet_id.to_string());
                 if let Some(a) = applicant {
+                    if a.name.is_empty() {
+                        // Sometimes we get back an empty name somehow...?
+                        continue;
+                    }
                     interview.applicant = vec![a.airtable_record_id];
                     interview.name = a.name.to_string();
                     break;
@@ -220,9 +225,9 @@ pub async fn compile_packets(db: &Database) {
     let interviews = ApplicantInterviews::get_from_db(&db);
 
     // Let's group the interviewers into each interview.
-    let mut interviewers: HashMap<String, Vec<(User, DateTime<Utc>, DateTime<Utc>)>> = HashMap::new();
+    let mut interviewers: HashMap<String, Vec<(User, DateTime<Tz>, DateTime<Tz>)>> = HashMap::new();
     for interview in interviews.clone() {
-        let mut existing: Vec<(User, DateTime<Utc>, DateTime<Utc>)> = Default::default();
+        let mut existing: Vec<(User, DateTime<Tz>, DateTime<Tz>)> = Default::default();
         if let Some(v) = interviewers.get(&interview.email) {
             existing = v.clone();
         }
@@ -234,7 +239,11 @@ pub async fn compile_packets(db: &Database) {
                 continue;
             }
             let user = u.unwrap();
-            existing.push((user, interview.start_time, interview.end_time));
+            existing.push((
+                user,
+                interview.start_time.with_timezone(&chrono_tz::US::Pacific),
+                interview.end_time.with_timezone(&chrono_tz::US::Pacific),
+            ));
             interviewers.insert(interview.email.to_string(), existing.clone());
         }
     }
@@ -356,6 +365,11 @@ The Oxide Team
         for (_, sheet_id) in get_sheets_map() {
             let a = Applicant::get_from_db(&db, applicant_email.to_string(), sheet_id.to_string());
             if let Some(mut applicant) = a {
+                if !applicant.name.is_empty() {
+                    // Sometimes we get back an empty name somehow...?
+                    continue;
+                }
+
                 let filename = format!("Interview Packet - {}.pdf", applicant.name);
 
                 let buffer = combine_pdfs(packet_args);
