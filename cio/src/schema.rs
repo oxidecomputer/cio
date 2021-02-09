@@ -8,7 +8,7 @@ table! {
         interviewers -> Array<Text>,
         google_event_id -> Varchar,
         event_link -> Varchar,
-        link_to_applicant -> Array<Text>,
+        applicant -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }

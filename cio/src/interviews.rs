@@ -40,7 +40,7 @@ pub struct NewApplicantInterview {
     pub event_link: String,
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub link_to_applicant: Vec<String>,
+    pub applicant: Vec<String>,
 }
 
 /// Implement updating the Airtable record for a ApplicantInterview.
@@ -88,7 +88,7 @@ pub async fn refresh_interviews() {
 
                 google_event_id: event.id.to_string(),
                 event_link: event.html_link.to_string(),
-                link_to_applicant: Default::default(),
+                applicant: Default::default(),
             };
 
             for attendee in event.attendees {
@@ -125,11 +125,16 @@ pub async fn refresh_interviews() {
             for (_, sheet_id) in get_sheets_map() {
                 let applicant = Applicant::get_from_db(&db, interview.email.to_string(), sheet_id.to_string());
                 if let Some(a) = applicant {
-                    interview.link_to_applicant = vec![a.airtable_record_id];
+                    interview.applicant = vec![a.airtable_record_id];
                     interview.name = a.name.to_string();
                     break;
                 }
             }
+
+            let mut interviewers = interview.interviewers.clone();
+            interviewers.iter_mut().for_each(|x| *x = x.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).to_string());
+
+            interview.name += &format!(" ({})", interviewers.join(", "));
 
             interview.upsert(&db).await;
         }
