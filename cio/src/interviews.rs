@@ -10,9 +10,10 @@ use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_INTERVIEWS_TABLE};
 use crate::applicants::{get_sheets_map, Applicant};
+use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::applicant_interviews;
+use crate::schema::{applicant_interviews, users};
 use crate::utils::{get_gsuite_token, DOMAIN, GSUITE_DOMAIN};
 
 #[db {
@@ -108,11 +109,23 @@ pub async fn refresh_interviews() {
                 {
                     // This is the interviewer.
                     let mut email = attendee.email.to_string();
-                    if attendee.email.starts_with("dave.pacheco") {
-                        email = format!("dave@{}", GSUITE_DOMAIN);
-                    } else if attendee.email.starts_with("nils") {
-                        email = format!("nils@{}", GSUITE_DOMAIN);
+
+                    // If the email is not their oxide computer email, let's firgure it out based
+                    // on the information from their user.
+                    if !email.ends_with(GSUITE_DOMAIN) && !email.ends_with(DOMAIN) {
+                        match users::dsl::users.filter(users::dsl::recovery_email.eq(email.to_string())).limit(1).load::<User>(&db.conn()) {
+                            Ok(r) => {
+                                if !r.is_empty() {
+                                    let record = r.get(0).unwrap().clone();
+                                    email = record.email();
+                                }
+                            }
+                            Err(e) => {
+                                println!("[db] we don't have the record in the database: {}", e);
+                            }
+                        }
                     }
+
                     interview.interviewers.push(email.to_string());
                     continue;
                 }
