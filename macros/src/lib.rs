@@ -178,19 +178,15 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         #[tracing::instrument(skip(db))]
         #[inline]
         pub fn get_from_db(db: &crate::db::Database#args) -> Option<Self> {
-            match #db_schema::dsl::#db_schema#filter.limit(1).load::<#new_struct_name>(&db.conn()) {
+            match #db_schema::dsl::#db_schema#filter.first::<#new_struct_name>(&db.conn()) {
                 Ok(r) => {
-                    if !r.is_empty() {
-                        return Some(r.get(0).unwrap().clone());
-                    }
+                    return Some(r);
                 }
                 Err(e) => {
                     println!("[db] we don't have the record in the database: {}", e);
                     return None;
                 }
             }
-
-            None
         }
 
         /// Get the row in our airtable workspace.
