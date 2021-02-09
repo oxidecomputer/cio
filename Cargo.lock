@@ -638,7 +638,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#134342dcf9191472a358dac182b6da6189af8a21"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#784d7ee333f332dd09061b1cd0ff92b7df4e25b1"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -646,6 +646,7 @@ dependencies = [
  "base64 0.12.3",
  "chrono",
  "chrono-humanize",
+ "chrono-tz",
  "clap",
  "cloudflare-rs",
  "comrak",
@@ -661,6 +662,7 @@ dependencies = [
  "html2text",
  "hubcaps",
  "hyper",
+ "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio)",
  "nom_pem",
  "openapiv3",
@@ -2181,7 +2183,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#134342dcf9191472a358dac182b6da6189af8a21"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#784d7ee333f332dd09061b1cd0ff92b7df4e25b1"
 dependencies = [
  "Inflector",
  "proc-macro2",
