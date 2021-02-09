@@ -319,9 +319,9 @@ The Oxide Team
             }
         }
         let mut output = env::temp_dir();
-        output.push(format!("Interview Packet - {}.pdf", applicant_name));
-        let filename = output.to_str().unwrap().to_string();
-        packet_args.push(filename.to_string());
+        let filename = format!("Interview Packet - {}.pdf", applicant_name);
+        output.push(filename.to_string());
+        packet_args.push(output.to_str().unwrap().to_string());
 
         // Extract the text from the PDF
         let cmd_output = Command::new("pdfunite").args(&packet_args).output().unwrap();
