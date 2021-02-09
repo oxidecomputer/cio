@@ -121,6 +121,8 @@ pub struct NewApplicant {
     pub question_values_in_tension: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub question_why_oxide: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub interview_packet: String,
     /// Airtable fields.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interviews: Vec<String>,
@@ -171,6 +173,7 @@ impl NewApplicant {
             question_value_violated: Default::default(),
             question_values_in_tension: Default::default(),
             question_why_oxide: Default::default(),
+            interview_packet: Default::default(),
             interviews: Default::default(),
         }
     }
@@ -335,6 +338,7 @@ Sincerely,
             question_value_violated: Default::default(),
             question_values_in_tension: Default::default(),
             question_why_oxide: Default::default(),
+            interview_packet: Default::default(),
             interviews: Default::default(),
         }
     }

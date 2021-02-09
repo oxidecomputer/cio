@@ -340,38 +340,41 @@ The Oxide Team
 
     // Concatenate all the files.
     for (applicant_email, mut packet_args) in packets {
-        let mut applicant_name = String::new();
         for (_, sheet_id) in get_sheets_map() {
-            let applicant = Applicant::get_from_db(&db, applicant_email.to_string(), sheet_id.to_string());
-            if let Some(a) = applicant {
-                applicant_name = a.name;
+            let a = Applicant::get_from_db(&db, applicant_email.to_string(), sheet_id.to_string());
+            if let Some(mut applicant) = a {
+                let mut output = env::temp_dir();
+                let filename = format!("Interview Packet - {}.pdf", applicant.name);
+                output.push(filename.to_string());
+                packet_args.push(output.to_str().unwrap().to_string());
+
+                // Combine all the PDFs into one PDF
+                let cmd_output = Command::new("pdfunite").args(&packet_args).output().unwrap();
+                match fs::read_to_string(output.clone()) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        println!("[applicants] running pdfunite failed: {} ", e);
+                        stdout().write_all(&cmd_output.stdout).unwrap();
+                        stderr().write_all(&cmd_output.stderr).unwrap();
+                    }
+                };
+                // Read the contents of the output file.
+                let mut f = fs::File::open(&output).unwrap();
+                let mut buffer = Vec::new();
+                f.read_to_end(&mut buffer).unwrap();
+
+                // Create or update the file in the google_drive.
+                drive_client.create_or_upload_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
+
+                // Get the file in drive.
+                let files = drive_client.get_file_by_name(&drive_id, &filename).await.unwrap();
+                if !files.is_empty() {
+                    applicant.interview_packet = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
+                }
+                applicant.update(&db).await;
                 break;
             }
         }
-        let mut output = env::temp_dir();
-        let filename = format!("Interview Packet - {}.pdf", applicant_name);
-        output.push(filename.to_string());
-        packet_args.push(output.to_str().unwrap().to_string());
-
-        // Extract the text from the PDF
-        let cmd_output = Command::new("pdfunite").args(&packet_args).output().unwrap();
-
-        match fs::read_to_string(output.clone()) {
-            Ok(_) => (),
-            Err(e) => {
-                println!("[applicants] running pdfunite failed: {} ", e);
-                stdout().write_all(&cmd_output.stdout).unwrap();
-                stderr().write_all(&cmd_output.stderr).unwrap();
-            }
-        };
-
-        let mut f = fs::File::open(&output).unwrap();
-        let mut buffer = Vec::new();
-        // read the whole file
-        f.read_to_end(&mut buffer).unwrap();
-
-        // Create or update the file in the google_drive.
-        drive_client.create_or_upload_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
     }
 }
 
