@@ -375,7 +375,10 @@ to our internal library: https://github.com/{}/library
 
 We use Airtable for storing just about everything. You can login with single
 sign-on (SSO) after setting up your email at:
-https://airtable.com/sso/login. Poke around :)
+https://airtable.com/sso/login.
+To join our Airtable workspace you need to click this link:
+https://airtable-join.corp.oxide.computer.
+Poke around once you've joined :)
 
 We have both a Riot server and a Slack for chat. Josh (josh@oxide.computer) can get
 you set up with an account on the Riot server. You can use SSO to login to the Slack
