@@ -81,7 +81,7 @@ pub async fn refresh_interviews(db: &Database) {
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
         println!("Getting events for {}", calendar.id);
-        let events = gsuite.list_calendar_events(&calendar.id).await.unwrap();
+        let events = gsuite.list_calendar_events(&calendar.id, true).await.unwrap();
 
         for event in events {
             // Create the interview event.

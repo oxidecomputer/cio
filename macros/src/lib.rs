@@ -200,7 +200,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             record.fields
         }
 
-        /// Delete a record from the dataabase and Airtable.
+        /// Delete a record from the database and Airtable.
         #[instrument(skip(db))]
         #[inline]
         pub async fn delete(&self, db: &crate::db::Database) {

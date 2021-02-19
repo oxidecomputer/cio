@@ -727,14 +727,14 @@ impl GSuite {
     }
 
     /// List events on a calendar.
-    pub async fn list_calendar_events(&self, calendar_id: &str) -> Result<Vec<CalendarEvent>, APIError> {
+    pub async fn list_calendar_events(&self, calendar_id: &str, show_deleted: bool) -> Result<Vec<CalendarEvent>, APIError> {
         // Build the request.
         let request = self.request(
             CALENDAR_ENDPOINT,
             Method::GET,
             &format!("calendars/{}/events", calendar_id),
             (),
-            Some(&[("singleEvents", "true"), ("maxResults", "2500")]),
+            Some(&[("singleEvents", "true"), ("maxResults", "2500"), ("showDeleted", &show_deleted.to_string())]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
