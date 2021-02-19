@@ -88,7 +88,7 @@ pub async fn refresh_interviews(db: &Database) {
             if event.status == "cancelled" {
                 // See if we have the event.
                 if let Some(db_event) = ApplicantInterview::get_from_db(db, event.id.to_string()) {
-                    db_event.delete(db);
+                    db_event.delete(db).await;
                 }
 
                 // Continue since we don't want to save this event again.
