@@ -84,6 +84,17 @@ pub async fn refresh_interviews(db: &Database) {
         let events = gsuite.list_calendar_events(&calendar.id, true).await.unwrap();
 
         for event in events {
+            // If the event has been cancelled, clear it out of the database.
+            if event.status == "cancelled" {
+                // See if we have the event.
+                if let Some(db_event) = ApplicantInterview::get_from_db(db, event.id.to_string()) {
+                    db_event.delete(db);
+                }
+
+                // Continue since we don't want to save this event again.
+                continue;
+            }
+
             // Create the interview event.
             let mut interview = NewApplicantInterview {
                 start_time: event.start.date_time.unwrap(),
