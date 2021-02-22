@@ -1246,7 +1246,12 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                 copy(&mut file, &mut outfile).unwrap();
 
                 let file_name = output.to_str().unwrap();
-                if (!output.is_dir()) && (file_name.ends_with("responses.pdf") || file_name.ends_with("OxideQuestions.pdf") || file_name.ends_with("Questionnaire.pdf")) {
+                if (!output.is_dir())
+                    && (file_name.ends_with("responses.pdf")
+                        || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
+                        || file_name.ends_with("OxideQuestions.pdf")
+                        || file_name.ends_with("Questionnaire.pdf"))
+                {
                     // Concatenate all the zip files into our result.
                     result += &format!(
                         "====================== zip file: {} ======================\n\n",
