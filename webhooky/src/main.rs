@@ -457,7 +457,11 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         }
     } else if column_header.contains("status") {
         // Parse the new status.
-        a.status = cio_api::applicant_status::Status::from_str(&event.event.value).unwrap_or_default().to_string();
+        let mut status = cio_api::applicant_status::Status::from_str(&event.event.value).unwrap_or_default().to_string();
+        status = status.trim().to_string();
+        if !status.is_empty() {
+            a.status = status;
+        }
     } else if column_header.contains("value reflected") {
         // Update the value reflected.
         a.value_reflected = event.event.value.to_lowercase();
