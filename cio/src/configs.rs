@@ -336,6 +336,24 @@ impl User {
         // Get the user's aliases if they have one.
         let aliases = self.aliases.join(", ");
 
+        let mut github_copy = format!(
+            "Your GitHub @{} has been added to our organization (https://github.com/{})
+and various teams within it. GitHub should have sent an email with instructions on
+accepting the invitation to our organization to the email you used
+when you signed up for GitHub. Or you can alternatively accept our invitation
+by going to https://github.com/{}.",
+            self.github, github_org, github_org
+        );
+        if self.github.is_empty() {
+            // Let the new hire know they need to create a GitHub account.
+            github_copy = format!(
+                "We do not have a github account for you. You will need to create one at https://github.com
+OR let jess@{} know your handle, if you already have one. Either way, be sure to
+let jess@{} know what your GitHub handle is.",
+                DOMAIN, DOMAIN
+            );
+        }
+
         // Send the message.
         sendgrid
             .send_mail(
@@ -354,11 +372,7 @@ Aliases: {}
 Make sure you set up two-factor authentication for your account, or in one week
 you will be locked out.
 
-Your GitHub @{} has been added to our organization (https://github.com/{})
-and various teams within it. GitHub should have sent an email with instructions on
-accepting the invitation to our organization to the email you used
-when you signed up for GitHub. Or you can alternatively accept our invitation
-by going to https://github.com/{}.
+{}
 
 If you have any questions or your email does not work please email your
 administrator, who is cc-ed on this email. Spoiler alert it's Jess...
@@ -394,9 +408,7 @@ xoxo,
                     self.email(),
                     password,
                     aliases,
-                    self.github,
-                    github_org,
-                    github_org,
+                    github_copy,
                     DOMAIN,
                     github_org,
                     github_org,
