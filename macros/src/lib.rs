@@ -298,11 +298,17 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Get the existing record in Airtable that matches this id.
         #[tracing::instrument]
         #[inline]
-        pub async fn get_existing_airtable_record(&self) -> airtable_api::Record<#new_struct_name> {
+        pub async fn get_existing_airtable_record(&self) -> Option<airtable_api::Record<#new_struct_name>> {
                 // Let's get the existing record from airtable.
-                #new_struct_name::airtable()
-                    .get_record(&#new_struct_name::airtable_table(), &self.airtable_record_id)
-                    .await.unwrap()
+                match #new_struct_name::airtable()
+                        .get_record(&#new_struct_name::airtable_table(), &self.airtable_record_id)
+                        .await {
+                            Ok(v) => return Some(v),
+                            Err(e) => {
+                                println!("getting airtable record failed: {}", self.airtable_record_id);
+                                return None;
+                            }
+                        }
         }
 
 
@@ -313,10 +319,13 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // First check if we have an `airtable_record_id` for this record.
             // If we do we can move ahead faster.
             if !self.airtable_record_id.is_empty() {
-                let mut existing_record: airtable_api::Record<#new_struct_name> = self.get_existing_airtable_record().await;
+                let mut er: Option<airtable_api::Record<#new_struct_name>> = self.get_existing_airtable_record().await;
 
-                // Return the result from the update.
-                return self.update_in_airtable(&mut existing_record).await;
+                if let Some(mut existing_record) = er {
+                    // Return the result from the update.
+                    return self.update_in_airtable(&mut existing_record).await;
+                }
+                // Otherwise we need to continue through the other loop.
             }
 
             // Since we don't know the airtable record id, we need to find it by looking

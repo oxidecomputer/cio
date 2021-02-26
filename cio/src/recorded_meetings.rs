@@ -191,12 +191,13 @@ pub async fn refresh_recorded_meetings() {
                     meeting.transcript_id = m.transcript_id.to_string();
 
                     // Get it from Airtable.
-                    let existing_airtable = m.get_existing_airtable_record().await;
-                    if meeting.transcript.is_empty() {
-                        meeting.transcript = existing_airtable.fields.transcript.to_string();
-                    }
-                    if meeting.transcript_id.is_empty() {
-                        meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
+                    if let Some(existing_airtable) = m.get_existing_airtable_record().await {
+                        if meeting.transcript.is_empty() {
+                            meeting.transcript = existing_airtable.fields.transcript.to_string();
+                        }
+                        if meeting.transcript_id.is_empty() {
+                            meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
+                        }
                     }
                 }
 
