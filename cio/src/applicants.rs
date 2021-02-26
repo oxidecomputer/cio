@@ -1284,7 +1284,10 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         pandoc.set_output(OutputKind::File(output.clone()));
         match pandoc.execute() {
             Ok(_) => (),
-            Err(e) => println!("pandoc failed: {}", e),
+            Err(e) => {
+                println!("pandoc failed: {}", e);
+                return "".to_string();
+            }
         }
         result = fs::read_to_string(output.clone()).unwrap();
     }
