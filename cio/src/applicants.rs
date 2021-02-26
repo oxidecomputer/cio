@@ -1282,8 +1282,10 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         let mut pandoc = pandoc::new();
         pandoc.add_input(&path);
         pandoc.set_output(OutputKind::File(output.clone()));
-        pandoc.execute().unwrap();
-
+        match pandoc.execute() {
+            Ok(_) => (),
+            Err(e) => println!("pandoc failed: {}", e),
+        }
         result = fs::read_to_string(output.clone()).unwrap();
     }
 
