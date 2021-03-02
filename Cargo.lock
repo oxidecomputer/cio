@@ -286,7 +286,7 @@ dependencies = [
  "memchr",
  "num_cpus",
  "once_cell",
- "pin-project-lite 0.2.4",
+ "pin-project-lite 0.2.5",
  "pin-utils",
  "slab",
  "wasm-bindgen-futures",
@@ -372,9 +372,9 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bincode"
-version = "1.3.1"
+version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f30d3a39baa26f9651f17b375061f3233dde33424a8b72b0dbe93a68a0bc896d"
+checksum = "d175dfa69e619905c4c3cdb7c3c203fa3bdd5d51184e3afdb2742c0280493772"
 dependencies = [
  "byteorder",
  "serde",
@@ -415,7 +415,7 @@ dependencies = [
  "block-padding",
  "byte-tools",
  "byteorder",
- "generic-array 0.12.3",
+ "generic-array 0.12.4",
 ]
 
 [[package]]
@@ -476,9 +476,9 @@ checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
 
 [[package]]
 name = "byteorder"
-version = "1.4.2"
+version = "1.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae44d1a3d5a19df61dd0c8beb138458ac2a53a7ac09eba97d55592540004306b"
+checksum = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
 
 [[package]]
 name = "bytes"
@@ -638,7 +638,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#9c90498891afbbd95a9908feba20545454b2c943"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d938064989f1a4d1c2c5cc9d9cc9d9cc4b536b5a"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -783,16 +783,16 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "cookie"
-version = "0.14.3"
+version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "784ad0fbab4f3e9cef09f20e0aea6000ae08d2cb98ac4c0abc53df18803d702f"
+checksum = "03a5d7b21829bc7b4bf4754a978a241ae54ea55a40f92bb20216e54096f4b951"
 dependencies = [
  "aes-gcm",
- "base64 0.12.3",
+ "base64 0.13.0",
  "hkdf",
  "hmac",
  "percent-encoding 2.1.0",
- "rand 0.7.3",
+ "rand 0.8.3",
  "sha2",
  "time 0.2.25",
  "version_check 0.9.2",
@@ -1056,7 +1056,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
 dependencies = [
- "generic-array 0.12.3",
+ "generic-array 0.12.4",
 ]
 
 [[package]]
@@ -1439,7 +1439,7 @@ dependencies = [
  "futures-io",
  "memchr",
  "parking",
- "pin-project-lite 0.2.4",
+ "pin-project-lite 0.2.5",
  "waker-fn",
 ]
 
@@ -1480,7 +1480,7 @@ dependencies = [
  "futures-sink",
  "futures-task",
  "memchr",
- "pin-project-lite 0.2.4",
+ "pin-project-lite 0.2.5",
  "pin-utils",
  "proc-macro-hack",
  "proc-macro-nested",
@@ -1489,9 +1489,9 @@ dependencies = [
 
 [[package]]
 name = "generic-array"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c68f0274ae0e023facc3c97b2e00f076be70e254bc851d972503b328db79b2ec"
+checksum = "ffdf9f34f1447443d37393cc6c2b8313aebddcd96906caf34e54c68d8e57d7bd"
 dependencies = [
  "typenum",
 ]
@@ -1772,9 +1772,9 @@ dependencies = [
 
 [[package]]
 name = "http-client"
-version = "6.3.1"
+version = "6.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "034fc6371e1657295cd261c2f705941af300a8438ce41dedbdf74d674f52ad0f"
+checksum = "663563ebc56b0bac7e08722cca7742612fd99d9bd6d05cf904ed9d9212065a34"
 dependencies = [
  "async-trait",
  "cfg-if 1.0.0",
@@ -1800,7 +1800,7 @@ dependencies = [
  "futures-lite",
  "http",
  "infer",
- "pin-project-lite 0.2.4",
+ "pin-project-lite 0.2.5",
  "rand 0.7.3",
  "serde",
  "serde_json",
@@ -2100,9 +2100,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.86"
+version = "0.2.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
+checksum = "265d751d31d6780a3f956bb5b8022feba2d94eeee5a84ba64f4212eedca42213"
 
 [[package]]
 name = "libflate"
@@ -2203,7 +2203,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#9c90498891afbbd95a9908feba20545454b2c943"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d938064989f1a4d1c2c5cc9d9cc9d9cc4b536b5a"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2497,9 +2497,9 @@ checksum = "a9a7ab5d64814df0fe4a4b5ead45ed6c5f181ee3ff04ba344313a6c80446c5d4"
 
 [[package]]
 name = "once_cell"
-version = "1.7.0"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10acf907b94fc1b1a152d08ef97e7759650268cf986bf127f387e602b02c7e5a"
+checksum = "af8b08b04175473088b46763e51ee54da5f9a164bc162f615b91bc179dbf15a3"
 
 [[package]]
 name = "oncemutex"
@@ -2521,9 +2521,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openapiv3"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ee9a17eebdd923c4cf74145cd31b2b1d3aa019262c9e8669a843b1d629a9a3c"
+checksum = "e2a8bc246418d720aed4b4361e1df544736d781fd0df3e4e4d1c552510c99633"
 dependencies = [
  "indexmap",
  "serde",
@@ -2819,15 +2819,15 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c917123afa01924fc84bb20c4c03f004d9c38e5127e3c039bbf7f4b9c76a2f6b"
+checksum = "257b64915a082f7811703966789728173279bdebb956b143dbcd23f6f970a777"
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "439697af366c49a6d0a010c56a0d97685bc140ce0d377b13a2ea2aa42d64a827"
+checksum = "0cf491442e4b033ed1c722cb9f0df5fcfcf4de682466c46469c36bc47dc5548a"
 
 [[package]]
 name = "pin-utils"
@@ -3215,7 +3215,7 @@ dependencies = [
  "mime_guess",
  "native-tls",
  "percent-encoding 2.1.0",
- "pin-project-lite 0.2.4",
+ "pin-project-lite 0.2.5",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.0",
@@ -3612,9 +3612,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.63"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43535db9747a4ba938c0ce0a98cc631a46ebf943c9e1d604e091df6007620bf6"
+checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
 dependencies = [
  "itoa",
  "ryu",
@@ -4109,20 +4109,20 @@ checksum = "1e81da0851ada1f3e9d4312c704aa4f8806f0f9d69faaf8df2f3464b4a9437c2"
 
 [[package]]
 name = "surf"
-version = "2.1.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7189c787d96fe18fef704950de76d590022d9d70858a4a201e1f07a0666882ea"
+checksum = "2a154d33ca6b5e1fe6fd1c760e5a5cc1202425f6cca2e13229f16a69009f6328"
 dependencies = [
  "async-std",
  "async-trait",
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "futures-util",
  "http-client",
  "http-types",
  "log 0.4.14",
  "mime_guess",
  "once_cell",
- "pin-project-lite 0.1.11",
+ "pin-project-lite 0.2.5",
  "serde",
  "serde_json",
 ]
@@ -4342,7 +4342,7 @@ dependencies = [
  "mio-named-pipes",
  "mio-uds",
  "num_cpus",
- "pin-project-lite 0.1.11",
+ "pin-project-lite 0.1.12",
  "signal-hook-registry",
  "slab",
  "tokio-macros",
@@ -4392,7 +4392,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "log 0.4.14",
- "pin-project-lite 0.1.11",
+ "pin-project-lite 0.1.12",
  "tokio",
 ]
 
@@ -4419,7 +4419,7 @@ checksum = "01ebdc2bb4498ab1ab5f5b73c5803825e60199229ccba0698170e3be0e7f959f"
 dependencies = [
  "cfg-if 1.0.0",
  "log 0.4.14",
- "pin-project-lite 0.2.4",
+ "pin-project-lite 0.2.5",
  "tracing-attributes",
  "tracing-core",
 ]
@@ -5028,9 +5028,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "0.5.10"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a8977234acab718eb2820494b2f96cbb16004c19dddf88b7445b27381450997"
+checksum = "8264fcea9b7a036a4a5103d7153e988dbc2ebbafb34f68a3c2d404b6b82d74b6"
 dependencies = [
  "byteorder",
  "bzip2",
