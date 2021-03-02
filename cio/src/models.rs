@@ -727,6 +727,24 @@ impl RFD {
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
 
+        let mut branch = self.number_string.to_string();
+        if self.link.contains(&format!("/{}/", repo.default_branch)) {
+            branch = repo.default_branch.to_string();
+        }
+
+        // We need to save the images locally as well.
+        // This ensures that
+        let dir = format!("rfd/{}", self.number_string);
+        let tmp = env::temp_dir();
+        let tmp_str = tmp.to_str().unwrap();
+        let images = get_images_in_branch(&rfd_repo, &dir, &branch).await;
+        for image in images {
+            // Save the image to our temporary directory.
+            let image_path = format!("{}/{}", tmp_str, image.path.replace(&dir, "").trim_start_matches('/'));
+
+            write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap_or_default());
+        }
+
         let cmd_output = Command::new("asciidoctor-pdf")
             .args(&["-o", "-", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
             .output()
