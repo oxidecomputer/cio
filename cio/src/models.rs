@@ -734,11 +734,11 @@ impl RFD {
 
         // Create the dir where to save images.
         let mut current_dir = env::current_dir().unwrap();
-        current_dir.push(format!("../rfd/src/public/static/images/{}/", self.number_string));
-        let current_dir_str = current_dir.to_str().unwrap();
+        current_dir.push(format!("rfd/src/public/static/images/{}/", self.number_string));
+        let current_dir_str = current_dir.to_str().unwrap().replace("/cio/cio/cio", "/cio/cio");
         // TODO: cleanup the directory when we are done, not really necessary for CI.
         // Create the directory if it does not already exist.
-        fs::create_dir_all(current_dir_str).unwrap();
+        fs::create_dir_all(current_dir_str.to_string()).unwrap();
 
         // We need to save the images locally as well.
         // This ensures that
