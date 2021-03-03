@@ -215,17 +215,14 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
 }
 
 // Sync the rfds with our database.
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn refresh_db_rfds(github: &Github) {
+pub async fn refresh_db_rfds(db: &Database, github: &Github) {
     let rfds = get_rfds_from_repo(github).await;
-
-    // Initialize our database.
-    let db = Database::new();
 
     // Sync rfds.
     for (_, rfd) in rfds {
-        let mut new_rfd = rfd.upsert(&db).await;
+        let mut new_rfd = rfd.upsert(db).await;
 
         // Expand the fields in the RFD.
         new_rfd.expand(github).await;
@@ -235,7 +232,7 @@ pub async fn refresh_db_rfds(github: &Github) {
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
-        new_rfd.update(&db).await;
+        new_rfd.update(db).await;
     }
 }
 
@@ -284,8 +281,11 @@ mod tests {
     #[ignore]
     #[tokio::test(threaded_scheduler)]
     async fn test_rfds() {
+        // Initialize our database.
+        let db = Database::new();
+
         let github = authenticate_github_jwt();
-        refresh_db_rfds(&github).await;
+        refresh_db_rfds(&db, &github).await;
 
         // Update rfds in airtable.
         RFDs::get_from_db(&db).update_airtable().await;
