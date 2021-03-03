@@ -718,7 +718,10 @@ impl RFD {
 
         // Fix the path for images.
         // TODO: this only fixes asciidoc images, not markdown.
-        let rfd_content = self.content.replace("image::", &format!("image::{}/rfd/src/public/static/images/{}/", workspace, self.number_string));
+        let rfd_content = self
+            .content
+            .replace("image::", "image:")
+            .replace("image:", &format!("image:{}/rfd/src/public/static/images/{}/", workspace, self.number_string));
 
         // Write the contents to a temporary file.
         let mut file = fs::File::create(path.clone()).unwrap();
