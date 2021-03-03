@@ -283,9 +283,12 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_rfds() {
+    async fn test_rfds() {
         let github = authenticate_github_jwt();
         refresh_db_rfds(&github).await;
+
+        // Update rfds in airtable.
+        RFDs::get_from_db(&db).update_airtable().await;
     }
 
     #[ignore]
@@ -539,15 +542,5 @@ sdf
 :title: nope"#;
         title = NewRFD::get_title(&content);
         assert_eq!(expected, title);
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_rfds_airtable() {
-        // Initialize our database.
-        let db = Database::new();
-
-        // Update rfds in airtable.
-        RFDs::get_from_db(&db).update_airtable().await;
     }
 }

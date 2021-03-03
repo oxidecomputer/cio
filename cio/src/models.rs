@@ -732,15 +732,23 @@ impl RFD {
             branch = repo.default_branch.to_string();
         }
 
+        // Create the dir where to save images.
+        let current_dir = env::current_dir().unwrap();
+        current_dir.push(format!("rfd/src/public/static/images/{}/", self.number_string));
+        // Create the directory if it does not already exist.
+        fs::create_dir_all(current_dir).unwrap();
+        let current_dir_str = current_dir.to_str().unwrap();
+
         // We need to save the images locally as well.
         // This ensures that
-        let dir = format!("rfd/{}", self.number_string);
+        let old_dir = format!("rfd/{}", self.number_string);
         let tmp = env::temp_dir();
-        let tmp_str = tmp.to_str().unwrap();
         let images = get_images_in_branch(&rfd_repo, &dir, &branch).await;
         for image in images {
             // Save the image to our temporary directory.
-            let image_path = format!("{}/{}", tmp_str, image.path.replace(&dir, "").trim_start_matches('/'));
+            let image_path = format!("{}/{}", current_dir_str, image.path.replace(&old_dir, "").trim_start_matches('/'));
+
+            println!("image_path {}", image_path);
 
             write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap_or_default());
         }
