@@ -721,7 +721,9 @@ impl RFD {
         let rfd_content = self
             .content
             .replace("image::", "image:")
-            .replace("image:", &format!("image:{}/rfd/src/public/static/images/{}/", workspace, self.number_string));
+            .replace("image:", &format!("image:{}/rfd/src/public/static/images/{}/", workspace, self.number_string))
+            // Make them all block.
+            .replace("image:", "image::");
 
         // Write the contents to a temporary file.
         let mut file = fs::File::create(path.clone()).unwrap();
