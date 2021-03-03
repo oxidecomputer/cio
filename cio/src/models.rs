@@ -746,7 +746,7 @@ impl RFD {
         let images = get_images_in_branch(&rfd_repo, &old_dir, &branch).await;
         for image in images {
             // Save the image to our temporary directory.
-            let image_path = format!("{}/{}", current_dir_str, image.path.replace(&old_dir, "").trim_start_matches('/'));
+            let image_path = format!("{}/{}", current_dir_str.trim_end_matches('/'), image.path.replace(&old_dir, "").trim_start_matches('/'));
 
             println!("image_path {}", image_path);
 
