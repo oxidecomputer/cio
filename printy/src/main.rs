@@ -1,5 +1,4 @@
 #![allow(clippy::field_reassign_with_default)]
-#![feature(str_split_once)]
 
 use std::env;
 use std::error::Error;
