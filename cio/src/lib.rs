@@ -1,4 +1,3 @@
-#![feature(str_split_once)]
 #![recursion_limit = "256"]
 #![allow(clippy::field_reassign_with_default)]
 
