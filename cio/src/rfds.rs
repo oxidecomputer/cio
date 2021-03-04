@@ -103,7 +103,8 @@ pub async fn get_images_in_branch(repo: &Repository, dir: &str, branch: &str) ->
                 }
                 Err(e) => match e {
                     hubcaps::errors::Error::Fault { code: _, ref error } => {
-                        if error.message.contains("too_large") {
+                        println!("error: {}", error.message);
+                        if error.message.contains("too large") {
                             // The file is too big for us to get it's contents through this API.
                             // The error suggests we use the Git Data API but we need the file sha for
                             // that.
@@ -114,6 +115,8 @@ pub async fn get_images_in_branch(repo: &Repository, dir: &str, branch: &str) ->
                             // TODO: move this logic to hubcaps.
                             let v = blob.content.replace("\n", "");
                             let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
+
+                            println!("getting from blob {}", file.name);
 
                             // Push the new file.
                             files.push(hubcaps::content::File {
