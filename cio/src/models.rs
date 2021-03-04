@@ -565,7 +565,16 @@ impl NewRFD {
                 if parts.len() < 2 {
                     Default::default()
                 } else {
-                    parts[1].to_string()
+                    let mut authors = parts[1].to_string();
+                    if authors == "{authors}" {
+                        // Do the traditional check.
+                        let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
+                        match re.find(&content) {
+                            Some(v) => authors = v.as_str().replace("authors:", "").trim().to_string(),
+                            None => (),
+                        }
+                    }
+                    authors
                 }
             }
             None => Default::default(),

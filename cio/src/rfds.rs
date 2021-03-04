@@ -356,6 +356,16 @@ authors: nope"#;
         authors = NewRFD::get_authors(&content, false);
         expected = r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
+
+        content = r#"authors: Jess <jess@thing.com>
+
+= sdfgsdfgsdfg
+{authors}
+dsfsdf
+sdf"#;
+        authors = NewRFD::get_authors(&content, false);
+        expected = r#"Jess <jess@thing.com>"#.to_string();
+        assert_eq!(expected, authors);
     }
 
     #[test]
