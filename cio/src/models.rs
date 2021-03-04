@@ -750,7 +750,6 @@ impl RFD {
         for image in images {
             // Save the image to our temporary directory.
             let image_path = format!("{}/{}", temp_dir_str.trim_end_matches('/'), image.path.replace(&old_dir, "").trim_start_matches('/'));
-            println!("{} {:?}", image_path, path);
 
             write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap_or_default());
         }
