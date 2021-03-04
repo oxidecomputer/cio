@@ -713,17 +713,7 @@ impl RFD {
         let mut path = env::temp_dir();
         path.push(format!("pdfcontents{}.adoc", self.number_string));
 
-        let mut workspace = env::var("GITHUB_WORKSPACE").unwrap_or_else(|_| "..".to_string());
-        workspace = workspace.trim_end_matches('/').to_string();
-
-        // Fix the path for images.
-        // TODO: this only fixes asciidoc images, not markdown.
-        let rfd_content = self
-            .content
-            .replace("image::", "image:")
-            .replace("image:", &format!("image:{}/rfd/src/public/static/images/{}/", workspace, self.number_string))
-            // Make them all block.
-            .replace("image:", "image::");
+        let rfd_content = self.content.to_string();
 
         // Write the contents to a temporary file.
         let mut file = fs::File::create(path.clone()).unwrap();
@@ -738,12 +728,8 @@ impl RFD {
         }
 
         // Create the dir where to save images.
-        let mut current_dir = env::current_dir().unwrap();
-        current_dir.push(format!("rfd/src/public/static/images/{}/", self.number_string));
-        let current_dir_str = current_dir.to_str().unwrap().replace("/cio/cio/cio", "/cio/cio");
-        // TODO: cleanup the directory when we are done, not really necessary for CI.
-        // Create the directory if it does not already exist.
-        fs::create_dir_all(current_dir_str.to_string()).unwrap();
+        let temp_dir = env::temp_dir();
+        let temp_dir_str = temp_dir.to_str().unwrap();
 
         // We need to save the images locally as well.
         // This ensures that
@@ -751,13 +737,14 @@ impl RFD {
         let images = get_images_in_branch(&rfd_repo, &old_dir, &branch).await;
         for image in images {
             // Save the image to our temporary directory.
-            let image_path = format!("{}/{}", current_dir_str.trim_end_matches('/'), image.path.replace(&old_dir, "").trim_start_matches('/'));
-            println!("{}", image_path);
+            let image_path = format!("{}/{}", temp_dir_str.trim_end_matches('/'), image.path.replace(&old_dir, "").trim_start_matches('/'));
+            println!("{} {:?}", image_path, path);
 
             write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap_or_default());
         }
 
         let cmd_output = Command::new("asciidoctor-pdf")
+            .current_dir(env::temp_dir())
             .args(&["-o", "-", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
             .output()
             .unwrap();
