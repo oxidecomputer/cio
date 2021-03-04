@@ -626,7 +626,11 @@ impl RFD {
             }
         }
 
-        let cmd_output = Command::new("asciidoctor").args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()]).output().unwrap();
+        let cmd_output = Command::new("asciidoctor")
+            .current_dir(parent)
+            .args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()])
+            .output()
+            .unwrap();
 
         let result = if cmd_output.status.success() {
             from_utf8(&cmd_output.stdout).unwrap()

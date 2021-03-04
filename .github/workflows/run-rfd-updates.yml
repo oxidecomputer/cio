@@ -20,7 +20,10 @@ jobs:
             texlive-latex-base \
             texlive-fonts-recommended \
             texlive-fonts-extra
-          sudo gem install asciidoctor-pdf rouge
+          sudo gem install \
+            asciidoctor-pdf \
+            prawn-gmagick \
+            rouge
       - name: Install SQL proxy
         shell: bash
         run: |
