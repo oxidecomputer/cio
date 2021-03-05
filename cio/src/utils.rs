@@ -322,8 +322,8 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
         if str_diff.contains("-/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("+/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("@@ -5,8 +5,8 @@") {
             // The binary contents are the same so we can return early.
             // The only thing that changed was the modified time and creation date.
-            println!("[github content] File contents at {} are the same, no update needed", file_path);
-            return;
+            //println!("[github content] File contents at {} are the same, no update needed", file_path);
+            //return;
         }
 
         // We need to update the file. Ignore failure.
