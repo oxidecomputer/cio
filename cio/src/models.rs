@@ -568,9 +568,9 @@ impl NewRFD {
                     let mut authors = parts[1].to_string();
                     if authors == "{authors}" {
                         // Do the traditional check.
-                        let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
+                        let re = Regex::new(r"(?m)(^:authors.*$)").unwrap();
                         if let Some(v) = re.find(&content) {
-                            authors = v.as_str().replace("authors:", "").trim().to_string();
+                            authors = v.as_str().replace(":authors:", "").trim().to_string();
                         }
                     }
                     authors

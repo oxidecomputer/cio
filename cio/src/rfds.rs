@@ -357,7 +357,7 @@ authors: nope"#;
         expected = r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
 
-        content = r#"authors: Jess <jess@thing.com>
+        content = r#":authors: Jess <jess@thing.com>
 
 = sdfgsdfgsdfg
 {authors}
