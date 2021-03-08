@@ -270,8 +270,11 @@ pub struct NewUser {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Credentials {
+    #[serde(default)]
     pub password: Password,
+    #[serde(default)]
     pub recovery_question: RecoveryQuestion,
+    #[serde(default)]
     pub provider: Provider,
 }
 
@@ -326,10 +329,26 @@ pub struct Profile {
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub login: String,
+    #[serde(default, rename = "primaryPhone", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub primary_phone: String,
     #[serde(default, rename = "mobilePhone", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub mobile_phone: String,
+    #[serde(default, rename = "streetAddress", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub street_address: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub city: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, rename = "zipCode", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub zip_code: String,
+    #[serde(default, rename = "countryCode", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub country_code: String,
     #[serde(default, rename = "secondEmail", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub second_email: String,
+    #[serde(default, rename = "githubUsername", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub github_username: String,
+    #[serde(default, rename = "matrixUsername", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub matrix_username: String,
 }
 
 pub mod deserialize_null_string {

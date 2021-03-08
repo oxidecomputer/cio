@@ -164,6 +164,27 @@ pub struct UserConfig {
     pub public_ssh_keys: Vec<String>,
 }
 
+impl Into<OktaProfile> for User {
+    fn into(self) -> OktaProfile {
+        OktaProfile {
+            first_name: self.first_name.to_string(),
+            last_name: self.last_name.to_string(),
+            email: self.email(),
+            login: self.email(),
+            primary_phone: self.recovery_phone.to_string(),
+            mobile_phone: self.recovery_phone.to_string(),
+            street_address: format!("{}\n{}", self.home_address_street_1, self.home_address_street_2).trim().to_string(),
+            city: self.home_address_city.to_string(),
+            state: self.home_address_state.to_string(),
+            zip_code: self.home_address_zipcode.to_string(),
+            country_code: self.home_address_country.to_string(),
+            second_email: self.recovery_email.to_string(),
+            github_username: self.github.to_string(),
+            matrix_username: self.chat.to_string(),
+        }
+    }
+}
+
 pub mod null_date_format {
     use chrono::naive::NaiveDate;
     use chrono::{DateTime, TimeZone, Utc};
@@ -1050,14 +1071,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             }
         }
 
-        let okta_profile = OktaProfile {
-            first_name: user.first_name.to_string(),
-            last_name: user.last_name.to_string(),
-            email: user.email(),
-            login: user.email(),
-            mobile_phone: user.recovery_phone.to_string(),
-            second_email: user.recovery_email.to_string(),
-        };
+        let okta_profile: OktaProfile = user.into();
 
         // Update the user with the settings from the config for the user.
         okta.update_user(okta_profile).await.unwrap_or_else(|e| panic!("updating user {} in okta failed: {}", username, e));
@@ -1072,14 +1086,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // Create any remaining users from the database that we do not have in Okta.
     for (username, user) in user_map {
         // Create the user's profile.
-        let okta_profile = OktaProfile {
-            first_name: user.first_name.to_string(),
-            last_name: user.last_name.to_string(),
-            email: user.email(),
-            login: user.email(),
-            mobile_phone: user.recovery_phone.to_string(),
-            second_email: user.recovery_email.to_string(),
-        };
+        let okta_profile: OktaProfile = user.into();
 
         okta.create_user(okta_profile).await.unwrap_or_else(|e| panic!("creating user {} in okta failed: {}", username, e));
 
