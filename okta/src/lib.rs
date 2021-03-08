@@ -212,6 +212,98 @@ impl Okta {
 
         Ok(result)
     }
+
+    /// List groups.
+    pub async fn list_groups(&self, query: &str) -> Result<Vec<Group>, APIError> {
+        // Build the request.
+        // TODO: paginate.
+        let mut q = "".to_string();
+        if !query.is_empty() {
+            q = format!("&q={}", query);
+        }
+        let rb = self.request(Method::GET, &format!("/api/v1/groups?limit=200{}", q), ());
+        let request = rb.build().unwrap();
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let result: Vec<Group> = resp.json().await.unwrap();
+
+        Ok(result)
+    }
+
+    /// Create a group.
+    pub async fn create_group(&self, profile: GroupProfile) -> Result<Group, APIError> {
+        // Build the request.
+        let rb = self.request(Method::POST, "/api/v1/groups", NewGroup { profile });
+        let request = rb.build().unwrap();
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let result: Group = resp.json().await.unwrap();
+
+        Ok(result)
+    }
+
+    /// Get a group by its name.
+    pub async fn get_group(&self, name: &str) -> Result<Group, APIError> {
+        let groups = self.list_groups(name).await.unwrap();
+        for group in groups {
+            if group.profile.name == name {
+                return Ok(group);
+            }
+        }
+
+        Err(APIError {
+            status_code: StatusCode::NOT_FOUND,
+            body: format!("Could not find group with name: {}", name),
+        })
+    }
+
+    /// Update a group.
+    pub async fn update_group(&self, profile: GroupProfile) -> Result<Group, APIError> {
+        // First we need to get the user to get their user_id.
+        let group = self.get_group(&profile.name).await.unwrap();
+
+        // Build the request.
+        let rb = self.request(Method::PUT, format!("/api/v1/groups/{}", group.id), NewGroup { profile });
+        let request = rb.build().unwrap();
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let result: Group = resp.json().await.unwrap();
+
+        Ok(result)
+    }
 }
 
 /// Error type returned by our library.
@@ -311,6 +403,12 @@ pub struct Links {
     pub deactivate: ChangePassword,
     #[serde(default, rename = "changePassword")]
     pub change_password: ChangePassword,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub logo: Vec<Logo>,
+    #[serde(default)]
+    pub users: ChangePassword,
+    #[serde(default)]
+    pub apps: ChangePassword,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -325,6 +423,8 @@ pub struct Profile {
     pub first_name: String,
     #[serde(default, rename = "lastName", skip_serializing_if = "String::is_empty")]
     pub last_name: String,
+    #[serde(default, rename = "displayName", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub display_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -349,6 +449,49 @@ pub struct Profile {
     pub github_username: String,
     #[serde(default, rename = "matrixUsername", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub matrix_username: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Group {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    pub created: DateTime<Utc>,
+    #[serde(rename = "lastUpdated")]
+    pub last_updated: DateTime<Utc>,
+    #[serde(rename = "lastMembershipUpdated")]
+    pub last_membership_updated: Option<DateTime<Utc>>,
+    #[serde(rename = "objectClass", default, skip_serializing_if = "Vec::is_empty")]
+    pub object_class: Vec<String>,
+    #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
+    pub group_type: String,
+    #[serde(default)]
+    pub profile: GroupProfile,
+    #[serde(default, rename = "_links")]
+    pub links: Links,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct NewGroup {
+    #[serde(default)]
+    pub profile: GroupProfile,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Logo {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub href: String,
+    #[serde(rename = "type", default, skip_serializing_if = "String::is_empty")]
+    pub logo_type: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct GroupProfile {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
 }
 
 pub mod deserialize_null_string {

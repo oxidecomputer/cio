@@ -13,7 +13,7 @@ use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarR
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
-use okta::{Okta, Profile as OktaProfile};
+use okta::{GroupProfile, Okta, Profile as OktaProfile};
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
@@ -169,6 +169,7 @@ impl Into<OktaProfile> for User {
         OktaProfile {
             first_name: self.first_name.to_string(),
             last_name: self.last_name.to_string(),
+            display_name: self.full_name(),
             email: self.email(),
             login: self.email(),
             primary_phone: self.recovery_phone.to_string(),
@@ -630,6 +631,15 @@ impl GroupConfig {
     #[inline]
     pub fn expand(&mut self) {
         self.link = self.get_link();
+    }
+}
+
+impl Into<GroupProfile> for Group {
+    fn into(self) -> GroupProfile {
+        GroupProfile {
+            name: self.name.to_string(),
+            description: self.description.to_string(),
+        }
     }
 }
 
@@ -1304,9 +1314,13 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+    let okta = Okta::new_from_env();
 
     // Get the GSuite groups.
     let gsuite_groups = gsuite.list_groups().await.unwrap();
+
+    // Get the Okta groups.
+    let okta_groups = okta.list_groups("").await.unwrap();
 
     // Get all the groups.
     let db_groups = Groups::get_from_db(db);
@@ -1421,6 +1435,52 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
         event!(Level::INFO, "created group in gsuite: {}", name);
     }
 
+    // Update the groups in Okta.
+    // Get all the groups.
+    let db_groups = Groups::get_from_db(db);
+    // Create a BTreeMap
+    let mut group_map: BTreeMap<String, Group> = Default::default();
+    for u in db_groups {
+        group_map.insert(u.name.to_string(), u);
+    }
+    // Iterate over the groups already in Okta.
+    for g in okta_groups {
+        let name = g.profile.name.to_string();
+
+        // Check if we already have this group in our database.
+        let group = if let Some(val) = group_map.get(&name) {
+            val
+        } else {
+            // If the group does not exist in our map we need to delete
+            // group from Okta.
+            // TODO: delete the group from okta.
+            println!("deleting group {} from okta", name);
+
+            event!(Level::INFO, "deleted group from okta: {}", name);
+            continue;
+        };
+
+        let okta_profile: GroupProfile = group.clone().into();
+
+        okta.update_group(okta_profile).await.unwrap_or_else(|e| panic!("updating group {} in okta failed: {}", name, e));
+
+        // Remove the group from the database map and continue.
+        // This allows us to add all the remaining new groups after.
+        group_map.remove(&name);
+
+        event!(Level::INFO, "updated group in okta: {}", name);
+    }
+
+    // Create any remaining groups from the database  that we do not have in Okta.
+    for (name, group) in group_map {
+        // Create the group.
+        let okta_profile: GroupProfile = group.clone().into();
+
+        okta.create_group(okta_profile).await.unwrap_or_else(|e| panic!("updating group {} in okta failed: {}", name, e));
+
+        event!(Level::INFO, "created group in okta: {}", name);
+    }
+
     // Update groups in airtable.
     Groups::get_from_db(db).update_airtable().await;
 }
@@ -1522,20 +1582,20 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     for label in configs.labels {
         label.upsert(&db).await;
     }
-    GithubLabels::get_from_db(&db).update_airtable().await;
+    GithubLabels::get_from_db(&db).update_airtable().await;*/
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
     sync_groups(&db, configs.groups).await;
 
-    // Sync links.
-    sync_links(&db, configs.links).await;*/
-
     // Sync users.
     sync_users(&db, github, configs.users).await;
 
+    // Sync links.
+    /*sync_links(&db, configs.links).await;
+
     // Sync certificates.
-    /*sync_certificates(&db, github, configs.certificates).await;
+    sync_certificates(&db, github, configs.certificates).await;
 
     // Sync github outside collaborators.
     sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;*/
