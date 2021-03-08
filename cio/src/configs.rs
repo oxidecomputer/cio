@@ -13,6 +13,7 @@ use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarR
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
+use okta::{Okta, Profile as OktaProfile};
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
@@ -892,8 +893,14 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
+    // Initialize Okta.
+    let okta = Okta::new_from_env();
+
     // Get the existing GSuite users.
     let gsuite_users = gsuite.list_users().await.unwrap();
+
+    // Get the existing Okta users.
+    let okta_users = okta.list_users().await.unwrap();
 
     // Get the GSuite groups.
     let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
@@ -939,6 +946,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         // TODO: Delete the user from Slack.
         event!(Level::INFO, "deleted user from slack: {}", username);
+
+        // TODO: Delete the user from Okta.
+        event!(Level::INFO, "deleted user from okta: {}", username);
     }
     event!(Level::INFO, "updated configs users in the database");
 
@@ -1010,6 +1020,70 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         // Add the user to their teams and groups.
         update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
+    }
+
+    // Update the users in Okta.
+    // Get all the users.
+    let db_users = Users::get_from_db(db);
+    // Create a BTreeMap
+    let mut user_map: BTreeMap<String, User> = Default::default();
+    for u in db_users {
+        user_map.insert(u.username.to_string(), u);
+    }
+    // Iterate over the users already in Okta.
+    for u in okta_users {
+        // Get the shorthand username and match it against our existing users.
+        let username = u.profile.email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN)).to_string();
+
+        // Check if we have that user already in our database.
+        let user: User;
+        match user_map.get(&username) {
+            Some(val) => user = val.clone(),
+            None => {
+                // If the user does not exist in our map we need to delete
+                // them from Okta.
+                // TODO: delete them from okta
+                println!("deleting user {} from okta", username);
+
+                event!(Level::INFO, "deleted user from okta: {}", username);
+                continue;
+            }
+        }
+
+        let okta_profile = OktaProfile {
+            first_name: user.first_name.to_string(),
+            last_name: user.last_name.to_string(),
+            email: user.email(),
+            login: user.email(),
+            mobile_phone: user.recovery_phone.to_string(),
+            second_email: user.recovery_email.to_string(),
+        };
+
+        // Update the user with the settings from the config for the user.
+        okta.update_user(okta_profile).await.unwrap_or_else(|e| panic!("updating user {} in okta failed: {}", username, e));
+
+        // Remove the user from the user map and continue.
+        // This allows us to add all the remaining new user after.
+        user_map.remove(&username);
+
+        event!(Level::INFO, "updated user in okta: {}", username);
+    }
+
+    // Create any remaining users from the database that we do not have in Okta.
+    for (username, user) in user_map {
+        // Create the user's profile.
+        let okta_profile = OktaProfile {
+            first_name: user.first_name.to_string(),
+            last_name: user.last_name.to_string(),
+            email: user.email(),
+            login: user.email(),
+            mobile_phone: user.recovery_phone.to_string(),
+            second_email: user.recovery_email.to_string(),
+        };
+
+        okta.create_user(okta_profile).await.unwrap_or_else(|e| panic!("creating user {} in okta failed: {}", username, e));
+
+        event!(Level::INFO, "created new user in okta: {}", username);
     }
 
     // Update users in airtable.
@@ -1432,7 +1506,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    sync_buildings(&db, configs.buildings).await;
+    /*sync_buildings(&db, configs.buildings).await;
 
     // Sync conference rooms.
     sync_conference_rooms(&db, configs.resources).await;
@@ -1448,16 +1522,16 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_groups(&db, configs.groups).await;
 
     // Sync links.
-    sync_links(&db, configs.links).await;
+    sync_links(&db, configs.links).await;*/
 
     // Sync users.
     sync_users(&db, github, configs.users).await;
 
     // Sync certificates.
-    sync_certificates(&db, github, configs.certificates).await;
+    /*sync_certificates(&db, github, configs.certificates).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
+    sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;*/
 }
 
 #[cfg(test)]

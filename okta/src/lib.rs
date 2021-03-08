@@ -81,7 +81,15 @@ impl Okta {
         P: ToString,
         B: Serialize,
     {
-        let endpoint = format!("https://{}", self.domain.trim_start_matches("https://").trim_start_matches("https://").trim_end_matches('/'));
+        let endpoint = format!(
+            "https://{}.okta.com",
+            self.domain
+                .trim_start_matches("https://")
+                .trim_start_matches("https://")
+                .trim_end_matches('/')
+                .trim_end_matches(".okta.com")
+                .trim_end_matches('/')
+        );
 
         // Build the url.
         let base = Url::parse(&endpoint).unwrap();
@@ -235,35 +243,36 @@ impl error::Error for APIError {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    id: String,
+    pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    status: String,
-    created: DateTime<Utc>,
-    activated: Option<DateTime<Utc>>,
+    pub status: String,
+    pub created: DateTime<Utc>,
+    pub activated: Option<DateTime<Utc>>,
     #[serde(rename = "statusChanged")]
-    status_changed: Option<DateTime<Utc>>,
+    pub status_changed: Option<DateTime<Utc>>,
     #[serde(rename = "lastLogin")]
-    last_login: Option<DateTime<Utc>>,
+    pub last_login: Option<DateTime<Utc>>,
     #[serde(rename = "lastUpdated")]
-    last_updated: DateTime<Utc>,
+    pub last_updated: DateTime<Utc>,
     #[serde(rename = "passwordChanged")]
-    password_changed: Option<DateTime<Utc>>,
-    profile: Profile,
-    credentials: Credentials,
+    pub password_changed: Option<DateTime<Utc>>,
+    pub profile: Profile,
+    #[serde(default)]
+    pub credentials: Credentials,
     #[serde(default, rename = "_links")]
-    links: Links,
+    pub links: Links,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct NewUser {
-    profile: Profile,
+    pub profile: Profile,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Credentials {
-    password: Password,
-    recovery_question: RecoveryQuestion,
-    provider: Provider,
+    pub password: Password,
+    pub recovery_question: RecoveryQuestion,
+    pub provider: Provider,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -272,50 +281,73 @@ pub struct Password {}
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Provider {
     #[serde(rename = "type", skip_serializing_if = "String::is_empty")]
-    provider_type: String,
+    pub provider_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    name: String,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct RecoveryQuestion {
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    question: String,
+    pub question: String,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Links {
-    #[serde(rename = "resetPassword")]
-    reset_password: ChangePassword,
-    #[serde(rename = "resetFactors")]
-    reset_factors: ChangePassword,
-    #[serde(rename = "expirePassword")]
-    expire_password: ChangePassword,
-    #[serde(rename = "forgotPassword")]
-    forgot_password: ChangePassword,
-    #[serde(rename = "changeRecoveryQuestion")]
-    change_recovery_question: ChangePassword,
-    deactivate: ChangePassword,
-    #[serde(rename = "changePassword")]
-    change_password: ChangePassword,
+    #[serde(default, rename = "resetPassword")]
+    pub reset_password: ChangePassword,
+    #[serde(default, rename = "resetFactors")]
+    pub reset_factors: ChangePassword,
+    #[serde(default, rename = "expirePassword")]
+    pub expire_password: ChangePassword,
+    #[serde(default, rename = "forgotPassword")]
+    pub forgot_password: ChangePassword,
+    #[serde(default, rename = "changeRecoveryQuestion")]
+    pub change_recovery_question: ChangePassword,
+    #[serde(default)]
+    pub deactivate: ChangePassword,
+    #[serde(default, rename = "changePassword")]
+    pub change_password: ChangePassword,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct ChangePassword {
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    href: String,
+    pub href: String,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Profile {
-    #[serde(rename = "firstName", skip_serializing_if = "String::is_empty")]
-    first_name: String,
-    #[serde(rename = "lastName", skip_serializing_if = "String::is_empty")]
-    last_name: String,
+    #[serde(default, rename = "firstName", skip_serializing_if = "String::is_empty")]
+    pub first_name: String,
+    #[serde(default, rename = "lastName", skip_serializing_if = "String::is_empty")]
+    pub last_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    email: String,
+    pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    login: String,
-    #[serde(rename = "mobilePhone", skip_serializing_if = "String::is_empty")]
-    mobile_phone: String,
+    pub login: String,
+    #[serde(default, rename = "mobilePhone", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub mobile_phone: String,
+    #[serde(default, rename = "secondEmail", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub second_email: String,
+}
+
+pub mod deserialize_null_string {
+    use serde::{self, Deserialize, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap_or_default();
+
+        Ok(s)
+    }
 }
