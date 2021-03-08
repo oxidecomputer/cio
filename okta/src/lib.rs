@@ -7,7 +7,7 @@
  * Example:
  *
  * ```
- * use okta_api::Okta;
+ * use okta::Okta;
  * use serde::{Deserialize, Serialize};
  *
  * async fn get_current_user() {
@@ -136,7 +136,56 @@ impl Okta {
     /// Create a user.
     pub async fn create_user(&self, profile: Profile) -> Result<User, APIError> {
         // Build the request.
-        let rb = self.request(Method::POST, "/api/v1/users?activate=false", NewUser { profile: profile });
+        let rb = self.request(Method::POST, "/api/v1/users?activate=false", NewUser { profile });
+        let request = rb.build().unwrap();
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let result: User = resp.json().await.unwrap();
+
+        Ok(result)
+    }
+
+    /// Get a user by their email.
+    pub async fn get_user(&self, email: &str) -> Result<User, APIError> {
+        // Build the request.
+        let rb = self.request(Method::GET, format!("/api/v1/users/{}", email), ());
+        let request = rb.build().unwrap();
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let result: User = resp.json().await.unwrap();
+
+        Ok(result)
+    }
+
+    /// Update a user.
+    pub async fn update_user(&self, profile: Profile) -> Result<User, APIError> {
+        // First we need to get the user to get their user_id.
+        let user = self.get_user(&profile.login).await.unwrap();
+
+        // Build the request.
+        let rb = self.request(Method::PUT, format!("/api/v1/users/{}", user.id), NewUser { profile });
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
