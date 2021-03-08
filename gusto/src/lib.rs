@@ -18,11 +18,6 @@
  *
  *     println!("{:?}", current_user);
  * }
- *
- * #[derive(Debug, Clone, Serialize, Deserialize)]
- * pub struct SomeFormat {
- *     pub x: bool,
- * }
  * ```
  */
 use std::collections::HashMap;
@@ -104,7 +99,7 @@ impl Gusto {
         self.client.request(method, url).headers(headers)
     }
 
-    /// List employees by company id.
+    /// Get information about the current user.
     pub async fn current_user(&self) -> Result<CurrentUser, APIError> {
         // Build the request.
         let rb = self.request(Method::GET, "/v1/me");
@@ -127,7 +122,7 @@ impl Gusto {
         Ok(result)
     }
 
-    /// Get information about the current user.
+    /// List all employees by company.
     pub async fn list_employees_by_company_id(&self, company_id: &u64) -> Result<Vec<Employee>, APIError> {
         // Build the request.
         let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", company_id));

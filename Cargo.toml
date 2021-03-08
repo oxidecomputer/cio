@@ -8,6 +8,7 @@ members = [
 	"google-geocode",
 	"gusto",
 	"macros",
+	"okta",
 	"printy",
 	"revai",
 	"sendgrid",
