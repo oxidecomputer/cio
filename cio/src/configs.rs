@@ -1105,6 +1105,11 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
     // Create any remaining users from the database that we do not have in Okta.
     for (username, user) in user_map {
+        if user.is_system_account {
+            // We don't need okta accounts for the bots.
+            continue;
+        }
+
         // Create the user's profile.
         let okta_profile: OktaProfile = user.clone().into();
 
@@ -1506,6 +1511,12 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
         let group = if let Some(val) = group_map.get(&name) {
             val
         } else {
+            if g.profile.name == "Everyone" {
+                // It's fine continue.
+                // This group is built into okta.
+                continue;
+            }
+
             // If the group does not exist in our map we need to delete
             // group from Okta.
             // TODO: delete the group from okta.
@@ -1628,7 +1639,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    /*sync_buildings(&db, configs.buildings).await;
+    sync_buildings(&db, configs.buildings).await;
 
     // Sync conference rooms.
     sync_conference_rooms(&db, configs.resources).await;
@@ -1637,7 +1648,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     for label in configs.labels {
         label.upsert(&db).await;
     }
-    GithubLabels::get_from_db(&db).update_airtable().await;*/
+    GithubLabels::get_from_db(&db).update_airtable().await;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
@@ -1647,13 +1658,13 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_users(&db, github, configs.users).await;
 
     // Sync links.
-    /*sync_links(&db, configs.links).await;
+    sync_links(&db, configs.links).await;
 
     // Sync certificates.
     sync_certificates(&db, github, configs.certificates).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;*/
+    sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
 }
 
 #[cfg(test)]
