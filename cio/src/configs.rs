@@ -1143,7 +1143,7 @@ pub async fn update_user_okta_groups(okta: &Okta, user: &User, okta_groups: BTre
         }
 
         // Add the user to the group.
-        okta.add_user_to_group(&group.profile.name, &user.email()).await.unwrap();
+        okta.add_user_to_group(&group.id, &user.email()).await.unwrap();
 
         event!(Level::INFO, "added {} to okta group {} as {}", user.email(), group.profile.name, role);
     }
@@ -1156,7 +1156,7 @@ pub async fn update_user_okta_groups(okta: &Okta, user: &User, okta_groups: BTre
         }
 
         // Remove the user to the group.
-        okta.delete_user_from_group(&group.profile.name, &user.email()).await.unwrap();
+        okta.delete_user_from_group(&group.id, &user.email()).await.unwrap();
 
         event!(Level::INFO, "removed {} from okta group {}", user.email(), group.profile.name);
     }

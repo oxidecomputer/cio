@@ -306,15 +306,12 @@ impl Okta {
     }
 
     /// Add user to a group.
-    pub async fn add_user_to_group(&self, group: &str, user: &str) -> Result<(), APIError> {
-        // First we need to get the group to get its group_id.
-        let g = self.get_group(group).await.unwrap();
-
+    pub async fn add_user_to_group(&self, group_id: &str, user: &str) -> Result<(), APIError> {
         // First we need to get the user to get their user_id.
         let u = self.get_user(user).await.unwrap();
 
         // Build the request.
-        let rb = self.request(Method::PUT, format!("/api/v1/groups/{}/users/{}", g.id, u.id), ());
+        let rb = self.request(Method::PUT, format!("/api/v1/groups/{}/users/{}", group_id, u.id), ());
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -332,20 +329,18 @@ impl Okta {
     }
 
     /// Delete a user from a group.
-    pub async fn delete_user_from_group(&self, group: &str, user: &str) -> Result<(), APIError> {
-        // First we need to get the group to get its group_id.
-        let g = self.get_group(group).await.unwrap();
-
+    pub async fn delete_user_from_group(&self, group_id: &str, user: &str) -> Result<(), APIError> {
         // First we need to get the user to get their user_id.
         let u = self.get_user(user).await.unwrap();
 
         // Build the request.
-        let rb = self.request(Method::DELETE, format!("/api/v1/groups/{}/users/{}", g.id, u.id), ());
+        let rb = self.request(Method::DELETE, format!("/api/v1/groups/{}/users/{}", group_id, u.id), ());
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::NO_CONTENT => (),
+            StatusCode::FORBIDDEN => (),
             s => {
                 return Err(APIError {
                     status_code: s,
