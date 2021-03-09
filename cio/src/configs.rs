@@ -13,7 +13,7 @@ use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarR
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
-use okta::{GroupProfile, Okta, Profile as OktaProfile};
+use okta::{Group as OktaGroup, GroupProfile, Okta, Profile as OktaProfile};
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
@@ -941,6 +941,14 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         gsuite_groups.insert(g.name.to_string(), g);
     }
 
+    // Get the Okta groups.
+    let mut okta_groups: BTreeMap<String, OktaGroup> = BTreeMap::new();
+    let o_groups = okta.list_groups("").await.unwrap();
+    for g in o_groups {
+        // Add the group to our map.
+        okta_groups.insert(g.profile.name.to_string(), g);
+    }
+
     // Get all the users.
     let db_users = Users::get_from_db(db);
     // Create a BTreeMap
@@ -1081,10 +1089,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             }
         }
 
-        let okta_profile: OktaProfile = user.into();
+        let okta_profile: OktaProfile = user.clone().into();
 
         // Update the user with the settings from the config for the user.
         okta.update_user(okta_profile).await.unwrap_or_else(|e| panic!("updating user {} in okta failed: {}", username, e));
+
+        update_user_okta_groups(&okta, &user, okta_groups.clone()).await;
 
         // Remove the user from the user map and continue.
         // This allows us to add all the remaining new user after.
@@ -1096,15 +1106,60 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // Create any remaining users from the database that we do not have in Okta.
     for (username, user) in user_map {
         // Create the user's profile.
-        let okta_profile: OktaProfile = user.into();
+        let okta_profile: OktaProfile = user.clone().into();
 
         okta.create_user(okta_profile).await.unwrap_or_else(|e| panic!("creating user {} in okta failed: {}", username, e));
+
+        update_user_okta_groups(&okta, &user, okta_groups.clone()).await;
 
         event!(Level::INFO, "created new user in okta: {}", username);
     }
 
     // Update users in airtable.
     Users::get_from_db(db).update_airtable().await;
+}
+
+/// Update a user's groups in Okta to match our database.
+#[instrument(skip(okta))]
+#[inline]
+pub async fn update_user_okta_groups(okta: &Okta, user: &User, okta_groups: BTreeMap<String, OktaGroup>) {
+    // Iterate over the groups and add the user as a member to it.
+    for g in &user.groups {
+        // Make sure the group exists.
+        let group: &OktaGroup;
+        match okta_groups.get(g) {
+            Some(val) => group = val,
+            // Continue through the loop and we will add the user later.
+            None => {
+                println!("okta group {} does not exist so cannot add user {}", g, user.email());
+                event!(Level::WARN, "okta group {} does not exist so cannot add user {}", g, user.email());
+                continue;
+            }
+        }
+
+        let mut role = "MEMBER";
+        if user.is_group_admin {
+            role = "OWNER";
+        }
+
+        // Add the user to the group.
+        okta.add_user_to_group(&group.profile.name, &user.email()).await.unwrap();
+
+        event!(Level::INFO, "added {} to okta group {} as {}", user.email(), group.profile.name, role);
+    }
+
+    // Iterate over all the groups and if the user is a member and should not
+    // be, remove them from the group.
+    for (slug, group) in &okta_groups {
+        if user.groups.contains(&slug) {
+            continue;
+        }
+
+        // Remove the user to the group.
+        okta.delete_user_from_group(&group.profile.name, &user.email()).await.unwrap();
+
+        event!(Level::INFO, "removed {} from okta group {}", user.email(), group.profile.name);
+    }
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.

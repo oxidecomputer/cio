@@ -281,7 +281,7 @@ impl Okta {
 
     /// Update a group.
     pub async fn update_group(&self, profile: GroupProfile) -> Result<Group, APIError> {
-        // First we need to get the user to get their user_id.
+        // First we need to get the group to get its group_id.
         let group = self.get_group(&profile.name).await.unwrap();
 
         // Build the request.
@@ -303,6 +303,58 @@ impl Okta {
         let result: Group = resp.json().await.unwrap();
 
         Ok(result)
+    }
+
+    /// Add user to a group.
+    pub async fn add_user_to_group(&self, group: &str, user: &str) -> Result<(), APIError> {
+        // First we need to get the group to get its group_id.
+        let g = self.get_group(group).await.unwrap();
+
+        // First we need to get the user to get their user_id.
+        let u = self.get_user(user).await.unwrap();
+
+        // Build the request.
+        let rb = self.request(Method::PUT, format!("/api/v1/groups/{}/users/{}", g.id, u.id), ());
+        let request = rb.build().unwrap();
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::NO_CONTENT => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
+    }
+
+    /// Delete a user from a group.
+    pub async fn delete_user_from_group(&self, group: &str, user: &str) -> Result<(), APIError> {
+        // First we need to get the group to get its group_id.
+        let g = self.get_group(group).await.unwrap();
+
+        // First we need to get the user to get their user_id.
+        let u = self.get_user(user).await.unwrap();
+
+        // Build the request.
+        let rb = self.request(Method::DELETE, format!("/api/v1/groups/{}/users/{}", g.id, u.id), ());
+        let request = rb.build().unwrap();
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::NO_CONTENT => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
     }
 }
 
