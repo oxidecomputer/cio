@@ -422,8 +422,14 @@ impl NewRFD {
     #[inline]
     pub async fn new_from_github(repo: &Repository, branch: &str, file_path: &str, commit_date: DateTime<Utc>) -> Self {
         // Get the file from GitHub.
-        let file = repo.content().file(file_path, branch).await.unwrap();
-        let content = from_utf8(&file.content).unwrap().trim().to_string();
+        let mut content = String::new();
+        let mut link = String::new();
+        let mut sha = String::new();
+        if let Ok(file) = repo.content().file(file_path, branch).await {
+            content = from_utf8(&file.content).unwrap().trim().to_string();
+            link = file.html_url;
+            sha = file.sha;
+        }
 
         // Parse the RFD directory as an int.
         let (dir, _) = file_path.trim_start_matches("rfd/").split_once('/').unwrap();
@@ -447,7 +453,7 @@ impl NewRFD {
             title,
             name,
             state,
-            link: file.html_url,
+            link,
             short_link: Default::default(),
             rendered_link: Default::default(),
             discussion,
@@ -455,7 +461,7 @@ impl NewRFD {
             // We parse this below.
             html: Default::default(),
             content,
-            sha: file.sha,
+            sha,
             commit_date,
             // Only exists in Airtable,
             milestones: Default::default(),
@@ -838,15 +844,17 @@ impl RFD {
 
         if branch == r.default_branch {
             // Get the commit date.
-            let commits = repo.commits().list(&rfd_dir, "", None).await.unwrap();
-            let commit = commits.get(0).unwrap();
-            self.commit_date = commit.commit.author.date;
+            if let Ok(commits) = repo.commits().list(&rfd_dir, "", None).await {
+                let commit = commits.get(0).unwrap();
+                self.commit_date = commit.commit.author.date;
+            }
         } else {
             // Get the branch.
-            let commit = repo.commits().get(&branch).await.unwrap();
-            // TODO: we should not have to duplicate this code below
-            // but the references were mad...
-            self.commit_date = commit.commit.author.date;
+            if let Ok(commit) = repo.commits().get(&branch).await {
+                // TODO: we should not have to duplicate this code below
+                // but the references were mad...
+                self.commit_date = commit.commit.author.date;
+            }
         }
 
         // Parse the HTML.

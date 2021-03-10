@@ -181,7 +181,7 @@ impl Into<OktaProfile> for User {
             country_code: self.home_address_country.to_string(),
             second_email: self.recovery_email.to_string(),
             github_username: self.github.to_string(),
-            matrix_username: self.chat.to_string(),
+            matrix_username: self.chat,
         }
     }
 }
@@ -638,7 +638,7 @@ impl Into<GroupProfile> for Group {
     fn into(self) -> GroupProfile {
         GroupProfile {
             name: self.name.to_string(),
-            description: self.description.to_string(),
+            description: self.description,
         }
     }
 }
@@ -791,7 +791,7 @@ pub struct LinkConfig {
 impl UpdateAirtableRecord<Link> for Link {
     #[instrument]
     #[inline]
-    async fn update_airtable_record(&mut self, record: Link) {}
+    async fn update_airtable_record(&mut self, _record: Link) {}
 }
 
 /// The data type for a label. These become GitHub labels for all the repositories

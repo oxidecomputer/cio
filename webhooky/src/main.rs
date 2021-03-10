@@ -19,7 +19,6 @@ use chrono::offset::Utc;
 use chrono::{DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, Path, Query, RequestContext, TypedBody};
-use futures_util::TryStreamExt;
 use google_drive::GoogleDrive;
 use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
@@ -1571,41 +1570,33 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     // We need to figure out whether this file is a README.adoc or README.md
     // before we update it.
     // Let's get the contents of the directory from GitHub.
-    let dir = format!("/rfd/{}", branch);
-    let files = github_repo
-        .content()
-        .iter(&format!("{}/", dir), &branch)
-        .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
-        .await
-        .unwrap_or_else(|e| panic!("getting directory {} content for RFD on branch {} failed: {}", dir, branch, e));
-    let mut filename = String::new();
-    for file in files {
-        if file.name.ends_with("README.md") || file.name.ends_with("README.adoc") {
-            filename = file.name;
-            break;
+    let dir = format!("/rfd/{}/", branch);
+    // Get the contents of the file.
+    let mut path = format!("{}/README.adoc", dir);
+    match github_repo.content().file(&path, &branch).await {
+        Ok(contents) => {
+            rfd.content = from_utf8(&contents.content).unwrap().trim().to_string();
+            rfd.sha = contents.sha;
+        }
+        Err(e) => {
+            println!("[rfd] getting file contents for {} on branch {} failed: {}, trying markdown instead...", path, branch, e);
+
+            // Try to get the markdown instead.
+            path = format!("{}/README.md", dir);
+            let contents = github_repo
+                .content()
+                .file(&path, &branch)
+                .await
+                .unwrap_or_else(|e| panic!("getting file contents for {} on branch {} failed: {}", path, branch, e));
+
+            rfd.content = from_utf8(&contents.content).unwrap().trim().to_string();
+            rfd.sha = contents.sha;
         }
     }
-    // Ensure we found a file.
-    if filename.is_empty() {
-        event!(Level::WARN, "could not find README.[md,adoc] in the directory `{}` for RFD `{}`", dir, branch);
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-    // Add our path prefix if we need it.
-    if !filename.contains(&dir) {
-        filename = format!("{}/{}", dir, filename);
-    }
-
-    // We need to get the content fresh first since this is racey.
-    let f = github_repo
-        .content()
-        .file(&filename, &branch)
-        .await
-        .unwrap_or_else(|e| panic!("getting repo content at filename {} on branch {} failed: {}", filename, branch, e));
-    rfd.content = from_utf8(&f.content).unwrap().to_string();
 
     // Update the discussion link.
     let discussion_link = event.pull_request.html_url;
-    rfd.update_discussion(&discussion_link, filename.ends_with(".md"));
+    rfd.update_discussion(&discussion_link, path.ends_with(".md"));
 
     // A pull request can be open for an RFD if it is in the following states:
     //  - published: a already published RFD is being updated in a pull request.
@@ -1614,7 +1605,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     // We can update the state if it is not currently in an acceptable state.
     if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
         //  Update the state of the RFD in GitHub to show it as `discussion`.
-        rfd.update_state("discussion", filename.ends_with(".md"));
+        rfd.update_state("discussion", path.ends_with(".md"));
     }
 
     // Update the RFD to show the new state and link in the database.
@@ -1622,7 +1613,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
 
     // Update the file in GitHub.
     // Keep in mind: this push will kick off another webhook.
-    create_or_update_file_in_github_repo(&github_repo, &branch, &filename, rfd.content.as_bytes().to_vec()).await;
+    create_or_update_file_in_github_repo(&github_repo, &branch, &path, rfd.content.as_bytes().to_vec()).await;
 
     event!(Level::INFO, "updated discussion link for RFD {}", rfd.number_string,);
     Ok(HttpResponseAccepted("ok".to_string()))
