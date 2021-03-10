@@ -414,7 +414,6 @@ table! {
         twitter -> Varchar,
         groups -> Array<Text>,
         is_group_admin -> Bool,
-        is_system_account -> Bool,
         building -> Varchar,
         link_to_building -> Array<Text>,
         aws_role -> Varchar,

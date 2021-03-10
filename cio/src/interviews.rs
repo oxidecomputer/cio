@@ -207,7 +207,7 @@ pub async fn compile_packets(db: &Database) {
     // locally.
     let employees = Users::get_from_db(db);
     for employee in employees {
-        if employee.is_system_account {
+        if employee.is_system_account() {
             continue;
         }
 

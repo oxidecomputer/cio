@@ -123,8 +123,6 @@ pub struct UserConfig {
 
     #[serde(default, alias = "is_group_admin")]
     pub is_group_admin: bool,
-    #[serde(default, alias = "is_system_account")]
-    pub is_system_account: bool,
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub building: String,
@@ -275,10 +273,11 @@ impl UserConfig {
     #[instrument]
     #[inline]
     pub fn populate_type(&mut self) {
+        // TODO: make this an enum.
         self.typev = "full-time".to_string();
         if self.groups.contains(&"consultants".to_string()) {
             self.typev = "consultant".to_string();
-        } else if self.is_system_account {
+        } else if self.groups.contains(&"system-accounts".to_string()) {
             self.typev = "system account".to_string();
         }
     }
@@ -307,6 +306,18 @@ impl User {
     #[inline]
     pub fn full_name(&self) -> String {
         format!("{} {}", self.first_name, self.last_name)
+    }
+
+    #[instrument]
+    #[inline]
+    pub fn is_system_account(&self) -> bool {
+        self.typev == "system account"
+    }
+
+    #[instrument]
+    #[inline]
+    pub fn is_consultant(&self) -> bool {
+        self.typev == "consultant"
     }
 
     /// Generate the email address for the user.
@@ -1115,7 +1126,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         // Send an email to the new user.
         // Do this here in case another step fails.
-        if user.typev == "consultant" {
+        if user.is_consultant() {
             user.send_email_new_consultant(&gsuite_user.password).await;
         } else {
             user.send_email_new_user(&gsuite_user.password).await;
@@ -1172,7 +1183,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
     // Create any remaining users from the database that we do not have in Okta.
     for (username, user) in user_map {
-        if user.is_system_account {
+        if user.is_system_account() {
             // We don't need okta accounts for the bots.
             continue;
         }
