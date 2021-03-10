@@ -1183,11 +1183,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
     // Create any remaining users from the database that we do not have in Okta.
     for (username, user) in user_map {
-        if user.is_system_account() {
-            // We don't need okta accounts for the bots.
-            continue;
-        }
-
         // Create the user's profile.
         let okta_profile: OktaProfile = user.clone().into();
 

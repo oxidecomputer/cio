@@ -144,7 +144,7 @@ impl Okta {
     /// Create a user.
     pub async fn create_user(&self, profile: Profile) -> Result<User, APIError> {
         // Build the request.
-        let rb = self.request(Method::POST, "/api/v1/users?activate=false", NewUser { profile });
+        let rb = self.request(Method::POST, "/api/v1/users?activate=true", NewUser { profile });
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
