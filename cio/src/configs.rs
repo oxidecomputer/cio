@@ -348,6 +348,56 @@ impl User {
         // TODO: Send an invite to the user.
     }
 
+    /// Send an email to the new consultant about their account.
+    #[instrument]
+    #[inline]
+    async fn send_email_new_consultant(&self, password: &str) {
+        // Initialize the SendGrid client.
+        let sendgrid = SendGrid::new_from_env();
+
+        // Get the user's aliases if they have one.
+        let aliases = self.aliases.join(", ");
+
+        // Send the message.
+        sendgrid
+            .send_mail(
+                format!("Your New Email Account: {}", self.email()),
+                format!(
+                    "Yoyoyo {},
+
+We have set up your account on mail.corp.{}. Details for accessing
+are below. You will be required to reset your password the next time you login.
+
+Website for Login: https://mail.corp.{}
+Email: {}
+Password: {}
+Aliases: {}
+
+Make sure you set up two-factor authentication for your account, or in one week
+you will be locked out.
+
+If you have any questions or your email does not work please email your
+administrator, who is cc-ed on this email. Spoiler alert it's Jess...
+jess@{}.
+
+xoxo,
+  The Onboarding Bot",
+                    self.first_name,
+                    DOMAIN,
+                    DOMAIN,
+                    self.email(),
+                    password,
+                    aliases,
+                    DOMAIN,
+                ),
+                vec![self.recovery_email.to_string()],
+                vec![self.email(), format!("jess@{}", DOMAIN)],
+                vec![],
+                format!("admin@{}", DOMAIN),
+            )
+            .await;
+    }
+
     /// Send an email to the new user about their account.
     #[instrument]
     #[inline]
@@ -973,7 +1023,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, user) in user_map {
-        println!("deleting user {} from the database, gsuite, airtable, etc", username);
+        println!("deleting user {} from the database, gsuite, and okta", username);
         let email = format!("{}@{}", username, GSUITE_DOMAIN);
 
         // Delete the user from the database and Airtable.
@@ -982,9 +1032,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Delete the user from GSuite.
         gsuite.delete_user(&email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
         event!(Level::INFO, "deleted user from gsuite: {}", username);
-
-        // TODO: Delete the user from Slack.
-        event!(Level::INFO, "deleted user from slack: {}", username);
 
         // TODO: Delete the user from Okta.
         event!(Level::INFO, "deleted user from okta: {}", username);
@@ -1052,7 +1099,11 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         // Send an email to the new user.
         // Do this here in case another step fails.
-        user.send_email_new_user(&gsuite_user.password).await;
+        if user.groups.contains(&"consultants".to_string()) {
+            user.send_email_new_consultant(&gsuite_user.password).await;
+        } else {
+            user.send_email_new_user(&gsuite_user.password).await;
+        }
         event!(Level::INFO, "created new user in gsuite: {}", username);
 
         update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
