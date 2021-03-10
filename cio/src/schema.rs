@@ -428,6 +428,7 @@ table! {
         start_date -> Date,
         birthday -> Date,
         public_ssh_keys -> Array<Text>,
+        typev -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

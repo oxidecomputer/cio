@@ -162,6 +162,9 @@ pub struct UserConfig {
     /// the GitHub API before the record gets saved in the database.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub public_ssh_keys: Vec<String>,
+
+    #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
+    pub typev: String,
 }
 
 impl Into<OktaProfile> for User {
@@ -271,10 +274,23 @@ impl UserConfig {
 
     #[instrument]
     #[inline]
+    pub fn populate_type(&mut self) {
+        self.typev = "full-time".to_string();
+        if self.groups.contains(&"consultants".to_string()) {
+            self.typev = "consultant".to_string();
+        } else if self.is_system_account {
+            self.typev = "system account".to_string();
+        }
+    }
+
+    #[instrument]
+    #[inline]
     pub async fn expand(&mut self) {
         self.populate_ssh_keys().await;
 
         self.populate_from_gusto().await;
+
+        self.populate_type();
     }
 
     /// Generate the email address for the user.
@@ -1099,7 +1115,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         // Send an email to the new user.
         // Do this here in case another step fails.
-        if user.groups.contains(&"consultants".to_string()) {
+        if user.typev == "consultant" {
             user.send_email_new_consultant(&gsuite_user.password).await;
         } else {
             user.send_email_new_user(&gsuite_user.password).await;
