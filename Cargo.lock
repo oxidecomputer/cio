@@ -582,7 +582,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f4e0ec858273afde247c68b699fdba2f0a2ac775"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#21341c525c1bf29b54b43869bbf48b76ae08475f"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -609,7 +609,6 @@ dependencies = [
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "nom_pem",
- "okta 0.0.2",
  "openapiv3",
  "openssl",
  "opentelemetry",
@@ -2194,7 +2193,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f4e0ec858273afde247c68b699fdba2f0a2ac775"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#21341c525c1bf29b54b43869bbf48b76ae08475f"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2497,18 +2496,6 @@ name = "object"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9a7ab5d64814df0fe4a4b5ead45ed6c5f181ee3ff04ba344313a6c80446c5d4"
-
-[[package]]
-name = "okta"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e7a986fa56a7f202ec6f078d4e86a7187b68f0e04003c816634cc6238e71e6e"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "okta"
@@ -4451,9 +4438,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.13"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8a9bd1db7706f2373a190b0d067146caa39350c486f3d455b0e33b431f94c07"
+checksum = "41768be5b9f3489491825f56f01f25290aa1d3e7cc97e182d4d34360493ba6fa"
 dependencies = [
  "proc-macro2",
  "quote",
