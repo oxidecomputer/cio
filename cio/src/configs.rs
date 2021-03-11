@@ -13,7 +13,6 @@ use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarR
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
-use okta::{Group as OktaGroup, GroupProfile, Okta, Profile as OktaProfile};
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
@@ -29,7 +28,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
-use crate::templates::generate_terraform_files_for_aws_and_github;
+use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
@@ -163,28 +162,6 @@ pub struct UserConfig {
 
     #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
     pub typev: String,
-}
-
-impl Into<OktaProfile> for User {
-    fn into(self) -> OktaProfile {
-        OktaProfile {
-            first_name: self.first_name.to_string(),
-            last_name: self.last_name.to_string(),
-            display_name: self.full_name(),
-            email: self.email(),
-            login: self.email(),
-            primary_phone: self.recovery_phone.to_string(),
-            mobile_phone: self.recovery_phone.to_string(),
-            street_address: format!("{}\n{}", self.home_address_street_1, self.home_address_street_2).trim().to_string(),
-            city: self.home_address_city.to_string(),
-            state: self.home_address_state.to_string(),
-            zip_code: self.home_address_zipcode.to_string(),
-            country_code: self.home_address_country.to_string(),
-            second_email: self.recovery_email.to_string(),
-            github_username: self.github.to_string(),
-            matrix_username: self.chat,
-        }
-    }
 }
 
 pub mod null_date_format {
@@ -711,15 +688,6 @@ impl GroupConfig {
     }
 }
 
-impl Into<GroupProfile> for Group {
-    fn into(self) -> GroupProfile {
-        GroupProfile {
-            name: self.name.to_string(),
-            description: self.description,
-        }
-    }
-}
-
 /// Implement updating the Airtable record for a Group.
 #[async_trait]
 impl UpdateAirtableRecord<Group> for Group {
@@ -1001,14 +969,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
-    // Initialize Okta.
-    let okta = Okta::new_from_env();
-
     // Get the existing GSuite users.
     let gsuite_users = gsuite.list_users().await.unwrap();
-
-    // Get the existing Okta users.
-    let okta_users = okta.list_users().await.unwrap();
 
     // Get the GSuite groups.
     let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
@@ -1016,14 +978,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     for g in groups {
         // Add the group to our map.
         gsuite_groups.insert(g.name.to_string(), g);
-    }
-
-    // Get the Okta groups.
-    let mut okta_groups: BTreeMap<String, OktaGroup> = BTreeMap::new();
-    let o_groups = okta.list_groups("").await.unwrap();
-    for g in o_groups {
-        // Add the group to our map.
-        okta_groups.insert(g.profile.name.to_string(), g);
     }
 
     // Get all the users.
@@ -1059,9 +1013,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Delete the user from GSuite.
         gsuite.delete_user(&email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
         event!(Level::INFO, "deleted user from gsuite: {}", username);
-
-        // TODO: Delete the user from Okta.
-        event!(Level::INFO, "deleted user from okta: {}", username);
     }
     event!(Level::INFO, "updated configs users in the database");
 
@@ -1139,105 +1090,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
     }
 
-    // Update the users in Okta.
-    // Get all the users.
-    let db_users = Users::get_from_db(db);
-    // Create a BTreeMap
-    let mut user_map: BTreeMap<String, User> = Default::default();
-    for u in db_users {
-        user_map.insert(u.username.to_string(), u);
-    }
-    // Iterate over the users already in Okta.
-    for u in okta_users {
-        // Get the shorthand username and match it against our existing users.
-        let username = u.profile.email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN)).to_string();
-
-        // Check if we have that user already in our database.
-        let user: User;
-        match user_map.get(&username) {
-            Some(val) => user = val.clone(),
-            None => {
-                // If the user does not exist in our map we need to delete
-                // them from Okta.
-                // TODO: delete them from okta
-                println!("deleting user {} from okta", username);
-
-                event!(Level::INFO, "deleted user from okta: {}", username);
-                continue;
-            }
-        }
-
-        let okta_profile: OktaProfile = user.clone().into();
-
-        // Update the user with the settings from the config for the user.
-        okta.update_user(okta_profile).await.unwrap_or_else(|e| panic!("updating user {} in okta failed: {}", username, e));
-
-        update_user_okta_groups(&okta, &user, okta_groups.clone()).await;
-
-        // Remove the user from the user map and continue.
-        // This allows us to add all the remaining new user after.
-        user_map.remove(&username);
-
-        event!(Level::INFO, "updated user in okta: {}", username);
-    }
-
-    // Create any remaining users from the database that we do not have in Okta.
-    for (username, user) in user_map {
-        // Create the user's profile.
-        let okta_profile: OktaProfile = user.clone().into();
-
-        okta.create_user(okta_profile).await.unwrap_or_else(|e| panic!("creating user {} in okta failed: {}", username, e));
-
-        update_user_okta_groups(&okta, &user, okta_groups.clone()).await;
-
-        event!(Level::INFO, "created new user in okta: {}", username);
-    }
-
     // Update users in airtable.
     Users::get_from_db(db).update_airtable().await;
-}
-
-/// Update a user's groups in Okta to match our database.
-#[instrument(skip(okta))]
-#[inline]
-pub async fn update_user_okta_groups(okta: &Okta, user: &User, okta_groups: BTreeMap<String, OktaGroup>) {
-    // Iterate over the groups and add the user as a member to it.
-    for g in &user.groups {
-        // Make sure the group exists.
-        let group: &OktaGroup;
-        match okta_groups.get(g) {
-            Some(val) => group = val,
-            // Continue through the loop and we will add the user later.
-            None => {
-                println!("okta group {} does not exist so cannot add user {}", g, user.email());
-                event!(Level::WARN, "okta group {} does not exist so cannot add user {}", g, user.email());
-                continue;
-            }
-        }
-
-        let mut role = "MEMBER";
-        if user.is_group_admin {
-            role = "OWNER";
-        }
-
-        // Add the user to the group.
-        okta.add_user_to_group(&group.id, &user.email()).await.unwrap();
-
-        event!(Level::INFO, "added {} to okta group {} as {}", user.email(), group.profile.name, role);
-    }
-
-    // Iterate over all the groups and if the user is a member and should not
-    // be, remove them from the group.
-    for (slug, group) in &okta_groups {
-        if user.groups.contains(&slug) {
-            continue;
-        }
-
-        // Remove the user to the group.
-        okta.delete_user_from_group(&group.id, &user.email()).await.unwrap();
-
-        event!(Level::INFO, "removed {} from okta group {}", user.email(), group.profile.name);
-    }
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
@@ -1447,13 +1301,9 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
-    let okta = Okta::new_from_env();
 
     // Get the GSuite groups.
     let gsuite_groups = gsuite.list_groups().await.unwrap();
-
-    // Get the Okta groups.
-    let okta_groups = okta.list_groups("").await.unwrap();
 
     // Get all the groups.
     let db_groups = Groups::get_from_db(db);
@@ -1568,58 +1418,6 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
         event!(Level::INFO, "created group in gsuite: {}", name);
     }
 
-    // Update the groups in Okta.
-    // Get all the groups.
-    let db_groups = Groups::get_from_db(db);
-    // Create a BTreeMap
-    let mut group_map: BTreeMap<String, Group> = Default::default();
-    for u in db_groups {
-        group_map.insert(u.name.to_string(), u);
-    }
-    // Iterate over the groups already in Okta.
-    for g in okta_groups {
-        let name = g.profile.name.to_string();
-
-        // Check if we already have this group in our database.
-        let group = if let Some(val) = group_map.get(&name) {
-            val
-        } else {
-            if g.profile.name == "Everyone" {
-                // It's fine continue.
-                // This group is built into okta.
-                continue;
-            }
-
-            // If the group does not exist in our map we need to delete
-            // group from Okta.
-            // TODO: delete the group from okta.
-            println!("deleting group {} from okta", name);
-
-            event!(Level::INFO, "deleted group from okta: {}", name);
-            continue;
-        };
-
-        let okta_profile: GroupProfile = group.clone().into();
-
-        okta.update_group(okta_profile).await.unwrap_or_else(|e| panic!("updating group {} in okta failed: {}", name, e));
-
-        // Remove the group from the database map and continue.
-        // This allows us to add all the remaining new groups after.
-        group_map.remove(&name);
-
-        event!(Level::INFO, "updated group in okta: {}", name);
-    }
-
-    // Create any remaining groups from the database  that we do not have in Okta.
-    for (name, group) in group_map {
-        // Create the group.
-        let okta_profile: GroupProfile = group.clone().into();
-
-        okta.create_group(okta_profile).await.unwrap_or_else(|e| panic!("updating group {} in okta failed: {}", name, e));
-
-        event!(Level::INFO, "created group in okta: {}", name);
-    }
-
     // Update groups in airtable.
     Groups::get_from_db(db).update_airtable().await;
 }
@@ -1706,6 +1504,9 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
 #[inline]
 pub async fn refresh_db_configs_and_airtable(github: &Github) {
     let configs = get_configs_from_repo(github).await;
+
+    // Sync okta users and group from the configs.
+    generate_terraform_files_for_okta(github, &configs).await;
 
     // Initialize our database.
     let db = Database::new();

@@ -668,7 +668,6 @@ dependencies = [
  "lopdf",
  "macros 0.1.0",
  "nom_pem",
- "okta 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "openapiv3",
  "openssl",
  "opentelemetry",
@@ -2514,18 +2513,6 @@ dependencies = [
 [[package]]
 name = "okta"
 version = "0.0.3"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "okta"
-version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2362d0855c48407c9c76cf6cac9fdc0c324626a2bf0b5797cc1b6916be08bcdc"
 dependencies = [
  "chrono",
  "reqwest",
