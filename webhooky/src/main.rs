@@ -1570,7 +1570,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     // We need to figure out whether this file is a README.adoc or README.md
     // before we update it.
     // Let's get the contents of the directory from GitHub.
-    let dir = format!("/rfd/{}/", branch);
+    let dir = format!("/rfd/{}", branch);
     // Get the contents of the file.
     let mut path = format!("{}/README.adoc", dir);
     match github_repo.content().file(&path, &branch).await {
