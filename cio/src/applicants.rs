@@ -1648,10 +1648,10 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     // Assign scorers and send email.
                     // Choose random five reviewers.
                     let random_reviewers: Vec<String> = reviewer_pool.choose_multiple(&mut rng, 5).cloned().collect();
-                    println!("reviewers: {:?}", random_reviewers);
 
                     // Set the scorers.
-                    applicant.scorers = random_reviewers;
+                    applicant.scorers = random_reviewers.clone();
+
                     // Send emails to the scorers.
                     for s in random_reviewers {
                         applicant.send_email_to_scorer(&s).await;
