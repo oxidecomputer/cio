@@ -45,6 +45,7 @@ opentelemetry = { version = "0.10", default-features = false, features = ["trace
 opentelemetry-zipkin = { version = "^0.8", features = ["reqwest-client"], default-features = false }
 pandoc = "0.8"
 phonenumber = "0.2"
+rand = { version = "^0.8.3", features = ["alloc"] }
 regex = "1"
 reqwest = { version = "0.10", features = ["json"] }
 revai = { version = "0.1.0" }

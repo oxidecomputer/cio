@@ -17,6 +17,7 @@ use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use hubcaps::Github;
 use macros::db;
 use pandoc::OutputKind;
+use rand::seq::SliceRandom;
 use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
@@ -232,26 +233,6 @@ Sincerely,
                 vec![],
                 vec![],
                 format!("applications@{}", DOMAIN),
-            )
-            .await;
-    }
-
-    /// Send an email to a scorer that they are assigned to an applicant.
-    #[instrument]
-    #[inline]
-    pub async fn send_email_to_scorer(&self, scorer: String) {
-        // Initialize the SendGrid client.
-        let sendgrid_client = SendGrid::new_from_env();
-
-        // Send the message.
-        sendgrid_client
-            .send_mail(
-                format!("[applicants] Reviewing applicant {}", self.name),
-                self.as_scorer_email(),
-                vec![scorer.to_string()],
-                vec![format!("careers@{}", DOMAIN)],
-                vec![],
-                format!("careers@{}", DOMAIN),
             )
             .await;
     }
@@ -739,63 +720,6 @@ Sincerely,
     }
 
     /// Get the applicant's information in the form of the body of an email for a
-    /// scorer email that they have been assigned to score the applicant.
-    #[instrument]
-    #[inline]
-    pub fn as_scorer_email(&self) -> String {
-        let time = self.human_duration();
-
-        let mut msg = format!(
-            "You have been assigned to review the applicant: {}
-
-Role: {}
-Submitted: {}
-Name: {}
-Email: {}",
-            self.name, self.role, time, self.name, self.email
-        );
-
-        if !self.location.is_empty() {
-            msg += &format!("\nLocation: {}", self.location);
-        }
-        if !self.phone.is_empty() {
-            msg += &format!("\nPhone: {}", self.phone);
-        }
-
-        if !self.github.is_empty() {
-            msg += &format!("\nGitHub: {} (https://github.com/{})", self.github, self.github.trim_start_matches('@'));
-        }
-        if !self.gitlab.is_empty() {
-            msg += &format!("\nGitLab: {} (https://gitlab.com/{})", self.gitlab, self.gitlab.trim_start_matches('@'));
-        }
-        if !self.linkedin.is_empty() {
-            msg += &format!("\nLinkedIn: {}", self.linkedin);
-        }
-        if !self.portfolio.is_empty() {
-            msg += &format!("\nPortfolio: {}", self.portfolio);
-        }
-        if !self.website.is_empty() {
-            msg += &format!("\nWebsite: {}", self.website);
-        }
-
-        msg += &format!(
-            "\nResume: {}
-Oxide Candidate Materials: {}
-Scoring form: {}
-Scoring form responses: {}
-
-## Reminder
-
-The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
-
-",
-            self.resume, self.materials, self.scoring_form_url, self.scoring_form_responses_url,
-        );
-
-        msg
-    }
-
-    /// Get the applicant's information in the form of the body of an email for a
     /// company wide notification that we received a new application.
     #[instrument]
     #[inline]
@@ -972,6 +896,83 @@ impl Applicant {
                 }
             ]
         })
+    }
+
+    /// Send an email to a scorer that they are assigned to an applicant.
+    #[instrument]
+    #[inline]
+    pub async fn send_email_to_scorer(&self, scorer: &str) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("[applicants] Reviewing applicant {}", self.name),
+                self.as_scorer_email(),
+                vec![scorer.to_string()],
+                vec![format!("careers@{}", DOMAIN)],
+                vec![],
+                format!("careers@{}", DOMAIN),
+            )
+            .await;
+    }
+
+    /// Get the applicant's information in the form of the body of an email for a
+    /// scorer email that they have been assigned to score the applicant.
+    #[instrument]
+    #[inline]
+    pub fn as_scorer_email(&self) -> String {
+        let time = self.human_duration();
+
+        let mut msg = format!(
+            "You have been assigned to review the applicant: {}
+
+Role: {}
+Submitted: {}
+Name: {}
+Email: {}",
+            self.name, self.role, time, self.name, self.email
+        );
+
+        if !self.location.is_empty() {
+            msg += &format!("\nLocation: {}", self.location);
+        }
+        if !self.phone.is_empty() {
+            msg += &format!("\nPhone: {}", self.phone);
+        }
+
+        if !self.github.is_empty() {
+            msg += &format!("\nGitHub: {} (https://github.com/{})", self.github, self.github.trim_start_matches('@'));
+        }
+        if !self.gitlab.is_empty() {
+            msg += &format!("\nGitLab: {} (https://gitlab.com/{})", self.gitlab, self.gitlab.trim_start_matches('@'));
+        }
+        if !self.linkedin.is_empty() {
+            msg += &format!("\nLinkedIn: {}", self.linkedin);
+        }
+        if !self.portfolio.is_empty() {
+            msg += &format!("\nPortfolio: {}", self.portfolio);
+        }
+        if !self.website.is_empty() {
+            msg += &format!("\nWebsite: {}", self.website);
+        }
+
+        msg += &format!(
+            "\nResume: {}
+Oxide Candidate Materials: {}
+Scoring form: {}
+Scoring form responses: {}
+
+## Reminder
+
+The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
+
+",
+            self.resume, self.materials, self.scoring_form_url, self.scoring_form_responses_url,
+        );
+
+        msg
     }
 
     #[instrument]
@@ -1566,6 +1567,36 @@ impl ApplicantFormSheetColumns {
     }
 }
 
+async fn get_reviewer_pool() -> Vec<String> {
+    // Get the GSuite token.
+    let token = get_gsuite_token("").await;
+
+    // Initialize the GSuite sheets client.
+    let sheets_client = Sheets::new(token.clone());
+    let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
+
+    // Get the values in the sheet.
+    let sheet_values = sheets_client.get_values(&sheet_id, "Reviewer pool!A1:G1000".to_string()).await.unwrap();
+    let values = sheet_values.values.unwrap();
+
+    if values.is_empty() {
+        panic!("unable to retrieve any data values from Google sheet for applicant forms {}", sheet_id);
+    }
+
+    // Iterate over the rows.
+    let mut reviewers: Vec<String> = vec![];
+    for (_, row) in values.iter().enumerate() {
+        if row[0].is_empty() {
+            // Break our loop we are in an empty row.
+            break;
+        }
+        // The email is the second column.
+        reviewers.push(row[1].to_string());
+    }
+
+    reviewers
+}
+
 #[instrument(skip(db))]
 #[inline]
 pub async fn update_applications_with_scoring_forms(db: &Database) {
@@ -1587,6 +1618,9 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
     // Parse the sheet columns.
     let columns = ApplicantFormSheetColumns::new();
 
+    let reviewer_pool = get_reviewer_pool().await;
+    let mut rng = rand::thread_rng();
+
     // Iterate over the rows.
     for (_, row) in values.iter().enumerate() {
         if row[columns.email].is_empty() {
@@ -1602,9 +1636,32 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
         // Update each of the applicants.
         for (_, sheet_id) in get_sheets_map() {
             if let Some(mut applicant) = Applicant::get_from_db(db, email.to_string(), sheet_id.to_string()) {
+                // Make sure the status is "Needs to be triaged".
+                let status = crate::applicant_status::Status::from_str(&applicant.status);
+                if status != Ok(crate::applicant_status::Status::NeedsToBeTriaged) {
+                    // Continue we don't care.
+                    continue;
+                }
+
+                // See if we already have scorers assigned.
+                if applicant.scorers.is_empty() {
+                    // Assign scorers and send email.
+                    // Choose random five reviewers.
+                    let random_reviewers: Vec<String> = reviewer_pool.choose_multiple(&mut rng, 5).cloned().collect();
+                    println!("reviewers: {:?}", random_reviewers);
+
+                    // Set the scorers.
+                    applicant.scorers = random_reviewers;
+                    // Send emails to the scorers.
+                    for s in random_reviewers {
+                        applicant.send_email_to_scorer(&s).await;
+                    }
+                }
+
                 applicant.scoring_form_id = form_id.to_string();
                 applicant.scoring_form_url = form_url.to_string();
                 applicant.scoring_form_responses_url = form_responses_url.to_string();
+
                 // Update the applicant in the database.
                 applicant.update(db).await;
             }

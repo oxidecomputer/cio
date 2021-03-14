@@ -673,6 +673,7 @@ dependencies = [
  "opentelemetry-zipkin",
  "pandoc",
  "phonenumber",
+ "rand 0.8.3",
  "regex 1.4.4",
  "reqwest",
  "revai 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
