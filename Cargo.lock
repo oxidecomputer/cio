@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 dependencies = [
  "lazy_static",
- "regex 1.4.3",
+ "regex 1.4.4",
 ]
 
 [[package]]
@@ -582,7 +582,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#21341c525c1bf29b54b43869bbf48b76ae08475f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#99d4b01f4ed73f42a643ee35448f192fd271a3d9"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -615,7 +615,7 @@ dependencies = [
  "opentelemetry-zipkin",
  "pandoc",
  "phonenumber",
- "regex 1.4.3",
+ "regex 1.4.4",
  "reqwest",
  "revai 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
@@ -673,7 +673,7 @@ dependencies = [
  "opentelemetry-zipkin",
  "pandoc",
  "phonenumber",
- "regex 1.4.3",
+ "regex 1.4.4",
  "reqwest",
  "revai 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
@@ -754,7 +754,7 @@ dependencies = [
  "lazy_static",
  "pest",
  "pest_derive",
- "regex 1.4.3",
+ "regex 1.4.4",
  "shell-words",
  "twoway",
  "typed-arena",
@@ -1774,9 +1774,9 @@ dependencies = [
 
 [[package]]
 name = "http-client"
-version = "6.3.4"
+version = "6.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98c12a6a451357392f3307325e9a15cbd27451abdaad96e74c30ea8786f615c4"
+checksum = "5566ecc26bc6b04e773e680d66141fced78e091ad818e420d726c152b05a64ff"
 dependencies = [
  "async-trait",
  "cfg-if 1.0.0",
@@ -1976,7 +1976,7 @@ dependencies = [
  "futures",
  "influxdb_derive",
  "lazy_static",
- "regex 1.4.3",
+ "regex 1.4.4",
  "serde",
  "serde_json",
  "surf",
@@ -2193,7 +2193,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#21341c525c1bf29b54b43869bbf48b76ae08475f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#99d4b01f4ed73f42a643ee35448f192fd271a3d9"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2545,15 +2545,15 @@ dependencies = [
 
 [[package]]
 name = "openssl"
-version = "0.10.32"
+version = "0.10.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "038d43985d1ddca7a9900630d8cd031b56e4794eecc2e9ea39dd17aa04399a70"
+checksum = "a61075b62a23fef5a29815de7536d940aa35ce96d18ce0cc5076272db678a577"
 dependencies = [
  "bitflags",
  "cfg-if 1.0.0",
  "foreign-types",
- "lazy_static",
  "libc",
+ "once_cell",
  "openssl-sys",
 ]
 
@@ -2565,9 +2565,9 @@ checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.60"
+version = "0.9.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "921fc71883267538946025deffb622905ecad223c28efbfdef9bb59a0175f3e6"
+checksum = "313752393519e876837e09e1fa183ddef0be7735868dced3196f4472d536277f"
 dependencies = [
  "autocfg",
  "cc",
@@ -2589,7 +2589,7 @@ dependencies = [
  "percent-encoding 2.1.0",
  "pin-project 0.4.27",
  "rand 0.7.3",
- "regex 1.4.3",
+ "regex 1.4.4",
  "reqwest",
  "tokio",
 ]
@@ -2661,9 +2661,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5d65c4d95931acda4498f675e332fcbdc9a06705cd07086c510e9b6009cd1c1"
+checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
 name = "pem"
@@ -2673,7 +2673,7 @@ checksum = "fd56cbd21fea48d0c440b41cd69c589faacade08c992d9a54e471b79d0fd13eb"
 dependencies = [
  "base64 0.13.0",
  "once_cell",
- "regex 1.4.3",
+ "regex 1.4.4",
 ]
 
 [[package]]
@@ -2783,7 +2783,7 @@ dependencies = [
  "lazy_static",
  "nom 5.1.2",
  "quick-xml",
- "regex 1.4.3",
+ "regex 1.4.4",
  "regex-cache",
  "serde",
  "serde_derive",
@@ -3148,14 +3148,13 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.4.3"
+version = "1.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9251239e129e16308e70d853559389de218ac275b515068abc96829d05b948a"
+checksum = "54fd1046a3107eb58f42de31d656fee6853e5d276c455fd943742dce89fc3dd3"
 dependencies = [
  "aho-corasick 0.7.15",
  "memchr",
- "regex-syntax 0.6.22",
- "thread_local 1.1.3",
+ "regex-syntax 0.6.23",
 ]
 
 [[package]]
@@ -3165,7 +3164,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae1ded71d66a4a97f5e961fd0cb25a5f366a42a41570d16a763a69c092c26ae4"
 dependencies = [
  "byteorder",
- "regex-syntax 0.6.22",
+ "regex-syntax 0.6.23",
 ]
 
 [[package]]
@@ -3176,8 +3175,8 @@ checksum = "2f7b62d69743b8b94f353b6b7c3deb4c5582828328bcb8d5fedf214373808793"
 dependencies = [
  "lru-cache",
  "oncemutex",
- "regex 1.4.3",
- "regex-syntax 0.6.22",
+ "regex 1.4.4",
+ "regex-syntax 0.6.23",
 ]
 
 [[package]]
@@ -3191,9 +3190,9 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.22"
+version = "0.6.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
+checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 
 [[package]]
 name = "remove_dir_all"
@@ -3533,7 +3532,7 @@ checksum = "38e528fb457baf53fcd6c90beb420705f35c12c3d8caed8817dcf7be00eff7c7"
 dependencies = [
  "backtrace",
  "lazy_static",
- "regex 1.4.3",
+ "regex 1.4.4",
  "sentry-core",
 ]
 
@@ -3546,7 +3545,7 @@ dependencies = [
  "hostname",
  "lazy_static",
  "libc",
- "regex 1.4.3",
+ "regex 1.4.4",
  "rustc_version",
  "sentry-core",
  "uname",
@@ -3929,7 +3928,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae939ed7d169eed9699f4f5cd440f046f5dc5dfc27c19e3cd311619594c175e0"
 dependencies = [
- "regex 1.4.3",
+ "regex 1.4.4",
  "slog",
 ]
 
@@ -3977,7 +3976,7 @@ checksum = "31bef221d42166d6708aa1e9b0182324b37a0a7517ff590ec201dbfe1cfa46ef"
 dependencies = [
  "chrono",
  "libflate",
- "regex 1.4.3",
+ "regex 1.4.4",
  "serde",
  "serde_derive",
  "slog",
@@ -3986,7 +3985,7 @@ dependencies = [
  "slog-scope",
  "slog-stdlog",
  "slog-term",
- "trackable",
+ "trackable 0.2.24",
 ]
 
 [[package]]
@@ -4141,9 +4140,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.63"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fd9bc7ccc2688b3344c2f48b9b546648b25ce0b20fc717ee7fa7981a8ca9717"
+checksum = "3fd9d1e9976102a03c542daa2eff1b43f9d72306342f3f8b3ed5fb8908195d6f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4438,9 +4437,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41768be5b9f3489491825f56f01f25290aa1d3e7cc97e182d4d34360493ba6fa"
+checksum = "c42e6fa53307c8a17e4ccd4dc81cf5ec38db9209f59b222210375b54ee40d1e2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4502,15 +4501,15 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ab8966ac3ca27126141f7999361cc97dd6fb4b71da04c02044fa9045d98bb96"
+checksum = "705096c6f83bf68ea5d357a6aa01829ddbdac531b357b45abeca842938085baa"
 dependencies = [
  "ansi_term 0.12.1",
  "chrono",
  "lazy_static",
  "matchers",
- "regex 1.4.3",
+ "regex 1.4.4",
  "serde",
  "serde_json",
  "sharded-slab",
@@ -4524,18 +4523,28 @@ dependencies = [
 
 [[package]]
 name = "trackable"
-version = "0.2.23"
+version = "0.2.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11475c3c53b075360eac9794965822cb053996046545f91cf61d90e00b72efa5"
+checksum = "b98abb9e7300b9ac902cc04920945a874c1973e08c310627cc4458c04b70dd32"
+dependencies = [
+ "trackable 1.1.0",
+ "trackable_derive",
+]
+
+[[package]]
+name = "trackable"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ffbe24a17d6b233c1d47e2d336b94a295a347b308a9a6d431a65b4eac57e97d"
 dependencies = [
  "trackable_derive",
 ]
 
 [[package]]
 name = "trackable_derive"
-version = "0.1.3"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edcf0b9b2caa5f4804ef77aeee1b929629853d806117c48258f402b69737e65c"
+checksum = "ebeb235c5847e2f82cfe0f07eb971d1e5f6804b18dac2ae16349cc604380f82f"
 dependencies = [
  "quote",
  "syn",
@@ -4576,9 +4585,9 @@ dependencies = [
 
 [[package]]
 name = "typenum"
-version = "1.12.0"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
+checksum = "879f6906492a7cd215bfa4cf595b600146ccfac0c79bcbd1f3000162af5e8b06"
 
 [[package]]
 name = "ucd-trie"
