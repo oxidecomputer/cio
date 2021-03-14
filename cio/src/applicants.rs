@@ -126,6 +126,15 @@ pub struct NewApplicant {
     /// Airtable fields.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interviews: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scorers: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scoring_form_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scoring_form_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scoring_form_responses_url: String,
 }
 
 impl NewApplicant {
@@ -175,6 +184,10 @@ impl NewApplicant {
             question_why_oxide: Default::default(),
             interview_packet: Default::default(),
             interviews: Default::default(),
+            scorers: Default::default(),
+            scoring_form_id: Default::default(),
+            scoring_form_url: Default::default(),
+            scoring_form_responses_url: Default::default(),
         }
     }
 
@@ -219,6 +232,26 @@ Sincerely,
                 vec![],
                 vec![],
                 format!("applications@{}", DOMAIN),
+            )
+            .await;
+    }
+
+    /// Send an email to a scorer that they are assigned to an applicant.
+    #[instrument]
+    #[inline]
+    pub async fn send_email_to_scorer(&self, scorer: String) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("[applicants] Reviewing applicant {}", self.name),
+                self.as_scorer_email(),
+                vec![scorer.to_string()],
+                vec![format!("careers@{}", DOMAIN)],
+                vec![],
+                format!("careers@{}", DOMAIN),
             )
             .await;
     }
@@ -340,6 +373,10 @@ Sincerely,
             question_why_oxide: Default::default(),
             interview_packet: Default::default(),
             interviews: Default::default(),
+            scorers: Default::default(),
+            scoring_form_id: Default::default(),
+            scoring_form_url: Default::default(),
+            scoring_form_responses_url: Default::default(),
         }
     }
 
@@ -702,6 +739,63 @@ Sincerely,
     }
 
     /// Get the applicant's information in the form of the body of an email for a
+    /// scorer email that they have been assigned to score the applicant.
+    #[instrument]
+    #[inline]
+    pub fn as_scorer_email(&self) -> String {
+        let time = self.human_duration();
+
+        let mut msg = format!(
+            "You have been assigned to review the applicant: {}
+
+Role: {}
+Submitted: {}
+Name: {}
+Email: {}",
+            self.name, self.role, time, self.name, self.email
+        );
+
+        if !self.location.is_empty() {
+            msg += &format!("\nLocation: {}", self.location);
+        }
+        if !self.phone.is_empty() {
+            msg += &format!("\nPhone: {}", self.phone);
+        }
+
+        if !self.github.is_empty() {
+            msg += &format!("\nGitHub: {} (https://github.com/{})", self.github, self.github.trim_start_matches('@'));
+        }
+        if !self.gitlab.is_empty() {
+            msg += &format!("\nGitLab: {} (https://gitlab.com/{})", self.gitlab, self.gitlab.trim_start_matches('@'));
+        }
+        if !self.linkedin.is_empty() {
+            msg += &format!("\nLinkedIn: {}", self.linkedin);
+        }
+        if !self.portfolio.is_empty() {
+            msg += &format!("\nPortfolio: {}", self.portfolio);
+        }
+        if !self.website.is_empty() {
+            msg += &format!("\nWebsite: {}", self.website);
+        }
+
+        msg += &format!(
+            "\nResume: {}
+Oxide Candidate Materials: {}
+Scoring form: {}
+Scoring form responses: {}
+
+## Reminder
+
+The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
+
+",
+            self.resume, self.materials, self.scoring_form_url, self.scoring_form_responses_url,
+        );
+
+        msg
+    }
+
+    /// Get the applicant's information in the form of the body of an email for a
     /// company wide notification that we received a new application.
     #[instrument]
     #[inline]
@@ -751,6 +845,8 @@ To view the all the candidates refer to the following Google spreadsheets:
 - Engineering Applications: https://applications-engineering.corp.oxide.computer
 - Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
 - Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
+
+The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
 ",
             self.resume, self.materials,
         );
@@ -1447,10 +1543,86 @@ pub async fn refresh_db_applicants(db: &Database) {
     }
 }
 
+/// The data type for a Google Sheet applicant form columns, we use this when
+/// parsing the Google Sheets for applicant forms where we leave our voting.
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct ApplicantFormSheetColumns {
+    pub name: usize,
+    pub email: usize,
+    pub form_id: usize,
+    pub form_url: usize,
+    pub form_responses_url: usize,
+}
+
+impl ApplicantFormSheetColumns {
+    fn new() -> Self {
+        ApplicantFormSheetColumns {
+            name: 0,
+            email: 1,
+            form_id: 2,
+            form_url: 3,
+            form_responses_url: 4,
+        }
+    }
+}
+
+#[instrument(skip(db))]
+#[inline]
+pub async fn update_applications_with_scoring_forms(db: &Database) {
+    // Get the GSuite token.
+    let token = get_gsuite_token("").await;
+
+    // Initialize the GSuite sheets client.
+    let sheets_client = Sheets::new(token.clone());
+    let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
+
+    // Get the values in the sheet.
+    let sheet_values = sheets_client.get_values(&sheet_id, "Applicants to review!A1:G1000".to_string()).await.unwrap();
+    let values = sheet_values.values.unwrap();
+
+    if values.is_empty() {
+        panic!("unable to retrieve any data values from Google sheet for applicant forms {}", sheet_id);
+    }
+
+    // Parse the sheet columns.
+    let columns = ApplicantFormSheetColumns::new();
+
+    // Iterate over the rows.
+    for (_, row) in values.iter().enumerate() {
+        if row[columns.email].is_empty() {
+            // Break our loop we are in an empty row.
+            break;
+        }
+
+        let email = row[columns.email].to_string();
+        let form_id = row[columns.form_id].to_string();
+        let form_url = row[columns.form_url].to_string();
+        let form_responses_url = row[columns.form_responses_url].to_string();
+
+        // Update each of the applicants.
+        for (_, sheet_id) in get_sheets_map() {
+            if let Some(mut applicant) = Applicant::get_from_db(db, email.to_string(), sheet_id.to_string()) {
+                applicant.scoring_form_id = form_id.to_string();
+                applicant.scoring_form_url = form_url.to_string();
+                applicant.scoring_form_responses_url = form_responses_url.to_string();
+                // Update the applicant in the database.
+                applicant.update(db).await;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::applicants::{refresh_db_applicants, Applicants};
+    use crate::applicants::{refresh_db_applicants, update_applications_with_scoring_forms, Applicants};
     use crate::db::Database;
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
+    async fn test_cron_scoring_applicants() {
+        let db = Database::new();
+        update_applications_with_scoring_forms(&db).await;
+    }
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]

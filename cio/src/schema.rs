@@ -53,6 +53,10 @@ table! {
         question_why_oxide -> Text,
         interview_packet -> Varchar,
         interviews -> Array<Text>,
+        scorers -> Array<Text>,
+        scoring_form_id -> Varchar,
+        scoring_form_url -> Varchar,
+        scoring_form_responses_url -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
