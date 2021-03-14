@@ -911,7 +911,7 @@ impl Applicant {
                 format!("[applicants] Reviewing applicant {}", self.name),
                 self.as_scorer_email(),
                 vec![scorer.to_string()],
-                vec![format!("careers@{}", DOMAIN)],
+                vec![],
                 vec![],
                 format!("careers@{}", DOMAIN),
             )
