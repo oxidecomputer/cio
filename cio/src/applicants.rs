@@ -1543,8 +1543,9 @@ pub async fn refresh_db_applicants(db: &Database) {
             applicant.scorers = a.scorers.clone();
             applicant.scoring_form_url = a.scoring_form_url.to_string();
             applicant.scoring_form_responses_url = a.scoring_form_responses_url.to_string();
-            println!("applied scorers for: {}", a.email);
+            println!("applied scorers for: {} {:?}", a.email, applicant.scorers);
         }
+        println!("got scorers for: {} {:?}", applicant.email, applicant.scorers);
         let new_applicant = applicant.upsert(db).await;
 
         new_applicant.create_github_next_steps_issue(&github, &meta_issues).await;
