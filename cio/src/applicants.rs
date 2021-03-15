@@ -1661,7 +1661,8 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
 
                     // Send emails to the scorers.
                     for s in random_reviewers {
-                        applicant.send_email_to_scorer(&s).await;
+                        println!("sending email to scorers: {}", s);
+                        //applicant.send_email_to_scorer(&s).await;
                     }
                 }
 
