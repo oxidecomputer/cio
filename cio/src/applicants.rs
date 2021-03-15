@@ -1625,8 +1625,15 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
     // Parse the sheet columns.
     let columns = ApplicantFormSheetColumns::new();
 
-    let reviewer_pool = get_reviewer_pool().await;
+    let mut reviewer_pool = get_reviewer_pool().await;
+
+    // We'll assign reviewers randomly but attempt to produce roughly even loads
+    // across reviewers. To do this, we shuffle the list of reviewers, and then
+    // create a cycling iterator that produces that shuffled sequence forever.
+    // Whenever we need a group of 5 interviewers, we'll just take the next 5.
     let mut rng = rand::thread_rng();
+    reviewer_pool.shuffle(&mut rng);
+    let mut reviewer_pool = reviewer_pool.iter().cloned().cycle();
 
     // Iterate over the rows.
     for (_, row) in values.iter().enumerate() {
@@ -1653,14 +1660,11 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                 // See if we already have scorers assigned.
                 if applicant.scorers.is_empty() {
                     // Assign scorers and send email.
-                    // Choose random five reviewers.
-                    let random_reviewers: Vec<String> = reviewer_pool.choose_multiple(&mut rng, 5).cloned().collect();
-
-                    // Set the scorers.
-                    applicant.scorers = random_reviewers.clone();
+                    // Choose next five reviewers.
+                    applicant.scorers = reviewer_pool.by_ref().take(5).collect();
 
                     // Send emails to the scorers.
-                    for s in random_reviewers {
+                    for s in &applicant.scorers {
                         println!("sending email to scorers: {}", s);
                         //applicant.send_email_to_scorer(&s).await;
                     }
