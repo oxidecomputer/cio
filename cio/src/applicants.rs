@@ -1543,6 +1543,7 @@ pub async fn refresh_db_applicants(db: &Database) {
             applicant.scorers = a.scorers.clone();
             applicant.scoring_form_url = a.scoring_form_url.to_string();
             applicant.scoring_form_responses_url = a.scoring_form_responses_url.to_string();
+            println!("applied scorers for: {}", a.email);
         }
         let new_applicant = applicant.upsert(db).await;
 
@@ -1665,7 +1666,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
 
                     // Send emails to the scorers.
                     for s in &applicant.scorers {
-                        applicant.send_email_to_scorer(&s).await;
+                        //applicant.send_email_to_scorer(&s).await;
                     }
                 }
 
@@ -1687,18 +1688,13 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_cron_scoring_applicants() {
-        let db = Database::new();
-        update_applications_with_scoring_forms(&db).await;
-    }
-
-    #[ignore]
-    #[tokio::test(threaded_scheduler)]
-    async fn test_cron_applicants() {
+    async fn test_applicants() {
         let db = Database::new();
         refresh_db_applicants(&db).await;
 
         // Update Airtable.
         Applicants::get_from_db(&db).update_airtable().await;
+
+        //update_applications_with_scoring_forms(&db).await;
     }
 }
