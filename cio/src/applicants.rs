@@ -1536,7 +1536,14 @@ pub async fn refresh_db_applicants(db: &Database) {
         .unwrap();
 
     // Sync applicants.
-    for applicant in applicants {
+    for mut applicant in applicants {
+        // Try to get the applicant, if they exist.
+        if let Some(a) = Applicant::get_from_db(db, applicant.email.to_string(), applicant.sheet_id.to_string()) {
+            // Set the scorers data so we don't keep adding new scorers.
+            applicant.scorers = a.scorers.clone();
+            applicant.scoring_form_url = a.scoring_form_url.to_string();
+            applicant.scoring_form_responses_url = a.scoring_form_responses_url.to_string();
+        }
         let new_applicant = applicant.upsert(db).await;
 
         new_applicant.create_github_next_steps_issue(&github, &meta_issues).await;
