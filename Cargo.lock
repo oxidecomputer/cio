@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 dependencies = [
  "lazy_static",
- "regex 1.4.4",
+ "regex 1.4.5",
 ]
 
 [[package]]
@@ -582,7 +582,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#99d4b01f4ed73f42a643ee35448f192fd271a3d9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8786a36e3eebbcb29c722bb9fd1918ad3a5d2a42"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -615,7 +615,8 @@ dependencies = [
  "opentelemetry-zipkin",
  "pandoc",
  "phonenumber",
- "regex 1.4.4",
+ "rand 0.8.3",
+ "regex 1.4.5",
  "reqwest",
  "revai 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
@@ -674,7 +675,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "rand 0.8.3",
- "regex 1.4.4",
+ "regex 1.4.5",
  "reqwest",
  "revai 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
@@ -755,7 +756,7 @@ dependencies = [
  "lazy_static",
  "pest",
  "pest_derive",
- "regex 1.4.4",
+ "regex 1.4.5",
  "shell-words",
  "twoway",
  "typed-arena",
@@ -1827,7 +1828,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#46957e6face039090fa068fb3a1e20e9cd7d34c3"
+source = "git+https://github.com/jessfraz/hubcaps?branch=actions#f30b78af3857eeb2465c1b23d46f35e9f6a47403"
 dependencies = [
  "base64 0.12.3",
  "chrono",
@@ -1977,7 +1978,7 @@ dependencies = [
  "futures",
  "influxdb_derive",
  "lazy_static",
- "regex 1.4.4",
+ "regex 1.4.5",
  "serde",
  "serde_json",
  "surf",
@@ -2194,7 +2195,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#99d4b01f4ed73f42a643ee35448f192fd271a3d9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8786a36e3eebbcb29c722bb9fd1918ad3a5d2a42"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2590,7 +2591,7 @@ dependencies = [
  "percent-encoding 2.1.0",
  "pin-project 0.4.27",
  "rand 0.7.3",
- "regex 1.4.4",
+ "regex 1.4.5",
  "reqwest",
  "tokio",
 ]
@@ -2674,7 +2675,7 @@ checksum = "fd56cbd21fea48d0c440b41cd69c589faacade08c992d9a54e471b79d0fd13eb"
 dependencies = [
  "base64 0.13.0",
  "once_cell",
- "regex 1.4.4",
+ "regex 1.4.5",
 ]
 
 [[package]]
@@ -2784,7 +2785,7 @@ dependencies = [
  "lazy_static",
  "nom 5.1.2",
  "quick-xml",
- "regex 1.4.4",
+ "regex 1.4.5",
  "regex-cache",
  "serde",
  "serde_derive",
@@ -3149,9 +3150,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.4.4"
+version = "1.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54fd1046a3107eb58f42de31d656fee6853e5d276c455fd943742dce89fc3dd3"
+checksum = "957056ecddbeba1b26965114e191d2e8589ce74db242b6ea25fc4062427a5c19"
 dependencies = [
  "aho-corasick 0.7.15",
  "memchr",
@@ -3176,7 +3177,7 @@ checksum = "2f7b62d69743b8b94f353b6b7c3deb4c5582828328bcb8d5fedf214373808793"
 dependencies = [
  "lru-cache",
  "oncemutex",
- "regex 1.4.4",
+ "regex 1.4.5",
  "regex-syntax 0.6.23",
 ]
 
@@ -3533,7 +3534,7 @@ checksum = "38e528fb457baf53fcd6c90beb420705f35c12c3d8caed8817dcf7be00eff7c7"
 dependencies = [
  "backtrace",
  "lazy_static",
- "regex 1.4.4",
+ "regex 1.4.5",
  "sentry-core",
 ]
 
@@ -3546,7 +3547,7 @@ dependencies = [
  "hostname",
  "lazy_static",
  "libc",
- "regex 1.4.4",
+ "regex 1.4.5",
  "rustc_version",
  "sentry-core",
  "uname",
@@ -3929,7 +3930,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae939ed7d169eed9699f4f5cd440f046f5dc5dfc27c19e3cd311619594c175e0"
 dependencies = [
- "regex 1.4.4",
+ "regex 1.4.5",
  "slog",
 ]
 
@@ -3977,7 +3978,7 @@ checksum = "31bef221d42166d6708aa1e9b0182324b37a0a7517ff590ec201dbfe1cfa46ef"
 dependencies = [
  "chrono",
  "libflate",
- "regex 1.4.4",
+ "regex 1.4.5",
  "serde",
  "serde_derive",
  "slog",
@@ -4510,7 +4511,7 @@ dependencies = [
  "chrono",
  "lazy_static",
  "matchers",
- "regex 1.4.4",
+ "regex 1.4.5",
  "serde",
  "serde_json",
  "sharded-slab",
