@@ -1704,6 +1704,6 @@ mod tests {
         // Update Airtable.
         Applicants::get_from_db(&db).update_airtable().await;
 
-        //update_applications_with_scoring_forms(&db).await;
+        update_applications_with_scoring_forms(&db).await;
     }
 }
