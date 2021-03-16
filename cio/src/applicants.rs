@@ -241,7 +241,7 @@ Sincerely,
     /// This is how we get the spreadsheet back from the API.
     #[instrument]
     #[inline]
-    pub fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
+    pub async fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
         let status = if row.len() > columns.status {
@@ -324,10 +324,20 @@ Sincerely,
         let mut scoring_form_responses_url = "".to_string();
         if let Some(a) = Applicant::get_from_db(&db, email.to_string(), sheet_id.to_string()) {
             // Set the scorers data so we don't keep adding new scorers.
-            scorers = a.scorers.clone();
-            scoring_form_id = a.scoring_form_id.to_string();
-            scoring_form_url = a.scoring_form_url.to_string();
-            scoring_form_responses_url = a.scoring_form_responses_url.to_string();
+            if !a.scorers.is_empty() {
+                scorers = a.scorers.clone();
+                scoring_form_id = a.scoring_form_id.to_string();
+                scoring_form_url = a.scoring_form_url.to_string();
+                scoring_form_responses_url = a.scoring_form_responses_url.to_string();
+            } else {
+                // Try to get from airtable.
+                if let Some(record) = a.get_existing_airtable_record().await {
+                    scorers = record.fields.scorers.clone();
+                    scoring_form_id = record.fields.scoring_form_id.to_string();
+                    scoring_form_url = record.fields.scoring_form_url.to_string();
+                    scoring_form_responses_url = record.fields.scoring_form_responses_url.to_string();
+                }
+            }
         }
         println!("got scorers for: {} {:?}", email, scorers);
 
@@ -1508,7 +1518,7 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
             }
 
             // Parse the applicant out of the row information.
-            let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row);
+            let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row).await;
             applicant.expand(&drive_client, &sheets_client, columns.sent_email_received, row_index + 1).await;
 
             if !applicant.sent_email_received {
