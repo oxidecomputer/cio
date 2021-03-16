@@ -316,6 +316,21 @@ Sincerely,
         let resume = row[columns.resume].to_string();
         let materials = row[columns.materials].to_string();
 
+        // Try to get the applicant, if they exist.
+        let db = Database::new();
+        let mut scorers: Vec<String> = Default::default();
+        let mut scoring_form_id = "".to_string();
+        let mut scoring_form_url = "".to_string();
+        let mut scoring_form_responses_url = "".to_string();
+        if let Some(a) = Applicant::get_from_db(&db, email.to_string(), sheet_id.to_string()) {
+            // Set the scorers data so we don't keep adding new scorers.
+            scorers = a.scorers.clone();
+            scoring_form_id = a.scoring_form_id.to_string();
+            scoring_form_url = a.scoring_form_url.to_string();
+            scoring_form_responses_url = a.scoring_form_responses_url.to_string();
+        }
+        println!("got scorers for: {} {:?}", email, scorers);
+
         NewApplicant {
             submitted_time: NewApplicant::parse_timestamp(&row[columns.timestamp]),
             name: row[columns.name].to_string(),
@@ -354,10 +369,10 @@ Sincerely,
             question_why_oxide: Default::default(),
             interview_packet: Default::default(),
             interviews: Default::default(),
-            scorers: Default::default(),
-            scoring_form_id: Default::default(),
-            scoring_form_url: Default::default(),
-            scoring_form_responses_url: Default::default(),
+            scorers,
+            scoring_form_id,
+            scoring_form_url,
+            scoring_form_responses_url,
         }
     }
 
@@ -1536,16 +1551,7 @@ pub async fn refresh_db_applicants(db: &Database) {
         .unwrap();
 
     // Sync applicants.
-    for mut applicant in applicants {
-        // Try to get the applicant, if they exist.
-        if let Some(a) = Applicant::get_from_db(db, applicant.email.to_string(), applicant.sheet_id.to_string()) {
-            // Set the scorers data so we don't keep adding new scorers.
-            applicant.scorers = a.scorers.clone();
-            applicant.scoring_form_url = a.scoring_form_url.to_string();
-            applicant.scoring_form_responses_url = a.scoring_form_responses_url.to_string();
-            println!("applied scorers for: {} {:?}", a.email, applicant.scorers);
-        }
-        println!("got scorers for: {} {:?}", applicant.email, applicant.scorers);
+    for applicant in applicants {
         let new_applicant = applicant.upsert(db).await;
 
         new_applicant.create_github_next_steps_issue(&github, &meta_issues).await;
