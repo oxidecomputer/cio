@@ -329,14 +329,6 @@ Sincerely,
                 scoring_form_id = a.scoring_form_id.to_string();
                 scoring_form_url = a.scoring_form_url.to_string();
                 scoring_form_responses_url = a.scoring_form_responses_url.to_string();
-            } else {
-                // Try to get from airtable.
-                if let Some(record) = a.get_existing_airtable_record().await {
-                    scorers = record.fields.scorers.clone();
-                    scoring_form_id = record.fields.scoring_form_id.to_string();
-                    scoring_form_url = record.fields.scoring_form_url.to_string();
-                    scoring_form_responses_url = record.fields.scoring_form_responses_url.to_string();
-                }
             }
         }
         println!("got scorers for: {} {:?}", email, scorers);
