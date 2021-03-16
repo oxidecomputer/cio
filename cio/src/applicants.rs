@@ -331,7 +331,6 @@ Sincerely,
                 scoring_form_responses_url = a.scoring_form_responses_url.to_string();
             }
         }
-        println!("got scorers for: {} {:?}", email, scorers);
 
         NewApplicant {
             submitted_time: NewApplicant::parse_timestamp(&row[columns.timestamp]),
