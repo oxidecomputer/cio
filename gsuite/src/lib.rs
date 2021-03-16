@@ -905,8 +905,8 @@ pub struct CalendarEvent {
     pub status: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "htmlLink")]
     pub html_link: String,
-    pub created: DateTime<Utc>,
-    pub updated: DateTime<Utc>,
+    pub created: Option<DateTime<Utc>>,
+    pub updated: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub summary: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
