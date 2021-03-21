@@ -1758,7 +1758,6 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
 
         // Update each of the applicants.
         for (_, sheet_id) in get_sheets_map() {
-            println!("[applicants] {} {}", email, sheet_id);
             if let Some(mut applicant) = Applicant::get_from_db(db, email.to_string(), sheet_id.to_string()) {
                 applicant.value_reflected = value_reflected.to_string();
                 applicant.value_violated = value_violated.to_string();
