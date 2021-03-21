@@ -163,7 +163,7 @@ impl NewApplicant {
             website: get_value(values, "Website"),
             resume: get_value(values, "Submit your resume (or PDF export of LinkedIn profile)"),
             materials: get_value(values, "Submit your Oxide candidate materials"),
-            status: Default::default(),
+            status: crate::applicant_status::Status::NeedsToBeTriaged.to_string(),
             sent_email_received: false,
             value_reflected: Default::default(),
             value_violated: Default::default(),
@@ -244,7 +244,7 @@ Sincerely,
     pub async fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
-        let status = if row.len() > columns.status {
+        let mut status = if row.len() > columns.status {
             crate::applicant_status::Status::from_str(&row[columns.status]).unwrap_or_default()
         } else {
             crate::applicant_status::Status::NeedsToBeTriaged
