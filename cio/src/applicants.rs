@@ -1738,21 +1738,21 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
         }
 
         let email = row[1].to_string();
-        let mut value_reflected = row[14].to_string();
-        if value_reflected == "N/A" {
+        let mut value_reflected = row[14].to_lowercase().to_string();
+        if value_reflected == "n/a" {
             value_reflected = "".to_string();
         }
-        let mut value_violated = row[15].to_string();
-        if value_violated == "N/A" {
+        let mut value_violated = row[15].to_lowercase().to_string();
+        if value_violated == "n/a" {
             value_violated = "".to_string();
         }
         let mut values_in_tension: Vec<String> = vec![];
-        let value_in_tension_1 = row[16].to_string();
-        if value_in_tension_1 != "N/A" {
+        let value_in_tension_1 = row[16].to_lowercase().to_string();
+        if value_in_tension_1 != "n/a" {
             values_in_tension.push(value_in_tension_1);
         }
         let value_in_tension_2 = row[17].to_string();
-        if value_in_tension_2 != "N/A" {
+        if value_in_tension_2 != "n/a" {
             values_in_tension.push(value_in_tension_2);
         }
 
