@@ -1751,7 +1751,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
         if value_in_tension_1 != "n/a" {
             values_in_tension.push(value_in_tension_1);
         }
-        let value_in_tension_2 = row[17].to_string();
+        let value_in_tension_2 = row[17].to_lowercase().to_string();
         if value_in_tension_2 != "n/a" {
             values_in_tension.push(value_in_tension_2);
         }
