@@ -642,6 +642,8 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
 
         // Send a company-wide email.
         applicant.send_email_internally().await;
+
+        applicant.sent_email_received = true;
     }
 
     // Send the applicant to the database and Airtable.
