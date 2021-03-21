@@ -1719,7 +1719,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
     let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
 
     // Get the values in the sheet.
-    let sheet_values = sheets_client.get_values(&sheet_id, "Responses!A1:G1000".to_string()).await.unwrap();
+    let sheet_values = sheets_client.get_values(&sheet_id, "Responses!A1:R1000".to_string()).await.unwrap();
     let values = sheet_values.values.unwrap();
 
     if values.is_empty() {
@@ -1727,7 +1727,11 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
     }
 
     // Iterate over the rows.
-    for (_, row) in values.iter().enumerate() {
+    for (row_index, row) in values.iter().enumerate() {
+        if row_index == 0 {
+            // We are on the header row.
+            continue;
+        }
         if row[0].is_empty() {
             // Break our loop we are in an empty row.
             break;
