@@ -278,7 +278,7 @@ Sincerely,
 
         // If the length of the row is greater than the value_reflected column
         // then we have a value_reflected.
-        let value_reflected = if row.len() > columns.value_reflected && columns.value_reflected != 0 {
+        let mut value_reflected = if row.len() > columns.value_reflected && columns.value_reflected != 0 {
             row[columns.value_reflected].trim().to_lowercase()
         } else {
             "".to_lowercase()
@@ -286,7 +286,7 @@ Sincerely,
 
         // If the length of the row is greater than the value_violated column
         // then we have a value_violated.
-        let value_violated = if row.len() > columns.value_violated && columns.value_violated != 0 {
+        let mut value_violated = if row.len() > columns.value_violated && columns.value_violated != 0 {
             row[columns.value_violated].trim().to_lowercase()
         } else {
             "".to_lowercase()
@@ -317,12 +317,23 @@ Sincerely,
         let materials = row[columns.materials].to_string();
 
         // Try to get the applicant, if they exist.
+        // This is a way around the stupid magic macro to make sure it
+        // doesn't overwrite fields set by other functions on the upsert.
         let db = Database::new();
         let mut scorers: Vec<String> = Default::default();
         let mut scoring_form_id = "".to_string();
         let mut scoring_form_url = "".to_string();
         let mut scoring_form_responses_url = "".to_string();
         if let Some(a) = Applicant::get_from_db(&db, email.to_string(), sheet_id.to_string()) {
+            if !a.value_reflected.is_empty() {
+                value_reflected = a.value_reflected.to_string();
+            }
+            if !a.value_violated.is_empty() {
+                value_violated = a.value_violated.to_string();
+            }
+            if !a.values_in_tension.is_empty() {
+                values_in_tension = a.values_in_tension.clone();
+            }
             // Set the scorers data so we don't keep adding new scorers.
             if !a.scorers.is_empty() {
                 scorers = a.scorers.clone();
@@ -1697,9 +1708,67 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
     }
 }
 
+#[instrument(skip(db))]
+#[inline]
+pub async fn update_applications_with_scoring_results(db: &Database) {
+    // Get the GSuite token.
+    let token = get_gsuite_token("").await;
+
+    // Initialize the GSuite sheets client.
+    let sheets_client = Sheets::new(token.clone());
+    let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
+
+    // Get the values in the sheet.
+    let sheet_values = sheets_client.get_values(&sheet_id, "Responses!A1:G1000".to_string()).await.unwrap();
+    let values = sheet_values.values.unwrap();
+
+    if values.is_empty() {
+        panic!("unable to retrieve any data values from Google sheet for applicant form responses {}", sheet_id);
+    }
+
+    // Iterate over the rows.
+    for (_, row) in values.iter().enumerate() {
+        if row[0].is_empty() {
+            // Break our loop we are in an empty row.
+            break;
+        }
+
+        let email = row[1].to_string();
+        let mut value_reflected = row[14].to_string();
+        if value_reflected == "N/A" {
+            value_reflected = "".to_string();
+        }
+        let mut value_violated = row[15].to_string();
+        if value_violated == "N/A" {
+            value_violated = "".to_string();
+        }
+        let mut values_in_tension: Vec<String> = vec![];
+        let value_in_tension_1 = row[16].to_string();
+        if value_in_tension_1 != "N/A" {
+            values_in_tension.push(value_in_tension_1);
+        }
+        let value_in_tension_2 = row[17].to_string();
+        if value_in_tension_2 != "N/A" {
+            values_in_tension.push(value_in_tension_2);
+        }
+
+        // Update each of the applicants.
+        for (_, sheet_id) in get_sheets_map() {
+            if let Some(mut applicant) = Applicant::get_from_db(db, email.to_string(), sheet_id.to_string()) {
+                applicant.value_reflected = value_reflected.to_string();
+                applicant.value_violated = value_violated.to_string();
+                applicant.values_in_tension = values_in_tension.clone();
+
+                // Update the applicant in the database.
+                applicant.update(db).await;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::applicants::{refresh_db_applicants, update_applications_with_scoring_forms, Applicants};
+    use crate::applicants::{refresh_db_applicants, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicants};
     use crate::db::Database;
 
     #[ignore]
@@ -1711,6 +1780,10 @@ mod tests {
         // Update Airtable.
         Applicants::get_from_db(&db).update_airtable().await;
 
+        // These come from the sheet at:
+        // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
         update_applications_with_scoring_forms(&db).await;
+
+        update_applications_with_scoring_results(&db).await;
     }
 }
