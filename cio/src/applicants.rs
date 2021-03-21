@@ -244,7 +244,7 @@ Sincerely,
     pub async fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
-        let mut status = if row.len() > columns.status {
+        let status = if row.len() > columns.status {
             crate::applicant_status::Status::from_str(&row[columns.status]).unwrap_or_default()
         } else {
             crate::applicant_status::Status::NeedsToBeTriaged
