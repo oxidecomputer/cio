@@ -28,7 +28,7 @@ impl Client {
     #[instrument]
     #[inline]
     async fn exists(&self, table: &str, time: DateTime<Utc>, filter: &str) -> bool {
-        let read_query = InfluxQuery::raw_read_query(&format!(
+        let read_query = <dyn InfluxQuery>::raw_read_query(&format!(
             r#"import "influxdata/influxdb/schema"
 from(bucket:"github_webhooks")
     |> range(start: {}, stop: {})
