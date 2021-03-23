@@ -18,6 +18,7 @@ use std::sync::Arc;
 use chrono::offset::Utc;
 use chrono::{DateTime, TimeZone};
 use chrono_humanize::HumanTime;
+use diesel::prelude::*;
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, Path, Query, RequestContext, TypedBody};
 use google_drive::GoogleDrive;
 use hubcaps::issues::{IssueListOptions, State};
@@ -36,6 +37,7 @@ use cio_api::db::Database;
 use cio_api::mailing_list::MailchimpWebhook;
 use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rfds::is_image;
+use cio_api::schema::applicants;
 use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
@@ -441,8 +443,11 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let column_header = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
 
     // Now let's get the applicant from the database so we can update it.
-    let result = Applicant::get_from_db(&db, email.to_string(), event.spreadsheet.id.to_string());
-    if result.is_none() {
+    let result = applicants::dsl::applicants
+        .filter(applicants::dsl::email.eq(email.to_string()))
+        .filter(applicants::dsl::sheet_id.eq(event.spreadsheet.id.to_string()))
+        .first::<Applicant>(&db.conn());
+    if result.is_err() {
         event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
