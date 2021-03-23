@@ -22,7 +22,7 @@
  * }
  * ```
  */
-#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::upper_case_acronyms, clippy::field_reassign_with_default)]
 use std::env;
 use std::error;
 use std::fmt;

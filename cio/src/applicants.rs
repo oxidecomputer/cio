@@ -410,7 +410,7 @@ Sincerely,
                     scorers = record.fields.scorers.clone();
                     scoring_form_id = record.fields.scoring_form_id.to_string();
                     scoring_form_url = record.fields.scoring_form_url.to_string();
-                    scoring_form_responses_url = record.fields.scoring_form_responses_url.to_string();
+                    scoring_form_responses_url = record.fields.scoring_form_responses_url;
                 }
             }
         }
