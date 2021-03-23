@@ -369,7 +369,11 @@ Sincerely,
         let mut scoring_form_id = "".to_string();
         let mut scoring_form_url = "".to_string();
         let mut scoring_form_responses_url = "".to_string();
-        if let Some(a) = Applicant::get_from_db(&db, email.to_string(), sheet_id.to_string()) {
+        if let Ok(a) = applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(email.to_string()))
+            .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
+            .first::<Applicant>(&db.conn())
+        {
             if !a.value_reflected.is_empty() {
                 value_reflected = a.value_reflected.to_string();
             }
@@ -401,6 +405,7 @@ Sincerely,
                 // Cannot figure out why sometimes diesel will return no record
                 // where I know a record exists, might not be diesel, might be postgres...
                 // This is super effing annoying and I need to figure out how to fix it.
+                // It might just be the macro
                 if let Some(record) = a.get_existing_airtable_record().await {
                     scorers = record.fields.scorers.clone();
                     scoring_form_id = record.fields.scoring_form_id.to_string();
@@ -1746,7 +1751,11 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
 
         // Update each of the applicants.
         for (_, sheet_id) in get_sheets_map() {
-            if let Some(mut applicant) = Applicant::get_from_db(db, email.to_string(), sheet_id.to_string()) {
+            if let Ok(mut applicant) = applicants::dsl::applicants
+                .filter(applicants::dsl::email.eq(email.to_string()))
+                .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
+                .first::<Applicant>(&db.conn())
+            {
                 // Make sure the status is "Needs to be triaged".
                 let status = crate::applicant_status::Status::from_str(&applicant.status);
                 if status != Ok(crate::applicant_status::Status::NeedsToBeTriaged) {
@@ -1841,7 +1850,11 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
 
         // Update each of the applicants.
         for (_, sheet_id) in get_sheets_map() {
-            if let Some(mut applicant) = Applicant::get_from_db(db, email.to_string(), sheet_id.to_string()) {
+            if let Ok(mut applicant) = applicants::dsl::applicants
+                .filter(applicants::dsl::email.eq(email.to_string()))
+                .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
+                .first::<Applicant>(&db.conn())
+            {
                 applicant.scoring_evaluations_count = scoring_evaluations_count;
                 applicant.scoring_enthusiastic_yes_count = scoring_enthusiastic_yes_count;
                 applicant.scoring_yes_count = scoring_yes_count;
