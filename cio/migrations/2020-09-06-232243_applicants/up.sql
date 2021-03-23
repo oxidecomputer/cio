@@ -41,5 +41,15 @@ CREATE TABLE applicants (
     scoring_form_id VARCHAR NOT NULL,
     scoring_form_url VARCHAR NOT NULL,
     scoring_form_responses_url VARCHAR NOT NULL,
+    scoring_evaluations_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_enthusiastic_yes_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_yes_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_pass_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_no_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_not_applicable_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_insufficient_experience_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_inapplicable_experience_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_job_function_yet_needed_count INTEGER DEFAULT 0 NOT NULL,
+    scoring_underwhelming_materials_count INTEGER DEFAULT 0 NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

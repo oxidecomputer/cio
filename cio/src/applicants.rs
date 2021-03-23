@@ -128,14 +128,37 @@ pub struct NewApplicant {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interviews: Vec<String>,
 
+    /// The scorers/reviewers assigned to the applicant.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scorers: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub scoring_form_id: String,
+    /// The form for scoring/evaluating applicants.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub scoring_form_url: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub scoring_form_responses_url: String,
+    /// The number of form responses for the applicant.
+    #[serde(default)]
+    pub scoring_evaluations_count: i32,
+    #[serde(default)]
+    pub scoring_enthusiastic_yes_count: i32,
+    #[serde(default)]
+    pub scoring_yes_count: i32,
+    #[serde(default)]
+    pub scoring_pass_count: i32,
+    #[serde(default)]
+    pub scoring_no_count: i32,
+    #[serde(default)]
+    pub scoring_not_applicable_count: i32,
+    #[serde(default)]
+    pub scoring_insufficient_experience_count: i32,
+    #[serde(default)]
+    pub scoring_inapplicable_experience_count: i32,
+    #[serde(default)]
+    pub scoring_job_function_yet_needed_count: i32,
+    #[serde(default)]
+    pub scoring_underwhelming_materials_count: i32,
 }
 
 impl NewApplicant {
@@ -189,6 +212,16 @@ impl NewApplicant {
             scoring_form_id: Default::default(),
             scoring_form_url: Default::default(),
             scoring_form_responses_url: Default::default(),
+            scoring_evaluations_count: Default::default(),
+            scoring_enthusiastic_yes_count: Default::default(),
+            scoring_yes_count: Default::default(),
+            scoring_pass_count: Default::default(),
+            scoring_no_count: Default::default(),
+            scoring_not_applicable_count: Default::default(),
+            scoring_insufficient_experience_count: Default::default(),
+            scoring_inapplicable_experience_count: Default::default(),
+            scoring_job_function_yet_needed_count: Default::default(),
+            scoring_underwhelming_materials_count: Default::default(),
         }
     }
 
@@ -316,6 +349,18 @@ Sincerely,
         let resume = row[columns.resume].to_string();
         let materials = row[columns.materials].to_string();
 
+        // Set the defaults.
+        let mut scoring_evaluations_count = 0;
+        let mut scoring_enthusiastic_yes_count = 0;
+        let mut scoring_yes_count = 0;
+        let mut scoring_pass_count = 0;
+        let mut scoring_no_count = 0;
+        let mut scoring_not_applicable_count = 0;
+        let mut scoring_insufficient_experience_count = 0;
+        let mut scoring_inapplicable_experience_count = 0;
+        let mut scoring_job_function_yet_needed_count = 0;
+        let mut scoring_underwhelming_materials_count = 0;
+
         // Try to get the applicant, if they exist.
         // This is a way around the stupid magic macro to make sure it
         // doesn't overwrite fields set by other functions on the upsert.
@@ -340,8 +385,22 @@ Sincerely,
                 scoring_form_id = a.scoring_form_id.to_string();
                 scoring_form_url = a.scoring_form_url.to_string();
                 scoring_form_responses_url = a.scoring_form_responses_url.to_string();
+
+                scoring_evaluations_count = a.scoring_evaluations_count;
+                scoring_enthusiastic_yes_count = a.scoring_enthusiastic_yes_count;
+                scoring_yes_count = a.scoring_yes_count;
+                scoring_pass_count = a.scoring_pass_count;
+                scoring_no_count = a.scoring_no_count;
+                scoring_not_applicable_count = a.scoring_not_applicable_count;
+                scoring_insufficient_experience_count = a.scoring_insufficient_experience_count;
+                scoring_inapplicable_experience_count = a.scoring_inapplicable_experience_count;
+                scoring_job_function_yet_needed_count = a.scoring_job_function_yet_needed_count;
+                scoring_underwhelming_materials_count = a.scoring_underwhelming_materials_count;
             } else {
                 // Try to get from airtable.
+                // Cannot figure out why sometimes diesel will return no record
+                // where I know a record exists, might not be diesel, might be postgres...
+                // This is super effing annoying and I need to figure out how to fix it.
                 if let Some(record) = a.get_existing_airtable_record().await {
                     scorers = record.fields.scorers.clone();
                     scoring_form_id = record.fields.scoring_form_id.to_string();
@@ -393,6 +452,16 @@ Sincerely,
             scoring_form_id,
             scoring_form_url,
             scoring_form_responses_url,
+            scoring_evaluations_count,
+            scoring_enthusiastic_yes_count,
+            scoring_yes_count,
+            scoring_pass_count,
+            scoring_no_count,
+            scoring_not_applicable_count,
+            scoring_insufficient_experience_count,
+            scoring_inapplicable_experience_count,
+            scoring_job_function_yet_needed_count,
+            scoring_underwhelming_materials_count,
         }
     }
 
@@ -1738,6 +1807,20 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
         }
 
         let email = row[1].to_string();
+
+        // Parse the scoring results.
+        let scoring_evaluations_count = row[2].parse::<i32>().unwrap_or(0);
+        let scoring_enthusiastic_yes_count = row[3].parse::<i32>().unwrap_or(0);
+        let scoring_yes_count = row[4].parse::<i32>().unwrap_or(0);
+        let scoring_pass_count = row[5].parse::<i32>().unwrap_or(0);
+        let scoring_no_count = row[6].parse::<i32>().unwrap_or(0);
+        let scoring_not_applicable_count = row[7].parse::<i32>().unwrap_or(0);
+        let scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
+        let scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
+        let scoring_job_function_yet_needed_count = row[11].parse::<i32>().unwrap_or(0);
+        let scoring_underwhelming_materials_count = row[12].parse::<i32>().unwrap_or(0);
+
+        // Parse the values.
         let mut value_reflected = row[14].to_lowercase().to_string();
         if value_reflected == "n/a" {
             value_reflected = "".to_string();
@@ -1759,6 +1842,17 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
         // Update each of the applicants.
         for (_, sheet_id) in get_sheets_map() {
             if let Some(mut applicant) = Applicant::get_from_db(db, email.to_string(), sheet_id.to_string()) {
+                applicant.scoring_evaluations_count = scoring_evaluations_count;
+                applicant.scoring_enthusiastic_yes_count = scoring_enthusiastic_yes_count;
+                applicant.scoring_yes_count = scoring_yes_count;
+                applicant.scoring_pass_count = scoring_pass_count;
+                applicant.scoring_no_count = scoring_no_count;
+                applicant.scoring_not_applicable_count = scoring_not_applicable_count;
+                applicant.scoring_insufficient_experience_count = scoring_insufficient_experience_count;
+                applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
+                applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
+                applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
+
                 applicant.value_reflected = value_reflected.to_string();
                 applicant.value_violated = value_violated.to_string();
                 applicant.values_in_tension = values_in_tension.clone();

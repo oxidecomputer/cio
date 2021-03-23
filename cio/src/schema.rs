@@ -57,6 +57,16 @@ table! {
         scoring_form_id -> Varchar,
         scoring_form_url -> Varchar,
         scoring_form_responses_url -> Varchar,
+        scoring_evaluations_count -> Int4,
+        scoring_enthusiastic_yes_count -> Int4,
+        scoring_yes_count -> Int4,
+        scoring_pass_count -> Int4,
+        scoring_no_count -> Int4,
+        scoring_not_applicable_count -> Int4,
+        scoring_insufficient_experience_count -> Int4,
+        scoring_inapplicable_experience_count -> Int4,
+        scoring_job_function_yet_needed_count -> Int4,
+        scoring_underwhelming_materials_count -> Int4,
         airtable_record_id -> Varchar,
     }
 }
