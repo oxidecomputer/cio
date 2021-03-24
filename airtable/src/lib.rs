@@ -407,7 +407,9 @@ pub struct Record<T> {
 /// An airtable user.
 #[derive(Debug, Default, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct User {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,

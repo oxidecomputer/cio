@@ -1874,8 +1874,20 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
 
 #[cfg(test)]
 mod tests {
-    use crate::applicants::{refresh_db_applicants, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicants};
+    use crate::applicants::{refresh_db_applicants, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants};
     use crate::db::Database;
+    use crate::schema::applicants;
+
+    use diesel::prelude::*;
+    use serde_json::json;
+
+    fn test_serialize_deserialize_applicants() {
+        let db = Database::new();
+        let applicant = applicants::dsl::applicants.filter(applicants::dsl::id.eq(318)).first::<Applicant>(&db.conn()).unwrap();
+
+        let scorers = json!(applicant.scorers);
+        println!("{}", scorers.to_string());
+    }
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
