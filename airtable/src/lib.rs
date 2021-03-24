@@ -40,6 +40,7 @@ use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
+use serde::de::{SeqAccess, Visitor};
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Airtable API.
@@ -415,6 +416,28 @@ pub struct User {
     pub name: String,
 }
 
+struct UsersVisitor;
+
+impl<'de> Visitor<'de> for UsersVisitor {
+    type Value = Vec<User>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a very special vector")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
+        let mut users: Vec<User> = Default::default();
+
+        // While there are entries remaining in the input, add them
+        // into our vector.
+        while let Some((user)) = access.next_element::<User>()? {
+            users.push(user);
+        }
+
+        Ok(users)
+    }
+}
+
 /// The response returned from deleting a user.
 /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserDeleteUserByEmail
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -433,4 +456,55 @@ pub struct ErrorResponse {
     pub type_: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub message: String,
+}
+
+pub mod user_format_as_array_of_strings {
+    use super::{User, UsersVisitor};
+    use serde::ser::SerializeSeq;
+    use serde::{self, Deserializer, Serializer};
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(array: &Vec<String>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Make our array of Airtable user objects.
+        let mut seq = serializer.serialize_seq(Some(array.len())).unwrap();
+        for e in array {
+            seq.serialize_element(&User {
+                id: Default::default(),
+                email: e.to_string(),
+                name: Default::default(),
+            })
+            .unwrap();
+        }
+        seq.end()
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let airtable_users = deserializer.deserialize_seq(UsersVisitor {}).unwrap();
+
+        let mut users: Vec<String> = Default::default();
+        for a in airtable_users {
+            users.push(a.email.to_string());
+        }
+
+        Ok(users)
+    }
 }

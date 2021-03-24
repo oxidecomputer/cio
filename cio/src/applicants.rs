@@ -129,7 +129,12 @@ pub struct NewApplicant {
     pub interviews: Vec<String>,
 
     /// The scorers/reviewers assigned to the applicant.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        serialize_with = "airtable_api::user_format_as_array_of_strings::serialize",
+        deserialize_with = "airtable_api::user_format_as_array_of_strings::deserialize"
+    )]
     pub scorers: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub scoring_form_id: String,
@@ -1881,12 +1886,20 @@ mod tests {
     use diesel::prelude::*;
     use serde_json::json;
 
+    #[test]
     fn test_serialize_deserialize_applicants() {
         let db = Database::new();
         let applicant = applicants::dsl::applicants.filter(applicants::dsl::id.eq(318)).first::<Applicant>(&db.conn()).unwrap();
 
-        let scorers = json!(applicant.scorers);
-        println!("{}", scorers.to_string());
+        // Let's test that serializing this is going to give us an array of Airtable users.
+        let scorers = json!(applicant).to_string();
+        // Let's assert in the string are the scorers formatted as Airtable users.
+        assert_eq!(scorers.contains("\"scorers\":[{\"email\":\""), true);
+
+        // Let's test that deserializing a string will give us the same applicant we had
+        // originally.
+        let a: Applicant = serde_json::from_str(&scorers).unwrap();
+        assert_eq!(applicant, a);
     }
 
     #[ignore]
