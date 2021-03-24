@@ -1759,7 +1759,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                 }
 
                 // See if we already have scorers assigned.
-                if applicant.scorers.is_empty() {
+                if applicant.scorers.is_empty() || applicant.scorers.len() < 5 {
                     // Assign scorers and send email.
                     // Choose next five reviewers.
                     applicant.scorers = reviewer_pool.by_ref().take(5).collect();
