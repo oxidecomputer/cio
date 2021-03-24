@@ -130,7 +130,8 @@ pub async fn refresh_interviews(db: &Database) {
                     || attendee.email.starts_with("nils.nieuwejaar")
                 {
                     // This is the interviewer.
-                    let mut email = attendee.email.to_string();
+                    let email = attendee.email.to_string();
+                    let mut final_email = "".to_string();
 
                     // If the email is not their oxide computer email, let's firgure it out based
                     // on the information from their user.
@@ -139,7 +140,7 @@ pub async fn refresh_interviews(db: &Database) {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    email = record.email();
+                                    final_email = record.email();
                                 }
                             }
                             Err(e) => {
@@ -158,7 +159,7 @@ pub async fn refresh_interviews(db: &Database) {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    email = record.email();
+                                    final_email = record.email();
                                 }
                             }
                             Err(e) => {
@@ -167,7 +168,7 @@ pub async fn refresh_interviews(db: &Database) {
                         }
                     }
 
-                    interview.interviewers.push(email.to_string());
+                    interview.interviewers.push(final_email.to_string());
                     continue;
                 }
 
