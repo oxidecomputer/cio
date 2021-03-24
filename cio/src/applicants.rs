@@ -349,6 +349,11 @@ Sincerely,
         let resume = row[columns.resume].to_string();
         let materials = row[columns.materials].to_string();
 
+        let mut scorers: Vec<String> = Default::default();
+        let mut scoring_form_id = "".to_string();
+        let mut scoring_form_url = "".to_string();
+        let mut scoring_form_responses_url = "".to_string();
+
         // Set the defaults.
         let mut scoring_evaluations_count = 0;
         let mut scoring_enthusiastic_yes_count = 0;
@@ -365,15 +370,17 @@ Sincerely,
         // This is a way around the stupid magic macro to make sure it
         // doesn't overwrite fields set by other functions on the upsert.
         let db = Database::new();
-        let mut scorers: Vec<String> = Default::default();
-        let mut scoring_form_id = "".to_string();
-        let mut scoring_form_url = "".to_string();
-        let mut scoring_form_responses_url = "".to_string();
         if let Ok(a) = applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(email.to_string()))
             .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
             .first::<Applicant>(&db.conn())
         {
+            // Try to get from airtable.
+            // This ensures if we had any one offs added in airtable that they stay intact.
+            if let Some(record) = a.get_existing_airtable_record().await {
+                scorers = record.fields.scorers.clone();
+            }
+
             if !a.value_reflected.is_empty() {
                 value_reflected = a.value_reflected.to_string();
             }
@@ -385,7 +392,6 @@ Sincerely,
             }
             // Set the scorers data so we don't keep adding new scorers.
             if !a.scorers.is_empty() {
-                scorers = a.scorers.clone();
                 scoring_form_id = a.scoring_form_id.to_string();
                 scoring_form_url = a.scoring_form_url.to_string();
                 scoring_form_responses_url = a.scoring_form_responses_url.to_string();
@@ -400,18 +406,6 @@ Sincerely,
                 scoring_inapplicable_experience_count = a.scoring_inapplicable_experience_count;
                 scoring_job_function_yet_needed_count = a.scoring_job_function_yet_needed_count;
                 scoring_underwhelming_materials_count = a.scoring_underwhelming_materials_count;
-            } else {
-                // Try to get from airtable.
-                // Cannot figure out why sometimes diesel will return no record
-                // where I know a record exists, might not be diesel, might be postgres...
-                // This is super effing annoying and I need to figure out how to fix it.
-                // It might just be the macro
-                if let Some(record) = a.get_existing_airtable_record().await {
-                    scorers = record.fields.scorers.clone();
-                    scoring_form_id = record.fields.scoring_form_id.to_string();
-                    scoring_form_url = record.fields.scoring_form_url.to_string();
-                    scoring_form_responses_url = record.fields.scoring_form_responses_url;
-                }
             }
         }
 
