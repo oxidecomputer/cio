@@ -35,7 +35,22 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Set up environment
+        shell: bash
+        run: |
+          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key \
+          && echo "$SQL_PROXY_KEY" > ${{ github.workspace }}/sql_proxy_key
+        env:
+          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
+          SQL_PROXY_KEY: ${{ secrets.SQL_PROXY_KEY }}
+      - name: Start the sql_proxy
+        shell: bash
+        run: |
+          ./cloud_sql_proxy -instances=${{ secrets.INSTANCE_CONNECTION_NAME }}=tcp:5432 \
+                  -credential_file=${{ github.workspace }}/sql_proxy_key &
       - name: Run cargo test
         run: |
           cargo test
         shell: bash
+        env:
+          CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
