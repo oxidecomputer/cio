@@ -41,7 +41,12 @@ pub struct NewApplicantInterview {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        serialize_with = "airtable_api::user_format_as_array_of_strings::serialize",
+        deserialize_with = "airtable_api::user_format_as_array_of_strings::deserialize"
+    )]
     pub interviewers: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub google_event_id: String,
@@ -131,6 +136,25 @@ pub async fn refresh_interviews(db: &Database) {
                     // on the information from their user.
                     if !email.ends_with(GSUITE_DOMAIN) && !email.ends_with(DOMAIN) {
                         match users::dsl::users.filter(users::dsl::recovery_email.eq(email.to_string())).limit(1).load::<User>(&db.conn()) {
+                            Ok(r) => {
+                                if !r.is_empty() {
+                                    let record = r.get(0).unwrap().clone();
+                                    email = record.email();
+                                }
+                            }
+                            Err(e) => {
+                                println!("[db] we don't have the record in the database: {}", e);
+                            }
+                        }
+                    } else {
+                        let username = email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').trim().to_string();
+                        // Find the real user.
+                        match users::dsl::users
+                            .filter(users::dsl::username.eq(username.to_string()))
+                            .or_filter(users::dsl::aliases.contains(vec![username.to_string()]))
+                            .limit(1)
+                            .load::<User>(&db.conn())
+                        {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();

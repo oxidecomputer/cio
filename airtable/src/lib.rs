@@ -470,7 +470,7 @@ pub mod user_format_as_array_of_strings {
     //        S: Serializer
     //
     // although it may also be generic over the input types T.
-    pub fn serialize<S>(array: &Vec<String>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(array: &[String], serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {

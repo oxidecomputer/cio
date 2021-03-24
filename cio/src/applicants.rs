@@ -383,7 +383,7 @@ Sincerely,
             // Try to get from airtable.
             // This ensures if we had any one offs added in airtable that they stay intact.
             if let Some(record) = a.get_existing_airtable_record().await {
-                scorers = record.fields.scorers.clone();
+                scorers = record.fields.scorers;
             }
 
             if !a.value_reflected.is_empty() {
