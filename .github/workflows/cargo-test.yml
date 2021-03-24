@@ -35,6 +35,11 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install SQL proxy
+        shell: bash
+        run: |
+          wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy \
+          && chmod +x cloud_sql_proxy
       - name: Set up environment
         shell: bash
         run: |
