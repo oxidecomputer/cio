@@ -983,7 +983,7 @@ pub struct GitHubWebhook {
     /// The user that triggered the event. This property is included in
     /// every webhook payload.
     #[serde(default)]
-    pub sender: Option<GitHubUser>,
+    pub sender: GitHubUser,
     /// The `repository` where the event occurred. Webhook payloads contain the
     /// `repository` property when the event occurs from activity in a repository.
     #[serde(default)]
@@ -1090,7 +1090,7 @@ impl GitHubWebhook {
                 let push_event = influx::Push {
                     time: c.commit.author.date,
                     repo_name: repo.name.to_string(),
-                    sender: self.sender.clone().unwrap().login.to_string(),
+                    sender: self.sender.login.to_string(),
                     reference: self.refv.to_string(),
                     added: commit.added.join(",").to_string(),
                     modified: commit.removed.join(",").to_string(),
@@ -1113,7 +1113,7 @@ impl GitHubWebhook {
         influx::PullRequest {
             time: Utc::now(),
             repo_name: self.repository.name.to_string(),
-            sender: self.sender.clone().unwrap().login.to_string(),
+            sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             head_reference: self.pull_request.head.commit_ref.to_string(),
             base_reference: self.pull_request.base.commit_ref.to_string(),
@@ -1129,7 +1129,7 @@ impl GitHubWebhook {
         influx::PullRequestReviewComment {
             time: Utc::now(),
             repo_name: self.repository.name.to_string(),
-            sender: self.sender.clone().unwrap().login.to_string(),
+            sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             pull_request_number: self.pull_request.number,
             github_id: self.comment.id,
@@ -1143,7 +1143,7 @@ impl GitHubWebhook {
         influx::Issue {
             time: Utc::now(),
             repo_name: self.repository.name.to_string(),
-            sender: self.sender.clone().unwrap().login.to_string(),
+            sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             number: self.number,
             github_id: self.pull_request.id,
@@ -1156,7 +1156,7 @@ impl GitHubWebhook {
         influx::IssueComment {
             time: Utc::now(),
             repo_name: self.repository.name.to_string(),
-            sender: self.sender.clone().unwrap().login.to_string(),
+            sender: self.sender.login.to_string(),
             action: self.action.to_string(),
             issue_number: self.issue.number,
             github_id: self.comment.id,
@@ -1170,7 +1170,7 @@ impl GitHubWebhook {
         influx::CheckSuite {
             time: Utc::now(),
             repo_name: self.repository.name.to_string(),
-            sender: self.sender.clone().unwrap().login.to_string(),
+            sender: self.sender.login.to_string(),
             action: self.action.to_string(),
 
             head_branch: self.check_suite.head_branch.to_string(),
@@ -1193,7 +1193,7 @@ impl GitHubWebhook {
         influx::CheckRun {
             time: Utc::now(),
             repo_name: self.repository.name.to_string(),
-            sender: self.sender.clone().unwrap().login.to_string(),
+            sender: self.sender.login.to_string(),
             action: self.action.to_string(),
 
             head_branch: self.check_suite.head_branch.to_string(),
@@ -1218,7 +1218,7 @@ impl GitHubWebhook {
         influx::Repository {
             time: Utc::now(),
             repo_name: self.repository.name.to_string(),
-            sender: self.sender.clone().unwrap().login.to_string(),
+            sender: self.sender.login.to_string(),
             action: self.action.to_string(),
         }
     }
