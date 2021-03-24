@@ -168,7 +168,9 @@ pub async fn refresh_interviews(db: &Database) {
                         }
                     }
 
-                    interview.interviewers.push(final_email.to_string());
+                    if !final_email.is_empty() {
+                        interview.interviewers.push(final_email.to_string());
+                    }
                     continue;
                 }
 
