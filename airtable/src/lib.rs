@@ -430,7 +430,7 @@ impl<'de> Visitor<'de> for UsersVisitor {
 
         // While there are entries remaining in the input, add them
         // into our vector.
-        while let Some((user)) = access.next_element::<User>()? {
+        while let Some(user) = access.next_element::<User>()? {
             users.push(user);
         }
 
