@@ -1763,6 +1763,10 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     continue;
                 }
 
+                applicant.scoring_form_id = form_id.to_string();
+                applicant.scoring_form_url = form_url.to_string();
+                applicant.scoring_form_responses_url = form_responses_url.to_string();
+
                 // See if we already have scorers assigned.
                 if applicant.scorers.is_empty() || applicant.scorers.len() < 5 {
                     // Assign scorers and send email.
@@ -1776,10 +1780,6 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     //applicant.send_email_to_scorer(&s).await;
                     //}
                 }
-
-                applicant.scoring_form_id = form_id.to_string();
-                applicant.scoring_form_url = form_url.to_string();
-                applicant.scoring_form_responses_url = form_responses_url.to_string();
 
                 // Update the applicant in the database.
                 applicant.update(db).await;
