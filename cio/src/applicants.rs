@@ -33,7 +33,7 @@ use crate::db::Database;
 use crate::models::get_value;
 use crate::schema::applicants;
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN};
+use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -1700,7 +1700,7 @@ async fn get_reviewer_pool() -> Vec<String> {
             break;
         }
         // The email is the second column.
-        reviewers.push(row[1].to_string());
+        reviewers.push(row[1].replace(DOMAIN, GSUITE_DOMAIN).to_string());
     }
 
     reviewers
