@@ -1770,9 +1770,11 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     applicant.scorers = reviewer_pool.by_ref().take(5).collect();
 
                     // Send emails to the scorers.
-                    for s in &applicant.scorers {
-                        applicant.send_email_to_scorer(&s).await;
-                    }
+                    // We don't need to do this since we will use airtable
+                    // for the emails.
+                    //for s in &applicant.scorers {
+                    //applicant.send_email_to_scorer(&s).await;
+                    //}
                 }
 
                 applicant.scoring_form_id = form_id.to_string();
