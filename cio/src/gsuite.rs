@@ -1,12 +1,6 @@
-use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::{thread, time};
 
-use gsuite_api::{
-    generate_password, Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties,
-    UserEmail, UserGender, UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
-};
-use serde_json::Value;
+use gsuite_api::{Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup};
 use tracing::{event, instrument, Level};
 
 use crate::configs::{Building, ConferenceRoom, Group};
