@@ -266,6 +266,10 @@ impl UserConfig {
             self.aliases.push(self.github.to_string());
         }
 
+        if !self.twitter.is_empty() && !self.aliases.contains(&self.twitter) {
+            self.aliases.push(self.twitter.to_string());
+        }
+
         let name_alias = format!("{}.{}", self.first_name.to_lowercase(), self.last_name.to_lowercase());
         if !self.aliases.contains(&name_alias) {
             self.aliases.push(name_alias);
