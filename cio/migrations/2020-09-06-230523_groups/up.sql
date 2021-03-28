@@ -14,5 +14,6 @@ CREATE TABLE groups (
     who_can_post_message VARCHAR NOT NULL,
     who_can_view_group VARCHAR NOT NULL,
     who_can_view_membership VARCHAR NOT NULL,
+    enable_collaborative_inbox BOOLEAN NOT NULL DEFAULT 'f',
     airtable_record_id VARCHAR NOT NULL
 )

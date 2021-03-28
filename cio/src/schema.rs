@@ -272,6 +272,7 @@ table! {
         who_can_post_message -> Varchar,
         who_can_view_group -> Varchar,
         who_can_view_membership -> Varchar,
+        enable_collaborative_inbox -> Bool,
         airtable_record_id -> Varchar,
     }
 }

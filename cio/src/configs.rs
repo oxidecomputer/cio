@@ -691,6 +691,10 @@ pub struct GroupConfig {
     /// list.
     #[serde(alias = "who_can_view_membership", skip_serializing_if = "String::is_empty", default)]
     pub who_can_view_membership: String,
+
+    /// Specifies whether a collaborative inbox will remain turned on for the group.
+    #[serde(default)]
+    pub enable_collaborative_inbox: bool,
 }
 
 impl GroupConfig {
