@@ -48,6 +48,8 @@ pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group) {
     settings.who_can_view_group = group.who_can_view_group.to_string();
     settings.who_can_view_membership = group.who_can_view_membership.to_string();
     settings.who_can_contact_owner = "ALL_IN_DOMAIN_CAN_CONTACT".to_string();
+    settings.who_can_assist_content = "ALL_MEMBERS".to_string();
+    settings.who_can_moderate_content = "ALL_MEMBERS".to_string();
     settings.enable_collaborative_inbox = group.enable_collaborative_inbox.to_string();
 
     // Update the group with the given settings.
