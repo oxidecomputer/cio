@@ -261,7 +261,22 @@ impl UserConfig {
 
     #[instrument]
     #[inline]
+    pub fn ensure_all_aliases(&mut self) {
+        if !self.github.is_empty() && !self.aliases.contains(&self.github) {
+            self.aliases.push(self.github.to_string());
+        }
+
+        let name_alias = format!("{}.{}", self.first_name.to_lowercase(), self.last_name.to_lowercase());
+        if self.aliases.contains(&name_alias) {
+            self.aliases.push(name_alias);
+        }
+    }
+
+    #[instrument]
+    #[inline]
     pub async fn expand(&mut self) {
+        self.ensure_all_aliases();
+
         self.populate_ssh_keys().await;
 
         self.populate_from_gusto().await;
