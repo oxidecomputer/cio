@@ -1456,6 +1456,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                         || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
                         || file_name.ends_with("Oxide Candidate Materials.pdf")
                         || file_name.ends_with("OxideQuestions.pdf")
+                        || file_name.ends_with("oxide-computer-candidate-materials.pdf")
                         || file_name.ends_with("Questionnaire.pdf"))
                 {
                     // Concatenate all the zip files into our result.
