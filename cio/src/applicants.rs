@@ -1826,28 +1826,36 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
         let scoring_pass_count = row[5].parse::<i32>().unwrap_or(0);
         let scoring_no_count = row[6].parse::<i32>().unwrap_or(0);
         let scoring_not_applicable_count = row[7].parse::<i32>().unwrap_or(0);
-        let scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
-        let scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
-        let scoring_job_function_yet_needed_count = row[11].parse::<i32>().unwrap_or(0);
-        let scoring_underwhelming_materials_count = row[12].parse::<i32>().unwrap_or(0);
-
-        // Parse the values.
-        let mut value_reflected = row[14].to_lowercase().to_string();
-        if value_reflected == "n/a" {
-            value_reflected = "".to_string();
-        }
-        let mut value_violated = row[15].to_lowercase().to_string();
-        if value_violated == "n/a" {
-            value_violated = "".to_string();
-        }
+        let mut scoring_insufficient_experience_count = 0;
+        let mut scoring_inapplicable_experience_count = 0;
+        let mut scoring_job_function_yet_needed_count = 0;
+        let mut scoring_underwhelming_materials_count = 0;
+        let mut value_reflected = "".to_string();
+        let mut value_violated = "".to_string();
         let mut values_in_tension: Vec<String> = vec![];
-        let value_in_tension_1 = row[16].to_lowercase().to_string();
-        if value_in_tension_1 != "n/a" && !value_in_tension_1.is_empty() {
-            values_in_tension.push(value_in_tension_1);
-        }
-        let value_in_tension_2 = row[17].to_lowercase().to_string();
-        if value_in_tension_2 != "n/a" && !value_in_tension_2.is_empty() {
-            values_in_tension.push(value_in_tension_2);
+        if row.len() >= 10 {
+            scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
+            scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
+            scoring_job_function_yet_needed_count = row[11].parse::<i32>().unwrap_or(0);
+            scoring_underwhelming_materials_count = row[12].parse::<i32>().unwrap_or(0);
+
+            // Parse the values.
+            value_reflected = row[14].to_lowercase().to_string();
+            if value_reflected == "n/a" {
+                value_reflected = "".to_string();
+            }
+            value_violated = row[15].to_lowercase().to_string();
+            if value_violated == "n/a" {
+                value_violated = "".to_string();
+            }
+            let value_in_tension_1 = row[16].to_lowercase().to_string();
+            if value_in_tension_1 != "n/a" && !value_in_tension_1.is_empty() {
+                values_in_tension.push(value_in_tension_1);
+            }
+            let value_in_tension_2 = row[17].to_lowercase().to_string();
+            if value_in_tension_2 != "n/a" && !value_in_tension_2.is_empty() {
+                values_in_tension.push(value_in_tension_2);
+            }
         }
 
         // Update each of the applicants.
