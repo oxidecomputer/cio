@@ -57,6 +57,7 @@ struct GitHubTeamMembers {
 pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database) {
     let users = Users::get_from_db(db);
     let groups = Groups::get_from_db(db);
+
     let repo = github.repo(github_org(), "configs");
     let r = repo.get().await.unwrap();
 

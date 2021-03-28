@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
-use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser};
+use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup};
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
@@ -26,7 +26,7 @@ use crate::airtable::{
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases, update_user_google_groups};
+use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource};
 use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
@@ -267,7 +267,7 @@ impl UserConfig {
         }
 
         let name_alias = format!("{}.{}", self.first_name.to_lowercase(), self.last_name.to_lowercase());
-        if self.aliases.contains(&name_alias) {
+        if !self.aliases.contains(&name_alias) {
             self.aliases.push(name_alias);
         }
     }
@@ -978,23 +978,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // Generate the terraform files for teams.
     generate_terraform_files_for_aws_and_github(github, users.clone()).await;
 
-    // Get everything we need to authenticate with GSuite.
-    // Initialize the GSuite client.
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
-    let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
-
-    // Get the existing GSuite users.
-    let gsuite_users = gsuite.list_users().await.unwrap();
-
-    // Get the GSuite groups.
-    let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
-    let groups = gsuite.list_groups().await.unwrap();
-    for g in groups {
-        // Add the group to our map.
-        gsuite_groups.insert(g.name.to_string(), g);
-    }
-
     // Get all the users.
     let db_users = Users::get_from_db(db);
     // Create a BTreeMap
@@ -1019,91 +1002,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, user) in user_map {
-        println!("deleting user {} from the database, gsuite, and okta", username);
-        let email = format!("{}@{}", username, GSUITE_DOMAIN);
+        println!("deleting user {} from the database", username);
 
         // Delete the user from the database and Airtable.
         user.delete(db).await;
-
-        // Delete the user from GSuite.
-        gsuite.delete_user(&email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
-        event!(Level::INFO, "deleted user from gsuite: {}", username);
     }
     event!(Level::INFO, "updated configs users in the database");
-
-    // Update the users in GSuite.
-    // Get all the users.
-    let db_users = Users::get_from_db(db);
-    // Create a BTreeMap
-    let mut user_map: BTreeMap<String, User> = Default::default();
-    for u in db_users {
-        user_map.insert(u.username.to_string(), u);
-    }
-    // Iterate over the users already in GSuite.
-    for u in gsuite_users {
-        // Get the shorthand username and match it against our existing users.
-        let username = u.primary_email.trim_end_matches(&format!("@{}", GSUITE_DOMAIN)).to_string();
-
-        // Check if we have that user already in our settings.
-        let user: User;
-        match user_map.get(&username) {
-            Some(val) => user = val.clone(),
-            None => {
-                // If the user does not exist in our map we need to delete
-                // them from GSuite.
-                println!("deleting user {} from gsuite", username);
-                gsuite
-                    .delete_user(&format!("{}@{}", username, GSUITE_DOMAIN))
-                    .await
-                    .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
-
-                event!(Level::INFO, "deleted user from gsuite: {}", username);
-                continue;
-            }
-        }
-
-        // Update the user with the settings from the config for the user.
-        let gsuite_user = update_gsuite_user(&u, &user, false).await;
-
-        gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
-
-        update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
-
-        // Add the user to their teams and groups.
-        update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
-
-        // Remove the user from the user map and continue.
-        // This allows us to add all the remaining new user after.
-        user_map.remove(&username);
-
-        event!(Level::INFO, "updated user in gsuite: {}", username);
-    }
-
-    // Create any remaining users from the database that we do not have in GSuite.
-    for (username, user) in user_map {
-        // Create the user.
-        let u: GSuiteUser = Default::default();
-
-        // The last argument here tell us to create a password!
-        // Make sure it is set to true.
-        let gsuite_user = update_gsuite_user(&u, &user, true).await;
-
-        gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
-
-        // Send an email to the new user.
-        // Do this here in case another step fails.
-        if user.is_consultant() {
-            user.send_email_new_consultant(&gsuite_user.password).await;
-        } else {
-            user.send_email_new_user(&gsuite_user.password).await;
-        }
-        event!(Level::INFO, "created new user in gsuite: {}", username);
-
-        update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone()).await;
-
-        // Add the user to their teams and groups.
-        update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
-    }
 
     // Update users in airtable.
     Users::get_from_db(db).update_airtable().await;
