@@ -6,7 +6,8 @@ use hubcaps::Github;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::configs::{Config, UserConfig};
+use crate::configs::{Groups, UserConfig, Users};
+use crate::db::Database;
 use crate::shorturls::ShortUrl;
 use crate::utils::{create_or_update_file_in_github_repo, github_org};
 
@@ -51,9 +52,11 @@ struct GitHubTeamMembers {
  *
  * This function uses the users.toml and the groups.toml file in the configs repo for information.
  */
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn generate_terraform_files_for_okta(github: &Github, config: &Config) {
+pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database) {
+    let users = Users::get_from_db(db);
+    let groups = Groups::get_from_db(db);
     let repo = github.repo(github_org(), "configs");
     let r = repo.get().await.unwrap();
 
@@ -65,7 +68,7 @@ pub async fn generate_terraform_files_for_okta(github: &Github, config: &Config)
     handlebars.register_helper("terraformize", Box::new(terraform_username_helper));
 
     // Generate the members of the users file.
-    let users_rendered = handlebars.render_template(&TEMPLATE_TERRAFORM_OKTA_USER, &config.users).unwrap();
+    let users_rendered = handlebars.render_template(&TEMPLATE_TERRAFORM_OKTA_USER, &users).unwrap();
 
     // Join it with the directory to save the files in.
     let users_file = format!("{}/generated.users.tf", okta_path);
@@ -73,7 +76,7 @@ pub async fn generate_terraform_files_for_okta(github: &Github, config: &Config)
     create_or_update_file_in_github_repo(&repo, &r.default_branch, &users_file, users_rendered.as_bytes().to_vec()).await;
 
     // Generate the members of the groups file.
-    let groups_rendered = handlebars.render_template(&TEMPLATE_TERRAFORM_OKTA_GROUP, &config.groups).unwrap();
+    let groups_rendered = handlebars.render_template(&TEMPLATE_TERRAFORM_OKTA_GROUP, &groups).unwrap();
 
     // Join it with the directory to save the files in.
     let groups_file = format!("{}/generated.groups.tf", okta_path);

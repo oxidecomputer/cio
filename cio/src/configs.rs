@@ -1520,9 +1520,6 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
 pub async fn refresh_db_configs_and_airtable(github: &Github) {
     let configs = get_configs_from_repo(github).await;
 
-    // Sync okta users and group from the configs.
-    generate_terraform_files_for_okta(github, &configs).await;
-
     // Initialize our database.
     let db = Database::new();
 
@@ -1545,6 +1542,10 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync users.
     sync_users(&db, github, configs.users).await;
+
+    // Sync okta users and group from the database.
+    // Do this after we update the users and groups in the database.
+    generate_terraform_files_for_okta(github, &db).await;
 
     // Sync links.
     sync_links(&db, configs.links).await;
