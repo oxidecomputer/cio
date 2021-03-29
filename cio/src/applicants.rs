@@ -27,6 +27,7 @@ use sheets::Sheets;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tar::Archive;
 use tracing::instrument;
+use walkdir::WalkDir;
 
 use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS};
 use crate::core::UpdateAirtableRecord;
@@ -1540,10 +1541,11 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         // Unpack the tarball.
         let mut tar = Archive::new(fs::File::open(&path).unwrap());
         output.push(id);
+        println!("unpacking tarball: {:?} -> {:?}", path, output);
         tar.unpack(&output).unwrap();
 
         // Walk the output directory trying to find our file.
-        for entry in fs::read_dir(&output).unwrap() {
+        for entry in WalkDir::new(&output).min_depth(1) {
             let entry = entry.unwrap();
             let path = entry.path();
             if is_materials(path.file_name().unwrap().to_str().unwrap()) {
@@ -1553,7 +1555,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                     path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.clone());
+                    result += &read_pdf(&name, path.clone().to_path_buf());
                 } else {
                     result += &fs::read_to_string(&path).unwrap();
                 }
