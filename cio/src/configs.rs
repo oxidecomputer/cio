@@ -271,7 +271,7 @@ impl UserConfig {
         }
 
         let name_alias = format!("{}.{}", self.first_name.to_lowercase(), self.last_name.to_lowercase());
-        if !self.aliases.contains(&name_alias) {
+        if !self.aliases.contains(&name_alias) && self.username != name_alias {
             self.aliases.push(name_alias);
         }
     }
