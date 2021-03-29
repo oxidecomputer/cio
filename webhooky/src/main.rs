@@ -99,6 +99,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
+    api.register(listen_airtable_applicants_edit_webhooks).unwrap();
     api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_edit_webhooks).unwrap();
@@ -678,6 +679,38 @@ pub struct GoogleSpreadsheetRowCreateEvent {
     pub event: GoogleSpreadsheetEvent,
     #[serde(default)]
     pub spreadsheet: GoogleSpreadsheet,
+}
+
+/**
+ * Listen for rows edited in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/applicants/edit",
+}]
+#[instrument]
+#[inline]
+async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    let event = body_param.into_inner();
+    event!(Level::DEBUG, "{:?}", event);
+
+    if event.record_id.is_empty() {
+        event!(Level::WARN, "Record id is empty");
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Get the row from airtable.
+    let mut applicant = Applicant::get_from_airtable(&event.record_id).await;
+    if applicant.request_background_check {
+        // Request the background check.
+        applicant.send_background_check_invitation(&api_context.db).await;
+        event!(Level::INFO, "sent background check invitation to applicant: {}", applicant.email);
+    }
+
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**

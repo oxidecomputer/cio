@@ -604,12 +604,13 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#dcf6ab2701f4f07ba820e4510dc087b04a727056"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#b1f812d0c9714fcf4246fd882ee23e13b65ae6d5"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
+ "checkr 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
@@ -2228,7 +2229,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#dcf6ab2701f4f07ba820e4510dc087b04a727056"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#b1f812d0c9714fcf4246fd882ee23e13b65ae6d5"
 dependencies = [
  "Inflector",
  "proc-macro2",
