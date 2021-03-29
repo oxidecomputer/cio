@@ -11,10 +11,14 @@ pub enum Status {
     /// We are giving an offer to the applicant.
     GivingOffer,
 
+    /// We are in the process of interviewing the applicant.
+    Interviewing,
+
     /// The applicant has been deferred.
     Deferred,
 
-    /// We are taking next steps with the applicant.
+    /// We are taking next steps with the applicant. This usually includes
+    /// talking to them a bit more but not going into full fledged interviews yet.
     NextSteps,
 
     /// The applicant has been declined.
@@ -54,6 +58,8 @@ impl FromStr for Status {
             Ok(Status::Declined)
         } else if s.contains("hired") {
             Ok(Status::Hired)
+        } else if s.contains("interviewing") {
+            Ok(Status::Interviewing)
         } else if s.contains("giving offer") {
             Ok(Status::GivingOffer)
         } else if s.contains("contractor") || s.contains("consulting") {
@@ -79,6 +85,7 @@ impl ToString for Status {
             Status::Contractor => "Contractor".to_string(),
             Status::KeepingWarm => "Keeping warm".to_string(),
             Status::NeedsToBeTriaged => "Needs to be triaged".to_string(),
+            Status::Interviewing => "Interviewing".to_string(),
         }
     }
 }

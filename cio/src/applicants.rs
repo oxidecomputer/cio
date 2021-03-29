@@ -370,7 +370,7 @@ The Oxide Team",
         // If the length of the row is greater than the status column
         // then we have a status.
         let raw_status = if row.len() > columns.status { row[columns.status].to_string() } else { "".to_string() };
-        let status = crate::applicant_status::Status::from_str(&raw_status).unwrap_or_default();
+        let mut status = crate::applicant_status::Status::from_str(&raw_status).unwrap_or_default();
 
         let (github, gitlab) = NewApplicant::parse_github_gitlab(&row[columns.github]);
 
@@ -444,6 +444,8 @@ The Oxide Team",
         let resume = row[columns.resume].to_string();
         let materials = row[columns.materials].to_string();
 
+        let mut interviews: Vec<String> = Default::default();
+
         let mut scorers: Vec<String> = Default::default();
         let mut scoring_form_id = "".to_string();
         let mut scoring_form_url = "".to_string();
@@ -481,6 +483,10 @@ The Oxide Team",
                 request_background_check = record.fields.request_background_check;
             }
 
+            if !a.interviews.is_empty() {
+                interviews = a.interviews.clone();
+            }
+
             if !a.value_reflected.is_empty() {
                 value_reflected = a.value_reflected.to_string();
             }
@@ -513,6 +519,12 @@ The Oxide Team",
             if !a.motor_vehicle_background_check_status.is_empty() {
                 motor_vehicle_background_check_status = a.criminal_background_check_status.to_string();
             }
+        }
+
+        // If we know they have more than 1 interview AND their current status is "next steps",
+        // THEN we can mark the applicant as in the "interviewing" state.
+        if interviews.len() > 1 && status == crate::applicant_status::Status::NextSteps {
+            status = crate::applicant_status::Status::Interviewing;
         }
 
         NewApplicant {
@@ -554,7 +566,7 @@ The Oxide Team",
             question_values_in_tension: Default::default(),
             question_why_oxide: Default::default(),
             interview_packet: Default::default(),
-            interviews: Default::default(),
+            interviews,
             scorers,
             scoring_form_id,
             scoring_form_url,
