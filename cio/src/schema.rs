@@ -20,6 +20,7 @@ table! {
         role -> Varchar,
         sheet_id -> Varchar,
         status -> Varchar,
+        raw_status -> Varchar,
         submitted_time -> Timestamptz,
         email -> Varchar,
         phone -> Varchar,

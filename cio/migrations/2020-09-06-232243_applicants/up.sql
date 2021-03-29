@@ -4,6 +4,7 @@ CREATE TABLE applicants (
     role VARCHAR NOT NULL,
     sheet_id VARCHAR NOT NULL,
     status VARCHAR NOT NULL,
+    raw_status VARCHAR NOT NULL,
     submitted_time TIMESTAMPTZ NOT NULL,
     email VARCHAR NOT NULL,
     phone VARCHAR NOT NULL,

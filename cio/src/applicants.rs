@@ -64,6 +64,7 @@ pub struct NewApplicant {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sheet_id: String,
     pub status: String,
+    pub raw_status: String,
     pub submitted_time: DateTime<Utc>,
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -194,6 +195,7 @@ impl NewApplicant {
             resume: get_value(values, "Submit your resume (or PDF export of LinkedIn profile)"),
             materials: get_value(values, "Submit your Oxide candidate materials"),
             status: crate::applicant_status::Status::NeedsToBeTriaged.to_string(),
+            raw_status: get_value(values, "Status"),
             sent_email_received: false,
             sent_email_follow_up: false,
             value_reflected: Default::default(),
@@ -258,6 +260,70 @@ Sincerely,
             .await;
     }
 
+    /// Send an email to the applicant that they did not provide materials.
+    #[instrument]
+    #[inline]
+    pub async fn send_email_rejection_did_not_provide_materials(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                "Thank you for your application".to_string(),
+                format!(
+                    "Dear {},
+
+Unfortunately, we cannot accept it at this time since you failed to provide the
+requested materials.
+
+All the best,
+The Oxide Team",
+                    self.name
+                ),
+                vec![self.email.to_string()],
+                vec![format!("careers@{}", DOMAIN)],
+                vec![],
+                format!("careers@{}", DOMAIN),
+            )
+            .await;
+    }
+
+    /// Send an email to the applicant about timing.
+    #[instrument]
+    #[inline]
+    pub async fn send_email_rejection_timing(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                "Thank you for your application".to_string(),
+                format!(
+                    "Dear {},
+
+We are so humbled by your application to join Oxide Computer Company. At this
+stage of the company we are hyper-focused on certain areas of the stack and
+when we need specific domain space experience such as yours, please engage
+with us. Our roles will be updated as we need them.
+
+We are grateful you took the time to apply and put so much thought into the
+candidate materials, we loved reading them. We would absolutely love to work
+with you in the future and cannot wait for that stage of the company!
+
+All the best,
+The Oxide Team",
+                    self.name
+                ),
+                vec![self.email.to_string()],
+                vec![format!("careers@{}", DOMAIN)],
+                vec![],
+                format!("careers@{}", DOMAIN),
+            )
+            .await;
+    }
+
     /// Send an email internally that we have a new application.
     #[instrument]
     #[inline]
@@ -285,11 +351,8 @@ Sincerely,
     pub async fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
-        let status = if row.len() > columns.status {
-            crate::applicant_status::Status::from_str(&row[columns.status]).unwrap_or_default()
-        } else {
-            crate::applicant_status::Status::NeedsToBeTriaged
-        };
+        let raw_status = if row.len() > columns.status { row[columns.status].to_string() } else { "".to_string() };
+        let status = crate::applicant_status::Status::from_str(&raw_status).unwrap_or_default();
 
         let (github, gitlab) = NewApplicant::parse_github_gitlab(&row[columns.github]);
 
@@ -438,6 +501,7 @@ Sincerely,
             resume,
             materials,
             status: status.to_string(),
+            raw_status,
             sent_email_received,
             sent_email_follow_up,
             role: sheet_name.to_string(),
@@ -526,7 +590,7 @@ Sincerely,
     /// Expand the applicants materials and do any automation that needs to be done.
     #[instrument(skip(drive_client, sheets_client))]
     #[inline]
-    pub async fn expand(&mut self, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, row_index: usize) {
+    pub async fn expand(&mut self, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, sent_email_follow_up_index: usize, row_index: usize) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
@@ -539,6 +603,44 @@ Sincerely,
             sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
 
             println!("[applicant] sent email to {} that we received their application", self.email);
+        }
+
+        // Send an email follow up if we should.
+        if !self.sent_email_follow_up {
+            // Get the right cell to eventually change in the google sheet.
+            let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
+            let rng = format!("{}{}", colmn.nth(sent_email_follow_up_index).unwrap().to_string(), row_index);
+
+            let status = crate::applicant_status::Status::from_str(&self.status).unwrap_or_default();
+            if status == crate::applicant_status::Status::Declined || status == crate::applicant_status::Status::Deferred {
+                // Check if we have sent the follow up email to them.unwrap_or_default().
+                if self.raw_status.contains("did not do materials") {
+                    // Send the email.
+                    self.send_email_rejection_did_not_provide_materials().await;
+
+                    println!("[applicant] sent email to {} tell them they did not do the materials", self.email);
+                } else {
+                    // Send the email.
+                    self.send_email_rejection_timing().await;
+
+                    println!("[applicant] sent email to {} tell them about timing", self.email);
+                }
+
+                // Update the cell in the google sheet so we know we sent the email.
+                // Mark the column as true not false.
+                sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
+
+                self.sent_email_follow_up = true;
+            } else if status != crate::applicant_status::Status::NeedsToBeTriaged {
+                // Just set that we have sent the email so that we don't do it again if we move to
+                // next steps then interviews etc.
+                // Only when it's not in "NeedsToBeTriaged".
+                // Update the cell in the google sheet so we know we sent the email.
+                // Mark the column as true not false.
+                sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
+
+                self.sent_email_follow_up = true;
+            }
         }
 
         // Cleanup and parse the phone number and country code.
@@ -1618,7 +1720,9 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
 
             // Parse the applicant out of the row information.
             let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row).await;
-            applicant.expand(&drive_client, &sheets_client, columns.sent_email_received, row_index + 1).await;
+            applicant
+                .expand(&drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
+                .await;
 
             if !applicant.sent_email_received {
                 // Post to Slack.
