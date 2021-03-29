@@ -1,6 +1,7 @@
 [workspace]
 members = [
 	"airtable",
+	"checkr",
 	"cio",
 	"drive",
 	"giphy",

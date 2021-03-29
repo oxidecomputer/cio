@@ -7,6 +7,7 @@ use std::process::Command;
 use std::str::FromStr;
 
 use async_trait::async_trait;
+use checkr::Checkr;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use chrono_humanize::HumanTime;
@@ -170,6 +171,13 @@ pub struct NewApplicant {
     pub scoring_job_function_yet_needed_count: i32,
     #[serde(default)]
     pub scoring_underwhelming_materials_count: i32,
+
+    #[serde(default)]
+    pub request_background_check: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub criminal_background_check_status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub motor_vehicles_background_check_status: String,
 }
 
 impl NewApplicant {
@@ -235,6 +243,9 @@ impl NewApplicant {
             scoring_inapplicable_experience_count: Default::default(),
             scoring_job_function_yet_needed_count: Default::default(),
             scoring_underwhelming_materials_count: Default::default(),
+            request_background_check: Default::default(),
+            criminal_background_check_status: Default::default(),
+            motor_vehicles_background_check_status: Default::default(),
         }
     }
 
@@ -548,6 +559,9 @@ The Oxide Team",
             scoring_inapplicable_experience_count,
             scoring_job_function_yet_needed_count,
             scoring_underwhelming_materials_count,
+            request_background_check: Default::default(),
+            criminal_background_check_status: Default::default(),
+            motor_vehicles_background_check_status: Default::default(),
         }
     }
 
@@ -2056,9 +2070,31 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
     }
 }
 
+#[instrument]
+#[inline]
+fn is_materials(file_name: &str) -> bool {
+    file_name.ends_with("responses.pdf")
+        || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
+        || file_name.ends_with("Oxide Candidate Materials.pdf")
+        || file_name.ends_with("OxideQuestions.pdf")
+        || file_name.ends_with("oxide-computer-candidate-materials.pdf")
+        || file_name.ends_with("Questionnaire.pdf")
+}
+
+#[instrument(skip(db))]
+#[inline]
+pub async fn refresh_background_checks(db: &Database) {
+    // Initialize the Checker client.
+    let checkr = Checkr::new_from_env();
+
+    // List the candidates.
+    let candidates = checkr.list_candidates().await.unwrap();
+    println!("{:?}", candidates);
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::applicants::{refresh_db_applicants, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants};
+    use crate::applicants::{refresh_background_checks, refresh_db_applicants, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants};
     use crate::db::Database;
     use crate::schema::applicants;
 
@@ -2083,6 +2119,14 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
+    async fn test_applicants_background_checks() {
+        let db = Database::new();
+
+        refresh_background_checks(&db).await;
+    }
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
         let db = Database::new();
         refresh_db_applicants(&db).await;
@@ -2096,13 +2140,4 @@ mod tests {
 
         update_applications_with_scoring_results(&db).await;
     }
-}
-
-fn is_materials(file_name: &str) -> bool {
-    file_name.ends_with("responses.pdf")
-        || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
-        || file_name.ends_with("Oxide Candidate Materials.pdf")
-        || file_name.ends_with("OxideQuestions.pdf")
-        || file_name.ends_with("oxide-computer-candidate-materials.pdf")
-        || file_name.ends_with("Questionnaire.pdf")
 }

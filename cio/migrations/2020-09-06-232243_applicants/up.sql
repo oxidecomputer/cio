@@ -53,5 +53,8 @@ CREATE TABLE applicants (
     scoring_inapplicable_experience_count INTEGER DEFAULT 0 NOT NULL,
     scoring_job_function_yet_needed_count INTEGER DEFAULT 0 NOT NULL,
     scoring_underwhelming_materials_count INTEGER DEFAULT 0 NOT NULL,
+    request_background_check BOOLEAN NOT NULL DEFAULT 'f',
+    criminal_background_check_status VARCHAR NOT NULL,
+    motor_vehicles_background_check_status VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

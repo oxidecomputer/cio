@@ -14,7 +14,7 @@ airtable-api = "^0.1.22"
 #airtable-api = { path = "../airtable" }
 async-trait = "^0.1.0"
 base64 = "0.12"
-diffy = "^0.2.0"
+checkr = { path = "../checkr" }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 chrono-tz = { version = "0.4", features = ["serde"] }
@@ -24,6 +24,7 @@ cloudflare-rs = "^0.6.0"
 csv = "1.1"
 comrak = "0.8"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
+diffy = "^0.2.0"
 #dropshot = "^0.3.0"
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "working" }
 futures-util = "0.3"

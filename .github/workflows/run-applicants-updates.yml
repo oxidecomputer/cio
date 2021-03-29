@@ -73,6 +73,7 @@ jobs:
           CIO_AUTH0_CLIENT_ID: ${{ secrets.CIO_AUTH0_CLIENT_ID }}
           CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          CHECKR_API_KEY: ${{ secrets.CHECKR_API_KEY }}
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
           GITHUB_ORG: oxidecomputer
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
