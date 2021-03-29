@@ -472,6 +472,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         status = status.trim().to_string();
         if !status.is_empty() {
             a.status = status;
+            a.raw_status = event.event.value.to_string();
         }
     } else if column_header.contains("value reflected") {
         // Update the value reflected.
