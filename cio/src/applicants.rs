@@ -462,6 +462,10 @@ The Oxide Team",
         let mut scoring_job_function_yet_needed_count = 0;
         let mut scoring_underwhelming_materials_count = 0;
 
+        let mut request_background_check = false;
+        let mut criminal_background_check_status = "".to_string();
+        let mut motor_vehicles_background_check_status = "".to_string();
+
         // Try to get the applicant, if they exist.
         // This is a way around the stupid magic macro to make sure it
         // doesn't overwrite fields set by other functions on the upsert.
@@ -475,6 +479,7 @@ The Oxide Team",
             // This ensures if we had any one offs added in airtable that they stay intact.
             if let Some(record) = a.get_existing_airtable_record().await {
                 scorers = record.fields.scorers;
+                request_background_check = record.fields.request_background_check;
             }
 
             if !a.value_reflected.is_empty() {
@@ -502,6 +507,12 @@ The Oxide Team",
                 scoring_inapplicable_experience_count = a.scoring_inapplicable_experience_count;
                 scoring_job_function_yet_needed_count = a.scoring_job_function_yet_needed_count;
                 scoring_underwhelming_materials_count = a.scoring_underwhelming_materials_count;
+            }
+            if !a.criminal_background_check_status.is_empty() {
+                criminal_background_check_status = a.criminal_background_check_status.to_string();
+            }
+            if !a.motor_vehicles_background_check_status.is_empty() {
+                motor_vehicles_background_check_status = a.criminal_background_check_status.to_string();
             }
         }
 
@@ -559,9 +570,9 @@ The Oxide Team",
             scoring_inapplicable_experience_count,
             scoring_job_function_yet_needed_count,
             scoring_underwhelming_materials_count,
-            request_background_check: Default::default(),
-            criminal_background_check_status: Default::default(),
-            motor_vehicles_background_check_status: Default::default(),
+            request_background_check,
+            criminal_background_check_status,
+            motor_vehicles_background_check_status,
         }
     }
 
@@ -1032,6 +1043,37 @@ impl Applicant {
         }
 
         HumanTime::from(dur)
+    }
+
+    /// Send an invite to the applicant to do a background check.
+    #[instrument(skip(db))]
+    #[inline]
+    pub async fn send_background_check_invitation(&mut self, db: &Database) {
+        // Initialize the Checker client.
+        let checkr = Checkr::new_from_env();
+
+        // Check if we already sent them an invitation.
+        let candidates = checkr.list_candidates().await.unwrap();
+        for candidate in candidates {
+            if candidate.email == self.email {
+                // We can return early they already exist as a candidate.
+                return;
+            }
+        }
+
+        // Create a new candidate for the applicant in checkr.
+        let candidate = checkr.create_candidate(&self.email).await.unwrap();
+
+        // Create an invitation for the candidate.
+        checkr.create_invitation(&candidate.id, "").await.unwrap();
+
+        // Update the database.
+        self.request_background_check = true;
+        self.criminal_background_check_status = "requested".to_string();
+
+        self.update(db).await;
+
+        println!("[applicant] sent background check invitation to: {}", self.email);
     }
 
     /// Convert the applicant into JSON for a Slack message.
@@ -2090,11 +2132,27 @@ pub async fn refresh_background_checks(db: &Database) {
     // List the candidates.
     let candidates = checkr.list_candidates().await.unwrap();
     for candidate in candidates {
-        println!("{:?}", candidate);
-        for report_id in candidate.report_ids {
-            // Get the report for the candidate.
-            let report = checkr.get_report(&report_id).await.unwrap();
-            println!("report: {:?}", report);
+        // Try to match the candidate based on their email.
+        // Try for all the sheet_ids.
+        for (_, sheet_id) in get_sheets_map() {
+            if let Ok(mut applicant) = applicants::dsl::applicants
+                .filter(applicants::dsl::email.eq(candidate.email.to_string()))
+                .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
+                .first::<Applicant>(&db.conn())
+            {
+                for report_id in &candidate.report_ids {
+                    // Get the report for the candidate.
+                    let report = checkr.get_report(&report_id).await.unwrap();
+                    println!("report: {:?}", report);
+
+                    // Set the status for the report.
+
+                    // Update the applicant.
+                    // applicant.update(db).await;
+                }
+            } else {
+                println!("[checkr] could not find applicant with email {} in sheet_id {}", candidate.email, sheet_id);
+            }
         }
     }
 }
