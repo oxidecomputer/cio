@@ -249,12 +249,17 @@ impl NewApplicant {
         sendgrid_client
             .send_mail(
                 "Oxide Computer Company Application Received!".to_string(),
-                "Thank you for submitting your application materials! We really appreciate all
+                format!(
+                    "Dear {},
+
+Thank you for submitting your application materials! We really appreciate all
 the time and thought everyone puts into their application. We will be in touch
 within the next couple weeks with more information.
+
 Sincerely,
-  The Oxide Team"
-                    .to_string(),
+  The Oxide Team",
+                    self.name
+                ),
                 vec![self.email.to_string()],
                 vec![format!("careers@{}", DOMAIN)],
                 vec![],
