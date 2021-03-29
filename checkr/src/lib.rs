@@ -294,8 +294,8 @@ pub struct Candidate {
     pub mother_maiden_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub email: String,
-    #[serde(default)]
-    pub phone: Option<i64>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub phone: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub zipcode: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
