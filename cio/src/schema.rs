@@ -33,6 +33,7 @@ table! {
         resume -> Varchar,
         materials -> Varchar,
         sent_email_received -> Bool,
+        sent_email_follow_up -> Bool,
         value_reflected -> Varchar,
         value_violated -> Varchar,
         values_in_tension -> Array<Text>,

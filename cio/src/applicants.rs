@@ -86,6 +86,8 @@ pub struct NewApplicant {
     pub materials: String,
     #[serde(default)]
     pub sent_email_received: bool,
+    #[serde(default)]
+    pub sent_email_follow_up: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value_reflected: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -193,6 +195,7 @@ impl NewApplicant {
             materials: get_value(values, "Submit your Oxide candidate materials"),
             status: crate::applicant_status::Status::NeedsToBeTriaged.to_string(),
             sent_email_received: false,
+            sent_email_follow_up: false,
             value_reflected: Default::default(),
             value_violated: Default::default(),
             values_in_tension: Default::default(),
@@ -348,6 +351,12 @@ Sincerely,
             sent_email_received = false;
         }
 
+        // Check if we sent them an email to either reject or follow up.
+        let mut sent_email_follow_up = true;
+        if row[columns.sent_email_follow_up].to_lowercase().contains("false") {
+            sent_email_follow_up = false;
+        }
+
         let email = row[columns.email].trim().to_string();
         let location = row[columns.location].trim().to_string();
         let phone = row[columns.phone].trim().to_string();
@@ -430,6 +439,7 @@ Sincerely,
             materials,
             status: status.to_string(),
             sent_email_received,
+            sent_email_follow_up,
             role: sheet_name.to_string(),
             sheet_id: sheet_id.to_string(),
             value_reflected,
@@ -1300,6 +1310,7 @@ pub struct ApplicantSheetColumns {
     pub materials: usize,
     pub status: usize,
     pub sent_email_received: usize,
+    pub sent_email_follow_up: usize,
     pub value_reflected: usize,
     pub value_violated: usize,
     pub value_in_tension_1: usize,
@@ -1371,6 +1382,9 @@ impl ApplicantSheetColumns {
             }
             if c.contains("sent email that we received their application") {
                 columns.sent_email_received = index;
+            }
+            if c.contains("have sent follow up email") {
+                columns.sent_email_follow_up = index;
             }
         }
         columns
