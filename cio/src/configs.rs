@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::str::from_utf8;
-use std::{thread, time};
 
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
@@ -16,7 +15,6 @@ use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
-use slack_chat_api::Slack;
 use tracing::{event, instrument, Level};
 
 use crate::airtable::{
@@ -323,58 +321,10 @@ impl User {
         format!("{}@{}", self.username, GSUITE_DOMAIN)
     }
 
-    /// Creates or updates the Slack user based on their user config.
-    #[instrument]
-    #[inline]
-    pub async fn to_slack_user(&self) {
-        // Authenticate Slack.
-        let slack = Slack::new_from_env();
-
-        // List all the users.
-        let users = slack.list_users().await.unwrap();
-
-        // Try to find our user, to see if we should update or create them.
-        for user in users {
-            if user.is_bot || user.profile.email.is_empty() {
-                // Continue early, skip the bots.
-                continue;
-            }
-
-            let mut profile = user.profile.clone();
-
-            if profile.email == self.email() {
-                // We found our user.
-                // Update the user's profile.
-                profile.first_name = self.first_name.to_string();
-                profile.display_name = self.github.to_string();
-                profile.display_name_normalized = self.github.to_string();
-                profile.last_name = self.last_name.to_string();
-                profile.phone = self.recovery_phone.to_string();
-                profile.real_name = self.full_name();
-                profile.real_name_normalized = self.full_name();
-
-                // Update the user's profile.
-                slack.update_user_profile(&user.id, profile).await.unwrap();
-
-                // TODO: Figure out rate limit.
-                let rate_limit_sleep = time::Duration::from_secs(10);
-                // We need to sleep here for a half second so we don't get rate limited.
-                thread::sleep(rate_limit_sleep);
-                println!("updated slack user: {}", self.email());
-
-                // Return early.
-                return;
-            }
-        }
-
-        println!("could not find slack user: {}", self.username);
-        // TODO: Send an invite to the user.
-    }
-
     /// Send an email to the new consultant about their account.
     #[instrument]
     #[inline]
-    async fn send_email_new_consultant(&self, password: &str) {
+    async fn send_email_new_consultant(&self) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 
@@ -388,12 +338,17 @@ impl User {
                 format!(
                     "Yoyoyo {},
 
-We have set up your account on mail.corp.{}. Details for accessing
-are below. You will be required to reset your password the next time you login.
+You should have an email from Okta about setting up your account with them.
+We use Okta to authenticate to a number of different apps -- including
+Google Workspace. This includes email, calendar, drive, etc.
 
-Website for Login: https://mail.corp.{}
+After setting up your Okta account your email account with Google will be
+provisioned. You can then login to your email from: mail.corp.{}.
+Details for accessing are below.
+
+Website for Okta login: https://oxidecomputerlogin.okta.com
+Website for email login: https://mail.corp.{}
 Email: {}
-Password: {}
 Aliases: {}
 
 Make sure you set up two-factor authentication for your account, or in one week
@@ -409,7 +364,6 @@ xoxo,
                     DOMAIN,
                     DOMAIN,
                     self.email(),
-                    password,
                     aliases,
                     DOMAIN,
                 ),
@@ -424,7 +378,7 @@ xoxo,
     /// Send an email to the new user about their account.
     #[instrument]
     #[inline]
-    async fn send_email_new_user(&self, password: &str) {
+    async fn send_email_new_user(&self) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
         let github_org = github_org();
@@ -457,12 +411,17 @@ let jess@{} know what your GitHub handle is.",
                 format!(
                     "Yoyoyo {},
 
-We have set up your account on mail.corp.{}. Details for accessing
-are below. You will be required to reset your password the next time you login.
+You should have an email from Okta about setting up your account with them.
+We use Okta to authenticate to a number of different apps -- including
+Google Workspace and GitHub. This includes email, calendar, drive, etc.
 
-Website for Login: https://mail.corp.{}
+After setting up your Okta account your email account with Google will be
+provisioned. You can then login to your email from: mail.corp.{}.
+Details for accessing are below.
+
+Website for Okta login: https://oxidecomputerlogin.okta.com
+Website for email login: https://mail.corp.{}
 Email: {}
-Password: {}
 Aliases: {}
 
 Make sure you set up two-factor authentication for your account, or in one week
@@ -502,7 +461,6 @@ xoxo,
                     DOMAIN,
                     DOMAIN,
                     self.email(),
-                    password,
                     aliases,
                     github_copy,
                     DOMAIN,
@@ -997,11 +955,22 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     for (_, mut user) in users {
         user.expand().await;
 
+        // Check if we already have the new user in the database.
+        let existing = User::get_from_db(db, user.username.to_string());
+
         // Update or create the user in the database.
         let new_user = user.upsert(db).await;
 
-        // Update slack user.
-        new_user.to_slack_user().await;
+        if existing.is_none() {
+            // The user did not already exist in the database.
+            // We should send them an email about setting up their account.
+            println!("sending email to new user: {}", new_user.username);
+            if new_user.is_consultant() {
+                new_user.send_email_new_consultant().await;
+            } else {
+                new_user.send_email_new_user().await;
+            }
+        }
 
         // Remove the user from the BTreeMap.
         user_map.remove(&user.username);
