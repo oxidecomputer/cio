@@ -41,6 +41,7 @@ use cio_api::schema::applicants;
 use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, Shipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
+use cio_api::templates::generate_terraform_files_for_okta;
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
 
 #[tokio::main]
@@ -1975,6 +1976,12 @@ async fn handle_configs_push(api_context: Arc<Context>, event: GitHubWebhook) ->
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
         sync_users(&api_context.db, &api_context.github, configs.users).await;
+    }
+
+    if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
+        // Sync okta users and group from the database.
+        // Do this after we update the users and groups in the database.
+        generate_terraform_files_for_okta(&api_context.github, &api_context.db).await;
     }
 
     // Check if the buildings.toml file changed.
