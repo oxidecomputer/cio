@@ -64,6 +64,7 @@ pub struct NewApplicant {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sheet_id: String,
     pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub raw_status: String,
     pub submitted_time: DateTime<Utc>,
     pub email: String,
