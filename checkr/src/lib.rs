@@ -103,10 +103,9 @@ impl Checkr {
     /// List candidates.
     pub async fn list_candidates(&self) -> Result<Vec<Candidate>, APIError> {
         // Build the request.
-        // TODO: paginate.
-        let request = self.request(Method::GET, "candidates", (), None);
+        let mut request = self.request(Method::GET, "candidates", (), None);
 
-        let resp = self.client.execute(request).await.unwrap();
+        let mut resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -117,9 +116,36 @@ impl Checkr {
             }
         };
 
-        let r: CandidatesResponse = resp.json().await.unwrap();
+        let mut r: CandidatesResponse = resp.json().await.unwrap();
+        let mut candidates = r.candidates;
 
-        Ok(r.candidates)
+        let mut next_href = r.next_href;
+
+        // Paginate if we should.
+        // TODO: make this more DRY
+        while !next_href.is_empty() {
+            request = self.request(Method::GET, next_href.trim_start_matches(ENDPOINT), (), None);
+
+            resp = self.client.execute(request).await.unwrap();
+            match resp.status() {
+                StatusCode::OK => (),
+                s => {
+                    return Err(APIError {
+                        status_code: s,
+                        body: resp.text().await.unwrap(),
+                    })
+                }
+            };
+
+            // Try to deserialize the response.
+            r = resp.json().await.unwrap();
+
+            candidates.append(&mut r.candidates);
+
+            next_href = r.next_href;
+        }
+
+        Ok(candidates)
     }
 
     /// Create a new candidate.

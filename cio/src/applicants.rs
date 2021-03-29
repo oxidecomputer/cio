@@ -1065,7 +1065,7 @@ impl Applicant {
         let candidate = checkr.create_candidate(&self.email).await.unwrap();
 
         // Create an invitation for the candidate.
-        checkr.create_invitation(&candidate.id, "").await.unwrap();
+        checkr.create_invitation(&candidate.id, "tasker_pro").await.unwrap();
 
         // Update the database.
         self.request_background_check = true;
@@ -2146,9 +2146,15 @@ pub async fn refresh_background_checks(db: &Database) {
                     println!("report: {:?}", report);
 
                     // Set the status for the report.
+                    if report.package.contains("tasker") {
+                        applicant.criminal_background_check_status = report.status.to_string();
+                    }
+                    if report.package.contains("driver") {
+                        applicant.motor_vehicles_background_check_status = report.status.to_string();
+                    }
 
                     // Update the applicant.
-                    // applicant.update(db).await;
+                    applicant.update(db).await;
                 }
             } else {
                 println!("[checkr] could not find applicant with email {} in sheet_id {}", candidate.email, sheet_id);
