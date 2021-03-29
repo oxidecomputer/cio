@@ -177,7 +177,7 @@ pub struct NewApplicant {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub criminal_background_check_status: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub motor_vehicles_background_check_status: String,
+    pub motor_vehicle_background_check_status: String,
 }
 
 impl NewApplicant {
@@ -245,7 +245,7 @@ impl NewApplicant {
             scoring_underwhelming_materials_count: Default::default(),
             request_background_check: Default::default(),
             criminal_background_check_status: Default::default(),
-            motor_vehicles_background_check_status: Default::default(),
+            motor_vehicle_background_check_status: Default::default(),
         }
     }
 
@@ -464,7 +464,7 @@ The Oxide Team",
 
         let mut request_background_check = false;
         let mut criminal_background_check_status = "".to_string();
-        let mut motor_vehicles_background_check_status = "".to_string();
+        let mut motor_vehicle_background_check_status = "".to_string();
 
         // Try to get the applicant, if they exist.
         // This is a way around the stupid magic macro to make sure it
@@ -511,8 +511,8 @@ The Oxide Team",
             if !a.criminal_background_check_status.is_empty() {
                 criminal_background_check_status = a.criminal_background_check_status.to_string();
             }
-            if !a.motor_vehicles_background_check_status.is_empty() {
-                motor_vehicles_background_check_status = a.criminal_background_check_status.to_string();
+            if !a.motor_vehicle_background_check_status.is_empty() {
+                motor_vehicle_background_check_status = a.criminal_background_check_status.to_string();
             }
         }
 
@@ -572,7 +572,7 @@ The Oxide Team",
             scoring_underwhelming_materials_count,
             request_background_check,
             criminal_background_check_status,
-            motor_vehicles_background_check_status,
+            motor_vehicle_background_check_status,
         }
     }
 
@@ -1065,7 +1065,7 @@ impl Applicant {
         let candidate = checkr.create_candidate(&self.email).await.unwrap();
 
         // Create an invitation for the candidate.
-        checkr.create_invitation(&candidate.id, "tasker_pro").await.unwrap();
+        checkr.create_invitation(&candidate.id, "premium_criminal").await.unwrap();
 
         // Update the database.
         self.request_background_check = true;
@@ -2146,11 +2146,11 @@ pub async fn refresh_background_checks(db: &Database) {
                     println!("report: {:?}", report);
 
                     // Set the status for the report.
-                    if report.package.contains("tasker") {
+                    if report.package.contains("premium_criminal") {
                         applicant.criminal_background_check_status = report.status.to_string();
                     }
-                    if report.package.contains("driver") {
-                        applicant.motor_vehicles_background_check_status = report.status.to_string();
+                    if report.package.contains("motor_vehicle") {
+                        applicant.motor_vehicle_background_check_status = report.status.to_string();
                     }
 
                     // Update the applicant.

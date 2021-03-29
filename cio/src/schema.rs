@@ -71,7 +71,7 @@ table! {
         scoring_underwhelming_materials_count -> Int4,
         request_background_check -> Bool,
         criminal_background_check_status -> Varchar,
-        motor_vehicles_background_check_status -> Varchar,
+        motor_vehicle_background_check_status -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
