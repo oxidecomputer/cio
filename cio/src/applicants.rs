@@ -2089,7 +2089,14 @@ pub async fn refresh_background_checks(db: &Database) {
 
     // List the candidates.
     let candidates = checkr.list_candidates().await.unwrap();
-    println!("{:?}", candidates);
+    for candidate in candidates {
+        println!("{:?}", candidate);
+        for report_id in candidate.report_ids {
+            // Get the report for the candidate.
+            let report = checkr.get_report(&report_id).await.unwrap();
+            println!("report: {:?}", report);
+        }
+    }
 }
 
 #[cfg(test)]
