@@ -2074,11 +2074,11 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                 value_violated = "".to_string();
             }
             let value_in_tension_1 = row[16].to_lowercase().to_string();
-            if value_in_tension_1 != "n/a" && !value_in_tension_1.is_empty() {
+            if value_in_tension_1 != "n/a" && !value_in_tension_1.trim().is_empty() {
                 values_in_tension.push(value_in_tension_1);
             }
             let value_in_tension_2 = row[17].to_lowercase().to_string();
-            if value_in_tension_2 != "n/a" && !value_in_tension_2.is_empty() {
+            if value_in_tension_2 != "n/a" && !value_in_tension_2.trim().is_empty() {
                 values_in_tension.push(value_in_tension_2);
             }
         }
