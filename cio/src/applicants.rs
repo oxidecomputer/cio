@@ -1226,7 +1226,14 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
                 repo.issue(i.number)
                     .comments()
                     .create(&CommentOptions {
-                        body: format!("Closing issue automatically since the applicant is now status: `{}`", self.status,),
+                        body: format!(
+                            "Closing issue automatically since the applicant is now status: `{}`
+
+Notes:
+
+> {}",
+                            self.status, self.raw_status
+                        ),
                     })
                     .await
                     .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
@@ -1261,12 +1268,16 @@ GitHub: {}
 Resume: {}
 Oxide Candidate Materials: {}
 
+Notes:
+
+> {}
+
 ## Reminder
 
 To view the all the candidates refer to the Airtable workspace: https://airtable-applicants.corp.oxide.computer
 
 cc @jessfraz @sdtuck @bcantrill",
-            self.submitted_time, self.email, self.phone, self.location, self.github, self.resume, self.materials
+            self.submitted_time, self.email, self.phone, self.location, self.github, self.resume, self.materials, self.raw_status
         );
 
         // Create the issue.
@@ -1351,9 +1362,14 @@ cc @jessfraz @sdtuck @bcantrill",
                 .create(&CommentOptions {
                     body: format!(
                         "Closing issue automatically since the applicant is set to be onboarded.
-The onboarding issue is: https://github.com/{}/configs#{}",
+The onboarding issue is: https://github.com/{}/configs#{}
+
+Notes:
+
+> {}",
                         github_org(),
-                        new_issue.number
+                        new_issue.number,
+                        self.raw_status
                     ),
                 })
                 .await
