@@ -459,6 +459,11 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         if event.event.value.to_lowercase() == "true" {
             a.sent_email_received = true;
         }
+    } else if column_header.contains("have sent follow up email?") {
+        // Parse the boolean.
+        if event.event.value.to_lowercase() == "true" {
+            a.sent_email_follow_up = true;
+        }
     } else if column_header.contains("status") {
         // Parse the new status.
         let mut status = cio_api::applicant_status::Status::from_str(&event.event.value).unwrap_or_default().to_string();
