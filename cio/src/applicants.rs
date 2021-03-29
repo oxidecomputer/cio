@@ -1560,7 +1560,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                     path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.clone().to_path_buf());
+                    result += &read_pdf(&name, path.to_path_buf());
                 } else {
                     result += &fs::read_to_string(&path).unwrap();
                 }
