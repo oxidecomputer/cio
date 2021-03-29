@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
+use tar::Archive;
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS};
@@ -1527,6 +1528,38 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         result = from_read(&contents[..], 80);
     } else if mime_type == "application/vnd.google-apps.document" {
         result = drive_client.get_file_contents_by_id(&id).await.unwrap();
+    } else if name.ends_with(".tar") {
+        // Get the ip contents from Drive.
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        path.push(format!("{}.tar", id));
+
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(&contents).unwrap();
+
+        // Unpack the tarball.
+        let mut tar = Archive::new(fs::File::open(&path).unwrap());
+        output.push(id);
+        tar.unpack(&output).unwrap();
+
+        // Walk the output directory trying to find our file.
+        for entry in fs::read_dir(&output).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if is_materials(path.file_name().unwrap().to_str().unwrap()) {
+                // Concatenate all the zip files into our result.
+                result += &format!(
+                    "====================== tarball file: {} ======================\n\n",
+                    path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                );
+                if path.extension().unwrap() == "pdf" {
+                    result += &read_pdf(&name, path.clone());
+                } else {
+                    result += &fs::read_to_string(&path).unwrap();
+                }
+                result += "\n\n\n";
+            }
+        }
     } else if name.ends_with(".zip") {
         // This is patrick :)
         // Get the ip contents from Drive.
@@ -1568,14 +1601,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                 copy(&mut file, &mut outfile).unwrap();
 
                 let file_name = output.to_str().unwrap();
-                if (!output.is_dir())
-                    && (file_name.ends_with("responses.pdf")
-                        || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
-                        || file_name.ends_with("Oxide Candidate Materials.pdf")
-                        || file_name.ends_with("OxideQuestions.pdf")
-                        || file_name.ends_with("oxide-computer-candidate-materials.pdf")
-                        || file_name.ends_with("Questionnaire.pdf"))
-                {
+                if !output.is_dir() && is_materials(file_name) {
                     // Concatenate all the zip files into our result.
                     result += &format!(
                         "====================== zip file: {} ======================\n\n",
@@ -2047,4 +2073,13 @@ mod tests {
 
         update_applications_with_scoring_results(&db).await;
     }
+}
+
+fn is_materials(file_name: &str) -> bool {
+    file_name.ends_with("responses.pdf")
+        || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
+        || file_name.ends_with("Oxide Candidate Materials.pdf")
+        || file_name.ends_with("OxideQuestions.pdf")
+        || file_name.ends_with("oxide-computer-candidate-materials.pdf")
+        || file_name.ends_with("Questionnaire.pdf")
 }

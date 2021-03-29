@@ -62,6 +62,7 @@ slack-chat-api = "^0.1.4"
 #slack-chat-api = { path = "../slack" }
 tailscale-api = "^0.1.0"
 #tailscale-api = { path = "../tailscale" }
+tar = "^0.4"
 tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
 toml = "0.5"
 tracing = "^0.1"
