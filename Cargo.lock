@@ -542,17 +542,6 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "checkr"
 version = "0.0.4"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#57f57521ead584d5d95f26e2435a71303e09450f"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "checkr"
-version = "0.0.4"
 dependencies = [
  "chrono",
  "reqwest",
@@ -615,13 +604,13 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#57f57521ead584d5d95f26e2435a71303e09450f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#5cabdc8ef6998b37f850b4458a2bb8728f64a2fd"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
- "checkr 0.0.4 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "checkr 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
@@ -2240,7 +2229,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#57f57521ead584d5d95f26e2435a71303e09450f"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#5cabdc8ef6998b37f850b4458a2bb8728f64a2fd"
 dependencies = [
  "Inflector",
  "proc-macro2",
