@@ -14,6 +14,21 @@ table! {
 }
 
 table! {
+    applicant_reviewers (id) {
+        id -> Int4,
+        name -> Varchar,
+        email -> Varchar,
+        evaluations -> Int4,
+        emphatic_yes -> Int4,
+        yes -> Int4,
+        pass -> Int4,
+        no -> Int4,
+        not_applicable -> Int4,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     applicants (id) {
         id -> Int4,
         name -> Varchar,
@@ -455,6 +470,7 @@ table! {
 
 allow_tables_to_appear_in_same_query!(
     applicant_interviews,
+    applicant_reviewers,
     applicants,
     auth_user_logins,
     auth_users,

@@ -1854,6 +1854,8 @@ pub struct ApplicantFormSheetColumns {
 }
 
 impl ApplicantFormSheetColumns {
+#[instrument]
+#[inline]
     fn new() -> Self {
         ApplicantFormSheetColumns {
             name: 0,
@@ -1865,6 +1867,8 @@ impl ApplicantFormSheetColumns {
     }
 }
 
+#[instrument]
+#[inline]
 async fn get_reviewer_pool() -> Vec<String> {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
@@ -2155,6 +2159,69 @@ pub struct NewApplicantReviewer {
     pub no: i32,
     #[serde(default)]
     pub not_applicable: i32,
+}
+
+/// Implement updating the Airtable record for an ApplicantReviewer.
+#[async_trait]
+impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
+    async fn update_airtable_record(&mut self, _record: ApplicantReviewer) {
+    }
+}
+
+#[instrument(skip(db))]
+#[inline]
+pub async fn update_applicant_reviewers(db: &Database) {
+    // Get the GSuite token.
+    let token = get_gsuite_token("").await;
+
+    // Initialize the GSuite sheets client.
+    let sheets_client = Sheets::new(token.clone());
+    let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
+
+    // Get the values in the sheet.
+    let sheet_values = sheets_client.get_values(&sheet_id, "Leaderboard!A1:R1000".to_string()).await.unwrap();
+    let values = sheet_values.values.unwrap();
+
+    if values.is_empty() {
+        panic!("unable to retrieve any data values from Google sheet for reviewer leaderboard {}", sheet_id);
+    }
+
+    // Iterate over the rows.
+    for (row_index, row) in values.iter().enumerate() {
+        if row_index == 0 {
+            // We are on the header row.
+            continue;
+        }
+        if row[0].is_empty() {
+            // Break our loop we are in an empty row.
+            break;
+        }
+
+        let email = row[0].to_string();
+
+        // Parse the scoring results.
+        let evaluations = row[1].parse::<i32>().unwrap_or(0);
+        let emphatic_yes = row[2].parse::<i32>().unwrap_or(0);
+        let yes = row[3].parse::<i32>().unwrap_or(0);
+        let pass = row[4].parse::<i32>().unwrap_or(0);
+        let no = row[5].parse::<i32>().unwrap_or(0);
+        let not_applicable = row[6].parse::<i32>().unwrap_or(0);
+
+        let user = Users::get_from_db(db, email.trim(GSUITE_DOMAIN).to_string()).unwrap();
+
+        let reviewer = NewApplicantReviewer{
+            name: user.full_name(),
+            email,
+            evaluations,
+            emphatic_yes,
+            yes,
+            pass,
+            no,
+            not_applicable,
+        }
+        // Update the applicant  reviewer in the database.
+        reviewer.upsert(db).await;
+    }
 }
 
 #[cfg(test)]
