@@ -178,6 +178,10 @@ pub struct NewApplicant {
     pub criminal_background_check_status: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub motor_vehicle_background_check_status: String,
+
+    // This field is used by Airtable for mapping the location data.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub geocode_cache: String,
 }
 
 impl NewApplicant {
@@ -246,6 +250,7 @@ impl NewApplicant {
             request_background_check: Default::default(),
             criminal_background_check_status: Default::default(),
             motor_vehicle_background_check_status: Default::default(),
+            geocode_cache: Default::default(),
         }
     }
 
@@ -625,6 +630,7 @@ The Oxide Team",
             request_background_check,
             criminal_background_check_status,
             motor_vehicle_background_check_status,
+            geocode_cache: Default::default(),
         }
     }
 

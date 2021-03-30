@@ -56,5 +56,6 @@ CREATE TABLE applicants (
     request_background_check BOOLEAN NOT NULL DEFAULT 'f',
     criminal_background_check_status VARCHAR NOT NULL,
     motor_vehicle_background_check_status VARCHAR NOT NULL,
+    geocode_cache VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

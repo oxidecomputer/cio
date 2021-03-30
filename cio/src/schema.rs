@@ -72,6 +72,7 @@ table! {
         request_background_check -> Bool,
         criminal_background_check_status -> Varchar,
         motor_vehicle_background_check_status -> Varchar,
+        geocode_cache -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
