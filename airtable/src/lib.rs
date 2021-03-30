@@ -619,10 +619,8 @@ pub mod user_format_as_string {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("User", 3)?;
-        state.serialize_field("id", "")?;
+        let mut state = serializer.serialize_struct("User", 1)?;
         state.serialize_field("email", &email)?;
-        state.serialize_field("name", "")?;
         state.end()
     }
 
