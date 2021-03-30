@@ -561,6 +561,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "checkr"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e58423ec91ffccee79d6ff65cd15f9273633deda4cffef7a1c9f08385d2727c"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -671,7 +683,7 @@ dependencies = [
  "airtable-api 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
- "checkr 0.0.4",
+ "checkr 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
  "chrono-tz",

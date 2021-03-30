@@ -14,8 +14,8 @@ airtable-api = "^0.1.23"
 #airtable-api = { path = "../airtable" }
 async-trait = "^0.1.0"
 base64 = "0.12"
-#checkr = "^0.0.3"
-checkr = { path = "../checkr" }
+checkr = "^0.0.4"
+#checkr = { path = "../checkr" }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 chrono-tz = { version = "0.4", features = ["serde"] }
