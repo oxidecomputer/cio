@@ -500,15 +500,13 @@ The Oxide Team",
             if let Some(record) = a.get_existing_airtable_record().await {
                 scorers = record.fields.scorers;
                 request_background_check = record.fields.request_background_check;
+                interviews = record.fields.interviews;
             }
 
             if !a.country_code.is_empty() {
                 country_code = a.country_code.to_string();
             }
 
-            if !a.interviews.is_empty() {
-                interviews = a.interviews.clone();
-            }
             if !a.interview_packet.is_empty() {
                 interview_packet = a.interview_packet.to_string();
             }
@@ -565,7 +563,7 @@ The Oxide Team",
 
         // If we know they have more than 1 interview AND their current status is "next steps",
         // THEN we can mark the applicant as in the "interviewing" state.
-        if !interview_packet.is_empty() && status == crate::applicant_status::Status::NextSteps {
+        if interviews.len() > 1 && status == crate::applicant_status::Status::NextSteps {
             status = crate::applicant_status::Status::Interviewing;
         }
 
