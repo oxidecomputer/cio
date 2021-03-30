@@ -565,7 +565,7 @@ The Oxide Team",
 
         // If we know they have more than 1 interview AND their current status is "next steps",
         // THEN we can mark the applicant as in the "interviewing" state.
-        if interviews.len() > 1 && status == crate::applicant_status::Status::NextSteps {
+        if !interview_packet.is_empty() && status == crate::applicant_status::Status::NextSteps {
             status = crate::applicant_status::Status::Interviewing;
         }
 
