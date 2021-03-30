@@ -119,7 +119,7 @@ pub async fn refresh_recorded_meetings() {
                         if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
                             owner = attendee.email.to_string()
                         } else {
-                            owner = "catchall@oxidecomputer.com".to_string();
+                            owner = env::var("GADMIN_SUBJECT").unwrap();
                         }
                     }
                 }
