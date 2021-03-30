@@ -151,7 +151,7 @@ impl Checkr {
     /// Create a new candidate.
     pub async fn create_candidate(&self, email: &str) -> Result<Candidate, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, "candidates", (), Some(vec![("email", email.to_string())]));
+        let request = self.request(Method::POST, "candidates", CandidateRequest { email: email.to_string() }, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -214,8 +214,11 @@ impl Checkr {
         let request = self.request(
             Method::POST,
             "invitations",
-            (),
-            Some(vec![("candidate_id", candidate_id.to_string()), ("package", package.to_string())]),
+            InvitationRequest {
+                package: package.to_string(),
+                candidate_id: candidate_id.to_string(),
+            },
+            None,
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -272,6 +275,12 @@ pub struct CandidatesResponse {
     pub count: i64,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "data")]
     pub candidates: Vec<Candidate>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CandidateRequest {
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub email: String,
 }
 
 /// The data type for a candidate.
@@ -429,6 +438,14 @@ pub struct InvitationsResponse {
     pub count: i64,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "data")]
     pub invitations: Vec<Invitation>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvitationRequest {
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub package: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub candidate_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

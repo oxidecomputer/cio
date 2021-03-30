@@ -672,7 +672,7 @@ dependencies = [
  "airtable-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
- "checkr 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "checkr 0.0.3",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
