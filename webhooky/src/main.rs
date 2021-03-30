@@ -953,15 +953,21 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query
     // Parse the webhook as a new mailing list subscriber.
     let new_subscriber = event.as_subscriber();
 
-    // Update the subscriber in the database.
-    let subscriber = new_subscriber.upsert(db).await;
+    let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
+    if existing.is_none() {
+        // Update the subscriber in the database.
+        let subscriber = new_subscriber.upsert(db).await;
 
-    // Parse the signup into a slack message.
-    // Send the message to the slack channel.
-    post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
-    event!(Level::INFO, "subscriber {} posted to Slack", subscriber.email);
+        // Parse the signup into a slack message.
+        // Send the message to the slack channel.
+        post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
+        event!(Level::INFO, "subscriber {} posted to Slack", subscriber.email);
 
-    event!(Level::INFO, "subscriber {} created successfully", subscriber.email);
+        event!(Level::INFO, "subscriber {} created successfully", subscriber.email);
+    } else {
+        event!(Level::INFO, "subscriber {} already exists", subscriber.email);
+    }
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
