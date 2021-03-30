@@ -2158,14 +2158,14 @@ pub async fn refresh_background_checks(db: &Database) {
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "applicant_reviewers"]
 pub struct NewApplicantReviewer {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",
         serialize_with = "airtable_api::user_format_as_string::serialize",
         deserialize_with = "airtable_api::user_format_as_string::deserialize"
     )]
-    pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     #[serde(default)]
     pub evaluations: i32,
@@ -2238,6 +2238,8 @@ pub async fn update_applicant_reviewers(db: &Database) {
             no,
             not_applicable,
         };
+
+        println!("{}", json!(reviewer).to_string());
 
         // Upsert the applicant reviewer in the database.
         reviewer.upsert(db).await;
