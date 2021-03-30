@@ -1131,6 +1131,7 @@ impl Applicant {
 
         // Create an invitation for the candidate.
         checkr.create_invitation(&candidate.id, "premium_criminal").await.unwrap();
+        checkr.create_invitation(&candidate.id, "motor_vehicle_report").await.unwrap();
 
         // Update the database.
         self.request_background_check = true;
