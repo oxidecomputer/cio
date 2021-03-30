@@ -1443,6 +1443,7 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 impl UpdateAirtableRecord<Applicant> for Applicant {
     async fn update_airtable_record(&mut self, record: Applicant) {
         self.interviews = record.interviews;
+        self.geocode_cache = record.geocode_cache;
     }
 }
 
