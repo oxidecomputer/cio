@@ -13,6 +13,7 @@ use chrono::{DateTime, Duration};
 use chrono_humanize::HumanTime;
 use google_drive::GoogleDrive;
 use html2text::from_read;
+use hubcaps::comments::CommentOptions;
 use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use hubcaps::Github;
 use macros::db;
@@ -1320,14 +1321,49 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
     #[instrument]
     #[inline]
     pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue]) {
-        // Check if their status is not hired, we only care about hired applicants.
-        if !self.status.contains("Hired") {
-            return;
-        }
+        let repo = github.repo(github_org(), "configs");
 
         // Check if we already have an issue for this user.
         let issue = check_if_github_issue_exists(&configs_issues, &self.name);
-        if issue.is_some() {
+
+        // Check if their status is not onboarding, we only care about onboarding applicants.
+        if !self.status.contains("Onboarding") {
+            // If the issue exists and is opened, we need to close it.
+            if let Some(i) = issue {
+                if i.state != "open" {
+                    // We only care if the issue is still opened.
+                    return;
+                }
+
+                // Comment on the issue that this person is now set to a different status and we no
+                // longer need the issue.
+                repo.issue(i.number)
+                    .comments()
+                    .create(&CommentOptions {
+                        body: format!(
+                            "Closing issue automatically since the applicant is now status: `{}`
+Notes:
+> {}",
+                            self.status, self.raw_status
+                        ),
+                    })
+                    .await
+                    .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
+
+                // Close the issue.
+                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
+            }
+
+            // Return early.
+            return;
+        }
+
+        if let Some(i) = issue {
+            if i.state != "open" {
+                // Make sure the issue is in the state of "open".
+                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
+            }
+
             // Return early we don't want to update the issue because it will overwrite
             // any changes we made.
             return;
@@ -1350,9 +1386,7 @@ cc @jessfraz @sdtuck @bcantrill",
         );
 
         // Create the issue.
-        github
-            .repo(github_org(), "configs")
-            .issues()
+        repo.issues()
             .create(&IssueOptions {
                 title,
                 body: Some(body),
