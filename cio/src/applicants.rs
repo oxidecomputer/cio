@@ -31,10 +31,11 @@ use tracing::instrument;
 use walkdir::WalkDir;
 
 use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
+use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
-use crate::schema::applicants;
+use crate::schema::{applicant_reviewers, applicants};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
 use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -1121,6 +1122,20 @@ impl Applicant {
         let candidates = checkr.list_candidates().await.unwrap();
         for candidate in candidates {
             if candidate.email == self.email {
+                // Check if we already have sent their invitation.
+                if self.criminal_background_check_status.is_empty() {
+                    // Create an invitation for the candidate.
+                    checkr.create_invitation(&candidate.id, "premium_criminal").await.unwrap();
+                    checkr.create_invitation(&candidate.id, "motor_vehicle_report").await.unwrap();
+
+                    // Update the database.
+                    self.request_background_check = true;
+                    self.criminal_background_check_status = "requested".to_string();
+
+                    self.update(db).await;
+
+                    println!("[applicant] sent background check invitation to: {}", self.email);
+                }
                 // We can return early they already exist as a candidate.
                 return;
             }
@@ -1854,8 +1869,8 @@ pub struct ApplicantFormSheetColumns {
 }
 
 impl ApplicantFormSheetColumns {
-#[instrument]
-#[inline]
+    #[instrument]
+    #[inline]
     fn new() -> Self {
         ApplicantFormSheetColumns {
             name: 0,
@@ -2143,7 +2158,12 @@ pub async fn refresh_background_checks(db: &Database) {
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "applicant_reviewers"]
 pub struct NewApplicantReviewer {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        serialize_with = "airtable_api::user_format_as_string::serialize",
+        deserialize_with = "airtable_api::user_format_as_string::deserialize"
+    )]
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
@@ -2164,8 +2184,7 @@ pub struct NewApplicantReviewer {
 /// Implement updating the Airtable record for an ApplicantReviewer.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
-    async fn update_airtable_record(&mut self, _record: ApplicantReviewer) {
-    }
+    async fn update_airtable_record(&mut self, _record: ApplicantReviewer) {}
 }
 
 #[instrument(skip(db))]
@@ -2207,9 +2226,9 @@ pub async fn update_applicant_reviewers(db: &Database) {
         let no = row[5].parse::<i32>().unwrap_or(0);
         let not_applicable = row[6].parse::<i32>().unwrap_or(0);
 
-        let user = Users::get_from_db(db, email.trim(GSUITE_DOMAIN).to_string()).unwrap();
+        let user = User::get_from_db(db, email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()).unwrap();
 
-        let reviewer = NewApplicantReviewer{
+        let reviewer = NewApplicantReviewer {
             name: user.full_name(),
             email,
             evaluations,
@@ -2218,15 +2237,18 @@ pub async fn update_applicant_reviewers(db: &Database) {
             pass,
             no,
             not_applicable,
-        }
-        // Update the applicant  reviewer in the database.
+        };
+
+        // Upsert the applicant reviewer in the database.
         reviewer.upsert(db).await;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::applicants::{refresh_background_checks, refresh_db_applicants, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants};
+    use crate::applicants::{
+        refresh_background_checks, refresh_db_applicants, update_applicant_reviewers, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants,
+    };
     use crate::db::Database;
     use crate::schema::applicants;
 
@@ -2247,6 +2269,14 @@ mod tests {
         // originally.
         let a: Applicant = serde_json::from_str(&scorers).unwrap();
         assert_eq!(applicant, a);
+    }
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
+    async fn test_applicant_reviewer_leaderboard() {
+        let db = Database::new();
+
+        update_applicant_reviewers(&db).await;
     }
 
     #[ignore]

@@ -8,5 +8,5 @@ CREATE TABLE applicant_reviewers (
     pass INTEGER NOT NULL DEFAULT 0,
     no INTEGER NOT NULL DEFAULT 0,
     not_applicable INTEGER NOT NULL DEFAULT 0,
-    airtable_record_id VARCHAR NOT NULL
+    airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

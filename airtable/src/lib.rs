@@ -40,8 +40,8 @@ use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
-use serde::de::{SeqAccess, Visitor};
-use serde::{Deserialize, Serialize};
+use serde::de::{MapAccess, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Endpoint for the Airtable API.
 const ENDPOINT: &str = "https://api.airtable.com/v0/";
@@ -416,6 +416,100 @@ pub struct User {
     pub name: String,
 }
 
+enum UserField {
+    Id,
+    Email,
+    Name,
+}
+
+const USERFIELDS: &[&str] = &["id", "email", "name"];
+
+impl<'de> Deserialize<'de> for UserField {
+    fn deserialize<D>(deserializer: D) -> Result<UserField, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct UserFieldVisitor;
+
+        impl<'de> Visitor<'de> for UserFieldVisitor {
+            type Value = UserField;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("`id` `email` or `name`")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<UserField, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "id" => Ok(UserField::Id),
+                    "email" => Ok(UserField::Email),
+                    "name" => Ok(UserField::Name),
+                    _ => Err(serde::de::Error::unknown_field(value, USERFIELDS)),
+                }
+            }
+        }
+
+        deserializer.deserialize_identifier(UserFieldVisitor)
+    }
+}
+
+struct UserVisitor;
+
+impl<'de> Visitor<'de> for UserVisitor {
+    type Value = User;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("struct User")
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> Result<User, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let id = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+        let email = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+        let name = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
+        Ok(User { id, email, name })
+    }
+
+    fn visit_map<V>(self, mut map: V) -> Result<User, V::Error>
+    where
+        V: MapAccess<'de>,
+    {
+        let mut id = None;
+        let mut email = None;
+        let mut name = None;
+        while let Some(key) = map.next_key()? {
+            match key {
+                UserField::Id => {
+                    if id.is_some() {
+                        return Err(serde::de::Error::duplicate_field("id"));
+                    }
+                    id = Some(map.next_value()?);
+                }
+                UserField::Email => {
+                    if email.is_some() {
+                        return Err(serde::de::Error::duplicate_field("email"));
+                    }
+                    email = Some(map.next_value()?);
+                }
+                UserField::Name => {
+                    if name.is_some() {
+                        return Err(serde::de::Error::duplicate_field("name"));
+                    }
+                    name = Some(map.next_value()?);
+                }
+            }
+        }
+        let id = id.ok_or_else(|| serde::de::Error::missing_field("id"))?;
+        let email = email.ok_or_else(|| serde::de::Error::missing_field("email"))?;
+        let name = name.ok_or_else(|| serde::de::Error::missing_field("name"))?;
+        Ok(User { id, email, name })
+    }
+}
+
 struct UsersVisitor;
 
 impl<'de> Visitor<'de> for UsersVisitor {
@@ -506,5 +600,42 @@ pub mod user_format_as_array_of_strings {
         }
 
         Ok(users)
+    }
+}
+
+pub mod user_format_as_string {
+    use super::{UserVisitor, USERFIELDS};
+    use serde::ser::SerializeStruct;
+    use serde::{self, Deserializer, Serializer};
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(email: &str, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("User", 1)?;
+        state.serialize_field("email", &email)?;
+        state.end()
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let user = deserializer.deserialize_struct("User", USERFIELDS, UserVisitor).unwrap();
+        Ok(user.email)
     }
 }
