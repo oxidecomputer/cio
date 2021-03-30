@@ -34,7 +34,7 @@ use cio_api::applicants::get_role_from_sheet_id;
 use cio_api::applicants::{Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users};
 use cio_api::db::Database;
-use cio_api::mailing_list::MailchimpWebhook;
+use cio_api::mailing_list::{MailchimpWebhook, MailingListSubscriber};
 use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rfds::is_image;
 use cio_api::schema::applicants;
@@ -965,7 +965,7 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query
 
         event!(Level::INFO, "subscriber {} created successfully", subscriber.email);
     } else {
-        event!(Level::INFO, "subscriber {} already exists", subscriber.email);
+        event!(Level::INFO, "subscriber {} already exists", new_subscriber.email);
     }
 
     Ok(HttpResponseAccepted("ok".to_string()))
