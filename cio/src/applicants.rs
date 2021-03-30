@@ -2239,8 +2239,6 @@ pub async fn update_applicant_reviewers(db: &Database) {
             not_applicable,
         };
 
-        println!("{}", json!(reviewer).to_string());
-
         // Upsert the applicant reviewer in the database.
         reviewer.upsert(db).await;
     }
