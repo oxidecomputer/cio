@@ -30,7 +30,7 @@ use tar::Archive;
 use tracing::instrument;
 use walkdir::WalkDir;
 
-use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS};
+use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
@@ -2125,6 +2125,36 @@ pub async fn refresh_background_checks(db: &Database) {
             }
         }
     }
+}
+
+/// The data type for a ApplicantReviewer.
+#[db {
+    new_struct_name = "ApplicantReviewer",
+    airtable_base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
+    airtable_table = "AIRTABLE_REVIEWER_LEADERBOARD_TABLE",
+    match_on = {
+        "email" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "applicant_reviewers"]
+pub struct NewApplicantReviewer {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default)]
+    pub evaluations: i32,
+    #[serde(default)]
+    pub emphatic_yes: i32,
+    #[serde(default)]
+    pub yes: i32,
+    #[serde(default)]
+    pub pass: i32,
+    #[serde(default)]
+    pub no: i32,
+    #[serde(default)]
+    pub not_applicable: i32,
 }
 
 #[cfg(test)]
