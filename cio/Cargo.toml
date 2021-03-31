@@ -61,8 +61,8 @@ serde_qs = "0.7"
 sheets = "^0.1.0"
 shippo = "^0.1.12"
 #shippo = { path = "../shippo" }
-slack-chat-api = "^0.1.4"
-#slack-chat-api = { path = "../slack" }
+#slack-chat-api = "^0.1.4"
+slack-chat-api = { path = "../slack" }
 tailscale-api = "^0.1.0"
 #tailscale-api = { path = "../tailscale" }
 tar = "^0.4"

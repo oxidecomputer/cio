@@ -136,6 +136,28 @@ impl Slack {
         Ok(r.users)
     }
 
+    /// Get billable info.
+    /// FROM: https://api.slack.com/methods/team.billableInfo
+    pub async fn billable_info(&self) -> Result<HashMap<String, BillableInfo>, APIError> {
+        // Build the request.
+        // TODO: paginate.
+        let request = self.request(Method::GET, "team.billableInfo", (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: BillableInfoResponse = resp.json().await.unwrap();
+        Ok(r.billable_info)
+    }
+
     /// Invite a user to a workspace.
     /// FROM: https://api.slack.com/methods/admin.users.invite
     pub async fn invite_user(&self, invite: UserInvite) -> Result<(), APIError> {
@@ -543,4 +565,18 @@ pub struct User {
 pub struct UpdateUserProfileRequest {
     pub user: String,
     pub profile: UserProfile,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct BillableInfoResponse {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub billable_info: HashMap<String, BillableInfo>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct BillableInfo {
+    #[serde(default)]
+    pub billing_active: bool,
 }

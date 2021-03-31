@@ -78,6 +78,8 @@ pub async fn refresh_software_vendors() {
 
     let okta = Okta::new_from_env();
 
+    let slack = slack_chat_api::Slack::new_from_env();
+
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SoftwareVendor>> = SoftwareVendor::airtable().list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![]).await.unwrap();
     for vendor_record in results {
@@ -99,6 +101,18 @@ pub async fn refresh_software_vendors() {
             vendor.users = users.len() as i32;
         }
 
+        if vendor.name == "Slack" {
+            let users = slack.billable_info().await.unwrap();
+            let mut count = 0;
+            for (_, user) in users {
+                if user.billing_active {
+                    count += 1;
+                }
+            }
+
+            vendor.users = count;
+        }
+
         // Airtable, Brex, Gusto, Expensify are all the same number of users as
         // in all@.
         if vendor.name == "Airtable" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
@@ -112,8 +126,8 @@ pub async fn refresh_software_vendors() {
 
         if db_vendor.airtable_record_id.is_empty() {
             db_vendor.airtable_record_id = vendor_record.id;
-            db_vendor.update(&db).await;
         }
+        db_vendor.update(&db).await;
     }
 }
 
