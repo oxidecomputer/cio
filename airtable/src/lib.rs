@@ -307,6 +307,43 @@ impl Airtable {
         }
     }
 
+    /// List users.
+    /// This is for an enterprise admin to do only.
+    /// FROM: https://airtable.com/api/enterprise
+    pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
+        if self.enterprise_account_id.is_empty() {
+            // Return an error early.
+            return Err(APIError {
+                status_code: StatusCode::OK,
+                body: "An enterprise account id is required.".to_string(),
+            });
+        }
+
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            format!("meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            (),
+            Some(vec![("state", "provisioned".to_string())]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let result: UsersResponse = resp.json().await.unwrap();
+
+        Ok(result.users)
+    }
+
     /// Delete internal user by email.
     /// This is for an enterprise admin to do only.
     /// The user must be an internal user, meaning they have an email with the company domain.
@@ -530,6 +567,13 @@ impl<'de> Visitor<'de> for UsersVisitor {
 
         Ok(users)
     }
+}
+
+/// The response returned from listing users.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct UsersResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub users: Vec<User>,
 }
 
 /// The response returned from deleting a user.

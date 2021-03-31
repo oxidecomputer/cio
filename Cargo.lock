@@ -604,7 +604,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#586c31621a24cfc87541598ebf99d6b367deb5fb"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#173adb8b014130cf05be5a981c6c6105f37ee818"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -623,7 +623,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -632,6 +632,7 @@ dependencies = [
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "nom_pem",
+ "okta 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "openapiv3",
  "openssl",
  "opentelemetry",
@@ -685,7 +686,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1643,7 +1644,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1655,9 +1656,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.13"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e91496bf717df6147a518d236e06cf7141d9ecf24c3f3e7ef552163bb8585a3"
+checksum = "7a7911071983c3c37f05a6c75217554f2b4b592bc9ddaecdcd8aafbd755d58d1"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2230,7 +2231,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#586c31621a24cfc87541598ebf99d6b367deb5fb"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#173adb8b014130cf05be5a981c6c6105f37ee818"
 dependencies = [
  "Inflector",
  "proc-macro2",

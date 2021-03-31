@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_FINANCE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
+use crate::configs::Group;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::software_vendors;
@@ -96,6 +97,14 @@ pub async fn refresh_software_vendors() {
         if vendor.name == "Google Workspace" {
             let users = gsuite.list_users().await.unwrap();
             vendor.users = users.len() as i32;
+        }
+
+        // Airtable, Brex, Gusto, Expensify are all the same number of users as
+        // in all@.
+        if vendor.name == "Airtable" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
+            let group = Group::get_from_db(&db, "all".to_string()).unwrap();
+            let airtable_group = group.get_existing_airtable_record().await.unwrap();
+            vendor.users = airtable_group.fields.members.len() as i32;
         }
 
         // Upsert the record in our database.
