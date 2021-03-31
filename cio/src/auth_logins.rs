@@ -26,21 +26,6 @@ use crate::utils::{DOMAIN, GSUITE_DOMAIN};
     airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
     airtable_table = "AIRTABLE_AUTH_USERS_TABLE",
     custom_partial_eq = true,
-    airtable_fields = [
-        "id",
-        "link_to_people",
-        "logins_count",
-        "updated_at",
-        "created_at",
-        "user_id",
-        "last_login",
-        "email_verified",
-        "email",
-        "link_to_auth_user_logins",
-        "link_to_page_views",
-        "last_application_accessed",
-        "company",
-    ],
     match_on = {
         "user_id" = "String",
     },
@@ -59,7 +44,12 @@ pub struct NewAuthUser {
     pub email: String,
     #[serde(default)]
     pub email_verified: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        serialize_with = "airtable_api::attachment_format_as_string::serialize",
+        deserialize_with = "airtable_api::attachment_format_as_string::deserialize"
+    )]
     pub picture: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub company: String,

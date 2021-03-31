@@ -26,10 +26,6 @@ struct Params {
     /// If so, we will not add the derive method PartialEq to the new struct.
     #[serde(default)]
     custom_partial_eq: bool,
-    /// When we want to only request some fields from the Airtable API. This happens with fields
-    /// like "image" where Airtable will break our type if it is returned.
-    #[serde(default)]
-    airtable_fields: Vec<String>,
     /// The struct item and type that we will filter on to find unique database entries.
     match_on: HashMap<String, String>,
 }
@@ -81,7 +77,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Get the Airtable information.
     let airtable_base_id = format_ident!("{}", params.airtable_base_id);
     let airtable_table = format_ident!("{}", params.airtable_table);
-    let airtable_fields = params.airtable_fields;
 
     let airtable = quote! {
     // Import what we need from diesel so the database queries work.
@@ -392,7 +387,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         #[inline]
         pub async fn get_from_airtable() -> std::collections::BTreeMap<i32, airtable_api::Record<#new_struct_name>> {
             let result: Vec<airtable_api::Record<#new_struct_name>> = #new_struct_name::airtable()
-                .list_records(&#new_struct_name::airtable_table(), "Grid view", vec![#(#airtable_fields),*])
+                .list_records(&#new_struct_name::airtable_table(), "Grid view", vec![])
                 .await
                 .unwrap();
 

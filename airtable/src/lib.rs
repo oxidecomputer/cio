@@ -552,6 +552,64 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Attachment {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub filename: String,
+    #[serde(default)]
+    pub size: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
+    pub type_: String,
+    #[serde(default)]
+    pub thumbnails: Thumbnails,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Thumbnails {
+    #[serde(default)]
+    pub small: Full,
+    #[serde(default)]
+    pub large: Full,
+    #[serde(default)]
+    pub full: Full,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Full {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default)]
+    pub width: i64,
+    #[serde(default)]
+    pub height: i64,
+}
+
+struct AttachmentsVisitor;
+
+impl<'de> Visitor<'de> for AttachmentsVisitor {
+    type Value = Vec<Attachment>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a very special vector")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
+        let mut attachments: Vec<Attachment> = Default::default();
+
+        // While there are entries remaining in the input, add them
+        // into our vector.
+        while let Some(attachment) = access.next_element::<Attachment>()? {
+            attachments.push(attachment);
+        }
+
+        Ok(attachments)
+    }
+}
+
 pub mod user_format_as_array_of_strings {
     use super::{User, UsersVisitor};
     use serde::ser::SerializeSeq;
@@ -637,5 +695,49 @@ pub mod user_format_as_string {
     {
         let user = deserializer.deserialize_struct("User", USERFIELDS, UserVisitor).unwrap();
         Ok(user.email)
+    }
+}
+
+pub mod attachment_format_as_string {
+    use super::{Attachment, AttachmentsVisitor};
+    use serde::ser::SerializeSeq;
+    use serde::{self, Deserializer, Serializer};
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(url: &str, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Make our array of Airtable attachment objects.
+        let mut seq = serializer.serialize_seq(Some(1)).unwrap();
+        let mut attachment: Attachment = Default::default();
+        attachment.url = url.to_string();
+        seq.serialize_element(&attachment).unwrap();
+        seq.end()
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let airtable_attachments = deserializer.deserialize_seq(AttachmentsVisitor {}).unwrap();
+        let mut url = String::new();
+        if !airtable_attachments.is_empty() {
+            url = airtable_attachments[0].url.to_string();
+        }
+        Ok(url)
     }
 }
