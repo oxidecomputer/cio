@@ -44,12 +44,7 @@ pub struct NewAuthUser {
     pub email: String,
     #[serde(default)]
     pub email_verified: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        serialize_with = "airtable_api::attachment_format_as_string::serialize",
-        deserialize_with = "airtable_api::attachment_format_as_string::deserialize"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
     pub picture: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub company: String,

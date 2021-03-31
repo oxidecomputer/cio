@@ -123,9 +123,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "730676522cf17202537c49c0fcd10b7ad2fae6818b993007df590ef550d1ed10"
+version = "0.1.24"
 dependencies = [
  "chrono",
  "reqwest",
@@ -137,6 +135,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34fc63734c628b0e01576bf3acc07680be6ae904ab78aa0059c0067f3b1f6300"
 dependencies = [
  "chrono",
  "reqwest",
@@ -607,7 +607,7 @@ version = "0.2.0"
 source = "git+https://github.com/oxidecomputer/cio?branch=master#5c7f9437964e616cee7c6826ab05cf6bb7960183"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.23",
+ "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
  "checkr 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -669,7 +669,7 @@ name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.24",
+ "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
  "checkr 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
