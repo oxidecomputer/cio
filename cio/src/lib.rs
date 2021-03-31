@@ -10,6 +10,7 @@ pub mod certs;
 pub mod configs;
 pub mod core;
 pub mod db;
+pub mod finance;
 pub mod gsuite;
 pub mod interviews;
 pub mod journal_clubs;

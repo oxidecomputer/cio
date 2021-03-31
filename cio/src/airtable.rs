@@ -36,4 +36,7 @@ pub static AIRTABLE_BASE_ID_SHIPMENTS: &str = "appQD9Sitpo8baLZ4";
 pub static AIRTABLE_OUTBOUND_TABLE: &str = "Outbound";
 pub static AIRTABLE_INBOUND_TABLE: &str = "Inbound";
 
+pub static AIRTABLE_BASE_ID_FINANCE: &str = "appduLHDVQ332gKyf";
+pub static AIRTABLE_SOFTWARE_VENDORS_TABLE: &str = "Software Vendors";
+
 pub static AIRTABLE_GRID_VIEW: &str = "Grid view";
