@@ -1,7 +1,7 @@
 [package]
 name = "gsuite-api"
 description = "An API client for GSuite APIs: directory, resources, groups"
-version = "0.1.13"
+version = "0.1.14"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"

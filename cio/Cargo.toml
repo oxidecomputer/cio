@@ -42,6 +42,7 @@ hyper = "0.13.0"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 macros = { path = "../macros" }
 nom_pem = "4"
+okta = "0.0.3"
 openapiv3 = "=0.3.2"
 openssl = "0.10"
 opentelemetry = { version = "0.10", default-features = false, features = ["trace", "tokio"] }

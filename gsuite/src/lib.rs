@@ -1593,6 +1593,7 @@ pub struct Organization {
     pub location: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    #[serde(default)]
     pub primary: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub symbol: String,
@@ -1608,6 +1609,7 @@ pub struct UserPhone {
     /// If the value of type is custom, this property contains the custom type string.
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
     pub custom_type: String,
+    #[serde(default)]
     pub primary: bool,
     #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
     pub typev: String,

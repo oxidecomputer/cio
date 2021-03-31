@@ -69,8 +69,11 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Get the original struct information.
     let og_struct: ItemStruct = syn::parse2(item.clone()).unwrap();
     let mut fields: Vec<&Field> = Default::default();
+    let mut struct_inners = quote!();
     for field in og_struct.fields.iter() {
         fields.push(field);
+        let ident = field.ident.clone();
+        struct_inners = quote!(#struct_inners#ident: item.#ident.clone(),);
     }
     let og_struct_name = og_struct.ident;
 
@@ -139,6 +142,14 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             self.create_in_db(db)
+        }
+    }
+
+    impl From<#new_struct_name> for #og_struct_name {
+        fn from(item: #new_struct_name) -> Self {
+            #og_struct_name {
+                #struct_inners
+            }
         }
     }
 
@@ -363,9 +374,9 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
-    impl Into<Vec<#new_struct_name>> for #new_struct_name_plural {
-        fn into(self) -> Vec<#new_struct_name> {
-            self.0
+    impl From<#new_struct_name_plural> for Vec<#new_struct_name> {
+        fn from(item: #new_struct_name_plural) -> Self {
+            item.0
         }
     }
 
