@@ -431,6 +431,26 @@ table! {
         relevant_components -> Array<Text>,
         pdf_link_github -> Varchar,
         pdf_link_google_drive -> Varchar,
+    }
+}
+
+table! {
+    software_vendors (id) {
+        id -> Int4,
+        name -> Varchar,
+        status -> Varchar,
+        description -> Varchar,
+        website -> Varchar,
+        has_okta_integration -> Bool,
+        used_purely_for_api -> Bool,
+        pay_as_you_go -> Bool,
+        pay_as_you_go_pricing_description -> Varchar,
+        software_licenses -> Bool,
+        cost_per_user_per_month -> Float4,
+        users -> Int4,
+        flat_cost_per_month -> Float4,
+        total_cost_per_month -> Float4,
+        groups -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }
@@ -488,5 +508,6 @@ allow_tables_to_appear_in_same_query!(
     page_views,
     recorded_meetings,
     rfds,
+    software_vendors,
     users,
 );
