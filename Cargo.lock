@@ -604,7 +604,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#173adb8b014130cf05be5a981c6c6105f37ee818"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#479ba7ede4406de144ec98aa833371dc08ec91a6"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -650,7 +650,7 @@ dependencies = [
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.4",
+ "slack-chat-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tokio",
@@ -713,7 +713,7 @@ dependencies = [
  "serde_qs 0.7.2",
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.5",
+ "slack-chat-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tokio",
@@ -2231,7 +2231,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#173adb8b014130cf05be5a981c6c6105f37ee818"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#479ba7ede4406de144ec98aa833371dc08ec91a6"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -3918,13 +3918,10 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
 name = "slack-chat-api"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a92047e76aaad43b3d01afe958c65cc2ddd5457c1c7cbffdb496d83d5e1a7957"
+version = "0.1.5"
 dependencies = [
  "chrono",
  "reqwest",
- "schemars",
  "serde",
  "serde_json",
 ]
@@ -3932,6 +3929,8 @@ dependencies = [
 [[package]]
 name = "slack-chat-api"
 version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3dbdadb7c0a1115287b27ae39e4ec941d1c689cbb53da4174e438cb06a68ccf"
 dependencies = [
  "chrono",
  "reqwest",
