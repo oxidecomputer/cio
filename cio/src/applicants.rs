@@ -1754,6 +1754,7 @@ pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
     sheets.insert("Product Engineering and Design", "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI");
     sheets.insert("Technical Program Management", "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU");
+    sheets.insert("Operations Manager", "1S21W7ouI4qLeic4T71MGRL1Vk-ToqSQ6Z95GN-PT6Zc");
 
     sheets
 }
