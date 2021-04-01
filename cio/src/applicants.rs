@@ -1083,12 +1083,6 @@ Oxide Candidate Materials: {}
 
 ## Reminder
 
-To view the all the candidates refer to the following Google spreadsheets:
-
-- Engineering Applications: https://applications-engineering.corp.oxide.computer
-- Product Engineering and Design Applications: https://applications-product.corp.oxide.computer
-- Technical Program Manager Applications: https://applications-tpm.corp.oxide.computer
-
 The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
 ",
             self.resume, self.materials,
