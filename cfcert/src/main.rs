@@ -1,9 +1,6 @@
 use std::env;
 use std::error::Error;
-use std::fs::File;
-use std::io::prelude::*;
 
-use cio_api::certs::create_ssl_certificate;
 use cloudflare::endpoints::{dns, zone};
 use cloudflare::framework::{
     async_api::{ApiClient, Client},
@@ -96,15 +93,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 
         println!("Updated DNS record: {:?}", dns_record);
     }
-
-    println!("Creating SSL certificate for {}", domain);
-    let cert = create_ssl_certificate(&domain).await;
-
-    let mut file = File::create("/etc/cloudflare/certificate").unwrap();
-    file.write_all(cert.certificate.as_bytes()).unwrap();
-
-    let mut key = File::create("/etc/cloudflare/private_key").unwrap();
-    key.write_all(cert.private_key.as_bytes()).unwrap();
 
     Ok(())
 }

@@ -531,7 +531,6 @@ checksum = "e3c69b077ad434294d3ce9f1f6143a2a4b89a8a2d54ef813d85003a4fd1137fd"
 name = "cfcert"
 version = "0.1.0"
 dependencies = [
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "cloudflare-rs",
  "tokio",
 ]
