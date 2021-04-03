@@ -23,6 +23,7 @@ FROM debian:sid-slim
 
 RUN apt-get update && apt-get install -y \
 	ca-certificates \
+	libpq5 \
 	libssl1.1 \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
