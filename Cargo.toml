@@ -2,6 +2,7 @@
 members = [
 	"airtable",
 	"checkr",
+	"cfcert",
 	"cio",
 	"drive",
 	"giphy",

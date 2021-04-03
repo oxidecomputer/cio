@@ -38,3 +38,11 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/cio:webhooky
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
+      - name: Build and push - cfcert
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          file: ./cfcert/Dockerfile
+          tags: ghcr.io/${{ github.repository_owner }}/cio:cfcert
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache

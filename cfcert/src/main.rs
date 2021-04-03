@@ -1,0 +1,110 @@
+use std::env;
+use std::error::Error;
+use std::fs::File;
+use std::io::prelude::*;
+
+use cio_api::certs::create_ssl_certificate;
+use cloudflare::endpoints::{dns, zone};
+use cloudflare::framework::{
+    async_api::{ApiClient, Client},
+    auth::Credentials,
+    Environment, HttpApiClientConfig,
+};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    let args: Vec<String> = env::args().collect();
+
+    let domain = &args[1];
+    let ip = &args[2];
+
+    println!("Setting up Cloudflare A record from {} -> {}", ip, domain);
+    // Create the Cloudflare client.
+    let cf_creds = Credentials::UserAuthKey {
+        email: env::var("CLOUDFLARE_EMAIL").unwrap(),
+        key: env::var("CLOUDFLARE_TOKEN").unwrap(),
+    };
+    let api_client = Client::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
+
+    // We need the root of the domain not a subdomain.
+    let domain_parts: Vec<&str> = domain.split('.').collect();
+    let root_domain = format!("{}.{}", domain_parts[domain_parts.len() - 2], domain_parts[domain_parts.len() - 1]);
+
+    // Get the zone ID for the domain.
+    let zones = api_client
+        .request(&zone::ListZones {
+            params: zone::ListZonesParams {
+                name: Some(root_domain.to_string()),
+                ..Default::default()
+            },
+        })
+        .await
+        .unwrap()
+        .result;
+
+    // Our zone identifier should be the first record's ID.
+    let zone_identifier = &zones[0].id;
+
+    // Check if we already have a TXT record and we need to update it.
+    let dns_records = api_client
+        .request(&dns::ListDnsRecords {
+            zone_identifier: &zone_identifier,
+            params: dns::ListDnsRecordsParams {
+                name: Some(domain.to_string()),
+                ..Default::default()
+            },
+        })
+        .await
+        .unwrap()
+        .result;
+
+    // If we have a dns record already, update it. If not, create it.
+    if dns_records.is_empty() {
+        // Create the DNS record.
+        let dns_record = api_client
+            .request(&dns::CreateDnsRecord {
+                zone_identifier: &zone_identifier,
+                params: dns::CreateDnsRecordParams {
+                    name: &domain,
+                    content: dns::DnsContent::A { content: ip.parse().unwrap() },
+                    ttl: None,
+                    proxied: None,
+                    priority: None,
+                },
+            })
+            .await
+            .unwrap()
+            .result;
+
+        println!("Created DNS record: {:?}", dns_record);
+    } else {
+        // Update the DNS record.
+        let dns_record = api_client
+            .request(&dns::UpdateDnsRecord {
+                zone_identifier: &zone_identifier,
+                identifier: &dns_records[0].id,
+                params: dns::UpdateDnsRecordParams {
+                    name: &domain,
+                    content: dns::DnsContent::A { content: ip.parse().unwrap() },
+                    ttl: None,
+                    proxied: None,
+                },
+            })
+            .await
+            .unwrap()
+            .result;
+
+        println!("Updated DNS record: {:?}", dns_record);
+    }
+
+    println!("Creating SSL certificate for {}", domain);
+    let cert = create_ssl_certificate(&domain).await;
+
+    let mut file = File::create("/etc/cloudflare/certificate").unwrap();
+    file.write_all(cert.certificate.as_bytes()).unwrap();
+
+    let mut key = File::create("/etc/cloudflare/private_key").unwrap();
+    key.write_all(cert.private_key.as_bytes()).unwrap();
+
+    Ok(())
+}
