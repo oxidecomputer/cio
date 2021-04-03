@@ -128,7 +128,8 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
 
     // Create the array of links.
     for device in devices {
-        if device.addresses.is_empty() || device.hostname.is_empty() {
+        if device.addresses.is_empty() || device.hostname.is_empty() || device.hostname.starts_with("console-git-") {
+            // Skip over the domains we generate for the console.
             // Continue early.
             continue;
         }
