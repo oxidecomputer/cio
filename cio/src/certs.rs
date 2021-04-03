@@ -236,11 +236,13 @@ impl NewCertificate {
         let repo = github.repo(github_org(), "configs");
         let r = repo.get().await.unwrap();
 
-        let cert = repo.content().file(&self.get_github_path("fullchain.pem"), &r.default_branch).await.unwrap();
-        let priv_key = repo.content().file(&self.get_github_path("privkey.pem"), &r.default_branch).await.unwrap();
+        if let Ok(cert) = repo.content().file(&self.get_github_path("fullchain.pem"), &r.default_branch).await {
+            self.certificate = from_utf8(&cert.content).unwrap().to_string();
+        }
+        if let Ok(p) = repo.content().file(&self.get_github_path("privkey.pem"), &r.default_branch).await {
+            self.private_key = from_utf8(&p.content).unwrap().to_string();
+        }
 
-        self.certificate = from_utf8(&cert.content).unwrap().to_string();
-        self.private_key = from_utf8(&priv_key.content).unwrap().to_string();
         let exp_date = self.expiration_date();
         self.expiration_date = exp_date.date().naive_utc();
         self.valid_days_left = self.valid_days_left();
@@ -321,6 +323,10 @@ impl NewCertificate {
     #[instrument]
     #[inline]
     pub fn expiration_date(&self) -> DateTime<Utc> {
+        if self.certificate.is_empty() {
+            return Utc::now();
+        }
+
         // load as x509
         let x509 = X509::from_pem(self.certificate.as_bytes()).expect("from_pem");
 
