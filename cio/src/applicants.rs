@@ -265,7 +265,7 @@ impl NewApplicant {
         // Send the message.
         sendgrid_client
             .send_mail(
-                "Oxide Computer Company Application Received!".to_string(),
+                format!("Oxide Computer Company Application Received for {}", self.name),
                 format!(
                     "Dear {},
 
@@ -295,7 +295,7 @@ Sincerely,
         // Send the message.
         sendgrid_client
             .send_mail(
-                "Thank you for your application".to_string(),
+                format!("Thank you for your application, {}", self.name),
                 format!(
                     "Dear {},
 
@@ -324,7 +324,7 @@ The Oxide Team",
         // Send the message.
         sendgrid_client
             .send_mail(
-                "Thank you for your application".to_string(),
+                format!("Thank you for your application, {}", self.name),
                 format!(
                     "Dear {},
 
