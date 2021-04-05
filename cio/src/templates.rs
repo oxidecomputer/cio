@@ -125,7 +125,7 @@ pub async fn generate_terraform_files_for_aws_and_github(github: &Github, users:
 
     // Generate the members of each GitHub team.
     // TODO: don't hard code these
-    let teams = vec!["all", "eng"];
+    let teams = vec!["all", "eng", "consultants"];
     for team in teams {
         // Build the members array.
         let mut members: Vec<UserConfig> = Default::default();
