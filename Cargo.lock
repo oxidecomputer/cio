@@ -612,7 +612,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bcc23da4e0a9e70d700c1aea0fdc3328f317f6ca"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#245da68854e20754360e32b5d2916b51ea0633db"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2178,9 +2178,9 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "lock_api"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd96ffd135b2fd7b973ac026d28085defbe8983df057ced3eb4f2130b0831312"
+checksum = "5a3c91c24eae6777794bb1997ad98bbb87daf92890acab859f7eaa4320333176"
 dependencies = [
  "scopeguard",
 ]
@@ -2239,7 +2239,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bcc23da4e0a9e70d700c1aea0fdc3328f317f6ca"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#245da68854e20754360e32b5d2916b51ea0633db"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -4410,9 +4410,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.1.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "317cca572a0e89c3ce0ca1f1bdc9369547fe318a683418e42ac8f59d14701023"
+checksum = "5b5220f05bb7de7f3f53c7c065e1199b3172696fe2db9f9c4d8ad9b4ee74c342"
 dependencies = [
  "tinyvec_macros",
 ]
@@ -4614,15 +4614,15 @@ version = "0.2.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b98abb9e7300b9ac902cc04920945a874c1973e08c310627cc4458c04b70dd32"
 dependencies = [
- "trackable 1.1.0",
+ "trackable 1.2.0",
  "trackable_derive",
 ]
 
 [[package]]
 name = "trackable"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ffbe24a17d6b233c1d47e2d336b94a295a347b308a9a6d431a65b4eac57e97d"
+checksum = "017e2a1a93718e4e8386d037cfb8add78f1d690467f4350fb582f55af1203167"
 dependencies = [
  "trackable_derive",
 ]
