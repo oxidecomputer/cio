@@ -612,7 +612,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#245da68854e20754360e32b5d2916b51ea0633db"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#366fa8d85a1322f17fc2a1f137e0d596dccfffea"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2239,7 +2239,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#245da68854e20754360e32b5d2916b51ea0633db"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#366fa8d85a1322f17fc2a1f137e0d596dccfffea"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -3448,9 +3448,9 @@ dependencies = [
 
 [[package]]
 name = "schemars"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f81b69175bfb19653b59983e78701ebda5ee6a6f1e4875f65f9b92e2efde48f3"
+checksum = "bc6ab463ae35acccb5cba66c0084c985257b797d288b6050cc2f6ac1b266cb78"
 dependencies = [
  "chrono",
  "dyn-clone",
@@ -3462,9 +3462,9 @@ dependencies = [
 
 [[package]]
 name = "schemars_derive"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3a9f7bf22f96bc98cebd33a9286118c4e588b6a2fc26ab83469c18e12ae7678"
+checksum = "902fdfbcf871ae8f653bddf4b2c05905ddaabc08f69d32a915787e3be0d31356"
 dependencies = [
  "proc-macro2",
  "quote",
