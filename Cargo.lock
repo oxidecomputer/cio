@@ -659,7 +659,7 @@ dependencies = [
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tailscale-api 0.1.0",
  "tar",
  "tokio",
  "toml",
@@ -722,7 +722,7 @@ dependencies = [
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "tailscale-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tailscale-api 0.1.0",
  "tar",
  "tokio",
  "toml",
@@ -4240,22 +4240,22 @@ dependencies = [
 [[package]]
 name = "tailscale-api"
 version = "0.1.0"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "tailscale-api"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1015cae3287483248a0a2263a3d801694ff55eb71e37bcf87567633bfa6f1c30"
 dependencies = [
  "chrono",
  "reqwest",
  "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "tailscale-api"
+version = "0.1.1"
+dependencies = [
+ "chrono",
+ "reqwest",
  "serde",
  "serde_json",
 ]

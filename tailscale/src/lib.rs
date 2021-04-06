@@ -1,8 +1,8 @@
 /*!
  * A rust library for interacting with the Tailscale API.
  *
- * For more information, the Tailscale API is still in beta. Once the docs are
- * online, we need to link to them.
+ * For more information, the Tailscale API is still in beta. The docs are
+ * here: https://github.com/tailscale/tailscale/blob/main/api.md
  *
  * Example:
  *
@@ -124,6 +124,24 @@ impl Tailscale {
         let r: APIResponse = resp.json().await.unwrap();
 
         Ok(r.devices)
+    }
+
+    /// List devices.
+    pub async fn delete_device(&self, device_id: &str) -> Result<(), APIError> {
+        let request = self.request(Method::DELETE, &format!("devices/{}", device_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
     }
 }
 
