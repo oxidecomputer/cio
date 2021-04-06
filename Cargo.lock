@@ -612,7 +612,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#5f4bcbf05f3f8cb1458aeffa3a39e9a80e1668b8"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8f844b29d0505c36eb2e012c5b55b447dd1051ae"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -659,7 +659,7 @@ dependencies = [
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "tailscale-api 0.1.0",
+ "tailscale-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tokio",
  "toml",
@@ -722,7 +722,7 @@ dependencies = [
  "sheets 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "tailscale-api 0.1.0",
+ "tailscale-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tokio",
  "toml",
@@ -2154,9 +2154,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.92"
+version = "0.2.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56d855069fafbb9b344c0f962150cd2c1187975cb1c22c1522c240d8c4986714"
+checksum = "9385f66bf6105b241aa65a61cb923ef20efc665cb9f9bb50ac2f0c4b7f378d41"
 
 [[package]]
 name = "libflate"
@@ -2239,7 +2239,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#5f4bcbf05f3f8cb1458aeffa3a39e9a80e1668b8"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8f844b29d0505c36eb2e012c5b55b447dd1051ae"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -4239,13 +4239,10 @@ dependencies = [
 
 [[package]]
 name = "tailscale-api"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1015cae3287483248a0a2263a3d801694ff55eb71e37bcf87567633bfa6f1c30"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "reqwest",
- "schemars",
  "serde",
  "serde_json",
 ]
@@ -4253,6 +4250,8 @@ dependencies = [
 [[package]]
 name = "tailscale-api"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66706fb1da3baa74bb73603d5372625b98e651cef627e66d9b8552460e2f41ac"
 dependencies = [
  "chrono",
  "reqwest",
