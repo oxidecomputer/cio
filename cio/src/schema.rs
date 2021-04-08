@@ -488,7 +488,6 @@ allow_tables_to_appear_in_same_query!(
     buildings,
     certificates,
     conference_rooms,
-    github_labels,
     github_repos,
     groups,
     inbound_shipments,
