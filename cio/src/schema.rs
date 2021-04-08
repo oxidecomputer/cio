@@ -194,16 +194,6 @@ table! {
 }
 
 table! {
-    github_labels (id) {
-        id -> Int4,
-        name -> Varchar,
-        description -> Varchar,
-        color -> Varchar,
-        airtable_record_id -> Varchar,
-    }
-}
-
-table! {
     github_repos (id) {
         id -> Int4,
         github_id -> Varchar,

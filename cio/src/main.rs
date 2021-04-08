@@ -12,7 +12,7 @@ use tracing_subscriber::prelude::*;
 
 use cio_api::applicants::{Applicant, Applicants};
 use cio_api::auth_logins::{AuthUser, AuthUsers};
-use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, GithubLabel, GithubLabels, Group, Groups, Link, Links, User, Users};
+use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, Group, Groups, Link, Links, User, Users};
 use cio_api::db::Database;
 use cio_api::journal_clubs::{JournalClubMeeting, JournalClubMeetings};
 use cio_api::mailing_list::{MailingListSubscriber, MailingListSubscribers};
@@ -73,7 +73,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(api_get_auth_users).unwrap();
     api.register(api_get_buildings).unwrap();
     api.register(api_get_conference_rooms).unwrap();
-    api.register(api_get_github_labels).unwrap();
     api.register(api_get_github_repos).unwrap();
     api.register(api_get_groups).unwrap();
     api.register(api_get_journal_club_meetings).unwrap();
@@ -249,22 +248,6 @@ async fn api_get_conference_rooms(rqctx: Arc<RequestContext>) -> Result<HttpResp
     let db = &api_context.db;
 
     Ok(HttpResponseOk(ConferenceRooms::get_from_db(db).0))
-}
-
-/**
- * Fetch a list of our GitHub labels that get added to all repositories.
- */
-#[endpoint {
-    method = GET,
-    path = "/github/labels",
-}]
-#[instrument]
-#[inline]
-async fn api_get_github_labels(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Vec<GithubLabel>>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
-    let db = &api_context.db;
-
-    Ok(HttpResponseOk(GithubLabels::get_from_db(db).0))
 }
 
 /**

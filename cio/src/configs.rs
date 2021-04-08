@@ -17,15 +17,12 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use tracing::{event, instrument, Level};
 
-use crate::airtable::{
-    AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BASE_ID_MISC, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GITHUB_LABELS_TABLE, AIRTABLE_GROUPS_TABLE,
-    AIRTABLE_LINKS_TABLE,
-};
+use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource};
-use crate::schema::{buildings, conference_rooms, github_labels, groups, links, users};
+use crate::schema::{buildings, conference_rooms, groups, links, users};
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -39,8 +36,6 @@ pub struct Config {
     pub resources: BTreeMap<String, ResourceConfig>,
 
     pub links: BTreeMap<String, LinkConfig>,
-
-    pub labels: Vec<LabelConfig>,
 
     #[serde(alias = "github-outside-collaborators")]
     pub github_outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
@@ -820,32 +815,6 @@ impl UpdateAirtableRecord<Link> for Link {
     async fn update_airtable_record(&mut self, _record: Link) {}
 }
 
-/// The data type for a label. These become GitHub labels for all the repositories
-/// in our organization.
-#[db {
-    new_struct_name = "GithubLabel",
-    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
-    airtable_table = "AIRTABLE_GITHUB_LABELS_TABLE",
-    match_on = {
-        "name" = "String",
-    },
-}]
-#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "github_labels"]
-pub struct LabelConfig {
-    pub name: String,
-    pub description: String,
-    pub color: String,
-}
-
-/// Implement updating the Airtable record for a GithubLabel.
-#[async_trait]
-impl UpdateAirtableRecord<GithubLabel> for GithubLabel {
-    #[instrument]
-    #[inline]
-    async fn update_airtable_record(&mut self, _record: GithubLabel) {}
-}
-
 /// The data type for GitHub outside collaborators to repositories.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubOutsideCollaboratorsConfig {
@@ -1410,12 +1379,6 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync conference rooms.
     sync_conference_rooms(&db, configs.resources).await;
-
-    // Sync GitHub labels.
-    for label in configs.labels {
-        label.upsert(&db).await;
-    }
-    GithubLabels::get_from_db(&db).update_airtable().await;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
