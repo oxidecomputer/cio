@@ -1743,6 +1743,12 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
 
 #[instrument]
 #[inline]
+pub fn get_tracking_sheets() -> Vec<&'static str> {
+    vec!["18ZyWSX4jHY2FOlOhGwDuX3wXV48JnCdxtCq9aXC8cjk", "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM"]
+}
+
+#[instrument]
+#[inline]
 pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
     sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
@@ -1877,13 +1883,12 @@ impl ApplicantFormSheetColumns {
 
 #[instrument]
 #[inline]
-async fn get_reviewer_pool() -> Vec<String> {
+async fn get_reviewer_pool(sheet_id: &str) -> Vec<String> {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
-    let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
 
     // Get the values in the sheet.
     let sheet_values = sheets_client.get_values(&sheet_id, "Reviewer pool!A1:G1000".to_string()).await.unwrap();
@@ -1915,75 +1920,75 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
-    let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
+    for sheet_id in get_tracking_sheets() {
+        // Get the values in the sheet.
+        let sheet_values = sheets_client.get_values(&sheet_id, "Applicants to review!A1:G1000".to_string()).await.unwrap();
+        let values = sheet_values.values.unwrap();
 
-    // Get the values in the sheet.
-    let sheet_values = sheets_client.get_values(&sheet_id, "Applicants to review!A1:G1000".to_string()).await.unwrap();
-    let values = sheet_values.values.unwrap();
-
-    if values.is_empty() {
-        panic!("unable to retrieve any data values from Google sheet for applicant forms {}", sheet_id);
-    }
-
-    // Parse the sheet columns.
-    let columns = ApplicantFormSheetColumns::new();
-
-    let mut reviewer_pool = get_reviewer_pool().await;
-
-    // We'll assign reviewers randomly but attempt to produce roughly even loads
-    // across reviewers. To do this, we shuffle the list of reviewers, and then
-    // create a cycling iterator that produces that shuffled sequence forever.
-    // Whenever we need a group of 5 interviewers, we'll just take the next 5.
-    let mut rng = rand::thread_rng();
-    reviewer_pool.shuffle(&mut rng);
-    let mut reviewer_pool = reviewer_pool.iter().cloned().cycle();
-
-    // Iterate over the rows.
-    for (_, row) in values.iter().enumerate() {
-        if row[columns.email].is_empty() {
-            // Break our loop we are in an empty row.
-            break;
+        if values.is_empty() {
+            panic!("unable to retrieve any data values from Google sheet for applicant forms {}", sheet_id);
         }
 
-        let email = row[columns.email].to_string();
-        let form_id = row[columns.form_id].to_string();
-        let form_url = row[columns.form_url].to_string();
-        let form_responses_url = row[columns.form_responses_url].to_string();
+        // Parse the sheet columns.
+        let columns = ApplicantFormSheetColumns::new();
 
-        // Update each of the applicants.
-        for (_, sheet_id) in get_sheets_map() {
-            if let Ok(mut applicant) = applicants::dsl::applicants
-                .filter(applicants::dsl::email.eq(email.to_string()))
-                .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
-                .first::<Applicant>(&db.conn())
-            {
-                // Make sure the status is "Needs to be triaged".
-                let status = crate::applicant_status::Status::from_str(&applicant.status);
-                if status != Ok(crate::applicant_status::Status::NeedsToBeTriaged) {
-                    // Continue we don't care.
-                    continue;
+        let mut reviewer_pool = get_reviewer_pool(sheet_id).await;
+
+        // We'll assign reviewers randomly but attempt to produce roughly even loads
+        // across reviewers. To do this, we shuffle the list of reviewers, and then
+        // create a cycling iterator that produces that shuffled sequence forever.
+        // Whenever we need a group of 5 interviewers, we'll just take the next 5.
+        let mut rng = rand::thread_rng();
+        reviewer_pool.shuffle(&mut rng);
+        let mut reviewer_pool = reviewer_pool.iter().cloned().cycle();
+
+        // Iterate over the rows.
+        for (_, row) in values.iter().enumerate() {
+            if row[columns.email].is_empty() {
+                // Break our loop we are in an empty row.
+                break;
+            }
+
+            let email = row[columns.email].to_string();
+            let form_id = row[columns.form_id].to_string();
+            let form_url = row[columns.form_url].to_string();
+            let form_responses_url = row[columns.form_responses_url].to_string();
+
+            // Update each of the applicants.
+            for (_, sheet_id) in get_sheets_map() {
+                if let Ok(mut applicant) = applicants::dsl::applicants
+                    .filter(applicants::dsl::email.eq(email.to_string()))
+                    .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
+                    .first::<Applicant>(&db.conn())
+                {
+                    // Make sure the status is "Needs to be triaged".
+                    let status = crate::applicant_status::Status::from_str(&applicant.status);
+                    if status != Ok(crate::applicant_status::Status::NeedsToBeTriaged) {
+                        // Continue we don't care.
+                        continue;
+                    }
+
+                    applicant.scoring_form_id = form_id.to_string();
+                    applicant.scoring_form_url = form_url.to_string();
+                    applicant.scoring_form_responses_url = form_responses_url.to_string();
+
+                    // See if we already have scorers assigned.
+                    if applicant.scorers.is_empty() || applicant.scorers.len() < 5 {
+                        // Assign scorers and send email.
+                        // Choose next five reviewers.
+                        applicant.scorers = reviewer_pool.by_ref().take(5).collect();
+
+                        // Send emails to the scorers.
+                        // We don't need to do this since we will use airtable
+                        // for the emails.
+                        //for s in &applicant.scorers {
+                        //applicant.send_email_to_scorer(&s).await;
+                        //}
+                    }
+
+                    // Update the applicant in the database.
+                    applicant.update(db).await;
                 }
-
-                applicant.scoring_form_id = form_id.to_string();
-                applicant.scoring_form_url = form_url.to_string();
-                applicant.scoring_form_responses_url = form_responses_url.to_string();
-
-                // See if we already have scorers assigned.
-                if applicant.scorers.is_empty() || applicant.scorers.len() < 5 {
-                    // Assign scorers and send email.
-                    // Choose next five reviewers.
-                    applicant.scorers = reviewer_pool.by_ref().take(5).collect();
-
-                    // Send emails to the scorers.
-                    // We don't need to do this since we will use airtable
-                    // for the emails.
-                    //for s in &applicant.scorers {
-                    //applicant.send_email_to_scorer(&s).await;
-                    //}
-                }
-
-                // Update the applicant in the database.
-                applicant.update(db).await;
             }
         }
     }
@@ -1997,92 +2002,92 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
-    let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
+    for sheet_id in get_tracking_sheets() {
+        // Get the values in the sheet.
+        let sheet_values = sheets_client.get_values(&sheet_id, "Responses!A1:R1000".to_string()).await.unwrap();
+        let values = sheet_values.values.unwrap();
 
-    // Get the values in the sheet.
-    let sheet_values = sheets_client.get_values(&sheet_id, "Responses!A1:R1000".to_string()).await.unwrap();
-    let values = sheet_values.values.unwrap();
-
-    if values.is_empty() {
-        panic!("unable to retrieve any data values from Google sheet for applicant form responses {}", sheet_id);
-    }
-
-    // Iterate over the rows.
-    for (row_index, row) in values.iter().enumerate() {
-        if row_index == 0 {
-            // We are on the header row.
-            continue;
-        }
-        if row[0].is_empty() {
-            // Break our loop we are in an empty row.
-            break;
+        if values.is_empty() {
+            panic!("unable to retrieve any data values from Google sheet for applicant form responses {}", sheet_id);
         }
 
-        let email = row[1].to_string();
-
-        // Parse the scoring results.
-        let scoring_evaluations_count = row[2].parse::<i32>().unwrap_or(0);
-        let scoring_enthusiastic_yes_count = row[3].parse::<i32>().unwrap_or(0);
-        let scoring_yes_count = row[4].parse::<i32>().unwrap_or(0);
-        let scoring_pass_count = row[5].parse::<i32>().unwrap_or(0);
-        let scoring_no_count = row[6].parse::<i32>().unwrap_or(0);
-        let scoring_not_applicable_count = row[7].parse::<i32>().unwrap_or(0);
-        let mut scoring_insufficient_experience_count = 0;
-        let mut scoring_inapplicable_experience_count = 0;
-        let mut scoring_job_function_yet_needed_count = 0;
-        let mut scoring_underwhelming_materials_count = 0;
-        let mut value_reflected = "".to_string();
-        let mut value_violated = "".to_string();
-        let mut values_in_tension: Vec<String> = vec![];
-        if row.len() >= 10 {
-            scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
-            scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
-            scoring_job_function_yet_needed_count = row[11].parse::<i32>().unwrap_or(0);
-            scoring_underwhelming_materials_count = row[12].parse::<i32>().unwrap_or(0);
-
-            // Parse the values.
-            value_reflected = row[14].to_lowercase().to_string();
-            if value_reflected == "n/a" {
-                value_reflected = "".to_string();
+        // Iterate over the rows.
+        for (row_index, row) in values.iter().enumerate() {
+            if row_index == 0 {
+                // We are on the header row.
+                continue;
             }
-            value_violated = row[15].to_lowercase().to_string();
-            if value_violated == "n/a" {
-                value_violated = "".to_string();
+            if row[0].is_empty() {
+                // Break our loop we are in an empty row.
+                break;
             }
-            let value_in_tension_1 = row[16].to_lowercase().to_string();
-            if value_in_tension_1 != "n/a" && !value_in_tension_1.trim().is_empty() {
-                values_in_tension.push(value_in_tension_1);
+
+            let email = row[1].to_string();
+
+            // Parse the scoring results.
+            let scoring_evaluations_count = row[2].parse::<i32>().unwrap_or(0);
+            let scoring_enthusiastic_yes_count = row[3].parse::<i32>().unwrap_or(0);
+            let scoring_yes_count = row[4].parse::<i32>().unwrap_or(0);
+            let scoring_pass_count = row[5].parse::<i32>().unwrap_or(0);
+            let scoring_no_count = row[6].parse::<i32>().unwrap_or(0);
+            let scoring_not_applicable_count = row[7].parse::<i32>().unwrap_or(0);
+            let mut scoring_insufficient_experience_count = 0;
+            let mut scoring_inapplicable_experience_count = 0;
+            let mut scoring_job_function_yet_needed_count = 0;
+            let mut scoring_underwhelming_materials_count = 0;
+            let mut value_reflected = "".to_string();
+            let mut value_violated = "".to_string();
+            let mut values_in_tension: Vec<String> = vec![];
+            if row.len() >= 10 {
+                scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
+                scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
+                scoring_job_function_yet_needed_count = row[11].parse::<i32>().unwrap_or(0);
+                scoring_underwhelming_materials_count = row[12].parse::<i32>().unwrap_or(0);
+
+                // Parse the values.
+                value_reflected = row[14].to_lowercase().to_string();
+                if value_reflected == "n/a" {
+                    value_reflected = "".to_string();
+                }
+                value_violated = row[15].to_lowercase().to_string();
+                if value_violated == "n/a" {
+                    value_violated = "".to_string();
+                }
+                let value_in_tension_1 = row[16].to_lowercase().to_string();
+                if value_in_tension_1 != "n/a" && !value_in_tension_1.trim().is_empty() {
+                    values_in_tension.push(value_in_tension_1);
+                }
+                let value_in_tension_2 = row[17].to_lowercase().to_string();
+                if value_in_tension_2 != "n/a" && !value_in_tension_2.trim().is_empty() {
+                    values_in_tension.push(value_in_tension_2);
+                }
             }
-            let value_in_tension_2 = row[17].to_lowercase().to_string();
-            if value_in_tension_2 != "n/a" && !value_in_tension_2.trim().is_empty() {
-                values_in_tension.push(value_in_tension_2);
-            }
-        }
 
-        // Update each of the applicants.
-        for (_, sheet_id) in get_sheets_map() {
-            if let Ok(mut applicant) = applicants::dsl::applicants
-                .filter(applicants::dsl::email.eq(email.to_string()))
-                .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
-                .first::<Applicant>(&db.conn())
-            {
-                applicant.scoring_evaluations_count = scoring_evaluations_count;
-                applicant.scoring_enthusiastic_yes_count = scoring_enthusiastic_yes_count;
-                applicant.scoring_yes_count = scoring_yes_count;
-                applicant.scoring_pass_count = scoring_pass_count;
-                applicant.scoring_no_count = scoring_no_count;
-                applicant.scoring_not_applicable_count = scoring_not_applicable_count;
-                applicant.scoring_insufficient_experience_count = scoring_insufficient_experience_count;
-                applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
-                applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
-                applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
+            // Update each of the applicants.
+            for (_, sheet_id) in get_sheets_map() {
+                if let Ok(mut applicant) = applicants::dsl::applicants
+                    .filter(applicants::dsl::email.eq(email.to_string()))
+                    .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
+                    .first::<Applicant>(&db.conn())
+                {
+                    applicant.scoring_evaluations_count = scoring_evaluations_count;
+                    applicant.scoring_enthusiastic_yes_count = scoring_enthusiastic_yes_count;
+                    applicant.scoring_yes_count = scoring_yes_count;
+                    applicant.scoring_pass_count = scoring_pass_count;
+                    applicant.scoring_no_count = scoring_no_count;
+                    applicant.scoring_not_applicable_count = scoring_not_applicable_count;
+                    applicant.scoring_insufficient_experience_count = scoring_insufficient_experience_count;
+                    applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
+                    applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
+                    applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
 
-                applicant.value_reflected = value_reflected.to_string();
-                applicant.value_violated = value_violated.to_string();
-                applicant.values_in_tension = values_in_tension.clone();
+                    applicant.value_reflected = value_reflected.to_string();
+                    applicant.value_violated = value_violated.to_string();
+                    applicant.values_in_tension = values_in_tension.clone();
 
-                // Update the applicant in the database.
-                applicant.update(db).await;
+                    // Update the applicant in the database.
+                    applicant.update(db).await;
+                }
             }
         }
     }
