@@ -134,7 +134,7 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
             continue;
         }
 
-        let hostname = device.hostname.trim().trim_end_matches(".local").to_lowercase();
+        let hostname = device.name.trim().trim_end_matches(".local").to_lowercase();
 
         let l = ShortUrl {
             name: hostname.to_string(),
