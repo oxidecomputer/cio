@@ -63,8 +63,8 @@ shippo = "^0.1.12"
 #shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.5"
 #slack-chat-api = { path = "../slack" }
-#tailscale-api = "^0.1.1"
-tailscale-api = { path = "../tailscale" }
+tailscale-api = "^0.1.2"
+#tailscale-api = { path = "../tailscale" }
 tar = "^0.4"
 tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
 toml = "0.5"

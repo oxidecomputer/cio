@@ -7,7 +7,7 @@ use crate::configs::Links;
 use crate::db::Database;
 use crate::models::{GithubRepos, RFDs};
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
-use crate::utils::{authenticate_github_jwt, github_org};
+use crate::utils::{authenticate_github_jwt, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// Generate the files for the GitHub repository short URLs.
 #[instrument(skip(db, repo))]
@@ -134,7 +134,14 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
             continue;
         }
 
-        let hostname = device.name.trim().trim_end_matches(".local").to_lowercase();
+        let hostname = device
+            .name
+            .trim()
+            .trim_end_matches(".local")
+            .trim_end_matches(GSUITE_DOMAIN)
+            .trim_end_matches(DOMAIN)
+            .trim_end_matches('.')
+            .to_lowercase();
 
         let l = ShortUrl {
             name: hostname.to_string(),
