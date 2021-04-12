@@ -24,7 +24,7 @@ pub async fn cleanup_old_tailscale_devices() {
 
         let last_seen_duration = Utc::now() - device.last_seen;
         if last_seen_duration > Duration::days(1) {
-            println!("Deleting tailscale device {}", device.hostname);
+            println!("Deleting tailscale device {}", device.name);
             tailscale.delete_device(&device.id).await.unwrap();
         }
     }

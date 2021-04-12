@@ -128,7 +128,7 @@ impl Tailscale {
 
     /// List devices.
     pub async fn delete_device(&self, device_id: &str) -> Result<(), APIError> {
-        let request = self.request(Method::DELETE, &format!("devices/{}", device_id), (), None);
+        let request = self.request(Method::DELETE, &format!("device/{}", device_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
