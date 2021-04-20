@@ -265,7 +265,7 @@ impl NewApplicant {
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!("Oxide Computer Company Application Received for {}", self.name),
+                format!("Oxide Computer Company {} Application Received for {}", self.role, self.name),
                 format!(
                     "Dear {},
 
@@ -359,7 +359,7 @@ The Oxide Team",
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!("New Application: {}", self.name),
+                format!("New {} Application: {}", self.role, self.name),
                 self.as_company_notification_email(),
                 vec![format!("all@{}", DOMAIN)],
                 vec![],
