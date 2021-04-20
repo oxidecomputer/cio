@@ -607,6 +607,7 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
+            StatusCode::NO_CONTENT => (),
             s => {
                 return Err(APIError {
                     status_code: s,
@@ -693,6 +694,7 @@ impl GSuite {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
+            StatusCode::NO_CONTENT => (),
             s => {
                 return Err(APIError {
                     status_code: s,
