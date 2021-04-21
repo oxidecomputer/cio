@@ -189,6 +189,8 @@ pub struct Shipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub country: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub address_formatted: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub phone: String,
@@ -230,9 +232,25 @@ pub struct Shipment {
     pub messages: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub geocode_cache: String,
 }
 
 impl Shipment {
+    #[instrument]
+    #[inline]
+    fn populate_formatted_address(&mut self) {
+        let mut street_address = self.street_1.to_string();
+        if !self.street_2.is_empty() {
+            street_address = format!("{}\n{}", self.street_1, self.street_2,);
+        }
+        self.address_formatted = format!("{}\n{}, {} {} {}", street_address, self.city, self.state, self.zipcode, self.country)
+            .trim()
+            .trim_matches(',')
+            .trim()
+            .to_string();
+    }
+
     #[instrument]
     #[inline]
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
@@ -283,6 +301,7 @@ impl Shipment {
             state: get_value(values, "State").to_uppercase(),
             zipcode: get_value(values, "Zipcode").to_uppercase(),
             country,
+            address_formatted: String::new(),
             contents: contents.trim().to_string(),
             carrier: Default::default(),
             pickup_date: None,
@@ -302,6 +321,7 @@ impl Shipment {
             eta: None,
             messages: Default::default(),
             notes: Default::default(),
+            geocode_cache: Default::default(),
         }
     }
 
@@ -451,6 +471,7 @@ impl Shipment {
                 state,
                 zipcode,
                 country,
+                address_formatted: String::new(),
                 contents: contents.trim().to_string(),
                 carrier: Default::default(),
                 pickup_date: None,
@@ -470,6 +491,7 @@ impl Shipment {
                 eta: None,
                 messages: Default::default(),
                 notes: Default::default(),
+                geocode_cache: Default::default(),
             },
             sent,
         )
@@ -485,6 +507,9 @@ impl Shipment {
     #[tracing::instrument]
     #[inline]
     pub async fn create_or_get_shippo_shipment(&mut self) {
+        // Update the formatted address.
+        self.populate_formatted_address();
+
         // Create the shippo client.
         let shippo_client = Shippo::new_from_env();
 
