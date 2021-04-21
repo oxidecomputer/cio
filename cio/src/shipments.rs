@@ -948,6 +948,8 @@ xoxo,
 #[async_trait]
 impl UpdateAirtableRecord<Shipment> for Shipment {
     async fn update_airtable_record(&mut self, record: Shipment) {
+        self.geocode_cache = record.geocode_cache;
+
         if self.status.is_empty() {
             self.status = record.status;
         }
