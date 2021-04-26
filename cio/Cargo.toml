@@ -30,8 +30,8 @@ diffy = "^0.2.0"
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "working" }
 futures-util = "0.3"
 google-drive = "^0.1.0"
-#gsuite-api = "^0.1.15"
-gsuite-api = { path = "../gsuite" }
+gsuite-api = "^0.1.16"
+#gsuite-api = { path = "../gsuite" }
 gusto-api = "^0.1.1"
 #gusto-api = { path = "../gusto" }
 handlebars = "3.5.3"
