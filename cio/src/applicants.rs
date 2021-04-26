@@ -9,6 +9,7 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::offset::Utc;
+use chrono::NaiveDate;
 use chrono::{DateTime, Duration};
 use chrono_humanize::HumanTime;
 use google_drive::GoogleDrive;
@@ -188,6 +189,9 @@ pub struct NewApplicant {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub motor_vehicle_background_check_status: String,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<NaiveDate>,
+
     // This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
@@ -260,6 +264,7 @@ impl NewApplicant {
             request_background_check: Default::default(),
             criminal_background_check_status: Default::default(),
             motor_vehicle_background_check_status: Default::default(),
+            start_date: None,
             geocode_cache: Default::default(),
         }
     }
@@ -396,6 +401,18 @@ The Oxide Team",
             row[columns.linkedin].trim().to_lowercase()
         } else {
             "".to_string()
+        };
+
+        // If the length of the row is greater than the start date column
+        // then we have a start date.
+        let start_date = if row.len() > columns.start_date && columns.start_date != 0 {
+            if row[columns.start_date].trim().is_empty() {
+                None
+            } else {
+                Some(NaiveDate::parse_from_str(row[columns.start_date].trim(), "%Y-%m-%d").unwrap())
+            }
+        } else {
+            None
         };
 
         // If the length of the row is greater than the portfolio column
@@ -643,6 +660,7 @@ The Oxide Team",
             request_background_check,
             criminal_background_check_status,
             motor_vehicle_background_check_status,
+            start_date,
             geocode_cache: Default::default(),
         }
     }
@@ -1401,14 +1419,18 @@ Notes:
         let body = format!(
             "- [ ] Add to users.toml
 - [ ] Add to matrix chat
-Start Date: [START DATE (ex. Monday, January 20th, 2020)]
+Start Date: {}
 Personal Email: {}
 Twitter: [TWITTER HANDLE]
 GitHub: {}
 Phone: {}
 Location: {}
 cc @jessfraz @sdtuck @bcantrill",
-            self.email, self.github, self.phone, self.location,
+            self.start_date.unwrap().format("%A, %B %-d, %C%y").to_string(),
+            self.email,
+            self.github,
+            self.phone,
+            self.location,
         );
 
         // Create the issue.
@@ -1489,6 +1511,7 @@ pub struct ApplicantSheetColumns {
     pub value_violated: usize,
     pub value_in_tension_1: usize,
     pub value_in_tension_2: usize,
+    pub start_date: usize,
 }
 
 impl ApplicantSheetColumns {
@@ -1559,6 +1582,9 @@ impl ApplicantSheetColumns {
             }
             if c.contains("have sent follow up email") {
                 columns.sent_email_follow_up = index;
+            }
+            if c.contains("start date") {
+                columns.start_date = index;
             }
         }
         columns
@@ -2052,7 +2078,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
             let mut values_in_tension: Vec<String> = vec![];
 
             let mut scorers_completed: Vec<String> = vec![];
-            for (index, s) in vec!["thing@oxidecomputer.com"].iter().enumerate() {
+            for s in vec!["thing@oxidecomputer.com"] {
                 match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
                     Some(user) => {
                         scorers_completed.push(user.email());
