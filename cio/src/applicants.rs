@@ -2050,6 +2050,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
             let mut value_reflected = "".to_string();
             let mut value_violated = "".to_string();
             let mut values_in_tension: Vec<String> = vec![];
+            let scorers_completed: Vec<String> = vec![];
             if row.len() >= 10 {
                 scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
                 scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
@@ -2109,6 +2110,14 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                     applicant.value_reflected = value_reflected.to_string();
                     applicant.value_violated = value_violated.to_string();
                     applicant.values_in_tension = values_in_tension.clone();
+
+                    // Remove anyone from the scorers if they have already completed their review.
+                    for (index, scorer) in applicant.scorers.clone().iter().enumerate() {
+                        if scorers_completed.contains(scorer) {
+                            applicant.scorers.remove(index);
+                        }
+                    }
+                    applicant.scorers_completed = scorers_completed.clone();
 
                     // Update the applicant in the database.
                     applicant.update(db).await;
@@ -2324,6 +2333,8 @@ mod tests {
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
         update_applications_with_scoring_forms(&db).await;
 
+        // This must be after update_applications_with_scoring_forms, so that if someone
+        // has done the application then we remove them from the scorers.
         update_applications_with_scoring_results(&db).await;
     }
 }
