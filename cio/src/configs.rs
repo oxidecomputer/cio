@@ -249,7 +249,9 @@ impl UserConfig {
             .first::<Applicant>(&db.conn())
         {
             // Get their start date.
-            self.start_date = a.start_date.unwrap();
+            if a.start_date.is_some() {
+                self.start_date = a.start_date.unwrap();
+            }
         }
     }
 

@@ -2078,7 +2078,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
             let mut values_in_tension: Vec<String> = vec![];
 
             let mut scorers_completed: Vec<String> = vec![];
-            for s in vec!["thing@oxidecomputer.com"] {
+            for s in &["thing@oxidecomputer.com"] {
                 match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
                     Some(user) => {
                         scorers_completed.push(user.email());
