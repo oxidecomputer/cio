@@ -18,11 +18,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{event, instrument, Level};
 
 use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
+use crate::applicants::Applicant;
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource};
-use crate::schema::{buildings, conference_rooms, groups, links, users};
+use crate::schema::{applicants, buildings, conference_rooms, groups, links, users};
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -240,6 +241,18 @@ impl UserConfig {
         .to_string();
     }
 
+    #[instrument(skip(db))]
+    #[inline]
+    pub fn populate_start_date(&mut self, db: &Database) {
+        if let Ok(a) = applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
+            .first::<Applicant>(&db.conn())
+        {
+            // Get their start date.
+            self.start_date = a.start_date.unwrap();
+        }
+    }
+
     #[instrument]
     #[inline]
     pub fn populate_type(&mut self) {
@@ -269,14 +282,16 @@ impl UserConfig {
         }
     }
 
-    #[instrument]
+    #[instrument(skip(db))]
     #[inline]
-    pub async fn expand(&mut self) {
+    pub async fn expand(&mut self, db: &Database) {
         self.ensure_all_aliases();
 
         self.populate_ssh_keys().await;
 
         self.populate_from_gusto().await;
+
+        self.populate_start_date(db);
 
         self.populate_type();
     }
@@ -922,7 +937,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     }
     // Sync users.
     for (_, mut user) in users {
-        user.expand().await;
+        user.expand(db).await;
 
         // Check if we already have the new user in the database.
         let existing = User::get_from_db(db, user.username.to_string());
