@@ -16,6 +16,7 @@ use std::str::{from_utf8, FromStr};
 use std::sync::Arc;
 
 use chrono::offset::Utc;
+use chrono::NaiveDate;
 use chrono::{DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use diesel::prelude::*;
@@ -473,6 +474,12 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         if !status.is_empty() {
             a.status = status;
             a.raw_status = event.event.value.to_string();
+        }
+    } else if column_header.contains("start date") {
+        if event.event.value.trim().is_empty() {
+            a.start_date = None;
+        } else {
+            a.start_date = Some(NaiveDate::parse_from_str(event.event.value.trim(), "%m/%d/%Y").unwrap());
         }
     } else if column_header.contains("value reflected") {
         // Update the value reflected.
