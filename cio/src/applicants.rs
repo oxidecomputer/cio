@@ -2080,6 +2080,19 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                     applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
                     applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
                     applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
+                    if applicant.status.to_lowercase().contains("onboarding") || applicant.status.to_lowercase().contains("hired") {
+                        // Zero out the values for the scores.
+                        applicant.scoring_evaluations_count = 0;
+                        applicant.scoring_enthusiastic_yes_count = 0;
+                        applicant.scoring_yes_count = 0;
+                        applicant.scoring_pass_count = 0;
+                        applicant.scoring_no_count = 0;
+                        applicant.scoring_not_applicable_count = 0;
+                        applicant.scoring_insufficient_experience_count = 0;
+                        applicant.scoring_inapplicable_experience_count = 0;
+                        applicant.scoring_job_function_yet_needed_count = 0;
+                        applicant.scoring_underwhelming_materials_count = 0;
+                    }
 
                     applicant.value_reflected = value_reflected.to_string();
                     applicant.value_violated = value_violated.to_string();
