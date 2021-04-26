@@ -156,6 +156,10 @@ pub struct UserConfig {
 
     #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
     pub typev: String,
+
+    /// This field is automatically populated by airtable based on the user's start date.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub google_anniversary_event_id: String,
 }
 
 pub mod null_date_format {
@@ -495,7 +499,7 @@ xoxo,
 impl UpdateAirtableRecord<User> for User {
     #[instrument]
     #[inline]
-    async fn update_airtable_record(&mut self, _record: User) {
+    async fn update_airtable_record(&mut self, record: User) {
         // Get the current groups in Airtable so we can link to them.
         // TODO: make this more dry so we do not call it every single damn time.
         let groups = Groups::get_from_airtable().await;
@@ -516,6 +520,8 @@ impl UpdateAirtableRecord<User> for User {
         }
 
         self.groups = links;
+
+        self.google_anniversary_event_id = record.google_anniversary_event_id.to_string();
 
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.

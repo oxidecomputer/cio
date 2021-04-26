@@ -26,5 +26,6 @@ CREATE TABLE users (
     birthday DATE NOT NULL,
     public_ssh_keys [] TEXT NOT NULL,
     typev VARCHAR NOT NULL,
+    google_anniversary_event_id VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

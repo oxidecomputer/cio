@@ -477,6 +477,7 @@ table! {
         birthday -> Date,
         public_ssh_keys -> Array<Text>,
         typev -> Varchar,
+        google_anniversary_event_id -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
