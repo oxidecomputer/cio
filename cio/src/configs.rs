@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
-use gsuite_api::{Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup};
+use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup};
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
@@ -1424,9 +1424,91 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
 }
 
+#[instrument(skip(db))]
+#[inline]
+pub async fn refresh_anniversary_events(db: &Database) {
+    // Get everything we need to authenticate with GSuite.
+    // Initialize the GSuite client.
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token("").await;
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+
+    // Find the anniversary calendar.
+    // Get the list of our calendars.
+    let calendars = gsuite.list_calendars().await.unwrap();
+
+    let mut anniversary_cal_id = "".to_string();
+
+    // Iterate over the calendars.
+    for calendar in calendars {
+        if calendar.summary.contains("Anniversaries") {
+            // We are on the anniversaries calendar.
+            anniversary_cal_id = calendar.id.to_string();
+            break;
+        }
+    }
+
+    if anniversary_cal_id.is_empty() {
+        // Return early we couldn't find the calendar.
+        return;
+    }
+
+    // Get our list of users from our database.
+    let users = Users::get_from_db(db);
+    // For each user, create an anniversary for their start date.
+    for mut user in users {
+        // We only care if the user has a start date.
+        if user.start_date == crate::utils::default_date() {
+            continue;
+        }
+
+        if user.google_anniversary_event_id.is_empty() {
+            // Create a new event.
+            let mut new_event: CalendarEvent = Default::default();
+
+            new_event.start = Date {
+                time_zone: "America/Los_Angeles".to_string(),
+                date: Some(user.start_date),
+                date_time: None,
+            };
+            new_event.end = Date {
+                time_zone: "America/Los_Angeles".to_string(),
+                date: Some(user.start_date),
+                date_time: None,
+            };
+            new_event.summary = format!("{} {}'s Anniversary", user.first_name, user.last_name);
+            new_event.description = format!(
+                "On {}, {} {} joined the company!",
+                user.start_date.format("%A, %B %-d, %C%y").to_string(),
+                user.first_name,
+                user.last_name
+            );
+            new_event.recurrance = vec!["RRULE:FREQ=YEARLY".to_string()];
+            new_event.transparency = "transparent".to_string();
+            new_event.attendees = vec![Attendee {
+                id: Default::default(),
+                email: user.email(),
+                display_name: Default::default(),
+                organizer: false,
+                resource: false,
+                optional: false,
+                response_status: Default::default(),
+                comment: Default::default(),
+                additional_guests: 0,
+            }];
+            let event = gsuite.create_calendar_event(&anniversary_cal_id, &new_event).await.unwrap();
+
+            user.google_anniversary_event_id = event.recurring_event_id.to_string();
+        }
+        // Update the user in the database.
+        user.update(db).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::configs::refresh_db_configs_and_airtable;
+    use crate::configs::{refresh_anniversary_events, refresh_db_configs_and_airtable};
+    use crate::db::Database;
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
@@ -1434,5 +1516,12 @@ mod tests {
     async fn test_cron_configs() {
         let github = authenticate_github_jwt();
         refresh_db_configs_and_airtable(&github).await;
+    }
+
+    #[ignore]
+    #[tokio::test(threaded_scheduler)]
+    async fn test_anniversary_events() {
+        let db = Database::new();
+        refresh_anniversary_events(&db).await;
     }
 }

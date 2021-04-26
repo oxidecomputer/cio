@@ -783,6 +783,45 @@ impl GSuite {
 
         Ok(value.items)
     }
+
+    /// Create a calendar event.
+    pub async fn create_calendar_event(&self, calendar_id: &str, event: &CalendarEvent) -> Result<CalendarEvent, APIError> {
+        // Build the request.
+        let request = self.request(CALENDAR_ENDPOINT, Method::POST, &format!("calendars/{}/events", calendar_id), event, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
+    pub async fn delete_calendar_event(&self, calendar_id: &str, event_id: &str) -> Result<(), APIError> {
+        // Build the request.
+        let request = self.request(CALENDAR_ENDPOINT, Method::DELETE, &format!("calendars/{}/events/{}", calendar_id, event_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            StatusCode::NO_CONTENT => (),
+            StatusCode::NOT_FOUND => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
 }
 
 /// Error type returned by our library.
@@ -893,7 +932,7 @@ pub struct CalendarEvents {
 
 /// A calendar event.
 /// FROM: https://developers.google.com/calendar/v3/reference/events#resource
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct CalendarEvent {
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -915,6 +954,8 @@ pub struct CalendarEvent {
     pub description: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recurrance: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "recurringEventId")]
     pub recurring_event_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
