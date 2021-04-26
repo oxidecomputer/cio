@@ -521,7 +521,9 @@ impl UpdateAirtableRecord<User> for User {
 
         self.groups = links;
 
-        self.google_anniversary_event_id = record.google_anniversary_event_id.to_string();
+        if !record.google_anniversary_event_id.is_empty() {
+            self.google_anniversary_event_id = record.google_anniversary_event_id.to_string();
+        }
 
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
@@ -933,6 +935,27 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 #[instrument(skip(db))]
 #[inline]
 pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>) {
+    // Get everything we need to authenticate with GSuite.
+    // Initialize the GSuite client.
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token("").await;
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+
+    // Find the anniversary calendar.
+    // Get the list of our calendars.
+    let calendars = gsuite.list_calendars().await.unwrap();
+
+    let mut anniversary_cal_id = "".to_string();
+
+    // Iterate over the calendars.
+    for calendar in calendars {
+        if calendar.summary.contains("Anniversaries") {
+            // We are on the anniversaries calendar.
+            anniversary_cal_id = calendar.id.to_string();
+            break;
+        }
+    }
+
     // Generate the terraform files for teams.
     generate_terraform_files_for_aws_and_github(github, users.clone()).await;
 
@@ -972,6 +995,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // the existing repos from the map above.
     for (username, user) in user_map {
         println!("deleting user {} from the database", username);
+
+        if !user.google_anniversary_event_id.is_empty() {
+            // First delete the recurring event for their anniversary.
+            gsuite.delete_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id).await.unwrap();
+            println!("deleted user {} event {} from google", username, user.google_anniversary_event_id);
+        }
 
         // Delete the user from the database and Airtable.
         user.delete(db).await;
@@ -1483,7 +1512,7 @@ pub async fn refresh_anniversary_events(db: &Database) {
                 user.first_name,
                 user.last_name
             );
-            new_event.recurrance = vec!["RRULE:FREQ=YEARLY".to_string()];
+            new_event.recurrence = vec!["RRULE:FREQ=YEARLY;".to_string()];
             new_event.transparency = "transparent".to_string();
             new_event.attendees = vec![Attendee {
                 id: Default::default(),
@@ -1497,8 +1526,9 @@ pub async fn refresh_anniversary_events(db: &Database) {
                 additional_guests: 0,
             }];
             let event = gsuite.create_calendar_event(&anniversary_cal_id, &new_event).await.unwrap();
+            println!("created event for user {} anniversary: {:?}", user.username, event);
 
-            user.google_anniversary_event_id = event.recurring_event_id.to_string();
+            user.google_anniversary_event_id = event.id.to_string();
         }
         // Update the user in the database.
         user.update(db).await;

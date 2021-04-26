@@ -955,7 +955,7 @@ pub struct CalendarEvent {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub recurrance: Vec<String>,
+    pub recurrence: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "recurringEventId")]
     pub recurring_event_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
