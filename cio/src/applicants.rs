@@ -2050,7 +2050,19 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
             let mut value_reflected = "".to_string();
             let mut value_violated = "".to_string();
             let mut values_in_tension: Vec<String> = vec![];
-            let scorers_completed: Vec<String> = vec![];
+
+            let mut scorers_completed: Vec<String> = vec![];
+            for (index, s) in vec!["thing@oxidecomputer.com"].iter().enumerate() {
+                match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                    Some(user) => {
+                        scorers_completed.push(user.email());
+                    }
+                    None => {
+                        println!("could not find user with email: {}", email);
+                    }
+                }
+            }
+
             if row.len() >= 10 {
                 scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
                 scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
@@ -2083,16 +2095,6 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                     .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
                     .first::<Applicant>(&db.conn())
                 {
-                    applicant.scoring_evaluations_count = scoring_evaluations_count;
-                    applicant.scoring_enthusiastic_yes_count = scoring_enthusiastic_yes_count;
-                    applicant.scoring_yes_count = scoring_yes_count;
-                    applicant.scoring_pass_count = scoring_pass_count;
-                    applicant.scoring_no_count = scoring_no_count;
-                    applicant.scoring_not_applicable_count = scoring_not_applicable_count;
-                    applicant.scoring_insufficient_experience_count = scoring_insufficient_experience_count;
-                    applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
-                    applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
-                    applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
                     if applicant.status.to_lowercase().contains("onboarding") || applicant.status.to_lowercase().contains("hired") {
                         // Zero out the values for the scores.
                         applicant.scoring_evaluations_count = 0;
@@ -2105,6 +2107,17 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                         applicant.scoring_inapplicable_experience_count = 0;
                         applicant.scoring_job_function_yet_needed_count = 0;
                         applicant.scoring_underwhelming_materials_count = 0;
+                    } else {
+                        applicant.scoring_evaluations_count = scoring_evaluations_count;
+                        applicant.scoring_enthusiastic_yes_count = scoring_enthusiastic_yes_count;
+                        applicant.scoring_yes_count = scoring_yes_count;
+                        applicant.scoring_pass_count = scoring_pass_count;
+                        applicant.scoring_no_count = scoring_no_count;
+                        applicant.scoring_not_applicable_count = scoring_not_applicable_count;
+                        applicant.scoring_insufficient_experience_count = scoring_insufficient_experience_count;
+                        applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
+                        applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
+                        applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
                     }
 
                     applicant.value_reflected = value_reflected.to_string();
@@ -2124,6 +2137,28 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                 }
             }
         }
+    }
+
+    // Ensure anyone with the status of "Onboarding" or "Hired" gets their scores zero-ed out.
+    let applicants = applicants::dsl::applicants
+        .filter(applicants::dsl::status.eq("Onboarding".to_string()).or(applicants::dsl::status.eq("Hired".to_string())))
+        .load::<Applicant>(&db.conn())
+        .unwrap();
+    for mut applicant in applicants {
+        // Zero out the values for the scores.
+        applicant.scoring_evaluations_count = 0;
+        applicant.scoring_enthusiastic_yes_count = 0;
+        applicant.scoring_yes_count = 0;
+        applicant.scoring_pass_count = 0;
+        applicant.scoring_no_count = 0;
+        applicant.scoring_not_applicable_count = 0;
+        applicant.scoring_insufficient_experience_count = 0;
+        applicant.scoring_inapplicable_experience_count = 0;
+        applicant.scoring_job_function_yet_needed_count = 0;
+        applicant.scoring_underwhelming_materials_count = 0;
+
+        // Update the applicant in the database.
+        applicant.update(db).await;
     }
 }
 
@@ -2259,21 +2294,26 @@ pub async fn update_applicant_reviewers(db: &Database) {
         let no = row[5].parse::<i32>().unwrap_or(0);
         let not_applicable = row[6].parse::<i32>().unwrap_or(0);
 
-        let user = User::get_from_db(db, email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()).unwrap();
+        match User::get_from_db(db, email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+            Some(user) => {
+                let reviewer = NewApplicantReviewer {
+                    name: user.full_name(),
+                    email,
+                    evaluations,
+                    emphatic_yes,
+                    yes,
+                    pass,
+                    no,
+                    not_applicable,
+                };
 
-        let reviewer = NewApplicantReviewer {
-            name: user.full_name(),
-            email,
-            evaluations,
-            emphatic_yes,
-            yes,
-            pass,
-            no,
-            not_applicable,
-        };
-
-        // Upsert the applicant reviewer in the database.
-        reviewer.upsert(db).await;
+                // Upsert the applicant reviewer in the database.
+                reviewer.upsert(db).await;
+            }
+            None => {
+                println!("could not find user with email: {}", email);
+            }
+        }
     }
 }
 
@@ -2306,7 +2346,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_applicant_reviewer_leaderboard() {
+    async fn test_applicants_reviewer_leaderboard() {
         let db = Database::new();
 
         update_applicant_reviewers(&db).await;
@@ -2324,14 +2364,14 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
         let db = Database::new();
-        refresh_db_applicants(&db).await;
+        //refresh_db_applicants(&db).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db).update_airtable().await;
+        //Applicants::get_from_db(&db).update_airtable().await;
 
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-        update_applications_with_scoring_forms(&db).await;
+        //update_applications_with_scoring_forms(&db).await;
 
         // This must be after update_applications_with_scoring_forms, so that if someone
         // has done the application then we remove them from the scorers.
