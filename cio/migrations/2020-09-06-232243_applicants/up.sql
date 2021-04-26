@@ -40,6 +40,7 @@ CREATE TABLE applicants (
     interview_packet VARCHAR NOT NULL,
 	interviews TEXT [] NOT NULL,
 	scorers TEXT [] NOT NULL,
+	scorers_completed TEXT [] NOT NULL,
     scoring_form_id VARCHAR NOT NULL,
     scoring_form_url VARCHAR NOT NULL,
     scoring_form_responses_url VARCHAR NOT NULL,

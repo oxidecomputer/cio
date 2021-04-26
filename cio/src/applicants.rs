@@ -144,6 +144,14 @@ pub struct NewApplicant {
         deserialize_with = "airtable_api::user_format_as_array_of_strings::deserialize"
     )]
     pub scorers: Vec<String>,
+    /// The scorers_completed field means the person has already reviewed the applicant.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        serialize_with = "airtable_api::user_format_as_array_of_strings::serialize",
+        deserialize_with = "airtable_api::user_format_as_array_of_strings::deserialize"
+    )]
+    pub scorers_completed: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub scoring_form_id: String,
     /// The form for scoring/evaluating applicants.
@@ -235,6 +243,7 @@ impl NewApplicant {
             interview_packet: Default::default(),
             interviews: Default::default(),
             scorers: Default::default(),
+            scorers_completed: Default::default(),
             scoring_form_id: Default::default(),
             scoring_form_url: Default::default(),
             scoring_form_responses_url: Default::default(),
@@ -472,6 +481,7 @@ The Oxide Team",
         let mut interview_packet = String::new();
 
         let mut scorers: Vec<String> = Default::default();
+        let mut scorers_completed: Vec<String> = Default::default();
         let mut scoring_form_id = "".to_string();
         let mut scoring_form_url = "".to_string();
         let mut scoring_form_responses_url = "".to_string();
@@ -506,6 +516,7 @@ The Oxide Team",
             // This ensures if we had any one offs added in airtable that they stay intact.
             if let Some(record) = a.get_existing_airtable_record().await {
                 scorers = record.fields.scorers;
+                scorers_completed = a.scorers_completed;
                 request_background_check = record.fields.request_background_check;
                 interviews = record.fields.interviews;
             }
@@ -615,6 +626,7 @@ The Oxide Team",
             interview_packet,
             interviews,
             scorers,
+            scorers_completed,
             scoring_form_id,
             scoring_form_url,
             scoring_form_responses_url,
