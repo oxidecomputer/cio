@@ -191,7 +191,8 @@ pub struct NewApplicant {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start_date: Option<NaiveDate>,
-
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interested_in: Vec<String>,
     // This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
@@ -205,6 +206,14 @@ impl NewApplicant {
     pub fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
         // Fill in the data we know from what we got from the row.
         let (github, gitlab) = NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
+
+        let interested_in_string = get_value(values, "Which job descriptions are you interested in?");
+        let split = interested_in_string.trim().split(',');
+        let interested_in_str: Vec<&str> = split.collect();
+        let mut interested_in: Vec<String> = Default::default();
+        for s in interested_in_str {
+            interested_in.push(s.trim().to_string());
+        }
 
         NewApplicant {
             submitted_time: NewApplicant::parse_timestamp(&get_value(values, "Timestamp")),
@@ -265,6 +274,7 @@ impl NewApplicant {
             criminal_background_check_status: Default::default(),
             motor_vehicle_background_check_status: Default::default(),
             start_date: None,
+            interested_in,
             geocode_cache: Default::default(),
         }
     }
@@ -414,6 +424,23 @@ The Oxide Team",
         } else {
             None
         };
+
+        // If the length of the row is greater than the interested in column
+        // then we have an interest.
+        let interested_in_str: Vec<&str> = if row.len() > columns.interested_in && columns.interested_in != 0 {
+            if row[columns.interested_in].trim().is_empty() {
+                vec![]
+            } else {
+                let split = row[columns.interested_in].trim().split(',');
+                split.collect()
+            }
+        } else {
+            vec![]
+        };
+        let mut interested_in: Vec<String> = Default::default();
+        for s in interested_in_str {
+            interested_in.push(s.trim().to_string());
+        }
 
         // If the length of the row is greater than the portfolio column
         // then we have a portfolio.
@@ -661,6 +688,7 @@ The Oxide Team",
             criminal_background_check_status,
             motor_vehicle_background_check_status,
             start_date,
+            interested_in,
             geocode_cache: Default::default(),
         }
     }
@@ -1512,6 +1540,7 @@ pub struct ApplicantSheetColumns {
     pub value_in_tension_1: usize,
     pub value_in_tension_2: usize,
     pub start_date: usize,
+    pub interested_in: usize,
 }
 
 impl ApplicantSheetColumns {
@@ -1585,6 +1614,9 @@ impl ApplicantSheetColumns {
             }
             if c.contains("start date") {
                 columns.start_date = index;
+            }
+            if c.contains("job descriptions are you interested in") {
+                columns.interested_in = index;
             }
         }
         columns

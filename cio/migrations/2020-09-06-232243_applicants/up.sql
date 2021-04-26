@@ -58,6 +58,7 @@ CREATE TABLE applicants (
     criminal_background_check_status VARCHAR NOT NULL,
     motor_vehicle_background_check_status VARCHAR NOT NULL,
     start_date DATE DEFAULT NULL,
+    interested_in TEXT [] NOT NULL,
     geocode_cache VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )
