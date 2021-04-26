@@ -1138,12 +1138,15 @@ Email: {}",
         msg += &format!(
             "\nResume: {}
 Oxide Candidate Materials: {}
+Interested in: {}
 
 ## Reminder
 
 The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
 ",
-            self.resume, self.materials,
+            self.resume,
+            self.materials,
+            self.interested_in.join(", ")
         );
 
         msg
