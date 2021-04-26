@@ -46,7 +46,6 @@
 use std::collections::HashMap;
 use std::error;
 use std::fmt;
-use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -61,7 +60,7 @@ const ENDPOINT: &str = "https://www.googleapis.com/drive/v3/";
 pub struct GoogleDrive {
     token: AccessToken,
 
-    client: Arc<Client>,
+    client: Client,
 }
 
 impl GoogleDrive {
@@ -71,7 +70,7 @@ impl GoogleDrive {
     pub fn new(token: AccessToken) -> Self {
         let client = Client::builder().timeout(Duration::from_secs(360)).build();
         match client {
-            Ok(c) => Self { token, client: Arc::new(c) },
+            Ok(c) => Self { token, client: c },
             Err(e) => panic!("creating client failed: {:?}", e),
         }
     }
