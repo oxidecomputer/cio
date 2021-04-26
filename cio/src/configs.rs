@@ -1550,7 +1550,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_anniversary_events() {
+    async fn test_cron_anniversary_events() {
         let db = Database::new();
         refresh_anniversary_events(&db).await;
     }
