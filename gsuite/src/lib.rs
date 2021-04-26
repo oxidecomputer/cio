@@ -820,7 +820,7 @@ impl GSuite {
             }
         };
 
-        Ok(resp.json().await.unwrap())
+        Ok(())
     }
 }
 

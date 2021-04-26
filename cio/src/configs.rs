@@ -951,7 +951,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     for calendar in calendars {
         if calendar.summary.contains("Anniversaries") {
             // We are on the anniversaries calendar.
-            anniversary_cal_id = calendar.id.to_string();
+            anniversary_cal_id = calendar.id;
             break;
         }
     }
@@ -974,6 +974,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         let existing = User::get_from_db(db, user.username.to_string());
 
         // Update or create the user in the database.
+        if let Some(e) = existing.clone() {
+            user.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
+        }
         let new_user = user.upsert(db).await;
 
         if existing.is_none() {
@@ -1472,7 +1475,7 @@ pub async fn refresh_anniversary_events(db: &Database) {
     for calendar in calendars {
         if calendar.summary.contains("Anniversaries") {
             // We are on the anniversaries calendar.
-            anniversary_cal_id = calendar.id.to_string();
+            anniversary_cal_id = calendar.id;
             break;
         }
     }
