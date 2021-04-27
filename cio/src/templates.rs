@@ -376,6 +376,7 @@ resource "okta_user" "{{terraformize this.username}}" {
   admin_roles = [
     "SUPER_ADMIN",
   ]{{/if}}
+
   custom_profile_attributes = "{ \"githubUsername\": \"{{this.github}}\", \"matrixUsername\": \"{{this.chat}}\", \"awsRole\": \"{{this.aws_role}}\", \"startDate\": \"{{this.start_date}}\", \"emailAliases\": [{{#each this.aliases}}\"{{this}}@oxidecomputer.com\"{{#if @last}}{{else}},{{/if}}{{/each}}]  }"
 }
 {{#each this.groups}}
