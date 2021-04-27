@@ -2029,16 +2029,18 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
             let form_url = row[columns.form_url].to_string();
             let form_responses_url = row[columns.form_responses_url].to_string();
 
-            let scorers_completed_string = row[columns.scorers_completed].to_string();
-            let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
             let mut scorers_completed: Vec<String> = vec![];
-            for s in scorers_completed_str {
-                match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
-                    Some(user) => {
-                        scorers_completed.push(user.email());
-                    }
-                    None => {
-                        println!("could not find user with email: {}", email);
+            if row.len() > columns.scorers_completed {
+                let scorers_completed_string = row[columns.scorers_completed].to_string();
+                let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
+                for s in scorers_completed_str {
+                    match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                        Some(user) => {
+                            scorers_completed.push(user.email());
+                        }
+                        None => {
+                            println!("could not find user with email: {}", email);
+                        }
                     }
                 }
             }
