@@ -1938,6 +1938,7 @@ pub struct ApplicantFormSheetColumns {
     pub form_id: usize,
     pub form_url: usize,
     pub form_responses_url: usize,
+    pub scorers_completed: usize,
 }
 
 impl ApplicantFormSheetColumns {
@@ -1950,6 +1951,7 @@ impl ApplicantFormSheetColumns {
             form_id: 2,
             form_url: 3,
             form_responses_url: 4,
+            scorers_completed: 5,
         }
     }
 }
@@ -2027,6 +2029,20 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
             let form_url = row[columns.form_url].to_string();
             let form_responses_url = row[columns.form_responses_url].to_string();
 
+            let scorers_completed_string = row[columns.scorers_completed].to_string();
+            let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
+            let mut scorers_completed: Vec<String> = vec![];
+            for s in scorers_completed_str {
+                match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                    Some(user) => {
+                        scorers_completed.push(user.email());
+                    }
+                    None => {
+                        println!("could not find user with email: {}", email);
+                    }
+                }
+            }
+
             // Update each of the applicants.
             for (_, sheet_id) in get_sheets_map() {
                 if let Ok(mut applicant) = applicants::dsl::applicants
@@ -2045,8 +2061,10 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     applicant.scoring_form_url = form_url.to_string();
                     applicant.scoring_form_responses_url = form_responses_url.to_string();
 
+                    applicant.scorers_completed = scorers_completed.clone();
+
                     // See if we already have scorers assigned.
-                    if applicant.scorers.is_empty() || applicant.scorers.len() < 5 {
+                    if applicant.scorers.is_empty() || (applicant.scorers.len() + applicant.scorers_completed.len()) < 5 {
                         // Assign scorers and send email.
                         // Choose next five reviewers.
                         applicant.scorers = reviewer_pool.by_ref().take(5).collect();
@@ -2112,18 +2130,6 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
             let mut value_violated = "".to_string();
             let mut values_in_tension: Vec<String> = vec![];
 
-            let mut scorers_completed: Vec<String> = vec![];
-            for s in &["thing@oxidecomputer.com"] {
-                match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
-                    Some(user) => {
-                        scorers_completed.push(user.email());
-                    }
-                    None => {
-                        println!("could not find user with email: {}", email);
-                    }
-                }
-            }
-
             if row.len() >= 10 {
                 scoring_insufficient_experience_count = row[9].parse::<i32>().unwrap_or(0);
                 scoring_inapplicable_experience_count = row[10].parse::<i32>().unwrap_or(0);
@@ -2187,11 +2193,10 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
 
                     // Remove anyone from the scorers if they have already completed their review.
                     for (index, scorer) in applicant.scorers.clone().iter().enumerate() {
-                        if scorers_completed.contains(scorer) {
+                        if applicant.scorers_completed.contains(scorer) {
                             applicant.scorers.remove(index);
                         }
                     }
-                    applicant.scorers_completed = scorers_completed.clone();
 
                     // Update the applicant in the database.
                     applicant.update(db).await;
@@ -2425,10 +2430,10 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
         let db = Database::new();
-        refresh_db_applicants(&db).await;
+        //refresh_db_applicants(&db).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db).update_airtable().await;
+        //Applicants::get_from_db(&db).update_airtable().await;
 
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
