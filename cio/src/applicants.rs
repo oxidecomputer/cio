@@ -1630,7 +1630,10 @@ impl ApplicantSheetColumns {
 #[instrument(skip(drive_client))]
 #[inline]
 pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String {
-    let id = url.replace("https://drive.google.com/open?id=", "");
+    let id = url
+        .replace("https://drive.google.com/open?id=", "")
+        .replace("https://drive.google.com/file/d/", "")
+        .replace("/view", "");
 
     // Get information about the file.
     let drive_file = drive_client.get_file_by_id(&id).await.unwrap();
