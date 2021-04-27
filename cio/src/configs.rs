@@ -996,6 +996,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             user.home_address_state = airtable_record.fields.home_address_state.to_string();
             user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
             user.home_address_country = airtable_record.fields.home_address_country.to_string();
+            user.birthday = airtable_record.fields.birthday;
         }
 
         user.expand(db).await;
