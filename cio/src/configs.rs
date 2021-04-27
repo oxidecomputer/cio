@@ -538,17 +538,6 @@ impl UpdateAirtableRecord<User> for User {
             self.google_anniversary_event_id = record.google_anniversary_event_id.to_string();
         }
 
-        // TODO: remove this when we populate from Gusto.
-        if !record.home_address_street_1.is_empty() {
-            self.home_address_street_1 = record.home_address_street_1.to_string();
-            self.home_address_street_2 = record.home_address_street_2.to_string();
-            self.home_address_city = record.home_address_city.to_string();
-            self.home_address_state = record.home_address_state.to_string();
-            self.home_address_zipcode = record.home_address_zipcode.to_string();
-            self.home_address_country = record.home_address_country.to_string();
-            self.home_address_formatted = record.home_address_formatted.to_string();
-        }
-
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
