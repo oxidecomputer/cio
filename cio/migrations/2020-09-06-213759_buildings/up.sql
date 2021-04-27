@@ -11,5 +11,6 @@ CREATE TABLE buildings (
     floors TEXT [] NOT NULL,
     employees TEXT [] NOT NULL,
     conference_rooms TEXT [] NOT NULL,
+    geocode_cache VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

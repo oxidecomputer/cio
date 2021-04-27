@@ -747,6 +747,10 @@ pub struct BuildingConfig {
     pub employees: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub conference_rooms: Vec<String>,
+
+    /// This field is used by Airtable for mapping the location data.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub geocode_cache: String,
 }
 
 impl BuildingConfig {
@@ -767,6 +771,8 @@ impl UpdateAirtableRecord<Building> for Building {
         self.employees = record.employees.clone();
         // Make sure we don't mess with the conference_rooms since that is populated by the Conference Rooms table.
         self.conference_rooms = record.conference_rooms;
+
+        self.geocode_cache = record.geocode_cache;
     }
 }
 

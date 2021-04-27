@@ -165,6 +165,7 @@ table! {
         floors -> Array<Text>,
         employees -> Array<Text>,
         conference_rooms -> Array<Text>,
+        geocode_cache -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
