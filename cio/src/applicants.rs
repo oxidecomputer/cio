@@ -2432,10 +2432,10 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
         let db = Database::new();
-        //refresh_db_applicants(&db).await;
+        refresh_db_applicants(&db).await;
 
         // Update Airtable.
-        //Applicants::get_from_db(&db).update_airtable().await;
+        Applicants::get_from_db(&db).update_airtable().await;
 
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
