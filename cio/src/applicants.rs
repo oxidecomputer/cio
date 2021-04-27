@@ -32,7 +32,7 @@ use tracing::instrument;
 use walkdir::WalkDir;
 
 use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
-use crate::configs::User;
+use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
@@ -1941,34 +1941,17 @@ impl ApplicantFormSheetColumns {
     }
 }
 
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-async fn get_reviewer_pool(sheet_id: &str) -> Vec<String> {
-    // Get the GSuite token.
-    let token = get_gsuite_token("").await;
+fn get_reviewer_pool(db: &Database) -> Vec<String> {
+    let users = Users::get_from_db(db);
 
-    // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token.clone());
-
-    // Get the values in the sheet.
-    let sheet_values = sheets_client.get_values(&sheet_id, "Reviewer pool!A1:G1000".to_string()).await.unwrap();
-    let values = sheet_values.values.unwrap();
-
-    if values.is_empty() {
-        panic!("unable to retrieve any data values from Google sheet for applicant forms {}", sheet_id);
-    }
-
-    // Iterate over the rows.
-    let mut reviewers: Vec<String> = vec![];
-    for (_, row) in values.iter().enumerate() {
-        if row[0].is_empty() {
-            // Break our loop we are in an empty row.
-            break;
+    let mut reviewers: Vec<String> = Default::default();
+    for user in users {
+        if user.typev == "full-time" {
+            reviewers.push(user.email());
         }
-        // The email is the second column.
-        reviewers.push(row[1].replace(DOMAIN, GSUITE_DOMAIN).to_string());
     }
-
     reviewers
 }
 
@@ -1992,7 +1975,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
         // Parse the sheet columns.
         let columns = ApplicantFormSheetColumns::new();
 
-        let mut reviewer_pool = get_reviewer_pool(sheet_id).await;
+        let mut reviewer_pool = get_reviewer_pool(db);
 
         // We'll assign reviewers randomly but attempt to produce roughly even loads
         // across reviewers. To do this, we shuffle the list of reviewers, and then
