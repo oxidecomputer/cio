@@ -379,7 +379,7 @@ resource "okta_user" "{{terraformize this.username}}" {
     "SUPER_ADMIN",
   ]{{/if}}
 
-  custom_profile_attributes = "{ \"githubUsername\": \"{{this.github}}\", \"matrixUsername\": \"{{this.chat}}\", \"awsRole\": \"{{this.aws_role}}\", \"startDate\": \"{{this.start_date}}\", \"emailAliases\": [{{#each this.aliases}}\"{{this}}@oxidecomputer.com\"{{#if @last}}{{else}},{{/if}}{{/each}}]  }"
+  custom_profile_attributes = "{ \"githubUsername\": \"{{this.github}}\", \"matrixUsername\": \"{{this.chat}}\", \"awsRole\": \"{{this.aws_role}}\", \"startDate\": \"{{this.start_date}}\", \"birthday\": \"{{this.birthday}}\", \"emailAliases\": [{{#each this.aliases}}\"{{this}}@oxidecomputer.com\"{{#if @last}}{{else}},{{/if}}{{/each}}]  }"
 }
 {{#each this.groups}}
 # Add {{../username}}@ to the {{this}}@ group.
