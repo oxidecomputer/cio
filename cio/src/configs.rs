@@ -993,6 +993,15 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Update or create the user in the database.
         if let Some(e) = existing.clone() {
             user.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
+
+            // TODO: remove this when we populate from Gusto.
+            let airtable_record = e.get_existing_airtable_record().await.unwrap();
+            user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
+            user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
+            user.home_address_city = airtable_record.fields.home_address_city.to_string();
+            user.home_address_state = airtable_record.fields.home_address_state.to_string();
+            user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
+            user.home_address_country = airtable_record.fields.home_address_country.to_string();
         }
         let new_user = user.upsert(db).await;
 
