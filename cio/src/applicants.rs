@@ -2052,17 +2052,6 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
                     .first::<Applicant>(&db.conn())
                 {
-                    // Make sure the status is "Needs to be triaged".
-                    let status = crate::applicant_status::Status::from_str(&applicant.status);
-                    if status != Ok(crate::applicant_status::Status::NeedsToBeTriaged) {
-                        // Continue we don't care.
-                        continue;
-                    }
-
-                    applicant.scoring_form_id = form_id.to_string();
-                    applicant.scoring_form_url = form_url.to_string();
-                    applicant.scoring_form_responses_url = form_responses_url.to_string();
-
                     applicant.scorers_completed = scorers_completed.clone();
 
                     // Remove anyone from the scorers if they have already completed their review.
@@ -2077,6 +2066,20 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                             }
                         }
                     }
+
+                    // Make sure the status is "Needs to be triaged".
+                    let status = crate::applicant_status::Status::from_str(&applicant.status);
+                    if status != Ok(crate::applicant_status::Status::NeedsToBeTriaged) {
+                        // Update the applicant in the database.
+                        applicant.update(db).await;
+
+                        // Continue we don't care.
+                        continue;
+                    }
+
+                    applicant.scoring_form_id = form_id.to_string();
+                    applicant.scoring_form_url = form_url.to_string();
+                    applicant.scoring_form_responses_url = form_responses_url.to_string();
 
                     // See if we already have scorers assigned.
                     if applicant.scorers.is_empty() || (applicant.scorers.len() + applicant.scorers_completed.len()) < 5 {
