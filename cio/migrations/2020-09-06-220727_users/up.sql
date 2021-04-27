@@ -27,5 +27,6 @@ CREATE TABLE users (
     public_ssh_keys [] TEXT NOT NULL,
     typev VARCHAR NOT NULL,
     google_anniversary_event_id VARCHAR NOT NULL,
+    geocode_cache VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

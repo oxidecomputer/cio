@@ -193,7 +193,8 @@ pub struct NewApplicant {
     pub start_date: Option<NaiveDate>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interested_in: Vec<String>,
-    // This field is used by Airtable for mapping the location data.
+
+    /// This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
 }

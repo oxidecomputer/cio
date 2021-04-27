@@ -160,6 +160,10 @@ pub struct UserConfig {
     /// This field is automatically populated by airtable based on the user's start date.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub google_anniversary_event_id: String,
+
+    /// This field is used by Airtable for mapping the location data.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub geocode_cache: String,
 }
 
 pub mod null_date_format {
@@ -521,8 +525,21 @@ impl UpdateAirtableRecord<User> for User {
 
         self.groups = links;
 
+        self.geocode_cache = record.geocode_cache.to_string();
+
         if !record.google_anniversary_event_id.is_empty() {
             self.google_anniversary_event_id = record.google_anniversary_event_id.to_string();
+        }
+
+        // TODO: remove this when we populate from Gusto.
+        if !record.home_address_street_1.is_empty() {
+            self.home_address_street_1 = record.home_address_street_1.to_string();
+            self.home_address_street_2 = record.home_address_street_2.to_string();
+            self.home_address_city = record.home_address_city.to_string();
+            self.home_address_state = record.home_address_state.to_string();
+            self.home_address_zipcode = record.home_address_zipcode.to_string();
+            self.home_address_country = record.home_address_country.to_string();
+            self.home_address_formatted = record.home_address_formatted.to_string();
         }
 
         // Set the building to right building link.
