@@ -878,7 +878,7 @@ The Oxide Team",
 
         // If the application is as new as the last week then parse all the contents.
         // This takes a long time so we skip all the others.
-        if duration_from_now < Duration::days(7) {
+        if duration_from_now < Duration::days(5) {
             // Read the file contents.
             self.resume_contents = get_file_contents(drive_client, &self.resume).await;
             self.materials_contents = get_file_contents(drive_client, &self.materials).await;
@@ -1844,10 +1844,20 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
     String::new()
 }
 
-/// Return a vector of all the raw applicants and add all the metadata.
-#[instrument]
+// Sync the applicants with our database.
+#[instrument(skip(db))]
 #[inline]
-pub async fn get_raw_applicants() -> Vec<NewApplicant> {
+pub async fn refresh_db_applicants(db: &Database) {
+    let github = authenticate_github_jwt();
+
+    // Get all the hiring issues on the configs repository.
+    let configs_issues = github
+        .repo(github_org(), "configs")
+        .issues()
+        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+        .await
+        .unwrap();
+
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
 
@@ -1859,7 +1869,6 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
-    let mut applicants: Vec<NewApplicant> = Default::default();
     for (sheet_name, sheet_id) in get_sheets_map() {
         // Get the values in the sheet.
         let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:Z1000".to_string()).await.unwrap();
@@ -1898,34 +1907,10 @@ pub async fn get_raw_applicants() -> Vec<NewApplicant> {
                 applicant.send_email_internally().await;
             }
 
-            applicants.push(applicant);
+            let new_applicant = applicant.upsert(db).await;
+
+            new_applicant.create_github_onboarding_issue(&github, &configs_issues).await;
         }
-    }
-
-    applicants
-}
-
-// Sync the applicants with our database.
-#[instrument(skip(db))]
-#[inline]
-pub async fn refresh_db_applicants(db: &Database) {
-    let applicants = get_raw_applicants().await;
-
-    let github = authenticate_github_jwt();
-
-    // Get all the hiring issues on the configs repository.
-    let configs_issues = github
-        .repo(github_org(), "configs")
-        .issues()
-        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
-        .await
-        .unwrap();
-
-    // Sync applicants.
-    for applicant in applicants {
-        let new_applicant = applicant.upsert(db).await;
-
-        new_applicant.create_github_onboarding_issue(&github, &configs_issues).await;
     }
 }
 
