@@ -981,8 +981,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     }
     // Sync users.
     for (_, mut user) in users {
-        user.expand(db).await;
-
         // Check if we already have the new user in the database.
         let existing = User::get_from_db(db, user.username.to_string());
 
@@ -999,6 +997,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
             user.home_address_country = airtable_record.fields.home_address_country.to_string();
         }
+
+        user.expand(db).await;
+
         let new_user = user.upsert(db).await;
 
         if existing.is_none() {
