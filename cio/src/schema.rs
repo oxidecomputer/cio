@@ -473,6 +473,7 @@ table! {
         home_address_state -> Varchar,
         home_address_zipcode -> Varchar,
         home_address_country -> Varchar,
+        home_address_country_code -> Varchar,
         home_address_formatted -> Varchar,
         start_date -> Date,
         birthday -> Date,

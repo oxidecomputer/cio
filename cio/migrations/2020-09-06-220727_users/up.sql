@@ -21,6 +21,7 @@ CREATE TABLE users (
     home_address_state VARCHAR NOT NULL,
     home_address_zipcode VARCHAR NOT NULL,
     home_address_country VARCHAR NOT NULL,
+    home_address_country_code VARCHAR NOT NULL,
     home_address_formatted VARCHAR NOT NULL,
     start_date DATE NOT NULL,
     birthday DATE NOT NULL,

@@ -365,7 +365,15 @@ resource "okta_user" "{{terraformize this.username}}" {
   display_name              = "{{this.first_name}} {{this.last_name}}"{{#if this.recovery_email}}
   mobile_phone              = "{{this.recovery_phone}}"
   primary_phone             = "{{this.recovery_phone}}"{{/if}}{{#if this.recovery_email}}
-  second_email              = "{{this.recovery_email}}"{{/if}}{{#if (eq this.username "jess")}}
+  second_email              = "{{this.recovery_email}}"{{/if}}
+
+
+  street_address     = "{{this.home_address_street_1}} {{this.home_address_street_2}}"
+  city               = "{{this.home_address_city}}"
+  state              = "{{this.home_address_state}}"
+  zip_code           = "{{this.home_address_zipcode}}"
+  country_code       = "{{this.home_address_country_code}}"{{#if (eq this.username "jess")}}
+
   admin_roles = [
     "SUPER_ADMIN",
   ]{{/if}}
