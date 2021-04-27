@@ -306,17 +306,6 @@ impl UserConfig {
 
         self.populate_ssh_keys().await;
 
-        // TODO: remove this when we populate from Gusto.
-        if !record.home_address_street_1.is_empty() {
-            self.home_address_street_1 = record.home_address_street_1.to_string();
-            self.home_address_street_2 = record.home_address_street_2.to_string();
-            self.home_address_city = record.home_address_city.to_string();
-            self.home_address_state = record.home_address_state.to_string();
-            self.home_address_zipcode = record.home_address_zipcode.to_string();
-            self.home_address_country = record.home_address_country.to_string();
-            self.home_address_formatted = record.home_address_formatted.to_string();
-        }
-
         self.populate_from_gusto().await;
 
         self.populate_start_date(db);
