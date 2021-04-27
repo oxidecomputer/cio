@@ -2065,6 +2065,13 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
 
                     applicant.scorers_completed = scorers_completed.clone();
 
+                    // Remove anyone from the scorers if they have already completed their review.
+                    for (index, scorer) in applicant.scorers.clone().iter().enumerate() {
+                        if applicant.scorers_completed.contains(scorer) {
+                            applicant.scorers.remove(index);
+                        }
+                    }
+
                     // See if we already have scorers assigned.
                     if applicant.scorers.is_empty() || (applicant.scorers.len() + applicant.scorers_completed.len()) < 5 {
                         // Assign scorers and send email.
@@ -2192,13 +2199,6 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                     applicant.value_reflected = value_reflected.to_string();
                     applicant.value_violated = value_violated.to_string();
                     applicant.values_in_tension = values_in_tension.clone();
-
-                    // Remove anyone from the scorers if they have already completed their review.
-                    for (index, scorer) in applicant.scorers.clone().iter().enumerate() {
-                        if applicant.scorers_completed.contains(scorer) {
-                            applicant.scorers.remove(index);
-                        }
-                    }
 
                     // Update the applicant in the database.
                     applicant.update(db).await;
