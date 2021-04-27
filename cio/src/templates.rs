@@ -368,7 +368,8 @@ resource "okta_user" "{{terraformize this.username}}" {
   second_email              = "{{this.recovery_email}}"{{/if}}
 
   {{#if this.home_address_formatted}}postal_address     = <<EOT
-{{this.home_address_formatted}}EOT
+{{this.home_address_formatted}}
+EOT
   {{/if}}street_address     = "{{this.home_address_street_1}}{{#if this.home_address_street_2}} {{this.home_address_street_2}}{{/if}}"
   city               = "{{this.home_address_city}}"
   state              = "{{this.home_address_state}}"
