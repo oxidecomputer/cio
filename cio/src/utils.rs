@@ -310,7 +310,7 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
     // Try to get the content for the file from the repo.
     let (existing_content, sha) = get_file_content_from_repo(repo, branch, path).await;
 
-    if !existing_content.is_empty() {
+    if !existing_content.is_empty() || !sha.is_empty() {
         if content == existing_content {
             // They are the same so we can return early, we do not need to update the
             // file.
