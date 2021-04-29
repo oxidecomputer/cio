@@ -265,7 +265,6 @@ pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &
 
                         for item in repo.content().iter(path.to_str().unwrap(), branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
                             if file_path.trim_start_matches('/') != item.path {
-                                println!("[github content] {} {} paths do not match", file_path.trim_start_matches('/'), item.path);
                                 // Continue early.
                                 continue;
                             }
