@@ -254,7 +254,7 @@ pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &
                     return get_file_content_from_repo(repo, branch, path).await;
                 }
                 hubcaps::errors::Error::Fault { code: _, ref error } => {
-                    if error.message.contains("too_large") {
+                    if error.message.contains("too large") {
                         // The file is too big for us to get it's contents through this API.
                         // The error suggests we use the Git Data API but we need the file sha for
                         // that.
