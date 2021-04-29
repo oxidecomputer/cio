@@ -1,4 +1,3 @@
-use async_recursion::async_recursion;
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -232,7 +231,6 @@ pub async fn refresh_db_github_repos(db: &Database, github: &Github) {
 
 /// Get a files content from a repo.
 /// It returns a tuple of the bytes of the file content and the sha of the file.
-#[async_recursion]
 pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &str) -> (Vec<u8>, String) {
     // Add the starting "/" so this works.
     // TODO: figure out why it doesn't work without it.
@@ -250,8 +248,6 @@ pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &
                     // We got a rate limit error.
                     println!("got rate limited, sleeping for {}s", reset.as_secs());
                     thread::sleep(reset.add(time::Duration::from_secs(5)));
-                    // Try again.
-                    return get_file_content_from_repo(repo, branch, path).await;
                 }
                 hubcaps::errors::Error::Fault { code: _, ref error } => {
                     if error.message.contains("too large") {
