@@ -1434,17 +1434,6 @@ Notes:
             return;
         }
 
-        if let Some(i) = issue {
-            if i.state != "open" {
-                // Make sure the issue is in the state of "open".
-                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
-            }
-
-            // Return early we don't want to update the issue because it will overwrite
-            // any changes we made.
-            return;
-        }
-
         let split = self.name.splitn(2, ' ');
         let parts: Vec<&str> = split.collect();
         let first_name = parts[0];
@@ -1501,6 +1490,35 @@ cc @jessfraz @sdtuck @bcantrill
             self.phone.replace("-", "").replace(" ", ""),
             self.github,
         );
+
+        if let Some(i) = issue {
+            if i.state != "open" {
+                // Make sure the issue is in the state of "open".
+                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
+            }
+
+            // If the issue does not have any check marks.
+            // Update it.
+            let checkmark = "[x]".to_string();
+            let body = i.clone().body.unwrap_or_default();
+            if !body.contains(&checkmark) {
+                repo.issue(i.number)
+                    .edit(&IssueOptions {
+                        title,
+                        body: Some(body),
+                        assignee: Some("jessfraz".to_string()),
+                        labels,
+                        milestone: Default::default(),
+                        state: Default::default(),
+                    })
+                    .await
+                    .unwrap_or_else(|e| panic!("could not edit issue {}: {}", i.number, e));
+            }
+
+            // Return early we don't want to update the issue because it will overwrite
+            // any changes we made.
+            return;
+        }
 
         // Create the issue.
         repo.issues()
