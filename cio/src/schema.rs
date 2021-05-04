@@ -463,6 +463,7 @@ table! {
         chat -> Varchar,
         github -> Varchar,
         twitter -> Varchar,
+        department -> Varchar,
         groups -> Array<Text>,
         is_group_admin -> Bool,
         building -> Varchar,
