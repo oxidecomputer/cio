@@ -318,6 +318,7 @@ impl UserConfig {
             self.work_address_zipcode = self.home_address_zipcode.to_string();
             self.work_address_country = self.home_address_country.to_string();
             self.work_address_country_code = self.home_address_country_code.to_string();
+            self.work_address_formatted = self.home_address_formatted.to_string();
 
             if self.typev != "system account" && self.typev != "consultant" {
                 let group = "remote".to_string();
