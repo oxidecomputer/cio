@@ -334,7 +334,7 @@ impl UserConfig {
         }
 
         // Replace new lines.
-        self.work_address_formatted.replace('\n', "\\n");
+        self.work_address_formatted = self.work_address_formatted.replace('\n', "\\n");
     }
 
     #[instrument(skip(db))]
