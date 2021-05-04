@@ -111,6 +111,9 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub twitter: String,
 
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub department: String,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub groups: Vec<String>,
 
