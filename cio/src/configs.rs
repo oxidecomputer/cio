@@ -1663,6 +1663,11 @@ pub async fn refresh_anniversary_events(db: &Database) {
 
             user.google_anniversary_event_id = event.id.to_string();
         } else {
+            // Get the existing event.
+            let old_event = gsuite.get_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id).await.unwrap();
+            // Set the correct sequence so we don't error out.
+            new_event.sequence = old_event.sequence;
+
             // Update the event.
             let event = gsuite.update_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id, &new_event).await.unwrap();
             println!("updated event for user {} anniversary: {:?}", user.username, event);

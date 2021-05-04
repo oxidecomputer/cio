@@ -822,6 +822,25 @@ impl GSuite {
         Ok(resp.json().await.unwrap())
     }
 
+    /// Get a calendar event.
+    pub async fn get_calendar_event(&self, calendar_id: &str, event_id: &str) -> Result<CalendarEvent, APIError> {
+        // Build the request.
+        let request = self.request(CALENDAR_ENDPOINT, Method::GET, &format!("calendars/{}/events/{}", calendar_id, event_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
     pub async fn delete_calendar_event(&self, calendar_id: &str, event_id: &str) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(CALENDAR_ENDPOINT, Method::DELETE, &format!("calendars/{}/events/{}", calendar_id, event_id), (), None);

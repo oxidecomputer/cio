@@ -586,7 +586,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#3889d317943e95ca3e9512e6f3869a660a0db2c3"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8c9362b73a74e1c208a1708674b7f8042cb5dc7b"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -605,7 +605,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.17",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -669,7 +669,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.18",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1623,6 +1623,8 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "313abbc91497f71616466f795207b87f0437eb09f119a42b7702fd2e1f80ba5f"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1634,9 +1636,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "313abbc91497f71616466f795207b87f0437eb09f119a42b7702fd2e1f80ba5f"
+version = "0.1.18"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2262,7 +2262,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#3889d317943e95ca3e9512e6f3869a660a0db2c3"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8c9362b73a74e1c208a1708674b7f8042cb5dc7b"
 dependencies = [
  "Inflector",
  "proc-macro2",
