@@ -67,7 +67,7 @@ jobs:
           --max-instances=5 \
           --allow-unauthenticated
         # Wait for it to be deployed
-        sleep 10
+        sleep 100
     - name: Extract revision
       shell: bash
       run: REVISION=$(gcloud run revisions list --platform managed --region "$RUN_REGION" --service $SERVICE_NAME --sort-by ~deployed --limit 1 --quiet | sed -n '2 p' | awk '{print $2}'); echo "::set-output name=version::${REVISION/webhooky-/}"
