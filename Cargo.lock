@@ -605,7 +605,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.17",
+ "gsuite-api 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -669,7 +669,7 @@ dependencies = [
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.18",
+ "gsuite-api 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1622,9 +1622,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "313abbc91497f71616466f795207b87f0437eb09f119a42b7702fd2e1f80ba5f"
+version = "0.1.18"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1637,6 +1635,8 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0527640a400d7286c61843e398e229e150b1b6dbe0bdcfcb45ad7139ef622330"
 dependencies = [
  "chrono",
  "rand 0.7.3",
