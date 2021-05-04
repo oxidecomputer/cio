@@ -534,6 +534,10 @@ impl UpdateAirtableRecord<User> for User {
 
         self.geocode_cache = record.geocode_cache.to_string();
 
+        if self.start_date == crate::utils::default_date() && record.start_date != crate::utils::default_date() {
+            self.start_date = record.start_date;
+        }
+
         if !record.google_anniversary_event_id.is_empty() {
             self.google_anniversary_event_id = record.google_anniversary_event_id.to_string();
         }

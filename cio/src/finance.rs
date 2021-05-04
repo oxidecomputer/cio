@@ -127,6 +127,10 @@ pub async fn refresh_software_vendors() {
         if db_vendor.airtable_record_id.is_empty() {
             db_vendor.airtable_record_id = vendor_record.id;
         }
+
+        // Update the cost per month.
+        db_vendor.total_cost_per_month = (db_vendor.cost_per_user_per_month * db_vendor.users) + flat_cost_per_month;
+
         db_vendor.update(&db).await;
     }
 }
