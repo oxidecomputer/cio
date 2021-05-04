@@ -659,6 +659,8 @@ impl UpdateAirtableRecord<User> for User {
                 break;
             }
         }
+
+        self.work_address_formatted = self.work_address_formatted.replace("\\n", "\n");
     }
 }
 
