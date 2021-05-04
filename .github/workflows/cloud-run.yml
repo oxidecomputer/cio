@@ -70,7 +70,7 @@ jobs:
         sleep 100
     - name: Extract revision
       shell: bash
-      run: REVISION=$(gcloud run revisions list --platform managed --region "$RUN_REGION" --service $SERVICE_NAME --sort-by ~deployed --limit 1 --quiet | sed -n '2 p' | awk '{print $2}'); echo "::set-output name=version::${REVISION/webhooky-/}"
+      run: REVISION=$(gcloud run revisions list --platform managed --region "$RUN_REGION" --service $SERVICE_NAME --sort-by ~deployed --quiet | sed -n '2 p' | awk '{print $2}'); echo "::set-output name=version::${REVISION/webhooky-/}"
       id: extract_version
     - name: Create GitHub Release
       id: create_release
