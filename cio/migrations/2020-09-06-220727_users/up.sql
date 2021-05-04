@@ -12,6 +12,7 @@ CREATE TABLE users (
     twitter VARCHAR NOT NULL,
     department VARCHAR NOT NULL,
     manager VARCHAR NOT NULL,
+    link_to_manager TEXT [] NOT NULL,
     groups TEXT [] NOT NULL,
     is_group_admin BOOLEAN NOT NULL DEFAULT 'f',
     building VARCHAR NOT NULL,

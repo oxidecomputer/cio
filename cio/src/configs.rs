@@ -115,6 +115,8 @@ pub struct UserConfig {
     pub department: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub manager: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_manager: Vec<String>,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub groups: Vec<String>,
@@ -316,6 +318,11 @@ impl UserConfig {
         self.populate_start_date(db);
 
         self.populate_type();
+
+        // Create the link to the manager.
+        if !self.manager.is_empty() {
+            self.link_to_manager = vec![self.manager.to_string()];
+        }
     }
 
     /// Generate the email address for the user.

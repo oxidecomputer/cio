@@ -465,6 +465,7 @@ table! {
         twitter -> Varchar,
         department -> Varchar,
         manager -> Varchar,
+        link_to_manager -> Array<Text>,
         groups -> Array<Text>,
         is_group_admin -> Bool,
         building -> Varchar,
