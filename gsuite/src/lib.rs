@@ -803,6 +803,25 @@ impl GSuite {
         Ok(resp.json().await.unwrap())
     }
 
+    /// Update a calendar event.
+    pub async fn update_calendar_event(&self, calendar_id: &str, event_id: &str, event: &CalendarEvent) -> Result<CalendarEvent, APIError> {
+        // Build the request.
+        let request = self.request(CALENDAR_ENDPOINT, Method::PUT, &format!("calendars/{}/events/{}", calendar_id, event_id), event, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
     pub async fn delete_calendar_event(&self, calendar_id: &str, event_id: &str) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(CALENDAR_ENDPOINT, Method::DELETE, &format!("calendars/{}/events/{}", calendar_id, event_id), (), None);

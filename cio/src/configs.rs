@@ -1540,45 +1540,52 @@ pub async fn refresh_anniversary_events(db: &Database) {
             continue;
         }
 
-        if user.google_anniversary_event_id.is_empty() {
-            // Create a new event.
-            let mut new_event: CalendarEvent = Default::default();
+        // Create a new event.
+        let mut new_event: CalendarEvent = Default::default();
 
-            new_event.start = Date {
-                time_zone: "America/Los_Angeles".to_string(),
-                date: Some(user.start_date),
-                date_time: None,
-            };
-            new_event.end = Date {
-                time_zone: "America/Los_Angeles".to_string(),
-                date: Some(user.start_date),
-                date_time: None,
-            };
-            new_event.summary = format!("{} {}'s Anniversary", user.first_name, user.last_name);
-            new_event.description = format!(
-                "On {}, {} {} joined the company!",
-                user.start_date.format("%A, %B %-d, %C%y").to_string(),
-                user.first_name,
-                user.last_name
-            );
-            new_event.recurrence = vec!["RRULE:FREQ=YEARLY;".to_string()];
-            new_event.transparency = "transparent".to_string();
-            new_event.attendees = vec![Attendee {
-                id: Default::default(),
-                email: user.email(),
-                display_name: Default::default(),
-                organizer: false,
-                resource: false,
-                optional: false,
-                response_status: Default::default(),
-                comment: Default::default(),
-                additional_guests: 0,
-            }];
+        new_event.start = Date {
+            time_zone: "America/Los_Angeles".to_string(),
+            date: Some(user.start_date),
+            date_time: None,
+        };
+        new_event.end = Date {
+            time_zone: "America/Los_Angeles".to_string(),
+            date: Some(user.start_date),
+            date_time: None,
+        };
+        new_event.summary = format!("{} {}'s Anniversary", user.first_name, user.last_name);
+        new_event.description = format!(
+            "On {}, {} {} joined the company!",
+            user.start_date.format("%A, %B %-d, %C%y").to_string(),
+            user.first_name,
+            user.last_name
+        );
+        new_event.recurrence = vec!["RRULE:FREQ=YEARLY;".to_string()];
+        new_event.transparency = "transparent".to_string();
+        new_event.attendees = vec![Attendee {
+            id: Default::default(),
+            email: user.email(),
+            display_name: Default::default(),
+            organizer: false,
+            resource: false,
+            optional: false,
+            response_status: Default::default(),
+            comment: Default::default(),
+            additional_guests: 0,
+        }];
+
+        if user.google_anniversary_event_id.is_empty() {
+            // Create the event.
             let event = gsuite.create_calendar_event(&anniversary_cal_id, &new_event).await.unwrap();
             println!("created event for user {} anniversary: {:?}", user.username, event);
 
             user.google_anniversary_event_id = event.id.to_string();
+        } else {
+            // Update the event.
+            let event = gsuite.update_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id, &new_event).await.unwrap();
+            println!("updated event for user {} anniversary: {:?}", user.username, event);
         }
+
         // Update the user in the database.
         user.update(db).await;
     }
