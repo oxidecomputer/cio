@@ -129,7 +129,7 @@ pub async fn refresh_software_vendors() {
         }
 
         // Update the cost per month.
-        db_vendor.total_cost_per_month = (db_vendor.cost_per_user_per_month * db_vendor.users) + flat_cost_per_month;
+        db_vendor.total_cost_per_month = (db_vendor.cost_per_user_per_month * db_vendor.users as f32) + db_vendor.flat_cost_per_month;
 
         db_vendor.update(&db).await;
     }

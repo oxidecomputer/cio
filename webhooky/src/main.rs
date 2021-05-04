@@ -51,10 +51,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
-        dsn: sentry_dsn.into_dsn().unwrap().clone(),
+        dsn: sentry_dsn.into_dsn().unwrap(),
 
         release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
-        environment: Some(env::var("SENTRY_ENV").unwrap_or("development".to_string()).into()),
+        environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
         ..Default::default()
     });
 
