@@ -319,10 +319,12 @@ impl UserConfig {
             self.work_address_country = self.home_address_country.to_string();
             self.work_address_country_code = self.home_address_country_code.to_string();
 
-            let group = "remote".to_string();
-            // Ensure we have added the remote group.
-            if !self.groups.contains(&group) {
-                self.groups.push(group);
+            if self.typev != "system account" && self.typev != "consultant" {
+                let group = "remote".to_string();
+                // Ensure we have added the remote group.
+                if !self.groups.contains(&group) {
+                    self.groups.push(group);
+                }
             }
         }
 
@@ -390,6 +392,9 @@ impl UserConfig {
     #[instrument(skip(db))]
     #[inline]
     pub async fn expand(&mut self, db: &Database) {
+        // Do this first.
+        self.populate_type();
+
         self.ensure_all_aliases();
         self.ensure_all_groups();
 
@@ -399,8 +404,6 @@ impl UserConfig {
         self.populate_work_address(db).await;
 
         self.populate_start_date(db);
-
-        self.populate_type();
 
         // Create the link to the manager.
         if !self.manager.is_empty() {
