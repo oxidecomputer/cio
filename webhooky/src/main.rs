@@ -57,6 +57,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
         ..Default::default()
     });
+    sentry::start_session();
 
     let service_address = "0.0.0.0:8080";
 
@@ -135,6 +136,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     // Start the server.
     let server_task = server.run();
     server.wait_for_shutdown(server_task).await.unwrap();
+    sentry::end_session();
     Ok(())
 }
 
