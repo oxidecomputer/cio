@@ -151,6 +151,26 @@ pub struct UserConfig {
     pub home_address_country_code: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_formatted: String,
+
+    /// The following fields do not exist in the config files but are populated
+    /// automatically based on the user's location.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_street_1: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_street_2: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_zipcode: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_country: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_country_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub work_address_formatted: String,
+
     /// Start date (automatically populated by Gusto)
     #[serde(default = "crate::utils::default_date", alias = "start_date", serialize_with = "null_date_format::serialize")]
     pub start_date: NaiveDate,
@@ -242,7 +262,7 @@ impl UserConfig {
 
     #[instrument]
     #[inline]
-    async fn populate_from_gusto(&mut self) {
+    async fn populate_home_address(&mut self) {
         // TODO: actually get the data from Guso once we have credentials.
         let mut street_address = self.home_address_street_1.to_string();
         if !self.home_address_street_2.is_empty() {
@@ -260,6 +280,52 @@ impl UserConfig {
         // Populate the country code.
         if self.home_address_country.is_empty() || self.home_address_country == "United States" {
             self.home_address_country_code = "US".to_string();
+        }
+    }
+
+    #[instrument(skip(db))]
+    #[inline]
+    async fn populate_work_address(&mut self, db: &Database) {
+        // Populate the address based on the user's location.
+        if !self.building.is_empty() {
+            // The user has an actual building for their work address.
+            // Let's get it.
+            let building = Building::get_from_db(db, self.building.to_string()).unwrap();
+            // Now let's set their address to the building's address.
+            self.work_address_street_1 = building.street_address.to_string();
+            self.work_address_street_2 = "".to_string();
+            self.work_address_city = building.city.to_string();
+            self.work_address_state = building.state.to_string();
+            self.work_address_zipcode = building.zipcode.to_string();
+            self.work_address_country = building.country.to_string();
+            self.work_address_formatted = building.address_formatted.to_string();
+
+            let city_group = building.city.to_lowercase().replace(" ", "-");
+
+            // Ensure we have added the group for that city.
+            if !self.groups.contains(&city_group) {
+                self.groups.push(city_group);
+            }
+        } else {
+            // They are remote so we should use their home address.
+            self.work_address_street_1 = self.home_address_street_1.to_string();
+            self.work_address_street_2 = self.home_address_street_2.to_string();
+            self.work_address_city = self.home_address_city.to_string();
+            self.work_address_state = self.home_address_state.to_string();
+            self.work_address_zipcode = self.home_address_zipcode.to_string();
+            self.work_address_country = self.home_address_country.to_string();
+            self.work_address_country_code = self.home_address_country_code.to_string();
+
+            let group = "remote".to_string();
+            // Ensure we have added the remote group.
+            if !self.groups.contains(&group) {
+                self.groups.push(group);
+            }
+        }
+
+        // Populate the country code.
+        if self.work_address_country.is_empty() || self.work_address_country == "United States" {
+            self.work_address_country_code = "US".to_string();
         }
     }
 
@@ -309,7 +375,7 @@ impl UserConfig {
     #[instrument]
     #[inline]
     pub fn ensure_all_groups(&mut self) {
-        let mut department_group = self.department.trim().to_lowercase().to_string();
+        let mut department_group = self.department.to_lowercase().trim().to_string();
         if department_group == "engineering" {
             department_group = "eng".to_string();
         }
@@ -326,7 +392,8 @@ impl UserConfig {
 
         self.populate_ssh_keys().await;
 
-        self.populate_from_gusto().await;
+        self.populate_home_address().await;
+        self.populate_work_address(db).await;
 
         self.populate_start_date(db);
 
