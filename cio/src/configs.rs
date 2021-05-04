@@ -332,6 +332,9 @@ impl UserConfig {
         if self.work_address_country.is_empty() || self.work_address_country == "United States" {
             self.work_address_country_code = "US".to_string();
         }
+
+        // Replace new lines.
+        self.work_address_formatted.replace('\n', "\\n");
     }
 
     #[instrument(skip(db))]
