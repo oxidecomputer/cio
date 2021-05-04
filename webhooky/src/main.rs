@@ -486,7 +486,13 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         if event.event.value.trim().is_empty() {
             a.start_date = None;
         } else {
-            a.start_date = Some(NaiveDate::parse_from_str(event.event.value.trim(), "%m/%d/%Y").unwrap());
+            match NaiveDate::parse_from_str(event.event.value.trim(), "%m/%d/%Y") {
+                Ok(v) => a.start_date = Some(v),
+                Err(e) => {
+                    println!("error parsing date {}: {}", event.event.value.trim(), e);
+                    a.start_date = None
+                }
+            }
         }
     } else if column_header.contains("value reflected") {
         // Update the value reflected.
