@@ -367,6 +367,11 @@ resource "okta_user" "{{terraformize this.username}}" {
   primary_phone             = "{{this.recovery_phone}}"{{/if}}{{#if this.recovery_email}}
   second_email              = "{{this.recovery_email}}"{{/if}}
 
+
+  department         = "{{this.department}}"
+  organization       = "Oxide Computer Company"
+  manager            = "{{this.manager}}"
+
   {{#if this.home_address_formatted}}postal_address     = <<EOT
 {{this.home_address_formatted}}
 EOT

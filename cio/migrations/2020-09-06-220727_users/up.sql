@@ -11,6 +11,7 @@ CREATE TABLE users (
     github VARCHAR NOT NULL,
     twitter VARCHAR NOT NULL,
     department VARCHAR NOT NULL,
+    manager VARCHAR NOT NULL,
     groups TEXT [] NOT NULL,
     is_group_admin BOOLEAN NOT NULL DEFAULT 'f',
     building VARCHAR NOT NULL,

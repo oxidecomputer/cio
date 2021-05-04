@@ -464,6 +464,7 @@ table! {
         github -> Varchar,
         twitter -> Varchar,
         department -> Varchar,
+        manager -> Varchar,
         groups -> Array<Text>,
         is_group_admin -> Bool,
         building -> Varchar,
