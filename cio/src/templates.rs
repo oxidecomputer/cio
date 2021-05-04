@@ -370,7 +370,7 @@ resource "okta_user" "{{terraformize this.username}}" {
 
   department         = "{{this.department}}"
   organization       = "Oxide Computer Company"
-  manager            = "{{this.manager}}"
+  manager            = "{{this.manager}}@oxidecomputer.com"
 
   {{#if this.home_address_formatted}}postal_address     = <<EOT
 {{this.home_address_formatted}}
