@@ -1445,6 +1445,10 @@ Notes:
             return;
         }
 
+        let split = self.name.splitn(2, ' ');
+        let parts: Vec<&str> = split.collect();
+        let first_name = parts[0];
+        let last_name = parts[1];
         // Create an issue for the applicant.
         let title = format!("Onboarding: {}", self.name);
         let labels = vec!["hiring".to_string()];
@@ -1457,12 +1461,45 @@ Twitter: [TWITTER HANDLE]
 GitHub: {}
 Phone: {}
 Location: {}
-cc @jessfraz @sdtuck @bcantrill",
+cc @jessfraz @sdtuck @bcantrill
+
+
+```
+[users.{}-{}]
+ first_name = '{}'
+ last_name = '{}'
+ username = '{}.{}'
+ aliases = []
+ groups = [
+     'all',
+     'friends-of-oxide',
+     'hardware',
+     'manufacturing',
+     'pci-sig',
+ ]
+ recovery_email = '{}'
+ recovery_phone = '{}'
+ gender = ''
+ github = '{}'
+ chat = ''
+ aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:saml-provider/GoogleApps'
+ department = ''
+ manager = ''
+```",
             self.start_date.unwrap().format("%A, %B %-d, %C%y").to_string(),
             self.email,
             self.github,
             self.phone,
             self.location,
+            first_name.to_lowercase(),
+            last_name.to_lowercase(),
+            first_name,
+            last_name,
+            first_name.to_lowercase(),
+            last_name.to_lowercase(),
+            self.email,
+            self.phone.replace("-", "").replace(" ", ""),
+            self.github,
         );
 
         // Create the issue.
