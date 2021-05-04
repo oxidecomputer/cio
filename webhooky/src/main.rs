@@ -57,7 +57,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
         ..Default::default()
     });
-    sentry::start_session();
 
     let service_address = "0.0.0.0:8080";
 
@@ -136,7 +135,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     // Start the server.
     let server_task = server.run();
     server.wait_for_shutdown(server_task).await.unwrap();
-    sentry::end_session();
     Ok(())
 }
 
@@ -210,6 +208,7 @@ async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, Htt
 #[instrument]
 #[inline]
 async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GitHubWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let api_context = Context::from_rqctx(&rqctx);
 
     let event = body_param.into_inner();
@@ -238,6 +237,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 // `push` event has no commits.
                 // We can throw this out, log it and return early.
                 event!(Level::INFO, "`push` event has no commits: {:?}", event);
+                sentry::end_session();
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
 
@@ -247,6 +247,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 // The commit is not distinct.
                 // We can throw this out, log it and return early.
                 event!(Level::INFO, "`push` event commit `{}` is not distinct", commit.id);
+                sentry::end_session();
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
 
@@ -258,6 +259,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 // We can throw this out, log it and return early.
                 // This should never happen, but we won't rule it out because computers.
                 event!(Level::WARN, "`push` event branch name is empty: {:?}", event);
+                sentry::end_session();
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
         }
@@ -297,7 +299,9 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             api_context.influx.query(influx_event, event_type.name()).await;
 
             // Now let's handle the event.
-            return handle_repository_event(api_context, event).await;
+            let resp = handle_repository_event(api_context, event).await;
+            sentry::end_session();
+            return resp;
         }
         _ => (),
     }
@@ -309,16 +313,22 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         match repo_name {
             Repo::RFD => match event_type {
                 EventType::Push => {
-                    return handle_rfd_push(api_context, event).await;
+                    let resp = handle_rfd_push(api_context, event).await;
+                    sentry::end_session();
+                    return resp;
                 }
                 EventType::PullRequest => {
-                    return handle_rfd_pull_request(api_context, event).await;
+                    let resp = handle_rfd_pull_request(api_context, event).await;
+                    sentry::end_session();
+                    return resp;
                 }
                 _ => (),
             },
             Repo::Configs => {
                 if let EventType::Push = event_type {
-                    return handle_configs_push(api_context, event).await;
+                    let resp = handle_configs_push(api_context, event).await;
+                    sentry::end_session();
+                    return resp;
                 }
             }
             _ => {
@@ -328,6 +338,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
         }
     }
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -344,6 +355,7 @@ struct RFDPathParams {
 #[instrument(skip(path_params))]
 #[inline]
 async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: Path<RFDPathParams>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let num = path_params.into_inner().num;
     event!(Level::INFO, "Triggering an update for RFD number `{}`", num);
 
@@ -355,6 +367,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     if result.is_none() {
         // Return early, we couldn't find an RFD.
         event!(Level::WARN, "No RFD was found with number `{}`", num);
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let mut rfd = result.unwrap();
@@ -368,6 +381,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     // Save the rfd back to our database.
     rfd.update(db).await;
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -379,6 +393,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
 #[instrument]
 #[inline]
 async fn github_rate_limit(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+    sentry::start_session();
     let api_context = Context::from_rqctx(&rqctx);
     let github = &api_context.github;
 
@@ -387,6 +402,7 @@ async fn github_rate_limit(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<
 
     let dur = reset_time - Utc::now();
 
+    sentry::end_session();
     Ok(HttpResponseOk(GitHubRateLimit {
         limit: response.resources.core.limit,
         remaining: response.resources.core.remaining,
@@ -413,6 +429,7 @@ pub struct GitHubRateLimit {
 #[instrument]
 #[inline]
 async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
     let token = get_gsuite_token("").await;
@@ -430,6 +447,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
         event!(Level::INFO, "event is not for an application spreadsheet: {:?}", event);
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -444,6 +462,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     if email.is_empty() {
         // We can return early, the row does not have an email.
         event!(Level::WARN, "email cell returned empty for event: {:?}", event);
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -461,6 +480,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         .first::<Applicant>(&db.conn());
     if result.is_err() {
         event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let mut a = result.unwrap();
@@ -519,6 +539,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     } else {
         // If this is a field wehipmentdon't care about, return early.
         event!(Level::INFO, "column updated was `{}`, no automations set up for that column yet", column_header);
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -535,6 +556,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     new_applicant.create_github_onboarding_issue(&github, &configs_issues).await;
 
     event!(Level::INFO, "applicant {} updated successfully", new_applicant.email);
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -611,6 +633,7 @@ pub struct GoogleSpreadsheet {
 #[instrument]
 #[inline]
 async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
     let token = get_gsuite_token("").await;
@@ -633,6 +656,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         if !swag_spreadsheets.contains(&event.spreadsheet.id) {
             // Return early if not
             event!(Level::INFO, "event is not for an application spreadsheet or a swag spreadsheet: {:?}", event);
+            sentry::end_session();
             return Ok(HttpResponseAccepted("ok".to_string()));
         }
 
@@ -642,6 +666,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         shipment.create_or_update_in_airtable().await;
 
         // Handle if the event is for a swag spreadsheet.
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -650,6 +675,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
 
     if applicant.email.is_empty() {
         event!(Level::WARN, "applicant has an empty email: {:?}", applicant);
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -683,6 +709,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     let a = applicant.upsert(db).await;
 
     event!(Level::INFO, "applicant {} created successfully", a.email);
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -706,6 +733,7 @@ pub struct GoogleSpreadsheetRowCreateEvent {
 #[instrument]
 #[inline]
 async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let api_context = Context::from_rqctx(&rqctx);
 
     let event = body_param.into_inner();
@@ -713,6 +741,7 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, bo
 
     if event.record_id.is_empty() {
         event!(Level::WARN, "Record id is empty");
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -724,6 +753,7 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, bo
         event!(Level::INFO, "sent background check invitation to applicant: {}", applicant.email);
     }
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -738,11 +768,13 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, bo
 #[instrument]
 #[inline]
 async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
     if event.record_id.is_empty() {
         event!(Level::WARN, "Record id is empty");
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -755,6 +787,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestC
     shipment.create_or_update_in_airtable().await;
 
     event!(Level::INFO, "shipment {} created successfully", shipment.email);
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -776,11 +809,13 @@ pub struct AirtableRowEvent {
 #[instrument]
 #[inline]
 async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
     if event.record_id.is_empty() {
         event!(Level::WARN, "Record id is empty");
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -822,6 +857,7 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
         shipment.create_or_update_in_airtable().await;
     }
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -836,11 +872,13 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
 #[instrument]
 #[inline]
 async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let event = body_param.into_inner();
     event!(Level::DEBUG, "{:?}", event);
 
     if event.record_id.is_empty() {
         event!(Level::WARN, "Record id is empty");
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -853,6 +891,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
         event!(Level::WARN, "tracking_number and carrier are empty, ignoring");
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -878,6 +917,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     shipment.update(&db).await;
 
     event!(Level::INFO, "inbound shipment {} updated successfully", shipment.tracking_number);
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -891,6 +931,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
 #[instrument]
 #[inline]
 async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let event = body_param.into_inner();
     let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
         println!("decoding event body `{}` failed: {}", event.to_string(), e);
@@ -902,12 +943,14 @@ async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, bod
         // We can reaturn early.
         // It's too early to get anything good from this event.
         event!(Level::WARN, "too early to get any information about the shipment");
+        sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     println!("shippo-tracking-update parsed: {:?}", body);
 
     //event!(Level::INFO, "shipment {} tracking status updated successfully", a.email);
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -937,6 +980,7 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResp
 #[instrument]
 #[inline]
 async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
@@ -950,6 +994,7 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_pa
     let pv = event.create(db).await;
 
     event!(Level::INFO, "page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -961,6 +1006,7 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_pa
 #[instrument]
 #[inline]
 async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let api_context = Context::from_rqctx(&rqctx);
     let db = &api_context.db;
 
@@ -990,6 +1036,7 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query
         event!(Level::INFO, "subscriber {} already exists", new_subscriber.email);
     }
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
