@@ -385,7 +385,22 @@ EOT
     "SUPER_ADMIN",
   ]{{/if}}
 
-  custom_profile_attributes = "{ \"githubUsername\": \"{{this.github}}\", \"matrixUsername\": \"{{this.chat}}\", \"awsRole\": \"{{this.aws_role}}\", \"startDate\": \"{{this.start_date}}\", \"birthday\": \"{{this.birthday}}\", \"emailAliases\": [{{#each this.aliases}}\"{{this}}@oxidecomputer.com\"{{#if @last}}{{else}},{{/if}}{{/each}}]  }"
+  custom_profile_attributes = <<EOT
+{
+    "githubUsername": "{{this.github}}",
+    "matrixUsername": "{{this.chat}}",
+    "awsRole": "{{this.aws_role}}",
+    "startDate": "{{this.start_date}}",
+    "birthday": "{{this.birthday}}",
+    "emailAliases": [{{#each this.aliases}}"{{this}}@oxidecomputer.com"{{#if @last}}{{else}},{{/if}}{{/each}}],
+    "workPostalAddress": "{{this.work_address_formatted}}",
+    "workStreetAddress": "{{this.work_address_street_1}}{{#if this.work_address_street_2}} {{this.work_address_street_2}}{{/if}}",
+    "workCity": "{{this.work_address_city}}",
+    "workState": "{{this.work_address_state}}",
+    "workZipCode": "{{this.work_address_zipcode}}",
+    "workCountryCode": "{{this.work_address_country_code}}"
+}
+EOT
 }
 {{#each this.groups}}
 # Add {{../username}}@ to the {{this}}@ group.
