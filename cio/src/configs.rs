@@ -298,6 +298,9 @@ impl UserConfig {
             self.work_address_state = building.state.to_string();
             self.work_address_zipcode = building.zipcode.to_string();
             self.work_address_country = building.country.to_string();
+            if self.work_address_country == "US" {
+                self.work_address_country = "United States".to_string();
+            }
             self.work_address_formatted = building.address_formatted.to_string();
 
             let city_group = building.city.to_lowercase().replace(" ", "-");
