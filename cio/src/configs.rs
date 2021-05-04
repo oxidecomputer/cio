@@ -338,7 +338,7 @@ impl UserConfig {
         }
 
         // Title case the department.
-        self.department = titlecase::titlecase(&self.department).to_string();
+        self.department = titlecase::titlecase(&self.department);
     }
 
     /// Generate the email address for the user.
