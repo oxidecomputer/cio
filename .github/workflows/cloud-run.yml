@@ -52,6 +52,10 @@ jobs:
           --timeout 2h \
           --machine-type n1-highcpu-32 \
           --tag "gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA"
+    - name: Extract sha
+      shell: bash
+      run: echo "::set-output name=hash::${GITHUB_SHA:0:8}"
+      id: extract_sha
     # Deploy image to Cloud Run
     - name: Deploy
       run: |-
@@ -63,7 +67,7 @@ jobs:
           --memory 2Gi \
           --platform "managed" \
           --add-cloudsql-instances "${{ secrets.INSTANCE_CONNECTION_NAME }}" \
-          --set-env-vars "GADMIN_SUBJECT=${{secrets.GADMIN_SUBJECT}},CIO_DATABASE_URL=${{secrets.DATABASE_URL}},INSTANCE_CONNECTION_NAME=${{secrets.INSTANCE_CONNECTION_NAME}},RUST_BACKTRACE=1,SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL=${{secrets.SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL}},AIRTABLE_API_KEY=${{secrets.AIRTABLE_API_KEY}},GITHUB_TOKEN=${{secrets.GLOBAL_GITHUB_TOKEN}},GITHUB_ORG=oxidecomputer,GSUITE_KEY_ENCODED=${{secrets.GSUITE_KEY_ENCODED}},GH_APP_ID=${{secrets.GH_APP_ID}},GH_PRIVATE_KEY=${{secrets.GH_PRIVATE_KEY}},GH_INSTALLATION_ID=${{secrets.GH_INSTALLATION_ID}},INFLUX_DB_URL=${{secrets.INFLUX_DB_URL}},INFLUX_DB_TOKEN=${{secrets.INFLUX_DB_TOKEN}},SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }},LIGHTSTEP_ACCESS_TOKEN=${{secrets.LIGHTSTEP_ACCESS_TOKEN}},SLACK_HIRING_CHANNEL_POST_URL=${{secrets.SLACK_HIRING_CHANNEL_POST_URL}},SHIPPO_API_TOKEN=${{secrets.SHIPPO_API_TOKEN}},PRINTER_URL=${{secrets.PRINTER_URL}},GADMIN_ACCOUNT_ID=${{secrets.GADMIN_ACCOUNT_ID}},TAILSCALE_API_KEY=${{secrets.TAILSCALE_API_KEY}},TAILSCALE_DOMAIN=${{secrets.TAILSCALE_DOMAIN}},AIRTABLE_ENTERPRISE_ACCOUNT_ID=${{secrets.AIRTABLE_ENTERPRISE_ACCOUNT_ID}},WEBHOOKY_SENTRY_DSN=${{secrets.WEBHOOKY_SENTRY_DSN}},SLACK_TOKEN=${{secrets.SLACK_TOKEN}},CLOUDFLARE_EMAIL=${{secrets.CLOUDFLARE_EMAIL}},CLOUDFLARE_TOKEN=${{secrets.CLOUDFLARE_TOKEN}},OKTA_API_TOKEN=${{secrets.OKTA_API_TOKEN}},OKTA_DOMAIN=${{secrets.OKTA_DOMAIN}},CHECKR_API_KEY=${{secrets.CHECKR_API_KEY}}" \
+          --set-env-vars "GADMIN_SUBJECT=${{secrets.GADMIN_SUBJECT}},CIO_DATABASE_URL=${{secrets.DATABASE_URL}},INSTANCE_CONNECTION_NAME=${{secrets.INSTANCE_CONNECTION_NAME}},RUST_BACKTRACE=1,SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL=${{secrets.SLACK_PUBLIC_RELATIONS_CHANNEL_POST_URL}},AIRTABLE_API_KEY=${{secrets.AIRTABLE_API_KEY}},GITHUB_TOKEN=${{secrets.GLOBAL_GITHUB_TOKEN}},GITHUB_ORG=oxidecomputer,GSUITE_KEY_ENCODED=${{secrets.GSUITE_KEY_ENCODED}},GH_APP_ID=${{secrets.GH_APP_ID}},GH_PRIVATE_KEY=${{secrets.GH_PRIVATE_KEY}},GH_INSTALLATION_ID=${{secrets.GH_INSTALLATION_ID}},INFLUX_DB_URL=${{secrets.INFLUX_DB_URL}},INFLUX_DB_TOKEN=${{secrets.INFLUX_DB_TOKEN}},SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }},LIGHTSTEP_ACCESS_TOKEN=${{secrets.LIGHTSTEP_ACCESS_TOKEN}},SLACK_HIRING_CHANNEL_POST_URL=${{secrets.SLACK_HIRING_CHANNEL_POST_URL}},SHIPPO_API_TOKEN=${{secrets.SHIPPO_API_TOKEN}},PRINTER_URL=${{secrets.PRINTER_URL}},GADMIN_ACCOUNT_ID=${{secrets.GADMIN_ACCOUNT_ID}},TAILSCALE_API_KEY=${{secrets.TAILSCALE_API_KEY}},TAILSCALE_DOMAIN=${{secrets.TAILSCALE_DOMAIN}},AIRTABLE_ENTERPRISE_ACCOUNT_ID=${{secrets.AIRTABLE_ENTERPRISE_ACCOUNT_ID}},WEBHOOKY_SENTRY_DSN=${{secrets.WEBHOOKY_SENTRY_DSN}},SLACK_TOKEN=${{secrets.SLACK_TOKEN}},CLOUDFLARE_EMAIL=${{secrets.CLOUDFLARE_EMAIL}},CLOUDFLARE_TOKEN=${{secrets.CLOUDFLARE_TOKEN}},OKTA_API_TOKEN=${{secrets.OKTA_API_TOKEN}},OKTA_DOMAIN=${{secrets.OKTA_DOMAIN}},CHECKR_API_KEY=${{secrets.CHECKR_API_KEY}},GIT_HASH=${{ steps.extract_sha.outputs.hash }},SENTRY_ENV=production" \
           --max-instances=5 \
           --allow-unauthenticated
         # Wait for it to be deployed
@@ -78,7 +82,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
       with:
-        tag_name: ${{ steps.extract_version.outputs.version }}
+        tag_name: ${{ steps.extract_sha.outputs.hash }}
         release_name: ${{ steps.extract_version.outputs.version }}
         draft: false
         prerelease: false
@@ -90,5 +94,5 @@ jobs:
         SENTRY_PROJECT: webhooky
       with:
         environment: production
-        version: ${{ steps.extract_version.outputs.version }}
+        version: ${{ steps.extract_sha.outputs.hash }}
 

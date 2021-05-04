@@ -25,6 +25,7 @@ use google_drive::GoogleDrive;
 use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
 use schemars::JsonSchema;
+use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use tracing::{event, instrument, span, Level};
@@ -49,7 +50,13 @@ use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_re
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
-    let _guard = sentry::init(sentry_dsn);
+    let _guard = sentry::init(sentry::ClientOptions {
+        dsn: sentry_dsn.into_dsn().unwrap().clone(),
+
+        release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+        environment: Some(env::var("SENTRY_ENV").unwrap_or("development".to_string()).into()),
+        ..Default::default()
+    });
 
     let service_address = "0.0.0.0:8080";
 
