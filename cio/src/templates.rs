@@ -1,12 +1,10 @@
-use std::collections::BTreeMap;
-
 use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
 use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::configs::{Groups, UserConfig, Users};
+use crate::configs::{Groups, User, Users};
 use crate::db::Database;
 use crate::shorturls::ShortUrl;
 use crate::utils::{create_or_update_file_in_github_repo, github_org};
@@ -41,7 +39,7 @@ fn terraform_username_helper(h: &Helper, _: &Handlebars, _: &Context, _rc: &mut 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct GitHubTeamMembers {
     pub team: String,
-    pub members: Vec<UserConfig>,
+    pub members: Vec<User>,
 }
 
 /**
@@ -93,9 +91,11 @@ pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database) {
  *
  * This function uses the users.toml file in the configs repo for information.
  */
-#[instrument]
+#[instrument(skip(db))]
 #[inline]
-pub async fn generate_terraform_files_for_aws_and_github(github: &Github, users: BTreeMap<String, UserConfig>) {
+pub async fn generate_terraform_files_for_aws_and_github(github: &Github, db: &Database) {
+    let users = Users::get_from_db(db);
+
     let repo = github.repo(github_org(), "configs");
     let r = repo.get().await.unwrap();
 
@@ -128,8 +128,8 @@ pub async fn generate_terraform_files_for_aws_and_github(github: &Github, users:
     let teams = vec!["all", "eng", "consultants"];
     for team in teams {
         // Build the members array.
-        let mut members: Vec<UserConfig> = Default::default();
-        for user in users.values() {
+        let mut members: Vec<User> = Default::default();
+        for user in users.clone() {
             if user.groups.contains(&team.to_string()) {
                 members.push(user.clone());
             }

@@ -1074,9 +1074,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
     }
 
-    // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(github, users.clone()).await;
-
     // Get all the users.
     let db_users = Users::get_from_db(db);
     // Create a BTreeMap
@@ -1574,6 +1571,8 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
     generate_terraform_files_for_okta(github, &db).await;
+    // Generate the terraform files for teams.
+    generate_terraform_files_for_aws_and_github(github, &db).await;
 
     // Sync links.
     sync_links(&db, configs.links).await;
