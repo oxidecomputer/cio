@@ -306,10 +306,23 @@ impl UserConfig {
         }
     }
 
+    #[instrument]
+    #[inline]
+    pub fn ensure_all_groups(&mut self) {
+        let mut department_group = self.department.trim().to_lowercase().to_string();
+        if department_group == "engineering" {
+            department_group = "eng".to_string();
+        }
+        if !department_group.is_empty() && !self.groups.contains(&department_group) {
+            self.groups.push(department_group);
+        }
+    }
+
     #[instrument(skip(db))]
     #[inline]
     pub async fn expand(&mut self, db: &Database) {
         self.ensure_all_aliases();
+        self.ensure_all_groups();
 
         self.populate_ssh_keys().await;
 
@@ -323,6 +336,9 @@ impl UserConfig {
         if !self.manager.is_empty() {
             self.link_to_manager = vec![self.manager.to_string()];
         }
+
+        // Title case the department.
+        self.department = titlecase::titlecase(&self.department).to_string();
     }
 
     /// Generate the email address for the user.

@@ -698,6 +698,7 @@ dependencies = [
  "slack-chat-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
+ "titlecase",
  "tokio 0.2.25",
  "toml",
  "tracing",
@@ -4468,6 +4469,16 @@ name = "tinyvec_macros"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
+
+[[package]]
+name = "titlecase"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f565e410cfc24c2f2a89960b023ca192689d7f77d3f8d4f4af50c2d8affe1117"
+dependencies = [
+ "lazy_static",
+ "regex 1.5.3",
+]
 
 [[package]]
 name = "tokio"
