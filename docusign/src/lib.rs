@@ -21,13 +21,19 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
+use std::collections::BTreeMap;
 use std::env;
 use std::error;
 use std::fmt;
+use std::ops::Add;
 use std::sync::Arc;
 
 use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{DateTime, Duration};
+use jwt::header::HeaderType;
+use jwt::{AlgorithmType, Header, PKeyWithDigest, SignWithKey, Token};
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
@@ -46,12 +52,13 @@ impl DocuSign {
     /// Create a new DocuSign client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, B, P>(account_id: I, rsa_key: K, integration_key: B, key_pair_id: P) -> Self
+    pub fn new<I, K, B, P, A>(account_id: I, rsa_key: K, integration_key: B, key_pair_id: P, api_username: A) -> Self
     where
         I: ToString,
         K: ToString,
         B: ToString,
         P: ToString,
+        A: ToString,
     {
         let client = Client::builder().build();
         match client {
@@ -61,6 +68,7 @@ impl DocuSign {
                     private_key: rsa_key.to_string(),
                     integrator_key: integration_key.to_string(),
                     key_pair_id: key_pair_id.to_string(),
+                    api_username: api_username.to_string(),
                     is_demo: true,
                 },
                 token: "".to_string(),
@@ -80,8 +88,9 @@ impl DocuSign {
         let rsa_key = env::var("DOCUSIGN_RSA_KEY").unwrap();
         let integration_key = env::var("DOCUSIGN_INTEGRATION_KEY").unwrap();
         let key_pair_id = env::var("DOCUSIGN_KEY_PAIR_ID").unwrap();
+        let api_username = env::var("DOCUSIGN_API_USERNAME").unwrap();
 
-        DocuSign::new(account_id, rsa_key, integration_key, key_pair_id)
+        DocuSign::new(account_id, rsa_key, integration_key, key_pair_id, api_username)
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
@@ -387,4 +396,55 @@ pub struct JWTConfig {
     /// not set then the user's default account will be used.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub account_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub api_username: String,
+}
+
+impl JWTConfig {
+    /// UserConsentURL creates a url allowing a user to consent to impersonation
+    /// https://developers.docusign.com/esign-rest-api/guides/authentication/obtaining-consent#individual-consent
+    fn user_consent_url(&self, redirect_uri: String) -> String {
+        let scope = "signature impersonation";
+        let mut endpoint = "https://account.docusign.com/oauth/auth";
+        if self.is_demo {
+            endpoint = "https://account-d.docusign.com/oauth/auth";
+        }
+
+        // docusign insists upon %20 not + in scope definition
+        return format!(
+            "{}?response_type=code&scope={}&client_id={}&redirect_uri={}",
+            endpoint,
+            scope.replace(" ", "%20"),
+            self.integrator_key,
+            redirect_uri
+        );
+    }
+
+    fn get_token(&self) -> String {
+        let header = Header {
+            algorithm: AlgorithmType::Rs256,
+            type_: Some(HeaderType::JsonWebToken),
+            ..Default::default()
+        };
+
+        let mut claims = BTreeMap::new();
+        claims.insert("sub", self.api_username.to_string());
+        claims.insert("iss", self.integrator_key.to_string());
+        let mut audience = "account.docusign.com";
+        if self.is_demo {
+            audience = "account-d.docusign.com";
+        }
+        claims.insert("aud", audience.to_string());
+        claims.insert("scope", "signature impersonation".to_string());
+        claims.insert("exp", format!("{}", Utc::now().add(Duration::hours(1)).timestamp()));
+        claims.insert("iat", format!("{}", Utc::now().timestamp()));
+
+        let private_key = PKeyWithDigest {
+            digest: MessageDigest::sha256(),
+            key: PKey::private_key_from_pem(self.private_key.as_bytes()).unwrap(),
+        };
+
+        let t = Token::new(header, claims).sign_with_key(&private_key).unwrap();
+        t.as_str().to_string()
+    }
 }
