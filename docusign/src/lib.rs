@@ -84,12 +84,7 @@ impl DocuSign {
         if method != Method::POST {
             headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
         }
-        if path.ends_with("/transcript") {
-            // Get the plain text transcript
-            headers.append(header::ACCEPT, header::HeaderValue::from_static("text/plain"));
-        } else {
-            headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
-        }
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
         let mut rb = self.client.request(method, url).headers(headers).bearer_auth(&self.key);
 
