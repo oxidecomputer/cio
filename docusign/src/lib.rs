@@ -12,11 +12,11 @@
  *
  * async fn geocode() {
  *     // Initialize the DocuSign client.
- *     let docusign = DocuSign::new_from_env();
+ *     let docusign = DocuSign::new_from_env().await;
  *
  *     let envelope = docusign.get_envelope("some-envelope-id").await.unwrap();
  *
- *     println!("{}", envelope);
+ *     println!("{:?}", envelope);
  * }
  * ```
  */
@@ -38,7 +38,8 @@ use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the DocuSign API.
-const ENDPOINT: &str = "https://n4.docusign.net/restapi/v2.1/";
+/// For production use n4.
+const ENDPOINT: &str = "https://demo.docusign.net/restapi/v2.1/";
 
 /// Entrypoint for interacting with the DocuSign API.
 pub struct DocuSign {
@@ -52,7 +53,7 @@ impl DocuSign {
     /// Create a new DocuSign client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, B, P, A>(account_id: I, rsa_key: K, integration_key: B, key_pair_id: P, api_username: A) -> Self
+    pub async fn new<I, K, B, P, A>(account_id: I, rsa_key: K, integration_key: B, key_pair_id: P, api_username: A) -> Self
     where
         I: ToString,
         K: ToString,
@@ -62,19 +63,26 @@ impl DocuSign {
     {
         let client = Client::builder().build();
         match client {
-            Ok(c) => Self {
-                jwt_config: JWTConfig {
+            Ok(c) => {
+                let jwt_config = JWTConfig {
                     account_id: account_id.to_string(),
                     private_key: rsa_key.to_string(),
                     integrator_key: integration_key.to_string(),
                     key_pair_id: key_pair_id.to_string(),
                     api_username: api_username.to_string(),
                     is_demo: true,
-                },
-                token: "".to_string(),
+                };
 
-                client: Arc::new(c),
-            },
+                println!("docusign consent URL: {}", jwt_config.user_consent_url());
+                let token = jwt_config.get_access_token().await;
+
+                DocuSign {
+                    jwt_config,
+                    token,
+
+                    client: Arc::new(c),
+                }
+            }
             Err(e) => panic!("creating client failed: {:?}", e),
         }
     }
@@ -83,14 +91,14 @@ impl DocuSign {
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key and your requests will work.
-    pub fn new_from_env() -> Self {
+    pub async fn new_from_env() -> Self {
         let account_id = env::var("DOCUSIGN_ACCOUNT_ID").unwrap();
         let rsa_key = env::var("DOCUSIGN_RSA_KEY").unwrap();
         let integration_key = env::var("DOCUSIGN_INTEGRATION_KEY").unwrap();
         let key_pair_id = env::var("DOCUSIGN_KEY_PAIR_ID").unwrap();
         let api_username = env::var("DOCUSIGN_API_USERNAME").unwrap();
 
-        DocuSign::new(account_id, rsa_key, integration_key, key_pair_id, api_username)
+        DocuSign::new(account_id, rsa_key, integration_key, key_pair_id, api_username).await
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
@@ -403,7 +411,7 @@ pub struct JWTConfig {
 impl JWTConfig {
     /// UserConsentURL creates a url allowing a user to consent to impersonation
     /// https://developers.docusign.com/esign-rest-api/guides/authentication/obtaining-consent#individual-consent
-    fn user_consent_url(&self, redirect_uri: String) -> String {
+    fn user_consent_url(&self) -> String {
         let scope = "signature impersonation";
         let mut endpoint = "https://account.docusign.com/oauth/auth";
         if self.is_demo {
@@ -416,11 +424,11 @@ impl JWTConfig {
             endpoint,
             scope.replace(" ", "%20"),
             self.integrator_key,
-            redirect_uri
+            env::var("DOCUSIGN_API_REDIRECT_URI").unwrap(),
         );
     }
 
-    fn get_token(&self) -> String {
+    fn get_jwt_token(&self) -> String {
         let header = Header {
             algorithm: AlgorithmType::Rs256,
             type_: Some(HeaderType::JsonWebToken),
@@ -447,4 +455,34 @@ impl JWTConfig {
         let t = Token::new(header, claims).sign_with_key(&private_key).unwrap();
         t.as_str().to_string()
     }
+
+    async fn get_access_token(&self) -> String {
+        let jwt_token = self.get_jwt_token();
+
+        let mut endpoint = "https://account.docusign.com/oauth/token";
+        if self.is_demo {
+            endpoint = "https://account-d.docusign.com/oauth/token";
+        }
+
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(endpoint)
+            .query(&[("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"), ("assertion", &jwt_token)])
+            .send()
+            .await
+            .unwrap();
+
+        let t: AccessToken = resp.json().await.unwrap();
+        t.access_token
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AccessToken {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub access_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token_type: String,
+    #[serde(default)]
+    pub expires_in: i64,
 }
