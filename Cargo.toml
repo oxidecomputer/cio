@@ -4,6 +4,7 @@ members = [
 	"checkr",
 	"cfcert",
 	"cio",
+	"docusign",
 	"drive",
 	"giphy",
 	"gsuite",

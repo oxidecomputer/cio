@@ -1128,6 +1128,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
+name = "docusign"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "reqwest 0.10.10",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dropshot"
 version = "0.3.0"
 source = "git+https://github.com/jessfraz/dropshot?branch=working#d1206a5c92923df72e8fb7693b4f375d46131ba7"
