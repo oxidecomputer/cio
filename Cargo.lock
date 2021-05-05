@@ -1132,6 +1132,7 @@ name = "docusign"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "jwt",
  "reqwest 0.10.10",
  "serde",
  "serde_json",
@@ -2139,6 +2140,21 @@ dependencies = [
  "serde",
  "serde_json",
  "simple_asn1",
+]
+
+[[package]]
+name = "jwt"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86e46349d67dc03bdbdb28da0337a355a53ca1d5156452722c36fe21d0e6389b"
+dependencies = [
+ "base64 0.13.0",
+ "crypto-mac",
+ "digest 0.9.0",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

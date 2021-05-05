@@ -28,17 +28,16 @@ use std::sync::Arc;
 
 use chrono::offset::Utc;
 use chrono::DateTime;
-use reqwest::multipart::Form;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the DocuSign API.
-const ENDPOINT: &str = "https://n2.docusign.net/restapi/v2.1/";
+const ENDPOINT: &str = "https://n4.docusign.net/restapi/v2.1/";
 
 /// Entrypoint for interacting with the DocuSign API.
 pub struct DocuSign {
-    account_id: String,
-    key: String,
+    token: String,
+    jwt_config: JWTConfig,
 
     client: Arc<Client>,
 }
@@ -47,16 +46,24 @@ impl DocuSign {
     /// Create a new DocuSign client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K>(account_id: I, key: K) -> Self
+    pub fn new<I, K, B, P>(account_id: I, rsa_key: K, integration_key: B, key_pair_id: P) -> Self
     where
         I: ToString,
         K: ToString,
+        B: ToString,
+        P: ToString,
     {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
-                account_id: account_id.to_string(),
-                key: key.to_string(),
+                jwt_config: JWTConfig {
+                    account_id: account_id.to_string(),
+                    private_key: rsa_key.to_string(),
+                    integrator_key: integration_key.to_string(),
+                    key_pair_id: key_pair_id.to_string(),
+                    is_demo: true,
+                },
+                token: "".to_string(),
 
                 client: Arc::new(c),
             },
@@ -70,34 +77,38 @@ impl DocuSign {
     /// given a valid API key and your requests will work.
     pub fn new_from_env() -> Self {
         let account_id = env::var("DOCUSIGN_ACCOUNT_ID").unwrap();
-        let key = env::var("DOCUSIGN_API_KEY").unwrap();
+        let rsa_key = env::var("DOCUSIGN_RSA_KEY").unwrap();
+        let integration_key = env::var("DOCUSIGN_INTEGRATION_KEY").unwrap();
+        let key_pair_id = env::var("DOCUSIGN_KEY_PAIR_ID").unwrap();
 
-        DocuSign::new(account_id, key)
+        DocuSign::new(account_id, rsa_key, integration_key, key_pair_id)
     }
 
-    fn request(&self, method: Method, path: &str, form: Option<Form>, query: Option<Vec<(&str, String)>>) -> Request {
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
+    where
+        B: Serialize,
+    {
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(path).unwrap();
 
+        let bt = format!("Bearer {}", self.token);
+        let bearer = header::HeaderValue::from_str(&bt).unwrap();
+
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
-        if method != Method::POST {
-            headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
-        }
+        headers.append(header::AUTHORIZATION, bearer);
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
-        let mut rb = self.client.request(method, url).headers(headers).bearer_auth(&self.key);
+        let mut rb = self.client.request(method.clone(), url).headers(headers);
 
-        match query {
-            None => (),
-            Some(val) => {
-                rb = rb.query(&val);
-            }
+        if let Some(val) = query {
+            rb = rb.query(&val);
         }
 
         // Add the body, this is to ensure our GET and DELETE calls succeed.
-        if let Some(f) = form {
-            rb = rb.multipart(f);
+        if method != Method::GET && method != Method::DELETE {
+            rb = rb.json(&body);
         }
 
         // Build the request.
@@ -107,7 +118,7 @@ impl DocuSign {
     /// Get an envelope.
     pub async fn get_envelope(&self, envelope_id: &str) -> Result<Envelope, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}", self.account_id, envelope_id), None, None);
+        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}", self.jwt_config.account_id, envelope_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -126,7 +137,7 @@ impl DocuSign {
     /// Create an envelope.
     pub async fn create_envelope(&self, envelope: Envelope) -> Result<Envelope, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, &format!("accounts/{}/envelopes", self.account_id), envelope, None);
+        let request = self.request(Method::POST, &format!("accounts/{}/envelopes", self.jwt_config.account_id), envelope, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -353,3 +364,27 @@ pub struct LockInformation {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LockedByUser {}
+
+/// Options can specify how long the token will be valid. DocuSign
+/// limits this to 1 hour.  1 hour is assumed if left empty.  Offsets
+/// for expiring token may also be used.  Do not set FormValues or Custom Claims.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct JWTConfig {
+    /// see https://developers.docusign.com/esign-rest-api/guides/authentication/oauth2-jsonwebtoken#prerequisites
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub integrator_key: String,
+    /// Use developer sandbox
+    #[serde(default)]
+    pub is_demo: bool,
+    /// PEM encoding of an RSA Private Key.
+    /// see https://developers.docusign.com/esign-rest-api/guides/authentication/oauth2-jsonwebtoken#prerequisites
+    /// for how to create RSA keys to the application.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub private_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub key_pair_id: String,
+    /// DocuSign users may have more than one account.  If AccountID is
+    /// not set then the user's default account will be used.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub account_id: String,
+}
