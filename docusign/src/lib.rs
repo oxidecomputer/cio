@@ -212,12 +212,12 @@ impl DocuSign {
         connect.url_to_publish_to = env::var("DOCUSIGN_WEBHOOK_ENDPOINT").unwrap();
         connect.allow_envelope_publish = "true".to_string();
         connect.envelope_events = vec![
-            "completed".to_string(),
-            "sent".to_string(),
-            "declined".to_string(),
-            "delivered".to_string(),
-            "signed".to_string(),
-            "voided".to_string(),
+            "Completed".to_string(),
+            "Sent".to_string(),
+            "Declined".to_string(),
+            "Delivered".to_string(),
+            "Signed".to_string(),
+            "Voided".to_string(),
         ];
         connect.all_users = "true".to_string();
         connect.include_document_fields = "true".to_string();
