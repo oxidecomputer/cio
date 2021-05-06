@@ -157,7 +157,12 @@ impl DocuSign {
     /// Get an envelope.
     pub async fn get_envelope(&self, envelope_id: &str) -> Result<Envelope, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}", self.jwt_config.account_id, envelope_id), (), None);
+        let request = self.request(
+            Method::GET,
+            &format!("accounts/{}/envelopes/{}", self.jwt_config.account_id, envelope_id),
+            (),
+            Some(&[("include", "custom_fields")]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
