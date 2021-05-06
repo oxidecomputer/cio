@@ -544,18 +544,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "checkr"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5382f24f0c1658a714ca4e823603360e92d746ceb136d11aa00eb9c074f30513"
-dependencies = [
- "chrono",
- "reqwest 0.11.3",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -598,14 +586,13 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#5218f8e0cf1434289c0dadaf3d2cca6b3c89dda9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e5ffd374460b866c22d6564fb4e334638557e87d"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
- "bytes 0.5.6",
- "checkr 0.0.5",
+ "checkr 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
@@ -628,7 +615,7 @@ dependencies = [
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "nom_pem",
- "okta 0.0.4",
+ "okta 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "openapiv3",
  "openssl",
  "opentelemetry",
@@ -1145,13 +1132,13 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "docusign"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#5218f8e0cf1434289c0dadaf3d2cca6b3c89dda9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e5ffd374460b866c22d6564fb4e334638557e87d"
 dependencies = [
- "bytes 1.0.1",
+ "bytes 0.5.6",
  "chrono",
  "jwt",
  "openssl",
- "reqwest 0.11.3",
+ "reqwest 0.10.10",
  "serde",
  "serde_json",
 ]
@@ -1920,7 +1907,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#55223da081f8a81f6ab2ab34b60d1c438946a63d"
+source = "git+https://github.com/jessfraz/hubcaps?branch=actions#ef678603ced049631cce747170b2008a734cea7c"
 dependencies = [
  "base64 0.12.3",
  "chrono",
@@ -1933,7 +1920,7 @@ dependencies = [
  "log 0.4.14",
  "mime",
  "percent-encoding 2.1.0",
- "reqwest 0.11.3",
+ "reqwest 0.10.10",
  "schemars",
  "serde",
  "serde_derive",
@@ -2320,7 +2307,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#5218f8e0cf1434289c0dadaf3d2cca6b3c89dda9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e5ffd374460b866c22d6564fb4e334638557e87d"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2641,18 +2628,6 @@ checksum = "2362d0855c48407c9c76cf6cac9fdc0c324626a2bf0b5797cc1b6916be08bcdc"
 dependencies = [
  "chrono",
  "reqwest 0.10.10",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "okta"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a0ac659a383337b6e02faee1e530254b41865247c8fb1a202770291d1d30ba8"
-dependencies = [
- "chrono",
- "reqwest 0.11.3",
  "serde",
  "serde_json",
 ]
