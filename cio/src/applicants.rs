@@ -5,6 +5,7 @@ use std::fs;
 use std::io::{copy, stderr, stdout, Write};
 use std::process::Command;
 use std::str::FromStr;
+use std::thread;
 
 use async_trait::async_trait;
 use checkr::Checkr;
@@ -36,7 +37,7 @@ use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
-use crate::schema::{applicant_reviewers, applicants};
+use crate::schema::{applicant_reviewers, applicants, users};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
 use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -2410,7 +2411,9 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        if applicant.status.to_lowercase() != "giving offer" && applicant.email != "me@jessfraz.com" {
+        // We look for "Onboarding" here as well since we want to make sure we can actually update
+        // the data for the user.
+        if applicant.status.to_lowercase() != "giving offer" && applicant.status.to_lowercase() != "onboarding" && applicant.email != "me@jessfraz.com" {
             // We can return early.
             continue;
         }
@@ -2439,7 +2442,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                 docusign::TemplateRole {
                     name: "Steve Tuck".to_string(),
                     role_name: "CEO".to_string(),
-                    email: "steve+dev@oxidecomputer.com".to_string(),
+                    email: format!("jess+steve+dev@{}", GSUITE_DOMAIN),
                     signer_name: "Steve Tuck".to_string(),
                     routing_order: "1".to_string(),
                     // Make Steve's email notification different than the actual applicant.
@@ -2482,6 +2485,10 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             if envelope.status == "completed" {
                 for document in envelope.documents {
                     // Get the document from docusign.
+                    // In order to not "over excessively poll the API here, we need to sleep for 15
+                    // min before getting each of the documents.
+                    // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
+                    thread::sleep(std::time::Duration::from_secs(900));
                     let bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap();
 
                     let mut filename = format!("{} - {}.pdf", applicant.name, document.name);
@@ -2497,15 +2504,42 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                 }
             }
 
-            // TODO: parse and update the custom fields if we have them.
+            // In order to not "over excessively poll the API here, we need to sleep for 15
+            // min before getting each of the documents.
+            // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
+            thread::sleep(std::time::Duration::from_secs(15));
             let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
-            for fd in form_data {
-                // TODO: Save the data to the employee who matches this applicant.
-                if fd.name == "Applicant's Street Address" {
-                    println!("{}", fd.value);
+
+            // Let's get the employee for the applicant.
+            // We will match on their recovery email.
+            if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(applicant.email.to_string())).first::<User>(&db.conn()) {
+                // We have an employee, so we can update their data from the data in Docusign.
+                println!("got employee {:?}", employee);
+
+                // TODO: continue for now as we don't want to eff up my record.
+                break;
+
+                for fd in form_data {
+                    // Save the data to the employee who matches this applicant.
+                    if fd.name == "Applicant's Street Address" {
+                        employee.home_address_street_1 = fd.value.trim().to_string();
+                    }
+                    if fd.name == "Applicant's City" {
+                        employee.home_address_city = fd.value.trim().to_string();
+                    }
+                    if fd.name == "Applicant's State" {
+                        employee.home_address_state = fd.value.trim().to_string();
+                    }
+                    if fd.name == "Applicant's Postal Code" {
+                        employee.home_address_zipcode = fd.value.trim().to_string();
+                    }
+                    if fd.name == "Start Date" {
+                        employee.start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                    }
                 }
 
-                println!("form data: {:?}", fd);
+                // Update the employee.
+                employee.update(db);
             }
         }
 
