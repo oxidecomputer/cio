@@ -112,6 +112,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_edit_webhooks).unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
+    api.register(listen_checkr_background_update_webhooks).unwrap();
+    api.register(listen_docusign_envelope_update_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
@@ -935,6 +937,8 @@ async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, bod
     let event = body_param.into_inner();
     let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
         println!("decoding event body `{}` failed: {}", event.to_string(), e);
+        sentry::capture_message(&format!("shippo: {}", event.to_string()), sentry::Level::Info);
+
         Default::default()
     });
     event!(Level::INFO, "shipment parsed: {:?}", body);
@@ -970,6 +974,36 @@ pub struct ShippoTrackingUpdateEvent {
 #[inline]
 async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("ok".to_string()))
+}
+
+/** Listen for updates to our checkr background checks. */
+#[endpoint {
+    method = POST,
+    path = "/checkr/background/update",
+}]
+#[instrument]
+#[inline]
+async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    println!("checkr: {}", event.to_string());
+    sentry::capture_message(&format!("checkr: {}", event.to_string()), sentry::Level::Info);
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Listen for updates to our docusign envelopes. */
+#[endpoint {
+    method = POST,
+    path = "/docusign/envelope/update",
+}]
+#[instrument]
+#[inline]
+async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    println!("docusign: {}", event.to_string());
+    sentry::capture_message(&format!("docusign: {}", event.to_string()), sentry::Level::Info);
+
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /** Listen for analytics page view events. */
