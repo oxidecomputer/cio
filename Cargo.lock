@@ -381,7 +381,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#976da0c2d55889e8a90753d28538609d6a81b566"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4ef145860f27ca94bb1e4893d92f78a1446f6c49"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -423,15 +423,13 @@ dependencies = [
  "serde_json",
  "serde_qs 0.7.2",
  "sheets 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.22",
+ "shippo 0.1.23 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "slack-chat-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "titlecase",
  "tokio",
  "toml",
- "tracing",
- "tracing-attributes",
  "walkdir",
  "yup-oauth2",
  "zip",
@@ -1786,7 +1784,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#976da0c2d55889e8a90753d28538609d6a81b566"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4ef145860f27ca94bb1e4893d92f78a1446f6c49"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -3200,6 +3198,18 @@ dependencies = [
 [[package]]
 name = "shippo"
 version = "0.1.23"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4ef145860f27ca94bb1e4893d92f78a1446f6c49"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "shippo"
+version = "0.1.23"
 dependencies = [
  "chrono",
  "reqwest",
@@ -3804,19 +3814,7 @@ checksum = "09adeb8c97449311ccd28a427f96fb563e7fd31aabf994189879d9da2394b89d"
 dependencies = [
  "cfg-if 1.0.0",
  "pin-project-lite",
- "tracing-attributes",
  "tracing-core",
-]
-
-[[package]]
-name = "tracing-attributes"
-version = "0.1.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c42e6fa53307c8a17e4ccd4dc81cf5ec38db9209f59b222210375b54ee40d1e2"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
