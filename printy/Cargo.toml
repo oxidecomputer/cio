@@ -9,15 +9,8 @@ edition = "2018"
 
 [dependencies]
 #dropshot = "^0.3.0"
-dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "working" }
+dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 http = "0.2.0"
-opentelemetry = { version = "0.10", default-features = false, features = ["trace", "tokio"] }
-opentelemetry-zipkin = { version = "^0.8", features = ["reqwest-client"], default-features = false }
-reqwest = "^0.10.10"
-tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
-tracing = "^0.1"
-tracing-attributes = "^0.1"
-tracing-futures = "^0.2"
-tracing-opentelemetry = "^0.9.0"
-tracing-subscriber = { version = "^0.2", features = ["ansi", "fmt", "json", "chrono", "registry"] }
+reqwest = "^0.11"
+tokio = { version = "1", features = ["full"] }
 uuid = { version = "^0.8.1", features = ["serde", "v4"] }

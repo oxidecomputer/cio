@@ -10,8 +10,8 @@ edition = "2018"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
-cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
-#cio-api = { path = "../cio" }
+#cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
+cio-api = { path = "../cio" }
 #dropshot = "^0.3.0"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
@@ -28,4 +28,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sheets = "^0.1.0"
 shippo = "^0.1.12"
-tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
+tokio = { version = "=1", features = ["full"] }

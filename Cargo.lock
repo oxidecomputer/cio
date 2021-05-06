@@ -506,7 +506,7 @@ name = "cfcert"
 version = "0.1.0"
 dependencies = [
  "cloudflare-rs",
- "tokio 0.2.25",
+ "tokio 1.5.0",
 ]
 
 [[package]]
@@ -586,7 +586,6 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#cf7461daefdf4944df3ad4cde4f304bc7f477b88"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -602,8 +601,8 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.4 (git+https://github.com/oxidecomputer/cio?branch=master)",
- "dropshot 0.3.0",
+ "docusign",
+ "dropshot",
  "futures-util",
  "google-drive 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -611,20 +610,16 @@ dependencies = [
  "handlebars",
  "html2text",
  "hubcaps",
- "hyper 0.13.10",
  "lopdf",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "macros",
  "nom_pem",
  "okta 0.0.3",
- "openapiv3 0.3.2",
  "openssl",
- "opentelemetry",
- "opentelemetry-zipkin",
  "pandoc",
  "phonenumber",
  "rand 0.8.3",
  "regex 1.5.3",
- "reqwest 0.10.10",
+ "reqwest 0.11.3",
  "revai 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
  "sendgrid-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -637,76 +632,11 @@ dependencies = [
  "tailscale-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "titlecase",
- "tokio 0.2.25",
+ "tokio 1.5.0",
  "toml",
  "tracing",
  "tracing-attributes",
  "tracing-futures",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "walkdir",
- "yup-oauth2",
- "zip",
-]
-
-[[package]]
-name = "cio-api"
-version = "0.2.0"
-dependencies = [
- "acme-lib",
- "airtable-api 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
- "async-trait",
- "base64 0.12.3",
- "checkr 0.0.4",
- "chrono",
- "chrono-humanize",
- "chrono-tz",
- "clap",
- "cloudflare-rs",
- "comrak",
- "csv",
- "diesel",
- "diffy",
- "docusign 0.1.4",
- "dropshot 0.5.2-dev",
- "futures-util",
- "google-drive 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "handlebars",
- "html2text",
- "hubcaps",
- "lopdf",
- "macros 0.1.0",
- "nom_pem",
- "okta 0.0.3",
- "openssl",
- "opentelemetry",
- "opentelemetry-zipkin",
- "pandoc",
- "phonenumber",
- "rand 0.8.3",
- "regex 1.5.3",
- "reqwest 0.10.10",
- "revai 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "schemars",
- "sendgrid-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde",
- "serde_json",
- "serde_qs 0.7.2",
- "sheets 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "tailscale-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar",
- "titlecase",
- "tokio 0.2.25",
- "toml",
- "tracing",
- "tracing-attributes",
- "tracing-futures",
- "tracing-opentelemetry",
- "tracing-subscriber",
  "walkdir",
  "yup-oauth2",
  "zip",
@@ -1130,7 +1060,6 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "docusign"
 version = "0.1.4"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#cf7461daefdf4944df3ad4cde4f304bc7f477b88"
 dependencies = [
  "bytes 0.5.6",
  "chrono",
@@ -1139,52 +1068,6 @@ dependencies = [
  "reqwest 0.10.10",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "docusign"
-version = "0.1.4"
-dependencies = [
- "bytes 0.5.6",
- "chrono",
- "jwt",
- "openssl",
- "reqwest 0.10.10",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "dropshot"
-version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=working#d1206a5c92923df72e8fb7693b4f375d46131ba7"
-dependencies = [
- "async-trait",
- "base64 0.12.3",
- "bytes 0.5.6",
- "chrono",
- "dropshot_endpoint 0.3.0",
- "futures",
- "hostname",
- "http",
- "hyper 0.13.10",
- "indexmap",
- "openapiv3 0.3.2",
- "paste",
- "schemars",
- "serde",
- "serde_json",
- "serde_qs 0.7.2",
- "serde_urlencoded 0.6.1",
- "slog",
- "slog-async",
- "slog-bunyan",
- "slog-json",
- "slog-term",
- "tokio 0.2.25",
- "toml",
- "urlencoding",
- "uuid",
 ]
 
 [[package]]
@@ -1196,19 +1079,19 @@ dependencies = [
  "base64 0.13.0",
  "bytes 1.0.1",
  "chrono",
- "dropshot_endpoint 0.5.2-dev",
+ "dropshot_endpoint",
  "futures",
  "hostname",
  "http",
  "hyper 0.14.5",
  "indexmap",
- "openapiv3 0.5.0",
+ "openapiv3",
  "paste",
  "schemars",
  "serde",
  "serde_json",
  "serde_qs 0.8.3",
- "serde_urlencoded 0.7.0",
+ "serde_urlencoded",
  "slog",
  "slog-async",
  "slog-bunyan",
@@ -1218,19 +1101,6 @@ dependencies = [
  "toml",
  "urlencoding",
  "uuid",
-]
-
-[[package]]
-name = "dropshot_endpoint"
-version = "0.3.0"
-source = "git+https://github.com/jessfraz/dropshot?branch=working#d1206a5c92923df72e8fb7693b4f375d46131ba7"
-dependencies = [
- "proc-macro2",
- "quote",
- "schemars",
- "serde",
- "serde_tokenstream",
- "syn",
 ]
 
 [[package]]
@@ -1931,7 +1801,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.7.2",
- "serde_urlencoded 0.7.0",
+ "serde_urlencoded",
  "url",
 ]
 
@@ -1950,7 +1820,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 [[package]]
 name = "hubcaps"
 version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#ef678603ced049631cce747170b2008a734cea7c"
+source = "git+https://github.com/jessfraz/hubcaps?branch=actions#93a904cbe4df86bc9b3c9b530c8e1c7e4c0649ef"
 dependencies = [
  "base64 0.12.3",
  "chrono",
@@ -1963,7 +1833,7 @@ dependencies = [
  "log 0.4.14",
  "mime",
  "percent-encoding 2.1.0",
- "reqwest 0.10.10",
+ "reqwest 0.11.3",
  "schemars",
  "serde",
  "serde_derive",
@@ -1987,7 +1857,7 @@ dependencies = [
  "httparse",
  "httpdate",
  "itoa",
- "pin-project 1.0.7",
+ "pin-project",
  "socket2 0.3.19",
  "tokio 0.2.25",
  "tower-service",
@@ -2011,7 +1881,7 @@ dependencies = [
  "httparse",
  "httpdate",
  "itoa",
- "pin-project 1.0.7",
+ "pin-project",
  "socket2 0.4.0",
  "tokio 1.5.0",
  "tower-service",
@@ -2350,19 +2220,6 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#cf7461daefdf4944df3ad4cde4f304bc7f477b88"
-dependencies = [
- "Inflector",
- "proc-macro2",
- "quote",
- "serde",
- "serde_tokenstream",
- "syn",
-]
-
-[[package]]
-name = "macros"
-version = "0.1.0"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2409,15 +2266,6 @@ name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
-
-[[package]]
-name = "matchers"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f099785f7595cc4b4553a174ce30dd7589ef93391ff414dbb67f62392b9e0ce1"
-dependencies = [
- "regex-automata",
-]
 
 [[package]]
 name = "matches"
@@ -2487,29 +2335,6 @@ dependencies = [
  "miow 0.3.7",
  "ntapi",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "mio-named-pipes"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0840c1c50fd55e521b247f949c241c9997709f23bd7f023b9762cd561e935656"
-dependencies = [
- "log 0.4.14",
- "mio 0.6.23",
- "miow 0.3.7",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "mio-uds"
-version = "0.6.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afcb699eb26d4332647cc848492bbc15eafb26f08d0304550d5aa1f612e066f0"
-dependencies = [
- "iovec",
- "libc",
- "mio 0.6.23",
 ]
 
 [[package]]
@@ -2701,18 +2526,6 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openapiv3"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ee9a17eebdd923c4cf74145cd31b2b1d3aa019262c9e8669a843b1d629a9a3c"
-dependencies = [
- "indexmap",
- "serde",
- "serde_json",
- "serde_yaml",
-]
-
-[[package]]
-name = "openapiv3"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90228d34f20d9fff3174d19b0d41e67f52711045270b540a2a2c2dc41ccb4085"
@@ -2764,40 +2577,6 @@ dependencies = [
  "openssl-src",
  "pkg-config",
  "vcpkg",
-]
-
-[[package]]
-name = "opentelemetry"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e260f0ef133e1043b95143f83cfc8f6be023cf4b46a526da0212039b45392679"
-dependencies = [
- "async-trait",
- "futures",
- "http",
- "lazy_static",
- "percent-encoding 2.1.0",
- "pin-project 0.4.28",
- "rand 0.7.3",
- "regex 1.5.3",
- "reqwest 0.10.10",
- "tokio 0.2.25",
-]
-
-[[package]]
-name = "opentelemetry-zipkin"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff42307efbc2c2810845fbe23393e3b6b75284bb51d98bf085118469a8ffe3b8"
-dependencies = [
- "async-trait",
- "http",
- "lazy_static",
- "opentelemetry",
- "reqwest 0.10.10",
- "serde",
- "serde_json",
- "typed-builder",
 ]
 
 [[package]]
@@ -2981,31 +2760,11 @@ dependencies = [
 
 [[package]]
 name = "pin-project"
-version = "0.4.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "918192b5c59119d51e0cd221f4d49dde9112824ba717369e903c97d076083d0f"
-dependencies = [
- "pin-project-internal 0.4.28",
-]
-
-[[package]]
-name = "pin-project"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7509cc106041c40a4518d2af7a61530e1eed0e6285296a3d8c5472806ccc4a4"
 dependencies = [
- "pin-project-internal 1.0.7",
-]
-
-[[package]]
-name = "pin-project-internal"
-version = "0.4.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3be26700300be6d9d23264c73211d8190e755b6b5ca7a1b28230025511b52a5e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "pin-project-internal",
 ]
 
 [[package]]
@@ -3098,17 +2857,10 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 name = "printy"
 version = "0.1.0"
 dependencies = [
- "dropshot 0.3.0",
+ "dropshot",
  "http",
- "opentelemetry",
- "opentelemetry-zipkin",
- "reqwest 0.10.10",
- "tokio 0.2.25",
- "tracing",
- "tracing-attributes",
- "tracing-futures",
- "tracing-opentelemetry",
- "tracing-subscriber",
+ "reqwest 0.11.3",
+ "tokio 1.5.0",
  "uuid",
 ]
 
@@ -3328,7 +3080,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae1ded71d66a4a97f5e961fd0cb25a5f366a42a41570d16a763a69c092c26ae4"
 dependencies = [
  "byteorder",
- "regex-syntax 0.6.25",
 ]
 
 [[package]]
@@ -3393,7 +3144,7 @@ dependencies = [
  "pin-project-lite 0.2.6",
  "serde",
  "serde_json",
- "serde_urlencoded 0.7.0",
+ "serde_urlencoded",
  "tokio 0.2.25",
  "tokio-tls",
  "url",
@@ -3428,7 +3179,7 @@ dependencies = [
  "pin-project-lite 0.2.6",
  "serde",
  "serde_json",
- "serde_urlencoded 0.7.0",
+ "serde_urlencoded",
  "tokio 1.5.0",
  "tokio-native-tls",
  "url",
@@ -3901,18 +3652,6 @@ dependencies = [
 
 [[package]]
 name = "serde_urlencoded"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ec5d77e2d4c73717816afac02670d5c4f534ea95ed430442cad02e7a6e32c97"
-dependencies = [
- "dtoa",
- "itoa",
- "serde",
- "url",
-]
-
-[[package]]
-name = "serde_urlencoded"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edfa57a7f8d9c1d260a549e7224100f6c43d43f9103e06dd8b4095a9b2b43ce9"
@@ -3987,15 +3726,6 @@ dependencies = [
  "cpufeatures",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
-]
-
-[[package]]
-name = "sharded-slab"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79c719719ee05df97490f80a45acfc99e5a30ce98a1e4fb67aee422745ae14e3"
-dependencies = [
- "lazy_static",
 ]
 
 [[package]]
@@ -4599,17 +4329,12 @@ dependencies = [
  "futures-core",
  "iovec",
  "lazy_static",
- "libc",
  "memchr",
  "mio 0.6.23",
- "mio-named-pipes",
- "mio-uds",
  "num_cpus",
  "pin-project-lite 0.1.12",
- "signal-hook-registry",
  "slab",
  "tokio-macros 0.2.6",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -4768,64 +4493,8 @@ version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
 dependencies = [
- "pin-project 1.0.7",
+ "pin-project",
  "tracing",
-]
-
-[[package]]
-name = "tracing-log"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6923477a48e41c1951f1999ef8bb5a3023eb723ceadafe78ffb65dc366761e3"
-dependencies = [
- "lazy_static",
- "log 0.4.14",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-opentelemetry"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08457d22f95dc05ff929afcdc3d57f3a2437f9377765bb6e20ffeb67d72b1719"
-dependencies = [
- "opentelemetry",
- "tracing",
- "tracing-core",
- "tracing-log",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "tracing-serde"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb65ea441fbb84f9f6748fd496cf7f63ec9af5bca94dd86456978d055e8eb28b"
-dependencies = [
- "serde",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-subscriber"
-version = "0.2.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa5553bf0883ba7c9cbe493b085c29926bd41b66afc31ff72cf17ff4fb60dcd5"
-dependencies = [
- "ansi_term 0.12.1",
- "chrono",
- "lazy_static",
- "matchers",
- "regex 1.5.3",
- "serde",
- "serde_json",
- "sharded-slab",
- "smallvec",
- "thread_local 1.1.3",
- "tracing",
- "tracing-core",
- "tracing-log",
- "tracing-serde",
 ]
 
 [[package]]
@@ -4878,17 +4547,6 @@ name = "typed-arena"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9b2228007eba4120145f785df0f6c92ea538f5a3635a612ecf4e334c8c1446d"
-
-[[package]]
-name = "typed-builder"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f85f4270f4f449a3f2c0cf2aecc8415e388a597aeacc7d55fc749c5c968c8533"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "typenum"
@@ -5200,9 +4858,9 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "chrono-humanize",
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "cio-api",
  "diesel",
- "dropshot 0.5.2-dev",
+ "dropshot",
  "futures-util",
  "google-drive 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
@@ -5214,7 +4872,7 @@ dependencies = [
  "serde_json",
  "sheets 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio 0.2.25",
+ "tokio 1.5.0",
 ]
 
 [[package]]
@@ -5396,7 +5054,7 @@ name = "zoom-api"
 version = "0.1.4"
 dependencies = [
  "chrono",
- "cio-api 0.2.0",
+ "cio-api",
  "jsonwebtoken",
  "reqwest 0.10.10",
  "serde",

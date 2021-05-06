@@ -1,42 +1,18 @@
 #![allow(clippy::field_reassign_with_default)]
 
 use std::env;
-use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, RequestContext, TypedBody};
-use tracing::{instrument, span, Level};
-use tracing_subscriber::prelude::*;
+use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody};
 use uuid::Uuid;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+async fn main() -> Result<(), String> {
     let service_address = "0.0.0.0:8080";
-
-    // Set up tracing.
-    let (tracer, _uninstall) = opentelemetry_zipkin::new_pipeline()
-        .with_service_name("printy")
-        .with_collector_endpoint("https://ingest.lightstep.com:443/api/v2/spans")
-        .with_trace_config(
-            opentelemetry::sdk::trace::config()
-                .with_default_sampler(opentelemetry::sdk::trace::Sampler::AlwaysOn)
-                .with_resource(opentelemetry::sdk::Resource::new(vec![
-                    opentelemetry::KeyValue::new("lightstep.service_name", "printy"),
-                    opentelemetry::KeyValue::new("lightstep.access_token", env::var("LIGHTSTEP_ACCESS_TOKEN").unwrap_or_default()),
-                ])),
-        )
-        .install()
-        .unwrap();
-    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let subscriber = tracing_subscriber::Registry::default().with(opentelemetry);
-    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
-
-    let root = span!(Level::TRACE, "app_start", work_units = 2);
-    let _enter = root.enter();
 
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
@@ -45,7 +21,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      */
     let config_dropshot = ConfigDropshot {
         bind_address: service_address.parse().unwrap(),
-        request_body_max_bytes: dropshot::RequestBodyMaxBytes(100000000),
+        request_body_max_bytes: 100000000,
     };
 
     /*
@@ -73,14 +49,11 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     /*
      * Set up the server.
      */
-    let mut server = HttpServer::new(&config_dropshot, api, api_context, &log)
+    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
         .map_err(|error| format!("failed to start server: {}", error))
-        .unwrap();
-
-    // Start the server.
-    let server_task = server.run();
-    server.wait_for_shutdown(server_task).await.unwrap();
-    Ok(())
+        .unwrap()
+        .start();
+    server.await
 }
 
 /**
@@ -92,9 +65,9 @@ impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new() -> Arc<Context> {
+    pub async fn new() -> Context {
         // Create the context.
-        Arc::new(Context {})
+        Context {}
     }
 }
 
@@ -107,9 +80,7 @@ impl Context {
     method = GET,
     path = "/ping",
 }]
-#[instrument]
-#[inline]
-async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
 }
 
@@ -118,9 +89,7 @@ async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, Htt
     method = POST,
     path = "/print",
 }]
-#[instrument]
-#[inline]
-async fn listen_print_requests(_rqctx: Arc<RequestContext>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_print_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let url = body_param.into_inner();
     let printer = get_rollo_printer();
     println!("{:?}", printer);
@@ -136,8 +105,6 @@ async fn listen_print_requests(_rqctx: Arc<RequestContext>, body_param: TypedBod
 }
 
 // Return our rollo printer.
-#[instrument]
-#[inline]
 fn get_rollo_printer() -> String {
     let output = Command::new("lpstat").args(&["-a"]).output().expect("failed to execute process");
     if !output.status.success() {
@@ -159,8 +126,6 @@ fn get_rollo_printer() -> String {
 
 // Save URL contents to a temporary file.
 // Returns the filepath.
-#[instrument]
-#[inline]
 async fn save_url_to_file(url: String) -> String {
     println!("Getting contents of URL `{}` to print", url);
     let body = reqwest::get(&url).await.unwrap().bytes().await.unwrap();
@@ -178,9 +143,8 @@ async fn save_url_to_file(url: String) -> String {
     path
 }
 
-// Print the file.
-#[instrument]
-#[inline]
+// Save URL contents to a temporary file.
+// Returns the filepath.
 fn print_file(printer: &str, file: &str) {
     println!("Sending file `{}` to printer `{}`", file, printer);
     let output = Command::new("lp").args(&["-d", printer, "-o", "media=4.00x6.00\"", file]).output().expect("failed to execute process");
