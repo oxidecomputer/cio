@@ -36,8 +36,6 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use reqwest::{get, header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
-use cio_api::configs::{BuildingConfig, ResourceConfig};
-
 /// Endpoint for the Zoom API.
 const ENDPOINT: &str = "https://api.zoom.us/v2/";
 
@@ -703,20 +701,6 @@ pub struct Room {
     pub location_id: Option<String>,
 }
 
-impl Room {
-    /// Update a room from a configuration.
-    pub fn update(mut self, resource: ResourceConfig, passcode: String, location_id: String) -> Room {
-        self.name = resource.name;
-        self.room_passcode = Some(passcode);
-        self.required_code_to_ext = Some(true);
-        self.typev = Some("ZoomRoom".to_string());
-        self.location_id = Some(location_id);
-        self.hide_in_room_contacts = Some(false);
-
-        self
-    }
-}
-
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 struct UpdateRoomRequest {
     pub basic: Room,
@@ -769,20 +753,6 @@ pub struct Building {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 struct UpdateBuildingRequest {
     pub basic: Building,
-}
-
-impl Building {
-    /// Update a building from a configuration.
-    pub fn update(mut self, building: BuildingConfig, passcode: String) -> Building {
-        self.name = building.name;
-        self.description = Some(building.description);
-        self.address = Some(building.address_formatted);
-        self.room_passcode = Some(passcode);
-        self.required_code_to_ext = Some(true);
-        self.typev = Some("building".to_string());
-
-        self
-    }
 }
 
 /// A meeting.
