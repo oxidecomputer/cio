@@ -69,7 +69,6 @@ tokio = { version = "1", features = ["full"] }
 toml = "0.5"
 tracing = "^0.1"
 tracing-attributes = "^0.1"
-tracing-futures = "^0.2"
 walkdir = "^2.3.2"
 yup-oauth2 = "^5"
 zip = "0.5"
