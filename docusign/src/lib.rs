@@ -36,6 +36,7 @@ use jwt::{AlgorithmType, Header, PKeyWithDigest, SignWithKey, Token};
 use openssl::hash::MessageDigest;
 use openssl::pkey::PKey;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the DocuSign API.
@@ -399,7 +400,7 @@ impl error::Error for APIError {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Envelope {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeDocuments")]
     pub documents: Vec<Document>,
@@ -492,7 +493,7 @@ pub struct Envelope {
     pub pdf_bytes: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Document {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "documentId")]
     pub id: String,
@@ -500,7 +501,7 @@ pub struct Document {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Recipients {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub agents: Vec<Recipient>,
@@ -508,7 +509,7 @@ pub struct Recipients {
     pub signers: Vec<Recipient>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Recipient {
     /// Email of the recipient. Notification will be sent to this email id.
     /// Maximum Length: 100 characters.
@@ -535,7 +536,7 @@ pub struct Recipient {
     pub recipient_id: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct TemplateRole {
     /// Email of the recipient. Notification will be sent to this email id.
     /// Maximum Length: 100 characters.
@@ -564,7 +565,7 @@ pub struct TemplateRole {
     pub email_notification: EmailNotification,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct EmailNotification {
     /// The subject line of the email message that is sent to all recipients.
     ///
@@ -578,13 +579,13 @@ pub struct EmailNotification {
     pub language: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct CustomFields {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "textCustomFields")]
     pub text_custom_fields: Vec<TextCustomField>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct TextCustomField {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "fieldId")]
     pub field_id: String,
@@ -598,7 +599,7 @@ pub struct TextCustomField {
     pub error_details: ErrorDetails,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct ErrorDetails {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "errorCode")]
     pub error_code: String,
@@ -606,7 +607,7 @@ pub struct ErrorDetails {
     pub message: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct EmailSettings {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "replyEmailAddressOverride")]
     pub reply_email_address_override: String,
@@ -616,7 +617,7 @@ pub struct EmailSettings {
     pub bcc_email_addresses: Vec<BccEmailAddress>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct BccEmailAddress {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "bccEmailAddressId")]
     pub bcc_email_address_id: String,
@@ -624,7 +625,7 @@ pub struct BccEmailAddress {
     pub email: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct LockInformation {
     #[serde(default, rename = "lockedByUser")]
     pub locked_by_user: LockedByUser,
@@ -644,13 +645,13 @@ pub struct LockInformation {
     pub error_details: ErrorDetails,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct LockedByUser {}
 
 /// Options can specify how long the token will be valid. DocuSign
 /// limits this to 1 hour.  1 hour is assumed if left empty.  Offsets
 /// for expiring token may also be used.  Do not set FormValues or Custom Claims.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct JWTConfig {
     /// see https://developers.docusign.com/esign-rest-api/guides/authentication/oauth2-jsonwebtoken#prerequisites
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -750,7 +751,7 @@ impl JWTConfig {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct AccessToken {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub access_token: String,
@@ -760,7 +761,7 @@ pub struct AccessToken {
     pub expires_in: i64,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct TemplatesResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeTemplates")]
     pub envelope_templates: Vec<Template>,
@@ -780,7 +781,7 @@ pub struct TemplatesResponse {
     pub folders: Vec<Folder>,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
 pub struct Folder {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "ownerUserName")]
     pub owner_user_name: String,
@@ -808,7 +809,7 @@ pub struct Folder {
     pub filter: Filter,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
 pub struct Filter {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "actionRequired")]
     pub action_required: String,
@@ -834,7 +835,7 @@ pub struct Filter {
     pub order: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Template {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "templateId")]
     pub template_id: String,
@@ -856,7 +857,7 @@ pub struct Template {
     pub uri: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct DocumentField {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -864,7 +865,7 @@ pub struct DocumentField {
     pub value: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct FormData {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "formData")]
     pub form_data: Vec<FormDatum>,
@@ -878,7 +879,7 @@ pub struct FormData {
     pub recipient_form_data: Vec<RecipientFormDatum>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct FormDatum {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -888,7 +889,7 @@ pub struct FormDatum {
     pub original_value: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct RecipientFormDatum {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "formData")]
     pub form_data: Vec<FormDatum>,
@@ -904,7 +905,7 @@ pub struct RecipientFormDatum {
     pub delivered_time: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Webhook {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "connectId")]
     pub connect_id: String,
@@ -961,7 +962,7 @@ pub struct Webhook {
     #[serde(default, rename = "eventData")]
     pub event_data: WebhookEventData,
 }
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct WebhookEventData {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub format: String,
@@ -971,7 +972,7 @@ pub struct WebhookEventData {
     pub version: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct WebhooksResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub configurations: Vec<Webhook>,

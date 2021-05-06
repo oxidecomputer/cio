@@ -2491,12 +2491,12 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
 impl Applicant {
     pub async fn update_applicant_from_docusign_envelope(&mut self, envelope: docusign::Envelope) {
         // Set the status in the database and airtable.
-        applicant.docusign_envelope_status = envelope.status.to_string();
+        self.docusign_envelope_status = envelope.status.to_string();
 
         // If the document is completed, let's save it to Google Drive.
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
-            applicant.update(db).await;
+            self.update(db).await;
             return;
         }
 
@@ -2512,11 +2512,11 @@ impl Applicant {
                 bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap();
             }
 
-            let mut filename = format!("{} - {}.pdf", applicant.name, document.name);
+            let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
-                filename = format!("{} - Offer.pdf", applicant.name);
+                filename = format!("{} - Offer.pdf", self.name);
             } else if document.name.contains("Summary") {
-                filename = format!("{} - DocuSign Summary.pdf", applicant.name);
+                filename = format!("{} - DocuSign Summary.pdf", self.name);
             }
 
             // Create or update the file in the google_drive.
@@ -2526,12 +2526,12 @@ impl Applicant {
 
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
-        if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(applicant.email.to_string())).first::<User>(&db.conn()) {
+        if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(self.email.to_string())).first::<User>(&db.conn()) {
             // We have an employee, so we can update their data from the data in Docusign.
             println!("got employee {:?}", employee);
 
             // TODO: continue for now as we don't want to eff up my record.
-            break;
+            return;
 
             // In order to not "over excessively poll the API here, we need to sleep for 15
             // min before getting each of the documents.

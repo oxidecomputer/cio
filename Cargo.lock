@@ -397,7 +397,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docusign 0.1.6",
  "dropshot",
  "futures-util",
  "google-drive 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -453,7 +453,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docusign 0.1.6",
  "dropshot",
  "futures-util",
  "google-drive 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -831,6 +831,8 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "docusign"
 version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89d86d8b6fd517da3f85cd5e95af876ba0844eeb78d7b6d0b1f74ec79594a400"
 dependencies = [
  "bytes",
  "chrono",
@@ -843,15 +845,14 @@ dependencies = [
 
 [[package]]
 name = "docusign"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89d86d8b6fd517da3f85cd5e95af876ba0844eeb78d7b6d0b1f74ec79594a400"
+version = "0.1.8"
 dependencies = [
  "bytes",
  "chrono",
  "jwt",
  "openssl",
  "reqwest",
+ "schemars",
  "serde",
  "serde_json",
 ]
@@ -4142,6 +4143,7 @@ dependencies = [
  "chrono-humanize",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
+ "docusign 0.1.6",
  "dropshot",
  "futures-util",
  "google-drive 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
