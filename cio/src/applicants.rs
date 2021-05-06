@@ -2629,20 +2629,20 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
         let db = Database::new();
-        //refresh_db_applicants(&db).await;
+        refresh_db_applicants(&db).await;
 
         // Update Airtable.
-        //Applicants::get_from_db(&db).update_airtable().await;
+        Applicants::get_from_db(&db).update_airtable().await;
 
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-        //update_applications_with_scoring_forms(&db).await;
+        update_applications_with_scoring_forms(&db).await;
 
         // This must be after update_applications_with_scoring_forms, so that if someone
         // has done the application then we remove them from the scorers.
-        //update_applications_with_scoring_results(&db).await;
+        update_applications_with_scoring_results(&db).await;
 
         // Refresh DocuSign for the applicants.
-        refresh_docusign_for_applicants(&db).await;
+        //refresh_docusign_for_applicants(&db).await;
     }
 }
