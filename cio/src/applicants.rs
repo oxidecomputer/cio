@@ -2311,8 +2311,14 @@ pub async fn refresh_background_checks(db: &Database) {
         // Try to match the candidate based on their email.
         // Try for all the sheet_ids.
         for (_, sheet_id) in get_sheets_map() {
+            // Match on their email or their name.
+            // TODO: name is working for now but might want to make it more fuzzy in the future.
             if let Ok(mut applicant) = applicants::dsl::applicants
-                .filter(applicants::dsl::email.eq(candidate.email.to_string()))
+                .filter(
+                    applicants::dsl::email
+                        .eq(candidate.email.to_string())
+                        .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
+                )
                 .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
                 .first::<Applicant>(&db.conn())
             {
@@ -2450,7 +2456,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     let templates = ds.list_templates().await.unwrap();
     for template in templates {
         if template.name == "Employee Offer Letter (US)" {
-            template_id = template.template_id.to_string();
+            template_id = template.template_id;
             // We can break our loop.
             break;
         }
@@ -2493,6 +2499,12 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                     email: "jess+dev+steve@oxidecomputer.com".to_string(),
                     signer_name: "Steve Tuck".to_string(),
                     routing_order: "1".to_string(),
+                    // Make Steve's email notification different than the actual applicant.
+                    email_notification: docusign::EmailNotification {
+                        email_subject: format!("Complete the offer letter for {}", applicant.name),
+                        email_blurb: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!", applicant.name, applicant.name, applicant.email),
+                        language: Default::default(),
+                    },
                 },
                 docusign::TemplateRole {
                     name: applicant.name.to_string(),
@@ -2500,6 +2512,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                     email: applicant.email.to_string(),
                     signer_name: applicant.name.to_string(),
                     routing_order: "2".to_string(),
+                    email_notification: Default::default(),
                 },
             ];
 

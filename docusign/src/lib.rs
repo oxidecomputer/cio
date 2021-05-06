@@ -181,6 +181,7 @@ impl DocuSign {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
+            StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
@@ -367,6 +368,22 @@ pub struct TemplateRole {
     /// This specifies the routing order of the recipient in the envelope.
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "routingOrder")]
     pub routing_order: String,
+    #[serde(default, rename = "emailNotification")]
+    pub email_notification: EmailNotification,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct EmailNotification {
+    /// The subject line of the email message that is sent to all recipients.
+    ///
+    /// For information about adding merge field information to the email subject, see [Template Email Subject Merge Fields](https://developers.docusign.com/esign-rest-api/reference/Templates/Templates/create#template-email-subject-merge-fields).
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailSubject")]
+    pub email_subject: String,
+    /// This is the same as the email body. If specified it is included in the email body for all envelope recipients.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailBlurb")]
+    pub email_blurb: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub language: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
