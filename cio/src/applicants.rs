@@ -2319,7 +2319,6 @@ pub async fn refresh_background_checks(db: &Database) {
                 for report_id in &candidate.report_ids {
                     // Get the report for the candidate.
                     let report = checkr.get_report(&report_id).await.unwrap();
-                    println!("report: {:?}", report);
 
                     // Set the status for the report.
                     if report.package.contains("premium_criminal") {
@@ -2450,26 +2449,41 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     let mut template_id = "".to_string();
     let templates = ds.list_templates().await.unwrap();
     for template in templates {
-        println!("template: {:?}", template);
         if template.name == "Employee Offer Letter (US)" {
             template_id = template.template_id.to_string();
             // We can break our loop.
             break;
         }
     }
-    println!("template id {}", template_id);
 
     // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db);
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for applicant in applicants {
-        if applicant.status.to_lowercase() != "giving offer" {
+        if applicant.status.to_lowercase() != "giving offer" && applicant.email != "me@jessfraz.com" {
             // We can return early.
             continue;
         }
 
         println!("applicant has status giving offer: {}", applicant.name);
+        if applicant.docusign_envelope_id.is_empty() {
+            // We haven't sent their offer yet, so let's do that.
+            // Let's create a new envelope for the user.
+        } else {
+            // We have sent their offer.
+            // Let's get the status of the envelope in Docusign.
+            let envelope = ds.get_envelope(&applicant.docusign_envelope_id).await.unwrap();
+            println!("envelope {:?}", envelope);
+
+            // Set the status in the database and airtable.
+            applicant.docusign_envelope_status = envelope.status.to_string();
+
+            // TODO: parse and update the custom fields if we have them.
+
+            // Update the applicant in the database.
+            applicant.update(db).await;
+        }
     }
 }
 

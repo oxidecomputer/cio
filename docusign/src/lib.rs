@@ -607,8 +607,8 @@ pub struct Template {
     pub last_modified: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub created: String,
-    #[serde(default, rename = "pageCount")]
-    pub page_count: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "pageCount")]
+    pub page_count: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub uri: String,
 }
