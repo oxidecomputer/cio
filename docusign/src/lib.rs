@@ -79,12 +79,18 @@ impl DocuSign {
                 println!("docusign consent URL: {}", jwt_config.user_consent_url());
                 let token = jwt_config.get_access_token().await;
 
-                DocuSign {
+                let ds = DocuSign {
                     jwt_config,
                     token,
 
                     client: Arc::new(c),
-                }
+                };
+
+                // Create our webhook (this will make sure one doesn't already exist as well).
+                // Otherwise the API people will be mad at us for polling.
+                ds.create_webhook().await.unwrap();
+
+                ds
             }
             Err(e) => panic!("creating client failed: {:?}", e),
         }
@@ -168,6 +174,71 @@ impl DocuSign {
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// List webhooks with "Connect".
+    pub async fn list_webhooks(&self) -> Result<Vec<Webhook>, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("accounts/{}/connect", self.jwt_config.account_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: WebhooksResponse = resp.json().await.unwrap();
+
+        Ok(r.configurations)
+    }
+
+    /// Create a webhook with "Connect".
+    pub async fn create_webhook(&self) -> Result<Webhook, APIError> {
+        let mut connect: Webhook = Default::default();
+        connect.url_to_publish_to = env::var("DOCUSIGN_WEBHOOK_ENDPOINT").unwrap();
+        connect.allow_envelope_publish = "true".to_string();
+        connect.envelope_events = vec![
+            "completed".to_string(),
+            "created".to_string(),
+            "sent".to_string(),
+            "declined".to_string(),
+            "delivered".to_string(),
+            "signed".to_string(),
+            "voided".to_string(),
+        ];
+        connect.all_users = "true".to_string();
+        connect.include_document_fields = "true".to_string();
+        connect.name = "CIO Webhook".to_string();
+
+        // Get all the webhooks to check if we already have one.
+        let webhooks = self.list_webhooks().await.unwrap();
+        for webhook in webhooks {
+            if webhook.name == connect.name {
+                return Ok(webhook);
+            }
+        }
+
+        // Build the request.
+        let request = self.request(Method::POST, &format!("accounts/{}/connect", self.jwt_config.account_id), connect, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            StatusCode::CREATED => (),
             s => {
                 return Err(APIError {
                     status_code: s,
@@ -818,4 +889,60 @@ pub struct RecipientFormDatum {
     pub signed_time: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "DeliveredTime")]
     pub delivered_time: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Webhook {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "connectId")]
+    pub connect_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "configurationType")]
+    pub configuration_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "urlToPublishTo")]
+    pub url_to_publish_to: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowEnvelopePublish")]
+    pub allow_envelope_publish: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "enableLog")]
+    pub enable_log: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeDocuments")]
+    pub include_documents: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeCertificateOfCompletion")]
+    pub include_certificate_of_completion: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "requiresAcknowledgement")]
+    pub requires_acknowledgement: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "signMessageWithX509Certificate")]
+    pub sign_message_with_x509_certificate: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "useSoapInterface")]
+    pub use_soap_interface: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeTimeZoneInformation")]
+    pub include_time_zone_information: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeHMAC")]
+    pub include_hmac: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeEnvelopeVoidReason")]
+    pub include_envelope_void_reason: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeSenderAccountasCustomField")]
+    pub include_sender_accountas_custom_field: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeEvents")]
+    pub envelope_events: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "recipientEvents")]
+    pub recipient_events: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "userIds")]
+    pub user_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "soapNamespace")]
+    pub soap_namespace: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allUsers")]
+    pub all_users: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeCertSoapHeader")]
+    pub include_cert_soap_header: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeDocumentFields")]
+    pub include_document_fields: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WebhooksResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub configurations: Vec<Webhook>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "totalRecords")]
+    pub total_records: String,
 }
