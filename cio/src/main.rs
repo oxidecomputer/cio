@@ -99,7 +99,7 @@ impl Context {
 async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
-    Ok(HttpResponseOk(json!(api_context.schema).to_string()))
+    Ok(HttpResponseOk(api_context.schema))
 }
 
 /**
