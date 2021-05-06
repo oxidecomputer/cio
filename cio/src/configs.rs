@@ -1697,14 +1697,14 @@ mod tests {
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_configs() {
         let github = authenticate_github_jwt();
         refresh_db_configs_and_airtable(&github).await;
     }
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_anniversary_events() {
         let db = Database::new();
         refresh_anniversary_events(&db).await;

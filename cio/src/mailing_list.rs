@@ -605,7 +605,7 @@ mod tests {
     }
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_mailing_list_subscribers() {
         // Initialize our database.
         let db = Database::new();

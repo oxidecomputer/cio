@@ -232,7 +232,7 @@ mod tests {
     use crate::recorded_meetings::refresh_recorded_meetings;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_recorded_meetings() {
         refresh_recorded_meetings().await;
     }

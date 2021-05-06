@@ -71,7 +71,7 @@ mod tests {
     use crate::db::Database;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_page_views_airtable() {
         // Initialize our database.
         let db = Database::new();

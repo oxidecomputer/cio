@@ -2610,7 +2610,7 @@ mod tests {
     }
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants_reviewer_leaderboard() {
         let db = Database::new();
 
@@ -2618,7 +2618,7 @@ mod tests {
     }
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants_background_checks() {
         let db = Database::new();
 
@@ -2626,7 +2626,7 @@ mod tests {
     }
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants() {
         let db = Database::new();
         refresh_db_applicants(&db).await;

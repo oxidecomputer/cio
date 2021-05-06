@@ -666,7 +666,7 @@ mod tests {
     use crate::interviews::{compile_packets, refresh_interviews};
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_interviews() {
         let db = Database::new();
         refresh_interviews(&db).await;

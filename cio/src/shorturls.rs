@@ -213,7 +213,7 @@ mod tests {
     use crate::shorturls::refresh_shorturls;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_shorturls() {
         refresh_shorturls().await;
     }

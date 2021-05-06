@@ -327,7 +327,7 @@ mod tests {
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_journal_club_meetings_and_papers() {
         let github = authenticate_github_jwt();
         let db = Database::new();

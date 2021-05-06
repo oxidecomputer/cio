@@ -148,7 +148,7 @@ mod tests {
     use crate::finance::refresh_software_vendors;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_software_vendors() {
         refresh_software_vendors().await;
     }

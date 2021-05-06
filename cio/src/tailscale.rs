@@ -35,7 +35,7 @@ mod tests {
     use crate::tailscale::cleanup_old_tailscale_devices;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_tailscale() {
         cleanup_old_tailscale_devices().await;
     }

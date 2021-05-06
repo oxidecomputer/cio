@@ -436,7 +436,7 @@ mod tests {
     use crate::db::Database;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_auth_users_and_logins_refresh() {
         // Initialize our database.
         let db = Database::new();

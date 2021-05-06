@@ -417,7 +417,7 @@ mod tests {
     use crate::utils::{authenticate_github_jwt, refresh_db_github_repos};
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_github_repos() {
         let github = authenticate_github_jwt();
 

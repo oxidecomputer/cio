@@ -1192,7 +1192,7 @@ mod tests {
     use crate::shipments::{refresh_airtable_shipments, refresh_inbound_shipments};
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_shipments() {
         refresh_inbound_shipments().await;
         refresh_airtable_shipments().await;

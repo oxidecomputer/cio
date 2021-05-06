@@ -279,7 +279,7 @@ mod tests {
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_rfds() {
         // Initialize our database.
         let db = Database::new();
@@ -292,7 +292,7 @@ mod tests {
     }
 
     #[ignore]
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_monday_cron_rfds_changelog() {
         send_rfd_changelog().await;
     }
