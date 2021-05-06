@@ -489,10 +489,18 @@ impl JWTConfig {
         let client = reqwest::Client::new();
         let resp = client
             .post(endpoint)
-            .query(&[("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"), ("assertion", &jwt_token)])
+            .form(&[("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"), ("assertion", &jwt_token)])
             .send()
             .await
             .unwrap();
+
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                // TODO: do something better than a panic.
+                panic!("response for token failed with code {}: {}", s, resp.text().await.unwrap());
+            }
+        };
 
         let t: AccessToken = resp.json().await.unwrap();
         t.access_token

@@ -2445,12 +2445,21 @@ pub async fn update_applicant_reviewers(db: &Database) {
 pub async fn refresh_docusign_for_applicants(db: &Database) {
     // Authenticate DocuSign.
     let ds = DocuSign::new_from_env().await;
+
     // Get the template we need.
+    let mut template_id = "".to_string();
     let templates = ds.list_templates().await.unwrap();
     for template in templates {
         println!("template: {:?}", template);
+        if template.name == "Employee Offer Letter (US)" {
+            template_id = template.template_id.to_string();
+            // We can break our loop.
+            break;
+        }
     }
+    println!("template id {}", template_id);
 
+    // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db);
 
     // Iterate over the applicants and find any that have the status: giving offer.
