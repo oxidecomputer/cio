@@ -134,6 +134,26 @@ impl DocuSign {
         rb.build().unwrap()
     }
 
+    /// List templates.
+    pub async fn list_templates(&self) -> Result<Vec<Template>, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("accounts/{}/templates", self.jwt_config.account_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: TemplatesResponse = resp.json().await.unwrap();
+        Ok(r.envelope_templates)
+    }
+
     /// Get an envelope.
     pub async fn get_envelope(&self, envelope_id: &str) -> Result<Envelope, APIError> {
         // Build the request.
@@ -426,7 +446,7 @@ impl JWTConfig {
             endpoint,
             scope.replace(" ", "%20"),
             self.integrator_key,
-            env::var("DOCUSIGN_API_REDIRECT_URI").unwrap(),
+            env::var("DOCUSIGN_REDIRECT_URI").unwrap(),
         );
     }
 
@@ -487,4 +507,100 @@ pub struct AccessToken {
     pub token_type: String,
     #[serde(default)]
     pub expires_in: i64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TemplatesResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeTemplates")]
+    pub envelope_templates: Vec<Template>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "resultSetSize")]
+    pub result_set_size: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "startPosition")]
+    pub start_position: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "endPosition")]
+    pub end_position: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "totalSetSize")]
+    pub total_set_size: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextUri")]
+    pub next_uri: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "previousUri")]
+    pub previous_uri: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub folders: Vec<Folder>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Folder {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ownerUserName")]
+    pub owner_user_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ownerEmail")]
+    pub owner_email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ownerUserId")]
+    pub owner_user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
+    pub folder_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub uri: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "parentFolderId")]
+    pub parent_folder_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "parentFolderUri")]
+    pub parent_folder_uri: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "folderId")]
+    pub folder_id: String,
+    #[serde(default, rename = "errorDetails")]
+    pub error_details: ErrorDetails,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub folders: Vec<LockedByUser>,
+    #[serde(default)]
+    pub filter: Filter,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Filter {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "actionRequired")]
+    pub action_required: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub expires: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "isTemplate")]
+    pub is_template: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "fromDateTime")]
+    pub from_date_time: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "toDateTime")]
+    pub to_date_time: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "searchTarget")]
+    pub search_target: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "searchText")]
+    pub search_text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "folderIds")]
+    pub folder_ids: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "orderBy")]
+    pub order_by: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub order: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Template {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "templateId")]
+    pub template_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub shared: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub password: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "lastModified")]
+    pub last_modified: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub created: String,
+    #[serde(default, rename = "pageCount")]
+    pub page_count: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub uri: String,
 }

@@ -2444,7 +2444,12 @@ pub async fn update_applicant_reviewers(db: &Database) {
 
 pub async fn refresh_docusign_for_applicants(db: &Database) {
     // Authenticate DocuSign.
-    let ds = DocuSign::new_from_env();
+    let ds = DocuSign::new_from_env().await;
+    // Get the template we need.
+    let templates = ds.list_templates().await.unwrap();
+    for template in templates {
+        println!("template: {:?}", template);
+    }
 
     let applicants = Applicants::get_from_db(db);
 
