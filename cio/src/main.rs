@@ -10,9 +10,6 @@ use cio_api::journal_clubs::{JournalClubMeeting, JournalClubMeetings};
 use cio_api::mailing_list::{MailingListSubscriber, MailingListSubscribers};
 use cio_api::models::{GithubRepo, GithubRepos, RFDs, RFD};
 
-#[macro_use]
-extern crate serde_json;
-
 #[tokio::main]
 async fn main() -> Result<(), String> {
     let service_address = "0.0.0.0:8888";
@@ -99,7 +96,7 @@ impl Context {
 async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
-    Ok(HttpResponseOk(api_context.schema))
+    Ok(HttpResponseOk(api_context.schema.to_string()))
 }
 
 /**
