@@ -113,6 +113,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(listen_airtable_shipments_outbound_edit_webhooks).unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
+    api.register(listen_docusign_callback).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
@@ -987,6 +988,21 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext>, bo
     let event = body_param.into_inner();
     println!("checkr: {}", event.to_string());
     sentry::capture_message(&format!("checkr: {}", event.to_string()), sentry::Level::Info);
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Listen for callbacks to docusign auth. */
+#[endpoint {
+    method = GET,
+    path = "/docusign/callback",
+}]
+#[instrument]
+#[inline]
+async fn listen_docusign_callback(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = body_param.into_inner();
+    println!("docusign: {}", event.to_string());
+    sentry::capture_message(&format!("docusign callback: {}", event.to_string()), sentry::Level::Info);
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
