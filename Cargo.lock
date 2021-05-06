@@ -381,6 +381,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#92c794e182355b63942468dad79f94c946b17a22"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -406,7 +407,65 @@ dependencies = [
  "html2text",
  "hubcaps",
  "lopdf",
- "macros",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "nom_pem",
+ "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openssl",
+ "pandoc",
+ "phonenumber",
+ "rand 0.8.3",
+ "regex 1.5.3",
+ "reqwest",
+ "revai 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "schemars",
+ "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "serde_qs 0.7.2",
+ "sheets 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slack-chat-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar",
+ "titlecase",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-attributes",
+ "walkdir",
+ "yup-oauth2",
+ "zip",
+]
+
+[[package]]
+name = "cio-api"
+version = "0.2.0"
+dependencies = [
+ "acme-lib",
+ "airtable-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait",
+ "base64 0.12.3",
+ "checkr 0.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono",
+ "chrono-humanize",
+ "chrono-tz",
+ "clap",
+ "cloudflare",
+ "comrak",
+ "csv",
+ "diesel",
+ "diffy",
+ "docusign 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dropshot",
+ "futures-util",
+ "google-drive 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "handlebars",
+ "html2text",
+ "hubcaps",
+ "lopdf",
+ "macros 0.1.0",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -1725,6 +1784,19 @@ name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
+
+[[package]]
+name = "macros"
+version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#92c794e182355b63942468dad79f94c946b17a22"
+dependencies = [
+ "Inflector",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_tokenstream",
+ "syn",
+]
 
 [[package]]
 name = "macros"
@@ -4084,7 +4156,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "chrono-humanize",
- "cio-api",
+ "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
  "dropshot",
  "futures-util",
