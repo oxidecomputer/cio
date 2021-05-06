@@ -2059,7 +2059,7 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.db, &api_context.github, configs.users).await;
+        sync_users(&api_context.db, configs.users).await;
     }
 
     if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
