@@ -2502,7 +2502,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                     // Make Steve's email notification different than the actual applicant.
                     email_notification: docusign::EmailNotification {
                         email_subject: format!("Complete the offer letter for {}", applicant.name),
-                        email_blurb: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!", applicant.name, applicant.name, applicant.email),
+                        email_body: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!", applicant.name, applicant.name, applicant.email),
                         language: Default::default(),
                     },
                 },

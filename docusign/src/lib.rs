@@ -161,7 +161,7 @@ impl DocuSign {
             Method::GET,
             &format!("accounts/{}/envelopes/{}", self.jwt_config.account_id, envelope_id),
             (),
-            Some(&[("include", "custom_fields")]),
+            Some(&[("include", "documents")]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -197,6 +197,54 @@ impl DocuSign {
 
         Ok(resp.json().await.unwrap())
     }
+
+    /// Get document fields.
+    pub async fn get_document_fields(&self, envelope_id: &str, document_id: &str) -> Result<Vec<DocumentField>, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            &format!("accounts/{}/envelopes/{}/documents/{}/fields", self.jwt_config.account_id, envelope_id, document_id),
+            (),
+            None,
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Update document fields.
+    pub async fn update_document_fields(&self, envelope_id: &str, document_id: &str, document_fields: Vec<DocumentField>) -> Result<(), APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::PUT,
+            &format!("accounts/{}/envelopes/{}/documents/{}/fields", self.jwt_config.account_id, envelope_id, document_id),
+            document_fields,
+            None,
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
+    }
 }
 
 /// Error type returned by our library.
@@ -227,6 +275,8 @@ impl error::Error for APIError {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Envelope {
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeDocuments")]
+    pub documents: Vec<Document>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "createdDateTime")]
     pub created_date_time: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "completedDateTime")]
@@ -314,6 +364,14 @@ pub struct Envelope {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Document {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "documentId")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Recipients {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub agents: Vec<Recipient>,
@@ -385,8 +443,8 @@ pub struct EmailNotification {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailSubject")]
     pub email_subject: String,
     /// This is the same as the email body. If specified it is included in the email body for all envelope recipients.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailBlurb")]
-    pub email_blurb: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailBody")]
+    pub email_body: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub language: String,
 }
@@ -667,4 +725,12 @@ pub struct Template {
     pub page_count: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub uri: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DocumentField {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value: String,
 }
