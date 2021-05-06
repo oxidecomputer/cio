@@ -2643,6 +2643,6 @@ mod tests {
         update_applications_with_scoring_results(&db).await;
 
         // Refresh DocuSign for the applicants.
-        refresh_docusign_for_applicants(&db).await;
+        //refresh_docusign_for_applicants(&db).await;
     }
 }

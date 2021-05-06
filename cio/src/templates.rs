@@ -235,6 +235,23 @@ pub static TEMPLATE_NGINX: &str = r#"{{#each this}}
 # Redirect {{this.link}} to {{this.name}}.{{this.subdomain}}.oxide.computer
 # Description: {{this.description}}
 server {
+	listen      80;
+	server_name {{this.name}}.{{this.subdomain}};
+
+	# Add redirect.
+	location / {
+		return 301 "{{this.link}}";
+	}
+
+	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}
+	# Description: Discussion link for {{this.description}}
+	location /discussion {
+		return 301 {{this.discussion}};
+	}
+{{/if}}
+}
+
+server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
 	server_name {{this.name}}.{{this.subdomain}} {{this.name}}.{{this.subdomain}}.oxide.computer;
@@ -262,6 +279,29 @@ server {
 
 /// Template for creating nginx conf files for the paths urls.
 pub static TEMPLATE_NGINX_PATHS: &str = r#"server {
+	listen      80;
+	server_name {{this.0.subdomain}};
+
+	location = / {
+		return 301 https://github.com/oxidecomputer/meta/tree/master/links;
+	}
+
+	{{#each this}}
+	# Redirect {{this.subdomain}}.oxide.computer/{{this.name}} to {{this.link}}
+	# Description: {{this.description}}
+	location = /{{this.name}} {
+		return 301 "{{this.link}}";
+	}
+{{#if this.discussion}}	# Redirect /{{this.name}}/discussion to {{this.discussion}}
+	# Description: Discussion link for {{this.name}}
+	location = /{{this.name}}/discussion {
+		return 301 {{this.discussion}};
+	}
+{{/if}}
+{{/each}}
+}
+
+server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
 	server_name {{this.0.subdomain}} {{this.0.subdomain}}.oxide.computer;
