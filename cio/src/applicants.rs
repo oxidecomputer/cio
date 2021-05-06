@@ -2473,13 +2473,24 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&applicant.docusign_envelope_id).await.unwrap();
 
-            applicant.update_applicant_from_docusign_envelope(db, &ds, envelope).await;
+            applicant.update_applicant_from_docusign_envelope(db, ds.clone(), envelope).await;
         }
     }
 }
 
 impl Applicant {
-    pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+    pub async fn update_applicant_from_docusign_envelope(&self, db: &Database, ds: DocuSign, envelope: docusign::Envelope) -> Self {
+        let mut applicant = self.clone();
+
+        // Set the status in the database and airtable.
+        applicant.docusign_envelope_status = envelope.status.to_string();
+
+        // If the document is completed, let's save it to Google Drive.
+        if envelope.status != "completed" {
+            // We will skip to the end and return early, only updating the status.
+            return applicant;
+        }
+
         // Get gsuite token.
         let token = get_gsuite_token("").await;
 
@@ -2489,16 +2500,6 @@ impl Applicant {
         // It should be in the shared drive : "Offer Letters"
         let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
         let drive_id = shared_drive.id.to_string();
-
-        // Set the status in the database and airtable.
-        self.docusign_envelope_status = envelope.status.to_string();
-
-        // If the document is completed, let's save it to Google Drive.
-        if envelope.status != "completed" {
-            // We will skip to the end and return early, only updating the status.
-            self.update(db).await;
-            return;
-        }
 
         for document in envelope.documents {
             let mut bytes = base64::decode(&document.pdf_bytes).unwrap_or_default();
@@ -2512,11 +2513,11 @@ impl Applicant {
                 bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
             }
 
-            let mut filename = format!("{} - {}.pdf", self.name, document.name);
+            let mut filename = format!("{} - {}.pdf", applicant.name, document.name);
             if document.name.contains("Offer Letter") {
-                filename = format!("{} - Offer.pdf", self.name);
+                filename = format!("{} - Offer.pdf", applicant.name);
             } else if document.name.contains("Summary") {
-                filename = format!("{} - DocuSign Summary.pdf", self.name);
+                filename = format!("{} - DocuSign Summary.pdf", applicant.name);
             }
 
             // Create or update the file in the google_drive.
@@ -2526,16 +2527,18 @@ impl Applicant {
 
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
-        if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(self.email.to_string())).first::<User>(&db.conn()) {
-            // TODO: continue for now as we don't want to eff up my record.
-            return;
-
+        if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(applicant.email.to_string())).first::<User>(&db.conn()) {
             // We have an employee, so we can update their data from the data in Docusign.
+            println!("got employee {:?}", employee);
+
+            // TODO: continue for now as we don't want to eff up my record.
+            return applicant;
+
             // In order to not "over excessively poll the API here, we need to sleep for 15
             // min before getting each of the documents.
             // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
             thread::sleep(std::time::Duration::from_secs(15));
-            let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
+            let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
 
             for fd in form_data {
                 // Save the data to the employee who matches this applicant.
@@ -2560,8 +2563,7 @@ impl Applicant {
             employee.update(db).await;
         }
 
-        // Update the applicant in the database.
-        self.update(db).await;
+        applicant
     }
 }
 

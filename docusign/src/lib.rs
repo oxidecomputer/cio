@@ -44,6 +44,7 @@ use serde::{Deserialize, Serialize};
 const ENDPOINT: &str = "https://demo.docusign.net/restapi/v2.1/";
 
 /// Entrypoint for interacting with the DocuSign API.
+#[derive(Debug, Clone)]
 pub struct DocuSign {
     token: String,
     jwt_config: JWTConfig,
