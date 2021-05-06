@@ -514,7 +514,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
             match NaiveDate::parse_from_str(event.event.value.trim(), "%m/%d/%Y") {
                 Ok(v) => a.start_date = Some(v),
                 Err(e) => {
-                    println!("error parsing date {}: {}", event.event.value.trim(), e);
+                    sentry::capture_message(&format!("error parsing date {}: {}", event.event.value.trim(), e), sentry::Level::Info);
                     a.start_date = None
                 }
             }
@@ -937,8 +937,7 @@ async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, bod
     sentry::start_session();
     let event = body_param.into_inner();
     let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
-        println!("decoding event body `{}` failed: {}", event.to_string(), e);
-        sentry::capture_message(&format!("shippo: {}", event.to_string()), sentry::Level::Info);
+        sentry::capture_message(&format!("decoding event body for shippo `{}` failed: {}", event.to_string(), e), sentry::Level::Info);
 
         Default::default()
     });
@@ -986,7 +985,6 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResp
 #[inline]
 async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
-    println!("checkr: {}", event.to_string());
     sentry::capture_message(&format!("checkr: {}", event.to_string()), sentry::Level::Info);
 
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1001,7 +999,6 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext>, bo
 #[inline]
 async fn listen_docusign_callback(rqctx: Arc<RequestContext>, query_args: Query<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = query_args.into_inner();
-    println!("docusign: {}", event.to_string());
     sentry::capture_message(&format!("docusign callback: {}", event.to_string()), sentry::Level::Info);
 
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1016,7 +1013,6 @@ async fn listen_docusign_callback(rqctx: Arc<RequestContext>, query_args: Query<
 #[inline]
 async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
-    println!("docusign: {}", event.to_string());
     sentry::capture_message(&format!("docusign: {}", event.to_string()), sentry::Level::Info);
 
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1945,7 +1941,6 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                 for pull in pulls {
                     // Check if the pull request is for our branch.
                     let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
-                    println!("[/github]: pull branch {} branch {}", pull_branch, branch);
 
                     if pull_branch == branch {
                         event!(
