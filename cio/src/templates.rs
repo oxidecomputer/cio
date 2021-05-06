@@ -237,7 +237,7 @@ pub static TEMPLATE_NGINX: &str = r#"{{#each this}}
 server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
-	server_name {{this.name}}.{{this.subdomain}}.oxide.computer;
+	server_name {{this.name}}.{{this.subdomain}} {{this.name}}.{{this.subdomain}}.oxide.computer;
 
 	include ssl-params.conf;
 
@@ -264,7 +264,7 @@ server {
 pub static TEMPLATE_NGINX_PATHS: &str = r#"server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
-	server_name {{this.0.subdomain}}.oxide.computer;
+	server_name {{this.0.subdomain}} {{this.0.subdomain}}.oxide.computer;
 
 	include ssl-params.conf;
 
