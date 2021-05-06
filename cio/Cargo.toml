@@ -57,8 +57,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.7"
 sheets = "^0.1.0"
-shippo = "^0.1.12"
-#shippo = { path = "../shippo" }
+#shippo = "^0.1.12"
+shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.5"
 #slack-chat-api = { path = "../slack" }
 tailscale-api = "^0.1.2"
@@ -67,8 +67,6 @@ tar = "^0.4"
 titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
-tracing = "^0.1"
-tracing-attributes = "^0.1"
 walkdir = "^2.3.2"
 yup-oauth2 = "^5"
 zip = "0.5"

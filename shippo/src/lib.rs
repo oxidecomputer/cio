@@ -659,13 +659,13 @@ pub struct ServiceLevel {
     /// A servicelevel commonly defines the transit time of a Shipment
     /// (e.g., Express vs. Standard), along with other properties.
     /// These names vary depending on the provider.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub name: String,
     /// Token of the Rate's servicelevel, e.g. "usps_priority" or "fedex_ground".
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub token: String,
     /// Further clarification of the service.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub terms: String,
 }
 
@@ -907,10 +907,10 @@ pub struct TrackingStatus {
     pub tracking_number: String,
     /// The sender address with city, state, zip and country information.
     #[serde(default)]
-    pub address_from: Address,
+    pub address_from: Option<Address>,
     /// The recipient address with city, state, zip and country information.
     #[serde(default)]
-    pub address_to: Address,
+    pub address_to: Option<Address>,
     /// The object_id of the transaction associated with this tracking object.
     /// This field is visible only to the object owner of the transaction.
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
@@ -927,7 +927,7 @@ pub struct TrackingStatus {
     #[serde(default)]
     pub servicelevel: ServiceLevel,
     /// The latest tracking information of this shipment.
-    pub tracking_status: Status,
+    pub tracking_status: Option<Status>,
     /// A list of tracking events, following the same structure as `tracking_status`.
     /// It contains a full history of all tracking statuses, starting with the earlier tracking event first.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

@@ -126,20 +126,14 @@ impl NewInboundShipment {
         // Get the tracking status for the shipment and fill in the details.
         let ts = shippo.get_tracking_status(&carrier, &self.tracking_number).await.unwrap_or_default();
         self.tracking_number = ts.tracking_number.to_string();
-        self.tracking_status = ts.tracking_status.status.to_string();
+        let status = ts.tracking_status.unwrap_or_default();
+        self.tracking_status = status.status.to_string();
         self.tracking_link();
         self.eta = ts.eta;
 
         self.oxide_tracking_link = self.oxide_tracking_link();
 
-        /*
-        // Register a tracking webhook for this shipment.
-        let status = shippo_client.register_tracking_webhook(&carrier, &self.tracking_number).await.unwrap_or_else(|e| {
-            println!("registering the tracking webhook failed: {:?}", e);
-            Default::default()
-        });*/
-
-        self.messages = ts.tracking_status.status_details;
+        self.messages = status.status_details;
 
         // Iterate over the tracking history and set the shipped_time.
         // Get the first date it was maked as in transit and use that as the shipped
@@ -156,8 +150,8 @@ impl NewInboundShipment {
             }
         }
 
-        if ts.tracking_status.status == *"DELIVERED" {
-            self.delivered_time = ts.tracking_status.status_date;
+        if status.status == *"DELIVERED" {
+            self.delivered_time = status.status_date;
         }
     }
 }
@@ -518,31 +512,32 @@ impl Shipment {
                 Default::default()
             });
 
+            let tracking_status = status.tracking_status.unwrap_or_default();
             if self.messages.is_empty() {
-                self.messages = status.tracking_status.status_details;
+                self.messages = tracking_status.status_details;
             }
 
             // Get the status of the shipment.
-            if status.tracking_status.status == *"TRANSIT" || status.tracking_status.status == "IN_TRANSIT" {
+            if tracking_status.status == *"TRANSIT" || tracking_status.status == "IN_TRANSIT" {
                 if self.status != *"Shipped" {
                     // Send an email to the recipient with their tracking link.
                     // Wait until it is in transit to do this.
                     self.send_email_to_recipient().await;
                     // We make sure it only does this one time.
                     // Set the shipped date as this first date.
-                    self.shipped_time = status.tracking_status.status_date;
+                    self.shipped_time = tracking_status.status_date;
                 }
 
                 self.status = "Shipped".to_string();
             }
-            if status.tracking_status.status == *"DELIVERED" {
+            if tracking_status.status == *"DELIVERED" {
                 self.status = "Delivered".to_string();
-                self.delivered_time = status.tracking_status.status_date;
+                self.delivered_time = tracking_status.status_date;
             }
-            if status.tracking_status.status == *"RETURNED" {
+            if tracking_status.status == *"RETURNED" {
                 self.status = "Returned".to_string();
             }
-            if status.tracking_status.status == *"FAILURE" {
+            if tracking_status.status == *"FAILURE" {
                 self.status = "Failure".to_string();
             }
 

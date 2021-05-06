@@ -1009,7 +1009,7 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 }
 
 /// Sync our users with our database and then update Airtable from the database.
-pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>) {
+pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
@@ -1511,7 +1511,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_groups(&db, configs.groups).await;
 
     // Sync users.
-    sync_users(&db, github, configs.users).await;
+    sync_users(&db, configs.users).await;
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.

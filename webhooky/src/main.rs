@@ -940,6 +940,10 @@ async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext<Conte
 pub struct ShippoTrackingUpdateEvent {
     #[serde(default)]
     pub data: shippo::TrackingStatus,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub event: String,
+    #[serde(default)]
+    pub test: bool,
 }
 
 /** Ping endpoint for MailChimp webhooks. */
