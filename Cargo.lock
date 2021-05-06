@@ -586,7 +586,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#734ac531c0484713b5d8c9d4453a5ad3465e75b7"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#1695b05121e1998594ad6b053f2d3e6f2a1a1c6b"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1132,7 +1132,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "docusign"
 version = "0.1.3"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#734ac531c0484713b5d8c9d4453a5ad3465e75b7"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#1695b05121e1998594ad6b053f2d3e6f2a1a1c6b"
 dependencies = [
  "bytes 0.5.6",
  "chrono",
@@ -2307,7 +2307,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#734ac531c0484713b5d8c9d4453a5ad3465e75b7"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#1695b05121e1998594ad6b053f2d3e6f2a1a1c6b"
 dependencies = [
  "Inflector",
  "proc-macro2",
