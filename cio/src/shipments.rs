@@ -156,6 +156,28 @@ impl NewInboundShipment {
     }
 }
 
+impl InboundShipment {
+    pub fn oxide_tracking_link(&self) -> String {
+        format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
+    }
+
+    // Get the tracking link for the provider.
+    pub fn tracking_link(&mut self) {
+        let carrier = self.carrier.to_lowercase();
+
+        if carrier == "usps" {
+            self.tracking_link = format!("https://tools.usps.com/go/TrackConfirmAction_input?origTrackNum={}", self.tracking_number);
+        } else if carrier == "ups" {
+            self.tracking_link = format!("https://www.ups.com/track?tracknum={}", self.tracking_number);
+        } else if carrier == "fedex" {
+            self.tracking_link = format!("https://www.fedex.com/apps/fedextrack/?tracknumbers={}", self.tracking_number);
+        } else if carrier == "dhl" {
+            // TODO: not sure if this one is correct.
+            self.tracking_link = format!("https://www.dhl.com/en/express/tracking.html?AWB={}", self.tracking_number);
+        }
+    }
+}
+
 /// The data type for a internal shipment.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Shipment {

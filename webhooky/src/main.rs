@@ -910,17 +910,19 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     method = POST,
     path = "/shippo/tracking/update",
 }]
-async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let api_context = rqctx.context();
+
     let event = body_param.into_inner();
     let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
         sentry::capture_message(&format!("decoding event body for shippo `{}` failed: {}", event.to_string(), e), sentry::Level::Info);
 
         Default::default()
     });
-    println!("shipment parsed: {:?}", body);
 
-    if body.data.address_from.street1.is_empty() {
+    let ts = body.data;
+    if ts.address_from.unwrap_or_default().street1.is_empty() && ts.tracking_history.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
         sentry::capture_message("too early to get any information about the shipment", sentry::Level::Fatal);
@@ -928,9 +930,42 @@ async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext<Conte
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    println!("shippo-tracking-update parsed: {:?}", body);
+    // Update the inbound shipment, if it exists.
+    if let Some(mut shipment) = InboundShipment::get_from_db(&api_context.db, ts.tracking_number.to_string(), ts.carrier.to_string()) {
+        // Get the tracking status for the shipment and fill in the details.
+        shipment.tracking_number = ts.tracking_number.to_string();
+        let tracking_status = ts.tracking_status.unwrap_or_default();
+        shipment.tracking_status = tracking_status.status.to_string();
+        shipment.tracking_link();
+        shipment.eta = ts.eta;
 
-    //println!( "shipment {} tracking status updated successfully", a.email);
+        shipment.oxide_tracking_link = shipment.oxide_tracking_link();
+
+        shipment.messages = tracking_status.status_details;
+
+        // Iterate over the tracking history and set the shipped_time.
+        // Get the first date it was maked as in transit and use that as the shipped
+        // time.
+        for h in ts.tracking_history {
+            if h.status == *"TRANSIT" {
+                if let Some(shipped_time) = h.status_date {
+                    let current_shipped_time = if let Some(s) = shipment.shipped_time { s } else { Utc::now() };
+
+                    if shipped_time < current_shipped_time {
+                        shipment.shipped_time = Some(shipped_time);
+                    }
+                }
+            }
+        }
+
+        if tracking_status.status == *"DELIVERED" {
+            shipment.delivered_time = tracking_status.status_date;
+        }
+    }
+
+    // TODO: update the outbound shipment in airtable.
+
+    println!("shipment {} tracking status updated successfully", ts.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
