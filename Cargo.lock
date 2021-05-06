@@ -124,6 +124,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ba8f27bc3235b97a523cc15f98a3f189abf12465987cc14b5c8402c6b1ca44f"
 dependencies = [
  "chrono",
  "reqwest 0.11.3",
@@ -134,12 +136,10 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ba8f27bc3235b97a523cc15f98a3f189abf12465987cc14b5c8402c6b1ca44f"
+version = "0.1.27"
 dependencies = [
  "chrono",
- "reqwest 0.11.3",
+ "reqwest 0.10.10",
  "schemars",
  "serde",
  "serde_json",
@@ -524,6 +524,8 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "checkr"
 version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e58423ec91ffccee79d6ff65cd15f9273633deda4cffef7a1c9f08385d2727c"
 dependencies = [
  "chrono",
  "reqwest 0.10.10",
@@ -533,9 +535,7 @@ dependencies = [
 
 [[package]]
 name = "checkr"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e58423ec91ffccee79d6ff65cd15f9273633deda4cffef7a1c9f08385d2727c"
+version = "0.0.6"
 dependencies = [
  "chrono",
  "reqwest 0.10.10",
@@ -586,13 +586,13 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e5ffd374460b866c22d6564fb4e334638557e87d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6b80657032d1cc30029542a8a1932225ecc82b53"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.25",
  "async-trait",
  "base64 0.12.3",
- "checkr 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "checkr 0.0.4",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
@@ -602,7 +602,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "docusign 0.1.0",
  "dropshot",
  "futures-util",
  "google-drive 0.1.13",
@@ -615,7 +615,7 @@ dependencies = [
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "nom_pem",
- "okta 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "okta 0.0.3",
  "openapiv3",
  "openssl",
  "opentelemetry",
@@ -654,10 +654,10 @@ name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.25",
  "async-trait",
  "base64 0.12.3",
- "checkr 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "checkr 0.0.4",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
@@ -667,7 +667,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.0",
+ "docusign 0.1.3",
  "dropshot",
  "futures-util",
  "google-drive 0.1.13",
@@ -680,7 +680,7 @@ dependencies = [
  "lopdf",
  "macros 0.1.0",
  "nom_pem",
- "okta 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "okta 0.0.3",
  "openapiv3",
  "openssl",
  "opentelemetry",
@@ -1132,7 +1132,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "docusign"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e5ffd374460b866c22d6564fb4e334638557e87d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6b80657032d1cc30029542a8a1932225ecc82b53"
 dependencies = [
  "bytes 0.5.6",
  "chrono",
@@ -1145,7 +1145,7 @@ dependencies = [
 
 [[package]]
 name = "docusign"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "bytes 0.5.6",
  "chrono",
@@ -1599,7 +1599,7 @@ checksum = "f6503fe142514ca4799d4c26297c4248239fe8838d827db6bd6065c6ed29a6ce"
 
 [[package]]
 name = "giphy-api"
-version = "0.1.4"
+version = "0.1.6"
 dependencies = [
  "reqwest 0.10.10",
  "serde",
@@ -1620,16 +1620,6 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.12"
-dependencies = [
- "bytes 0.5.6",
- "reqwest 0.10.10",
- "serde",
- "yup-oauth2",
-]
-
-[[package]]
-name = "google-drive"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "208627eb79ed34f49a4d82e3326c99b725b032671a262a665f4b54e4de3d9027"
@@ -1641,24 +1631,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "google-geocode"
-version = "0.1.2"
+name = "google-drive"
+version = "0.1.14"
 dependencies = [
+ "bytes 0.5.6",
  "reqwest 0.10.10",
  "serde",
- "serde_json",
+ "yup-oauth2",
 ]
 
 [[package]]
-name = "gsuite-api"
-version = "0.1.18"
+name = "google-geocode"
+version = "0.1.4"
 dependencies = [
- "chrono",
- "rand 0.7.3",
  "reqwest 0.10.10",
  "serde",
  "serde_json",
- "yup-oauth2",
 ]
 
 [[package]]
@@ -1676,13 +1664,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "gusto-api"
-version = "0.1.1"
+name = "gsuite-api"
+version = "0.1.20"
 dependencies = [
  "chrono",
+ "rand 0.7.3",
  "reqwest 0.10.10",
  "serde",
  "serde_json",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -1693,6 +1683,16 @@ checksum = "631b8cef0404c0238397fe0263784cca486526d980f55204eac9bb01960f8941"
 dependencies = [
  "chrono",
  "reqwest 0.11.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "gusto-api"
+version = "0.1.4"
+dependencies = [
+ "chrono",
+ "reqwest 0.10.10",
  "serde",
  "serde_json",
 ]
@@ -2307,7 +2307,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e5ffd374460b866c22d6564fb4e334638557e87d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6b80657032d1cc30029542a8a1932225ecc82b53"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2613,6 +2613,8 @@ checksum = "a9a7ab5d64814df0fe4a4b5ead45ed6c5f181ee3ff04ba344313a6c80446c5d4"
 [[package]]
 name = "okta"
 version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2362d0855c48407c9c76cf6cac9fdc0c324626a2bf0b5797cc1b6916be08bcdc"
 dependencies = [
  "chrono",
  "reqwest 0.10.10",
@@ -2622,9 +2624,7 @@ dependencies = [
 
 [[package]]
 name = "okta"
-version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2362d0855c48407c9c76cf6cac9fdc0c324626a2bf0b5797cc1b6916be08bcdc"
+version = "0.0.5"
 dependencies = [
  "chrono",
  "reqwest 0.10.10",
@@ -3386,17 +3386,6 @@ dependencies = [
 
 [[package]]
 name = "revai"
-version = "0.1.0"
-dependencies = [
- "bytes 0.5.6",
- "chrono",
- "reqwest 0.10.10",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "revai"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b67e6024100cf1d56d1117818486d37c604e92af3685b688cf010e8b34bf2136"
@@ -3404,6 +3393,17 @@ dependencies = [
  "bytes 1.0.1",
  "chrono",
  "reqwest 0.11.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "revai"
+version = "0.1.2"
+dependencies = [
+ "bytes 0.5.6",
+ "chrono",
+ "reqwest 0.10.10",
  "serde",
  "serde_json",
 ]
@@ -3660,21 +3660,21 @@ dependencies = [
 
 [[package]]
 name = "sendgrid-api"
-version = "0.1.3"
-dependencies = [
- "data-encoding",
- "reqwest 0.10.10",
- "serde",
-]
-
-[[package]]
-name = "sendgrid-api"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c5cfec071dc5f14aa59ddceca3fc83fd70f984afe8f1b745e4c743479d9cad0"
 dependencies = [
  "data-encoding",
  "reqwest 0.11.3",
+ "serde",
+]
+
+[[package]]
+name = "sendgrid-api"
+version = "0.1.5"
+dependencies = [
+ "data-encoding",
+ "reqwest 0.10.10",
  "serde",
 ]
 
@@ -3935,20 +3935,20 @@ dependencies = [
 
 [[package]]
 name = "sheets"
-version = "0.1.6"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d9a8c7960cd6fd652258d79f3319767fae147f23b957b32a8340157b6b38d54"
 dependencies = [
- "reqwest 0.10.10",
+ "reqwest 0.11.3",
  "serde",
  "yup-oauth2",
 ]
 
 [[package]]
 name = "sheets"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d9a8c7960cd6fd652258d79f3319767fae147f23b957b32a8340157b6b38d54"
+version = "0.1.8"
 dependencies = [
- "reqwest 0.11.3",
+ "reqwest 0.10.10",
  "serde",
  "yup-oauth2",
 ]
@@ -3961,10 +3961,12 @@ checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 
 [[package]]
 name = "shippo"
-version = "0.1.19"
+version = "0.1.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a08a18aaa5e86958d7d21e937cbdceed032e8911b288b3b7cbf221fad1285a57"
 dependencies = [
  "chrono",
- "reqwest 0.10.10",
+ "reqwest 0.11.3",
  "schemars",
  "serde",
  "serde_json",
@@ -3972,12 +3974,10 @@ dependencies = [
 
 [[package]]
 name = "shippo"
-version = "0.1.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a08a18aaa5e86958d7d21e937cbdceed032e8911b288b3b7cbf221fad1285a57"
+version = "0.1.21"
 dependencies = [
  "chrono",
- "reqwest 0.11.3",
+ "reqwest 0.10.10",
  "schemars",
  "serde",
  "serde_json",
@@ -4017,22 +4017,22 @@ checksum = "f173ac3d1a7e3b28003f40de0b5ce7fe2710f9b9dc3fc38664cebee46b3b6527"
 
 [[package]]
 name = "slack-chat-api"
-version = "0.1.5"
-dependencies = [
- "chrono",
- "reqwest 0.10.10",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "slack-chat-api"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "170430b93c4af5fc1506005ea727cd5b942d1a1fd39efdcb8cee208655f4c6e6"
 dependencies = [
  "chrono",
  "reqwest 0.11.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "slack-chat-api"
+version = "0.1.7"
+dependencies = [
+ "chrono",
+ "reqwest 0.10.10",
  "serde",
  "serde_json",
 ]
@@ -4330,22 +4330,22 @@ dependencies = [
 
 [[package]]
 name = "tailscale-api"
-version = "0.1.2"
-dependencies = [
- "chrono",
- "reqwest 0.10.10",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "tailscale-api"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c08aa49aa26218c023606646bb213bbf67d96865a36566e98cf74c391c5beee"
 dependencies = [
  "chrono",
  "reqwest 0.11.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "tailscale-api"
+version = "0.1.4"
+dependencies = [
+ "chrono",
+ "reqwest 0.10.10",
  "serde",
  "serde_json",
 ]

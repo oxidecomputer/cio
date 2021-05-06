@@ -1,7 +1,7 @@
 [package]
 name = "airtable-api"
 description = "An API client for Airtable"
-version = "0.1.25"
+version = "0.1.27"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -10,7 +10,7 @@ documentation = "https://docs.rs/airtable-api"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.10", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
