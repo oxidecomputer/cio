@@ -18,9 +18,9 @@ fn terraform_name_helper(h: &Helper, _: &Handlebars, _: &Context, _rc: &mut Rend
     // Check if the first character is a number.
     let first_char = param.chars().next().unwrap();
     if first_char.is_digit(10) {
-        out.write(&("_".to_owned() + param))?;
+        out.write(&("_".to_owned() + &param.replace('.', "")))?;
     } else {
-        out.write(&param)?;
+        out.write(&param.replace(".", "")).unwrap();
     }
     Ok(())
 }
