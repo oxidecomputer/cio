@@ -2,8 +2,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use tracing::instrument;
-
 /// GitHub repos.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Repo {
@@ -16,8 +14,6 @@ pub enum Repo {
 
 impl Repo {
     /// Returns a static string for the repo name.
-    #[instrument]
-    #[inline]
     pub fn name(self) -> &'static str {
         match self {
             Repo::Wildcard => "*",
@@ -30,8 +26,6 @@ impl Repo {
 impl FromStr for Repo {
     type Err = &'static str;
 
-    #[instrument]
-    #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "*" => Ok(Repo::Wildcard),

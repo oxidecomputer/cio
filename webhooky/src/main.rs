@@ -7,13 +7,9 @@ pub mod influx;
 #[macro_use]
 extern crate serde_json;
 
-use std::any::Any;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
-use std::error::Error;
-use std::fs::File;
-use std::io::Read;
 use std::str::{from_utf8, FromStr};
 use std::sync::Arc;
 
@@ -22,7 +18,9 @@ use chrono::NaiveDate;
 use chrono::{DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use diesel::prelude::*;
-use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServer, Path, Query, RequestContext, TypedBody};
+use dropshot::{
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody,
+};
 use google_drive::GoogleDrive;
 use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
@@ -30,8 +28,6 @@ use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
-use tracing::{event, instrument, span, Level};
-use tracing_subscriber::prelude::*;
 
 use cio_api::analytics::NewPageView;
 use cio_api::applicants::get_role_from_sheet_id;
@@ -49,7 +45,7 @@ use cio_api::templates::generate_terraform_files_for_okta;
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+async fn main() -> Result<(), String> {
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
@@ -62,27 +58,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 
     let service_address = "0.0.0.0:8080";
 
-    // Set up tracing.
-    let (tracer, _uninstall) = opentelemetry_zipkin::new_pipeline()
-        .with_service_name("webhooky")
-        .with_collector_endpoint("https://ingest.lightstep.com:443/api/v2/spans")
-        .with_trace_config(
-            opentelemetry::sdk::trace::config()
-                .with_default_sampler(opentelemetry::sdk::trace::Sampler::AlwaysOn)
-                .with_resource(opentelemetry::sdk::Resource::new(vec![
-                    opentelemetry::KeyValue::new("lightstep.service_name", "webhooky"),
-                    opentelemetry::KeyValue::new("lightstep.access_token", env::var("LIGHTSTEP_ACCESS_TOKEN").unwrap_or_default()),
-                ])),
-        )
-        .install()
-        .unwrap();
-    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let subscriber = tracing_subscriber::Registry::default().with(opentelemetry);
-    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
-
-    let root = span!(Level::TRACE, "app_start", work_units = 2);
-    let _enter = root.enter();
-
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
@@ -90,7 +65,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
      */
     let config_dropshot = ConfigDropshot {
         bind_address: service_address.parse().unwrap(),
-        request_body_max_bytes: dropshot::RequestBodyMaxBytes(100000000),
+        request_body_max_bytes: 100000000,
     };
 
     /*
@@ -127,41 +102,18 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(api_get_schema).unwrap();
 
     // Print the OpenAPI Spec to stdout.
-    let api_file = "openapi-webhooky.json";
-    let mut tmp_file = env::temp_dir();
-    tmp_file.push("openapi-webhooky.json");
-    println!("Writing OpenAPI spec to {}...", api_file);
-    let mut buffer = File::create(tmp_file.clone()).unwrap();
-    api.print_openapi(
-        &mut buffer,
-        &"Webhooks API",
-        Some(&"API for our webhooky server that listens to various events"),
-        None,
-        Some(&"Jess Frazelle"),
-        Some(&"https://oxide.computer"),
-        Some(&"webhooks@oxide.computer"),
-        None,
-        None,
-        &"0.0.1",
-    )
-    .unwrap();
-    let mut f = File::open(tmp_file).unwrap();
-    let mut api_schema = String::new();
-    f.read_to_string(&mut api_schema).unwrap();
-    let mut schema: openapiv3::OpenAPI = serde_json::from_str(&api_schema).unwrap();
-    // Modify more of the schema.
-    // TODO: make this cleaner when dropshot allows for it.
-    schema.servers = vec![openapiv3::Server {
-        url: "https://webhooks.corp.oxide.computer".to_string(),
-        description: Some("Our deployed webhooks server".to_string()),
-        variables: None,
-    }];
-    schema.external_docs = Some(openapiv3::ExternalDocumentation {
-        description: Some("Automatically updated documentation site, public, not behind the VPN.".to_string()),
-        url: "https://api.docs.corp.oxide.computer".to_string(),
-    });
-    // Save it back to the file.
-    serde_json::to_writer_pretty(&File::create(api_file).unwrap(), &schema).unwrap();
+    /* let mut api_definition = &mut api.openapi(&"Webhooks API", &"0.0.1");
+
+    api_definition = api_definition
+           .description("Internal webhooks server for listening to several third party webhooks")
+           .contact_url("https://oxide.computer")
+           .contact_email("webhooks@oxide.computer");
+       let api_file = "openapi-webhooky.json";
+       println!("Writing OpenAPI spec to {}...", api_file);
+       let mut buffer = File::create(api_file).unwrap();
+       let schema = api_definition.json().unwrap().to_string();
+       api_definition.write(&mut buffer).unwrap();*/
+    let schema = Default::default();
 
     /*
      * The functions that implement our API endpoints will share this context.
@@ -171,14 +123,11 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     /*
      * Set up the server.
      */
-    let mut server = HttpServer::new(&config_dropshot, api, api_context, &log)
+    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
         .map_err(|error| format!("failed to start server: {}", error))
-        .unwrap();
-
-    // Start the server.
-    let server_task = server.run();
-    server.wait_for_shutdown(server_task).await.unwrap();
-    Ok(())
+        .unwrap()
+        .start();
+    server.await
 }
 
 /**
@@ -191,14 +140,14 @@ struct Context {
     influx: influx::Client,
     db: Database,
 
-    schema: openapiv3::OpenAPI,
+    schema: String,
 }
 
 impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new(schema: openapiv3::OpenAPI) -> Arc<Context> {
+    pub async fn new(schema: String) -> Context {
         // Get gsuite token.
         let token = get_gsuite_token("").await;
 
@@ -211,23 +160,14 @@ impl Context {
         let drive_rfd_shared_id = shared_drive.id;
 
         // Create the context.
-        Arc::new(Context {
+        Context {
             drive_rfd_shared_id,
             github: authenticate_github_jwt(),
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
             db: Database::new(),
             schema,
-        })
-    }
-
-    /**
-     * Given `rqctx` (which is provided by Dropshot to all HTTP handler
-     * functions), return our application-specific context.
-     */
-    pub fn from_rqctx(rqctx: &Arc<RequestContext>) -> Arc<Context> {
-        let ctx: Arc<dyn Any + Send + Sync + 'static> = Arc::clone(&rqctx.server.private);
-        ctx.downcast::<Context>().expect("wrong type for private data")
+        }
     }
 }
 
@@ -242,12 +182,10 @@ impl Context {
     method = GET,
     path = "/",
 }]
-#[instrument]
-#[inline]
-async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
-    let api_context = Context::from_rqctx(&rqctx);
+async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+    let api_context = rqctx.context();
 
-    Ok(HttpResponseOk(json!(api_context.schema).to_string()))
+    Ok(HttpResponseOk(api_context.schema.to_string()))
 }
 
 /** Return pong. */
@@ -255,9 +193,7 @@ async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<Str
     method = GET,
     path = "/ping",
 }]
-#[instrument]
-#[inline]
-async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
 }
 
@@ -266,11 +202,9 @@ async fn ping(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, Htt
     method = POST,
     path = "/github",
 }]
-#[instrument]
-#[inline]
-async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GitHubWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
 
     let event = body_param.into_inner();
 
@@ -290,14 +224,14 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
         EventType::Push => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             event.as_influx_push(&api_context.influx, &api_context.github).await;
 
             // Ensure we have commits.
             if event.commits.is_empty() {
                 // `push` event has no commits.
                 // We can throw this out, log it and return early.
-                event!(Level::INFO, "`push` event has no commits: {:?}", event);
+                println!("`push` event has no commits: {:?}", event);
                 sentry::end_session();
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
@@ -307,7 +241,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             if !commit.distinct {
                 // The commit is not distinct.
                 // We can throw this out, log it and return early.
-                event!(Level::INFO, "`push` event commit `{}` is not distinct", commit.id);
+                println!("`push` event commit `{}` is not distinct", commit.id);
                 sentry::end_session();
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
@@ -319,43 +253,43 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
                 // The branch name is empty.
                 // We can throw this out, log it and return early.
                 // This should never happen, but we won't rule it out because computers.
-                event!(Level::WARN, "`push` event branch name is empty: {:?}", event);
+                sentry::capture_message(&format!("`push` event branch name is empty: {:?}", event), sentry::Level::Fatal);
                 sentry::end_session();
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
         }
         EventType::PullRequest => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_pull_request();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::PullRequestReviewComment => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_pull_request_review_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::Issues => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_issue();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::IssueComment => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_issue_comment();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckSuite => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_check_suite();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::CheckRun => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_check_run();
             api_context.influx.query(influx_event, event_type.name()).await;
         }
         EventType::Repository => {
-            event!(Level::DEBUG, "`{}` {:?}", event_type.name(), event);
+            println!("`{}` {:?}", event_type.name(), event);
             let influx_event = event.as_influx_repository();
             api_context.influx.query(influx_event, event_type.name()).await;
 
@@ -394,7 +328,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBod
             }
             _ => {
                 // We can throw this out, log it and return early.
-                event!(Level::INFO, "`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
+                println!("`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
             }
         }
     }
@@ -413,31 +347,29 @@ struct RFDPathParams {
     method = POST,
     path = "/rfd/{num}",
 }]
-#[instrument(skip(path_params))]
-#[inline]
-async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: Path<RFDPathParams>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_params: Path<RFDPathParams>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let num = path_params.into_inner().num;
-    event!(Level::INFO, "Triggering an update for RFD number `{}`", num);
+    println!("Triggering an update for RFD number `{}`", num);
 
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
     let github = &api_context.github;
     let db = &api_context.db;
 
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
-        event!(Level::WARN, "No RFD was found with number `{}`", num);
+        sentry::capture_message(&format!("No RFD was found with number `{}`", num), sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let mut rfd = result.unwrap();
     // Update the RFD.
     rfd.expand(github).await;
-    event!(Level::INFO, "updated  RFD {}", rfd.number_string);
+    println!("updated  RFD {}", rfd.number_string);
 
     rfd.convert_and_upload_pdf(github).await;
-    event!(Level::INFO, "updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
+    println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
     rfd.update(db).await;
@@ -451,11 +383,9 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext>, path_params: P
     method = GET,
     path = "/github/ratelimit",
 }]
-#[instrument]
-#[inline]
-async fn github_rate_limit(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     sentry::start_session();
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
     let github = &api_context.github;
 
     let response = github.rate_limit().get().await.unwrap();
@@ -487,9 +417,7 @@ pub struct GitHubRateLimit {
     method = POST,
     path = "/google/sheets/edit",
 }]
-#[instrument]
-#[inline]
-async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
@@ -497,17 +425,17 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
 
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
     let db = &api_context.db;
     let github = &api_context.github;
 
     let event = body_param.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
-        event!(Level::INFO, "event is not for an application spreadsheet: {:?}", event);
+        println!("event is not for an application spreadsheet: {:?}", event);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -522,7 +450,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
-        event!(Level::WARN, "email cell returned empty for event: {:?}", event);
+        sentry::capture_message(&format!("email cell returned empty for event: {:?}", event), sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -540,7 +468,10 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         .filter(applicants::dsl::sheet_id.eq(event.spreadsheet.id.to_string()))
         .first::<Applicant>(&db.conn());
     if result.is_err() {
-        event!(Level::WARN, "could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id);
+        sentry::capture_message(
+            &format!("could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id),
+            sentry::Level::Fatal,
+        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -599,7 +530,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
         // If this is a field wehipmentdon't care about, return early.
-        event!(Level::INFO, "column updated was `{}`, no automations set up for that column yet", column_header);
+        println!("column updated was `{}`, no automations set up for that column yet", column_header);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -616,7 +547,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext>, body_par
         .unwrap();
     new_applicant.create_github_onboarding_issue(&github, &configs_issues).await;
 
-    event!(Level::INFO, "applicant {} updated successfully", new_applicant.email);
+    println!("applicant {} updated successfully", new_applicant.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -691,9 +622,7 @@ pub struct GoogleSpreadsheet {
     method = POST,
     path = "/google/sheets/row/create",
 }]
-#[instrument]
-#[inline]
-async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
@@ -703,11 +632,11 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
 
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
     let db = &api_context.db;
 
     let event = body_param.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
@@ -716,7 +645,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         let swag_spreadsheets = get_shipments_spreadsheets();
         if !swag_spreadsheets.contains(&event.spreadsheet.id) {
             // Return early if not
-            event!(Level::INFO, "event is not for an application spreadsheet or a swag spreadsheet: {:?}", event);
+            println!("event is not for an application spreadsheet or a swag spreadsheet: {:?}", event);
             sentry::end_session();
             return Ok(HttpResponseAccepted("ok".to_string()));
         }
@@ -735,7 +664,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values);
 
     if applicant.email.is_empty() {
-        event!(Level::WARN, "applicant has an empty email: {:?}", applicant);
+        sentry::capture_message(&format!("applicant has an empty email: {:?}", applicant), sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -755,7 +684,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
         .await;
 
     if !applicant.sent_email_received {
-        event!(Level::INFO, "applicant is new, sending internal notifications: {:?}", applicant);
+        println!("applicant is new, sending internal notifications: {:?}", applicant);
 
         // Post to Slack.
         post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
@@ -769,7 +698,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext>, bo
     // Send the applicant to the database and Airtable.
     let a = applicant.upsert(db).await;
 
-    event!(Level::INFO, "applicant {} created successfully", a.email);
+    println!("applicant {} created successfully", a.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -791,17 +720,15 @@ pub struct GoogleSpreadsheetRowCreateEvent {
     method = POST,
     path = "/airtable/applicants/edit",
 }]
-#[instrument]
-#[inline]
-async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     if event.record_id.is_empty() {
-        event!(Level::WARN, "Record id is empty");
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -811,7 +738,7 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, bo
     if applicant.request_background_check {
         // Request the background check.
         applicant.send_background_check_invitation(&api_context.db).await;
-        event!(Level::INFO, "sent background check invitation to applicant: {}", applicant.email);
+        println!("sent background check invitation to applicant: {}", applicant.email);
     }
 
     sentry::end_session();
@@ -826,15 +753,13 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext>, bo
     method = POST,
     path = "/airtable/shipments/outbound/create",
 }]
-#[instrument]
-#[inline]
-async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     if event.record_id.is_empty() {
-        event!(Level::WARN, "Record id is empty");
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -847,7 +772,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestC
     // Update airtable again.
     shipment.create_or_update_in_airtable().await;
 
-    event!(Level::INFO, "shipment {} created successfully", shipment.email);
+    println!("shipment {} created successfully", shipment.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -867,15 +792,13 @@ pub struct AirtableRowEvent {
     method = POST,
     path = "/airtable/shipments/outbound/edit",
 }]
-#[instrument]
-#[inline]
-async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     if event.record_id.is_empty() {
-        event!(Level::WARN, "Record id is empty");
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -891,7 +814,7 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
     if shipment.reprint_label {
         // Reprint the label.
         shipment.print_label().await;
-        event!(Level::INFO, "shipment {} reprinted label", shipment.email);
+        println!("shipment {} reprinted label", shipment.email);
 
         // Update the field.
         shipment.reprint_label = false;
@@ -903,7 +826,7 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
     if shipment.resend_email_to_recipient {
         // Resend the email to the recipient.
         shipment.send_email_to_recipient().await;
-        event!(Level::INFO, "resent the shipment email to the recipient {}", shipment.email);
+        println!("resent the shipment email to the recipient {}", shipment.email);
 
         // Update the field.
         shipment.resend_email_to_recipient = false;
@@ -930,20 +853,18 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
     method = POST,
     path = "/airtable/shipments/inbound/create",
 }]
-#[instrument]
-#[inline]
-async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     if event.record_id.is_empty() {
-        event!(Level::WARN, "Record id is empty");
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
     let db = &api_context.db;
 
     // Get the row from airtable.
@@ -951,7 +872,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
-        event!(Level::WARN, "tracking_number and carrier are empty, ignoring");
+        sentry::capture_message("tracking_number and carrier are empty, ignoring", sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -977,7 +898,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     }
     shipment.update(&db).await;
 
-    event!(Level::INFO, "inbound shipment {} updated successfully", shipment.tracking_number);
+    println!("inbound shipment {} updated successfully", shipment.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -989,9 +910,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     method = POST,
     path = "/shippo/tracking/update",
 }]
-#[instrument]
-#[inline]
-async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
@@ -999,19 +918,19 @@ async fn listen_shippo_tracking_update_webhooks(_rqctx: Arc<RequestContext>, bod
 
         Default::default()
     });
-    event!(Level::INFO, "shipment parsed: {:?}", body);
+    println!("shipment parsed: {:?}", body);
 
     if body.data.address_from.street1.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
-        event!(Level::WARN, "too early to get any information about the shipment");
+        sentry::capture_message("too early to get any information about the shipment", sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     println!("shippo-tracking-update parsed: {:?}", body);
 
-    //event!(Level::INFO, "shipment {} tracking status updated successfully", a.email);
+    //println!( "shipment {} tracking status updated successfully", a.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1028,9 +947,7 @@ pub struct ShippoTrackingUpdateEvent {
     method = GET,
     path = "/mailchimp",
 }]
-#[instrument]
-#[inline]
-async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("ok".to_string()))
 }
 
@@ -1039,9 +956,7 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext>) -> Result<HttpResp
     method = POST,
     path = "/checkr/background/update",
 }]
-#[instrument]
-#[inline]
-async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_checkr_background_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     sentry::capture_message(&format!("checkr: {}", event.to_string()), sentry::Level::Info);
 
@@ -1053,11 +968,9 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext>, bo
     method = POST,
     path = "/docusign/callback",
 }]
-#[instrument]
-#[inline]
-async fn listen_docusign_callback(rqctx: Arc<RequestContext>, query_args: Query<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<HashMap<String, String>>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = query_args.into_inner();
-    sentry::capture_message(&format!("docusign callback: {}", event.to_string()), sentry::Level::Info);
+    sentry::capture_message(&format!("docusign callback: {:?}", event), sentry::Level::Info);
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1067,9 +980,7 @@ async fn listen_docusign_callback(rqctx: Arc<RequestContext>, query_args: Query<
     method = POST,
     path = "/docusign/envelope/update",
 }]
-#[instrument]
-#[inline]
-async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_docusign_envelope_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
     sentry::capture_message(&format!("docusign: {}", event.to_string()), sentry::Level::Info);
 
@@ -1081,15 +992,13 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext>, bo
     method = POST,
     path = "/analytics/page_view",
 }]
-#[instrument]
-#[inline]
-async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_param: TypedBody<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
     let db = &api_context.db;
 
     let mut event = body_param.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     // Expand the page_view.
     event.set_page_link();
@@ -1097,7 +1006,7 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_pa
     // Add the page_view to the database and Airttable.
     let pv = event.create(db).await;
 
-    event!(Level::INFO, "page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
+    println!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1107,18 +1016,16 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext>, body_pa
     method = POST,
     path = "/mailchimp",
 }]
-#[instrument]
-#[inline]
-async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = Context::from_rqctx(&rqctx);
+    let api_context = rqctx.context();
     let db = &api_context.db;
 
     let event = query_args.into_inner();
-    event!(Level::DEBUG, "{:?}", event);
+    println!("{:?}", event);
 
     if event.webhook_type != *"subscribe" {
-        event!(Level::INFO, "not a `subscribe` event, got `{}`", event.webhook_type);
+        println!("not a `subscribe` event, got `{}`", event.webhook_type);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -1133,11 +1040,11 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext>, query_args: Query
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
         post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
-        event!(Level::INFO, "subscriber {} posted to Slack", subscriber.email);
+        println!("subscriber {} posted to Slack", subscriber.email);
 
-        event!(Level::INFO, "subscriber {} created successfully", subscriber.email);
+        println!("subscriber {} created successfully", subscriber.email);
     } else {
-        event!(Level::INFO, "subscriber {} already exists", new_subscriber.email);
+        println!("subscriber {} already exists", new_subscriber.email);
     }
 
     sentry::end_session();
@@ -1289,8 +1196,6 @@ pub struct GitHubRepo {
 
 impl GitHubWebhook {
     // Push an event for every commit.
-    #[instrument]
-    #[inline]
     pub async fn as_influx_push(&self, influx: &influx::Client, github: &Github) {
         let repo = &self.repository;
 
@@ -1300,7 +1205,7 @@ impl GitHubWebhook {
 
                 if c.sha != commit.id {
                     // We have a problem.
-                    event!(Level::WARN, "commit sha mismatch: {} {}", c.sha.to_string(), commit.id.to_string());
+                    sentry::capture_message(&format!("commit sha mismatch: {} {}", c.sha, commit.id), sentry::Level::Fatal);
                     return;
                 }
 
@@ -1324,8 +1229,6 @@ impl GitHubWebhook {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn as_influx_pull_request(&self) -> influx::PullRequest {
         influx::PullRequest {
             time: Utc::now(),
@@ -1340,8 +1243,6 @@ impl GitHubWebhook {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn as_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
         influx::PullRequestReviewComment {
             time: Utc::now(),
@@ -1354,8 +1255,6 @@ impl GitHubWebhook {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn as_influx_issue(&self) -> influx::Issue {
         influx::Issue {
             time: Utc::now(),
@@ -1367,8 +1266,6 @@ impl GitHubWebhook {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn as_influx_issue_comment(&self) -> influx::IssueComment {
         influx::IssueComment {
             time: Utc::now(),
@@ -1381,8 +1278,6 @@ impl GitHubWebhook {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn as_influx_check_suite(&self) -> influx::CheckSuite {
         influx::CheckSuite {
             time: Utc::now(),
@@ -1404,8 +1299,6 @@ impl GitHubWebhook {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn as_influx_check_run(&self) -> influx::CheckRun {
         influx::CheckRun {
             time: Utc::now(),
@@ -1429,8 +1322,6 @@ impl GitHubWebhook {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn as_influx_repository(&self) -> influx::Repository {
         influx::Repository {
             time: Utc::now(),
@@ -1489,15 +1380,11 @@ impl GitHubCommit {
     }
 
     /// Return if the commit has any files that were added, modified, or removed.
-    #[instrument]
-    #[inline]
     pub fn has_changed_files(&self) -> bool {
         !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
     }
 
     /// Return if a specific file was added, modified, or removed in a commit.
-    #[instrument]
-    #[inline]
     pub fn file_changed(&self, file: &str) -> bool {
         self.added.contains(&file.to_string()) || self.modified.contains(&file.to_string()) || self.removed.contains(&file.to_string())
     }
@@ -1698,8 +1585,6 @@ pub mod deserialize_null_string {
     }
 }
 
-#[instrument]
-#[inline]
 fn filter(files: &[String], dir: &str) -> Vec<String> {
     let mut in_dir: Vec<String> = Default::default();
     for file in files {
@@ -1712,9 +1597,7 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
 }
 
 /// Handle a `pull_request` event for the rfd repo.
-#[instrument(skip(api_context))]
-#[inline]
-async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_pull_request(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
     // Get the repo.
@@ -1727,7 +1610,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     // This should never happen, but let's check regardless.
     if branch == event.repository.default_branch {
         // Return early.
-        event!(Level::INFO, "event was to the default branch `{}`, we don't care: {:?}", event.repository.default_branch, event);
+        println!("event was to the default branch `{}`, we don't care: {:?}", event.repository.default_branch, event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -1737,14 +1620,14 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     // Make sure we actually have a number.
     if number == 0 {
         // Return early.
-        event!(Level::INFO, "event was to the branch `{}`, which is not a number so it cannot be an RFD: {:?}", branch, event);
+        println!("event was to the branch `{}`, which is not a number so it cannot be an RFD: {:?}", branch, event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Try to get the RFD from the database.
     let result = RFD::get_from_db(db, number);
     if result.is_none() {
-        event!(Level::INFO, "could not find RFD with number `{}` in the database: {:?}", number, event);
+        println!("could not find RFD with number `{}` in the database: {:?}", number, event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let mut rfd = result.unwrap();
@@ -1778,7 +1661,7 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     // We only care if the pull request was `opened`.
     if event.action != "opened" {
         // We can throw this out, log it and return early.
-        event!(Level::INFO, "no automations are set up for action `{}` yet", event.action);
+        println!("no automations are set up for action `{}` yet", event.action);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -1839,14 +1722,12 @@ async fn handle_rfd_pull_request(api_context: Arc<Context>, event: GitHubWebhook
     // Keep in mind: this push will kick off another webhook.
     create_or_update_file_in_github_repo(&github_repo, &branch, &path, rfd.content.as_bytes().to_vec()).await;
 
-    event!(Level::INFO, "updated discussion link for RFD {}", rfd.number_string,);
+    println!("updated discussion link for RFD {}", rfd.number_string,);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /// Handle a `push` event for the rfd repo.
-#[instrument(skip(api_context))]
-#[inline]
-async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get gsuite token.
     // We re-get the token here because otherwise it will expire.
     let token = get_gsuite_token("").await;
@@ -1867,7 +1748,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        event!(Level::INFO, "`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
+        println!("`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -1907,7 +1788,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                     )
                     .await
                     .unwrap();
-                event!(Level::INFO, "deleted file `{}` since it was removed in mose recent push for RFD {:?}", website_file, event);
+                println!("deleted file `{}` since it was removed in mose recent push for RFD {:?}", website_file, event);
             }
         }
     }
@@ -1937,7 +1818,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             // We update these on the default branch ONLY
             let website_file = file.replace("rfd/", "src/public/static/images/");
             create_or_update_file_in_github_repo(&github_repo, &event.repository.default_branch, &website_file, gh_file_content).await;
-            event!(Level::INFO, "updated file `{}` since it was modified in mose recent push for RFD {:?}", website_file, event);
+            println!("updated file `{}` since it was modified in mose recent push for RFD {:?}", website_file, event);
             // We are done so we can continue throught the loop.
             continue;
         }
@@ -1946,7 +1827,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
         if file.ends_with("README.md") || file.ends_with("README.adoc") {
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
-            event!(Level::INFO, "`push` event -> file {} was modified on branch {}", file, branch,);
+            println!("`push` event -> file {} was modified on branch {}", file, branch,);
             // Parse the RFD.
             let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
@@ -1966,18 +1847,18 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             // Update all the fields for the RFD.
             rfd.expand(&api_context.github).await;
             rfd.update(db).await;
-            event!(Level::INFO, "updated RFD {} in the database", new_rfd.number_string);
-            event!(Level::INFO, "updated airtable for RFD {}", new_rfd.number_string);
+            println!("updated RFD {} in the database", new_rfd.number_string);
+            println!("updated airtable for RFD {}", new_rfd.number_string);
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
             generate_shorturls_for_rfds(&db, &api_context.github.repo(&api_context.github_org, "configs")).await;
-            event!(Level::INFO, "generated shorturls for the rfds");
+            println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
             rfd.convert_and_upload_pdf(&api_context.github).await;
             rfd.update(db).await;
-            event!(Level::INFO, "updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
+            println!("updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
             // Check if the RFD state changed from what is currently in the
             // database.
@@ -2001,14 +1882,12 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                     let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
 
                     if pull_branch == branch {
-                        event!(
-                            Level::INFO,
-                            "RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
-                            rfd.number_string,
-                            old_rfd_state,
-                            rfd.state,
-                            branch,
-                            pull.html_url
+                        sentry::capture_message(
+                            &format!(
+                                "RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                                rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
+                            ),
+                            sentry::Level::Info,
                         );
 
                         has_pull = true;
@@ -2018,13 +1897,9 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
 
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
-                    event!(
-                        Level::INFO,
-                        "RFD {} has moved from state {} -> {}, on branch {}, opening a PR",
-                        rfd.number_string,
-                        old_rfd_state,
-                        rfd.state,
-                        branch
+                    sentry::capture_message(
+                        &format!("RFD {} has moved from state {} -> {}, on branch {}, opening a PR", rfd.number_string, old_rfd_state, rfd.state, branch),
+                        sentry::Level::Info,
                     );
 
                     github_repo
@@ -2037,7 +1912,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                                             ))
                                     .await
                                     .unwrap();
-                    event!(Level::INFO, "opened pull request for RFD {}", new_rfd.number_string);
+                    println!("opened pull request for RFD {}", new_rfd.number_string);
 
                     // We could update the discussion link here, but we will already
                     // trigger a `pull_request` `opened` event, so we might as well let
@@ -2048,12 +1923,12 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
             // If the RFD was merged into the default branch, but the RFD state is not `published`,
             // update the state of the RFD in GitHub to show it as `published`.
             if branch == event.repository.default_branch && rfd.state != "published" {
-                event!(
-                    Level::INFO,
-                    "RFD {} is the branch {} but its state is {}, updating it to `published`",
-                    rfd.number_string,
-                    event.repository.default_branch,
-                    old_rfd_state,
+                sentry::capture_message(
+                    &format!(
+                        "RFD {} is the branch {} but its state is {}, updating it to `published`",
+                        rfd.number_string, event.repository.default_branch, old_rfd_state,
+                    ),
+                    sentry::Level::Info,
                 );
 
                 //  Update the state of the RFD in GitHub to show it as `published`.
@@ -2066,7 +1941,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                 // Update the file in GitHub.
                 // Keep in mind: this push will kick off another webhook.
                 create_or_update_file_in_github_repo(&github_repo, branch, &file, rfd_mut.content.as_bytes().to_vec()).await;
-                event!(Level::INFO, "updated state to `published` for  RFD {}", new_rfd.number_string);
+                println!("updated state to `published` for  RFD {}", new_rfd.number_string);
             }
 
             // If the title of the RFD changed, delete the old PDF file so it
@@ -2092,27 +1967,31 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
                         )
                         .await
                         .unwrap();
-                    event!(
-                        Level::INFO,
-                        "deleted old pdf file `{}` in GitHub for  RFD {}, new file is `{}`",
-                        &pdf_path,
-                        new_rfd.number_string,
-                        rfd.get_pdf_filename()
+                    sentry::capture_message(
+                        &format!(
+                            "deleted old pdf file `{}` in GitHub for  RFD {}, new file is `{}`",
+                            &pdf_path,
+                            new_rfd.number_string,
+                            rfd.get_pdf_filename()
+                        ),
+                        sentry::Level::Info,
                     );
                 }
 
                 // Delete the old filename from drive.
                 drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
-                event!(
-                    Level::INFO,
-                    "deleted old pdf file `{}` in Google Drive for RFD {}, new file is `{}`",
-                    &pdf_path,
-                    new_rfd.number_string,
-                    rfd.get_pdf_filename()
+                sentry::capture_message(
+                    &format!(
+                        "deleted old pdf file `{}` in Google Drive for RFD {}, new file is `{}`",
+                        &pdf_path,
+                        new_rfd.number_string,
+                        rfd.get_pdf_filename()
+                    ),
+                    sentry::Level::Info,
                 );
             }
 
-            event!(Level::INFO, "RFD {} `push` operations completed", new_rfd.number_string);
+            println!("RFD {} `push` operations completed", new_rfd.number_string);
         }
     }
 
@@ -2122,9 +2001,7 @@ async fn handle_rfd_push(api_context: Arc<Context>, event: GitHubWebhook) -> Res
 }
 
 /// Handle a `push` event for the configs repo.
-#[instrument(skip(api_context))]
-#[inline]
-async fn handle_configs_push(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
 
@@ -2137,7 +2014,7 @@ async fn handle_configs_push(api_context: Arc<Context>, event: GitHubWebhook) ->
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        event!(Level::INFO, "`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
+        println!("`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -2146,12 +2023,12 @@ async fn handle_configs_push(api_context: Arc<Context>, event: GitHubWebhook) ->
     // Make sure this is to the default branch, we don't care about anything else.
     if branch != event.repository.default_branch {
         // We can throw this out, log it and return early.
-        event!(
-            Level::INFO,
-            "`push` event commit `{}` is to the branch `{}` not the default branch `{}`",
-            commit.id,
-            branch,
-            event.repository.default_branch
+        sentry::capture_message(
+            &format!(
+                "`push` event commit `{}` is to the branch `{}` not the default branch `{}`",
+                commit.id, branch, event.repository.default_branch
+            ),
+            sentry::Level::Info,
         );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -2166,7 +2043,7 @@ async fn handle_configs_push(api_context: Arc<Context>, event: GitHubWebhook) ->
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&api_context.db, &github_repo).await;
-        event!(Level::INFO, "generated shorturls for the configs links");
+        println!("generated shorturls for the configs links");
     }
 
     // Check if the groups.toml file changed.
@@ -2215,9 +2092,7 @@ async fn handle_configs_push(api_context: Arc<Context>, event: GitHubWebhook) ->
 }
 
 /// Handle the `repository` event for all repos.
-#[instrument(skip(api_context))]
-#[inline]
-async fn handle_repository_event(api_context: Arc<Context>, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_repository_event(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     let repo = &api_context.github.repo(event.repository.owner.login, event.repository.name).get().await.unwrap();
     let nr = NewRepo::new(repo.clone());
     nr.upsert(&api_context.db).await;
@@ -2226,7 +2101,7 @@ async fn handle_repository_event(api_context: Arc<Context>, event: GitHubWebhook
     // make this a bit better.
     // Update the short urls for all the repos.
     generate_shorturls_for_repos(&api_context.db, &api_context.github.repo(&api_context.github_org, "configs")).await;
-    event!(Level::INFO, "generated shorturls for all the GitHub repos");
+    println!("generated shorturls for all the GitHub repos");
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }

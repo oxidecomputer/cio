@@ -9,7 +9,6 @@ use cio_api::utils::{authenticate_github_jwt, list_all_github_repos};
 use futures_util::stream::TryStreamExt;
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client as InfluxClient, Query as InfluxQuery};
-use tracing::instrument;
 
 use crate::event_types::EventType;
 
@@ -19,14 +18,10 @@ pub struct Client(pub InfluxClient);
 pub static FLUX_DATE_FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
 
 impl Client {
-    #[instrument]
-    #[inline]
     pub fn new_from_env() -> Self {
         Client(InfluxClient::new(env::var("INFLUX_DB_URL").unwrap(), "github_webhooks").with_auth(env::var("GADMIN_SUBJECT").unwrap(), env::var("INFLUX_DB_TOKEN").unwrap()))
     }
 
-    #[instrument]
-    #[inline]
     async fn exists(&self, table: &str, time: DateTime<Utc>, filter: &str) -> bool {
         let read_query = <dyn InfluxQuery>::raw_read_query(&format!(
             r#"import "influxdata/influxdb/schema"
@@ -51,8 +46,6 @@ from(bucket:"github_webhooks")
         false
     }
 
-    #[instrument]
-    #[inline]
     pub async fn commit_exists(&self, time: DateTime<Utc>, sha: &str, repo_name: &str) -> bool {
         let filter = format!(
             r#"|> filter(fn: (r) => r.repo_name == "{}")
@@ -64,8 +57,6 @@ from(bucket:"github_webhooks")
         self.exists(EventType::Push.name(), time, &filter).await
     }
 
-    #[instrument]
-    #[inline]
     pub async fn check_exists(&self, table: &str, time: DateTime<Utc>, github_id: i64, action: &str, sha: &str) -> bool {
         let filter = format!(
             r#"|> filter(fn: (r) => r.github_id == {})
@@ -77,8 +68,6 @@ from(bucket:"github_webhooks")
         self.exists(table, time, &filter).await
     }
 
-    #[instrument]
-    #[inline]
     pub async fn event_exists(&self, table: &str, time: DateTime<Utc>, github_id: i64, action: &str) -> bool {
         let filter = format!(
             r#"|> filter(fn: (r) => r.github_id == {})
@@ -89,8 +78,6 @@ from(bucket:"github_webhooks")
         self.exists(table, time, &filter).await
     }
 
-    #[instrument]
-    #[inline]
     pub async fn query<Q: InfluxDbWriteable + Clone + Debug>(&self, q: Q, table: &str) -> String {
         match self.0.query(&q.clone().into_query(table)).await {
             Ok(v) => {
@@ -105,8 +92,6 @@ from(bucket:"github_webhooks")
         "".to_string()
     }
 
-    #[instrument]
-    #[inline]
     pub async fn update_issues_events(&self) {
         let github = authenticate_github_jwt();
         let repos = list_all_github_repos(&github).await;
@@ -207,8 +192,6 @@ from(bucket:"github_webhooks")
         }
     }
 
-    #[instrument]
-    #[inline]
     pub async fn update_push_events(&self) {
         let github = authenticate_github_jwt();
         let repos = list_all_github_repos(&github).await;
@@ -522,8 +505,6 @@ from(bucket:"github_webhooks")
         // }
     }
 
-    #[instrument]
-    #[inline]
     pub async fn update_pull_request_events(&self) {
         let github = authenticate_github_jwt();
         let repos = list_all_github_repos(&github).await;

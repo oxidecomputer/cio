@@ -603,7 +603,7 @@ dependencies = [
  "diesel",
  "diffy",
  "docusign 0.1.4 (git+https://github.com/oxidecomputer/cio?branch=master)",
- "dropshot",
+ "dropshot 0.3.0",
  "futures-util",
  "google-drive 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -616,7 +616,7 @@ dependencies = [
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "nom_pem",
  "okta 0.0.3",
- "openapiv3",
+ "openapiv3 0.3.2",
  "openssl",
  "opentelemetry",
  "opentelemetry-zipkin",
@@ -668,7 +668,7 @@ dependencies = [
  "diesel",
  "diffy",
  "docusign 0.1.4",
- "dropshot",
+ "dropshot 0.5.2-dev",
  "futures-util",
  "google-drive 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -680,7 +680,6 @@ dependencies = [
  "macros 0.1.0",
  "nom_pem",
  "okta 0.0.3",
- "openapiv3",
  "openssl",
  "opentelemetry",
  "opentelemetry-zipkin",
@@ -1164,13 +1163,13 @@ dependencies = [
  "base64 0.12.3",
  "bytes 0.5.6",
  "chrono",
- "dropshot_endpoint",
+ "dropshot_endpoint 0.3.0",
  "futures",
  "hostname",
  "http",
  "hyper 0.13.10",
  "indexmap",
- "openapiv3",
+ "openapiv3 0.3.2",
  "paste",
  "schemars",
  "serde",
@@ -1189,6 +1188,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "dropshot"
+version = "0.5.2-dev"
+source = "git+https://github.com/jessfraz/dropshot?branch=rebased-working-args#34424c893370f5fad5da94245b9d44ccd47f4bf6"
+dependencies = [
+ "async-trait",
+ "base64 0.13.0",
+ "bytes 1.0.1",
+ "chrono",
+ "dropshot_endpoint 0.5.2-dev",
+ "futures",
+ "hostname",
+ "http",
+ "hyper 0.14.5",
+ "indexmap",
+ "openapiv3 0.5.0",
+ "paste",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_qs 0.8.3",
+ "serde_urlencoded 0.7.0",
+ "slog",
+ "slog-async",
+ "slog-bunyan",
+ "slog-json",
+ "slog-term",
+ "tokio 1.5.0",
+ "toml",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
 name = "dropshot_endpoint"
 version = "0.3.0"
 source = "git+https://github.com/jessfraz/dropshot?branch=working#d1206a5c92923df72e8fb7693b4f375d46131ba7"
@@ -1196,6 +1228,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "schemars",
+ "serde",
+ "serde_tokenstream",
+ "syn",
+]
+
+[[package]]
+name = "dropshot_endpoint"
+version = "0.5.2-dev"
+source = "git+https://github.com/jessfraz/dropshot?branch=rebased-working-args#34424c893370f5fad5da94245b9d44ccd47f4bf6"
+dependencies = [
+ "proc-macro2",
+ "quote",
  "serde",
  "serde_tokenstream",
  "syn",
@@ -2668,6 +2712,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "openapiv3"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90228d34f20d9fff3174d19b0d41e67f52711045270b540a2a2c2dc41ccb4085"
+dependencies = [
+ "indexmap",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
 name = "openssl"
 version = "0.10.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3042,7 +3098,7 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 name = "printy"
 version = "0.1.0"
 dependencies = [
- "dropshot",
+ "dropshot 0.3.0",
  "http",
  "opentelemetry",
  "opentelemetry-zipkin",
@@ -3822,6 +3878,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_qs"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b22063cd705114614293767c69aa992531f72b0cc8a6b9145801920730fe25e4"
+dependencies = [
+ "percent-encoding 2.1.0",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "serde_tokenstream"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4541,7 +4608,7 @@ dependencies = [
  "pin-project-lite 0.1.12",
  "signal-hook-registry",
  "slab",
- "tokio-macros",
+ "tokio-macros 0.2.6",
  "winapi 0.3.9",
 ]
 
@@ -4557,7 +4624,12 @@ dependencies = [
  "memchr",
  "mio 0.7.11",
  "num_cpus",
+ "once_cell",
+ "parking_lot",
  "pin-project-lite 0.2.6",
+ "signal-hook-registry",
+ "tokio-macros 1.1.0",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -4565,6 +4637,17 @@ name = "tokio-macros"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e44da00bfc73a25f814cd8d7e57a68a5c31b74b3152a0a1d1f590c97ed06265a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caf7b11a536f46a809a8a9f0bb4237020f70ecbf115b842360afb127ea2fda57"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5119,15 +5202,12 @@ dependencies = [
  "chrono-humanize",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
- "dropshot",
+ "dropshot 0.5.2-dev",
  "futures-util",
  "google-drive 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
  "influxdb",
- "openapiv3",
- "opentelemetry",
- "opentelemetry-zipkin",
  "schemars",
  "sentry",
  "serde",
@@ -5135,11 +5215,6 @@ dependencies = [
  "sheets 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.25",
- "tracing",
- "tracing-attributes",
- "tracing-futures",
- "tracing-opentelemetry",
- "tracing-subscriber",
 ]
 
 [[package]]

@@ -1,8 +1,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use tracing::instrument;
-
 /// GitHub events that are specified in the X-Github-Event header.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum EventType {
@@ -175,8 +173,6 @@ pub enum EventType {
 
 impl EventType {
     /// Returns a static string for the event name.
-    #[instrument]
-    #[inline]
     pub fn name(self) -> &'static str {
         match self {
             EventType::Wildcard => "*",
@@ -231,8 +227,6 @@ impl EventType {
 impl FromStr for EventType {
     type Err = &'static str;
 
-    #[instrument]
-    #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "*" => Ok(EventType::Wildcard),

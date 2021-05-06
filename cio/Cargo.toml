@@ -29,7 +29,7 @@ diffy = "^0.2.0"
 #docusign = "^0.1.0"
 docusign = { path = "../docusign" }
 #dropshot = "^0.3.0"
-dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "working" }
+dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
 google-drive = "^0.1.0"
 gsuite-api = "^0.1.18"
@@ -44,7 +44,6 @@ lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 macros = { path = "../macros" }
 nom_pem = "4"
 okta = "0.0.3"
-openapiv3 = "=0.3.2"
 openssl = "0.10"
 opentelemetry = { version = "0.10", default-features = false, features = ["trace", "tokio"] }
 opentelemetry-zipkin = { version = "^0.8", features = ["reqwest-client"], default-features = false }
