@@ -141,7 +141,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(threaded_scheduler)]
-    async fn test_software_vendors() {
+    async fn test_cron_software_vendors() {
         refresh_software_vendors().await;
     }
 }
