@@ -228,6 +228,11 @@ impl DocuSign {
         connect.include_document_fields = "true".to_string();
         connect.include_time_zone_information = "true".to_string();
         connect.use_soap_interface = "false".to_string();
+        connect.event_data = WebhookEventData {
+            format: "json".to_string(),
+            include_data: vec!["documents".to_string(), "attachments".to_string(), "custom_fields".to_string()],
+            version: "restv2.1".to_string(),
+        };
 
         // Get all the webhooks to check if we already have one.
         let webhooks = self.list_webhooks().await.unwrap();
@@ -950,6 +955,17 @@ pub struct Webhook {
     pub salesforce_auth_code: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceCallBackUrl")]
     pub salesforce_callback_url: String,
+    #[serde(default, rename = "eventData")]
+    pub event_data: WebhookEventData,
+}
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WebhookEventData {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub format: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "includeData")]
+    pub include_data: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub version: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
