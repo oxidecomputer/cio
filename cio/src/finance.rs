@@ -66,7 +66,7 @@ fn is_zero(num: &f32) -> bool {
 impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
     #[instrument]
     #[inline]
-    async fn update_airtable_record(&mut self, record: SoftwareVendor) {
+    async fn update_airtable_record(&mut self, _record: SoftwareVendor) {
         // This is a function so we can't change it through the API.
         self.total_cost_per_month = 0.0;
     }
