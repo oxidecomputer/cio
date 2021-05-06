@@ -12,7 +12,6 @@ use macros::db;
 use reqwest::{Client, StatusCode};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS};
 use crate::core::UpdateAirtableRecord;
@@ -80,8 +79,6 @@ pub struct NewAuthUser {
 /// Implement updating the Airtable record for a AuthUser.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUser> for AuthUser {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, record: AuthUser) {
         // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
         self.link_to_people = record.link_to_people.clone();
@@ -92,8 +89,6 @@ impl UpdateAirtableRecord<AuthUser> for AuthUser {
 
 impl PartialEq for AuthUser {
     // We implement our own here because Airtable has a different data type for the picture.
-    #[instrument]
-    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.user_id == other.user_id
             && self.last_login == other.last_login
@@ -161,8 +156,6 @@ pub struct NewAuthUserLogin {
 /// Implement updating the Airtable record for a AuthUserLogin.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: AuthUserLogin) {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -217,8 +210,6 @@ pub struct User {
 
 impl User {
     /// Convert an auth0 user into a NewAuthUser.
-    #[instrument]
-    #[inline]
     pub fn to_auth_user(&self) -> NewAuthUser {
         let mut company: &str = &self.company;
         // Check if we have an Oxide email address.
@@ -281,8 +272,6 @@ pub struct Token {
 }
 
 /// List users.
-#[instrument(skip(db))]
-#[inline]
 pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
     let client = Client::new();
     // Get our token.
@@ -350,8 +339,6 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
 }
 
 // TODO: clean this all up to be an auth0 api library.
-#[instrument]
-#[inline]
 async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec<NewAuthUserLogin> {
     let client = Client::new();
     let resp = client
@@ -394,8 +381,6 @@ async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec
     resp.json::<Vec<NewAuthUserLogin>>().await.unwrap()
 }
 
-#[instrument]
-#[inline]
 async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User> {
     let client = Client::new();
     let resp = client
@@ -419,8 +404,6 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 }
 
 // Sync the auth_users with our database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_auth_users_and_logins(db: &Database) {
     let auth_users = get_auth_users("oxide".to_string(), db).await;
 

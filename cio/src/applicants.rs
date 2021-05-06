@@ -29,7 +29,6 @@ use serde_json::Value;
 use sheets::Sheets;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tar::Archive;
-use tracing::instrument;
 use walkdir::WalkDir;
 
 use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
@@ -209,8 +208,6 @@ pub struct NewApplicant {
 impl NewApplicant {
     /// Parse the sheet columns from single Google Sheets row values.
     /// This is what we get back from the webhook.
-    #[instrument]
-    #[inline]
     pub fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
         // Fill in the data we know from what we got from the row.
         let (github, gitlab) = NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
@@ -290,8 +287,6 @@ impl NewApplicant {
     }
 
     /// Send an email to the applicant that we recieved their application.
-    #[instrument]
-    #[inline]
     pub async fn send_email_recieved_application_to_applicant(&self) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -320,8 +315,6 @@ Sincerely,
     }
 
     /// Send an email to the applicant that they did not provide materials.
-    #[instrument]
-    #[inline]
     pub async fn send_email_rejection_did_not_provide_materials(&self) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -349,8 +342,6 @@ The Oxide Team",
     }
 
     /// Send an email to the applicant about timing.
-    #[instrument]
-    #[inline]
     pub async fn send_email_rejection_timing(&self) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -384,8 +375,6 @@ The Oxide Team",
     }
 
     /// Send an email internally that we have a new application.
-    #[instrument]
-    #[inline]
     pub async fn send_email_internally(&self) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -405,8 +394,6 @@ The Oxide Team",
 
     /// Parse the applicant from a Google Sheets row, where we also happen to know the columns.
     /// This is how we get the spreadsheet back from the API.
-    #[instrument]
-    #[inline]
     pub async fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
@@ -715,16 +702,12 @@ The Oxide Team",
         }
     }
 
-    #[instrument]
-    #[inline]
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
         // Parse the time.
         let time_str = timestamp.to_owned() + " -08:00";
         DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z").unwrap().with_timezone(&Utc)
     }
 
-    #[instrument]
-    #[inline]
     fn parse_github_gitlab(s: &str) -> (String, String) {
         let mut github = "".to_string();
         let mut gitlab = "".to_string();
@@ -760,8 +743,6 @@ The Oxide Team",
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    #[instrument(skip(drive_client, sheets_client))]
-    #[inline]
     pub async fn expand(&mut self, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, sent_email_follow_up_index: usize, row_index: usize) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
@@ -1001,8 +982,6 @@ The Oxide Team",
     }
 
     /// Get the human duration of time since the application was submitted.
-    #[instrument]
-    #[inline]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
         if dur.num_seconds() > 0 {
@@ -1013,8 +992,6 @@ The Oxide Team",
     }
 
     /// Convert the applicant into JSON for a Slack message.
-    #[instrument]
-    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
@@ -1120,8 +1097,6 @@ The Oxide Team",
 
     /// Get the applicant's information in the form of the body of an email for a
     /// company wide notification that we received a new application.
-    #[instrument]
-    #[inline]
     pub fn as_company_notification_email(&self) -> String {
         let time = self.human_duration();
 
@@ -1177,8 +1152,6 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
 
 impl Applicant {
     /// Get the human duration of time since the application was submitted.
-    #[instrument]
-    #[inline]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
         if dur.num_seconds() > 0 {
@@ -1189,8 +1162,6 @@ impl Applicant {
     }
 
     /// Send an invite to the applicant to do a background check.
-    #[instrument(skip(db))]
-    #[inline]
     pub async fn send_background_check_invitation(&mut self, db: &Database) {
         // Initialize the Checker client.
         let checkr = Checkr::new_from_env();
@@ -1233,8 +1204,6 @@ impl Applicant {
     }
 
     /// Convert the applicant into JSON for a Slack message.
-    #[instrument]
-    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
@@ -1339,8 +1308,6 @@ impl Applicant {
     }
 
     /// Send an email to a scorer that they are assigned to an applicant.
-    #[instrument]
-    #[inline]
     pub async fn send_email_to_scorer(&self, scorer: &str) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -1360,8 +1327,6 @@ impl Applicant {
 
     /// Get the applicant's information in the form of the body of an email for a
     /// scorer email that they have been assigned to score the applicant.
-    #[instrument]
-    #[inline]
     pub fn as_scorer_email(&self) -> String {
         let time = self.human_duration();
 
@@ -1415,8 +1380,6 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         msg
     }
 
-    #[instrument]
-    #[inline]
     pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue]) {
         let repo = github.repo(github_org(), "configs");
 
@@ -1558,8 +1521,6 @@ cc @jessfraz @sdtuck @bcantrill
     }
 }
 
-#[instrument]
-#[inline]
 fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     if materials_contents.is_empty() {
         Default::default()
@@ -1625,8 +1586,6 @@ pub struct ApplicantSheetColumns {
 
 impl ApplicantSheetColumns {
     /// Parse the sheet columns from Google Sheets values.
-    #[instrument]
-    #[inline]
     pub fn parse(values: &[Vec<String>]) -> Self {
         // Iterate over the columns.
         // TODO: make this less horrible
@@ -1704,8 +1663,6 @@ impl ApplicantSheetColumns {
 }
 
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
-#[instrument(skip(drive_client))]
-#[inline]
 pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String {
     let id = url
         .replace("https://drive.google.com/open?id=", "")
@@ -1864,8 +1821,6 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     result.trim().to_string()
 }
 
-#[instrument]
-#[inline]
 fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
     let mut output = env::temp_dir();
     output.push("tempfile.txt");
@@ -1894,14 +1849,10 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
     result
 }
 
-#[instrument]
-#[inline]
 pub fn get_tracking_sheets() -> Vec<&'static str> {
     vec!["18ZyWSX4jHY2FOlOhGwDuX3wXV48JnCdxtCq9aXC8cjk", "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM"]
 }
 
-#[instrument]
-#[inline]
 pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
     sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
@@ -1912,8 +1863,6 @@ pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     sheets
 }
 
-#[instrument]
-#[inline]
 pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
     for (name, id) in get_sheets_map() {
         if *id == *sheet_id {
@@ -1925,8 +1874,6 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 }
 
 // Sync the applicants with our database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_db_applicants(db: &Database) {
     let github = authenticate_github_jwt();
 
@@ -2007,8 +1954,6 @@ pub struct ApplicantFormSheetColumns {
 }
 
 impl ApplicantFormSheetColumns {
-    #[instrument]
-    #[inline]
     fn new() -> Self {
         ApplicantFormSheetColumns {
             name: 0,
@@ -2021,8 +1966,6 @@ impl ApplicantFormSheetColumns {
     }
 }
 
-#[instrument(skip(db))]
-#[inline]
 fn get_reviewer_pool(db: &Database) -> Vec<String> {
     let users = Users::get_from_db(db);
 
@@ -2035,8 +1978,6 @@ fn get_reviewer_pool(db: &Database) -> Vec<String> {
     reviewers
 }
 
-#[instrument(skip(db))]
-#[inline]
 pub async fn update_applications_with_scoring_forms(db: &Database) {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
@@ -2151,8 +2092,6 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
     }
 }
 
-#[instrument(skip(db))]
-#[inline]
 pub async fn update_applications_with_scoring_results(db: &Database) {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
@@ -2287,8 +2226,6 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
     }
 }
 
-#[instrument]
-#[inline]
 fn is_materials(file_name: &str) -> bool {
     file_name.ends_with("responses.pdf")
         || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
@@ -2299,8 +2236,6 @@ fn is_materials(file_name: &str) -> bool {
         || file_name.ends_with("Operations Manager.pdf")
 }
 
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_background_checks(db: &Database) {
     // Initialize the Checker client.
     let checkr = Checkr::new_from_env();
@@ -2385,8 +2320,6 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
     async fn update_airtable_record(&mut self, _record: ApplicantReviewer) {}
 }
 
-#[instrument(skip(db))]
-#[inline]
 pub async fn update_applicant_reviewers(db: &Database) {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;

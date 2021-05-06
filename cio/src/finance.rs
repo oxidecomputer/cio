@@ -6,7 +6,6 @@ use macros::db;
 use okta::Okta;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_FINANCE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
 use crate::configs::Group;
@@ -64,8 +63,6 @@ fn is_zero(num: &f32) -> bool {
 /// Implement updating the Airtable record for a SoftwareVendor.
 #[async_trait]
 impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: SoftwareVendor) {
         // This is a function so we can't change it through the API.
         self.total_cost_per_month = 0.0;
@@ -73,8 +70,6 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 }
 
 /// Sync software vendors from Airtable.
-#[instrument]
-#[inline]
 pub async fn refresh_software_vendors() {
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;

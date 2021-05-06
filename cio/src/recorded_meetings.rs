@@ -11,7 +11,6 @@ use macros::db;
 use revai::RevAI;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_RECORDED_MEETINGS_TABLE};
 use crate::configs::User;
@@ -77,8 +76,6 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 }
 
 /// Sync the recorded meetings.
-#[instrument]
-#[inline]
 pub async fn refresh_recorded_meetings() {
     let db = Database::new();
     RecordedMeetings::get_from_db(&db).update_airtable().await;

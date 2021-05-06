@@ -1,12 +1,9 @@
 use chrono::{Duration, Utc};
 use tailscale_api::Tailscale;
-use tracing::instrument;
 
 /// When we generate VMs for the console repo on every branch we get lingering
 /// Tailscale devices that need to cleaned up when they are no longer active.
 /// This function does that.
-#[instrument]
-#[inline]
 pub async fn cleanup_old_tailscale_devices() {
     // Initialize the Tailscale API.
     let tailscale = Tailscale::new_from_env();

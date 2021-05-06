@@ -14,7 +14,6 @@ use macros::db;
 use pandoc::OutputKind;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_INTERVIEWS_TABLE};
 use crate::applicants::Applicant;
@@ -60,14 +59,10 @@ pub struct NewApplicantInterview {
 /// Implement updating the Airtable record for a ApplicantInterview.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: ApplicantInterview) {}
 }
 
 /// Sync interviews.
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_interviews(db: &Database) {
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
@@ -213,8 +208,6 @@ pub async fn refresh_interviews(db: &Database) {
 }
 
 /// Compile interview packets for each interviewee.
-#[instrument(skip(db))]
-#[inline]
 pub async fn compile_packets(db: &Database) {
     // Get gsuite token.
     let token = get_gsuite_token("").await;
@@ -420,8 +413,6 @@ The Oxide Team
 }
 
 /// Download materials file from Google drive and save it as a pdf under the persons username.
-#[instrument(skip(drive_client))]
-#[inline]
 pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username: &str) {
     let id = url.replace("https://drive.google.com/open?id=", "");
 
@@ -511,8 +502,6 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
 }
 
 /// Combine multiple pdfs into one pdf and return the byte stream of it.
-#[instrument]
-#[inline]
 pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
     // Define a starting max_id (will be used as start index for object_ids)
     let mut max_id = 1;

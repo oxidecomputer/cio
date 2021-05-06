@@ -13,7 +13,6 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE};
 use crate::core::UpdateAirtableRecord;
@@ -94,15 +93,11 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
 }
 
 impl NewInboundShipment {
-    #[tracing::instrument]
-    #[inline]
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     // Get the tracking link for the provider.
-    #[instrument]
-    #[inline]
     fn tracking_link(&mut self) {
         let carrier = self.carrier.to_lowercase();
 
@@ -119,8 +114,6 @@ impl NewInboundShipment {
     }
 
     /// Get the details about the shipment from the tracking API.
-    #[tracing::instrument]
-    #[inline]
     pub async fn expand(&mut self) {
         // Create the shippo client.
         let shippo = Shippo::new_from_env();
@@ -237,8 +230,6 @@ pub struct Shipment {
 }
 
 impl Shipment {
-    #[instrument]
-    #[inline]
     fn populate_formatted_address(&mut self) {
         let mut street_address = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -251,8 +242,6 @@ impl Shipment {
             .to_string();
     }
 
-    #[instrument]
-    #[inline]
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
         // Parse the time.
         let time_str = timestamp.to_owned() + " -08:00";
@@ -261,8 +250,6 @@ impl Shipment {
 
     /// Parse the sheet columns from single Google Sheets row values.
     /// This is what we get back from the webhook.
-    #[instrument]
-    #[inline]
     pub fn parse_from_row(values: &HashMap<String, Vec<String>>) -> Self {
         let hoodie_size = get_value(values, "Hoodie");
         let fleece_size = get_value(values, "Patagonia Fleece");
@@ -327,8 +314,6 @@ impl Shipment {
 
     /// Parse the shipment from a Google Sheets row, where we also happen to know the columns.
     /// This is how we get the spreadsheet back from the API.
-    #[instrument]
-    #[inline]
     pub fn parse_from_row_with_columns(columns: &SwagSheetColumns, row: &[String]) -> (Self, bool) {
         // If the length of the row is greater than the sent column
         // then we have a sent status.
@@ -497,15 +482,11 @@ impl Shipment {
         )
     }
 
-    #[tracing::instrument]
-    #[inline]
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
-    #[tracing::instrument]
-    #[inline]
     pub async fn create_or_get_shippo_shipment(&mut self) {
         // Update the formatted address.
         self.populate_formatted_address();
@@ -745,8 +726,6 @@ impl Shipment {
     }
 
     /// Send the label to our printer.
-    #[tracing::instrument]
-    #[inline]
     pub async fn print_label(&self) {
         let printer_url = env::var("PRINTER_URL").unwrap();
         let client = reqwest::Client::new();
@@ -760,8 +739,6 @@ impl Shipment {
     }
 
     /// Push the row to our Airtable workspace.
-    #[tracing::instrument]
-    #[inline]
     pub async fn push_to_airtable(&self) {
         // Initialize the Airtable client.
         let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
@@ -781,8 +758,6 @@ impl Shipment {
     }
 
     /// Update the record in airtable.
-    #[tracing::instrument]
-    #[inline]
     pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<Shipment>) {
         // Initialize the Airtable client.
         let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
@@ -806,8 +781,6 @@ impl Shipment {
     }
 
     /// Update a row in our airtable workspace.
-    #[tracing::instrument]
-    #[inline]
     pub async fn create_or_update_in_airtable(&mut self) {
         // Check if we already have the row in Airtable.
         // Initialize the Airtable client.
@@ -833,8 +806,6 @@ impl Shipment {
     }
 
     /// Get the row in our airtable workspace.
-    #[tracing::instrument]
-    #[inline]
     pub async fn get_from_airtable(id: &str) -> Self {
         // Initialize the Airtable client.
         let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
@@ -845,8 +816,6 @@ impl Shipment {
     }
 
     /// Format address.
-    #[tracing::instrument]
-    #[inline]
     pub fn format_address(&self) -> String {
         let mut street = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -857,8 +826,6 @@ impl Shipment {
     }
 
     /// Send an email to the recipient with their tracking code and information.
-    #[tracing::instrument]
-    #[inline]
     pub async fn send_email_to_recipient(&self) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -898,8 +865,6 @@ xoxo,
     }
 
     /// Send an email internally that we need to package the shipment.
-    #[tracing::instrument]
-    #[inline]
     pub async fn send_email_internally(&self) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -1016,8 +981,6 @@ pub struct SwagSheetColumns {
 
 impl SwagSheetColumns {
     /// Parse the sheet columns from Google Sheets values.
-    #[instrument]
-    #[inline]
     pub fn parse(values: &[Vec<String>]) -> Self {
         // Iterate over the columns.
         // TODO: make this less horrible
@@ -1083,8 +1046,6 @@ impl SwagSheetColumns {
 }
 
 /// Return a vector of all the shipments from Google sheets.
-#[instrument]
-#[inline]
 pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
@@ -1131,15 +1092,11 @@ pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
 }
 
 // Get the sheadsheets that contain shipments.
-#[instrument]
-#[inline]
 pub fn get_shipments_spreadsheets() -> Vec<String> {
     vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU".to_string(), "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y".to_string()]
 }
 
 // Sync the shipments with airtable.
-#[instrument]
-#[inline]
 pub async fn refresh_airtable_shipments() {
     let shipments = get_google_sheets_shipments().await;
 
@@ -1153,8 +1110,6 @@ pub async fn refresh_airtable_shipments() {
 }
 
 // Sync the inbound shipments.
-#[instrument]
-#[inline]
 pub async fn refresh_inbound_shipments() {
     let db = Database::new();
     let is = InboundShipments::get_from_airtable().await;

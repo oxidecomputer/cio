@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use tracing::instrument;
-
 /// The various different statuses that an applicant can be in.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Status {
@@ -39,8 +37,6 @@ pub enum Status {
 }
 
 impl Default for Status {
-    #[instrument]
-    #[inline]
     fn default() -> Self {
         Status::NeedsToBeTriaged
     }
@@ -49,8 +45,6 @@ impl Default for Status {
 impl FromStr for Status {
     type Err = &'static str;
 
-    #[instrument]
-    #[inline]
     fn from_str(status: &str) -> Result<Self, Self::Err> {
         let s = status.to_lowercase().trim().to_string();
 
@@ -79,8 +73,6 @@ impl FromStr for Status {
 }
 
 impl ToString for Status {
-    #[instrument]
-    #[inline]
     fn to_string(&self) -> String {
         match self {
             Status::NextSteps => "Next steps".to_string(),

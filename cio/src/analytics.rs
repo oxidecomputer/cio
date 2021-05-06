@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_PAGE_VIEWS_TABLE};
 use crate::auth_logins::AuthUsers;
@@ -37,8 +36,6 @@ pub struct NewPageView {
 /// Implement updating the Airtable record for a PageView.
 #[async_trait]
 impl UpdateAirtableRecord<PageView> for PageView {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: PageView) {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -57,8 +54,6 @@ impl UpdateAirtableRecord<PageView> for PageView {
 }
 
 impl NewPageView {
-    #[instrument]
-    #[inline]
     pub fn set_page_link(&mut self) {
         // Set the link.
         self.page_link = format!("https://{}/{}", self.domain, self.path.trim_start_matches('/'));

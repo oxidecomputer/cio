@@ -1,7 +1,6 @@
 use hubcaps::repositories::Repository;
 use serde::Serialize;
 use tailscale_api::Tailscale;
-use tracing::instrument;
 
 use crate::configs::Links;
 use crate::db::Database;
@@ -10,8 +9,6 @@ use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generat
 use crate::utils::{authenticate_github_jwt, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// Generate the files for the GitHub repository short URLs.
-#[instrument(skip(db, repo))]
-#[inline]
 pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
     let subdomain = "git";
     // Initialize the array of links.
@@ -41,8 +38,6 @@ pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
 }
 
 /// Generate the files for the RFD short URLs.
-#[instrument(skip(db, repo))]
-#[inline]
 pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository) {
     let subdomain = "rfd";
     // Initialize the array of links.
@@ -74,8 +69,6 @@ pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository) {
 }
 
 /// Generate the files for the configs links.
-#[instrument(skip(db, repo))]
-#[inline]
 pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Repository) {
     let subdomain = "corp";
     // Initialize the array of links.
@@ -114,8 +107,6 @@ pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Reposito
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
-#[instrument(skip(repo))]
-#[inline]
 pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
     let subdomain = "internal";
     // Initialize the array of links.
@@ -178,8 +169,6 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
 }
 
 /// Update all the short URLs and DNS.
-#[instrument]
-#[inline]
 pub async fn refresh_shorturls() {
     let github = authenticate_github_jwt();
     let repo = github.repo(github_org(), "configs");

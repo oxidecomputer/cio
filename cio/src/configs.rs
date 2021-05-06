@@ -15,7 +15,6 @@ use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
-use tracing::{event, instrument, Level};
 
 use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
 use crate::applicants::Applicant;
@@ -49,8 +48,6 @@ pub struct Config {
 
 impl Config {
     /// Read and decode the config from the files that are passed on the command line.
-    #[instrument]
-    #[inline]
     pub fn read(cli_matches: &ArgMatches) -> Self {
         let files: Vec<String>;
         match cli_matches.values_of("file") {
@@ -249,8 +246,6 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
-    #[instrument]
-    #[inline]
     async fn populate_ssh_keys(&mut self) {
         if self.github.is_empty() {
             // Return early if we don't know their github handle.
@@ -260,8 +255,6 @@ impl UserConfig {
         self.public_ssh_keys = get_github_user_public_ssh_keys(&self.github).await;
     }
 
-    #[instrument]
-    #[inline]
     async fn populate_home_address(&mut self) {
         // TODO: actually get the data from Guso once we have credentials.
         let mut street_address = self.home_address_street_1.to_string();
@@ -283,8 +276,6 @@ impl UserConfig {
         }
     }
 
-    #[instrument(skip(db))]
-    #[inline]
     async fn populate_work_address(&mut self, db: &Database) {
         // Populate the address based on the user's location.
         if !self.building.is_empty() {
@@ -338,8 +329,6 @@ impl UserConfig {
         self.work_address_formatted = self.work_address_formatted.replace('\n', "\\n");
     }
 
-    #[instrument(skip(db))]
-    #[inline]
     pub fn populate_start_date(&mut self, db: &Database) {
         if let Ok(a) = applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
@@ -352,8 +341,6 @@ impl UserConfig {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn populate_type(&mut self) {
         // TODO: make this an enum.
         self.typev = "full-time".to_string();
@@ -364,8 +351,6 @@ impl UserConfig {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn ensure_all_aliases(&mut self) {
         if !self.github.is_empty() && !self.aliases.contains(&self.github) {
             self.aliases.push(self.github.to_string());
@@ -381,8 +366,6 @@ impl UserConfig {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn ensure_all_groups(&mut self) {
         let mut department_group = self.department.to_lowercase().trim().to_string();
         if department_group == "engineering" {
@@ -393,8 +376,6 @@ impl UserConfig {
         }
     }
 
-    #[instrument(skip(db))]
-    #[inline]
     pub async fn expand(&mut self, db: &Database) {
         // Do this first.
         self.populate_type();
@@ -419,8 +400,6 @@ impl UserConfig {
     }
 
     /// Generate the email address for the user.
-    #[instrument]
-    #[inline]
     pub fn email(&self) -> String {
         format!("{}@{}", self.username, GSUITE_DOMAIN)
     }
@@ -428,34 +407,24 @@ impl UserConfig {
 
 impl User {
     /// Generate and return the full name for the user.
-    #[instrument]
-    #[inline]
     pub fn full_name(&self) -> String {
         format!("{} {}", self.first_name, self.last_name)
     }
 
-    #[instrument]
-    #[inline]
     pub fn is_system_account(&self) -> bool {
         self.typev == "system account"
     }
 
-    #[instrument]
-    #[inline]
     pub fn is_consultant(&self) -> bool {
         self.typev == "consultant"
     }
 
     /// Generate the email address for the user.
-    #[instrument]
-    #[inline]
     pub fn email(&self) -> String {
         format!("{}@{}", self.username, GSUITE_DOMAIN)
     }
 
     /// Send an email to the new consultant about their account.
-    #[instrument]
-    #[inline]
     async fn send_email_new_consultant(&self) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -508,8 +477,6 @@ xoxo,
     }
 
     /// Send an email to the new user about their account.
-    #[instrument]
-    #[inline]
     async fn send_email_new_user(&self) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -613,8 +580,6 @@ xoxo,
 /// Implement updating the Airtable record for a User.
 #[async_trait]
 impl UpdateAirtableRecord<User> for User {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, record: User) {
         // Get the current groups in Airtable so we can link to them.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -800,14 +765,10 @@ pub struct GroupConfig {
 }
 
 impl GroupConfig {
-    #[instrument]
-    #[inline]
     pub fn get_link(&self) -> String {
         format!("https://groups.google.com/a/{}/forum/#!forum/{}", GSUITE_DOMAIN, self.name)
     }
 
-    #[instrument]
-    #[inline]
     pub fn expand(&mut self) {
         self.link = self.get_link();
     }
@@ -816,8 +777,6 @@ impl GroupConfig {
 /// Implement updating the Airtable record for a Group.
 #[async_trait]
 impl UpdateAirtableRecord<Group> for Group {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, record: Group) {
         // Make sure we don't mess with the members since that is populated by the Users table.
         self.members = record.members;
@@ -865,8 +824,6 @@ pub struct BuildingConfig {
 }
 
 impl BuildingConfig {
-    #[instrument]
-    #[inline]
     pub fn expand(&mut self) {
         self.address_formatted = format!("{}\n{}, {} {}, {}", self.street_address, self.city, self.state, self.zipcode, self.country);
     }
@@ -875,8 +832,6 @@ impl BuildingConfig {
 /// Implement updating the Airtable record for a Building.
 #[async_trait]
 impl UpdateAirtableRecord<Building> for Building {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, record: Building) {
         // Make sure we don't mess with the employees since that is populated by the Users table.
         self.employees = record.employees.clone();
@@ -919,8 +874,6 @@ pub struct ResourceConfig {
 /// Implement updating the Airtable record for a ConferenceRoom.
 #[async_trait]
 impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: ConferenceRoom) {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
@@ -965,8 +918,6 @@ pub struct LinkConfig {
 /// Implement updating the Airtable record for a Link.
 #[async_trait]
 impl UpdateAirtableRecord<Link> for Link {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: Link) {}
 }
 
@@ -996,8 +947,6 @@ pub struct HuddleConfig {
 }
 
 /// Get the configs from the GitHub repository and parse them.
-#[instrument]
-#[inline]
 pub async fn get_configs_from_repo(github: &Github) -> Config {
     let repo = github.repo(github_org(), "configs");
     let r = repo.get().await.unwrap();
@@ -1024,14 +973,12 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
 }
 
 /// Sync GitHub outside collaborators with our configs.
-#[instrument]
-#[inline]
 pub async fn sync_github_outside_collaborators(github: &Github, outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>) {
     let github_org = github_org();
 
     // Add the outside contributors to the specified repos.
     for (name, outside_collaborators_config) in outside_collaborators {
-        event!(Level::INFO, "Running configuration for outside collaborators: {}", name);
+        println!("Running configuration for outside collaborators: {}", name);
         for repo in &outside_collaborators_config.repos {
             // Get the repository collaborators interface from hubcaps.
             let repo_collaborators = github.repo(github_org.to_string(), repo.to_string()).collaborators();
@@ -1047,23 +994,21 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
                     // Add the collaborator.
                     match repo_collaborators.add(&user, &perm).await {
                         Ok(_) => {
-                            event!(Level::INFO, "[{}] added user {} as a collaborator ({}) on repo {}", name, user, perm, repo);
+                            println!("[{}] added user {} as a collaborator ({}) on repo {}", name, user, perm, repo);
                         }
-                        Err(e) => event!(Level::WARN, "[{}] adding user {} as a collaborator ({}) on repo {} FAILED: {}", name, user, perm, repo, e),
+                        Err(e) => println!("[{}] adding user {} as a collaborator ({}) on repo {} FAILED: {}", name, user, perm, repo, e),
                     }
                 } else {
-                    event!(Level::INFO, "[{}] user {} is already a collaborator ({}) on repo {}", name, user, perm, repo);
+                    println!("[{}] user {} is already a collaborator ({}) on repo {}", name, user, perm, repo);
                 }
             }
         }
 
-        event!(Level::INFO, "Successfully ran configuration for outside collaborators: {}", name);
+        println!("Successfully ran configuration for outside collaborators: {}", name);
     }
 }
 
 /// Sync our users with our database and then update Airtable from the database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
@@ -1146,15 +1091,13 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Delete the user from the database and Airtable.
         user.delete(db).await;
     }
-    event!(Level::INFO, "updated configs users in the database");
+    println!("updated configs users in the database");
 
     // Update users in airtable.
     Users::get_from_db(db).update_airtable().await;
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
@@ -1191,9 +1134,9 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 
         // Delete the building from GSuite.
         gsuite.delete_building(&name).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
-        event!(Level::INFO, "deleted building from gsuite: {}", name);
+        println!("deleted building from gsuite: {}", name);
     }
-    event!(Level::INFO, "updated configs buildings in the database");
+    println!("updated configs buildings in the database");
 
     // Update the buildings in GSuite.
     // Get all the buildings.
@@ -1216,7 +1159,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
                 println!("deleting building {} from gsuite", id);
                 gsuite.delete_building(&id).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
 
-                event!(Level::INFO, "deleted building from gsuite: {}", id);
+                println!("deleted building from gsuite: {}", id);
                 continue;
             }
         }
@@ -1231,7 +1174,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
         // This allows us to add all the remaining new building after.
         building_map.remove(&id);
 
-        event!(Level::INFO, "updated building from gsuite: {}", id);
+        println!("updated building from gsuite: {}", id);
     }
 
     // Create any remaining buildings from the database that we do not have in GSuite.
@@ -1243,7 +1186,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 
         gsuite.create_building(&new_b).await.unwrap_or_else(|e| panic!("creating building {} in gsuite failed: {}", id, e));
 
-        event!(Level::INFO, "created building from gsuite: {}", id);
+        println!("created building from gsuite: {}", id);
     }
 
     // Update buildings in airtable.
@@ -1251,8 +1194,6 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
@@ -1284,7 +1225,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
         println!("deleting conference room {} from the database", name);
         room.delete(db).await;
     }
-    event!(Level::INFO, "updated configs conference_rooms in the database");
+    println!("updated configs conference_rooms in the database");
 
     // Update the conference_rooms in GSuite.
     // Get all the conference_rooms.
@@ -1310,7 +1251,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
                     .await
                     .unwrap_or_else(|e| panic!("deleting conference room {} with id {} from gsuite failed: {}", id, r.id, e));
 
-                event!(Level::INFO, "deleted conference room from gsuite: {}", id);
+                println!("deleted conference room from gsuite: {}", id);
                 continue;
             }
         }
@@ -1328,7 +1269,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
         // This allows us to add all the remaining new resource after.
         conference_room_map.remove(&id);
 
-        event!(Level::INFO, "updated conference room in gsuite: {}", id);
+        println!("updated conference room in gsuite: {}", id);
     }
 
     // Create any remaining resources from the database that we do not have in GSuite.
@@ -1343,7 +1284,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
             .await
             .unwrap_or_else(|e| panic!("creating conference room {} in gsuite failed: {}", id, e));
 
-        event!(Level::INFO, "created conference room in gsuite: {}", id);
+        println!("created conference room in gsuite: {}", id);
     }
 
     // Update conference_rooms in airtable.
@@ -1351,8 +1292,6 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
@@ -1393,9 +1332,9 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
             .delete_group(&format!("{}@{}", name, GSUITE_DOMAIN))
             .await
             .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
-        event!(Level::INFO, "deleted group from gsuite: {}", name);
+        println!("deleted group from gsuite: {}", name);
     }
-    event!(Level::INFO, "updated configs groups in the database");
+    println!("updated configs groups in the database");
 
     // Update the groups in GSuite.
     // Get all the groups.
@@ -1420,7 +1359,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
                 .delete_group(&format!("{}@{}", name, GSUITE_DOMAIN))
                 .await
                 .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
-            event!(Level::INFO, "deleted group from gsuite: {}", name);
+            println!("deleted group from gsuite: {}", name);
             continue;
         };
 
@@ -1446,7 +1385,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
         // This allows us to add all the remaining new groups after.
         group_map.remove(&name);
 
-        event!(Level::INFO, "updated group in gsuite: {}", name);
+        println!("updated group in gsuite: {}", name);
     }
 
     // Create any remaining groups from the database  that we do not have in GSuite.
@@ -1473,7 +1412,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
         // Update the groups settings.
         update_google_group_settings(&gsuite, &group).await;
 
-        event!(Level::INFO, "created group in gsuite: {}", name);
+        println!("created group in gsuite: {}", name);
     }
 
     // Update groups in airtable.
@@ -1481,8 +1420,6 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 }
 
 /// Sync our links with our database and then update Airtable from the database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
     // Get all the links.
     let db_links = Links::get_from_db(db);
@@ -1507,15 +1444,13 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
     for (_, link) in link_map {
         link.delete(db).await;
     }
-    event!(Level::INFO, "updated configs links in the database");
+    println!("updated configs links in the database");
 
     // Update links in airtable.
     Links::get_from_db(db).update_airtable().await;
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>) {
     // Get all the certificates.
     let db_certificates = Certificates::get_from_db(db);
@@ -1552,14 +1487,12 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     for (_, cert) in certificate_map {
         cert.delete(db).await;
     }
-    event!(Level::INFO, "updated configs certificates in the database");
+    println!("updated configs certificates in the database");
 
     // Update certificates in airtable.
     Certificates::get_from_db(db).update_airtable().await;
 }
 
-#[instrument]
-#[inline]
 pub async fn refresh_db_configs_and_airtable(github: &Github) {
     let configs = get_configs_from_repo(github).await;
 
@@ -1596,8 +1529,6 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
 }
 
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_anniversary_events(db: &Database) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.

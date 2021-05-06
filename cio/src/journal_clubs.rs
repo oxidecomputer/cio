@@ -9,7 +9,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE};
 use crate::core::UpdateAirtableRecord;
@@ -55,8 +54,6 @@ pub struct NewJournalClubMeeting {
 
 impl JournalClubMeeting {
     /// Convert the journal club meeting into JSON as Slack message.
-    #[instrument]
-    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let mut objects = vec![MessageBlock {
             block_type: MessageBlockType::Section,
@@ -138,8 +135,6 @@ impl JournalClubMeeting {
 /// Implement updating the Airtable record for a JournalClubMeeting.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, record: JournalClubMeeting) {
         // Set the papers field, since it is pre-populated as table links.
         self.papers = record.papers;
@@ -171,8 +166,6 @@ pub struct NewJournalClubPaper {
 /// Implement updating the Airtable record for a JournalClubPaper.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: JournalClubPaper) {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -257,8 +250,6 @@ pub mod meeting_date_format {
 }
 
 impl Meeting {
-    #[instrument]
-    #[inline]
     pub fn to_model(&self) -> NewJournalClubMeeting {
         let mut papers: Vec<String> = Default::default();
         for p in &self.papers {
@@ -280,8 +271,6 @@ impl Meeting {
 }
 
 /// Get the journal club meetings from the papers GitHub repo.
-#[instrument]
-#[inline]
 pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
     let repo = github.repo(github_org(), "papers");
     let r = repo.get().await.unwrap();
@@ -303,8 +292,6 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
 }
 
 // Sync the journal_club_meetings with our database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github) {
     let journal_club_meetings = get_meetings_from_repo(github).await;
 

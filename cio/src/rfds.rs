@@ -9,15 +9,12 @@ use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use regex::Regex;
 use sendgrid_api::SendGrid;
-use tracing::instrument;
 
 use crate::db::Database;
 use crate::models::{NewRFD, RFDs};
 use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, github_org, DOMAIN};
 
 /// Get the RFDs from the rfd GitHub repo.
-#[instrument]
-#[inline]
 pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
     let repo = github.repo(github_org(), "rfd");
     let r = repo.get().await.unwrap();
@@ -46,8 +43,6 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
 }
 
 /// Try to get the markdown or asciidoc contents from the repo.
-#[instrument]
-#[inline]
 pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str) -> (String, bool, String) {
     let repo = github.repo(github_org(), "rfd");
     let r = repo.get().await.unwrap();
@@ -87,8 +82,6 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
 }
 
 // Get all the images in a specific directory of a GitHub branch.
-#[instrument(skip(repo))]
-#[inline]
 pub async fn get_images_in_branch(repo: &Repository, dir: &str, branch: &str) -> Vec<hubcaps::content::File> {
     let mut files: Vec<hubcaps::content::File> = Default::default();
 
@@ -143,21 +136,15 @@ pub async fn get_images_in_branch(repo: &Repository, dir: &str, branch: &str) ->
     files
 }
 
-#[instrument]
-#[inline]
 pub fn parse_markdown(content: &str) -> String {
     markdown_to_html(content, &ComrakOptions::default())
 }
 
 /// Return if the file is an image.
-#[instrument]
-#[inline]
 pub fn is_image(file: &str) -> bool {
     file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
 }
 
-#[instrument]
-#[inline]
 pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     let mut cleaned = content
         .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
@@ -178,8 +165,6 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     cleaned
 }
 
-#[instrument]
-#[inline]
 pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> String {
     // TODO: there is probably a better way to do these regexes.
     let mut re = Regex::new(r"(?m)(:discussion:.*$)").unwrap();
@@ -196,8 +181,6 @@ pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> S
     content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1)
 }
 
-#[instrument]
-#[inline]
 pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
     // TODO: there is probably a better way to do these regexes.
     let mut re = Regex::new(r"(?m)(:state:.*$)").unwrap();
@@ -215,8 +198,6 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
 }
 
 // Sync the rfds with our database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_db_rfds(db: &Database, github: &Github) {
     let rfds = get_rfds_from_repo(github).await;
 

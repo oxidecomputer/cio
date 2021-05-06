@@ -2,7 +2,6 @@ use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContex
 use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::configs::{Groups, User, Users};
 use crate::db::Database;
@@ -50,8 +49,6 @@ struct GitHubTeamMembers {
  *
  * This function uses the users.toml and the groups.toml file in the configs repo for information.
  */
-#[instrument(skip(db))]
-#[inline]
 pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database) {
     let users = Users::get_from_db(db);
     let groups = Groups::get_from_db(db);
@@ -91,8 +88,6 @@ pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database) {
  *
  * This function uses the users.toml file in the configs repo for information.
  */
-#[instrument(skip(db))]
-#[inline]
 pub async fn generate_terraform_files_for_aws_and_github(github: &Github, db: &Database) {
     let users = Users::get_from_db(db);
 
@@ -154,8 +149,6 @@ pub async fn generate_terraform_files_for_aws_and_github(github: &Github, db: &D
 ///   - {num}.rfd.oxide.computer
 /// This function saves the generated files in the GitHub repository, in the
 /// given path.
-#[instrument(skip(repo))]
-#[inline]
 pub async fn generate_nginx_and_terraform_files_for_shorturls(repo: &Repository, shorturls: Vec<ShortUrl>) {
     if shorturls.is_empty() {
         println!("no shorturls in array");
@@ -197,8 +190,6 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(repo: &Repository,
 /// Generate terraform files for shorturls.
 /// This function saves the generated files in the GitHub repository, in the
 /// given path.
-#[instrument(skip(repo))]
-#[inline]
 pub async fn generate_terraform_files_for_shorturls(repo: &Repository, shorturls: Vec<ShortUrl>) {
     if shorturls.is_empty() {
         println!("no shorturls in array");

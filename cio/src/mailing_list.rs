@@ -12,7 +12,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE};
 use crate::db::Database;
@@ -62,8 +61,6 @@ pub struct NewMailingListSubscriber {
 
 impl NewMailingListSubscriber {
     /// Get the human duration of time since the signup was fired.
-    #[instrument]
-    #[inline]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.date_added - Utc::now();
         if dur.num_seconds() > 0 {
@@ -74,8 +71,6 @@ impl NewMailingListSubscriber {
     }
 
     /// Convert the mailing list signup into JSON as Slack message.
-    #[instrument]
-    #[inline]
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
@@ -151,8 +146,6 @@ impl NewMailingListSubscriber {
 }
 
 impl Default for NewMailingListSubscriber {
-    #[instrument]
-    #[inline]
     fn default() -> Self {
         NewMailingListSubscriber {
             email: String::new(),
@@ -177,8 +170,6 @@ impl Default for NewMailingListSubscriber {
 /// Implement updating the Airtable record for a MailingListSubscriber.
 #[async_trait]
 impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, record: MailingListSubscriber) {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
@@ -186,8 +177,6 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 }
 
 /// Returns the response from the Mailchimp API with the list of subscribers.
-#[instrument]
-#[inline]
 pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
     let client = reqwest::Client::new();
     let per_page = 500;
@@ -221,8 +210,6 @@ pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
 }
 
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
-#[instrument(skip(db))]
-#[inline]
 pub async fn refresh_db_mailing_list_subscribers(db: &Database) {
     let members = get_all_mailchimp_subscribers().await;
 
@@ -332,8 +319,6 @@ pub struct MailchimpMember {
 }
 
 impl Into<NewMailingListSubscriber> for MailchimpMember {
-    #[instrument]
-    #[inline]
     fn into(self) -> NewMailingListSubscriber {
         let default_bool = false;
 
@@ -488,8 +473,6 @@ mod mailchimp_date_format {
 
 impl MailchimpWebhook {
     /// Convert to a signup data type.
-    #[instrument]
-    #[inline]
     pub fn as_subscriber(&self) -> NewMailingListSubscriber {
         let mut signup: NewMailingListSubscriber = Default::default();
 

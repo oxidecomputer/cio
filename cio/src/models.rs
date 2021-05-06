@@ -21,7 +21,6 @@ use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GITHUB_REPOS_TABLE, AIRTABLE_RFD_TABLE};
 use crate::core::UpdateAirtableRecord;
@@ -74,8 +73,6 @@ pub struct GitHubUser {
 }
 
 impl FromSql<Jsonb, Pg> for GitHubUser {
-    #[instrument]
-    #[inline]
     fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
         let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
         Ok(serde_json::from_value(value).unwrap())
@@ -233,8 +230,6 @@ pub struct NewRepo {
 /// Implement updating the Airtable record for a GithubRepo.
 #[async_trait]
 impl UpdateAirtableRecord<GithubRepo> for GithubRepo {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, _record: GithubRepo) {}
 }
 
@@ -259,8 +254,6 @@ pub mod deserialize_null_string {
 }
 
 impl NewRepo {
-    #[instrument]
-    #[inline]
     pub fn new(r: Repo) -> Self {
         // TODO: get the languages as well
         // https://docs.rs/hubcaps/0.6.1/hubcaps/repositories/struct.Repo.html
@@ -418,8 +411,6 @@ pub struct NewRFD {
 
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
-    #[instrument(skip(repo))]
-    #[inline]
     pub async fn new_from_github(repo: &Repository, branch: &str, file_path: &str, commit_date: DateTime<Utc>) -> Self {
         // Get the file from GitHub.
         let mut content = String::new();
@@ -472,8 +463,6 @@ impl NewRFD {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn get_title(content: &str) -> String {
         let mut re = Regex::new(r"(?m)(RFD .*$)").unwrap();
         match re.find(&content) {
@@ -498,8 +487,6 @@ impl NewRFD {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn get_state(content: &str) -> String {
         let re = Regex::new(r"(?m)(state:.*$)").unwrap();
         match re.find(&content) {
@@ -508,8 +495,6 @@ impl NewRFD {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn get_discussion(content: &str) -> String {
         let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
         match re.find(&content) {
@@ -518,8 +503,6 @@ impl NewRFD {
         }
     }
 
-    #[instrument]
-    #[inline]
     pub fn generate_number_string(number: i32) -> String {
         // Add leading zeros to the number for the number_string.
         let mut number_string = number.to_string();
@@ -530,26 +513,18 @@ impl NewRFD {
         number_string
     }
 
-    #[instrument]
-    #[inline]
     pub fn generate_name(number: i32, title: &str) -> String {
         format!("RFD {} {}", number, title)
     }
 
-    #[instrument]
-    #[inline]
     pub fn generate_short_link(number: i32) -> String {
         format!("https://{}.rfd.oxide.computer", number)
     }
 
-    #[instrument]
-    #[inline]
     pub fn generate_rendered_link(number_string: &str) -> String {
         format!("https://rfd.shared.oxide.computer/rfd/{}", number_string)
     }
 
-    #[instrument]
-    #[inline]
     pub fn get_authors(content: &str, is_markdown: bool) -> String {
         if is_markdown {
             // TODO: make work w asciidoc.
@@ -588,8 +563,6 @@ impl NewRFD {
 }
 
 impl RFD {
-    #[instrument(skip(repo))]
-    #[inline]
     pub async fn get_html(&self, repo: &Repository, branch: &str, is_markdown: bool) -> String {
         let html: String;
         if is_markdown {
@@ -603,8 +576,6 @@ impl RFD {
         clean_rfd_html_links(&html, &self.number_string)
     }
 
-    #[instrument(skip(repo))]
-    #[inline]
     pub async fn parse_asciidoc(&self, repo: &Repository, branch: &str) -> String {
         let dir = format!("rfd/{}", self.number_string);
 
@@ -658,8 +629,6 @@ impl RFD {
 
     /// Convert an RFD into JSON as Slack message.
     // TODO: make this include more fields
-    #[instrument]
-    #[inline]
     pub fn as_slack_msg(&self) -> String {
         let mut msg = format!("{} (_*{}*_) <{}|github> <{}|rendered>", self.name, self.state, self.short_link, self.rendered_link);
 
@@ -671,8 +640,6 @@ impl RFD {
     }
 
     /// Get a changelog for the RFD.
-    #[instrument]
-    #[inline]
     pub async fn get_weekly_changelog(&self, github: &Github, since: DateTime<Utc>) -> String {
         let repo = github.repo(github_org(), "rfd");
         let r = repo.get().await.unwrap();
@@ -697,23 +664,17 @@ impl RFD {
     }
 
     /// Get the filename for the PDF of the RFD.
-    #[instrument]
-    #[inline]
     pub fn get_pdf_filename(&self) -> String {
         format!("RFD {} {}.pdf", self.number_string, self.title.replace("/", "-").replace("'", "").replace(":", "").trim())
     }
 
     /// Update an RFDs state.
-    #[instrument]
-    #[inline]
     pub fn update_state(&mut self, state: &str, is_markdown: bool) {
         self.content = update_state(&self.content, state, is_markdown);
         self.state = state.to_string();
     }
 
     /// Update an RFDs discussion link.
-    #[instrument]
-    #[inline]
     pub fn update_discussion(&mut self, link: &str, is_markdown: bool) {
         self.content = update_discussion_link(&self.content, link, is_markdown);
         self.discussion = link.to_string();
@@ -721,8 +682,6 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    #[instrument]
-    #[inline]
     pub async fn convert_and_upload_pdf(&mut self, github: &Github) {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
@@ -811,8 +770,6 @@ impl RFD {
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    #[instrument]
-    #[inline]
     pub async fn expand(&mut self, github: &Github) {
         let repo = github.repo(github_org(), "rfd");
         let r = repo.get().await.unwrap();
@@ -872,8 +829,6 @@ impl RFD {
 /// Implement updating the Airtable record for an RFD.
 #[async_trait]
 impl UpdateAirtableRecord<RFD> for RFD {
-    #[instrument]
-    #[inline]
     async fn update_airtable_record(&mut self, record: RFD) {
         // Set the Link to People from the original so it stays intact.
         self.milestones = record.milestones.clone();
@@ -885,8 +840,6 @@ impl UpdateAirtableRecord<RFD> for RFD {
     }
 }
 
-#[instrument]
-#[inline]
 pub fn truncate(s: &str, max_chars: usize) -> String {
     match s.char_indices().nth(max_chars) {
         None => s.to_string(),
@@ -894,8 +847,6 @@ pub fn truncate(s: &str, max_chars: usize) -> String {
     }
 }
 
-#[instrument]
-#[inline]
 pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
     let empty: Vec<String> = Default::default();
     let a = map.get(key).unwrap_or(&empty);

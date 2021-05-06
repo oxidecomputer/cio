@@ -1,14 +1,11 @@
 use std::{thread, time};
 
 use gsuite_api::{Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup};
-use tracing::{event, instrument, Level};
 
 use crate::configs::{Building, ConferenceRoom, Group};
 use crate::utils::GSUITE_DOMAIN;
 
 /// Update a group's aliases in GSuite to match our configuration files.
-#[instrument(skip(gsuite))]
-#[inline]
 pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
     if g.aliases.is_empty() {
         // return early
@@ -17,12 +14,10 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
 
     // Update the groups aliases.
     gsuite.update_group_aliases(&g.email, g.aliases.clone()).await;
-    event!(Level::INFO, "updated gsuite group aliases: {}", g.email);
+    println!("updated gsuite group aliases: {}", g.email);
 }
 
 /// Update a group's settings in GSuite to match our configuration files.
-#[instrument(skip(gsuite))]
-#[inline]
 pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group) {
     // Get the current group settings.
     let email = format!("{}@{}", group.name, GSUITE_DOMAIN);
@@ -60,12 +55,10 @@ pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group) {
         gsuite.update_group_settings(&settings).await.unwrap();
     }
 
-    event!(Level::INFO, "updated gsuite groups settings {}", group.name);
+    println!("updated gsuite groups settings {}", group.name);
 }
 
 /// Update a building in GSuite.
-#[instrument]
-#[inline]
 pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str) -> GSuiteBuilding {
     let mut gsuite_building = b.clone();
 
@@ -87,8 +80,6 @@ pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str)
 }
 
 /// Update a calendar resource.
-#[instrument]
-#[inline]
 pub fn update_gsuite_calendar_resource(c: &GSuiteCalendarResource, resource: &ConferenceRoom, id: &str) -> GSuiteCalendarResource {
     let mut gsuite_conference_room = c.clone();
 
