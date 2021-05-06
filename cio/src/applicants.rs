@@ -2501,7 +2501,7 @@ impl Applicant {
         }
 
         for document in envelope.documents {
-            let mut bytes = base64::decode(document.pdf_bytes).unwrap_or_default();
+            let mut bytes = base64::decode(&document.pdf_bytes).unwrap_or_default();
             // Check if we already have bytes to the data.
             if document.pdf_bytes.is_empty() {
                 // Get the document from docusign.
@@ -2509,7 +2509,7 @@ impl Applicant {
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
                 thread::sleep(std::time::Duration::from_secs(900));
-                bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap();
+                bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
             }
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
@@ -2527,12 +2527,10 @@ impl Applicant {
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
         if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(self.email.to_string())).first::<User>(&db.conn()) {
-            // We have an employee, so we can update their data from the data in Docusign.
-            println!("got employee {:?}", employee);
-
             // TODO: continue for now as we don't want to eff up my record.
             return;
 
+            // We have an employee, so we can update their data from the data in Docusign.
             // In order to not "over excessively poll the API here, we need to sleep for 15
             // min before getting each of the documents.
             // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/

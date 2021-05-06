@@ -926,7 +926,7 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
         // We can reaturn early.
         // It's too early to get anything good from this event.
         sentry::capture_message(
-            format!("too early to get any information about the shipment {} {}", ts.carrier, ts.tracking_number),
+            &format!("too early to get any information about the shipment {} {}", ts.carrier, ts.tracking_number),
             sentry::Level::Fatal,
         );
         sentry::end_session();
@@ -1022,8 +1022,32 @@ async fn listen_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_ar
     method = POST,
     path = "/docusign/envelope/update",
 }]
-async fn listen_docusign_envelope_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<docusign::Envelope>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<docusign::Envelope>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
     let event = body_param.into_inner();
+
+    // We need to get the applicant for the envelope.
+    /* if let Ok(mut applicant) = applicants::dsl::applicants
+        .filter(applicants::dsl::docusign_envelope_id.eq(event.envelope_id.to_string()))
+        .first::<Applicant>(&db.conn())
+    {
+        // Update the status of the applicants envelope.
+        applicant.docusign_envelope_status = event.status.to_lowercase().to_string();
+
+        // If the status is completed, update the applicant.
+        if event.status.to_lowercase() == "completed" {
+            // Create our docusign client.
+            let ds = docusign::DocuSign::new_from_env().await;
+            applicant.update_applicant_from_docusign_envelope(db, &ds, event.clone()).await;
+        }
+
+        // Update the applicant.
+        applicant.update(db).await;
+    } else {
+        sentry::capture_message(&format!("docusign could not find applicant with envelope id: {}", event.envelope_id), sentry::Level::Fatal);
+    }*/
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
