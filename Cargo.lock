@@ -666,6 +666,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
+ "docusign",
  "dropshot",
  "futures-util",
  "google-drive 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",

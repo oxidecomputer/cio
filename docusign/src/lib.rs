@@ -73,6 +73,8 @@ impl DocuSign {
                     is_demo: true,
                 };
 
+                // This is super hacky and a work arouind since there is no way to
+                // auth without using the browser.
                 println!("docusign consent URL: {}", jwt_config.user_consent_url());
                 let token = jwt_config.get_access_token().await;
 

@@ -6,6 +6,7 @@ on:
 name: run interview packets
 jobs:
   cargotest:
+    concurrency: interviews-production
     name: cargo test
     runs-on: ubuntu-latest
     steps:

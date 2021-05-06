@@ -60,5 +60,7 @@ CREATE TABLE applicants (
     start_date DATE DEFAULT NULL,
     interested_in TEXT [] NOT NULL,
     geocode_cache VARCHAR NOT NULL,
+    docusign_envelope_id VARCHAR NOT NULL,
+    docusign_envelope_status VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

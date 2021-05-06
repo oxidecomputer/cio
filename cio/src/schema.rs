@@ -91,6 +91,8 @@ table! {
         start_date -> Nullable<Date>,
         interested_in -> Array<Text>,
         geocode_cache -> Varchar,
+        docusign_envelope_id -> Varchar,
+        docusign_envelope_status -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

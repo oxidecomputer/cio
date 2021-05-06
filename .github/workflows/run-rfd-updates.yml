@@ -6,6 +6,7 @@ on:
 name: run rfd updates
 jobs:
   cargotest:
+    concurrency: rfd-production
     name: cargo test
     runs-on: ubuntu-latest
     steps:

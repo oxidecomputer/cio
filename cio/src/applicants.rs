@@ -12,6 +12,7 @@ use chrono::offset::Utc;
 use chrono::NaiveDate;
 use chrono::{DateTime, Duration};
 use chrono_humanize::HumanTime;
+use docusign::DocuSign;
 use google_drive::GoogleDrive;
 use html2text::from_read;
 use hubcaps::comments::CommentOptions;
@@ -197,6 +198,12 @@ pub struct NewApplicant {
     /// This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
+
+    /// These fields are used by the DocuSign integration.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub docusign_envelope_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub docusign_envelope_status: String,
 }
 
 impl NewApplicant {
@@ -277,6 +284,8 @@ impl NewApplicant {
             start_date: None,
             interested_in,
             geocode_cache: Default::default(),
+            docusign_envelope_id: Default::default(),
+            docusign_envelope_status: Default::default(),
         }
     }
 
@@ -547,6 +556,9 @@ The Oxide Team",
         let mut criminal_background_check_status = "".to_string();
         let mut motor_vehicle_background_check_status = "".to_string();
 
+        let mut docusign_envelope_id = "".to_string();
+        let mut docusign_envelope_status = "".to_string();
+
         // Try to get the applicant, if they exist.
         // This is a way around the stupid magic macro to make sure it
         // doesn't overwrite fields set by other functions on the upsert.
@@ -564,6 +576,13 @@ The Oxide Team",
                 scorers_completed = a.scorers_completed;
                 request_background_check = record.fields.request_background_check;
                 interviews = record.fields.interviews;
+            }
+
+            if !a.docusign_envelope_id.is_empty() {
+                docusign_envelope_id = a.docusign_envelope_id.to_string();
+            }
+            if !a.docusign_envelope_status.is_empty() {
+                docusign_envelope_status = a.docusign_envelope_status.to_string();
             }
 
             if !a.country_code.is_empty() {
@@ -691,6 +710,8 @@ The Oxide Team",
             start_date,
             interested_in,
             geocode_cache: Default::default(),
+            docusign_envelope_id,
+            docusign_envelope_status,
         }
     }
 
@@ -2421,10 +2442,28 @@ pub async fn update_applicant_reviewers(db: &Database) {
     }
 }
 
+pub async fn refresh_docusign_for_applicants(db: &Database) {
+    // Authenticate DocuSign.
+    let ds = DocuSign::new_from_env();
+
+    let applicants = Applicants::get_from_db(db);
+
+    // Iterate over the applicants and find any that have the status: giving offer.
+    for applicant in applicants {
+        if applicant.status.to_lowercase() != "giving offer" {
+            // We can return early.
+            continue;
+        }
+
+        println!("applicant has status giving offer: {}", applicant.name);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::applicants::{
-        refresh_background_checks, refresh_db_applicants, update_applicant_reviewers, update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants,
+        refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants, update_applicant_reviewers, update_applications_with_scoring_forms,
+        update_applications_with_scoring_results, Applicant, Applicants,
     };
     use crate::db::Database;
     use crate::schema::applicants;
@@ -2468,17 +2507,20 @@ mod tests {
     #[tokio::test(threaded_scheduler)]
     async fn test_applicants() {
         let db = Database::new();
-        refresh_db_applicants(&db).await;
+        //refresh_db_applicants(&db).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db).update_airtable().await;
+        //Applicants::get_from_db(&db).update_airtable().await;
 
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-        update_applications_with_scoring_forms(&db).await;
+        //update_applications_with_scoring_forms(&db).await;
 
         // This must be after update_applications_with_scoring_forms, so that if someone
         // has done the application then we remove them from the scorers.
-        update_applications_with_scoring_results(&db).await;
+        //update_applications_with_scoring_results(&db).await;
+
+        // Refresh DocuSign for the applicants.
+        refresh_docusign_for_applicants(&db).await;
     }
 }
