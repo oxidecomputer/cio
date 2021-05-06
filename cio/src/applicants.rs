@@ -2472,7 +2472,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             continue;
         }
 
-        println!("applicant has status giving offer: {}", applicant.name);
+        println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
         if applicant.docusign_envelope_id.is_empty() {
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
@@ -2512,7 +2512,11 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                     email: applicant.email.to_string(),
                     signer_name: applicant.name.to_string(),
                     routing_order: "2".to_string(),
-                    email_notification: Default::default(),
+                    email_notification: docusign::EmailNotification {
+                        email_subject: "Sign your Oxide Computer Company Offer Letter".to_string(),
+                        email_body: "We are very excited to offer you a position at the Oxide Computer Company!".to_string(),
+                        language: Default::default(),
+                    },
                 },
             ];
 
@@ -2527,12 +2531,20 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             // We have sent their offer.
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&applicant.docusign_envelope_id).await.unwrap();
-            println!("envelope {:?}", envelope);
 
             // Set the status in the database and airtable.
             applicant.docusign_envelope_status = envelope.status.to_string();
 
             // TODO: parse and update the custom fields if we have them.
+            let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
+            for fd in form_data {
+                // TODO: Save the data to the employee who matches this applicant.
+                if fd.name == "Applicant's Street Address" {
+                    println!("{}", fd.value);
+                }
+
+                println!("form data: {:?}", fd);
+            }
         }
 
         // Update the applicant in the database.

@@ -198,6 +198,26 @@ impl DocuSign {
         Ok(resp.json().await.unwrap())
     }
 
+    /// Get envelope form fields.
+    pub async fn get_envelope_form_data(&self, envelope_id: &str) -> Result<Vec<FormDatum>, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}/form_data", self.jwt_config.account_id, envelope_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let data: FormData = resp.json().await.unwrap();
+        Ok(data.form_data)
+    }
+
     /// Get document fields.
     pub async fn get_document_fields(&self, envelope_id: &str, document_id: &str) -> Result<Vec<DocumentField>, APIError> {
         // Build the request.
@@ -733,4 +753,44 @@ pub struct DocumentField {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FormData {
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "formData")]
+    pub form_data: Vec<FormDatum>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "envelopeId")]
+    pub envelope_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "sentDateTime")]
+    pub sent_date_time: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "recipientFormData")]
+    pub recipient_form_data: Vec<RecipientFormDatum>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FormDatum {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "originalValue")]
+    pub original_value: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RecipientFormDatum {
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "formData")]
+    pub form_data: Vec<FormDatum>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recipientId")]
+    pub recipient_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "SignedTime")]
+    pub signed_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "DeliveredTime")]
+    pub delivered_time: Option<DateTime<Utc>>,
 }
