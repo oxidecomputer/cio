@@ -283,7 +283,7 @@ pub static TEMPLATE_NGINX_PATHS: &str = r#"server {
 	server_name {{this.0.subdomain}};
 
 	location = / {
-		return 301 https://github.com/oxidecomputer/meta/tree/master/links;
+		return 301 https://119.rfd.oxide.computer;
 	}
 
 	{{#each this}}
@@ -314,7 +314,7 @@ server {
 	ssl_trusted_certificate	        /etc/nginx/ssl/{{this.0.subdomain}}.oxide.computer/fullchain.pem;
 
 	location = / {
-		return 301 https://github.com/oxidecomputer/meta/tree/master/links;
+		return 301 https://119.rfd.oxide.computer;
 	}
 
 	{{#each this}}
