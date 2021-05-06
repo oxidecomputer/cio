@@ -26,8 +26,8 @@ csv = "1.1"
 comrak = "0.8"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
 diffy = "^0.2.0"
-#docusign = "^0.1.0"
-docusign = { path = "../docusign" }
+docusign = "^0.1.0"
+#docusign = { path = "../docusign" }
 #dropshot = "^0.3.0"
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
@@ -43,14 +43,14 @@ hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", fea
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 macros = { path = "../macros" }
 nom_pem = "4"
-okta = "0.0.3"
+okta = "^0.0.3"
 openssl = "0.10"
 pandoc = "0.8"
 phonenumber = "0.2"
 rand = { version = "^0.8.3", features = ["alloc"] }
 regex = "1"
 reqwest = { version = "=0.11", features = ["json"] }
-revai = { version = "0.1.0" }
+revai = { version = "^0.1.0" }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "^0.1.0"
 serde = { version = "1.0", features = ["derive"] }
