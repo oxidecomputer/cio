@@ -277,16 +277,16 @@ impl Shipment {
             contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
         }
         if !fleece_size.is_empty() && !fleece_size.contains("N/A") {
-            contents += &format!("1 x Oxide Fleece, Size: {}", fleece_size);
+            contents += &format!("1 x Oxide Fleece, Size: {}\n", fleece_size);
         }
         if !womens_shirt_size.is_empty() && !womens_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Women's Shirt, Size: {}", womens_shirt_size);
+            contents += &format!("1 x Oxide Women's Shirt, Size: {}\n", womens_shirt_size);
         }
         if !unisex_shirt_size.is_empty() && !unisex_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Unisex Shirt, Size: {}", unisex_shirt_size);
+            contents += &format!("1 x Oxide Unisex Shirt, Size: {}\n", unisex_shirt_size);
         }
         if !kids_shirt_size.is_empty() && !kids_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Kids Shirt, Size: {}", kids_shirt_size);
+            contents += &format!("1 x Oxide Kids Shirt, Size: {}\n", kids_shirt_size);
         }
 
         let mut country = get_value(values, "Country");
@@ -442,22 +442,23 @@ impl Shipment {
             "".to_lowercase()
         };
 
+        // TODO: make all these more DRY.
         let email = row[columns.email].trim().to_lowercase();
         let mut contents = String::new();
         if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
             contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
         }
         if !fleece_size.is_empty() && !fleece_size.contains("N/A") {
-            contents += &format!("1 x Oxide Fleece, Size: {}", fleece_size);
+            contents += &format!("1 x Oxide Fleece, Size: {}\n", fleece_size);
         }
         if !womens_shirt_size.is_empty() && !womens_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Women's Shirt, Size: {}", womens_shirt_size);
+            contents += &format!("1 x Oxide Women's Shirt, Size: {}\n", womens_shirt_size);
         }
         if !unisex_shirt_size.is_empty() && !unisex_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Unisex Shirt, Size: {}", unisex_shirt_size);
+            contents += &format!("1 x Oxide Unisex Shirt, Size: {}\n", unisex_shirt_size);
         }
         if !kids_shirt_size.is_empty() && !kids_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Kids Shirt, Size: {}", kids_shirt_size);
+            contents += &format!("1 x Oxide Kids Shirt, Size: {}\n", kids_shirt_size);
         }
 
         (
