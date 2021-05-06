@@ -22,6 +22,7 @@ http = "0.2.0"
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
 #influxdb = { version = "0.3.0", features = ["derive"] }
 influxdb = { git = "https://github.com/jessfraz/influxdb-rust", branch = "cloud", features = ["derive"] }
+openapiv3 = "=0.3.2"
 opentelemetry = { version = "0.10", default-features = false, features = ["trace", "tokio"] }
 opentelemetry-zipkin = { version = "^0.8", features = ["reqwest-client"], default-features = false }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }

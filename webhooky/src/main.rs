@@ -12,6 +12,8 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
 use std::error::Error;
+use std::fs::File;
+use std::io::Read;
 use std::str::{from_utf8, FromStr};
 use std::sync::Arc;
 
@@ -122,11 +124,49 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(ping_mailchimp_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
+    api.register(api_get_schema).unwrap();
+
+    // Print the OpenAPI Spec to stdout.
+    let api_file = "openapi-webhooky.json";
+    let mut tmp_file = env::temp_dir();
+    tmp_file.push("openapi-webhooky.json");
+    println!("Writing OpenAPI spec to {}...", api_file);
+    let mut buffer = File::create(tmp_file.clone()).unwrap();
+    api.print_openapi(
+        &mut buffer,
+        &"Webhooks API",
+        Some(&"API for our webhooky server that listens to various events"),
+        None,
+        Some(&"Jess Frazelle"),
+        Some(&"https://oxide.computer"),
+        Some(&"webhooks@oxide.computer"),
+        None,
+        None,
+        &"0.0.1",
+    )
+    .unwrap();
+    let mut f = File::open(tmp_file).unwrap();
+    let mut api_schema = String::new();
+    f.read_to_string(&mut api_schema).unwrap();
+    let mut schema: openapiv3::OpenAPI = serde_json::from_str(&api_schema).unwrap();
+    // Modify more of the schema.
+    // TODO: make this cleaner when dropshot allows for it.
+    schema.servers = vec![openapiv3::Server {
+        url: "https://webhooks.corp.oxide.computer".to_string(),
+        description: Some("Our deployed webhooks server".to_string()),
+        variables: None,
+    }];
+    schema.external_docs = Some(openapiv3::ExternalDocumentation {
+        description: Some("Automatically updated documentation site, public, not behind the VPN.".to_string()),
+        url: "https://api.docs.corp.oxide.computer".to_string(),
+    });
+    // Save it back to the file.
+    serde_json::to_writer_pretty(&File::create(api_file).unwrap(), &schema).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
      */
-    let api_context = Context::new().await;
+    let api_context = Context::new(schema).await;
 
     /*
      * Set up the server.
@@ -150,13 +190,15 @@ struct Context {
     github_org: String,
     influx: influx::Client,
     db: Database,
+
+    schema: openapiv3::OpenAPI,
 }
 
 impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new() -> Arc<Context> {
+    pub async fn new(schema: openapiv3::OpenAPI) -> Arc<Context> {
         // Get gsuite token.
         let token = get_gsuite_token("").await;
 
@@ -175,6 +217,7 @@ impl Context {
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
             db: Database::new(),
+            schema,
         })
     }
 
@@ -191,6 +234,21 @@ impl Context {
 /*
  * HTTP API interface
  */
+
+/**
+ * Return the OpenAPI schema in JSON format.
+ */
+#[endpoint {
+    method = GET,
+    path = "/",
+}]
+#[instrument]
+#[inline]
+async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
+    let api_context = Context::from_rqctx(&rqctx);
+
+    Ok(HttpResponseOk(json!(api_context.schema).to_string()))
+}
 
 /** Return pong. */
 #[endpoint {

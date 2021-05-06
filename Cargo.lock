@@ -586,7 +586,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1695b05121e1998594ad6b053f2d3e6f2a1a1c6b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#cf7461daefdf4944df3ad4cde4f304bc7f477b88"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -602,7 +602,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.3",
+ "docusign 0.1.4 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "dropshot",
  "futures-util",
  "google-drive 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -676,7 +676,6 @@ dependencies = [
  "handlebars",
  "html2text",
  "hubcaps",
- "hyper 0.13.10",
  "lopdf",
  "macros 0.1.0",
  "nom_pem",
@@ -1131,8 +1130,8 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "docusign"
-version = "0.1.3"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1695b05121e1998594ad6b053f2d3e6f2a1a1c6b"
+version = "0.1.4"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#cf7461daefdf4944df3ad4cde4f304bc7f477b88"
 dependencies = [
  "bytes 0.5.6",
  "chrono",
@@ -2307,7 +2306,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1695b05121e1998594ad6b053f2d3e6f2a1a1c6b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#cf7461daefdf4944df3ad4cde4f304bc7f477b88"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2699,9 +2698,9 @@ dependencies = [
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.62"
+version = "0.9.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa52160d45fa2e7608d504b7c3a3355afed615e6d8b627a74458634ba21b69bd"
+checksum = "b6b0d6fb7d80f877617dfcb014e605e2b5ab2fb0afdf27935219bb6bd984cb98"
 dependencies = [
  "autocfg",
  "cc",
@@ -5126,6 +5125,7 @@ dependencies = [
  "http",
  "hubcaps",
  "influxdb",
+ "openapiv3",
  "opentelemetry",
  "opentelemetry-zipkin",
  "schemars",

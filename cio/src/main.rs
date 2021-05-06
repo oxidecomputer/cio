@@ -6,7 +6,6 @@ use std::io::Read;
 use std::sync::Arc;
 
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServer, RequestContext};
-use hyper::{Body, Response, StatusCode};
 use tracing::{instrument, span, Level};
 use tracing_subscriber::prelude::*;
 
@@ -181,10 +180,10 @@ impl Context {
 }]
 #[instrument]
 #[inline]
-async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<Response<Body>, HttpError> {
+async fn api_get_schema(rqctx: Arc<RequestContext>) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = Context::from_rqctx(&rqctx);
 
-    Ok(Response::builder().status(StatusCode::OK).body(Body::from(json!(api_context.schema).to_string())).unwrap())
+    Ok(HttpResponseOk(json!(api_context.schema).to_string()))
 }
 
 /**

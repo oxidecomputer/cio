@@ -108,27 +108,6 @@
         }
       }
     },
-    "/github/labels": {
-      "get": {
-        "description": "\n * Fetch a list of our GitHub labels that get added to all repositories.\n ",
-        "operationId": "api_get_github_labels",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GithubLabel"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/github/repos": {
       "get": {
         "description": "\n * Fetch a list of our GitHub repositories.\n ",
@@ -282,16 +261,33 @@
       "Applicant": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "analysis_samples": {
             "type": "string"
           },
           "country_code": {
             "type": "string"
           },
+          "criminal_background_check_status": {
+            "type": "string"
+          },
+          "docusign_envelope_id": {
+            "description": "These fields are used by the DocuSign integration.",
+            "type": "string"
+          },
+          "docusign_envelope_status": {
+            "type": "string"
+          },
           "email": {
             "type": "string"
           },
           "exploratory_samples": {
+            "type": "string"
+          },
+          "geocode_cache": {
+            "description": "This field is used by Airtable for mapping the location data.",
             "type": "string"
           },
           "github": {
@@ -304,6 +300,22 @@
             "type": "integer",
             "format": "int32"
           },
+          "interested_in": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "interview_packet": {
+            "type": "string"
+          },
+          "interviews": {
+            "description": "Airtable fields.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "linkedin": {
             "type": "string"
           },
@@ -314,6 +326,9 @@
             "type": "string"
           },
           "materials_contents": {
+            "type": "string"
+          },
+          "motor_vehicle_background_check_status": {
             "type": "string"
           },
           "name": {
@@ -352,6 +367,12 @@
           "question_why_oxide": {
             "type": "string"
           },
+          "raw_status": {
+            "type": "string"
+          },
+          "request_background_check": {
+            "type": "boolean"
+          },
           "resume": {
             "type": "string"
           },
@@ -361,11 +382,83 @@
           "role": {
             "type": "string"
           },
+          "scorers": {
+            "description": "The scorers/reviewers assigned to the applicant.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scorers_completed": {
+            "description": "The scorers_completed field means the person has already reviewed the applicant.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scoring_enthusiastic_yes_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_evaluations_count": {
+            "description": "The number of form responses for the applicant.",
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_form_id": {
+            "type": "string"
+          },
+          "scoring_form_responses_url": {
+            "type": "string"
+          },
+          "scoring_form_url": {
+            "description": "The form for scoring/evaluating applicants.",
+            "type": "string"
+          },
+          "scoring_inapplicable_experience_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_insufficient_experience_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_job_function_yet_needed_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_no_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_not_applicable_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_pass_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_underwhelming_materials_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoring_yes_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sent_email_follow_up": {
+            "type": "boolean"
+          },
           "sent_email_received": {
             "type": "boolean"
           },
           "sheet_id": {
             "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
           },
           "status": {
             "type": "string"
@@ -398,7 +491,6 @@
         },
         "required": [
           "email",
-          "id",
           "materials",
           "name",
           "resume",
@@ -410,6 +502,9 @@
       "AuthUser": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "blog": {
             "type": "string"
           },
@@ -499,7 +594,6 @@
         },
         "required": [
           "created_at",
-          "id",
           "last_login",
           "logins_count",
           "updated_at",
@@ -510,6 +604,9 @@
         "type": "object",
         "properties": {
           "address_formatted": {
+            "type": "string"
+          },
+          "airtable_record_id": {
             "type": "string"
           },
           "city": {
@@ -539,6 +636,10 @@
               "type": "string"
             }
           },
+          "geocode_cache": {
+            "description": "This field is used by Airtable for mapping the location data.",
+            "type": "string"
+          },
           "id": {
             "type": "integer",
             "format": "int32"
@@ -557,13 +658,15 @@
           }
         },
         "required": [
-          "id",
           "name"
         ]
       },
       "ConferenceRoom": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "building": {
             "type": "string"
           },
@@ -599,103 +702,16 @@
         },
         "required": [
           "capacity",
-          "id",
           "name",
           "type"
-        ]
-      },
-      "GitHubUser": {
-        "description": "The data type for a GitHub user.",
-        "type": "object",
-        "properties": {
-          "avatar_url": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "events_url": {
-            "type": "string"
-          },
-          "followers_url": {
-            "type": "string"
-          },
-          "following_url": {
-            "type": "string"
-          },
-          "gists_url": {
-            "type": "string"
-          },
-          "gravatar_id": {
-            "type": "string"
-          },
-          "html_url": {
-            "type": "string"
-          },
-          "id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "login": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "organizations_url": {
-            "type": "string"
-          },
-          "received_events_url": {
-            "type": "string"
-          },
-          "repos_url": {
-            "type": "string"
-          },
-          "site_admin": {
-            "type": "boolean"
-          },
-          "starred_url": {
-            "type": "string"
-          },
-          "subscriptions_url": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "username": {
-            "type": "string"
-          }
-        }
-      },
-      "GithubLabel": {
-        "type": "object",
-        "properties": {
-          "color": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "id": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "color",
-          "description",
-          "id",
-          "name"
         ]
       },
       "GithubRepo": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "archive_url": {
             "type": "string"
           },
@@ -845,7 +861,7 @@
             "format": "int32"
           },
           "owner": {
-            "$ref": "#/components/schemas/GitHubUser"
+            "type": "string"
           },
           "private": {
             "type": "boolean"
@@ -908,73 +924,22 @@
           }
         },
         "required": [
-          "archive_url",
-          "archived",
-          "assignees_url",
-          "blobs_url",
-          "branches_url",
-          "clone_url",
-          "collaborators_url",
-          "comments_url",
-          "commits_url",
-          "compare_url",
-          "contents_url",
-          "contributors_url",
           "created_at",
           "default_branch",
-          "deployments_url",
-          "downloads_url",
-          "events_url",
-          "fork",
-          "forks_count",
-          "forks_url",
           "full_name",
-          "git_commits_url",
-          "git_refs_url",
-          "git_tags_url",
-          "git_url",
-          "has_downloads",
-          "has_issues",
-          "has_pages",
-          "has_wiki",
-          "hooks_url",
-          "html_url",
-          "id",
-          "issue_comment_url",
-          "issue_events_url",
-          "issues_url",
-          "keys_url",
-          "labels_url",
-          "languages_url",
-          "merges_url",
-          "milestones_url",
           "name",
-          "notifications_url",
-          "open_issues_count",
           "owner",
-          "private",
-          "pulls_url",
           "pushed_at",
-          "releases_url",
-          "size",
-          "ssh_url",
           "stargazers_count",
-          "stargazers_url",
-          "statuses_url",
-          "subscribers_url",
-          "subscription_url",
-          "svn_url",
-          "tags_url",
-          "teams_url",
-          "trees_url",
-          "updated_at",
-          "url",
-          "watchers_count"
+          "updated_at"
         ]
       },
       "Group": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "aliases": {
             "type": "array",
             "items": {
@@ -991,6 +956,10 @@
           },
           "description": {
             "type": "string"
+          },
+          "enable_collaborative_inbox": {
+            "description": "Specifies whether a collaborative inbox will remain turned on for the group.",
+            "type": "boolean"
           },
           "id": {
             "type": "integer",
@@ -1038,13 +1007,15 @@
           }
         },
         "required": [
-          "id",
           "name"
         ]
       },
       "JournalClubMeeting": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "coordinator": {
             "type": "string"
           },
@@ -1080,7 +1051,6 @@
           }
         },
         "required": [
-          "id",
           "issue",
           "title"
         ]
@@ -1088,6 +1058,9 @@
       "Link": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "aliases": {
             "type": "array",
             "items": {
@@ -1114,13 +1087,15 @@
         },
         "required": [
           "description",
-          "id",
           "link"
         ]
       },
       "MailingListSubscriber": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "company": {
             "type": "string"
           },
@@ -1186,13 +1161,15 @@
           "date_added",
           "date_last_changed",
           "date_optin",
-          "email",
-          "id"
+          "email"
         ]
       },
       "RFD": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "authors": {
             "type": "string"
           },
@@ -1237,6 +1214,12 @@
             "description": "(generated) number_string is the long version of the number with leading zeros",
             "type": "string"
           },
+          "pdf_link_github": {
+            "type": "string"
+          },
+          "pdf_link_google_drive": {
+            "type": "string"
+          },
           "relevant_components": {
             "description": "relevant_components only exist in Airtable",
             "type": "array",
@@ -1264,7 +1247,6 @@
           }
         },
         "required": [
-          "id",
           "link",
           "number",
           "state",
@@ -1274,6 +1256,9 @@
       "User": {
         "type": "object",
         "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
           "aliases": {
             "type": "array",
             "items": {
@@ -1294,13 +1279,24 @@
           "chat": {
             "type": "string"
           },
+          "department": {
+            "type": "string"
+          },
           "first_name": {
             "type": "string"
           },
           "gender": {
             "type": "string"
           },
+          "geocode_cache": {
+            "description": "This field is used by Airtable for mapping the location data.",
+            "type": "string"
+          },
           "github": {
+            "type": "string"
+          },
+          "google_anniversary_event_id": {
+            "description": "This field is automatically populated by airtable based on the user's start date.",
             "type": "string"
           },
           "groups": {
@@ -1313,6 +1309,9 @@
             "type": "string"
           },
           "home_address_country": {
+            "type": "string"
+          },
+          "home_address_country_code": {
             "type": "string"
           },
           "home_address_formatted": {
@@ -1338,9 +1337,6 @@
           "is_group_admin": {
             "type": "boolean"
           },
-          "is_system_account": {
-            "type": "boolean"
-          },
           "last_name": {
             "type": "string"
           },
@@ -1349,6 +1345,15 @@
             "items": {
               "type": "string"
             }
+          },
+          "link_to_manager": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "manager": {
+            "type": "string"
           },
           "public_ssh_keys": {
             "description": "The following field does not exist in the config files but is populated by the GitHub API before the record gets saved in the database.",
@@ -1371,13 +1376,40 @@
           "twitter": {
             "type": "string"
           },
+          "type": {
+            "type": "string"
+          },
           "username": {
+            "type": "string"
+          },
+          "work_address_city": {
+            "type": "string"
+          },
+          "work_address_country": {
+            "type": "string"
+          },
+          "work_address_country_code": {
+            "type": "string"
+          },
+          "work_address_formatted": {
+            "type": "string"
+          },
+          "work_address_state": {
+            "type": "string"
+          },
+          "work_address_street_1": {
+            "description": "The following fields do not exist in the config files but are populated automatically based on the user's location.",
+            "type": "string"
+          },
+          "work_address_street_2": {
+            "type": "string"
+          },
+          "work_address_zipcode": {
             "type": "string"
           }
         },
         "required": [
           "first_name",
-          "id",
           "last_name",
           "username"
         ]
