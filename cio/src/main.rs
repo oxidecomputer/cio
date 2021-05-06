@@ -81,9 +81,7 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(schema: String) -> Context {
-        let api_context = Context { schema, db: Database::new() };
-
-        api_context
+        Context { schema, db: Database::new() }
     }
 }
 

@@ -14,14 +14,14 @@ airtable-api = "^0.1.24"
 #airtable-api = { path = "../airtable" }
 async-trait = "^0.1.0"
 base64 = "0.12"
-checkr = "^0.0.4"
+checkr = "^0.0.7"
 #checkr = { path = "../checkr" }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 chrono-tz = { version = "0.4", features = ["serde"] }
 clap = {version = "2", features = ["yaml"]}
 # One day go back to the non-forked "cloudflare" lib
-cloudflare-rs = "^0.6.0"
+cloudflare = "^0.8.0"
 csv = "1.1"
 comrak = "0.8"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
@@ -43,13 +43,13 @@ hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", fea
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 macros = { path = "../macros" }
 nom_pem = "4"
-okta = "^0.0.3"
+okta = "^0.0.6"
 openssl = "0.10"
 pandoc = "0.8"
 phonenumber = "0.2"
 rand = { version = "^0.8.3", features = ["alloc"] }
 regex = "1"
-reqwest = { version = "=0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json"] }
 revai = { version = "^0.1.0" }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "^0.1.0"
@@ -65,11 +65,11 @@ tailscale-api = "^0.1.2"
 #tailscale-api = { path = "../tailscale" }
 tar = "^0.4"
 titlecase = "1.0"
-tokio = { version = "=1", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 toml = "0.5"
 tracing = "^0.1"
 tracing-attributes = "^0.1"
 tracing-futures = "^0.2"
 walkdir = "^2.3.2"
-yup-oauth2 = "^4.1.3"
+yup-oauth2 = "^5"
 zip = "0.5"
