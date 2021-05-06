@@ -30,6 +30,7 @@ use std::sync::Arc;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Checker API.
@@ -265,7 +266,7 @@ impl error::Error for APIError {
 }
 
 /// The data type for an API response.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, JsonSchema, Default, Serialize, Deserialize)]
 pub struct CandidatesResponse {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub object: String,
@@ -279,14 +280,14 @@ pub struct CandidatesResponse {
     pub candidates: Vec<Candidate>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, JsonSchema, Serialize, Deserialize)]
 pub struct CandidateRequest {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub email: String,
 }
 
 /// The data type for a candidate.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, JsonSchema, Serialize, Deserialize)]
 pub struct Candidate {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub id: String,
@@ -335,10 +336,10 @@ pub struct Candidate {
     pub metadata: Metadata,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
 pub struct Metadata {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Report {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub id: String,
@@ -406,7 +407,7 @@ pub struct Report {
     pub estimated_completion_time: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct DrugScreening {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub id: String,
@@ -428,7 +429,7 @@ pub struct DrugScreening {
 }
 
 /// The data type for an API response.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, JsonSchema, Default, Serialize, Deserialize)]
 pub struct InvitationsResponse {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub object: String,
@@ -442,7 +443,7 @@ pub struct InvitationsResponse {
     pub invitations: Vec<Invitation>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct InvitationRequest {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub package: String,
@@ -450,7 +451,7 @@ pub struct InvitationRequest {
     pub candidate_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Invitation {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub id: String,

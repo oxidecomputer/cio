@@ -488,9 +488,6 @@ pub struct Envelope {
     pub template_roles: Vec<TemplateRole>,
     #[serde(default)]
     pub recipients: Recipients,
-    /// These appear to be base64 encoded.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PDFBytes")]
-    pub pdf_bytes: String,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
@@ -499,6 +496,9 @@ pub struct Document {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    /// These appear to be base64 encoded.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PDFBytes")]
+    pub pdf_bytes: String,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
@@ -962,6 +962,7 @@ pub struct Webhook {
     #[serde(default, rename = "eventData")]
     pub event_data: WebhookEventData,
 }
+
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct WebhookEventData {
     #[serde(default, skip_serializing_if = "String::is_empty")]

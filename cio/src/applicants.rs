@@ -2396,16 +2396,6 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
         }
     }
 
-    // Get gsuite token.
-    let token = get_gsuite_token("").await;
-
-    // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
-    // Figure out where our directory is.
-    // It should be in the shared drive : "Offer Letters"
-    let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
-    let drive_id = shared_drive.id.to_string();
-
     // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db);
 
@@ -2483,13 +2473,23 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&applicant.docusign_envelope_id).await.unwrap();
 
-            applicant.update_applicant_from_docusign_envelope(envelope).await;
+            applicant.update_applicant_from_docusign_envelope(db, &ds, envelope).await;
         }
     }
 }
 
 impl Applicant {
-    pub async fn update_applicant_from_docusign_envelope(&mut self, envelope: docusign::Envelope) {
+    pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+        // Get gsuite token.
+        let token = get_gsuite_token("").await;
+
+        // Initialize the Google Drive client.
+        let drive_client = GoogleDrive::new(token);
+        // Figure out where our directory is.
+        // It should be in the shared drive : "Offer Letters"
+        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
+        let drive_id = shared_drive.id.to_string();
+
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
 
@@ -2537,7 +2537,7 @@ impl Applicant {
             // min before getting each of the documents.
             // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
             thread::sleep(std::time::Duration::from_secs(15));
-            let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
+            let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
 
             for fd in form_data {
                 // Save the data to the employee who matches this applicant.
@@ -2563,7 +2563,7 @@ impl Applicant {
         }
 
         // Update the applicant in the database.
-        applicant.update(db).await;
+        self.update(db).await;
     }
 }
 

@@ -319,6 +319,8 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "checkr"
 version = "0.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "761ed071cca1d04d2edb4b7b5652725bcc2fe2b056faa5171680e860abcf9f37"
 dependencies = [
  "chrono",
  "reqwest",
@@ -328,12 +330,11 @@ dependencies = [
 
 [[package]]
 name = "checkr"
-version = "0.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "761ed071cca1d04d2edb4b7b5652725bcc2fe2b056faa5171680e860abcf9f37"
+version = "0.0.8"
 dependencies = [
  "chrono",
  "reqwest",
+ "schemars",
  "serde",
  "serde_json",
 ]
@@ -381,13 +382,12 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#150bbc73c0488e041acdb43380af1188f8d6e15e"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "base64 0.12.3",
- "checkr 0.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "checkr 0.0.7",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
@@ -397,7 +397,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.6",
+ "docusign 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot",
  "futures-util",
  "google-drive 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -407,63 +407,7 @@ dependencies = [
  "html2text",
  "hubcaps",
  "lopdf",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
- "nom_pem",
- "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "openssl",
- "pandoc",
- "phonenumber",
- "rand 0.8.3",
- "regex 1.5.4",
- "reqwest",
- "revai 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "schemars",
- "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde",
- "serde_json",
- "serde_qs 0.7.2",
- "sheets 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "shippo 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar",
- "titlecase",
- "tokio",
- "toml",
- "walkdir",
- "yup-oauth2",
- "zip",
-]
-
-[[package]]
-name = "cio-api"
-version = "0.2.0"
-dependencies = [
- "acme-lib",
- "airtable-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "async-trait",
- "base64 0.12.3",
- "checkr 0.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "chrono",
- "chrono-humanize",
- "chrono-tz",
- "clap",
- "cloudflare",
- "comrak",
- "csv",
- "diesel",
- "diffy",
- "docusign 0.1.6",
- "dropshot",
- "futures-util",
- "google-drive 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "handlebars",
- "html2text",
- "hubcaps",
- "lopdf",
- "macros 0.1.0",
+ "macros",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -602,9 +546,12 @@ checksum = "ea221b5284a47e40033bf9b66f35f984ec0ea2931eb03505246cd27a963f981b"
 
 [[package]]
 name = "cpufeatures"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cd5a7748210e7ec1a9696610b1015e6e31fbf58f77a160801f124bd1c36592a"
+checksum = "dec1028182c380cc45a2e2c5ec841134f2dfd0f8f5f0a5bcd68004f81b5efdf4"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "crc32fast"
@@ -830,15 +777,14 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "docusign"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89d86d8b6fd517da3f85cd5e95af876ba0844eeb78d7b6d0b1f74ec79594a400"
+version = "0.1.8"
 dependencies = [
  "bytes",
  "chrono",
  "jwt",
  "openssl",
  "reqwest",
+ "schemars",
  "serde",
  "serde_json",
 ]
@@ -846,6 +792,8 @@ dependencies = [
 [[package]]
 name = "docusign"
 version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "755eefb8aabacf0d9495c14ab1e837a7cd3c919a14dbdfd2ade504f748f132ac"
 dependencies = [
  "bytes",
  "chrono",
@@ -1781,19 +1729,6 @@ name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
-
-[[package]]
-name = "macros"
-version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#150bbc73c0488e041acdb43380af1188f8d6e15e"
-dependencies = [
- "Inflector",
- "proc-macro2",
- "quote",
- "serde",
- "serde_tokenstream",
- "syn",
-]
 
 [[package]]
 name = "macros"
@@ -4141,9 +4076,9 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "chrono-humanize",
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "cio-api",
  "diesel",
- "docusign 0.1.6",
+ "docusign 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot",
  "futures-util",
  "google-drive 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
