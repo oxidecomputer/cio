@@ -50,10 +50,15 @@ pub struct NewSoftwareVendor {
     pub users: i32,
     #[serde(default)]
     pub flat_cost_per_month: f32,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero")]
     pub total_cost_per_month: f32,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub groups: Vec<String>,
+}
+
+/// This is only used for serialize
+fn is_zero(num: &f32) -> bool {
+    *num == 0.0
 }
 
 /// Implement updating the Airtable record for a SoftwareVendor.
@@ -61,7 +66,10 @@ pub struct NewSoftwareVendor {
 impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
     #[instrument]
     #[inline]
-    async fn update_airtable_record(&mut self, _record: SoftwareVendor) {}
+    async fn update_airtable_record(&mut self, record: SoftwareVendor) {
+        // This is a function so we can't change it through the API.
+        self.total_cost_per_month = 0.0;
+    }
 }
 
 /// Sync software vendors from Airtable.
