@@ -2460,7 +2460,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     let applicants = Applicants::get_from_db(db);
 
     // Iterate over the applicants and find any that have the status: giving offer.
-    for applicant in applicants {
+    for mut applicant in applicants {
         if applicant.status.to_lowercase() != "giving offer" && applicant.email != "me@jessfraz.com" {
             // We can return early.
             continue;
@@ -2470,6 +2470,46 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
         if applicant.docusign_envelope_id.is_empty() {
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
+            let mut new_envelope: docusign::Envelope = Default::default();
+
+            // Sent the status to `sent` so it sends.
+            // To save it as a draft set the status as `created`.
+            new_envelope.status = "sent".to_string();
+
+            // Set the email subject.
+            new_envelope.email_subject = "Sign your Oxide Computer Company Offer Letter".to_string();
+
+            // Set the template id to that of our template.
+            new_envelope.template_id = template_id.to_string();
+
+            // Set the recipients of the template.
+            // The first recipient needs to be the CEO (or whoever is going to do the mad lib for
+            // the offer.
+            // The second recipient needs to be the Applicant.
+            new_envelope.template_roles = vec![
+                docusign::TemplateRole {
+                    name: "Steve Tuck".to_string(),
+                    role_name: "CEO".to_string(),
+                    email: "jess+dev+steve@oxidecomputer.com".to_string(),
+                    signer_name: "Steve Tuck".to_string(),
+                    routing_order: "1".to_string(),
+                },
+                docusign::TemplateRole {
+                    name: applicant.name.to_string(),
+                    role_name: "Applicant".to_string(),
+                    email: applicant.email.to_string(),
+                    signer_name: applicant.name.to_string(),
+                    routing_order: "2".to_string(),
+                },
+            ];
+
+            // Let's create the envelope.
+            let envelope = ds.create_envelope(new_envelope.clone()).await.unwrap();
+
+            // Set the id of the envelope.
+            applicant.docusign_envelope_id = envelope.envelope_id.to_string();
+            // Set the status of the envelope.
+            applicant.docusign_envelope_status = envelope.status.to_string();
         } else {
             // We have sent their offer.
             // Let's get the status of the envelope in Docusign.
@@ -2480,10 +2520,10 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             applicant.docusign_envelope_status = envelope.status.to_string();
 
             // TODO: parse and update the custom fields if we have them.
-
-            // Update the applicant in the database.
-            applicant.update(db).await;
         }
+
+        // Update the applicant in the database.
+        applicant.update(db).await;
     }
 }
 

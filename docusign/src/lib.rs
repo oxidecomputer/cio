@@ -219,7 +219,7 @@ impl error::Error for APIError {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Envelope {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "createdDateTime")]
     pub created_date_time: Option<DateTime<Utc>>,
@@ -301,6 +301,8 @@ pub struct Envelope {
     /// The id of the template. If a value is not provided, DocuSign generates a value.
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "templateId")]
     pub template_id: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "templateRoles")]
+    pub template_roles: Vec<TemplateRole>,
     #[serde(default)]
     pub recipients: Recipients,
 }
@@ -309,6 +311,8 @@ pub struct Envelope {
 pub struct Recipients {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub agents: Vec<Recipient>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signers: Vec<Recipient>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -333,6 +337,36 @@ pub struct Recipient {
     /// The full legal name of a signer for the envelope.
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "signerName")]
     pub signer_name: String,
+    /// Unique for the recipient. It is used by the tab element to indicate which recipient is to sign the Document.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recipientId")]
+    pub recipient_id: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TemplateRole {
+    /// Email of the recipient. Notification will be sent to this email id.
+    /// Maximum Length: 100 characters.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    /// Full legal name of the recipient.
+    /// Maximum Length: 100 characters.
+    ///
+    /// Note: If you are creating an envelope with DocuSign EU advanced signature enabled, ensure that recipient names do not contain any of the following characters: ^ : \ @ , + <
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    /// Optional element. Specifies the role name associated with the recipient.
+    /// This is required when working with template recipients.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "roleName")]
+    pub role_name: String,
+    /// Required element with recipient type In Person Signers.
+    /// Maximum Length: 100 characters.
+    ///
+    /// The full legal name of a signer for the envelope.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "signerName")]
+    pub signer_name: String,
+    /// This specifies the routing order of the recipient in the envelope.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "routingOrder")]
+    pub routing_order: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
