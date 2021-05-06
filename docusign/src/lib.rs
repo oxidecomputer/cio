@@ -213,7 +213,6 @@ impl DocuSign {
         connect.allow_envelope_publish = "true".to_string();
         connect.envelope_events = vec![
             "completed".to_string(),
-            "created".to_string(),
             "sent".to_string(),
             "declined".to_string(),
             "delivered".to_string(),
@@ -223,6 +222,11 @@ impl DocuSign {
         connect.all_users = "true".to_string();
         connect.include_document_fields = "true".to_string();
         connect.name = "CIO Webhook".to_string();
+        // This is the only valid choice.
+        connect.configuration_type = "custom".to_string();
+        connect.include_document_fields = "true".to_string();
+        connect.include_time_zone_information = "true".to_string();
+        connect.use_soap_interface = "false".to_string();
 
         // Get all the webhooks to check if we already have one.
         let webhooks = self.list_webhooks().await.unwrap();
@@ -937,6 +941,14 @@ pub struct Webhook {
     pub include_cert_soap_header: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeDocumentFields")]
     pub include_document_fields: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceAPIVersion")]
+    pub salesforce_api_version: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceDocumentsAsContentFiles")]
+    pub salesforce_documents_as_content_files: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceAuthcode")]
+    pub salesforce_auth_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceCallBackUrl")]
+    pub salesforce_callback_url: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
