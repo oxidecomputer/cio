@@ -487,6 +487,9 @@ pub struct Envelope {
     pub template_roles: Vec<TemplateRole>,
     #[serde(default)]
     pub recipients: Recipients,
+    /// These appear to be base64 encoded.
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PDFBytes")]
+    pub pdf_bytes: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

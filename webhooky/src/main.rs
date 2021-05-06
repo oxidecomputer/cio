@@ -925,7 +925,10 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
     if ts.address_from.unwrap_or_default().street1.is_empty() && ts.tracking_history.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
-        sentry::capture_message("too early to get any information about the shipment", sentry::Level::Fatal);
+        sentry::capture_message(
+            format!("too early to get any information about the shipment {} {}", ts.carrier, ts.tracking_number),
+            sentry::Level::Fatal,
+        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1019,9 +1022,8 @@ async fn listen_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_ar
     method = POST,
     path = "/docusign/envelope/update",
 }]
-async fn listen_docusign_envelope_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_docusign_envelope_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<docusign::Envelope>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let event = body_param.into_inner();
-    sentry::capture_message(&format!("docusign: {}", event.to_string()), sentry::Level::Info);
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }

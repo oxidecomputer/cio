@@ -2413,13 +2413,14 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     for mut applicant in applicants {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
+        // TODO: remove the testing email.
         if applicant.status.to_lowercase() != "giving offer" && applicant.status.to_lowercase() != "onboarding" && applicant.email != "me@jessfraz.com" {
             // We can return early.
             continue;
         }
 
-        println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
-        if applicant.docusign_envelope_id.is_empty() && applicant.status.to_lowercase() == "giving offer" {
+        if applicant.docusign_envelope_id.is_empty() && (applicant.status.to_lowercase() == "giving offer" || applicant.email == "me@jessfraz.com") {
+            println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
             let mut new_envelope: docusign::Envelope = Default::default();
@@ -2474,74 +2475,91 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             applicant.docusign_envelope_id = envelope.envelope_id.to_string();
             // Set the status of the envelope.
             applicant.docusign_envelope_status = envelope.status.to_string();
-        } else {
+
+            // Update the applicant in the database.
+            applicant.update(db).await;
+        } else if !applicant.docusign_envelope_id.is_empty() {
             // We have sent their offer.
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&applicant.docusign_envelope_id).await.unwrap();
 
-            // Set the status in the database and airtable.
-            applicant.docusign_envelope_status = envelope.status.to_string();
+            applicant.update_applicant_from_docusign_envelope(envelope).await;
+        }
+    }
+}
 
-            // If the document is completed, let's save it to Google Drive.
-            if envelope.status == "completed" {
-                for document in envelope.documents {
-                    // Get the document from docusign.
-                    // In order to not "over excessively poll the API here, we need to sleep for 15
-                    // min before getting each of the documents.
-                    // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
-                    thread::sleep(std::time::Duration::from_secs(900));
-                    let bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap();
+impl Applicant {
+    pub async fn update_applicant_from_docusign_envelope(&mut self, envelope: docusign::Envelope) {
+        // Set the status in the database and airtable.
+        applicant.docusign_envelope_status = envelope.status.to_string();
 
-                    let mut filename = format!("{} - {}.pdf", applicant.name, document.name);
-                    if document.name.contains("Offer Letter") {
-                        filename = format!("{} - Offer.pdf", applicant.name);
-                    } else if document.name.contains("Summary") {
-                        filename = format!("{} - DocuSign Summary.pdf", applicant.name);
-                    }
+        // If the document is completed, let's save it to Google Drive.
+        if envelope.status != "completed" {
+            // We will skip to the end and return early, only updating the status.
+            applicant.update(db).await;
+            return;
+        }
 
-                    // Create or update the file in the google_drive.
-                    drive_client.create_or_upload_file(&drive_id, "", &filename, "application/pdf", &bytes).await.unwrap();
-                    println!("[docusign] uploaded completed file {} to drive", filename);
-                }
-            }
-
-            // Let's get the employee for the applicant.
-            // We will match on their recovery email.
-            if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(applicant.email.to_string())).first::<User>(&db.conn()) {
-                // We have an employee, so we can update their data from the data in Docusign.
-                println!("got employee {:?}", employee);
-
-                // TODO: continue for now as we don't want to eff up my record.
-                break;
-
+        for document in envelope.documents {
+            let mut bytes = base64::decode(document.pdf_bytes).unwrap_or_default();
+            // Check if we already have bytes to the data.
+            if document.pdf_bytes.is_empty() {
+                // Get the document from docusign.
                 // In order to not "over excessively poll the API here, we need to sleep for 15
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
-                thread::sleep(std::time::Duration::from_secs(15));
-                let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
-
-                for fd in form_data {
-                    // Save the data to the employee who matches this applicant.
-                    if fd.name == "Applicant's Street Address" {
-                        employee.home_address_street_1 = fd.value.trim().to_string();
-                    }
-                    if fd.name == "Applicant's City" {
-                        employee.home_address_city = fd.value.trim().to_string();
-                    }
-                    if fd.name == "Applicant's State" {
-                        employee.home_address_state = fd.value.trim().to_string();
-                    }
-                    if fd.name == "Applicant's Postal Code" {
-                        employee.home_address_zipcode = fd.value.trim().to_string();
-                    }
-                    if fd.name == "Start Date" {
-                        employee.start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
-                    }
-                }
-
-                // Update the employee.
-                employee.update(db).await;
+                thread::sleep(std::time::Duration::from_secs(900));
+                bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap();
             }
+
+            let mut filename = format!("{} - {}.pdf", applicant.name, document.name);
+            if document.name.contains("Offer Letter") {
+                filename = format!("{} - Offer.pdf", applicant.name);
+            } else if document.name.contains("Summary") {
+                filename = format!("{} - DocuSign Summary.pdf", applicant.name);
+            }
+
+            // Create or update the file in the google_drive.
+            drive_client.create_or_upload_file(&drive_id, "", &filename, "application/pdf", &bytes).await.unwrap();
+            println!("[docusign] uploaded completed file {} to drive", filename);
+        }
+
+        // Let's get the employee for the applicant.
+        // We will match on their recovery email.
+        if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(applicant.email.to_string())).first::<User>(&db.conn()) {
+            // We have an employee, so we can update their data from the data in Docusign.
+            println!("got employee {:?}", employee);
+
+            // TODO: continue for now as we don't want to eff up my record.
+            break;
+
+            // In order to not "over excessively poll the API here, we need to sleep for 15
+            // min before getting each of the documents.
+            // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
+            thread::sleep(std::time::Duration::from_secs(15));
+            let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
+
+            for fd in form_data {
+                // Save the data to the employee who matches this applicant.
+                if fd.name == "Applicant's Street Address" {
+                    employee.home_address_street_1 = fd.value.trim().to_string();
+                }
+                if fd.name == "Applicant's City" {
+                    employee.home_address_city = fd.value.trim().to_string();
+                }
+                if fd.name == "Applicant's State" {
+                    employee.home_address_state = fd.value.trim().to_string();
+                }
+                if fd.name == "Applicant's Postal Code" {
+                    employee.home_address_zipcode = fd.value.trim().to_string();
+                }
+                if fd.name == "Start Date" {
+                    employee.start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                }
+            }
+
+            // Update the employee.
+            employee.update(db).await;
         }
 
         // Update the applicant in the database.
@@ -2597,21 +2615,21 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants() {
         let db = Database::new();
-        refresh_db_applicants(&db).await;
+        //refresh_db_applicants(&db).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db).update_airtable().await;
+        //Applicants::get_from_db(&db).update_airtable().await;
 
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-        update_applications_with_scoring_forms(&db).await;
+        //update_applications_with_scoring_forms(&db).await;
 
         // This must be after update_applications_with_scoring_forms, so that if someone
         // has done the application then we remove them from the scorers.
-        update_applications_with_scoring_results(&db).await;
+        //update_applications_with_scoring_results(&db).await;
 
         // TODO: turn this on.
         // Refresh DocuSign for the applicants.
-        //refresh_docusign_for_applicants(&db).await;
+        refresh_docusign_for_applicants(&db).await;
     }
 }
