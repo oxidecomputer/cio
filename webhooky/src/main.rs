@@ -994,13 +994,13 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext>, bo
 
 /** Listen for callbacks to docusign auth. */
 #[endpoint {
-    method = GET,
+    method = POST,
     path = "/docusign/callback",
 }]
 #[instrument]
 #[inline]
-async fn listen_docusign_callback(rqctx: Arc<RequestContext>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let event = body_param.into_inner();
+async fn listen_docusign_callback(rqctx: Arc<RequestContext>, query_args: Query<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let event = query_args.into_inner();
     println!("docusign: {}", event.to_string());
     sentry::capture_message(&format!("docusign callback: {}", event.to_string()), sentry::Level::Info);
 
