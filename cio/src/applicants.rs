@@ -2551,9 +2551,11 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                     // Get the document from docusign.
                     let bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap();
 
-                    let mut filename = format!("{} - {}", applicant.name, document.name);
+                    let mut filename = format!("{} - {}.pdf", applicant.name, document.name);
                     if document.name.contains("Offer Letter") {
-                        filename = format!("{}.pdf", applicant.name);
+                        filename = format!("{} - Offer.pdf", applicant.name);
+                    } else if document.name.contains("Summary") {
+                        filename = format!("{} - DocuSign Summary.pdf", applicant.name);
                     }
 
                     // Create or update the file in the google_drive.
