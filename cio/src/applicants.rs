@@ -2419,7 +2419,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
         }
 
         println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
-        if applicant.docusign_envelope_id.is_empty() {
+        if applicant.docusign_envelope_id.is_empty() && applicant.status.to_lowercase() == "giving offer" {
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
             let mut new_envelope: docusign::Envelope = Default::default();
@@ -2442,6 +2442,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                 docusign::TemplateRole {
                     name: "Steve Tuck".to_string(),
                     role_name: "CEO".to_string(),
+                    // TODO: make this the REAL email.
                     email: format!("jess+steve+dev@{}", GSUITE_DOMAIN),
                     signer_name: "Steve Tuck".to_string(),
                     routing_order: "1".to_string(),
@@ -2504,12 +2505,6 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                 }
             }
 
-            // In order to not "over excessively poll the API here, we need to sleep for 15
-            // min before getting each of the documents.
-            // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
-            thread::sleep(std::time::Duration::from_secs(15));
-            let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
-
             // Let's get the employee for the applicant.
             // We will match on their recovery email.
             if let Ok(mut employee) = users::dsl::users.filter(users::dsl::recovery_email.eq(applicant.email.to_string())).first::<User>(&db.conn()) {
@@ -2518,6 +2513,12 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
 
                 // TODO: continue for now as we don't want to eff up my record.
                 break;
+
+                // In order to not "over excessively poll the API here, we need to sleep for 15
+                // min before getting each of the documents.
+                // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
+                thread::sleep(std::time::Duration::from_secs(15));
+                let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
 
                 for fd in form_data {
                     // Save the data to the employee who matches this applicant.
@@ -2539,7 +2540,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                 }
 
                 // Update the employee.
-                employee.update(db);
+                employee.update(db).await;
             }
         }
 
@@ -2609,6 +2610,7 @@ mod tests {
         // has done the application then we remove them from the scorers.
         update_applications_with_scoring_results(&db).await;
 
+        // TODO: turn this on.
         // Refresh DocuSign for the applicants.
         //refresh_docusign_for_applicants(&db).await;
     }

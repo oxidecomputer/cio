@@ -71,6 +71,7 @@ impl DocuSign {
                     integrator_key: integration_key.to_string(),
                     key_pair_id: key_pair_id.to_string(),
                     api_username: api_username.to_string(),
+                    // TODO: set this to false when we are live.
                     is_demo: true,
                 };
 
