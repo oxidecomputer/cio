@@ -10,7 +10,7 @@
  * use docusign::DocuSign;
  * use serde::{Deserialize, Serialize};
  *
- * async fn geocode() {
+ * async fn get_envelope() {
  *     // Initialize the DocuSign client.
  *     let docusign = DocuSign::new_from_env().await;
  *
@@ -28,6 +28,7 @@ use std::fmt;
 use std::ops::Add;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
 use jwt::header::HeaderType;
@@ -240,6 +241,30 @@ impl DocuSign {
         };
 
         Ok(resp.json().await.unwrap())
+    }
+
+    /// Get document.
+    pub async fn get_document(&self, envelope_id: &str, document_id: &str) -> Result<Bytes, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            &format!("accounts/{}/envelopes/{}/documents/{}", self.jwt_config.account_id, envelope_id, document_id),
+            (),
+            None,
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.bytes().await.unwrap())
     }
 
     /// Update document fields.

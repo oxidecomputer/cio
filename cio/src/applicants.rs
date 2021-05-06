@@ -2462,6 +2462,16 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
         }
     }
 
+    // Get gsuite token.
+    let token = get_gsuite_token("").await;
+
+    // Initialize the Google Drive client.
+    let drive_client = GoogleDrive::new(token);
+    // Figure out where our directory is.
+    // It should be in the shared drive : "Offer Letters"
+    let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
+    let drive_id = shared_drive.id.to_string();
+
     // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db);
 
@@ -2496,7 +2506,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                 docusign::TemplateRole {
                     name: "Steve Tuck".to_string(),
                     role_name: "CEO".to_string(),
-                    email: "jess+dev+steve@oxidecomputer.com".to_string(),
+                    email: "steve+dev@oxidecomputer.com".to_string(),
                     signer_name: "Steve Tuck".to_string(),
                     routing_order: "1".to_string(),
                     // Make Steve's email notification different than the actual applicant.
@@ -2534,6 +2544,23 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
 
             // Set the status in the database and airtable.
             applicant.docusign_envelope_status = envelope.status.to_string();
+
+            // If the document is completed, let's save it to Google Drive.
+            if envelope.status == "completed" {
+                for document in envelope.documents {
+                    // Get the document from docusign.
+                    let bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap();
+
+                    let mut filename = format!("{} - {}", applicant.name, document.name);
+                    if document.name.contains("Offer Letter") {
+                        filename = format!("{}.pdf", applicant.name);
+                    }
+
+                    // Create or update the file in the google_drive.
+                    drive_client.create_or_upload_file(&drive_id, "", &filename, "application/pdf", &bytes).await.unwrap();
+                    println!("[docusign] uploaded completed file {} to drive", filename);
+                }
+            }
 
             // TODO: parse and update the custom fields if we have them.
             let form_data = ds.get_envelope_form_data(&applicant.docusign_envelope_id).await.unwrap();
