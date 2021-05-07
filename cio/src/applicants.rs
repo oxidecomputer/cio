@@ -2403,13 +2403,12 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     for mut applicant in applicants {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
-        // TODO: remove the testing email.
-        if applicant.status.to_lowercase() != "giving offer" && applicant.status.to_lowercase() != "onboarding" && applicant.email != "me@jessfraz.com" {
+        if applicant.status.to_lowercase() != "giving offer" && applicant.status.to_lowercase() != "onboarding" {
             // We can return early.
             continue;
         }
 
-        if applicant.docusign_envelope_id.is_empty() && (applicant.status.to_lowercase() == "giving offer" || applicant.email == "me@jessfraz.com") {
+        if applicant.docusign_envelope_id.is_empty() && (applicant.status.to_lowercase() == "giving offer"  {
             println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
@@ -2433,8 +2432,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                 docusign::TemplateRole {
                     name: "Steve Tuck".to_string(),
                     role_name: "CEO".to_string(),
-                    // TODO: make this the REAL email.
-                    email: format!("jess+steve+dev@{}", GSUITE_DOMAIN),
+                    email: format!("steve@{}", GSUITE_DOMAIN),
                     signer_name: "Steve Tuck".to_string(),
                     routing_order: "1".to_string(),
                     // Make Steve's email notification different than the actual applicant.
@@ -2529,10 +2527,6 @@ impl Applicant {
         if result.is_ok() {
             let employee = result.unwrap();
             // We have an employee, so we can update their data from the data in Docusign.
-
-            // TODO: continue for now as we don't want to eff up my record.
-            self.update(db).await;
-            return;
 
             // In order to not "over excessively poll the API here, we need to sleep for 15
             // min before getting each of the documents.
