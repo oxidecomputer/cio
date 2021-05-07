@@ -491,6 +491,19 @@ table! {
 }
 
 table! {
+    swag_inventory_items (id) {
+        id -> Int4,
+        name -> Varchar,
+        size -> Varchar,
+        current_stock -> Int4,
+        item -> Varchar,
+        barcode -> Varchar,
+        link_to_item -> Array<Text>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         first_name -> Varchar,
@@ -558,5 +571,6 @@ allow_tables_to_appear_in_same_query!(
     recorded_meetings,
     rfds,
     software_vendors,
+    swag_inventory_items,
     users,
 );

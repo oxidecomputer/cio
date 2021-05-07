@@ -1,18 +1,12 @@
-use std::env;
-
 use async_trait::async_trait;
-use gsuite_api::GSuite;
 use macros::db;
-use okta::Okta;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE};
-use crate::configs::Group;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::swag_invetory_items;
-use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 #[db {
     new_struct_name = "SwagInventoryItem",
