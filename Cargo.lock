@@ -391,7 +391,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e45e49cac8431acd87a04144196e0188feea8a0d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#9bc782234d6d83851244a1dd5a88f29ba1bce88d"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -411,7 +411,7 @@ dependencies = [
  "docusign 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot",
  "futures-util",
- "google-drive 0.1.17 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "google-drive 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
@@ -1318,17 +1318,6 @@ dependencies = [
 [[package]]
 name = "google-drive"
 version = "0.1.17"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e45e49cac8431acd87a04144196e0188feea8a0d"
-dependencies = [
- "bytes",
- "reqwest",
- "serde",
- "yup-oauth2",
-]
-
-[[package]]
-name = "google-drive"
-version = "0.1.17"
 dependencies = [
  "bytes",
  "reqwest",
@@ -1903,7 +1892,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e45e49cac8431acd87a04144196e0188feea8a0d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#9bc782234d6d83851244a1dd5a88f29ba1bce88d"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.26",
