@@ -22,7 +22,7 @@ CREATE TABLE outbound_shipments (
     resend_email_to_recipient BOOLEAN NOT NULL DEFAULT 'f',
     cost REAL NOT NULL DEFAULT 0,
     schedule_pickup BOOLEAN NOT NULL DEFAULT 'f',
-    pickup_date TIMESTAMPTZ DEFAULT NULL,
+    pickup_date DATE DEFAULT NULL,
     created_time TIMESTAMPTZ NOT NULL,
     shipped_time TIMESTAMPTZ DEFAULT NULL,
     delivered_time TIMESTAMPTZ DEFAULT NULL,

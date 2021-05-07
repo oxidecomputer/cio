@@ -18,7 +18,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTAB
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
-use crate::schema::inbound_shipments;
+use crate::schema::{inbound_shipments, outbound_shipments};
 use crate::utils::{get_gsuite_token, DOMAIN};
 
 /// The data type for an inbound shipment.
@@ -188,7 +188,7 @@ impl InboundShipment {
         "carrier" = "String",
     },
 }]
-#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "outbound_shipments"]
 pub struct NewOutboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -233,12 +233,11 @@ pub struct NewOutboundShipment {
     #[serde(default)]
     pub resend_email_to_recipient: bool,
     #[serde(default)]
-    pub cost: f64,
+    pub cost: f32,
     #[serde(default)]
     pub schedule_pickup: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pickup_date: Option<NaiveDate>,
-    #[serde(default)]
     pub created_time: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shipped_time: Option<DateTime<Utc>>,

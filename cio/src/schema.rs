@@ -397,7 +397,7 @@ table! {
         resend_email_to_recipient -> Bool,
         cost -> Float4,
         schedule_pickup -> Bool,
-        pickup_date -> Nullable<Timestamptz>,
+        pickup_date -> Nullable<Date>,
         created_time -> Timestamptz,
         shipped_time -> Nullable<Timestamptz>,
         delivered_time -> Nullable<Timestamptz>,
