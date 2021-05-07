@@ -171,6 +171,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "barcoders"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "298326aba91e0dd1acba62767652c7c9f4d45ada6804110278680c4f0c6e8ab7"
+
+[[package]]
 name = "base-x"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -443,6 +449,7 @@ dependencies = [
  "acme-lib",
  "airtable-api 0.1.29",
  "async-trait",
+ "barcoders",
  "base64 0.12.3",
  "checkr 0.0.7",
  "chrono",
