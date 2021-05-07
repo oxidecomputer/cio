@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::airtable::{AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::swag_invetory_items;
+use crate::schema::swag_inventory_items;
 
 #[db {
     new_struct_name = "SwagInventoryItem",
@@ -18,7 +18,7 @@ use crate::schema::swag_invetory_items;
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "swag_invetory_items"]
+#[table_name = "swag_inventory_items"]
 pub struct NewSwagInventoryItem {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -45,7 +45,7 @@ pub struct NewSwagInventoryItem {
 #[async_trait]
 impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
     async fn update_airtable_record(&mut self, record: SwagInventoryItem) {
-        if !reccord.link_to_item.is_empty() {
+        if !record.link_to_item.is_empty() {
             self.link_to_item = record.link_to_item;
         }
 
@@ -63,7 +63,7 @@ pub async fn refresh_swag_invetory_items() {
     for inventory_item_record in results {
         let mut inventory_item: NewSwagInventoryItem = inventory_item_record.fields.into();
 
-        db_inventory_item.update(&db).await;
+        inventory_item.upsert(&db).await;
     }
 }
 
