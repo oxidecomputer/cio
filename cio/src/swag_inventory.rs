@@ -1,4 +1,8 @@
 use async_trait::async_trait;
+use barcoders::generators::image::*;
+use barcoders::generators::svg::*;
+use barcoders::sym::code39::*;
+use google_drive::GoogleDrive;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -7,6 +11,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::swag_inventory_items;
+use crate::utils::get_gsuite_token;
 
 #[db {
     new_struct_name = "SwagInventoryItem",
@@ -36,6 +41,11 @@ pub struct NewSwagInventoryItem {
     )]
     pub barcode: String,
 
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
+    pub barcode_png: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
+    pub barcode_svg: String,
+
     /// This is populated by Airtable.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_item: Vec<String>,
@@ -58,6 +68,21 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 pub async fn refresh_swag_inventory_items() {
     let db = Database::new();
 
+    // Get gsuite token.
+    let token = get_gsuite_token("").await;
+
+    // Initialize the Google Drive client.
+    let drive_client = GoogleDrive::new(token);
+
+    // Figure out where our directory is.
+    // It should be in the shared drive : "Automated Documents"/"rfds"
+    let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
+    let drive_id = shared_drive.id.to_string();
+
+    // Get the directory by the name.
+    let drive_rfd_dir = drive_client.get_file_by_name(&drive_id, "swag_inventory_barcodes").await.unwrap();
+    let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
+
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SwagInventoryItem>> = SwagInventoryItem::airtable().list_records(&SwagInventoryItem::airtable_table(), "Grid view", vec![]).await.unwrap();
     for inventory_item_record in results {
@@ -73,9 +98,42 @@ pub async fn refresh_swag_inventory_items() {
                 .replace('/', "")
                 .replace('(', "")
                 .replace(')', "")
+                .replace('-', "")
                 .replace("'", "")
                 .trim()
                 .to_string();
+
+            // Generate the barcode svg and png.
+            let barcode = Code39::new(&inventory_item.barcode).unwrap();
+            let png = Image::png(80); // You must specify the height in pixels.
+            let encoded = barcode.encode();
+
+            // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
+            let png_bytes = png.generate(&encoded[..]).unwrap();
+            let mut file_name = format!("{}.png", inventory_item.name);
+
+            // Create or update the files in the google_drive.
+            drive_client.create_or_upload_file(&drive_id, &parent_id, &file_name, "image/png", &png_bytes).await.unwrap();
+            // Get the file in drive.
+            let files = drive_client.get_file_by_name(&drive_id, &file_name).await.unwrap();
+            if !files.is_empty() {
+                inventory_item.barcode_png = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
+            }
+
+            // Now do the SVG.
+            let svg = SVG::new(200); // You must specify the height in pixels.
+            let svg_data: String = svg.generate(&encoded).unwrap();
+            let svg_bytes = svg_data.as_bytes();
+
+            file_name = format!("{}.svg", inventory_item.name);
+
+            // Create or update the files in the google_drive.
+            drive_client.create_or_upload_file(&drive_id, &parent_id, &file_name, "image/svg+xml", &svg_bytes).await.unwrap();
+            // Get the file in drive.
+            let files = drive_client.get_file_by_name(&drive_id, &file_name).await.unwrap();
+            if !files.is_empty() {
+                inventory_item.barcode_svg = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
+            }
         }
 
         let mut db_inventory_item = inventory_item.upsert_in_db(&db);

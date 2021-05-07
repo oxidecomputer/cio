@@ -498,6 +498,8 @@ table! {
         current_stock -> Int4,
         item -> Varchar,
         barcode -> Varchar,
+        barcode_png -> Varchar,
+        barcode_svg -> Varchar,
         link_to_item -> Array<Text>,
         airtable_record_id -> Varchar,
     }
