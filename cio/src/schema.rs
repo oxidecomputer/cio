@@ -373,6 +373,44 @@ table! {
 }
 
 table! {
+    outbound_shipments (id) {
+        id -> Int4,
+        name -> Varchar,
+        contents -> Varchar,
+        street_1 -> Varchar,
+        street_2 -> Varchar,
+        city -> Varchar,
+        state -> Varchar,
+        zipcode -> Varchar,
+        country -> Varchar,
+        address_formatted -> Varchar,
+        email -> Varchar,
+        phone -> Varchar,
+        status -> Varchar,
+        carrier -> Varchar,
+        tracking_number -> Varchar,
+        tracking_link -> Varchar,
+        oxide_tracking_link -> Varchar,
+        tracking_status -> Varchar,
+        label_link -> Varchar,
+        reprint_label -> Bool,
+        resend_email_to_recipient -> Bool,
+        cost -> Float4,
+        schedule_pickup -> Bool,
+        pickup_date -> Nullable<Timestamptz>,
+        created_time -> Timestamptz,
+        shipped_time -> Nullable<Timestamptz>,
+        delivered_time -> Nullable<Timestamptz>,
+        eta -> Nullable<Timestamptz>,
+        shippo_id -> Varchar,
+        messages -> Varchar,
+        notes -> Varchar,
+        geocode_cache -> Varchar,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     page_views (id) {
         id -> Int4,
         time -> Timestamptz,
@@ -515,6 +553,7 @@ allow_tables_to_appear_in_same_query!(
     journal_club_papers,
     links,
     mailing_list_subscribers,
+    outbound_shipments,
     page_views,
     recorded_meetings,
     rfds,
