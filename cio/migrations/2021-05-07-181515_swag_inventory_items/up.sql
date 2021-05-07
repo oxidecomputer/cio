@@ -7,6 +7,7 @@ CREATE TABLE swag_inventory_items (
     barcode VARCHAR NOT NULL,
     barcode_png VARCHAR NOT NULL,
     barcode_svg VARCHAR NOT NULL,
+    barcode_pdf_label VARCHAR NOT NULL,
     link_to_item TEXT [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )
