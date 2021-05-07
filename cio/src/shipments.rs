@@ -227,7 +227,7 @@ pub struct NewOutboundShipment {
     pub oxide_tracking_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_status: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
     pub label_link: String,
     #[serde(default)]
     pub reprint_label: bool,
