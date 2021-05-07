@@ -94,6 +94,11 @@ pub async fn refresh_swag_inventory_items() {
             inventory_item.barcode = inventory_item
                 .name
                 .to_uppercase()
+                .replace("FIRST EDITION", "1ED")
+                .replace("SECOND EDITION", "2ED")
+                .replace("THIRD EDITION", "3ED")
+                // TODO: Find another way to do this so that it doesn't break eventually.
+                .replace("FOURTH EDITION", "4ED")
                 .replace(' ', "")
                 .replace('/', "")
                 .replace('(', "")
