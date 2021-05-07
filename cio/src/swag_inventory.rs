@@ -55,7 +55,7 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 }
 
 /// Sync software vendors from Airtable.
-pub async fn refresh_swag_invetory_items() {
+pub async fn refresh_swag_inventory_items() {
     let db = Database::new();
 
     // Get all the records from Airtable.
@@ -63,17 +63,19 @@ pub async fn refresh_swag_invetory_items() {
     for inventory_item_record in results {
         let mut inventory_item: NewSwagInventoryItem = inventory_item_record.fields.into();
 
-        inventory_item.upsert(&db).await;
+        let mut db_inventory_item = inventory_item.upsert_in_db(&db);
+        db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
+        db_inventory_item.update(&db).await;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::finance::refresh_swag_invetory_items;
+    use crate::swag_inventory::refresh_swag_inventory_items;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_swag_invetory_items() {
-        refresh_swag_invetory_items().await;
+    async fn test_cron_swag_inventory_items() {
+        refresh_swag_inventory_items().await;
     }
 }
