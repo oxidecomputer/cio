@@ -73,6 +73,7 @@ pub async fn refresh_swag_inventory_items() {
                 .replace('/', "")
                 .replace('(', "")
                 .replace(')', "")
+                .replace("'", "")
                 .trim()
                 .to_string();
         }
