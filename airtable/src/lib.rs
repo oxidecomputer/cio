@@ -897,7 +897,7 @@ pub mod barcode_format_as_string {
         let mut state = serializer.serialize_struct("Barcode", 1)?;
         state.serialize_field("text", &text)?;
         // This needs to be code39 or upce.
-        state.serialize_field("text", "code39")?;
+        state.serialize_field("type", "code39")?;
         state.end()
     }
 
