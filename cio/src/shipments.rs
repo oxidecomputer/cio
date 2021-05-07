@@ -1,5 +1,6 @@
 #![allow(clippy::from_over_into)]
 use std::collections::HashMap;
+use std::convert::From;
 use std::env;
 
 use async_trait::async_trait;
@@ -340,7 +341,7 @@ impl NewOutboundShipment {
 
     /// Parse the shipment from a Google Sheets row, where we also happen to know the columns.
     /// This is how we get the spreadsheet back from the API.
-    pub fn parse_from_row_with_columns(columns: &SwagSheetColumns, row: &[String]) -> (Self, bool) {
+    pub fn parse_from_row_with_columns(db: &Database, columns: &SwagSheetColumns, row: &[String]) -> (Self, bool) {
         // If the length of the row is greater than the sent column
         // then we have a sent status.
         let sent = if row.len() > columns.sent { row[columns.sent].to_lowercase().contains("true") } else { false };
@@ -471,9 +472,63 @@ impl NewOutboundShipment {
             contents += &format!("1 x Oxide Kids Shirt, Size: {}\n", kids_shirt_size);
         }
 
+        let created_time = NewOutboundShipment::parse_timestamp(&row[columns.timestamp]);
+
+        let mut carrier = Default::default();
+        let mut address_formatted = Default::default();
+        let mut shippo_id = Default::default();
+        let mut pickup_date = Default::default();
+        let mut delivered_time = Default::default();
+        let mut reprint_label = Default::default();
+        let mut schedule_pickup = Default::default();
+        let mut resend_email_to_recipient = Default::default();
+        let mut shipped_time = Default::default();
+        let mut tracking_link = Default::default();
+        let mut oxide_tracking_link = Default::default();
+        let mut cost = Default::default();
+        let mut tracking_status = Default::default();
+        let mut label_link = Default::default();
+        let mut eta = Default::default();
+        let mut notes = Default::default();
+        let mut geocode_cache = Default::default();
+        let mut messages = Default::default();
+        let mut status = Default::default();
+        let mut tracking_number = Default::default();
+
+        // Let's try to get the record from the database.
+        if let Ok(shipment) = outbound_shipments::dsl::outbound_shipments
+            .filter(outbound_shipments::dsl::email.eq(email.to_string()))
+            .filter(outbound_shipments::dsl::created_time.eq(created_time))
+            .first::<OutboundShipment>(&db.conn())
+        {
+            // Let's set some other fields.
+            carrier = shipment.carrier.to_string();
+            address_formatted = shipment.address_formatted.to_string();
+            shippo_id = shipment.shippo_id.to_string();
+            pickup_date = shipment.pickup_date;
+            delivered_time = shipment.delivered_time;
+            reprint_label = shipment.reprint_label;
+            schedule_pickup = shipment.schedule_pickup;
+            resend_email_to_recipient = shipment.resend_email_to_recipient;
+            shipped_time = shipment.shipped_time;
+            tracking_link = shipment.tracking_link.to_string();
+            oxide_tracking_link = shipment.oxide_tracking_link.to_string();
+            cost = shipment.cost;
+            tracking_status = shipment.tracking_status.to_string();
+            label_link = shipment.label_link.to_string();
+            eta = shipment.eta;
+            notes = shipment.notes.to_string();
+            geocode_cache = shipment.geocode_cache.to_string();
+            messages = shipment.messages.to_string();
+            status = shipment.status.to_string();
+            tracking_number = shipment.tracking_number.to_string();
+        } else {
+            panic!("could not find shipment {} {}", name, email);
+        }
+
         (
             NewOutboundShipment {
-                created_time: NewOutboundShipment::parse_timestamp(&row[columns.timestamp]),
+                created_time,
                 name,
                 email,
                 phone,
@@ -483,27 +538,27 @@ impl NewOutboundShipment {
                 state,
                 zipcode,
                 country,
-                address_formatted: String::new(),
                 contents: contents.trim().to_string(),
-                carrier: Default::default(),
-                pickup_date: None,
-                delivered_time: None,
-                reprint_label: false,
-                schedule_pickup: false,
-                resend_email_to_recipient: false,
-                shipped_time: None,
-                shippo_id: Default::default(),
-                status: Default::default(),
-                tracking_link: Default::default(),
-                oxide_tracking_link: Default::default(),
-                tracking_number: Default::default(),
-                tracking_status: Default::default(),
-                cost: Default::default(),
-                label_link: Default::default(),
-                eta: None,
-                messages: Default::default(),
-                notes: Default::default(),
-                geocode_cache: Default::default(),
+                address_formatted,
+                carrier,
+                pickup_date,
+                delivered_time,
+                reprint_label,
+                schedule_pickup,
+                resend_email_to_recipient,
+                shipped_time,
+                shippo_id,
+                status,
+                tracking_link,
+                oxide_tracking_link,
+                tracking_number,
+                tracking_status,
+                cost,
+                label_link,
+                eta,
+                messages,
+                notes,
+                geocode_cache,
             },
             sent,
         )
@@ -514,7 +569,7 @@ impl NewOutboundShipment {
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
-    pub async fn create_or_get_shippo_shipment(&mut self) {
+    pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) {
         // Update the formatted address.
         self.populate_formatted_address();
 
@@ -730,7 +785,7 @@ impl NewOutboundShipment {
                 self.oxide_tracking_link = self.oxide_tracking_link();
 
                 // Save it in Airtable here, in case one of the below steps fails.
-                self.create_or_update_in_airtable().await;
+                self.upsert(db).await;
 
                 // Register a tracking webhook for this shipment.
                 shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap_or_else(|e| {
@@ -997,7 +1052,7 @@ impl SwagSheetColumns {
 }
 
 /// Return a vector of all the shipments from Google sheets.
-pub async fn get_google_sheets_shipments() -> Vec<NewOutboundShipment> {
+pub async fn get_google_sheets_shipments(db: &Database) -> Vec<NewOutboundShipment> {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
 
@@ -1031,7 +1086,7 @@ pub async fn get_google_sheets_shipments() -> Vec<NewOutboundShipment> {
             }
 
             // Parse the applicant out of the row information.
-            let (shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(&columns, &row);
+            let (shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(db, &columns, &row);
 
             if !sent {
                 shipments.push(shipment);
@@ -1047,22 +1102,21 @@ pub fn get_shipments_spreadsheets() -> Vec<String> {
     vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU".to_string(), "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y".to_string()]
 }
 
-// Sync the shipments with airtable.
-pub async fn refresh_airtable_shipments() {
-    let shipments = get_google_sheets_shipments().await;
+// Sync the shipments with airtable and the database.
+pub async fn refresh_airtable_shipments(db: &Database) {
+    let shipments = get_google_sheets_shipments(db).await;
 
     for mut shipment in shipments {
-        shipment.create_or_update_in_airtable().await;
+        shipment.upsert(db).await;
         // Create the shipment in shippo.
-        shipment.create_or_get_shippo_shipment().await;
-        // Update airtable again.
-        shipment.create_or_update_in_airtable().await;
+        shipment.create_or_get_shippo_shipment(db).await;
+        // Update airtable and the database again.
+        shipment.upsert(db).await;
     }
 }
 
 // Sync the inbound shipments.
-pub async fn refresh_inbound_shipments() {
-    let db = Database::new();
+pub async fn refresh_inbound_shipments(db: &Database) {
     let is = InboundShipments::get_from_airtable().await;
 
     for (_, record) in is {
@@ -1095,12 +1149,20 @@ pub async fn refresh_inbound_shipments() {
 
 #[cfg(test)]
 mod tests {
+    use crate::db::Database;
     use crate::shipments::{refresh_airtable_shipments, refresh_inbound_shipments};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_shipments() {
-        refresh_inbound_shipments().await;
-        refresh_airtable_shipments().await;
+        let db = Database::new();
+        let shipments = Shipments::get_from_airtable().await;
+        for shipment in shipments {
+            // Upsert the shipment in the database.
+            let new_shipment: NewOutboundShipment = shipment.into();
+            new_shipment.upsert(&db);
+        }
+        refresh_inbound_shipments(&db).await;
+        //refresh_airtable_shipments(&db).await;
     }
 }
