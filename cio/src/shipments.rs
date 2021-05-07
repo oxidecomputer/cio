@@ -178,9 +178,19 @@ impl InboundShipment {
     }
 }
 
-/// The data type for a internal shipment.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Shipment {
+/// The data type for an outbound shipment.
+#[db {
+    new_struct_name = "OutboundShipment",
+    airtable_base_id = "AIRTABLE_BASE_ID_SHIPMENTS",
+    airtable_table = "AIRTABLE_OUTBOUND_TABLE",
+    match_on = {
+        "tracking_number" = "String",
+        "carrier" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "outbound_shipments"]
+pub struct NewOutboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -228,6 +238,7 @@ pub struct Shipment {
     pub schedule_pickup: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pickup_date: Option<NaiveDate>,
+    #[serde(default)]
     pub created_time: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shipped_time: Option<DateTime<Utc>>,
@@ -245,7 +256,7 @@ pub struct Shipment {
     pub geocode_cache: String,
 }
 
-impl Shipment {
+impl NewOutboundShipment {
     fn populate_formatted_address(&mut self) {
         let mut street_address = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -293,8 +304,8 @@ impl Shipment {
         if country.is_empty() {
             country = "US".to_string();
         }
-        Shipment {
-            created_time: Shipment::parse_timestamp(&get_value(values, "Timestamp")),
+        NewOutboundShipment {
+            created_time: NewOutboundShipment::parse_timestamp(&get_value(values, "Timestamp")),
             name: get_value(values, "Name"),
             email: get_value(values, "Email Address").to_lowercase(),
             phone: get_value(values, "Phone number"),
@@ -462,8 +473,8 @@ impl Shipment {
         }
 
         (
-            Shipment {
-                created_time: Shipment::parse_timestamp(&row[columns.timestamp]),
+            NewOutboundShipment {
+                created_time: NewOutboundShipment::parse_timestamp(&row[columns.timestamp]),
                 name,
                 email,
                 phone,
@@ -756,83 +767,6 @@ impl Shipment {
         };
     }
 
-    /// Push the row to our Airtable workspace.
-    pub async fn push_to_airtable(&self) {
-        // Initialize the Airtable client.
-        let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
-
-        // Create the record.
-        let record = airtable_api::Record {
-            id: "".to_string(),
-            created_time: None,
-            fields: self.clone(),
-        };
-
-        // Send the new record to the Airtable client.
-        // Batch can only handle 10 at a time.
-        let _: Vec<airtable_api::Record<Shipment>> = airtable.create_records(AIRTABLE_OUTBOUND_TABLE, vec![record]).await.unwrap();
-
-        println!("created new row in airtable: {:?}", self);
-    }
-
-    /// Update the record in airtable.
-    pub async fn update_in_airtable(&mut self, existing_record: &mut airtable_api::Record<Shipment>) {
-        // Initialize the Airtable client.
-        let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
-
-        // Run the custom trait to update the new record from the old record.
-        self.update_airtable_record(existing_record.fields.clone()).await;
-
-        // If the Airtable record and the record that was passed in are the same, then we can return early since
-        // we do not need to update it in Airtable.
-        // We do this after we update the record so that those fields match as
-        // well.
-        if self.clone() == existing_record.fields.clone() {
-            println!("[airtable] id={} in given object equals Airtable record, skipping update", self.email);
-            return;
-        }
-
-        existing_record.fields = self.clone();
-
-        airtable.update_records(AIRTABLE_OUTBOUND_TABLE, vec![existing_record.clone()]).await.unwrap();
-        println!("[airtable] id={} updated in Airtable", self.email);
-    }
-
-    /// Update a row in our airtable workspace.
-    pub async fn create_or_update_in_airtable(&mut self) {
-        // Check if we already have the row in Airtable.
-        // Initialize the Airtable client.
-        let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
-
-        let result: Vec<airtable_api::Record<Shipment>> = airtable.list_records(AIRTABLE_OUTBOUND_TABLE, "Grid view", vec![]).await.unwrap();
-
-        let mut records: std::collections::BTreeMap<DateTime<Utc>, airtable_api::Record<Shipment>> = Default::default();
-        for record in result {
-            records.insert(record.fields.created_time, record);
-        }
-
-        for (created_time, record) in records {
-            if self.created_time == created_time && self.email == record.fields.email {
-                self.update_in_airtable(&mut record.clone()).await;
-
-                return;
-            }
-        }
-
-        // The record does not exist. We need to create it.
-        self.push_to_airtable().await;
-    }
-
-    /// Get the row in our airtable workspace.
-    pub async fn get_from_airtable(id: &str) -> Self {
-        // Initialize the Airtable client.
-        let airtable = airtable_api::Airtable::new(airtable_api::api_key_from_env(), AIRTABLE_BASE_ID_SHIPMENTS, "");
-
-        let record: airtable_api::Record<Shipment> = airtable.get_record(AIRTABLE_OUTBOUND_TABLE, id).await.unwrap();
-
-        record.fields
-    }
-
     /// Format address.
     pub fn format_address(&self) -> String {
         let mut street = self.street_1.to_string();
@@ -927,10 +861,10 @@ xoxo,
     }
 }
 
-/// Implement updating the Airtable record for a Shipment.
+/// Implement updating the Airtable record for an OutboundShipment.
 #[async_trait]
-impl UpdateAirtableRecord<Shipment> for Shipment {
-    async fn update_airtable_record(&mut self, record: Shipment) {
+impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
+    async fn update_airtable_record(&mut self, record: OutboundShipment) {
         self.geocode_cache = record.geocode_cache;
 
         if self.status.is_empty() {
@@ -1064,7 +998,7 @@ impl SwagSheetColumns {
 }
 
 /// Return a vector of all the shipments from Google sheets.
-pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
+pub async fn get_google_sheets_shipments() -> Vec<NewOutboundShipment> {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
 
@@ -1072,7 +1006,7 @@ pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
     let sheets_client = Sheets::new(token.clone());
 
     // Iterate over the Google sheets and get the shipments.
-    let mut shipments: Vec<Shipment> = Default::default();
+    let mut shipments: Vec<NewOutboundShipment> = Default::default();
     for sheet_id in get_shipments_spreadsheets() {
         // Get the values in the sheet.
         let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string()).await.unwrap();
@@ -1098,7 +1032,7 @@ pub async fn get_google_sheets_shipments() -> Vec<Shipment> {
             }
 
             // Parse the applicant out of the row information.
-            let (shipment, sent) = Shipment::parse_from_row_with_columns(&columns, &row);
+            let (shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(&columns, &row);
 
             if !sent {
                 shipments.push(shipment);

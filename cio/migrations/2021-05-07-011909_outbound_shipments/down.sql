@@ -1,0 +1,1 @@
+DROP TABLE outbound_shipments
