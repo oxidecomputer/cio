@@ -30,9 +30,9 @@ dependencies = [
 
 [[package]]
 name = "addr2line"
-version = "0.14.1"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a55f82cfe485775d02112886f4169bde0c5894d75e79ead7eafe7e40a25e45f7"
+checksum = "03345e98af8f3d786b6d9f656ccfa6ac316d954e92bc4841f0bba20789d5fb5a"
 dependencies = [
  "gimli",
 ]
@@ -69,9 +69,8 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac23c6627ce3bdf205655969a79f65e77902a63b3f4249887ef2c73ecf005471"
+version = "0.1.29"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#f18646ac1f7bf412586b3e668b743427b9772683"
 dependencies = [
  "chrono",
  "reqwest",
@@ -83,6 +82,19 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.29"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "airtable-api"
+version = "0.1.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f29e4379b90791817a33313ff9dbab088b36075d56f49b2149acd0fa889af2e3"
 dependencies = [
  "chrono",
  "reqwest",
@@ -157,9 +169,9 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "backtrace"
-version = "0.3.58"
+version = "0.3.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88fb5a785d6b44fd9d6700935608639af1b8356de1e55d5f7c2740f4faa15d82"
+checksum = "4717cfcbfaa661a0fd48f8453951837ae7e8f81e481fbb136e3202d72805a744"
 dependencies = [
  "addr2line",
  "cc",
@@ -388,11 +400,12 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#39b2ddf0e4477a6c3478044c83dfe0739d3f2e11"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#f18646ac1f7bf412586b3e668b743427b9772683"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.28",
+ "airtable-api 0.1.29 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "async-trait",
+ "barcoders",
  "base64 0.12.3",
  "checkr 0.0.7",
  "chrono",
@@ -447,7 +460,7 @@ name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.29",
+ "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "barcoders",
  "base64 0.12.3",
@@ -1249,9 +1262,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6503fe142514ca4799d4c26297c4248239fe8838d827db6bd6065c6ed29a6ce"
+checksum = "0e4075386626662786ddb0ec9081e7c7eeb1ba31951f447ca780ef9f5d568189"
 
 [[package]]
 name = "giphy-api"
@@ -1797,7 +1810,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#39b2ddf0e4477a6c3478044c83dfe0739d3f2e11"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#f18646ac1f7bf412586b3e668b743427b9772683"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -2022,9 +2035,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9a7ab5d64814df0fe4a4b5ead45ed6c5f181ee3ff04ba344313a6c80446c5d4"
+checksum = "1a5b3dd1c072ee7963717671d1ca129f1048fda25edea6b752bfc71ac8854170"
 
 [[package]]
 name = "okta"
@@ -2418,9 +2431,9 @@ dependencies = [
 
 [[package]]
 name = "quick-error"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
+checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quick-xml"
@@ -3973,9 +3986,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.2.1"
+version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ccd964113622c8e9322cfac19eb1004a07e636c545f325da085d5cdde6f1f8b"
+checksum = "a507c383b2d33b5fc35d1861e77e6b383d158b2da5e14fe51b83dfedf6fd578c"
 dependencies = [
  "form_urlencoded",
  "idna",
