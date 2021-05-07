@@ -118,9 +118,10 @@ impl NewSwagInventoryItem {
 
             // Generate the barcode label.
             let label_bytes = self.generate_pdf_barcode_label();
+            file_name = format!("{} - Barcode Label.pdf", self.name);
             // Create or update the files in the google_drive.
             let label_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "application/pdf", &label_bytes).await.unwrap();
-            //self.barcode_label = format!("https://drive.google.com/uc?export=download&id={}", svg_file.id);
+            self.barcode_pdf_label = format!("https://drive.google.com/uc?export=download&id={}", label_file.id);
         }
     }
 
