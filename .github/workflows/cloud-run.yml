@@ -45,7 +45,7 @@ jobs:
         project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
 
     # Build and push image to Google Container Registry
-    - name: Build
+    - name: Build image
       run: |-
         cd webhooky && gcloud builds submit \
           --quiet \
