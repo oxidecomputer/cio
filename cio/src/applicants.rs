@@ -2408,7 +2408,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             continue;
         }
 
-        if applicant.docusign_envelope_id.is_empty() && (applicant.status.to_lowercase() == "giving offer"  {
+        if applicant.docusign_envelope_id.is_empty() && applicant.status.to_lowercase() == "giving offer" {
             println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
@@ -2525,7 +2525,7 @@ impl Applicant {
         // We will match on their recovery email.
         let result = users::dsl::users.filter(users::dsl::recovery_email.eq(self.email.to_string())).first::<User>(&db.conn());
         if result.is_ok() {
-            let employee = result.unwrap();
+            let mut employee = result.unwrap();
             // We have an employee, so we can update their data from the data in Docusign.
 
             // In order to not "over excessively poll the API here, we need to sleep for 15

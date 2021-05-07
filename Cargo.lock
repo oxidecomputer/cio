@@ -408,7 +408,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docusign 0.1.10",
  "dropshot",
  "futures-util",
  "google-drive 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -465,7 +465,7 @@ dependencies = [
  "csv",
  "diesel",
  "diffy",
- "docusign 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docusign 0.1.10",
  "dropshot",
  "futures-util",
  "google-drive 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -886,6 +886,8 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 [[package]]
 name = "docusign"
 version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb706bf24a6da687ce0afc6e2fff700e7e855645ae6df91b0fbf3323c02c6244"
 dependencies = [
  "bytes",
  "chrono",
@@ -899,9 +901,7 @@ dependencies = [
 
 [[package]]
 name = "docusign"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb706bf24a6da687ce0afc6e2fff700e7e855645ae6df91b0fbf3323c02c6244"
+version = "0.1.11"
 dependencies = [
  "bytes",
  "chrono",
@@ -4382,7 +4382,7 @@ dependencies = [
  "chrono-humanize",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
- "docusign 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docusign 0.1.10",
  "dropshot",
  "futures-util",
  "google-drive 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
