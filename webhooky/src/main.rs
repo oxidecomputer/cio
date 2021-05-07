@@ -1033,10 +1033,10 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
         .filter(applicants::dsl::docusign_envelope_id.eq(event.envelope_id.to_string()))
         .first::<Applicant>(&db.conn());
     match result {
-        Ok(applicant) => {
+        Ok(mut applicant) => {
             // Create our docusign client.
             let ds = docusign::DocuSign::new_from_env().await;
-            applicant.update_applicant_from_docusign_envelope(db, ds.clone(), event).await;
+            applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
         }
         Err(e) => {
             sentry::capture_message(&format!("docusign could not find applicant with envelope id {}: {}", event.envelope_id, e), sentry::Level::Fatal);
