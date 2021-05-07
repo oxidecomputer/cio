@@ -38,7 +38,7 @@ use cio_api::mailing_list::{MailchimpWebhook, MailingListSubscriber};
 use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rfds::is_image;
 use cio_api::schema::applicants;
-use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, Shipment};
+use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, NewOutboundShipment, OutboundShipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::templates::generate_terraform_files_for_okta;
@@ -651,9 +651,9 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
         }
 
         // Parse the shipment out of the row information.
-        let mut shipment = Shipment::parse_from_row(&event.event.named_values);
+        let mut shipment = NewOutboundShipment::parse_from_row(&event.event.named_values);
         // Create or update the shipment in airtable.
-        shipment.create_or_update_in_airtable().await;
+        shipment.upsert(db).await;
 
         // Handle if the event is for a swag spreadsheet.
         sentry::end_session();
@@ -753,10 +753,12 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext<Cont
     method = POST,
     path = "/airtable/shipments/outbound/create",
 }]
-async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("{:?}", event);
+
+    let api_context = rqctx.context();
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -765,12 +767,20 @@ async fn listen_airtable_shipments_outbound_create_webhooks(_rqctx: Arc<RequestC
     }
 
     // Get the row from airtable.
-    let mut shipment = Shipment::get_from_airtable(&event.record_id).await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
 
+    if shipment.email.is_empty() {
+        sentry::capture_message("Got an empty email for row", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Update the row in our database.
+    let mut new_shipment = shipment.update(&api_context.db).await;
     // Create the shipment in shippo.
-    shipment.create_or_get_shippo_shipment().await;
+    new_shipment.create_or_get_shippo_shipment(&api_context.db).await;
     // Update airtable again.
-    shipment.create_or_update_in_airtable().await;
+    new_shipment.update(&api_context.db).await;
 
     println!("shipment {} created successfully", shipment.email);
     sentry::end_session();
@@ -792,7 +802,7 @@ pub struct AirtableRowEvent {
     method = POST,
     path = "/airtable/shipments/outbound/edit",
 }]
-async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -803,6 +813,8 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
+    let api_context = rqctx.context();
+
     // Use a variable to track whether or not we need to update Airtable at the end.
     // Sometimes we will do nothing and we shouldn't waste the time to update Airtable,
     // or worse if we maybe updated when another function was updating.
@@ -810,7 +822,7 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
     let mut update_airtable = false;
 
     // Get the row from airtable.
-    let mut shipment = Shipment::get_from_airtable(&event.record_id).await;
+    let mut shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
     if shipment.reprint_label {
         // Reprint the label.
         shipment.print_label().await;
@@ -838,7 +850,7 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(_rqctx: Arc<RequestCon
 
     if update_airtable {
         // Update airtable again.
-        shipment.create_or_update_in_airtable().await;
+        shipment.update(&api_context.db).await;
     }
 
     sentry::end_session();
@@ -964,9 +976,18 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
         if tracking_status.status == *"DELIVERED" {
             shipment.delivered_time = tracking_status.status_date;
         }
+
+        shipment.update(&api_context.db).await;
     }
 
-    // TODO: update the outbound shipment in airtable.
+    // Update the outbound shipment if it exists.
+    if let Some(mut shipment) = OutboundShipment::get_from_db(&api_context.db, ts.tracking_number.to_string(), ts.carrier.to_string()) {
+        // Update the shipment in shippo.
+        // TODO: we likely don't need the extra request here, but it makes the code more DRY.
+        // Clean this up eventually.
+        shipment.create_or_get_shippo_shipment(&api_context.db).await;
+        shipment.update(&api_context.db).await;
+    }
 
     println!("shipment {} tracking status updated successfully", ts.tracking_number);
     sentry::end_session();

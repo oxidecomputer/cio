@@ -257,18 +257,6 @@ pub struct NewOutboundShipment {
 }
 
 impl NewOutboundShipment {
-    fn populate_formatted_address(&mut self) {
-        let mut street_address = self.street_1.to_string();
-        if !self.street_2.is_empty() {
-            street_address = format!("{}\n{}", self.street_1, self.street_2,);
-        }
-        self.address_formatted = format!("{}\n{}, {} {} {}", street_address, self.city, self.state, self.zipcode, self.country)
-            .trim()
-            .trim_matches(',')
-            .trim()
-            .to_string();
-    }
-
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
         // Parse the time.
         let time_str = timestamp.to_owned() + " -08:00";
@@ -521,9 +509,7 @@ impl NewOutboundShipment {
             geocode_cache = shipment.geocode_cache.to_string();
             messages = shipment.messages.to_string();
             status = shipment.status.to_string();
-            tracking_number = shipment.tracking_number.to_string();
-        } else {
-            panic!("could not find shipment {} {}", name, email);
+            tracking_number = shipment.tracking_number;
         }
 
         (
@@ -563,9 +549,177 @@ impl NewOutboundShipment {
             sent,
         )
     }
+}
+
+/// Implement updating the Airtable record for an OutboundShipment.
+#[async_trait]
+impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
+    async fn update_airtable_record(&mut self, record: OutboundShipment) {
+        self.geocode_cache = record.geocode_cache;
+
+        if self.status.is_empty() {
+            self.status = record.status;
+        }
+        if self.carrier.is_empty() {
+            self.carrier = record.carrier;
+        }
+        if self.tracking_number.is_empty() {
+            self.tracking_number = record.tracking_number;
+        }
+        if self.tracking_link.is_empty() {
+            self.tracking_link = record.tracking_link;
+        }
+        if self.tracking_status.is_empty() {
+            self.tracking_status = record.tracking_status;
+        }
+        if self.label_link.is_empty() {
+            self.label_link = record.label_link;
+        }
+        if self.pickup_date.is_none() {
+            self.pickup_date = record.pickup_date;
+        }
+        if self.shipped_time.is_none() {
+            self.shipped_time = record.shipped_time;
+        }
+        if self.delivered_time.is_none() {
+            self.delivered_time = record.delivered_time;
+        }
+        if self.shippo_id.is_empty() {
+            self.shippo_id = record.shippo_id;
+        }
+        if self.eta.is_none() {
+            self.eta = record.eta;
+        }
+        if self.cost == 0.0 {
+            self.cost = record.cost;
+        }
+        if self.notes.is_empty() {
+            self.notes = record.notes;
+        }
+    }
+}
+
+impl OutboundShipment {
+    fn populate_formatted_address(&mut self) {
+        let mut street_address = self.street_1.to_string();
+        if !self.street_2.is_empty() {
+            street_address = format!("{}\n{}", self.street_1, self.street_2,);
+        }
+        self.address_formatted = format!("{}\n{}, {} {} {}", street_address, self.city, self.state, self.zipcode, self.country)
+            .trim()
+            .trim_matches(',')
+            .trim()
+            .to_string();
+    }
 
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
+    }
+
+    /// Send the label to our printer.
+    pub async fn print_label(&self) {
+        let printer_url = env::var("PRINTER_URL").unwrap();
+        let client = reqwest::Client::new();
+        let resp = client.post(&printer_url).body(json!(self.label_link).to_string()).send().await.unwrap();
+        match resp.status() {
+            StatusCode::ACCEPTED => (),
+            s => {
+                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
+            }
+        };
+    }
+
+    /// Format address.
+    pub fn format_address(&self) -> String {
+        let mut street = self.street_1.to_string();
+        if !self.street_2.is_empty() {
+            street = format!("{}\n{}", self.street_1, self.street_2);
+        }
+
+        format!("{}\n{}, {} {} {}", street, self.city, self.state, self.zipcode, self.country)
+    }
+
+    /// Send an email to the recipient with their tracking code and information.
+    pub async fn send_email_to_recipient(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                "Your package from the Oxide Computer Company is on the way!".to_string(),
+                format!(
+                    "Below is the information for your package:
+
+**Contents:**
+{}
+
+**Address to:**
+{}
+{}
+
+**Tracking link:**
+{}
+
+If you have any questions or concerns, please respond to this email!
+Have a splendid day!
+
+xoxo,
+  The Oxide Shipping Bot",
+                    self.contents,
+                    self.name,
+                    self.format_address(),
+                    self.oxide_tracking_link
+                ),
+                vec![self.email.to_string()],
+                vec![],
+                vec![],
+                format!("packages@{}", DOMAIN),
+            )
+            .await;
+    }
+
+    /// Send an email internally that we need to package the shipment.
+    pub async fn send_email_internally(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("Shipment to {} is ready to be packaged", self.name),
+                format!(
+                    "Below is the information the package:
+
+**Contents:**
+{}
+
+**Address to:**
+{}
+{}
+
+**Tracking link:**
+{}
+
+The label should already be printed in the big conference room. Please take the
+label and affix it to the package with the specified contents. It can then be dropped off
+for {}.
+
+As always, the Airtable with all the shipments lives at:
+https://airtable-shipments.corp.oxide.computer.
+
+xoxo,
+  The Oxide Shipping Bot",
+                    self.contents,
+                    self.name,
+                    self.format_address(),
+                    self.oxide_tracking_link,
+                    self.carrier,
+                ),
+                vec![format!("packages@{}", DOMAIN)],
+                vec![],
+                vec![],
+                format!("packages@{}", DOMAIN),
+            )
+            .await;
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
@@ -785,7 +939,7 @@ impl NewOutboundShipment {
                 self.oxide_tracking_link = self.oxide_tracking_link();
 
                 // Save it in Airtable here, in case one of the below steps fails.
-                self.upsert(db).await;
+                self.update(db).await;
 
                 // Register a tracking webhook for this shipment.
                 shippo_client.register_tracking_webhook(&self.carrier, &self.tracking_number).await.unwrap_or_else(|e| {
@@ -806,160 +960,6 @@ impl NewOutboundShipment {
 
         // TODO: do something if we don't find a rate.
         // However we should always find a rate.
-    }
-
-    /// Send the label to our printer.
-    pub async fn print_label(&self) {
-        let printer_url = env::var("PRINTER_URL").unwrap();
-        let client = reqwest::Client::new();
-        let resp = client.post(&printer_url).body(json!(self.label_link).to_string()).send().await.unwrap();
-        match resp.status() {
-            StatusCode::ACCEPTED => (),
-            s => {
-                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
-            }
-        };
-    }
-
-    /// Format address.
-    pub fn format_address(&self) -> String {
-        let mut street = self.street_1.to_string();
-        if !self.street_2.is_empty() {
-            street = format!("{}\n{}", self.street_1, self.street_2);
-        }
-
-        format!("{}\n{}, {} {} {}", street, self.city, self.state, self.zipcode, self.country)
-    }
-
-    /// Send an email to the recipient with their tracking code and information.
-    pub async fn send_email_to_recipient(&self) {
-        // Initialize the SendGrid client.
-        let sendgrid_client = SendGrid::new_from_env();
-        // Send the message.
-        sendgrid_client
-            .send_mail(
-                "Your package from the Oxide Computer Company is on the way!".to_string(),
-                format!(
-                    "Below is the information for your package:
-
-**Contents:**
-{}
-
-**Address to:**
-{}
-{}
-
-**Tracking link:**
-{}
-
-If you have any questions or concerns, please respond to this email!
-Have a splendid day!
-
-xoxo,
-  The Oxide Shipping Bot",
-                    self.contents,
-                    self.name,
-                    self.format_address(),
-                    self.oxide_tracking_link
-                ),
-                vec![self.email.to_string()],
-                vec![],
-                vec![],
-                format!("packages@{}", DOMAIN),
-            )
-            .await;
-    }
-
-    /// Send an email internally that we need to package the shipment.
-    pub async fn send_email_internally(&self) {
-        // Initialize the SendGrid client.
-        let sendgrid_client = SendGrid::new_from_env();
-        // Send the message.
-        sendgrid_client
-            .send_mail(
-                format!("Shipment to {} is ready to be packaged", self.name),
-                format!(
-                    "Below is the information the package:
-
-**Contents:**
-{}
-
-**Address to:**
-{}
-{}
-
-**Tracking link:**
-{}
-
-The label should already be printed in the big conference room. Please take the
-label and affix it to the package with the specified contents. It can then be dropped off
-for {}.
-
-As always, the Airtable with all the shipments lives at:
-https://airtable-shipments.corp.oxide.computer.
-
-xoxo,
-  The Oxide Shipping Bot",
-                    self.contents,
-                    self.name,
-                    self.format_address(),
-                    self.oxide_tracking_link,
-                    self.carrier,
-                ),
-                vec![format!("packages@{}", DOMAIN)],
-                vec![],
-                vec![],
-                format!("packages@{}", DOMAIN),
-            )
-            .await;
-    }
-}
-
-/// Implement updating the Airtable record for an OutboundShipment.
-#[async_trait]
-impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
-    async fn update_airtable_record(&mut self, record: OutboundShipment) {
-        self.geocode_cache = record.geocode_cache;
-
-        if self.status.is_empty() {
-            self.status = record.status;
-        }
-        if self.carrier.is_empty() {
-            self.carrier = record.carrier;
-        }
-        if self.tracking_number.is_empty() {
-            self.tracking_number = record.tracking_number;
-        }
-        if self.tracking_link.is_empty() {
-            self.tracking_link = record.tracking_link;
-        }
-        if self.tracking_status.is_empty() {
-            self.tracking_status = record.tracking_status;
-        }
-        if self.label_link.is_empty() {
-            self.label_link = record.label_link;
-        }
-        if self.pickup_date.is_none() {
-            self.pickup_date = record.pickup_date;
-        }
-        if self.shipped_time.is_none() {
-            self.shipped_time = record.shipped_time;
-        }
-        if self.delivered_time.is_none() {
-            self.delivered_time = record.delivered_time;
-        }
-        if self.shippo_id.is_empty() {
-            self.shippo_id = record.shippo_id;
-        }
-        if self.eta.is_none() {
-            self.eta = record.eta;
-        }
-        if self.cost == 0.0 {
-            self.cost = record.cost;
-        }
-        if self.notes.is_empty() {
-            self.notes = record.notes;
-        }
     }
 }
 
@@ -1051,8 +1051,8 @@ impl SwagSheetColumns {
     }
 }
 
-/// Return a vector of all the shipments from Google sheets.
-pub async fn get_google_sheets_shipments(db: &Database) -> Vec<NewOutboundShipment> {
+// Sync the outbound shipments.
+pub async fn refresh_outbound_shipments(db: &Database) {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
 
@@ -1060,7 +1060,6 @@ pub async fn get_google_sheets_shipments(db: &Database) -> Vec<NewOutboundShipme
     let sheets_client = Sheets::new(token.clone());
 
     // Iterate over the Google sheets and get the shipments.
-    let mut shipments: Vec<NewOutboundShipment> = Default::default();
     for sheet_id in get_shipments_spreadsheets() {
         // Get the values in the sheet.
         let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string()).await.unwrap();
@@ -1085,34 +1084,23 @@ pub async fn get_google_sheets_shipments(db: &Database) -> Vec<NewOutboundShipme
                 break;
             }
 
-            // Parse the applicant out of the row information.
+            // Parse the shipment out of the row information.
             let (shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(db, &columns, &row);
 
             if !sent {
-                shipments.push(shipment);
+                let mut new_shipment = shipment.upsert(db).await;
+                // Create the shipment in shippo.
+                new_shipment.create_or_get_shippo_shipment(db).await;
+                // Update airtable and the database again.
+                new_shipment.update(db).await;
             }
         }
     }
-
-    shipments
 }
 
 // Get the sheadsheets that contain shipments.
 pub fn get_shipments_spreadsheets() -> Vec<String> {
     vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU".to_string(), "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y".to_string()]
-}
-
-// Sync the shipments with airtable and the database.
-pub async fn refresh_airtable_shipments(db: &Database) {
-    let shipments = get_google_sheets_shipments(db).await;
-
-    for mut shipment in shipments {
-        shipment.upsert(db).await;
-        // Create the shipment in shippo.
-        shipment.create_or_get_shippo_shipment(db).await;
-        // Update airtable and the database again.
-        shipment.upsert(db).await;
-    }
 }
 
 // Sync the inbound shipments.
@@ -1150,19 +1138,14 @@ pub async fn refresh_inbound_shipments(db: &Database) {
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
-    use crate::shipments::{refresh_airtable_shipments, refresh_inbound_shipments};
+    use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_shipments() {
         let db = Database::new();
-        let shipments = Shipments::get_from_airtable().await;
-        for shipment in shipments {
-            // Upsert the shipment in the database.
-            let new_shipment: NewOutboundShipment = shipment.into();
-            new_shipment.upsert(&db);
-        }
+
+        refresh_outbound_shipments(&db).await;
         refresh_inbound_shipments(&db).await;
-        //refresh_airtable_shipments(&db).await;
     }
 }
