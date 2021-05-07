@@ -433,6 +433,31 @@ impl GoogleDrive {
 
         Ok(())
     }
+
+    /// Upload an object to a cloud storage bucket.
+    pub async fn upload_to_cloud_storage(&self, bucket: &str, name: &str, mime_type: &str, body: &[u8], is_public: bool) -> Result<ObjectResource, APIError> {
+        let mut q = vec![("name", name.to_string()), ("uploadType", "media".to_string())];
+        if is_public {
+            q.push(("predefinedAcl", "publicRead".to_string()));
+        }
+
+        // Build the request.
+        let request = self.request(Method::POST, format!("https://storage.googleapis.com/upload/storage/v1/b/{}/o", bucket), (), Some(q), body, mime_type);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
 }
 
 /// Error type returned by our library.
@@ -1200,4 +1225,121 @@ pub struct User {
     /// The user's ID as visible in Permission resources.
     #[serde(rename = "permissionId")]
     pub permission_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectResource {
+    // Value: "storage#object"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub self_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub bucket: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub generation: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub metageneration: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub time_created: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub updated: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub time_deleted: String,
+    #[serde(default)]
+    pub temporary_hold: bool,
+    #[serde(default)]
+    pub event_based_hold: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub retention_expiration_time: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub storage_class: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub time_storage_class_updated: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub size: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub md5_hash: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub media_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content_encoding: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content_disposition: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content_language: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cache_control: String,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub metadata: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub acl: Vec<ObjectAclResource>,
+    #[serde(default)]
+    pub owner: ObjectOwner,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub crc32c: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub component_count: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+    #[serde(default)]
+    pub customer_encryption: ObjectCustomerEncryption,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kms_key_name: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectOwner {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub entity: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub entity_id: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectCustomerEncryption {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub encryption_algorithm: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub key_sha256: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectAclResource {
+    /// Value: "storage#objectAccessControl"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub entity: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub role: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub entity_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(default)]
+    pub project_team: ObjectAclProjectTeam,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub etag: String,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectAclProjectTeam {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub project_number: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub team: String,
 }

@@ -40,6 +40,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         .result;
 
     // Our zone identifier should be the first record's ID.
+    if zones.is_empty() {
+        println!("we found no zones!");
+        return Ok(());
+    }
     let zone_identifier = &zones[0].id;
 
     // Check if we already have a TXT record and we need to update it.

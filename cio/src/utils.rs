@@ -77,6 +77,7 @@ pub async fn get_gsuite_token(subject: &str) -> AccessToken {
             "https://www.googleapis.com/auth/apps.groups.settings",
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/devstorage.full_control",
         ])
         .await
         .expect("failed to get token");
