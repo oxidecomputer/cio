@@ -331,14 +331,14 @@ impl GoogleDrive {
     /// Create or update a file in a drive.
     /// If the file already exists, it will update it.
     /// If the file does not exist, it will create it.
-    pub async fn create_or_upload_file(&self, drive_id: &str, parent_id: &str, name: &str, mime_type: &str, contents: &[u8]) -> Result<(), APIError> {
+    pub async fn create_or_update_file(&self, drive_id: &str, parent_id: &str, name: &str, mime_type: &str, contents: &[u8]) -> Result<File, APIError> {
         // Create the file.
         let mut f: File = Default::default();
         let mut method = Method::POST;
         let mut uri = "https://www.googleapis.com/upload/drive/v3/files".to_string();
 
         // Check if the file exists.
-        let files = self.get_file_by_name(drive_id, name).await.unwrap();
+        let files = self.get_file_by_name(drive_id, name).await.unwrap_or_default();
         if files.is_empty() {
             // Set the name,
             f.name = name.to_string();
@@ -403,7 +403,7 @@ impl GoogleDrive {
             }
         };
 
-        Ok(())
+        Ok(resp.json().await.unwrap())
     }
 
     /// Delete a file by its name.

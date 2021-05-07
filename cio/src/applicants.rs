@@ -2519,7 +2519,7 @@ impl Applicant {
             }
 
             // Create or update the file in the google_drive.
-            drive_client.create_or_upload_file(&drive_id, "", &filename, "application/pdf", &bytes).await.unwrap();
+            drive_client.create_or_update_file(&drive_id, "", &filename, "application/pdf", &bytes).await.unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);
         }
 

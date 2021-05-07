@@ -32,7 +32,8 @@ docusign = "^0.1.0"
 #dropshot = "^0.3.0"
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
-google-drive = "^0.1.0"
+#google-drive = "^0.1.0"
+google-drive = { path = "../drive" }
 gsuite-api = "^0.1.18"
 #gsuite-api = { path = "../gsuite" }
 gusto-api = "^0.1.1"

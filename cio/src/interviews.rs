@@ -401,13 +401,8 @@ The Oxide Team
         let buffer = combine_pdfs(packet_args.to_vec());
 
         // Create or update the file in the google_drive.
-        drive_client.create_or_upload_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
-
-        // Get the file in drive.
-        let files = drive_client.get_file_by_name(&drive_id, &filename).await.unwrap();
-        if !files.is_empty() {
-            applicant.interview_packet = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
-        }
+        let drive_file = drive_client.create_or_update_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
+        applicant.interview_packet = format!("https://drive.google.com/open?id={}", drive_file.id);
         applicant.update(db).await;
     }
 }

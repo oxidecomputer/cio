@@ -751,20 +751,15 @@ impl RFD {
         let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
 
         // Create or update the file in the google_drive.
-        drive_client
-            .create_or_upload_file(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
+        let drive_file = drive_client
+            .create_or_update_file(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
             .await
             .unwrap();
+        self.pdf_link_google_drive = format!("https://drive.google.com/open?id={}", drive_file.id);
 
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {
             fs::remove_file(path).unwrap();
-        }
-
-        // Get the file in drive.
-        let files = drive_client.get_file_by_name(&drive_id, &file_name).await.unwrap();
-        if !files.is_empty() {
-            self.pdf_link_google_drive = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
         }
     }
 

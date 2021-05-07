@@ -113,12 +113,8 @@ pub async fn refresh_swag_inventory_items() {
             let mut file_name = format!("{}.png", inventory_item.name);
 
             // Create or update the files in the google_drive.
-            drive_client.create_or_upload_file(&drive_id, &parent_id, &file_name, "image/png", &png_bytes).await.unwrap();
-            // Get the file in drive.
-            let files = drive_client.get_file_by_name(&drive_id, &file_name).await.unwrap();
-            if !files.is_empty() {
-                inventory_item.barcode_png = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
-            }
+            let png_file = drive_client.create_or_update_file(&drive_id, &parent_id, &file_name, "image/png", &png_bytes).await.unwrap();
+            inventory_item.barcode_png = format!("https://drive.google.com/open?id={}", png_file.id);
 
             // Now do the SVG.
             let svg = SVG::new(200); // You must specify the height in pixels.
@@ -128,12 +124,8 @@ pub async fn refresh_swag_inventory_items() {
             file_name = format!("{}.svg", inventory_item.name);
 
             // Create or update the files in the google_drive.
-            drive_client.create_or_upload_file(&drive_id, &parent_id, &file_name, "image/svg+xml", &svg_bytes).await.unwrap();
-            // Get the file in drive.
-            let files = drive_client.get_file_by_name(&drive_id, &file_name).await.unwrap();
-            if !files.is_empty() {
-                inventory_item.barcode_svg = format!("https://drive.google.com/open?id={}", files.get(0).unwrap().id);
-            }
+            let svg_file = drive_client.create_or_update_file(&drive_id, &parent_id, &file_name, "image/svg+xml", &svg_bytes).await.unwrap();
+            inventory_item.barcode_svg = format!("https://drive.google.com/open?id={}", svg_file.id);
         }
 
         let mut db_inventory_item = inventory_item.upsert_in_db(&db);
