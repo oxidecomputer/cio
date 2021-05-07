@@ -937,10 +937,6 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
     if ts.address_from.unwrap_or_default().street1.is_empty() && ts.tracking_history.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
-        sentry::capture_message(
-            &format!("too early to get any information about the shipment {} {}", ts.carrier, ts.tracking_number),
-            sentry::Level::Fatal,
-        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
