@@ -785,3 +785,133 @@ pub mod attachment_format_as_string {
         Ok(url)
     }
 }
+
+/// An airtable barcode.
+#[derive(Debug, Default, Clone, Serialize, JsonSchema, Deserialize)]
+pub struct Barcode {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
+    pub type_: String,
+}
+
+struct BarcodeVisitor;
+
+impl<'de> Visitor<'de> for BarcodeVisitor {
+    type Value = Barcode;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("struct Barcode")
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> Result<Barcode, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let text = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+        let type_ = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+        Ok(Barcode { text, type_ })
+    }
+
+    fn visit_map<V>(self, mut map: V) -> Result<Barcode, V::Error>
+    where
+        V: MapAccess<'de>,
+    {
+        let mut text = None;
+        let mut type_ = None;
+        while let Some(key) = map.next_key()? {
+            match key {
+                BarcodeField::Text => {
+                    if text.is_some() {
+                        return Err(serde::de::Error::duplicate_field("text"));
+                    }
+                    text = Some(map.next_value()?);
+                }
+                BarcodeField::Type => {
+                    if type_.is_some() {
+                        return Err(serde::de::Error::duplicate_field("type"));
+                    }
+                    type_ = Some(map.next_value()?);
+                }
+            }
+        }
+        let text = text.ok_or_else(|| serde::de::Error::missing_field("text"))?;
+        let type_ = type_.ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        Ok(Barcode { text, type_ })
+    }
+}
+
+enum BarcodeField {
+    Text,
+    Type,
+}
+
+const BARCODEFIELDS: &[&str] = &["text", "type"];
+
+impl<'de> Deserialize<'de> for BarcodeField {
+    fn deserialize<D>(deserializer: D) -> Result<BarcodeField, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct BarcodeFieldVisitor;
+
+        impl<'de> Visitor<'de> for BarcodeFieldVisitor {
+            type Value = BarcodeField;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("`text` or `type`")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<BarcodeField, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "text" => Ok(BarcodeField::Text),
+                    "type" => Ok(BarcodeField::Type),
+                    _ => Err(serde::de::Error::unknown_field(value, BARCODEFIELDS)),
+                }
+            }
+        }
+
+        deserializer.deserialize_identifier(BarcodeFieldVisitor)
+    }
+}
+
+pub mod barcode_format_as_string {
+    use super::{BarcodeVisitor, BARCODEFIELDS};
+    use serde::ser::SerializeStruct;
+    use serde::{self, Deserializer, Serializer};
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(text: &str, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Barcode", 1)?;
+        state.serialize_field("text", &text)?;
+        state.serialize_field("text", "upce")?;
+        state.end()
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let barcode = deserializer.deserialize_struct("Barcode", BARCODEFIELDS, BarcodeVisitor).unwrap();
+        Ok(barcode.text)
+    }
+}

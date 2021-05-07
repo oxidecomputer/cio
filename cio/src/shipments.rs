@@ -1105,9 +1105,9 @@ pub fn get_shipments_spreadsheets() -> Vec<String> {
 
 // Sync the inbound shipments.
 pub async fn refresh_inbound_shipments(db: &Database) {
-    let is = InboundShipments::get_from_airtable().await;
+    let is: Vec<airtable_api::Record<InboundShipments>> = InboundShipments::airtable().list_records(&InboundShipments::airtable_table(), "Grid view", vec![]).await.unwrap();
 
-    for (_, record) in is {
+    for record in is {
         if record.fields.carrier.is_empty() || record.fields.tracking_number.is_empty() {
             // Ignore it, it's a blank record.
             continue;

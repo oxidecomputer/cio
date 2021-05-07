@@ -70,6 +70,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac23c6627ce3bdf205655969a79f65e77902a63b3f4249887ef2c73ecf005471"
 dependencies = [
  "chrono",
  "reqwest",
@@ -80,9 +82,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac23c6627ce3bdf205655969a79f65e77902a63b3f4249887ef2c73ecf005471"
+version = "0.1.29"
 dependencies = [
  "chrono",
  "reqwest",
@@ -382,9 +382,10 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#39b2ddf0e4477a6c3478044c83dfe0739d3f2e11"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.28",
  "async-trait",
  "base64 0.12.3",
  "checkr 0.0.7",
@@ -407,7 +408,7 @@ dependencies = [
  "html2text",
  "hubcaps",
  "lopdf",
- "macros 0.1.0",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -438,10 +439,9 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#39b2ddf0e4477a6c3478044c83dfe0739d3f2e11"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.29",
  "async-trait",
  "base64 0.12.3",
  "checkr 0.0.7",
@@ -464,7 +464,7 @@ dependencies = [
  "html2text",
  "hubcaps",
  "lopdf",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "macros 0.1.0",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -1790,6 +1790,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#39b2ddf0e4477a6c3478044c83dfe0739d3f2e11"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -1802,7 +1803,6 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#39b2ddf0e4477a6c3478044c83dfe0739d3f2e11"
 dependencies = [
  "Inflector",
  "proc-macro2",
