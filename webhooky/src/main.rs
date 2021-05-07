@@ -651,7 +651,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
         }
 
         // Parse the shipment out of the row information.
-        let mut shipment = NewOutboundShipment::parse_from_row(&event.event.named_values);
+        let shipment = NewOutboundShipment::parse_from_row(&event.event.named_values);
         // Create or update the shipment in airtable.
         shipment.upsert(db).await;
 
