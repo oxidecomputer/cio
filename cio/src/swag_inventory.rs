@@ -157,8 +157,10 @@ impl NewSwagInventoryItem {
             operations: vec![
                 Operation::new("BT", vec![]),
                 Operation::new("Tf", vec!["F1".into(), font_size.into()]),
-                Operation::new("Td", vec![pdf_margin.into(), pdf_margin.into()]),
-                Operation::new("Tj", vec![Object::string_literal(self.name.to_string())]),
+                Operation::new("Td", vec![pdf_margin.into(), (pdf_margin * 1.0).into()]),
+                Operation::new("Tj", vec![Object::string_literal(self.barcode.to_string())]),
+                Operation::new("'", vec![Object::string_literal(self.item.to_string())]),
+                Operation::new("'", vec![Object::string_literal(format!("Size: {}", self.size))]),
                 Operation::new("ET", vec![]),
             ],
         };
