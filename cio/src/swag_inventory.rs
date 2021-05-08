@@ -379,6 +379,6 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_refresh_barcode_scans() {
         let db = Database::new();
-        BarcodeScans::get_from_db(&db).update_in_airtable().await;
+        BarcodeScans::get_from_db(&db).update_airtable().await;
     }
 }
