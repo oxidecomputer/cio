@@ -1,9 +1,9 @@
 use std::env;
+use std::process::Command;
 
 use cio_api::swag_inventory::BarcodeScan;
 use hidapi::HidApi;
 use sentry::IntoDsn;
-use std::process::Command;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -16,7 +16,6 @@ async fn main() -> Result<(), String> {
         let o = std::str::from_utf8(&output.stdout).unwrap();
         o[0..8].to_string()
     };
-
     println!("git hash: {}", git_hash);
 
     // Initialize sentry.

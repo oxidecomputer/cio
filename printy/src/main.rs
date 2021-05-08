@@ -1,5 +1,3 @@
-#![allow(clippy::field_reassign_with_default)]
-
 use std::env;
 use std::fs::File;
 use std::io::Write;
@@ -13,12 +11,23 @@ use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    // Try to get the current git hash.
+    let git_hash = if let Ok(gh) = env::var("GIT_HASH") {
+        gh
+    } else {
+        // Try to shell out.
+        let output = Command::new("git").arg("rev-parse").arg("HEAD").output().expect("failed to execute process");
+        let o = std::str::from_utf8(&output.stdout).unwrap();
+        o[0..8].to_string()
+    };
+    println!("git hash: {}", git_hash);
+
     // Initialize sentry.
     let sentry_dsn = env::var("PRINTY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
         dsn: sentry_dsn.into_dsn().unwrap(),
 
-        release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+        release: Some(git_hash.into()),
         environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
         ..Default::default()
     });
