@@ -71,7 +71,7 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 
 impl NewSwagInventoryItem {
     pub fn generate_barcode(&mut self) {
-        self.barcode = self
+        let mut barcode = self
             .name
             .to_uppercase()
             .replace("FIRST EDITION", "1ED")
@@ -87,6 +87,14 @@ impl NewSwagInventoryItem {
             .replace("'", "")
             .trim()
             .to_string();
+
+        // Add zeros to start of barcode til it is 39 chars long.
+        // This makes sure the barcodes are all of uniform length.
+        while barcode.len() < 39 {
+            barcode = format!("0{}", barcode);
+        }
+
+        self.barcode = barcode.to_string();
     }
 
     pub async fn generate_barcode_images(&mut self, drive_client: &GoogleDrive) {
@@ -96,7 +104,7 @@ impl NewSwagInventoryItem {
             let bucket = "oxide_automated_documents";
             // Generate the barcode svg and png.
             let barcode = Code39::new(&self.barcode).unwrap();
-            let png = Image::png(50); // You must specify the height in pixels.
+            let png = Image::png(200); // You must specify the height in pixels.
             let encoded = barcode.encode();
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
@@ -129,8 +137,11 @@ impl NewSwagInventoryItem {
 
     // Get the bytes for a pdf barcode label.
     pub fn generate_pdf_barcode_label(&self, png_bytes: &[u8]) -> Vec<u8> {
-        let pdf_width = 288.0;
-        let pdf_height = 432.0;
+        let pdf_width = 4.0 * 72.0;
+        println!("{}", pdf_width);
+        let pdf_height = 6.0 * 72.0;
+        let pdf_margin = 10.0;
+        let font_size = 10.0;
         let mut doc = Document::with_version("1.5");
         let pages_id = doc.new_object_id();
         let font_id = doc.add_object(dictionary! {
@@ -146,8 +157,8 @@ impl NewSwagInventoryItem {
         let content = Content {
             operations: vec![
                 Operation::new("BT", vec![]),
-                Operation::new("Tf", vec!["F1".into(), 8.into()]),
-                Operation::new("Td", vec![10.into(), 10.into()]),
+                Operation::new("Tf", vec!["F1".into(), font_size.into()]),
+                Operation::new("Td", vec![pdf_margin.into(), pdf_margin.into()]),
                 Operation::new("Tj", vec![Object::string_literal(self.name.to_string())]),
                 Operation::new("ET", vec![]),
             ],
@@ -177,22 +188,30 @@ impl NewSwagInventoryItem {
 
         let logo_bytes = include_bytes!("oxide_logo.png");
         let (mut doc, logo_stream, logo_info) = image_to_pdf_object(doc, logo_bytes);
+        // We want the logo width to fit.
+        logo_info.width = logo_info.width / 3.0;
+        logo_info.height = logo_info.height / 3.0;
+        println!("logo: {:?}", logo_info);
         // Center the logo at the top of the pdf.
         doc.insert_image(
             page_id,
             logo_stream,
-            ((pdf_width - logo_info.width as f64) / 2.0, pdf_height - logo_info.height as f64 - 10.0),
-            (logo_info.width.into(), logo_info.height.into()),
+            ((pdf_width - logo_info.width) / 2.0, pdf_height - logo_info.height - pdf_margin),
+            (logo_info.width, logo_info.height),
         )
         .unwrap();
 
-        let (mut doc, img_stream, info) = image_to_pdf_object(doc, png_bytes);
+        let (mut doc, img_stream, mut info) = image_to_pdf_object(doc, png_bytes);
+        // We want the barcode width to fit.
+        info.width = info.width / 2.0;
+        info.height = info.height / 2.0;
+        println!("barcode: {:?}", info);
         // Center the barcode at the top of the pdf.
         doc.insert_image(
             page_id,
             img_stream,
-            ((pdf_width - info.width as f64) / 2.0, pdf_height - info.height as f64 - logo_info.height as f64 - 20.0),
-            (info.width.into(), info.height.into()),
+            ((pdf_width - info.width) / 2.0, pdf_height - info.height - logo_info.height - (pdf_margin * 2.0)),
+            (info.width, info.height),
         )
         .unwrap();
         doc.compress();

@@ -397,7 +397,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d19f90697a6edcc1e18828b5f5dcbe46ccfb96f5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#5924c48ee59a88eb87caadf6a7f02a7872d1ddc5"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -423,6 +423,7 @@ dependencies = [
  "handlebars",
  "html2text",
  "hubcaps",
+ "image 0.23.14",
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "nom_pem",
@@ -1528,9 +1529,9 @@ dependencies = [
 
 [[package]]
 name = "http-body"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dfb77c123b4e2f72a2069aeae0b4b4949cc7e966df277813fc16347e7549737"
+checksum = "60daa14be0e0786db0f03a9e57cb404c9d756eed2b6c62b9ea98ec5743ec75a9"
 dependencies = [
  "bytes",
  "http",
@@ -1938,7 +1939,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d19f90697a6edcc1e18828b5f5dcbe46ccfb96f5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#5924c48ee59a88eb87caadf6a7f02a7872d1ddc5"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.26",

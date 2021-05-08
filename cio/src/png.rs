@@ -2,8 +2,8 @@ use std::convert::TryInto;
 
 #[derive(Debug, Clone)]
 pub struct PngInfo {
-    pub width: u32,
-    pub height: u32,
+    pub width: f64,
+    pub height: f64,
     pub depth: u8,
     pub color_type: u8,
     pub interlace: bool,
@@ -50,8 +50,8 @@ pub fn get_info(bytes: &[u8]) -> PngInfo {
     }
 
     PngInfo {
-        width,
-        height,
+        width: width.into(),
+        height: height.into(),
         depth,
         color_type,
         interlace,
