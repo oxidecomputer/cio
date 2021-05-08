@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use barcoders::generators::image::*;
 use barcoders::generators::svg::*;
 use barcoders::sym::code39::*;
+use chrono::{DateTime, Utc};
 use google_drive::GoogleDrive;
 use image::{DynamicImage, ImageFormat};
 use lopdf::content::{Content, Operation};
@@ -10,10 +11,10 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE};
+use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::swag_inventory_items;
+use crate::schema::{barcode_scans, swag_inventory_items};
 use crate::utils::get_gsuite_token;
 
 #[db {
@@ -325,13 +326,59 @@ pub async fn refresh_swag_inventory_items() {
     }
 }
 
+#[db {
+    new_struct_name = "BarcodeScan",
+    airtable_base_id = "AIRTABLE_BASE_ID_SWAG",
+    airtable_table = "AIRTABLE_BARCODE_SCANS_TABLE",
+    match_on = {
+        "item" = "String",
+        "size" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "barcode_scans"]
+pub struct NewBarcodeScan {
+    pub time: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub size: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub item: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        serialize_with = "airtable_api::barcode_format_as_string::serialize",
+        deserialize_with = "airtable_api::barcode_format_as_string::deserialize"
+    )]
+    pub barcode: String,
+
+    /// This is populated by Airtable.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_item: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a BarcodeScan.
+#[async_trait]
+impl UpdateAirtableRecord<BarcodeScan> for BarcodeScan {
+    async fn update_airtable_record(&mut self, _record: BarcodeScan) {}
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::swag_inventory::refresh_swag_inventory_items;
+    use crate::db::Database;
+    use crate::swag_inventory::{refresh_swag_inventory_items, BarcodeScans};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_swag_inventory_items() {
         refresh_swag_inventory_items().await;
+    }
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_cron_refresh_barcode_scans() {
+        let db = Database::new();
+        BarcodeScans::get_from_db(&db).update_in_airtable().await;
     }
 }

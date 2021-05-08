@@ -98,6 +98,33 @@ table! {
 }
 
 table! {
+    auth_user_logins (id) {
+        id -> Int4,
+        date -> Timestamptz,
+        typev -> Varchar,
+        description -> Varchar,
+        connection -> Varchar,
+        connection_id -> Varchar,
+        client_id -> Varchar,
+        client_name -> Varchar,
+        ip -> Varchar,
+        hostname -> Varchar,
+        user_id -> Varchar,
+        user_name -> Varchar,
+        email -> Varchar,
+        audience -> Varchar,
+        scope -> Varchar,
+        strategy -> Varchar,
+        strategy_type -> Varchar,
+        log_id -> Varchar,
+        is_mobile -> Bool,
+        user_agent -> Varchar,
+        link_to_auth_user -> Array<Text>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     auth_users (id) {
         id -> Int4,
         user_id -> Varchar,
@@ -127,28 +154,14 @@ table! {
 }
 
 table! {
-    auth_user_logins (id) {
+    barcode_scans (id) {
         id -> Int4,
-        date -> Timestamptz,
-        typev -> Varchar,
-        description -> Varchar,
-        connection -> Varchar,
-        connection_id -> Varchar,
-        client_id -> Varchar,
-        client_name -> Varchar,
-        ip -> Varchar,
-        hostname -> Varchar,
-        user_id -> Varchar,
-        user_name -> Varchar,
-        email -> Varchar,
-        audience -> Varchar,
-        scope -> Varchar,
-        strategy -> Varchar,
-        strategy_type -> Varchar,
-        log_id -> Varchar,
-        is_mobile -> Bool,
-        user_agent -> Varchar,
-        link_to_auth_user -> Array<Text>,
+        time -> Timestamptz,
+        name -> Varchar,
+        size -> Varchar,
+        item -> Varchar,
+        barcode -> Varchar,
+        link_to_item -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }
@@ -559,6 +572,7 @@ allow_tables_to_appear_in_same_query!(
     applicants,
     auth_user_logins,
     auth_users,
+    barcode_scans,
     buildings,
     certificates,
     conference_rooms,
