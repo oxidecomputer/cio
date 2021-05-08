@@ -109,7 +109,7 @@ impl NewSwagInventoryItem {
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
             let png_bytes = png.generate(&encoded[..]).unwrap();
-            let mut file_name = format!("{}.png", self.name);
+            let mut file_name = format!("{}.png", self.name.replace('/', ""));
 
             // Create or update the files in the google_drive.
             let png_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "image/png", &png_bytes, true).await.unwrap();
@@ -120,7 +120,7 @@ impl NewSwagInventoryItem {
             let svg_data: String = svg.generate(&encoded).unwrap();
             let svg_bytes = svg_data.as_bytes();
 
-            file_name = format!("{}.svg", self.name);
+            file_name = format!("{}.svg", self.name.replace('/', ""));
 
             // Create or update the files in the google_drive.
             let svg_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "image/svg+xml", &svg_bytes, true).await.unwrap();
@@ -128,7 +128,7 @@ impl NewSwagInventoryItem {
 
             // Generate the barcode label.
             let label_bytes = self.generate_pdf_barcode_label(&png_bytes);
-            file_name = format!("{} - Barcode Label.pdf", self.name);
+            file_name = format!("{} - Barcode Label.pdf", self.name.replace('/', ""));
             // Create or update the files in the google_drive.
             let label_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "application/pdf", &label_bytes, true).await.unwrap();
             self.barcode_pdf_label = label_file.media_link.to_string();
@@ -138,7 +138,6 @@ impl NewSwagInventoryItem {
     // Get the bytes for a pdf barcode label.
     pub fn generate_pdf_barcode_label(&self, png_bytes: &[u8]) -> Vec<u8> {
         let pdf_width = 4.0 * 72.0;
-        println!("{}", pdf_width);
         let pdf_height = 6.0 * 72.0;
         let pdf_margin = 10.0;
         let font_size = 10.0;
@@ -189,23 +188,22 @@ impl NewSwagInventoryItem {
         let logo_bytes = include_bytes!("oxide_logo.png");
         let (mut doc, logo_stream, mut logo_info) = image_to_pdf_object(doc, logo_bytes);
         // We want the logo width to fit.
-        logo_info.width = logo_info.width / 3.0;
-        logo_info.height = logo_info.height / 3.0;
-        println!("logo: {:?}", logo_info);
+        let original_width = logo_info.width;
+        logo_info.width = pdf_width - (pdf_margin * 2.0);
+        logo_info.height = (logo_info.width / original_width) * logo_info.height;
         let position = ((pdf_width - logo_info.width) / 2.0, pdf_height - logo_info.height - pdf_margin);
-        println!("logo position: {:?}", position);
         // Center the logo at the top of the pdf.
         doc.insert_image(page_id, logo_stream, position, (logo_info.width, logo_info.height)).unwrap();
 
-        /*let (mut doc, img_stream, mut info) = image_to_pdf_object(doc, png_bytes);
+        let (mut doc, img_stream, mut info) = image_to_pdf_object(doc, png_bytes);
         // We want the barcode width to fit.
-        info.width = info.width / 2.0;
-        info.height = info.height / 2.0;
-        println!("barcode: {:?}", info);
+        let original_width = info.width;
+        info.width = pdf_width - (pdf_margin * 2.0);
+        info.height = (info.width / original_width) * info.height;
         let position = ((pdf_width - info.width) / 2.0, pdf_height - info.height - logo_info.height - (pdf_margin * 2.0));
-        println!("barcode position: {:?}", position);
         // Center the barcode at the top of the pdf.
-        doc.insert_image(page_id, img_stream, position, (info.width, info.height)).unwrap();*/
+        doc.insert_image(page_id, img_stream, position, (info.width, info.height)).unwrap();
+
         doc.compress();
 
         // Save the PDF
@@ -285,12 +283,12 @@ pub fn image_to_pdf_object(mut doc: Document, png_bytes: &[u8]) -> (Document, St
             "Filter" => "FlateDecode",
             "BitsPerComponent" => info.depth,
             "Length" => idat.len() as u32,
-            "Width" => info.width,
-            "Height" => info.height,
+            "Width" => info.width as u32,
+            "Height" => info.height as u32,
             "DecodeParms" => dictionary!{
                 "BitsPerComponent" => info.depth,
                 "Predictor" => 15,
-                "Columns" => info.width,
+                "Columns" => info.width as u32,
                 "Colors" => colors
             },
             "ColorSpace" => cs,
