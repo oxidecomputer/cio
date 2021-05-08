@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+#[derive(Debug, Clone)]
 pub struct PngInfo {
     pub width: u32,
     pub height: u32,

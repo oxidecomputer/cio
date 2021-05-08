@@ -96,7 +96,7 @@ impl NewSwagInventoryItem {
             let bucket = "oxide_automated_documents";
             // Generate the barcode svg and png.
             let barcode = Code39::new(&self.barcode).unwrap();
-            let png = Image::png(80); // You must specify the height in pixels.
+            let png = Image::png(70); // You must specify the height in pixels.
             let encoded = barcode.encode();
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
@@ -129,6 +129,8 @@ impl NewSwagInventoryItem {
 
     // Get the bytes for a pdf barcode label.
     pub fn generate_pdf_barcode_label(&self, png_bytes: &[u8]) -> Vec<u8> {
+        let pdf_width = 288.0;
+        let pdf_height = 432.0;
         let mut doc = Document::with_version("1.5");
         let pages_id = doc.new_object_id();
         let font_id = doc.add_object(dictionary! {
@@ -164,7 +166,7 @@ impl NewSwagInventoryItem {
             "Resources" => resources_id,
             // This should be (4 in x 6 in) for the rollo printer.
             // You get `pts` by (inches * 72).
-            "MediaBox" => vec![0.into(), 0.into(), 288.into(), 432.into()],
+            "MediaBox" => vec![0.into(), 0.into(),pdf_width.into(), pdf_height.into()],
         };
         doc.objects.insert(pages_id, Object::Dictionary(pages));
         let catalog_id = doc.add_object(dictionary! {
@@ -173,85 +175,15 @@ impl NewSwagInventoryItem {
         });
         doc.trailer.set("Root", catalog_id);
 
-        // Insert our barcode image.
-        let info = crate::png::get_info(png_bytes);
-
-        let bytes = if info.interlace || info.color_type >= 4 {
-            let img = image::load_from_memory(png_bytes).unwrap();
-            let mut result = Vec::new();
-
-            match info.color_type {
-                4 => match info.depth {
-                    8 => DynamicImage::ImageLuma8(img.into_luma8()),
-                    16 => DynamicImage::ImageLuma16(img.into_luma16()),
-                    _ => panic!(""),
-                },
-                6 => match info.depth {
-                    8 => DynamicImage::ImageRgb8(img.into_rgb8()),
-                    16 => DynamicImage::ImageRgb16(img.into_rgb16()),
-                    _ => panic!(""),
-                },
-                _ => img,
-            }
-            .write_to(&mut result, ImageFormat::Png)
-            .unwrap();
-            result
-        } else {
-            png_bytes.into()
-        };
-
-        let colors = if let 0 | 3 | 4 = info.color_type { 1 } else { 3 };
-
-        let idat = crate::png::get_idat(&bytes[..]);
-
-        let cs: Object = match info.color_type {
-            0 | 2 | 4 | 6 => {
-                if let Some(raw) = info.icc {
-                    let icc_id = doc.add_object(Stream::new(
-                        dictionary! {
-                            "N" => colors,
-                            "Alternate" => if let 0 | 4 = info.color_type { "DeviceGray" } else { "DeviceRGB" },
-                            "Length" => raw.len() as u32,
-                            "Filter" => "FlateDecode"
-                        },
-                        raw,
-                    ));
-                    vec!["ICCBased".into(), icc_id.into()].into()
-                } else {
-                    if let 0 | 4 = info.color_type { "DeviceGray" } else { "DeviceRGB" }.into()
-                }
-            }
-
-            3 => {
-                let palette = info.palette.unwrap();
-                vec!["Indexed".into(), "DeviceRGB".into(), (palette.1 - 1).into(), Object::String(palette.0, StringFormat::Hexadecimal)].into()
-            }
-
-            _ => panic!("unexpected color type found: {}", info.color_type),
-        };
-
-        let img_stream = Stream::new(
-            dictionary! {
-                "Type" => "XObject",
-                "Subtype" => "Image",
-                "Filter" => "FlateDecode",
-                "BitsPerComponent" => info.depth,
-                "Length" => idat.len() as u32,
-                "Width" => info.width,
-                "Height" => info.height,
-                "DecodeParms" => dictionary!{
-                    "BitsPerComponent" => info.depth,
-                    "Predictor" => 15,
-                    "Columns" => info.width,
-                    "Colors" => colors
-                },
-                "ColorSpace" => cs,
-            },
-            idat,
-        );
-
-        doc.insert_image(page_id, img_stream, (0.0, 0.0), (info.width.into(), info.height.into())).unwrap();
-        println!("doc: {:?}", doc);
+        let (mut doc, img_stream, info) = image_to_pdf_object(doc, png_bytes);
+        // Center the image at the top of the pdf.
+        doc.insert_image(
+            page_id,
+            img_stream,
+            ((pdf_width - info.width as f64) / 2.0, pdf_height - info.height as f64 - 10.0),
+            (info.width.into(), info.height.into()),
+        )
+        .unwrap();
         doc.compress();
 
         // Save the PDF
@@ -264,6 +196,87 @@ impl NewSwagInventoryItem {
         self.generate_barcode();
         self.generate_barcode_images(drive_client).await;
     }
+}
+
+pub fn image_to_pdf_object(mut doc: Document, png_bytes: &[u8]) -> (Document, Stream, crate::png::PngInfo) {
+    // Insert our barcode image.
+    let info = crate::png::get_info(png_bytes);
+
+    let bytes = if info.interlace || info.color_type >= 4 {
+        let img = image::load_from_memory(png_bytes).unwrap();
+        let mut result = Vec::new();
+
+        match info.color_type {
+            4 => match info.depth {
+                8 => DynamicImage::ImageLuma8(img.into_luma8()),
+                16 => DynamicImage::ImageLuma16(img.into_luma16()),
+                _ => panic!(""),
+            },
+            6 => match info.depth {
+                8 => DynamicImage::ImageRgb8(img.into_rgb8()),
+                16 => DynamicImage::ImageRgb16(img.into_rgb16()),
+                _ => panic!(""),
+            },
+            _ => img,
+        }
+        .write_to(&mut result, ImageFormat::Png)
+        .unwrap();
+        result
+    } else {
+        png_bytes.into()
+    };
+
+    let colors = if let 0 | 3 | 4 = info.color_type { 1 } else { 3 };
+
+    let idat = crate::png::get_idat(&bytes[..]);
+
+    let cs: Object = match info.color_type {
+        0 | 2 | 4 | 6 => {
+            if let Some(ref raw) = info.icc {
+                let icc_id = doc.add_object(Stream::new(
+                    dictionary! {
+                        "N" => colors,
+                        "Alternate" => if let 0 | 4 = info.color_type { "DeviceGray" } else { "DeviceRGB" },
+                        "Length" => raw.len() as u32,
+                        "Filter" => "FlateDecode"
+                    },
+                    raw.to_vec(),
+                ));
+                vec!["ICCBased".into(), icc_id.into()].into()
+            } else {
+                if let 0 | 4 = info.color_type { "DeviceGray" } else { "DeviceRGB" }.into()
+            }
+        }
+
+        3 => {
+            let palette = info.clone().palette.unwrap();
+            vec!["Indexed".into(), "DeviceRGB".into(), (palette.1 - 1).into(), Object::String(palette.0, StringFormat::Hexadecimal)].into()
+        }
+
+        _ => panic!("unexpected color type found: {}", info.color_type),
+    };
+
+    let img_stream = Stream::new(
+        dictionary! {
+            "Type" => "XObject",
+            "Subtype" => "Image",
+            "Filter" => "FlateDecode",
+            "BitsPerComponent" => info.depth,
+            "Length" => idat.len() as u32,
+            "Width" => info.width,
+            "Height" => info.height,
+            "DecodeParms" => dictionary!{
+                "BitsPerComponent" => info.depth,
+                "Predictor" => 15,
+                "Columns" => info.width,
+                "Colors" => colors
+            },
+            "ColorSpace" => cs,
+        },
+        idat,
+    );
+
+    (doc, img_stream, info)
 }
 
 /// Sync software vendors from Airtable.
