@@ -3,9 +3,22 @@ use std::env;
 use cio_api::swag_inventory::BarcodeScan;
 use hidapi::HidApi;
 use sentry::IntoDsn;
+use std::process::Command;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    // Try to get the current git hash.
+    let git_hash = if let Ok(gh) = env::var("GIT_HASH") {
+        gh
+    } else {
+        // Try to shell out.
+        let output = Command::new("git").arg("rev-parse").arg("HEAD").output().expect("failed to execute process");
+        let o = std::str::from_utf8(&output.stdout).unwrap();
+        o[0..8].to_string()
+    };
+
+    println!("git hash: {}", git_hash);
+
     // Initialize sentry.
     // In addition to all the sentry env variables, you will also need to set
     //  - CIO_DATABASE_URL
@@ -14,7 +27,7 @@ async fn main() -> Result<(), String> {
     let _guard = sentry::init(sentry::ClientOptions {
         dsn: sentry_dsn.into_dsn().unwrap(),
 
-        release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+        release: Some(git_hash.into()),
         environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
         ..Default::default()
     });
