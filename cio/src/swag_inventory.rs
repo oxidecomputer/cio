@@ -3,7 +3,7 @@ use barcoders::generators::image::*;
 use barcoders::generators::svg::*;
 use barcoders::sym::code39::*;
 use google_drive::GoogleDrive;
-use image::{DynamicImage, GenericImageView, ImageFormat};
+use image::{DynamicImage, ImageFormat};
 use lopdf::content::{Content, Operation};
 use lopdf::{Document, Object, Stream, StringFormat};
 use macros::db;
