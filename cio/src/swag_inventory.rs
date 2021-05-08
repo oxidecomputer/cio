@@ -187,7 +187,7 @@ impl NewSwagInventoryItem {
         doc.trailer.set("Root", catalog_id);
 
         let logo_bytes = include_bytes!("oxide_logo.png");
-        let (mut doc, logo_stream, logo_info) = image_to_pdf_object(doc, logo_bytes);
+        let (mut doc, logo_stream, mut logo_info) = image_to_pdf_object(doc, logo_bytes);
         // We want the logo width to fit.
         logo_info.width = logo_info.width / 3.0;
         logo_info.height = logo_info.height / 3.0;
