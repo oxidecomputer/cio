@@ -96,7 +96,7 @@ impl NewSwagInventoryItem {
             let bucket = "oxide_automated_documents";
             // Generate the barcode svg and png.
             let barcode = Code39::new(&self.barcode).unwrap();
-            let png = Image::png(70); // You must specify the height in pixels.
+            let png = Image::png(50); // You must specify the height in pixels.
             let encoded = barcode.encode();
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
@@ -175,12 +175,23 @@ impl NewSwagInventoryItem {
         });
         doc.trailer.set("Root", catalog_id);
 
+        let logo_bytes = include_bytes!("oxide_logo.png");
+        let (mut doc, logo_stream, logo_info) = image_to_pdf_object(doc, logo_bytes);
+        // Center the logo at the top of the pdf.
+        doc.insert_image(
+            page_id,
+            logo_stream,
+            ((pdf_width - logo_info.width as f64) / 2.0, pdf_height - logo_info.height as f64 - 10.0),
+            (logo_info.width.into(), logo_info.height.into()),
+        )
+        .unwrap();
+
         let (mut doc, img_stream, info) = image_to_pdf_object(doc, png_bytes);
-        // Center the image at the top of the pdf.
+        // Center the barcode at the top of the pdf.
         doc.insert_image(
             page_id,
             img_stream,
-            ((pdf_width - info.width as f64) / 2.0, pdf_height - info.height as f64 - 10.0),
+            ((pdf_width - info.width as f64) / 2.0, pdf_height - info.height as f64 - logo_info.height as f64 - 20.0),
             (info.width.into(), info.height.into()),
         )
         .unwrap();
