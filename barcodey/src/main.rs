@@ -1,11 +1,15 @@
 use std::env;
 
+use cio_api::swag_inventory::BarcodeScan;
 use hidapi::HidApi;
 use sentry::IntoDsn;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
     // Initialize sentry.
+    // In addition to all the sentry env variables, you will also need to set
+    //  - CIO_DATABASE_URL
+    //  - AIRTABLE_API_KEY
     let sentry_dsn = env::var("BARCODEY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
         dsn: sentry_dsn.into_dsn().unwrap(),
@@ -56,5 +60,8 @@ async fn main() -> Result<(), String> {
         }
 
         println!("{}", data_string);
+
+        // We got a barcode scan, lets add it to our database.
+        BarcodeScan::scan(data_string.trim().to_string()).await;
     }
 }

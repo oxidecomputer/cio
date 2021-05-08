@@ -364,6 +364,50 @@ impl UpdateAirtableRecord<BarcodeScan> for BarcodeScan {
     async fn update_airtable_record(&mut self, _record: BarcodeScan) {}
 }
 
+impl BarcodeScan {
+    // Takes a scanned barcode and updates the inventory count for the item
+    // as well as adds the scan to the barcodes_scan table for tracking.
+    pub async fn scan(b: String) {
+        let time = Utc::now();
+
+        // Make sure the barcode is formatted correctly.
+        let barcode = b.trim().to_uppercase().to_string();
+
+        // Initialize the database connection.
+        let db = Database::new();
+
+        // Firstly, let's make sure we have the barcode in the database.
+        match swag_inventory_items::dsl::swag_inventory_items
+            .filter(swag_inventory_items::dsl::barcode.eq(barcode.to_string()))
+            .first::<SwagInventoryItem>(&db.conn())
+        {
+            Ok(mut swag_inventory_item) => {
+                // We found the matching inventory item!
+                // Now let's subtract 1 from the current inventory and update it
+                // in the database.
+                swag_inventory_item.current_stock -= 1;
+                // Update the database.
+                swag_inventory_item.update(&db).await;
+                println!("Subtracted one from {} stock, we now have {}", swag_inventory_item.name, swag_inventory_item.current_stock);
+
+                // Now add our barcode scan to the barcode scans database.
+                let new_barcode_scan = NewBarcodeScan {
+                    time,
+                    item: swag_inventory_item.item.to_string(),
+                    size: swag_inventory_item.size.to_string(),
+                    link_to_item: swag_inventory_item.link_to_item,
+                    barcode: barcode.to_string(),
+                    name: swag_inventory_item.name.to_string(),
+                };
+
+                // Add our barcode scan to the database.
+                new_barcode_scan.upsert(&db).await;
+            }
+            Err(e) => println!("could not find inventory item with barcode {}: {}", barcode, e),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::db::Database;

@@ -183,6 +183,7 @@ dependencies = [
 name = "barcodey"
 version = "0.1.0"
 dependencies = [
+ "cio-api 0.2.0",
  "hidapi",
  "sentry",
  "tokio",
