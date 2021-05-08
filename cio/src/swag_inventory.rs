@@ -192,28 +192,20 @@ impl NewSwagInventoryItem {
         logo_info.width = logo_info.width / 3.0;
         logo_info.height = logo_info.height / 3.0;
         println!("logo: {:?}", logo_info);
+        let position = ((pdf_width - logo_info.width) / 2.0, pdf_height - logo_info.height - pdf_margin);
+        println!("logo position: {:?}", position);
         // Center the logo at the top of the pdf.
-        doc.insert_image(
-            page_id,
-            logo_stream,
-            ((pdf_width - logo_info.width) / 2.0, pdf_height - logo_info.height - pdf_margin),
-            (logo_info.width, logo_info.height),
-        )
-        .unwrap();
+        doc.insert_image(page_id, logo_stream, position, (logo_info.width, logo_info.height)).unwrap();
 
-        let (mut doc, img_stream, mut info) = image_to_pdf_object(doc, png_bytes);
+        /*let (mut doc, img_stream, mut info) = image_to_pdf_object(doc, png_bytes);
         // We want the barcode width to fit.
         info.width = info.width / 2.0;
         info.height = info.height / 2.0;
         println!("barcode: {:?}", info);
+        let position = ((pdf_width - info.width) / 2.0, pdf_height - info.height - logo_info.height - (pdf_margin * 2.0));
+        println!("barcode position: {:?}", position);
         // Center the barcode at the top of the pdf.
-        doc.insert_image(
-            page_id,
-            img_stream,
-            ((pdf_width - info.width) / 2.0, pdf_height - info.height - logo_info.height - (pdf_margin * 2.0)),
-            (info.width, info.height),
-        )
-        .unwrap();
+        doc.insert_image(page_id, img_stream, position, (info.width, info.height)).unwrap();*/
         doc.compress();
 
         // Save the PDF

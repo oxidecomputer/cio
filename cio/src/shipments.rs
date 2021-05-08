@@ -646,7 +646,7 @@ impl OutboundShipment {
         // Send the message.
         sendgrid_client
             .send_mail(
-                "Your package from the Oxide Computer Company is on the way!".to_string(),
+                format!("{}, your package from the Oxide Computer Company is on the way!", self.name),
                 format!(
                     "Below is the information for your package:
 
@@ -671,7 +671,7 @@ xoxo,
                     self.oxide_tracking_link
                 ),
                 vec![self.email.to_string()],
-                vec![],
+                vec![format!("packages@{}", DOMAIN)],
                 vec![],
                 format!("packages@{}", DOMAIN),
             )
