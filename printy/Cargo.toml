@@ -12,5 +12,6 @@ edition = "2018"
 dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 http = "0.2.0"
 reqwest = "^0.11"
+sentry = "^0.22.0"
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "^0.8.1", features = ["serde", "v4"] }

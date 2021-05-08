@@ -8,10 +8,21 @@ use std::str::from_utf8;
 use std::sync::Arc;
 
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody};
+use sentry::IntoDsn;
 use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    // Initialize sentry.
+    let sentry_dsn = env::var("PRINTY_SENTRY_DSN").unwrap_or_default();
+    let _guard = sentry::init(sentry::ClientOptions {
+        dsn: sentry_dsn.into_dsn().unwrap(),
+
+        release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+        environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
+        ..Default::default()
+    });
+
     let service_address = "0.0.0.0:8080";
 
     /*
@@ -90,6 +101,7 @@ async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Str
     path = "/print",
 }]
 async fn listen_print_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let url = body_param.into_inner();
     let printer = get_rollo_printer();
     println!("{:?}", printer);
@@ -101,6 +113,7 @@ async fn listen_print_requests(_rqctx: Arc<RequestContext<Context>>, body_param:
     print_file(&printer, &file);
 
     // Print the body to the rollo printer.
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -108,7 +121,9 @@ async fn listen_print_requests(_rqctx: Arc<RequestContext<Context>>, body_param:
 fn get_rollo_printer() -> String {
     let output = Command::new("lpstat").args(&["-a"]).output().expect("failed to execute process");
     if !output.status.success() {
-        println!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
+        let e = format!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
+        println!("{}", e);
+        sentry::capture_message(&e, sentry::Level::Fatal);
         return "".to_string();
     }
 
@@ -149,7 +164,9 @@ fn print_file(printer: &str, file: &str) {
     println!("Sending file `{}` to printer `{}`", file, printer);
     let output = Command::new("lp").args(&["-d", printer, "-o", "media=4.00x6.00\"", file]).output().expect("failed to execute process");
     if !output.status.success() {
-        println!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
+        let e = format!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
+        println!("{}", e);
+        sentry::capture_message(&e, sentry::Level::Fatal);
         return;
     }
 
