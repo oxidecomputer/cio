@@ -16,6 +16,7 @@ pub mod interviews;
 pub mod journal_clubs;
 pub mod mailing_list;
 pub mod models;
+pub mod png;
 pub mod recorded_meetings;
 pub mod rfds;
 pub mod schema;
