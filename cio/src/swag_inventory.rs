@@ -104,7 +104,7 @@ impl NewSwagInventoryItem {
             let bucket = "oxide_automated_documents";
             // Generate the barcode svg and png.
             let barcode = Code39::new(&self.barcode).unwrap();
-            let png = Image::png(200); // You must specify the height in pixels.
+            let png = Image::png(100); // You must specify the height in pixels.
             let encoded = barcode.encode();
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
@@ -137,10 +137,10 @@ impl NewSwagInventoryItem {
 
     // Get the bytes for a pdf barcode label.
     pub fn generate_pdf_barcode_label(&self, png_bytes: &[u8]) -> Vec<u8> {
-        let pdf_width = 4.0 * 72.0;
-        let pdf_height = 6.0 * 72.0;
-        let pdf_margin = 10.0;
-        let font_size = 10.0;
+        let pdf_width = 3.0 * 72.0;
+        let pdf_height = 2.0 * 72.0;
+        let pdf_margin = 1.0;
+        let font_size = 8.0;
         let mut doc = Document::with_version("1.5");
         let pages_id = doc.new_object_id();
         let font_id = doc.add_object(dictionary! {
@@ -156,14 +156,13 @@ impl NewSwagInventoryItem {
         let content = Content {
             operations: vec![
                 Operation::new("BT", vec![]),
-                Operation::new("Tf", vec!["F1".into(), font_size.into()]),
+                Operation::new("Tf", vec!["F1".into(), (font_size / 1.25).into()]),
                 Operation::new("TL", vec![(font_size * 1.25).into()]),
                 Operation::new("Td", vec![pdf_margin.into(), ((font_size * 1.25 * 3.0) + pdf_margin).into()]),
                 Operation::new("Tj", vec![Object::string_literal(self.barcode.to_string())]),
-                Operation::new("T*", vec![]),
-                Operation::new("Tj", vec![Object::string_literal(self.item.to_string())]),
-                Operation::new("T*", vec![]),
-                Operation::new("Tj", vec![Object::string_literal(format!("Size: {}", self.size))]),
+                Operation::new("Tf", vec!["F1".into(), font_size.into()]),
+                Operation::new("'", vec![Object::string_literal(self.item.to_string())]),
+                Operation::new("'", vec![Object::string_literal(format!("Size: {}", self.size))]),
                 Operation::new("ET", vec![]),
             ],
         };
