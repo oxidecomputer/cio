@@ -104,7 +104,7 @@ impl NewSwagInventoryItem {
             let bucket = "oxide_automated_documents";
             // Generate the barcode svg and png.
             let barcode = Code39::new(&self.barcode).unwrap();
-            let png = Image::png(100); // You must specify the height in pixels.
+            let png = Image::png(125); // You must specify the height in pixels.
             let encoded = barcode.encode();
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
@@ -158,7 +158,7 @@ impl NewSwagInventoryItem {
                 Operation::new("BT", vec![]),
                 Operation::new("Tf", vec!["F1".into(), (font_size / 1.25).into()]),
                 Operation::new("TL", vec![(font_size * 1.25).into()]),
-                Operation::new("Td", vec![pdf_margin.into(), ((font_size * 1.25 * 3.0) + pdf_margin).into()]),
+                Operation::new("Td", vec![pdf_margin.into(), (font_size * 0.9 * 3.0).into()]),
                 Operation::new("Tj", vec![Object::string_literal(self.barcode.to_string())]),
                 Operation::new("Tf", vec!["F1".into(), font_size.into()]),
                 Operation::new("'", vec![Object::string_literal(self.item.to_string())]),
