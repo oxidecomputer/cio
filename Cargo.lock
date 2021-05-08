@@ -180,6 +180,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "barcodey"
+version = "0.1.0"
+dependencies = [
+ "sentry",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "base-x"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
