@@ -2600,6 +2600,7 @@ dependencies = [
  "dropshot",
  "http",
  "reqwest",
+ "sentry",
  "tokio",
  "uuid",
 ]

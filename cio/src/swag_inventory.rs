@@ -95,7 +95,7 @@ impl NewSwagInventoryItem {
             barcode = format!("0{}", barcode);
         }
 
-        self.barcode = barcode.to_string();
+        self.barcode = barcode;
     }
 
     pub async fn generate_barcode_images(&mut self, drive_client: &GoogleDrive) {
@@ -132,7 +132,7 @@ impl NewSwagInventoryItem {
             file_name = format!("{} - Barcode Label.pdf", self.name.replace('/', ""));
             // Create or update the files in the google_drive.
             let label_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "application/pdf", &label_bytes, true).await.unwrap();
-            self.barcode_pdf_label = label_file.media_link.to_string();
+            self.barcode_pdf_label = label_file.media_link;
         }
     }
 
@@ -195,7 +195,7 @@ impl NewSwagInventoryItem {
         // We want the logo width to fit.
         let original_width = logo_info.width;
         logo_info.width = pdf_width - (pdf_margin * 2.0);
-        logo_info.height = (logo_info.width / original_width) * logo_info.height;
+        logo_info.height *= (logo_info.width / original_width);
         let position = ((pdf_width - logo_info.width) / 2.0, pdf_height - logo_info.height - pdf_margin);
         // Center the logo at the top of the pdf.
         doc.insert_image(page_id, logo_stream, position, (logo_info.width, logo_info.height)).unwrap();
@@ -204,7 +204,7 @@ impl NewSwagInventoryItem {
         // We want the barcode width to fit.
         let original_width = info.width;
         info.width = pdf_width - (pdf_margin * 2.0);
-        info.height = (info.width / original_width) * info.height;
+        info.height *= (info.width / original_width);
         let position = ((pdf_width - info.width) / 2.0, pdf_height - info.height - logo_info.height - (pdf_margin * 2.0));
         // Center the barcode at the top of the pdf.
         doc.insert_image(page_id, img_stream, position, (info.width, info.height)).unwrap();
