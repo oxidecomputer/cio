@@ -39,8 +39,8 @@ pub static AIRTABLE_BASE_ID_FINANCE: &str = "appduLHDVQ332gKyf";
 pub static AIRTABLE_SOFTWARE_VENDORS_TABLE: &str = "Vendors";
 
 pub static AIRTABLE_BASE_ID_SWAG: &str = "appjveIuMELa6BYw3";
-pub static AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE: &str = "Swag Inventory";
+pub static AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE: &str = "Inventory";
 pub static AIRTABLE_BARCODE_SCANS_TABLE: &str = "Barcode Scans";
-pub static AIRTABLE_SWAG_ITEMS_TABLE: &str = "Swag Items";
+pub static AIRTABLE_SWAG_ITEMS_TABLE: &str = "Items";
 
 pub static AIRTABLE_GRID_VIEW: &str = "Grid view";
