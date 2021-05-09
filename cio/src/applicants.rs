@@ -647,6 +647,13 @@ The Oxide Team",
         if interviews.len() > 1 && status == crate::applicant_status::Status::NextSteps {
             status = crate::applicant_status::Status::Interviewing;
         }
+        // If their status is "Onboarding" and it is after their start date.
+        // Set their status to "Hired".
+        if status == crate::applicant_status::Status::Onboarding && start_date.is_some() && start_date.unwrap() <= Utc::now().date().naive_utc() {
+            // We shouldn't also check if we have an employee for the user, only if the employee had
+            // been hired and left.
+            status = crate::applicant_status::Status::Hired;
+        }
 
         NewApplicant {
             submitted_time: NewApplicant::parse_timestamp(&row[columns.timestamp]),
