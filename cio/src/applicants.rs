@@ -1491,7 +1491,7 @@ cc @jessfraz @sdtuck @bcantrill
             last_name.to_lowercase(),
             self.email,
             self.phone.replace('-', "").replace(' ', ""),
-            self.github,
+            self.github.('@', ""),
         );
 
         if let Some(i) = issue {
