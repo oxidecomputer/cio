@@ -1438,7 +1438,7 @@ Notes:
         let title = format!("Onboarding: {}", self.name);
         let labels = vec!["hiring".to_string()];
         let body = format!(
-            "- [ ] Add to users.toml
+            r#"- [ ] Add to users.toml
 - [ ] Add to matrix chat
 Start Date: {}
 Personal Email: {}
@@ -1470,7 +1470,7 @@ cc @jessfraz @sdtuck @bcantrill
  aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:saml-provider/GoogleApps'
  department = ''
  manager = ''
-```",
+```"#,
             self.start_date.unwrap().format("%A, %B %-d, %C%y").to_string(),
             self.email,
             self.github,
@@ -1483,21 +1483,21 @@ cc @jessfraz @sdtuck @bcantrill
             first_name.to_lowercase(),
             last_name.to_lowercase(),
             self.email,
-            self.phone.replace("-", "").replace(" ", ""),
+            self.phone.replace('-', "").replace(' ', ""),
             self.github,
         );
 
         if let Some(i) = issue {
             if i.state != "open" {
                 // Make sure the issue is in the state of "open".
-                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
+                repo.issue(i.number).open().await.unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
             }
 
             // If the issue does not have any check marks.
             // Update it.
             let checkmark = "[x]".to_string();
-            let body = i.clone().body.unwrap_or_default();
-            if !body.contains(&checkmark) {
+            let old_body = i.clone().body.unwrap_or_default();
+            if !old_body.contains(&checkmark) {
                 repo.issue(i.number)
                     .edit(&IssueOptions {
                         title,
