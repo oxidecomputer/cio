@@ -2505,6 +2505,7 @@ impl Applicant {
 
         // Since the status is completed, let's set their status to "Onboarding".
         self.status = crate::applicant_status::Status::Onboarding.to_string();
+        // TODO: request their background check here once we know everything else is working well.
 
         // Get gsuite token.
         let token = get_gsuite_token("").await;
