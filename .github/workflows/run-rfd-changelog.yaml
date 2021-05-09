@@ -13,7 +13,12 @@ jobs:
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
-          sudo apt update -y && sudo apt install -y asciidoctor pandoc poppler-utils ruby
+          sudo apt update -y && sudo apt install -y \
+            asciidoctor \
+            libusb-1.0-0-dev \
+            pandoc \
+            poppler-utils \
+            ruby
           sudo gem install asciidoctor-pdf rouge
       - name: Install SQL proxy
         shell: bash
