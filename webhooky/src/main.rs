@@ -27,6 +27,7 @@ use hubcaps::Github;
 use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
+use serde_qs::Config as QSConfig;
 use sheets::Sheets;
 
 use cio_api::analytics::NewPageView;
@@ -1001,15 +1002,6 @@ pub struct ShippoTrackingUpdateEvent {
     pub test: bool,
 }
 
-/** Ping endpoint for MailChimp webhooks. */
-#[endpoint {
-    method = GET,
-    path = "/mailchimp",
-}]
-async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
-    Ok(HttpResponseOk("ok".to_string()))
-}
-
 /** Listen for updates to our checkr background checks. */
 #[endpoint {
     method = POST,
@@ -1087,17 +1079,31 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext<Context>>
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+/** Ping endpoint for MailChimp webhooks. */
+#[endpoint {
+    method = GET,
+    path = "/mailchimp",
+}]
+async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+    Ok(HttpResponseOk("ok".to_string()))
+}
+
 /** Listen for MailChimp webhooks. */
 #[endpoint {
     method = POST,
     path = "/mailchimp",
 }]
-async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, query_args: Query<MailchimpWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    let event = query_args.into_inner();
+    // We should have a string, which we will then parse into our args.
+    let event_string = body_param.into_inner();
+    println!("{}", event_string);
+    let qs_non_strict = QSConfig::new(10, false);
+
+    let event: MailchimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
     println!("{:?}", event);
 
     if event.webhook_type != *"subscribe" {

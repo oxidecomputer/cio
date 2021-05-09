@@ -424,7 +424,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#eaf43a45d55bc9260c13cd3e734396650068a23c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7306096acef367341901d533913a6c2c275de779"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -442,7 +442,7 @@ dependencies = [
  "diesel",
  "diffy",
  "docusign 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot",
+ "dropshot 0.5.2-dev",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -500,7 +500,7 @@ dependencies = [
  "diesel",
  "diffy",
  "docusign 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot",
+ "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -960,6 +960,38 @@ dependencies = [
 
 [[package]]
 name = "dropshot"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a16bdcb99c879bd111828065720fc0b5e782740ffedfe7db0dbdb357c462344e"
+dependencies = [
+ "async-trait",
+ "base64 0.12.3",
+ "bytes",
+ "chrono",
+ "dropshot_endpoint 0.5.1",
+ "futures",
+ "hostname",
+ "http",
+ "hyper",
+ "indexmap",
+ "openapiv3 0.4.0",
+ "paste",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.6.1",
+ "slog",
+ "slog-async",
+ "slog-bunyan",
+ "slog-json",
+ "slog-term",
+ "tokio",
+ "toml",
+ "uuid",
+]
+
+[[package]]
+name = "dropshot"
 version = "0.5.2-dev"
 source = "git+https://github.com/jessfraz/dropshot?branch=rebased-working-args#34424c893370f5fad5da94245b9d44ccd47f4bf6"
 dependencies = [
@@ -967,19 +999,19 @@ dependencies = [
  "base64 0.13.0",
  "bytes",
  "chrono",
- "dropshot_endpoint",
+ "dropshot_endpoint 0.5.2-dev",
  "futures",
  "hostname",
  "http",
  "hyper",
  "indexmap",
- "openapiv3",
+ "openapiv3 0.5.0",
  "paste",
  "schemars",
  "serde",
  "serde_json",
  "serde_qs 0.8.3",
- "serde_urlencoded",
+ "serde_urlencoded 0.7.0",
  "slog",
  "slog-async",
  "slog-bunyan",
@@ -989,6 +1021,19 @@ dependencies = [
  "toml",
  "urlencoding",
  "uuid",
+]
+
+[[package]]
+name = "dropshot_endpoint"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79e635a98e6f295a909d795d0011fb99f38390a1f18908cafa3f8ca38dc3f415"
+dependencies = [
+ "proc-macro2 1.0.26",
+ "quote 1.0.9",
+ "serde",
+ "serde_tokenstream",
+ "syn 1.0.72",
 ]
 
 [[package]]
@@ -2010,7 +2055,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#eaf43a45d55bc9260c13cd3e734396650068a23c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7306096acef367341901d533913a6c2c275de779"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.26",
@@ -2355,6 +2400,18 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openapiv3"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b3c622a8249a19c1b9730e6b3127cf2b0d42f47fbdf2e5ba43c43cfd48eb5ee"
+dependencies = [
+ "indexmap",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
+name = "openapiv3"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90228d34f20d9fff3174d19b0d41e67f52711045270b540a2a2c2dc41ccb4085"
@@ -2674,7 +2731,7 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 name = "printy"
 version = "0.1.0"
 dependencies = [
- "dropshot",
+ "dropshot 0.5.1",
  "http",
  "reqwest",
  "sentry",
@@ -3005,7 +3062,7 @@ dependencies = [
  "pin-project-lite",
  "serde",
  "serde_json",
- "serde_urlencoded",
+ "serde_urlencoded 0.7.0",
  "tokio",
  "tokio-native-tls",
  "url",
@@ -3444,6 +3501,18 @@ dependencies = [
  "proc-macro2 1.0.26",
  "serde",
  "syn 1.0.72",
+]
+
+[[package]]
+name = "serde_urlencoded"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ec5d77e2d4c73717816afac02670d5c4f534ea95ed430442cad02e7a6e32c97"
+dependencies = [
+ "dtoa",
+ "itoa",
+ "serde",
+ "url",
 ]
 
 [[package]]
@@ -4557,7 +4626,7 @@ dependencies = [
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
  "docusign 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot",
+ "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
@@ -4567,9 +4636,11 @@ dependencies = [
  "sentry",
  "serde",
  "serde_json",
+ "serde_qs 0.8.3",
  "sheets 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
+ "urlencoding",
 ]
 
 [[package]]

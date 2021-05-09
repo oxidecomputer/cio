@@ -29,8 +29,8 @@ diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "
 diffy = "^0.2.0"
 docusign = "^0.1.0"
 #docusign = { path = "../docusign" }
-#dropshot = "^0.3.0"
-dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
+dropshot = "^0.5.0"
+#dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
 google-drive = "^0.1.0"
 #google-drive = { path = "../drive" }

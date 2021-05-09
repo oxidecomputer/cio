@@ -8,8 +8,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-#dropshot = "^0.3.0"
-dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
+dropshot = "^0.5.0"
+#dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 http = "0.2.0"
 reqwest = "^0.11"
 sentry = "^0.22.0"
