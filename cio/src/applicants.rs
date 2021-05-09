@@ -218,7 +218,9 @@ impl NewApplicant {
         let interested_in_str: Vec<&str> = split.collect();
         let mut interested_in: Vec<String> = Default::default();
         for s in interested_in_str {
-            interested_in.push(s.trim().to_string());
+            if !s.trim().is_empty() {
+                interested_in.push(s.trim().to_string());
+            }
         }
 
         NewApplicant {
