@@ -566,6 +566,15 @@ The Oxide Team",
                 interviews = record.fields.interviews;
             }
 
+            // If the database has them as "Onboarding" and we have them as "Giving offer",
+            // then use what is in the database.
+            // This status change happens when the docusign offer is signed (so it is not
+            // propogated back to the spreadsheet).
+            // Therefore, the spreadsheet cannot be used as the source of truth.
+            if a.status == crate::applicant_status::Status::Onboarding.to_string() && status == crate::applicant_status::Status::GivingOffer {
+                status = crate::applicant_status::Status::Onboarding;
+            }
+
             if !a.docusign_envelope_id.is_empty() {
                 docusign_envelope_id = a.docusign_envelope_id.to_string();
             }
@@ -1388,7 +1397,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         let issue = check_if_github_issue_exists(&configs_issues, &self.name);
 
         // Check if their status is not onboarding, we only care about onboarding applicants.
-        if !self.status.contains("Onboarding") {
+        if self.status != crate::applicant_status::Status::Onboarding {
             // If the issue exists and is opened, we need to close it.
             if let Some(i) = issue {
                 if i.state != "open" {
@@ -2168,7 +2177,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                     .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
                     .first::<Applicant>(&db.conn())
                 {
-                    if applicant.status.to_lowercase().contains("onboarding") || applicant.status.to_lowercase().contains("hired") {
+                    if applicant.status == crate::applicant_status::Status::Onboarding.to_string() || applicant.status == crate::applicant_status::Status::Hired.to_string() {
                         // Zero out the values for the scores.
                         applicant.scoring_evaluations_count = 0;
                         applicant.scoring_enthusiastic_yes_count = 0;
@@ -2206,7 +2215,11 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
 
     // Ensure anyone with the status of "Onboarding" or "Hired" gets their scores zero-ed out.
     let applicants = applicants::dsl::applicants
-        .filter(applicants::dsl::status.eq("Onboarding".to_string()).or(applicants::dsl::status.eq("Hired".to_string())))
+        .filter(
+            applicants::dsl::status
+                .eq(crate::applicant_status::Status::Onboarding.to_string())
+                .or(applicants::dsl::status.eq(crate::applicant_status::Status::Hired.to_string())),
+        )
         .load::<Applicant>(&db.conn())
         .unwrap();
     for mut applicant in applicants {
@@ -2403,12 +2416,12 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     for mut applicant in applicants {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
-        if applicant.status.to_lowercase() != "giving offer" && applicant.status.to_lowercase() != "onboarding" {
+        if applicant.status != crate::applicant_status::Status::GivingOffer.to_string() && applicant.status != crate::applicant_status::Status::Onboarding.to_string() {
             // We can return early.
             continue;
         }
 
-        if applicant.docusign_envelope_id.is_empty() && applicant.status.to_lowercase() == "giving offer" {
+        if applicant.docusign_envelope_id.is_empty() && applicant.status == crate::applicant_status::Status::GivingOffer.to_string() {
             println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
@@ -2487,6 +2500,10 @@ impl Applicant {
             self.update(db).await;
             return;
         }
+
+        // Since the status is completed, let's set their status to "Onboarding".
+        self.status = crate::applicant_status::Status::Onboarding.to_string();
+
         // Get gsuite token.
         let token = get_gsuite_token("").await;
 
@@ -2549,7 +2566,9 @@ impl Applicant {
                     employee.home_address_zipcode = fd.value.trim().to_string();
                 }
                 if fd.name == "Start Date" {
-                    employee.start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                    let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                    employee.start_date = start_date;
+                    self.start_date = Some(start_date);
                 }
             }
 
