@@ -15,6 +15,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update -y && sudo apt install -y asciidoctor \
+            libusb-1.0-0-dev \
             pandoc \
             poppler-utils \
             ruby \

@@ -12,6 +12,11 @@ jobs:
             toolchain: nightly
             override: true
             components: rustfmt, clippy
+      - name: Install libusb
+        shell: bash
+        run: |
+          sudo apt update -y && sudo apt install -y \
+            libusb-1.0-0-dev
       - name: Cache cargo registry
         uses: actions/cache@v2
         with:

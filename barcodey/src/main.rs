@@ -32,11 +32,12 @@ async fn main() -> Result<(), String> {
     });
 
     let api = HidApi::new().expect("Failed to create API instance");
-    let vendor_id: u16 = u16::MIN;
-    let product_id: u16 = u16::MIN;
+    let mut vendor_id: u16 = u16::MIN;
+    let mut product_id: u16 = u16::MIN;
 
     // Iterate over our devices.
     // Try and find the barcode scanner.
+    let search = "KC433M";
     for device in api.device_list() {
         println!(
             "VID: {:04x}, PID: {:04x}, Serial: {}, Product name: {}",
@@ -51,6 +52,12 @@ async fn main() -> Result<(), String> {
                 _ => "<COULD NOT FETCH>",
             }
         );
+
+        if device.product_string().unwrap_or_default().contains(search) {
+            // We found our device.
+            vendor_id = device.vendor_id();
+            product_id = device.product_id();
+        }
     }
 
     if vendor_id == u16::MIN && product_id == u16::MIN {

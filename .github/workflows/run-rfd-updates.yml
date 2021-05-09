@@ -17,6 +17,7 @@ jobs:
           sudo apt update -y && sudo apt install -y asciidoctor \
             imagemagick \
             libmagickwand-dev \
+            libusb-1.0-0-dev \
             pandoc \
             poppler-utils \
             ruby \

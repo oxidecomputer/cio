@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
 	ca-certificates \
 	libpq5 \
 	libssl1.1 \
+	libusb-1.0-0-dev \
 	pandoc \
 	poppler-utils \
 	ruby \
