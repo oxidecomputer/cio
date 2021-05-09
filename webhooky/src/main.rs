@@ -504,7 +504,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
             match NaiveDate::parse_from_str(event.event.value.trim(), "%m/%d/%Y") {
                 Ok(v) => a.start_date = Some(v),
                 Err(e) => {
-                    sentry::capture_message(&format!("error parsing date {}: {}", event.event.value.trim(), e), sentry::Level::Info);
+                    sentry::capture_message(&format!("error parsing start date from spreadsheet {}: {}", event.event.value.trim(), e), sentry::Level::Info);
                     a.start_date = None
                 }
             }
