@@ -287,6 +287,9 @@ impl UserConfig {
             self.work_address_street_2 = "".to_string();
             self.work_address_city = building.city.to_string();
             self.work_address_state = building.state.to_string();
+            if self.work_address_state == "CA" {
+                self.work_address_state = "California".to_string();
+            }
             self.work_address_zipcode = building.zipcode.to_string();
             self.work_address_country = building.country.to_string();
             if self.work_address_country == "US" {
