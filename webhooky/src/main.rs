@@ -736,8 +736,8 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext<Cont
 
     // Get the row from airtable.
     let mut applicant = Applicant::get_from_airtable(&event.record_id).await;
-    if applicant.request_background_check {
-        // Request the background check.
+    if applicant.request_background_check && applicant.criminal_background_check_status.is_empty() {
+        // Request the background check, since we previously have not requested one.
         applicant.send_background_check_invitation(&api_context.db).await;
         println!("sent background check invitation to applicant: {}", applicant.email);
     }
