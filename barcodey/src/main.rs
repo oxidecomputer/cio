@@ -2,9 +2,8 @@ use std::env;
 use std::process::Command;
 
 use cio_api::swag_inventory::BarcodeScan;
+use hidapi::HidApi;
 use sentry::IntoDsn;
-use std::io::stdin;
-use termion::input::TermRead;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -32,36 +31,56 @@ async fn main() -> Result<(), String> {
         ..Default::default()
     });
 
-    let stdin = stdin();
+    let api = HidApi::new().expect("Failed to create API instance");
+    let mut vendor_id: u16 = u16::MIN;
+    let mut product_id: u16 = u16::MIN;
 
-    // Detecting keydown events.
-    // The barcode scanner works like a keyboard.
-    // Trying to hijack it over HID failed.
-    let mut chars: Vec<char> = Default::default();
-    for c in stdin.keys() {
-        match c.unwrap() {
-            termion::event::Key::Char(ch) => {
-                if ch == '\n' {
-                    // If its a new line character we are at the end of a code.
-                    // Combine all the characters together into a string.
-                    let barcode: String = chars.into_iter().collect();
-                    println!("Got barcode: {}", barcode);
-
-                    // We got a barcode scan, lets add it to our database.
-                    BarcodeScan::scan(barcode.trim().to_string()).await;
-
-                    // Clear out the vector so we can scan again.
-                    chars = vec![];
-                    continue;
-                }
-
-                // We have a character and its not a new line.
-                // Let's add it to our vector.
-                chars.push(ch);
+    // Iterate over our devices.
+    // Try and find the barcode scanner.
+    let search = "KC433M";
+    for device in api.device_list() {
+        println!(
+            "VID: {:04x}, PID: {:04x}, Serial: {}, Product name: {}",
+            device.vendor_id(),
+            device.product_id(),
+            match device.serial_number() {
+                Some(s) => s,
+                _ => "<COULD NOT FETCH>",
+            },
+            match device.product_string() {
+                Some(s) => s,
+                _ => "<COULD NOT FETCH>",
             }
-            _ => (),
+        );
+
+        if device.product_string().unwrap_or_default().contains(search) {
+            // We found our device.
+            vendor_id = device.vendor_id();
+            product_id = device.product_id();
         }
     }
 
-    Ok(())
+    if vendor_id == u16::MIN && product_id == u16::MIN {
+        return Err("could not find barcode scanner in HID devices".to_string());
+    }
+
+    // Open the scanner device and listen for events to read.
+    let scanner = api.open(vendor_id, product_id).expect("Failed to open device");
+    println!("Listening for events from (vendor ID: {}) (product ID: {}) in a loop...", vendor_id, product_id);
+
+    loop {
+        let mut buf = [0u8; 256];
+        let res = scanner.read(&mut buf[..]).unwrap();
+
+        let mut data_string = String::new();
+
+        for u in &buf[..res] {
+            data_string.push_str(&(u.to_string() + "\t"));
+        }
+
+        println!("{}", data_string);
+
+        // We got a barcode scan, lets add it to our database.
+        BarcodeScan::scan(data_string.trim().to_string()).await;
+    }
 }

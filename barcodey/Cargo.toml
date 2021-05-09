@@ -9,7 +9,7 @@ edition = "2018"
 
 [dependencies]
 cio-api = { path = "../cio" }
+hidapi = "^1.2.6"
 sentry = "^0.22.0"
-termion = "1.5.6"
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "^0.8.1", features = ["serde", "v4"] }
