@@ -1964,12 +1964,9 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
                     let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
 
                     if pull_branch == branch {
-                        sentry::capture_message(
-                            &format!(
-                                "RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
-                                rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
-                            ),
-                            sentry::Level::Info,
+                        println!(
+                            "RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                            rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
                         );
 
                         has_pull = true;
