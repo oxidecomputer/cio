@@ -1397,7 +1397,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         let issue = check_if_github_issue_exists(&configs_issues, &self.name);
 
         // Check if their status is not onboarding, we only care about onboarding applicants.
-        if self.status != crate::applicant_status::Status::Onboarding {
+        if self.status != crate::applicant_status::Status::Onboarding.to_string() {
             // If the issue exists and is opened, we need to close it.
             if let Some(i) = issue {
                 if i.state != "open" {
