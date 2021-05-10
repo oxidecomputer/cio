@@ -1999,7 +1999,7 @@ fn get_reviewer_pool(db: &Database) -> Vec<String> {
 
     let mut reviewers: Vec<String> = Default::default();
     for user in users {
-        if user.typev == "full-time" {
+        if user.typev == "full-time" && user.username != "robert.keith" && user.username != "robert" && user.username != "keith" && user.username != "thomas" && user.username != "arjen" {
             reviewers.push(user.email());
         }
     }
@@ -2102,7 +2102,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     if applicant.scorers.is_empty() || (applicant.scorers.len() + applicant.scorers_completed.len()) < 5 {
                         // Assign scorers and send email.
                         // Choose next five reviewers.
-                        applicant.scorers = reviewer_pool.by_ref().take(5).collect();
+                        applicant.scorers.push(reviewer_pool.by_ref().take(5).collect());
 
                         // Send emails to the scorers.
                         // We don't need to do this since we will use airtable
