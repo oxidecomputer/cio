@@ -363,7 +363,7 @@ impl UserConfig {
             self.aliases.push(self.twitter.to_string());
         }
 
-        let name_alias = format!("{}.{}", self.first_name.to_lowercase(), self.last_name.to_lowercase().replace(' ', "-"));
+        let name_alias = format!("{}.{}", self.first_name.to_lowercase().replace(' ', "-"), self.last_name.to_lowercase().replace(' ', "-"));
         if !self.aliases.contains(&name_alias) && self.username != name_alias {
             self.aliases.push(name_alias);
         }

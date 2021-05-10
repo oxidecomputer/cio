@@ -1399,7 +1399,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         msg
     }
 
-    pub async fn create_github_onboarding_issue(&self, github: &Github, configs_issues: &[Issue]) {
+    pub async fn create_github_onboarding_issue(&self, db: &Database, github: &Github, configs_issues: &[Issue]) {
         let repo = github.repo(github_org(), "configs");
 
         // Check if we already have an issue for this user.
@@ -1441,6 +1441,17 @@ Notes:
         let parts: Vec<&str> = split.collect();
         let first_name = parts[0];
         let last_name = parts[1];
+
+        // Let's check the user's database to see if we can give this person the
+        // {first_name}@ email.
+        let mut username = first_name.to_lowercase().to_string();
+        let existing_user = User::get_from_db(db, username.to_string());
+        if existing_user.is_some() {
+            username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
+        }
+        // Make sure it's lowercase.
+        username = username.to_lowercase();
+
         // Create an issue for the applicant.
         let title = format!("Onboarding: {}", self.name);
         let labels = vec!["hiring".to_string()];
@@ -1457,10 +1468,10 @@ cc @jessfraz @sdtuck @bcantrill
 
 
 ```
-[users.{}-{}]
+[users.{}]
  first_name = '{}'
  last_name = '{}'
- username = '{}.{}'
+ username = '{}'
  aliases = []
  groups = [
      'all',
@@ -1483,12 +1494,10 @@ cc @jessfraz @sdtuck @bcantrill
             self.github,
             self.phone,
             self.location,
-            first_name.to_lowercase(),
-            last_name.to_lowercase(),
+            username.replace('.', "-"),
             first_name,
             last_name,
-            first_name.to_lowercase(),
-            last_name.to_lowercase(),
+            username,
             self.email,
             self.phone.replace('-', "").replace(' ', ""),
             self.github.replace('@', ""),
@@ -1955,7 +1964,7 @@ pub async fn refresh_db_applicants(db: &Database) {
 
             let new_applicant = applicant.upsert(db).await;
 
-            new_applicant.create_github_onboarding_issue(&github, &configs_issues).await;
+            new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
         }
     }
 }
