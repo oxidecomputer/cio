@@ -40,8 +40,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the DocuSign API.
-/// For production use n4.
-const ENDPOINT: &str = "https://n4.docusign.net/restapi/v2.1/";
+/// For production use na4.
+const ENDPOINT: &str = "https://na4.docusign.net/restapi/v2.1/";
 
 /// Entrypoint for interacting with the DocuSign API.
 #[derive(Debug, Clone)]
