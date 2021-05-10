@@ -441,7 +441,7 @@ dependencies = [
  "diesel",
  "diffy",
  "docusign 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot",
+ "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -500,7 +500,7 @@ dependencies = [
  "diesel",
  "diffy",
  "docusign 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot",
+ "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -968,13 +968,13 @@ dependencies = [
  "base64 0.12.3",
  "bytes",
  "chrono",
- "dropshot_endpoint",
+ "dropshot_endpoint 0.5.1",
  "futures",
  "hostname",
  "http",
  "hyper",
  "indexmap",
- "openapiv3",
+ "openapiv3 0.4.0",
  "paste",
  "schemars",
  "serde",
@@ -991,10 +991,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "dropshot"
+version = "0.5.2-dev"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#bdbda2f970d83bf85c84318e61bf3eaa9638d2a4"
+dependencies = [
+ "async-trait",
+ "base64 0.13.0",
+ "bytes",
+ "chrono",
+ "dropshot_endpoint 0.5.2-dev",
+ "futures",
+ "hostname",
+ "http",
+ "hyper",
+ "indexmap",
+ "openapiv3 0.5.0",
+ "paste",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.0",
+ "slog",
+ "slog-async",
+ "slog-bunyan",
+ "slog-json",
+ "slog-term",
+ "tokio",
+ "toml",
+ "uuid",
+]
+
+[[package]]
 name = "dropshot_endpoint"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79e635a98e6f295a909d795d0011fb99f38390a1f18908cafa3f8ca38dc3f415"
+dependencies = [
+ "proc-macro2 1.0.26",
+ "quote 1.0.9",
+ "serde",
+ "serde_tokenstream",
+ "syn 1.0.72",
+]
+
+[[package]]
+name = "dropshot_endpoint"
+version = "0.5.2-dev"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#bdbda2f970d83bf85c84318e61bf3eaa9638d2a4"
 dependencies = [
  "proc-macro2 1.0.26",
  "quote 1.0.9",
@@ -2366,6 +2409,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "openapiv3"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90228d34f20d9fff3174d19b0d41e67f52711045270b540a2a2c2dc41ccb4085"
+dependencies = [
+ "indexmap",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
 name = "openssl"
 version = "0.10.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2674,7 +2729,7 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 name = "printy"
 version = "0.1.0"
 dependencies = [
- "dropshot",
+ "dropshot 0.5.1",
  "http",
  "reqwest",
  "sentry",
@@ -4569,7 +4624,7 @@ dependencies = [
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
  "docusign 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot",
+ "dropshot 0.5.2-dev",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",

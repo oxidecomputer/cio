@@ -10,6 +10,7 @@ extern crate serde_json;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
+use std::fs::File;
 use std::str::{from_utf8, FromStr};
 use std::sync::Arc;
 
@@ -103,8 +104,7 @@ async fn main() -> Result<(), String> {
     api.register(api_get_schema).unwrap();
 
     // Print the OpenAPI Spec to stdout.
-    /*let mut api_definition = &mut api.openapi(&"Webhooks API", &"0.0.1");
-
+    let mut api_definition = &mut api.openapi(&"Webhooks API", &"0.0.1");
     api_definition = api_definition
         .description("Internal webhooks server for listening to several third party webhooks")
         .contact_url("https://oxide.computer")
@@ -113,8 +113,7 @@ async fn main() -> Result<(), String> {
     println!("Writing OpenAPI spec to {}...", api_file);
     let mut buffer = File::create(api_file).unwrap();
     let schema = api_definition.json().unwrap().to_string();
-    api_definition.write(&mut buffer).unwrap();*/
-    let schema = "".to_string();
+    api_definition.write(&mut buffer).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.

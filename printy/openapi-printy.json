@@ -1,0 +1,64 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Print API",
+    "description": "Internal API server for printing shipping labels on a Rollo printer",
+    "contact": {
+      "url": "https://oxide.computer",
+      "email": "printy@oxide.computer"
+    },
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/ping": {
+      "get": {
+        "description": "Return pong.",
+        "operationId": "ping",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/print": {
+      "post": {
+        "description": "Listen for GitHub webhooks.",
+        "operationId": "listen_print_requests",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "title": "String",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {}
+}

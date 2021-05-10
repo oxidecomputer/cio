@@ -2,31 +2,36 @@
   "openapi": "3.0.3",
   "info": {
     "title": "CIO API",
-    "description": "API for interacting with the data our CIO bot handles",
+    "description": "Internal API server for information about the company, employess, etc",
     "contact": {
-      "name": "Jess Frazelle",
       "url": "https://oxide.computer",
       "email": "cio@oxide.computer"
     },
     "version": "0.0.1"
   },
-  "servers": [
-    {
-      "url": "http://api.internal.oxide.computer",
-      "description": "Hosted behind our VPN"
-    }
-  ],
   "paths": {
     "/": {
       "get": {
-        "description": "\n * Return the OpenAPI schema in JSON format.\n ",
+        "description": "Return the OpenAPI schema in JSON format.",
         "operationId": "api_get_schema",
-        "responses": {}
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/applicants": {
       "get": {
-        "description": "\n * Fetch all applicants.\n ",
+        "description": "Fetch all applicants.",
         "operationId": "api_get_applicants",
         "responses": {
           "200": {
@@ -34,6 +39,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_Applicant",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Applicant"
@@ -47,7 +53,7 @@
     },
     "/auth/users": {
       "get": {
-        "description": "\n * Fetch all auth users.\n ",
+        "description": "Fetch all auth users.",
         "operationId": "api_get_auth_users",
         "responses": {
           "200": {
@@ -55,6 +61,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_AuthUser",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/AuthUser"
@@ -68,7 +75,7 @@
     },
     "/buildings": {
       "get": {
-        "description": "\n * Fetch a list of office buildings.\n ",
+        "description": "Fetch a list of office buildings.",
         "operationId": "api_get_buildings",
         "responses": {
           "200": {
@@ -76,6 +83,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_Building",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Building"
@@ -89,7 +97,7 @@
     },
     "/conference_rooms": {
       "get": {
-        "description": "\n * Fetch a list of conference rooms.\n ",
+        "description": "Fetch a list of conference rooms.",
         "operationId": "api_get_conference_rooms",
         "responses": {
           "200": {
@@ -97,6 +105,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_ConferenceRoom",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ConferenceRoom"
@@ -110,7 +119,7 @@
     },
     "/github/repos": {
       "get": {
-        "description": "\n * Fetch a list of our GitHub repositories.\n ",
+        "description": "Fetch a list of our GitHub repositories.",
         "operationId": "api_get_github_repos",
         "responses": {
           "200": {
@@ -118,6 +127,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_GithubRepo",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/GithubRepo"
@@ -131,7 +141,7 @@
     },
     "/groups": {
       "get": {
-        "description": "\n * Fetch a list of Google groups.\n ",
+        "description": "Fetch a list of Google groups.",
         "operationId": "api_get_groups",
         "responses": {
           "200": {
@@ -139,6 +149,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_Group",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Group"
@@ -152,7 +163,7 @@
     },
     "/journal_club_meetings": {
       "get": {
-        "description": "\n * Fetch a list of journal club meetings.\n ",
+        "description": "Fetch a list of journal club meetings.",
         "operationId": "api_get_journal_club_meetings",
         "responses": {
           "200": {
@@ -160,6 +171,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_JournalClubMeeting",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/JournalClubMeeting"
@@ -173,7 +185,7 @@
     },
     "/links": {
       "get": {
-        "description": "\n * Fetch a list of internal links.\n ",
+        "description": "Fetch a list of internal links.",
         "operationId": "api_get_links",
         "responses": {
           "200": {
@@ -181,6 +193,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_Link",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Link"
@@ -194,7 +207,7 @@
     },
     "/mailing_list_subscribers": {
       "get": {
-        "description": "\n * Fetch a list of mailing list subscribers.\n ",
+        "description": "Fetch a list of mailing list subscribers.",
         "operationId": "api_get_mailing_list_subscribers",
         "responses": {
           "200": {
@@ -202,6 +215,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_MailingListSubscriber",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/MailingListSubscriber"
@@ -215,7 +229,7 @@
     },
     "/rfds": {
       "get": {
-        "description": "\n * Fetch all RFDs.\n ",
+        "description": "Fetch all RFDs.",
         "operationId": "api_get_rfds",
         "responses": {
           "200": {
@@ -223,6 +237,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_RFD",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/RFD"
@@ -236,7 +251,7 @@
     },
     "/users": {
       "get": {
-        "description": "\n * Fetch a list of employees.\n ",
+        "description": "Fetch a list of employees.",
         "operationId": "api_get_users",
         "responses": {
           "200": {
@@ -244,6 +259,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "title": "Array_of_User",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/User"
@@ -1415,9 +1431,5 @@
         ]
       }
     }
-  },
-  "externalDocs": {
-    "description": "Automatically updated documentation site, public, not behind the VPN.",
-    "url": "https://api.docs.corp.oxide.computer"
   }
 }

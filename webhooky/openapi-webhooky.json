@@ -1,0 +1,1559 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Webhooks API",
+    "description": "Internal webhooks server for listening to several third party webhooks",
+    "contact": {
+      "url": "https://oxide.computer",
+      "email": "webhooks@oxide.computer"
+    },
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "description": "Return the OpenAPI schema in JSON format.",
+        "operationId": "api_get_schema",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/airtable/applicants/edit": {
+      "post": {
+        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
+        "operationId": "listen_airtable_applicants_edit_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/airtable/shipments/inbound/create": {
+      "post": {
+        "description": "Listen for rows created in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
+        "operationId": "listen_airtable_shipments_inbound_create_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/airtable/shipments/outbound/create": {
+      "post": {
+        "description": "Listen for rows created in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
+        "operationId": "listen_airtable_shipments_outbound_create_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/airtable/shipments/outbound/edit": {
+      "post": {
+        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
+        "operationId": "listen_airtable_shipments_outbound_edit_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/page_view": {
+      "post": {
+        "description": "Listen for analytics page view events.",
+        "operationId": "listen_analytics_page_view_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPageView"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkr/background/update": {
+      "post": {
+        "description": "Listen for updates to our checkr background checks.",
+        "operationId": "listen_checkr_background_update_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/docusign/callback": {
+      "post": {
+        "description": "Listen for callbacks to docusign auth.",
+        "operationId": "listen_docusign_callback",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/docusign/envelope/update": {
+      "post": {
+        "description": "Listen for updates to our docusign envelopes.",
+        "operationId": "listen_docusign_envelope_update_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Envelope"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/github": {
+      "post": {
+        "description": "Listen for GitHub webhooks.",
+        "operationId": "listen_github_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitHubWebhook"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/github/ratelimit": {
+      "get": {
+        "description": "Get our current GitHub rate limit.",
+        "operationId": "github_rate_limit",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubRateLimit"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/google/sheets/edit": {
+      "post": {
+        "description": "Listen for edits to our Google Sheets. These are set up with a Google Apps script on the sheets themselves.",
+        "operationId": "listen_google_sheets_edit_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleSpreadsheetEditEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/google/sheets/row/create": {
+      "post": {
+        "description": "Listen for rows created in our Google Sheets. These are set up with a Google Apps script on the sheets themselves.",
+        "operationId": "listen_google_sheets_row_create_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleSpreadsheetRowCreateEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mailchimp": {
+      "get": {
+        "description": "Ping endpoint for MailChimp webhooks.",
+        "operationId": "ping_mailchimp_webhooks",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Listen for MailChimp webhooks.",
+        "operationId": "listen_mailchimp_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "title": "String",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ping": {
+      "get": {
+        "description": "Return pong.",
+        "operationId": "ping",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rfd/{num}": {
+      "post": {
+        "description": "Trigger an update for an RFD.",
+        "operationId": "trigger_rfd_update_by_number",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "num",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shippo/tracking/update": {
+      "post": {
+        "description": "Listen for shimpment tracking updated from Shippo.",
+        "operationId": "listen_shippo_tracking_update_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AirtableRowEvent": {
+        "description": "An Airtable row event.",
+        "type": "object",
+        "properties": {
+          "record_id": {
+            "type": "string"
+          }
+        }
+      },
+      "BccEmailAddress": {
+        "type": "object",
+        "properties": {
+          "bccEmailAddressId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "CustomFields": {
+        "type": "object",
+        "properties": {
+          "textCustomFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TextCustomField"
+            }
+          }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "PDFBytes": {
+            "description": "These appear to be base64 encoded.",
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "EmailNotification": {
+        "type": "object",
+        "properties": {
+          "emailBody": {
+            "description": "This is the same as the email body. If specified it is included in the email body for all envelope recipients.",
+            "type": "string"
+          },
+          "emailSubject": {
+            "description": "The subject line of the email message that is sent to all recipients.\n\nFor information about adding merge field information to the email subject, see [Template Email Subject Merge Fields](https://developers.docusign.com/esign-rest-api/reference/Templates/Templates/create#template-email-subject-merge-fields).",
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          }
+        }
+      },
+      "EmailSettings": {
+        "type": "object",
+        "properties": {
+          "bccEmailAddresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BccEmailAddress"
+            }
+          },
+          "replyEmailAddressOverride": {
+            "type": "string"
+          },
+          "replyEmailNameOverride": {
+            "type": "string"
+          }
+        }
+      },
+      "Envelope": {
+        "type": "object",
+        "properties": {
+          "allowComments": {
+            "type": "string"
+          },
+          "allowMarkup": {
+            "type": "string"
+          },
+          "allowReassign": {
+            "type": "string"
+          },
+          "allowViewHistory": {
+            "type": "string"
+          },
+          "asynchronous": {
+            "type": "string"
+          },
+          "attachmentsUri": {
+            "type": "string"
+          },
+          "brandId": {
+            "type": "string"
+          },
+          "brandLock": {
+            "type": "string"
+          },
+          "completedDateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "copyRecipientData": {
+            "type": "string"
+          },
+          "createdDateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "customFields": {
+            "$ref": "#/components/schemas/CustomFields"
+          },
+          "customFieldsUri": {
+            "type": "string"
+          },
+          "declinedDateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveredDateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "disableResponsiveDocument": {
+            "type": "string"
+          },
+          "documentsUri": {
+            "type": "string"
+          },
+          "emailBlurb": {
+            "description": "This is the same as the email body. If specified it is included in the email body for all envelope recipients.",
+            "type": "string"
+          },
+          "emailSettings": {
+            "$ref": "#/components/schemas/EmailSettings"
+          },
+          "emailSubject": {
+            "description": "The subject line of the email message that is sent to all recipients.\n\nFor information about adding merge field information to the email subject, see [Template Email Subject Merge Fields](https://developers.docusign.com/esign-rest-api/reference/Templates/Templates/create#template-email-subject-merge-fields).",
+            "type": "string"
+          },
+          "envelopeDocuments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            }
+          },
+          "envelopeId": {
+            "type": "string"
+          },
+          "envelopeUri": {
+            "type": "string"
+          },
+          "is21CFRPart11": {
+            "type": "string"
+          },
+          "isSignatureProviderEnvelope": {
+            "type": "string"
+          },
+          "lockInformation": {
+            "$ref": "#/components/schemas/LockInformation"
+          },
+          "purgeState": {
+            "type": "string"
+          },
+          "recipients": {
+            "$ref": "#/components/schemas/Recipients"
+          },
+          "recipientsUri": {
+            "type": "string"
+          },
+          "signerCanSignOnMobile": {
+            "type": "string"
+          },
+          "signingLocation": {
+            "type": "string"
+          },
+          "status": {
+            "description": "Indicates the envelope status. Valid values are:\n\n* `completed`: The envelope has been completed and all tags have been signed. * `created`: The envelope is created as a draft. It can be modified and sent later. * `declined`: The envelope has been declined by the recipients. * `delivered`: The envelope has been delivered to the recipients. * `sent`: The envelope is sent to the recipients. * `signed`: The envelope has been signed by the recipients. * `voided`: The envelope is no longer valid and recipients cannot access or sign the envelope.",
+            "type": "string"
+          },
+          "templateId": {
+            "description": "The id of the template. If a value is not provided, DocuSign generates a value.",
+            "type": "string"
+          },
+          "templateRoles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateRole"
+            }
+          },
+          "transactionId": {
+            "type": "string"
+          },
+          "useDisclosure": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorDetails": {
+        "type": "object",
+        "properties": {
+          "errorCode": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "GitHubApp": {
+        "description": "A GitHub app.",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "GitHubCheckRun": {
+        "description": "A GitHub check run. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/checks#get-a-check-run",
+        "type": "object",
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/GitHubApp"
+          },
+          "check_suite": {
+            "$ref": "#/components/schemas/GitHubCheckSuite"
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "head_sha": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "GitHubCheckSuite": {
+        "description": "A GitHub check suite. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/checks#suites",
+        "type": "object",
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/GitHubApp"
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "head_branch": {
+            "type": "string"
+          },
+          "head_sha": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "GitHubComment": {
+        "description": "A Github comment. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues#comments",
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "url": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/GitHubUser"
+          }
+        }
+      },
+      "GitHubCommit": {
+        "description": "A GitHub commit. FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push",
+        "type": "object",
+        "properties": {
+          "added": {
+            "description": "An array of files added in the commit.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "author": {
+            "$ref": "#/components/schemas/GitHubUser"
+          },
+          "commit_ref": {
+            "type": "string"
+          },
+          "distinct": {
+            "description": "Whether this commit is distinct from any that have been pushed before.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "The SHA of the commit.",
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "message": {
+            "description": "The commit message.",
+            "type": "string"
+          },
+          "modified": {
+            "description": "An array of files modified by the commit.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "removed": {
+            "description": "An array of files removed in the commit.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sha": {
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "The ISO 8601 timestamp of the commit.",
+            "type": "string",
+            "format": "date-time"
+          },
+          "url": {
+            "description": "URL that points to the commit API resource.",
+            "type": "string"
+          }
+        }
+      },
+      "GitHubInstallation": {
+        "description": "A GitHub app installation.",
+        "type": "object",
+        "properties": {
+          "access_tokens_url": {
+            "type": "string"
+          },
+          "app_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "repositories_url": {
+            "type": "string"
+          },
+          "repository_selection": {
+            "type": "string"
+          },
+          "single_file_name": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "target_type": {
+            "type": "string"
+          }
+        }
+      },
+      "GitHubIssue": {
+        "description": "A Github issue. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues",
+        "type": "object",
+        "properties": {
+          "assignee": {
+            "$ref": "#/components/schemas/GitHubUser"
+          },
+          "assignees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GitHubUser"
+            }
+          },
+          "body": {
+            "type": "string"
+          },
+          "closed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "comments": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "comments_url": {
+            "type": "string"
+          },
+          "events_url": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "labels_url": {
+            "type": "string"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pull_request": {
+            "$ref": "#/components/schemas/GitHubPullRef"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/GitHubUser"
+          }
+        },
+        "required": [
+          "events_url",
+          "labels_url"
+        ]
+      },
+      "GitHubOrganization": {
+        "description": "A GitHub organization.",
+        "type": "object",
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "events_url": {
+            "type": "string"
+          },
+          "hooks_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "issues_url": {
+            "type": "string"
+          },
+          "login": {
+            "type": "string"
+          },
+          "members_url": {
+            "type": "string"
+          },
+          "public_members_url": {
+            "type": "string"
+          },
+          "repos_url": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "avatar_url",
+          "events_url",
+          "hooks_url",
+          "id",
+          "issues_url",
+          "login",
+          "members_url",
+          "public_members_url",
+          "repos_url",
+          "url"
+        ]
+      },
+      "GitHubPullRef": {
+        "description": "A reference to a pull request.",
+        "type": "object",
+        "properties": {
+          "diff_url": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "patch_url": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "GitHubPullRequest": {
+        "description": "A GitHub pull request. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request",
+        "type": "object",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/GitHubCommit"
+          },
+          "body": {
+            "type": "string"
+          },
+          "closed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "comments_url": {
+            "type": "string"
+          },
+          "commits_url": {
+            "type": "string"
+          },
+          "diff_url": {
+            "type": "string"
+          },
+          "head": {
+            "$ref": "#/components/schemas/GitHubCommit"
+          },
+          "html_url": {
+            "description": "The HTML location of this pull request.",
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "issue_url": {
+            "type": "string"
+          },
+          "merged": {
+            "type": "boolean"
+          },
+          "merged_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "patch_url": {
+            "type": "string"
+          },
+          "review_comment_url": {
+            "type": "string"
+          },
+          "review_comments_url": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "statuses_url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/GitHubUser"
+          }
+        }
+      },
+      "GitHubRateLimit": {
+        "description": "A GitHub RateLimit",
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "remaining": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "reset": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "limit",
+          "remaining",
+          "reset"
+        ]
+      },
+      "GitHubRepo": {
+        "description": "A GitHub repository. FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push",
+        "type": "object",
+        "properties": {
+          "default_branch": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/GitHubUser"
+          }
+        }
+      },
+      "GitHubUser": {
+        "description": "The data type for a GitHub user.",
+        "type": "object",
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "events_url": {
+            "type": "string"
+          },
+          "followers_url": {
+            "type": "string"
+          },
+          "following_url": {
+            "type": "string"
+          },
+          "gists_url": {
+            "type": "string"
+          },
+          "gravatar_id": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "login": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organizations_url": {
+            "type": "string"
+          },
+          "received_events_url": {
+            "type": "string"
+          },
+          "repos_url": {
+            "type": "string"
+          },
+          "site_admin": {
+            "type": "boolean"
+          },
+          "starred_url": {
+            "type": "string"
+          },
+          "subscriptions_url": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "GitHubWebhook": {
+        "description": "A GitHub webhook event. FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads",
+        "type": "object",
+        "properties": {
+          "action": {
+            "description": "Most webhook payloads contain an action property that contains the specific activity that triggered the event.",
+            "type": "string"
+          },
+          "after": {
+            "description": "The SHA of the most recent commit on `ref` after the push.",
+            "type": "string"
+          },
+          "before": {
+            "description": "The SHA of the most recent commit on `ref` before the push.",
+            "type": "string"
+          },
+          "check_run": {
+            "$ref": "#/components/schemas/GitHubCheckRun"
+          },
+          "check_suite": {
+            "$ref": "#/components/schemas/GitHubCheckSuite"
+          },
+          "comment": {
+            "$ref": "#/components/schemas/GitHubComment"
+          },
+          "commits": {
+            "description": "An array of commit objects describing the pushed commits. The array includes a maximum of 20 commits. If necessary, you can use the Commits API to fetch additional commits. This limit is applied to timeline events only and isn't applied to webhook deliveries.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GitHubCommit"
+            }
+          },
+          "installation": {
+            "$ref": "#/components/schemas/GitHubInstallation"
+          },
+          "issue": {
+            "$ref": "#/components/schemas/GitHubIssue"
+          },
+          "number": {
+            "description": "`pull_request` event fields. FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request\n\nThe pull request number.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/GitHubOrganization"
+          },
+          "pull_request": {
+            "$ref": "#/components/schemas/GitHubPullRequest"
+          },
+          "ref": {
+            "description": "`push` event fields. FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push\n\nThe full `git ref` that was pushed. Example: `refs/heads/main`.",
+            "type": "string"
+          },
+          "repository": {
+            "$ref": "#/components/schemas/GitHubRepo"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/GitHubUser"
+          }
+        }
+      },
+      "GoogleSpreadsheet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "GoogleSpreadsheetEditEvent": {
+        "description": "A Google Sheet edit event.",
+        "type": "object",
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/GoogleSpreadsheetEvent"
+          },
+          "spreadsheet": {
+            "$ref": "#/components/schemas/GoogleSpreadsheet"
+          }
+        }
+      },
+      "GoogleSpreadsheetEvent": {
+        "type": "object",
+        "properties": {
+          "authMode": {
+            "type": "string"
+          },
+          "namedValues": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "oldValue": {
+            "type": "string"
+          },
+          "range": {
+            "$ref": "#/components/schemas/GoogleSpreadsheetRange"
+          },
+          "source": {
+            "$ref": "#/components/schemas/GoogleSpreadsheetSource"
+          },
+          "triggerUid": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/GoogleSpreadsheetUser"
+          },
+          "value": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "GoogleSpreadsheetRange": {
+        "type": "object",
+        "properties": {
+          "columnEnd": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "columnStart": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rowEnd": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rowStart": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "GoogleSpreadsheetRowCreateEvent": {
+        "description": "A Google Sheet row create event.",
+        "type": "object",
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/GoogleSpreadsheetEvent"
+          },
+          "spreadsheet": {
+            "$ref": "#/components/schemas/GoogleSpreadsheet"
+          }
+        }
+      },
+      "GoogleSpreadsheetSource": {
+        "type": "object"
+      },
+      "GoogleSpreadsheetUser": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "LockInformation": {
+        "type": "object",
+        "properties": {
+          "errorDetails": {
+            "$ref": "#/components/schemas/ErrorDetails"
+          },
+          "lockDurationInSeconds": {
+            "type": "string"
+          },
+          "lockToken": {
+            "type": "string"
+          },
+          "lockType": {
+            "type": "string"
+          },
+          "lockedByApp": {
+            "type": "string"
+          },
+          "lockedByUser": {
+            "$ref": "#/components/schemas/LockedByUser"
+          },
+          "lockedUntilDateTime": {
+            "type": "string"
+          },
+          "useScratchPad": {
+            "type": "string"
+          }
+        }
+      },
+      "LockedByUser": {
+        "type": "object"
+      },
+      "NewPageView": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "link_to_auth_user": {
+            "description": "link to another table in Airtable",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "page_link": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain",
+          "path",
+          "time",
+          "user_email"
+        ]
+      },
+      "Recipient": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "description": "Email of the recipient. Notification will be sent to this email id. Maximum Length: 100 characters.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Full legal name of the recipient. Maximum Length: 100 characters.\n\nNote: If you are creating an envelope with DocuSign EU advanced signature enabled, ensure that recipient names do not contain any of the following characters: ^ : \\ @ , + <",
+            "type": "string"
+          },
+          "recipientId": {
+            "description": "Unique for the recipient. It is used by the tab element to indicate which recipient is to sign the Document.",
+            "type": "string"
+          },
+          "roleName": {
+            "description": "Optional element. Specifies the role name associated with the recipient. This is required when working with template recipients.",
+            "type": "string"
+          },
+          "signerName": {
+            "description": "Required element with recipient type In Person Signers. Maximum Length: 100 characters.\n\nThe full legal name of a signer for the envelope.",
+            "type": "string"
+          }
+        }
+      },
+      "Recipients": {
+        "type": "object",
+        "properties": {
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            }
+          },
+          "signers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            }
+          }
+        }
+      },
+      "TemplateRole": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "description": "Email of the recipient. Notification will be sent to this email id. Maximum Length: 100 characters.",
+            "type": "string"
+          },
+          "emailNotification": {
+            "$ref": "#/components/schemas/EmailNotification"
+          },
+          "name": {
+            "description": "Full legal name of the recipient. Maximum Length: 100 characters.\n\nNote: If you are creating an envelope with DocuSign EU advanced signature enabled, ensure that recipient names do not contain any of the following characters: ^ : \\ @ , + <",
+            "type": "string"
+          },
+          "roleName": {
+            "description": "Optional element. Specifies the role name associated with the recipient. This is required when working with template recipients.",
+            "type": "string"
+          },
+          "routingOrder": {
+            "description": "This specifies the routing order of the recipient in the envelope.",
+            "type": "string"
+          },
+          "signerName": {
+            "description": "Required element with recipient type In Person Signers. Maximum Length: 100 characters.\n\nThe full legal name of a signer for the envelope.",
+            "type": "string"
+          }
+        }
+      },
+      "TextCustomField": {
+        "type": "object",
+        "properties": {
+          "configurationType": {
+            "type": "string"
+          },
+          "errorDetails": {
+            "$ref": "#/components/schemas/ErrorDetails"
+          },
+          "fieldId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "required": {
+            "type": "string"
+          },
+          "show": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "required",
+          "show",
+          "value"
+        ]
+      }
+    }
+  }
+}

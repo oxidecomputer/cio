@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::sync::Arc;
 
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServerStarter, RequestContext};
@@ -48,7 +49,17 @@ async fn main() -> Result<(), String> {
     api.register(api_get_schema).unwrap();
     api.register(api_get_users).unwrap();
 
-    let schema = "".to_string();
+    // Print the OpenAPI Spec to stdout.
+    let mut api_definition = &mut api.openapi(&"CIO API", &"0.0.1");
+    api_definition = api_definition
+        .description("Internal API server for information about the company, employess, etc")
+        .contact_url("https://oxide.computer")
+        .contact_email("cio@oxide.computer");
+    let api_file = "openapi-cio.json";
+    println!("Writing OpenAPI spec to {}...", api_file);
+    let mut buffer = File::create(api_file).unwrap();
+    let schema = api_definition.json().unwrap().to_string();
+    api_definition.write(&mut buffer).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.

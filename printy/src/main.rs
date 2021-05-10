@@ -61,10 +61,21 @@ async fn main() -> Result<(), String> {
     api.register(ping).unwrap();
     api.register(listen_print_requests).unwrap();
 
+    let mut api_definition = &mut api.openapi(&"Print API", &"0.0.1");
+    api_definition = api_definition
+        .description("Internal API server for printing shipping labels on a Rollo printer")
+        .contact_url("https://oxide.computer")
+        .contact_email("printy@oxide.computer");
+    let api_file = "openapi-printy.json";
+    println!("Writing OpenAPI spec to {}...", api_file);
+    let mut buffer = File::create(api_file).unwrap();
+    let schema = api_definition.json().unwrap().to_string();
+    api_definition.write(&mut buffer).unwrap();
+
     /*
      * The functions that implement our API endpoints will share this context.
      */
-    let api_context = Context::new().await;
+    let api_context = Context::new(schema).await;
 
     /*
      * Set up the server.
@@ -79,21 +90,35 @@ async fn main() -> Result<(), String> {
 /**
  * Application-specific context (state shared by handler functions)
  */
-struct Context {}
+struct Context {
+    schema: String,
+}
 
 impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new() -> Context {
-        // Create the context.
-        Context {}
+    pub async fn new(schema: String) -> Context {
+        Context { schema }
     }
 }
 
 /*
  * HTTP API interface
  */
+
+/**
+ * Return the OpenAPI schema in JSON format.
+ */
+#[endpoint {
+    method = GET,
+    path = "/",
+}]
+async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+    let api_context = rqctx.context();
+
+    Ok(HttpResponseOk(api_context.schema.to_string()))
+}
 
 /** Return pong. */
 #[endpoint {
