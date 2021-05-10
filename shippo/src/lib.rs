@@ -253,7 +253,7 @@ impl Shippo {
         let status = &resp.status();
 
         match &resp.json::<Transaction>().await {
-            Ok(v) => return Ok(v.clone()),
+            Ok(v) => Ok(v.clone()),
             Err(e) => {
                 return Err(APIError {
                     status_code: *status,
