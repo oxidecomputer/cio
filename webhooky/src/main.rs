@@ -546,7 +546,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
         .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
-    new_applicant.create_github_onboarding_issue(&github, &configs_issues).await;
+    new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
 
     println!("applicant {} updated successfully", new_applicant.email);
     sentry::end_session();
