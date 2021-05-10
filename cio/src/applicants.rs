@@ -2143,14 +2143,11 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     if applicant.scorers.is_empty() || (applicant.scorers.len() + applicant.scorers_completed.len()) < 5 {
                         // Assign scorers and send email.
                         // Choose next five reviewers.
-                        applicant.scorers.push(reviewer_pool.by_ref().take(5).collect());
-
-                        // Send emails to the scorers.
-                        // We don't need to do this since we will use airtable
-                        // for the emails.
-                        //for s in &applicant.scorers {
-                        //applicant.send_email_to_scorer(&s).await;
-                        //}
+                        let mut random_five: Vec<String> = reviewer_pool.by_ref().take(5).collect();
+                        applicant.scorers.append(&mut random_five);
+                        // Remove any duplicates.
+                        applicant.scorers.sort_unstable();
+                        applicant.scorers.dedup();
                     }
 
                     // Update the applicant in the database.
