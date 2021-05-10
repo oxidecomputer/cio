@@ -1013,14 +1013,19 @@ async fn listen_checkr_background_update_webhooks(_rqctx: Arc<RequestContext<Con
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct AuthCallback {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub code: String,
+}
+
 /** Listen for callbacks to docusign auth. */
 #[endpoint {
     method = GET,
     path = "/docusign/callback",
 }]
-async fn listen_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<HashMap<String, String>>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let event = query_args.into_inner();
-    sentry::capture_message(&format!("docusign callback: {:?}", event), sentry::Level::Info);
+async fn listen_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let _event = query_args.into_inner();
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
