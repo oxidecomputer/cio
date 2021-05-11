@@ -59,7 +59,8 @@ async fn main() -> Result<(), String> {
      * allowing this metadata to live right alongside the handler function.
      */
     api.register(ping).unwrap();
-    api.register(listen_print_requests).unwrap();
+    api.register(listen_print_rollo_requests).unwrap();
+    api.register(listen_print_zebra_requests).unwrap();
 
     let mut api_definition = &mut api.openapi(&"Print API", &"0.0.1");
     api_definition = api_definition
@@ -129,30 +130,52 @@ async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Str
     Ok(HttpResponseOk("pong".to_string()))
 }
 
-/** Listen for GitHub webhooks. */
+/** Listen for print requests for the Rollo label printer */
 #[endpoint {
     method = POST,
-    path = "/print",
+    path = "/print/rollo",
 }]
-async fn listen_print_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_print_rollo_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let url = body_param.into_inner();
-    let printer = get_rollo_printer();
+    let printer = get_printer("rollo");
     println!("{:?}", printer);
 
     // Save the contents of our URL to a file.
     let file = save_url_to_file(url).await;
 
     // Print the file.
-    print_file(&printer, &file);
+    print_file(&printer, &file, "4.00x6.00");
 
     // Print the body to the rollo printer.
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
-// Return our rollo printer.
-fn get_rollo_printer() -> String {
+/** Listen for print requests for the Zebra label printer */
+#[endpoint {
+    method = POST,
+    path = "/print/zebra",
+}]
+async fn listen_print_zebra_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let url = body_param.into_inner();
+    let printer = get_printer("zebra");
+    println!("{:?}", printer);
+
+    // Save the contents of our URL to a file.
+    let file = save_url_to_file(url).await;
+
+    // Print the file.
+    print_file(&printer, &file, "2.00x3.00");
+
+    // Print the body to the rollo printer.
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+// Return the printer we are looking for.
+fn get_printer(name: &str) -> String {
     let output = Command::new("lpstat").args(&["-a"]).output().expect("failed to execute process");
     if !output.status.success() {
         let e = format!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
@@ -164,7 +187,7 @@ fn get_rollo_printer() -> String {
     let os = from_utf8(&output.stdout).unwrap();
     let printers = os.trim().split('\n');
     for printer in printers {
-        if printer.to_lowercase().contains("rollo") {
+        if printer.to_lowercase().contains(name) {
             let (p, _r) = printer.split_once(' ').unwrap();
             return p.to_string();
         }
@@ -194,9 +217,12 @@ async fn save_url_to_file(url: String) -> String {
 
 // Save URL contents to a temporary file.
 // Returns the filepath.
-fn print_file(printer: &str, file: &str) {
+fn print_file(printer: &str, file: &str, media: &str) {
     println!("Sending file `{}` to printer `{}`", file, printer);
-    let output = Command::new("lp").args(&["-d", printer, "-o", "media=4.00x6.00\"", file]).output().expect("failed to execute process");
+    let output = Command::new("lp")
+        .args(&["-d", printer, "-o", &format!("media={}\"", media), file])
+        .output()
+        .expect("failed to execute process");
     if !output.status.success() {
         let e = format!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
         println!("{}", e);
