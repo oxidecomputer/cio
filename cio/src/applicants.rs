@@ -2150,6 +2150,19 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                         applicant.scorers.dedup();
                     }
 
+                    // Remove anyone from the scorers if they have already completed their review.
+                    for _ in 0..5 {
+                        for (index, scorer) in applicant.scorers.clone().iter().enumerate() {
+                            if applicant.scorers_completed.contains(scorer) {
+                                applicant.scorers.remove(index);
+                                // Break the loop since now the indexes are all off.
+                                // The next cron run will catch it.
+                                // TODO: make this better.
+                                break;
+                            }
+                        }
+                    }
+
                     // Update the applicant in the database.
                     applicant.update(db).await;
                 }
