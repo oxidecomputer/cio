@@ -1,3 +1,5 @@
+use std::env;
+
 use async_trait::async_trait;
 use barcoders::generators::image::*;
 use barcoders::generators::svg::*;
@@ -8,6 +10,7 @@ use image::{DynamicImage, ImageFormat};
 use lopdf::content::{Content, Operation};
 use lopdf::{Document, Object, Stream, StringFormat};
 use macros::db;
+use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -228,6 +231,22 @@ impl NewSwagInventoryItem {
     pub async fn expand(&mut self, drive_client: &GoogleDrive) {
         self.generate_barcode();
         self.generate_barcode_images(drive_client).await;
+    }
+}
+
+impl SwagInventoryItem {
+    /// Send the label to our printer.
+    pub async fn print_label(&self) {
+        let mut printer_url = env::var("PRINTER_URL").unwrap().trim_end_matches('/').to_string();
+        printer_url = format!("{}/zebra", printer_url);
+        let client = reqwest::Client::new();
+        let resp = client.post(&printer_url).body(json!(self.barcode_pdf_label).to_string()).send().await.unwrap();
+        match resp.status() {
+            StatusCode::ACCEPTED => (),
+            s => {
+                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
+            }
+        };
     }
 }
 

@@ -618,7 +618,8 @@ impl OutboundShipment {
 
     /// Send the label to our printer.
     pub async fn print_label(&self) {
-        let printer_url = env::var("PRINTER_URL").unwrap();
+        let mut printer_url = env::var("PRINTER_URL").unwrap().trim_end_matches('/').to_string();
+        printer_url = format!("{}/rollo", printer_url);
         let client = reqwest::Client::new();
         let resp = client.post(&printer_url).body(json!(self.label_link).to_string()).send().await.unwrap();
         match resp.status() {
