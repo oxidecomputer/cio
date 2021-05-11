@@ -739,10 +739,12 @@ async fn listen_airtable_swag_inventory_items_edit_webhooks(rqctx: Arc<RequestCo
     let mut swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id).await;
     if swag_inventory_item.print_barcode_label {
         // Print the barcode label.
-        // TODO: do this.
+        swag_inventory_item.print_label().await;
+        println!("swag inventory item {} printed label", swag_inventory_item.name);
 
         // Reset the field to false.
         swag_inventory_item.print_barcode_label = false;
+        // Update it in the database.
         swag_inventory_item.update(&api_context.db).await;
     }
 
