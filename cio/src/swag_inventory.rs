@@ -52,6 +52,11 @@ pub struct NewSwagInventoryItem {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
     pub barcode_pdf_label: String,
 
+    /// This field will be set in Airtable and used to hit an API endpoint
+    /// to print a barcode.
+    #[serde(default)]
+    pub print_barcode_label: bool,
+
     /// This is populated by Airtable.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_item: Vec<String>,
