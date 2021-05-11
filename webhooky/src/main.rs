@@ -43,6 +43,7 @@ use cio_api::schema::applicants;
 use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, NewOutboundShipment, OutboundShipment};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
+use cio_api::swag_inventory::SwagInventoryItem;
 use cio_api::templates::generate_terraform_files_for_okta;
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
 
@@ -90,6 +91,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_edit_webhooks).unwrap();
+    api.register(listen_airtable_swag_inventory_items_edit_webhooks).unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_callback).unwrap();
@@ -710,6 +712,42 @@ pub struct GoogleSpreadsheetRowCreateEvent {
     pub event: GoogleSpreadsheetEvent,
     #[serde(default)]
     pub spreadsheet: GoogleSpreadsheet,
+}
+
+/**
+ * Listen for rows edited in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/swag/inventory/items/edit",
+}]
+async fn listen_airtable_swag_inventory_items_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Get the row from airtable.
+    let mut swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id).await;
+    if swag_inventory_item.print_barcode_label {
+        // Print the barcode label.
+        // TODO: do this.
+
+        // Reset the field to false.
+        swag_inventory_item.print_barcode_label = false;
+        swag_inventory_item.update(&api_context.db).await;
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**

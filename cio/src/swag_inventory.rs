@@ -72,6 +72,9 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 
         // This is a funtion in Airtable so we can't update it.
         self.name = "".to_string();
+
+        // This is set in airtable so we need to keep it.
+        self.print_barcode_label = record.print_barcode_label;
     }
 }
 
