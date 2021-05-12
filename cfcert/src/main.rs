@@ -68,7 +68,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                 params: dns::CreateDnsRecordParams {
                     name: &domain,
                     content: dns::DnsContent::A { content: ip.parse().unwrap() },
-                    ttl: None,
+                    // This is the min.
+                    ttl: Some(120),
                     proxied: None,
                     priority: None,
                 },
