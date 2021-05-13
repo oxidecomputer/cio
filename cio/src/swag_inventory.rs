@@ -109,6 +109,8 @@ impl NewSwagInventoryItem {
             .replace("DIGITALCOMPUTER", "DEC")
             .replace("TURBOBUTTON", "TURBO")
             .replace("HOODIE", "HOOD")
+            .replace("RAMBLER", "R")
+            .replace("RULED", "RULE")
             .trim()
             .to_string();
 
