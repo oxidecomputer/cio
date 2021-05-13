@@ -167,7 +167,7 @@ async fn listen_print_zebra_requests(_rqctx: Arc<RequestContext<Context>>, body_
     let file = save_url_to_file(url).await;
 
     // Print the file.
-    print_file(&printer, &file, "2.00x3.00");
+    print_file(&printer, &file, "3.00x2.00");
 
     // Print the body to the rollo printer.
     sentry::end_session();
