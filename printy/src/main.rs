@@ -224,6 +224,8 @@ fn print_file(printer: &str, file: &str, media: &str) {
             "-d",
             printer,
             "-o",
+            "fit-to-page",
+            "-o",
             &format!("media={}\"", media),
             "-o",
             "page-left=0",
@@ -233,8 +235,6 @@ fn print_file(printer: &str, file: &str, media: &str) {
             "page-top=0",
             "-o",
             "page-bottom=0",
-            "-o",
-            "ppi=1200",
             file,
         ])
         .output()

@@ -97,13 +97,30 @@ impl NewSwagInventoryItem {
             .replace(')', "")
             .replace('-', "")
             .replace("'", "")
+            .replace("UNISEX", "U")
+            .replace("WOMENS", "W")
+            .replace("MENS", "M")
+            .replace("TODDLERS", "T")
+            .replace("YOUTH", "Y")
+            .replace("ONESIE", "B")
+            .replace("MOLESKINE", "MS")
+            .replace("NOTEBOOK", "NB")
+            .replace("TEE", "T")
+            .replace("DIGITALCOMPUTER", "DEC")
+            .replace("TURBOBUTTON", "TURBO")
             .trim()
             .to_string();
 
         // Add zeros to start of barcode til it is 39 chars long.
         // This makes sure the barcodes are all of uniform length.
-        while barcode.len() < 39 {
+        // To fit on the barcode label with the right DPI we CANNOT exceed this
+        // legth.
+        let max_barcode_len = 13;
+        while barcode.len() < max_barcode_len {
             barcode = format!("0{}", barcode);
+        }
+        if barcode.len() > max_barcode_len {
+            println!("len too long {} {}, needs to be {} or under", barcode, barcode.len(), max_barcode_len);
         }
 
         self.barcode = barcode;
@@ -116,7 +133,7 @@ impl NewSwagInventoryItem {
             let bucket = "oxide_automated_documents";
             // Generate the barcode svg and png.
             let barcode = Code39::new(&self.barcode).unwrap();
-            let png = Image::png(140); // You must specify the height in pixels.
+            let png = Image::png(40); // You must specify the height in pixels.
             let encoded = barcode.encode();
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
@@ -151,8 +168,8 @@ impl NewSwagInventoryItem {
     pub fn generate_pdf_barcode_label(&self, png_bytes: &[u8]) -> Vec<u8> {
         let pdf_width = 3.0 * 72.0;
         let pdf_height = 2.0 * 72.0;
-        let pdf_margin = 1.0;
-        let font_size = 8.0;
+        let pdf_margin = 5.0;
+        let font_size = 9.0;
         let mut doc = Document::with_version("1.5");
         let pages_id = doc.new_object_id();
         let font_id = doc.add_object(dictionary! {
@@ -211,11 +228,9 @@ impl NewSwagInventoryItem {
         // Center the logo at the top of the pdf.
         doc.insert_image(page_id, logo_stream, position, (logo_info.width, logo_info.height)).unwrap();
 
-        let (mut doc, img_stream, mut info) = image_to_pdf_object(doc, png_bytes);
+        let (mut doc, img_stream, info) = image_to_pdf_object(doc, png_bytes);
         // We want the barcode width to fit.
-        let original_width = info.width;
-        info.width = pdf_width - (pdf_margin * 2.0);
-        info.height *= info.width / original_width;
+        // This will center it automatically.
         let position = ((pdf_width - info.width) / 2.0, pdf_height - info.height - logo_info.height - (pdf_margin * 2.0));
         // Center the barcode at the top of the pdf.
         doc.insert_image(page_id, img_stream, position, (info.width, info.height)).unwrap();
