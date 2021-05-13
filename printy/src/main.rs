@@ -233,6 +233,8 @@ fn print_file(printer: &str, file: &str, media: &str) {
             "page-top=0",
             "-o",
             "page-bottom=0",
+            "-o",
+            "ppi=1200",
             file,
         ])
         .output()
