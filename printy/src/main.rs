@@ -220,7 +220,21 @@ async fn save_url_to_file(url: String) -> String {
 fn print_file(printer: &str, file: &str, media: &str) {
     println!("Sending file `{}` to printer `{}`", file, printer);
     let output = Command::new("lp")
-        .args(&["-d", printer, "-o", &format!("media={}\"", media),"-o", "page-left=0", "-o" "page-right=0", "-o", "page-top=0", "-o", "page-bottom=0", file])
+        .args(&[
+            "-d",
+            printer,
+            "-o",
+            &format!("media={}\"", media),
+            "-o",
+            "page-left=0",
+            "-o",
+            "page-right=0",
+            "-o",
+            "page-top=0",
+            "-o",
+            "page-bottom=0",
+            file,
+        ])
         .output()
         .expect("failed to execute process");
     if !output.status.success() {
