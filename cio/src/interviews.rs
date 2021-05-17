@@ -110,8 +110,8 @@ pub async fn refresh_interviews(db: &Database) {
             };
 
             for attendee in event.attendees {
-                // Skip the organizer, this is the Interviews calendar.
-                if attendee.organizer || attendee.email.ends_with("@group.calendar.google.com") {
+                // Skip the Interviews calendar.
+                if attendee.email.ends_with("@group.calendar.google.com") {
                     continue;
                 }
 
