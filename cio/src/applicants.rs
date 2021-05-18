@@ -2110,6 +2110,13 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
                     .first::<Applicant>(&db.conn())
                 {
+                    // Try to get from airtable.
+                    // This ensures if we had any one offs added in airtable that they stay intact.
+                    if let Some(record) = applicant.get_existing_airtable_record().await {
+                        applicant.scorers = record.fields.scorers;
+                        applicant.request_background_check = record.fields.request_background_check;
+                        applicant.interviews = record.fields.interviews;
+                    }
                     applicant.scorers_completed = scorers_completed.clone();
 
                     // Remove anyone from the scorers if they have already completed their review.
@@ -2704,6 +2711,14 @@ mod tests {
         // Update Airtable.
         Applicants::get_from_db(&db).update_airtable().await;
 
+        // Refresh DocuSign for the applicants.
+        refresh_docusign_for_applicants(&db).await;
+    }
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_reviewers() {
+        let db = Database::new();
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
         update_applications_with_scoring_forms(&db).await;
@@ -2711,8 +2726,5 @@ mod tests {
         // This must be after update_applications_with_scoring_forms, so that if someone
         // has done the application then we remove them from the scorers.
         update_applications_with_scoring_results(&db).await;
-
-        // Refresh DocuSign for the applicants.
-        refresh_docusign_for_applicants(&db).await;
     }
 }
