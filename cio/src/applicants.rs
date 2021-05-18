@@ -1504,6 +1504,7 @@ Notes:
         let body = format!(
             r#"- [ ] Add to users.toml
 - [ ] Add to matrix chat
+
 Start Date: {}
 Personal Email: {}
 Twitter: [TWITTER HANDLE]
