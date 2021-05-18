@@ -451,7 +451,7 @@ The Oxide Team",
 
         // If the length of the row is greater than the start date column
         // then we have a start date.
-        let start_date = if row.len() > columns.start_date && columns.start_date != 0 {
+        let mut start_date = if row.len() > columns.start_date && columns.start_date != 0 {
             if row[columns.start_date].trim().is_empty() {
                 None
             } else {
@@ -675,6 +675,11 @@ The Oxide Team",
             }
             if !a.motor_vehicle_background_check_status.is_empty() {
                 motor_vehicle_background_check_status = a.criminal_background_check_status.to_string();
+            }
+
+            // The start date might be set by docusign, in that case we want it to propgate.
+            if start_date.is_none() && a.start_date.is_some() {
+                start_date = a.start_date;
             }
         }
 
