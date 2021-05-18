@@ -2663,6 +2663,8 @@ impl Applicant {
         }
 
         for fd in form_data {
+            // TODO: we could somehow use the manager data here or above. The manager data is in
+            // the docusign data.
             if fd.name == "Start Date" {
                 let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
                 self.start_date = Some(start_date);
