@@ -1092,7 +1092,10 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
             applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
         }
         Err(e) => {
-            sentry::capture_message(&format!("docusign could not find applicant with envelope id {}: {}", event.envelope_id, e), sentry::Level::Fatal);
+            sentry::capture_message(
+                &format!("database could not find applicant with docusign envelope id {}: {}", event.envelope_id, e),
+                sentry::Level::Fatal,
+            );
         }
     }
 
