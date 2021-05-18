@@ -72,6 +72,7 @@ jobs:
           cargo test test_applicants -- --nocapture --ignored
         shell: bash
         env:
+          RUST_BACKTRACE: 1
           CIO_AUTH0_CLIENT_ID: ${{ secrets.CIO_AUTH0_CLIENT_ID }}
           CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
