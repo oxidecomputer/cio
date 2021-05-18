@@ -2605,7 +2605,7 @@ impl Applicant {
                 // In order to not "over excessively poll the API here, we need to sleep for 15
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
-                thread::sleep(std::time::Duration::from_secs(900));
+                thread::sleep(std::time::Duration::from_secs(15));
                 bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
             }
 
@@ -2621,6 +2621,12 @@ impl Applicant {
             println!("[docusign] uploaded completed file {} to drive", filename);
         }
 
+        // In order to not "over excessively poll the API here, we need to sleep for 15
+        // min before getting each of the documents.
+        // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
+        thread::sleep(std::time::Duration::from_secs(900));
+        let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
+
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
         let result = users::dsl::users.filter(users::dsl::recovery_email.eq(self.email.to_string())).first::<User>(&db.conn());
@@ -2628,13 +2634,7 @@ impl Applicant {
             let mut employee = result.unwrap();
             // We have an employee, so we can update their data from the data in Docusign.
 
-            // In order to not "over excessively poll the API here, we need to sleep for 15
-            // min before getting each of the documents.
-            // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
-            thread::sleep(std::time::Duration::from_secs(15));
-            let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
-
-            for fd in form_data {
+            for fd in form_data.clone() {
                 // Save the data to the employee who matches this applicant.
                 if fd.name == "Applicant's Street Address" {
                     employee.home_address_street_1 = fd.value.trim().to_string();
@@ -2651,12 +2651,18 @@ impl Applicant {
                 if fd.name == "Start Date" {
                     let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
                     employee.start_date = start_date;
-                    self.start_date = Some(start_date);
                 }
             }
 
             // Update the employee.
             employee.update(db).await;
+        }
+
+        for fd in form_data {
+            if fd.name == "Start Date" {
+                let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                self.start_date = Some(start_date);
+            }
         }
 
         self.update(db).await;
