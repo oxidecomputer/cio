@@ -275,6 +275,9 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         /// Get the existing record in Airtable that matches this id.
         pub async fn get_existing_airtable_record(&self) -> Option<airtable_api::Record<#new_struct_name>> {
+            if self.airtable_record_id.is_empty() {
+                return None;
+            }
                 // Let's get the existing record from airtable.
                 match #new_struct_name::airtable()
                         .get_record(&#new_struct_name::airtable_table(), &self.airtable_record_id)
