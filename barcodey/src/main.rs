@@ -37,7 +37,7 @@ async fn main() -> Result<(), String> {
 
     // Iterate over our devices.
     // Try and find the barcode scanner.
-    let search = "KC433M";
+    let search = "";
     for device in api.device_list() {
         println!(
             "VID: {:04x}, PID: {:04x}, Serial: {}, Product name: {}",
@@ -53,7 +53,7 @@ async fn main() -> Result<(), String> {
             }
         );
 
-        if device.product_string().unwrap_or_default().contains(search) {
+        if device.product_string().unwrap_or_default() == search && device.product_id() == u16::from_str_radix("011a", 16).unwrap() {
             // We found our device.
             vendor_id = device.vendor_id();
             product_id = device.product_id();
@@ -66,7 +66,10 @@ async fn main() -> Result<(), String> {
 
     // Open the scanner device and listen for events to read.
     let scanner = api.open(vendor_id, product_id).expect("Failed to open device");
-    println!("Listening for events from (vendor ID: {}) (product ID: {}) in a loop...", vendor_id, product_id);
+    println!(
+        "Listening for events from (vendor ID: {} {:04x}) (product ID: {} {:04x}) in a loop...",
+        vendor_id, vendor_id, product_id, product_id
+    );
 
     // This stores our set of characters.
     // When a return character is observed we will flush this.
