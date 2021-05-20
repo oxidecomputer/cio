@@ -276,6 +276,7 @@ impl UserConfig {
 
         // Populate the country code.
         if self.home_address_country.is_empty() || self.home_address_country == "United States" {
+            self.work_address_country = "United States".to_string();
             self.home_address_country_code = "US".to_string();
         }
     }
@@ -296,7 +297,7 @@ impl UserConfig {
             }
             self.work_address_zipcode = building.zipcode.to_string();
             self.work_address_country = building.country.to_string();
-            if self.work_address_country == "US" {
+            if self.work_address_country == "US" || self.work_address_country.is_empty() {
                 self.work_address_country = "United States".to_string();
             }
             self.work_address_formatted = building.address_formatted.to_string();
@@ -329,6 +330,7 @@ impl UserConfig {
 
         // Populate the country code.
         if self.work_address_country.is_empty() || self.work_address_country == "United States" {
+            self.work_address_country = "United States".to_string();
             self.work_address_country_code = "US".to_string();
         }
 
