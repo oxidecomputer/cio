@@ -740,7 +740,7 @@ async fn listen_airtable_employees_edit_webhooks(rqctx: Arc<RequestContext<Conte
     let mut user = User::get_from_airtable(&event.record_id).await;
     if user.print_home_address_label {
         // Create a new shipment for the employee and print the label.
-        // TODO: do this.
+        user.create_shipment_to_home_address(&api_context.db).await;
 
         // Reset the field to false.
         user.print_home_address_label = false;
