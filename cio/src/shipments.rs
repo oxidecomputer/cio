@@ -1129,12 +1129,24 @@ pub async fn refresh_outbound_shipments(db: &Database) {
 
             if !sent {
                 let mut new_shipment = shipment.upsert(db).await;
-                // Create the shipment in shippo.
+                // Create or update the shipment from shippo.
                 new_shipment.create_or_get_shippo_shipment(db).await;
                 // Update airtable and the database again.
                 new_shipment.update(db).await;
             }
         }
+    }
+
+    // Iterate over all the shipments in the database and update them.
+    // This ensures that any one offs (that don't come from spreadsheets) are also updated.
+    // TODO: if we decide to accept one-offs straight in airtable support that, but for now
+    // we do not.
+    let shipments = OutboundShipments::get_from_db(&db);
+    for mut s in shipments {
+        // Update the shipment from shippo.
+        s.create_or_get_shippo_shipment(db).await;
+        // Update airtable and the database again.
+        s.update(db).await;
     }
 }
 
