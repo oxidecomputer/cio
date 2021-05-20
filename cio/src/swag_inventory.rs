@@ -59,6 +59,10 @@ pub struct NewSwagInventoryItem {
     /// to print a barcode.
     #[serde(default)]
     pub print_barcode_label: bool,
+    /// The quantity of labels to print.
+    /// This field will be set and updated in Airtable.
+    #[serde(default)]
+    pub print_barcode_label_quantity: i32,
 
     /// This is populated by Airtable.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -78,6 +82,7 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 
         // This is set in airtable so we need to keep it.
         self.print_barcode_label = record.print_barcode_label;
+        self.print_barcode_label_quantity = record.print_barcode_label_quantity;
     }
 }
 
@@ -252,13 +257,33 @@ impl NewSwagInventoryItem {
     }
 }
 
+/// A request to print labels.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct PrintLabelsRequest {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default)]
+    pub quantity: i32,
+}
+
 impl SwagInventoryItem {
     /// Send the label to our printer.
     pub async fn print_label(&self) {
         let mut printer_url = env::var("PRINTER_URL").unwrap().trim_end_matches('/').to_string();
         printer_url = format!("{}/zebra", printer_url);
         let client = reqwest::Client::new();
-        let resp = client.post(&printer_url).body(json!(self.barcode_pdf_label).to_string()).send().await.unwrap();
+        let resp = client
+            .post(&printer_url)
+            .body(
+                json!(PrintLabelsRequest {
+                    url: self.barcode_pdf_label.to_string(),
+                    quantity: self.print_barcode_label_quantity
+                })
+                .to_string(),
+            )
+            .send()
+            .await
+            .unwrap();
         match resp.status() {
             StatusCode::ACCEPTED => (),
             s => {

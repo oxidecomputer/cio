@@ -2734,7 +2734,9 @@ dependencies = [
  "dropshot 0.5.1",
  "http",
  "reqwest",
+ "schemars",
  "sentry",
+ "serde",
  "tokio",
  "uuid",
 ]

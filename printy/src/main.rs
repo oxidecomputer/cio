@@ -6,7 +6,9 @@ use std::str::from_utf8;
 use std::sync::Arc;
 
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody};
+use schemars::JsonSchema;
 use sentry::IntoDsn;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[tokio::main]
@@ -145,11 +147,20 @@ async fn listen_print_rollo_requests(_rqctx: Arc<RequestContext<Context>>, body_
     let file = save_url_to_file(url).await;
 
     // Print the file.
-    print_file(&printer, &file, "4.00x6.00");
+    print_file(&printer, &file, "4.00x6.00", 1);
 
     // Print the body to the rollo printer.
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// A request to print labels.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct PrintLabelsRequest {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default)]
+    pub quantity: i32,
 }
 
 /** Listen for print requests for the Zebra label printer */
@@ -157,17 +168,17 @@ async fn listen_print_rollo_requests(_rqctx: Arc<RequestContext<Context>>, body_
     method = POST,
     path = "/print/zebra",
 }]
-async fn listen_print_zebra_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_print_zebra_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<PrintLabelsRequest>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let url = body_param.into_inner();
+    let r = body_param.into_inner();
     let printer = get_printer("zebra");
     println!("{:?}", printer);
 
     // Save the contents of our URL to a file.
-    let file = save_url_to_file(url).await;
+    let file = save_url_to_file(r.url).await;
 
     // Print the file.
-    print_file(&printer, &file, "3.00x2.00");
+    print_file(&printer, &file, "3.00x2.00", r.quantity);
 
     // Print the body to the rollo printer.
     sentry::end_session();
@@ -217,12 +228,14 @@ async fn save_url_to_file(url: String) -> String {
 
 // Save URL contents to a temporary file.
 // Returns the filepath.
-fn print_file(printer: &str, file: &str, media: &str) {
+fn print_file(printer: &str, file: &str, media: &str, copies: i32) {
     println!("Sending file `{}` to printer `{}`", file, printer);
     let output = Command::new("lp")
         .args(&[
             "-d",
             printer,
+            "-n",
+            &format!("{}", copies),
             "-o",
             "fit-to-page",
             "-o",
