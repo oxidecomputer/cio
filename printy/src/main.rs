@@ -5,10 +5,9 @@ use std::process::Command;
 use std::str::from_utf8;
 use std::sync::Arc;
 
+use cio_api::swag_inventory::PrintLabelsRequest;
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody};
-use schemars::JsonSchema;
 use sentry::IntoDsn;
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[tokio::main]
@@ -152,15 +151,6 @@ async fn listen_print_rollo_requests(_rqctx: Arc<RequestContext<Context>>, body_
     // Print the body to the rollo printer.
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
-}
-
-/// A request to print labels.
-#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
-pub struct PrintLabelsRequest {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub url: String,
-    #[serde(default)]
-    pub quantity: i32,
 }
 
 /** Listen for print requests for the Zebra label printer */

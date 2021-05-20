@@ -8,12 +8,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
 dropshot = "^0.5.0"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 http = "0.2.0"
 reqwest = "^0.11"
-schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sentry = "^0.22.0"
-serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "^0.8.1", features = ["serde", "v4"] }
