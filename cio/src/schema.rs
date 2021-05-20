@@ -515,8 +515,21 @@ table! {
         barcode_svg -> Varchar,
         barcode_pdf_label -> Varchar,
         print_barcode_label -> Bool,
-        print_barcode_label_quantity -> Int4,
-        link_to_item -> Array<Text>,
+        print_barcode_label_quantity -> Nullable<Int4>,
+    }
+}
+
+table! {
+    swag_items (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        image -> Varchar,
+        link_to_inventory -> Array<Text>,
+        link_to_barcode_scans -> Array<Text>,
+        link_to_order_january_2020 -> Array<Text>,
+        link_to_order_october_2020 -> Array<Text>,
+        link_to_order_may_2021 -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }
@@ -592,5 +605,6 @@ allow_tables_to_appear_in_same_query!(
     rfds,
     software_vendors,
     swag_inventory_items,
+    swag_items,
     users,
 );
