@@ -517,6 +517,7 @@ table! {
         print_barcode_label -> Bool,
         print_barcode_label_quantity -> Int4,
         link_to_item -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 

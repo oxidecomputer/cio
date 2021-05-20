@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::{barcode_scans, swag_inventory_items};
+use crate::schema::{barcode_scans, swag_inventory_items, swag_items};
 use crate::utils::get_gsuite_token;
 
 #[db {
@@ -61,6 +61,21 @@ impl UpdateAirtableRecord<SwagItem> for SwagItem {
         if !record.link_to_barcode_scans.is_empty() {
             self.link_to_barcode_scans = record.link_to_barcode_scans;
         }
+    }
+}
+
+/// Sync swag items from Airtable.
+pub async fn refresh_swag_items() {
+    let db = Database::new();
+
+    // Get all the records from Airtable.
+    let results: Vec<airtable_api::Record<SwagItem>> = SwagItem::airtable().list_records(&SwagItem::airtable_table(), "Grid view", vec![]).await.unwrap();
+    for item_record in results {
+        let item: NewSwagItem = item_record.fields.into();
+
+        let mut db_item = item.upsert_in_db(&db);
+        db_item.airtable_record_id = item_record.id.to_string();
+        db_item.update(&db).await;
     }
 }
 
@@ -417,7 +432,7 @@ pub fn image_to_pdf_object(mut doc: Document, png_bytes: &[u8]) -> (Document, St
     (doc, img_stream, info)
 }
 
-/// Sync software vendors from Airtable.
+/// Sync swag inventory items from Airtable.
 pub async fn refresh_swag_inventory_items() {
     let db = Database::new();
 
@@ -524,7 +539,13 @@ impl BarcodeScan {
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
-    use crate::swag_inventory::{refresh_swag_inventory_items, BarcodeScans};
+    use crate::swag_inventory::{refresh_swag_inventory_items, refresh_swag_items, BarcodeScans};
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_cron_swag_items() {
+        refresh_swag_items().await;
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
