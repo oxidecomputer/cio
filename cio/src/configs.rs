@@ -265,6 +265,10 @@ impl UserConfig {
         if !self.home_address_street_2.is_empty() {
             street_address = format!("{}\n{}", self.home_address_street_1, self.home_address_street_2,);
         }
+        // Make sure the state is not an abreev.
+        self.home_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
+
+        // Set the formatted address.
         self.home_address_formatted = format!(
             "{}\n{}, {} {} {}",
             street_address, self.home_address_city, self.home_address_state, self.home_address_zipcode, self.home_address_country
@@ -291,10 +295,7 @@ impl UserConfig {
             self.work_address_street_1 = building.street_address.to_string();
             self.work_address_street_2 = "".to_string();
             self.work_address_city = building.city.to_string();
-            self.work_address_state = building.state.to_string();
-            if self.work_address_state == "CA" {
-                self.work_address_state = "California".to_string();
-            }
+            self.work_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&building.state);
             self.work_address_zipcode = building.zipcode.to_string();
             self.work_address_country = building.country.to_string();
             if self.work_address_country == "US" || self.work_address_country.is_empty() {
@@ -313,7 +314,7 @@ impl UserConfig {
             self.work_address_street_1 = self.home_address_street_1.to_string();
             self.work_address_street_2 = self.home_address_street_2.to_string();
             self.work_address_city = self.home_address_city.to_string();
-            self.work_address_state = self.home_address_state.to_string();
+            self.work_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
             self.work_address_zipcode = self.home_address_zipcode.to_string();
             self.work_address_country = self.home_address_country.to_string();
             self.work_address_country_code = self.home_address_country_code.to_string();
