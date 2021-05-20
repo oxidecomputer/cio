@@ -34,7 +34,7 @@ use sheets::Sheets;
 use cio_api::analytics::NewPageView;
 use cio_api::applicants::get_role_from_sheet_id;
 use cio_api::applicants::{Applicant, NewApplicant};
-use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users};
+use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
 use cio_api::mailing_list::{MailchimpWebhook, MailingListSubscriber};
 use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
@@ -88,6 +88,7 @@ async fn main() -> Result<(), String> {
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
     api.register(listen_airtable_applicants_edit_webhooks).unwrap();
+    api.register(listen_airtable_employees_edit_webhooks).unwrap();
     api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_edit_webhooks).unwrap();
@@ -712,6 +713,43 @@ pub struct GoogleSpreadsheetRowCreateEvent {
     pub event: GoogleSpreadsheetEvent,
     #[serde(default)]
     pub spreadsheet: GoogleSpreadsheet,
+}
+
+/**
+ * Listen for rows edited in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/employees/edit",
+}]
+async fn listen_airtable_employees_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Get the row from airtable.
+    let mut user = User::get_from_airtable(&event.record_id).await;
+    if user.print_home_address_label {
+        // Create a new shipment for the employee and print the label.
+        // TODO: do this.
+
+        // Reset the field to false.
+        user.print_home_address_label = false;
+        // Update it in the database.
+        user.update(&api_context.db).await;
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**
