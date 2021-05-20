@@ -16,6 +16,7 @@ use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE};
+use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
@@ -254,6 +255,44 @@ pub struct NewOutboundShipment {
     pub notes: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
+}
+
+impl From<User> for NewOutboundShipment {
+    fn from(user: User) -> Self {
+        NewOutboundShipment {
+            created_time: Utc::now(),
+            name: user.full_name(),
+            email: user.email(),
+            phone: user.recovery_phone,
+            street_1: user.home_address_street_1.to_string(),
+            street_2: user.home_address_street_2.to_string(),
+            city: user.home_address_city.to_string(),
+            state: user.home_address_state.to_string(),
+            zipcode: user.home_address_zipcode.to_string(),
+            country: user.home_address_country.to_string(),
+            address_formatted: user.home_address_formatted,
+            contents: "Internal swag shipment".to_string(),
+            carrier: Default::default(),
+            pickup_date: None,
+            delivered_time: None,
+            reprint_label: false,
+            schedule_pickup: false,
+            resend_email_to_recipient: false,
+            shipped_time: None,
+            shippo_id: Default::default(),
+            status: "Queued".to_string(),
+            tracking_link: Default::default(),
+            oxide_tracking_link: Default::default(),
+            tracking_number: Default::default(),
+            tracking_status: Default::default(),
+            cost: Default::default(),
+            label_link: Default::default(),
+            eta: None,
+            messages: Default::default(),
+            notes: Default::default(),
+            geocode_cache: Default::default(),
+        }
+    }
 }
 
 impl NewOutboundShipment {

@@ -23,6 +23,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource};
 use crate::schema::{applicants, buildings, conference_rooms, groups, links, users};
+use crate::shipments::NewOutboundShipment;
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
 use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -428,6 +429,30 @@ impl User {
     /// Generate the email address for the user.
     pub fn email(&self) -> String {
         format!("{}@{}", self.username, GSUITE_DOMAIN)
+    }
+
+    /// Create an internal swag shipment to an employee's home address.
+    /// This will:
+    /// - Check if the user has a home address.
+    /// - Create a record in outgoing shipments.
+    /// - Generate the shippo label.
+    /// - Print said shippo label.
+    pub async fn create_shipment_to_home_address(&self, db: &Database) {
+        // First let's check if the user even has an address.
+        // If not we can return early.
+        if self.home_address_formatted.is_empty() {
+            println!("cannot create shipping label for user {} since we don't know their home address", self.username);
+            return;
+        }
+
+        // Let's create the shipment.
+        let new_shipment = NewOutboundShipment::from(self.clone());
+        // Let's add it to our database.
+        let mut shipment = new_shipment.upsert(db).await;
+        // Create the shipment in shippo.
+        shipment.create_or_get_shippo_shipment(db).await;
+        // Update airtable and the database again.
+        shipment.update(db).await;
     }
 
     /// Send an email to the new consultant about their account.
