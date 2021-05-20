@@ -148,6 +148,9 @@ pub struct UserConfig {
     pub home_address_country_code: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_formatted: String,
+    /// The following is populated by Airtable and triggers a webhook.
+    #[serde(default)]
+    pub print_home_address_label: bool,
 
     /// The following fields do not exist in the config files but are populated
     /// automatically based on the user's location.

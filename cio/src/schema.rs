@@ -550,6 +550,7 @@ table! {
         home_address_country -> Varchar,
         home_address_country_code -> Varchar,
         home_address_formatted -> Varchar,
+        print_home_address_label -> Bool,
         work_address_street_1 -> Varchar,
         work_address_street_2 -> Varchar,
         work_address_city -> Varchar,
