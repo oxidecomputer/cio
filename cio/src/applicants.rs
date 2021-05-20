@@ -2648,7 +2648,7 @@ impl Applicant {
                     employee.home_address_city = fd.value.trim().to_string();
                 }
                 if fd.name == "Applicant's State" {
-                    employee.home_address_state = fd.value.trim().to_string();
+                    employee.home_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&fd.value);
                 }
                 if fd.name == "Applicant's Postal Code" {
                     employee.home_address_zipcode = fd.value.trim().to_string();
