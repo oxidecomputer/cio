@@ -14,11 +14,55 @@ use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE};
+use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{barcode_scans, swag_inventory_items};
 use crate::utils::get_gsuite_token;
+
+#[db {
+    new_struct_name = "SwagItem",
+    airtable_base_id = "AIRTABLE_BASE_ID_SWAG",
+    airtable_table = "AIRTABLE_SWAG_ITEMS_TABLE",
+    match_on = {
+        "name" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "swag_items"]
+pub struct NewSwagItem {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
+    pub image: String,
+
+    /// This is populated by Airtable.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_inventory: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_barcode_scans: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_order_january_2020: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_order_october_2020: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_order_may_2021: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a SwagItem.
+#[async_trait]
+impl UpdateAirtableRecord<SwagItem> for SwagItem {
+    async fn update_airtable_record(&mut self, record: SwagItem) {
+        if !record.link_to_inventory.is_empty() {
+            self.link_to_inventory = record.link_to_inventory;
+        }
+        if !record.link_to_barcode_scans.is_empty() {
+            self.link_to_barcode_scans = record.link_to_barcode_scans;
+        }
+    }
+}
 
 #[db {
     new_struct_name = "SwagInventoryItem",
