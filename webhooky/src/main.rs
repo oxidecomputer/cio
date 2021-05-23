@@ -44,6 +44,7 @@ use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInbound
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::swag_inventory::SwagInventoryItem;
+use cio_api::swag_store::Order;
 use cio_api::templates::generate_terraform_files_for_okta;
 use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
 
@@ -102,6 +103,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_webhooks).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
+    api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(api_get_schema).unwrap();
@@ -994,7 +996,26 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
 }
 
 /**
- * Listen for shimpment tracking updated from Shippo.
+ * Listen for orders being created by the Oxide store.
+ */
+#[endpoint {
+    method = POST,
+    path = "/store/order",
+}]
+async fn listen_store_order_create(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<Order>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+    event.do_order(&api_context.db).await;
+
+    println!("order for {} created successfully", event.email);
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for shipment tracking updated from Shippo.
  */
 #[endpoint {
     method = POST,
