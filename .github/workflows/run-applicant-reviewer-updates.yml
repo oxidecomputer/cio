@@ -6,7 +6,7 @@ on:
 name: run applicant reviewers updates
 jobs:
   cargotest:
-    concurrency: applicants-production
+    concurrency: applicants-reviews-production
     name: cargo test
     runs-on: ubuntu-latest
     steps:
