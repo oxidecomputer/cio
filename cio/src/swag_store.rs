@@ -56,6 +56,12 @@ impl Order {
     }
 
     pub async fn create_shipment_for_order(&self, db: &Database) {
+        // If their email is empty return early.
+        if self.email.is_empty() || self.street_1.is_empty() || self.city.is_empty() || self.state.is_empty() || self.zipcode.is_empty() || self.items.is_empty() {
+            // This should not happen since we verify on the client side we have these
+            // things.
+            return;
+        }
         // Convert the shipment to an order.
         let shipment: NewOutboundShipment = self.clone().into();
         // Add the shipment to the database.
@@ -64,8 +70,9 @@ impl Order {
         new_shipment.create_or_get_shippo_shipment(db).await;
         // Update airtable and the database again.
         new_shipment.update(db).await;
-        // TODO: send an email to the person that we recieved their order and what they are
+        // Send an email to the person that we recieved their order and what they are
         // getting.
+        new_shipment.send_email_to_recipient_pre_shipping().await;
     }
 
     pub async fn subtract_order_from_inventory(&self, db: &Database) {

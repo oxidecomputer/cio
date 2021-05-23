@@ -679,6 +679,44 @@ impl OutboundShipment {
         format!("{}\n{}, {} {} {}", street, self.city, self.state, self.zipcode, self.country)
     }
 
+    /// Send an email to the recipient with their order information.
+    /// This should happen before they get the email that it has been shipped.
+    pub async fn send_email_to_recipient_pre_shipping(&self) {
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("{}, your order from the Oxide Computer Company has been received!", self.name),
+                format!(
+                    "Below is the information for your order:
+
+**Contents:**
+{}
+
+**Address to:**
+{}
+{}
+
+You will receive another email once your order has been shipped with your tracking numbers.
+
+If you have any questions or concerns, please respond to this email!
+Have a splendid day!
+
+xoxo,
+  The Oxide Shipping Bot",
+                    self.contents,
+                    self.name,
+                    self.format_address(),
+                ),
+                vec![self.email.to_string()],
+                vec![format!("packages@{}", DOMAIN)],
+                vec![],
+                format!("packages@{}", DOMAIN),
+            )
+            .await;
+    }
+
     /// Send an email to the recipient with their tracking code and information.
     pub async fn send_email_to_recipient(&self) {
         // Initialize the SendGrid client.
