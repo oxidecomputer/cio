@@ -1007,6 +1007,7 @@ async fn listen_store_order_create(rqctx: Arc<RequestContext<Context>>, body_par
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
+    println!("order {:?}", order);
     event.do_order(&api_context.db).await;
 
     println!("order for {} created successfully", event.email);
