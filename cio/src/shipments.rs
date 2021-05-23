@@ -777,9 +777,13 @@ xoxo,
 **Tracking link:**
 {}
 
-The label should already be printed in the big conference room. Please take the
-label and affix it to the package with the specified contents. It can then be dropped off
-for {}.
+The label should already be printed on the cart with the label printers. Please
+take the label and affix it to the package with the specified contents. It can
+then be dropped off for {}.
+
+You DO NOT need to scan the barcodes of the items since they have already been
+deducted from inventory. DO NOT SCAN THE BARCODES for the items since
+they have already been deducted from inventory.
 
 As always, the Airtable with all the shipments lives at:
 https://airtable-shipments.corp.oxide.computer.
