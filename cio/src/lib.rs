@@ -25,6 +25,7 @@ pub mod shorturls;
 pub mod slack;
 pub mod states;
 pub mod swag_inventory;
+pub mod swag_store;
 pub mod tailscale;
 pub mod templates;
 pub mod utils;

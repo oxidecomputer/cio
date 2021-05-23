@@ -181,6 +181,12 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
 
+        /// Get a record by its id.
+        pub fn get_by_id(db: &crate::db::Database, id: i32) -> Self {
+            #db_schema::dsl::#db_schema.find(id)
+                .first::<#new_struct_name>(&db.conn()).unwrap()
+        }
+
         /// Get the row in our airtable workspace.
         pub async fn get_from_airtable(id: &str) -> Self {
             let record = #new_struct_name::airtable()
