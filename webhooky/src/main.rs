@@ -1186,6 +1186,7 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, body_par
     // We should have a string, which we will then parse into our args.
     let event_string = body_param.into_inner();
     println!("{}", event_string);
+    sentry::capture_message(&format!("mailchimp event string: {}", event_string), sentry::Level::Info);
     let qs_non_strict = QSConfig::new(10, false);
 
     let event: MailchimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
