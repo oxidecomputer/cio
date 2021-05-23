@@ -56,12 +56,6 @@ impl Order {
     }
 
     pub async fn create_shipment_for_order(&self, db: &Database) {
-        // If their email is empty return early.
-        if self.email.is_empty() || self.street_1.is_empty() || self.city.is_empty() || self.state.is_empty() || self.zipcode.is_empty() || self.items.is_empty() {
-            // This should not happen since we verify on the client side we have these
-            // things.
-            return;
-        }
         // Convert the shipment to an order.
         let shipment: NewOutboundShipment = self.clone().into();
         // Add the shipment to the database.
@@ -94,6 +88,21 @@ impl Order {
         }
     }
     pub async fn do_order(&self, db: &Database) {
+        // If their email is empty return early.
+        if self.email.is_empty()
+            || self.street_1.is_empty()
+            || self.city.is_empty()
+            || self.state.is_empty()
+            || self.zipcode.is_empty()
+            || self.phone.is_empty()
+            || self.name.is_empty()
+            || self.items.is_empty()
+        {
+            // This should not happen since we verify on the client side we have these
+            // things.
+            return;
+        }
+
         self.create_shipment_for_order(db).await;
         self.subtract_order_from_inventory(db).await;
     }
