@@ -482,7 +482,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e8ff481c78d4c42781552b37ff517a72d7a6b295"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#66fd7066a15ae97c6be65ecc480a321c41a124b1"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2067,7 +2067,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e8ff481c78d4c42781552b37ff517a72d7a6b295"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#66fd7066a15ae97c6be65ecc480a321c41a124b1"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -4053,18 +4053,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.24"
+version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0f4a65597094d4483ddaed134f409b2cb7c1beccf25201a9f73c719254fa98e"
+checksum = "fa6f76457f59514c7eeb4e59d891395fab0b2fd1d40723ae737d64153392e9c6"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.24"
+version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7765189610d8241a44529806d6fd1f2e0a08734313a35d5b3a556f92b381f3c0"
+checksum = "8a36768c0fbf1bb15eca10defa29526bda730a2376c2ab4393ccfa16fb1a318d"
 dependencies = [
  "proc-macro2 1.0.27",
  "quote 1.0.9",
@@ -4485,9 +4485,9 @@ dependencies = [
 
 [[package]]
 name = "vcpkg"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbdbff6266a24120518560b5dc983096efb98462e51d0d68169895b237be3e5d"
+checksum = "025ce40a007e1907e58d5bc1a594def78e5573bb0b1160bc389634e8f12e4faa"
 
 [[package]]
 name = "vec_map"
