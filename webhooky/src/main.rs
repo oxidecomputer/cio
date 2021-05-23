@@ -21,6 +21,7 @@ use chrono_humanize::HumanTime;
 use diesel::prelude::*;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody,
+    UntypedBody,
 };
 use google_drive::GoogleDrive;
 use hubcaps::issues::{IssueListOptions, State};
@@ -1200,13 +1201,13 @@ async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result
     method = POST,
     path = "/mailchimp",
 }]
-async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
 
     // We should have a string, which we will then parse into our args.
-    let event_string = body_param.into_inner();
+    let event_string = body_param.as_str().unwrap().to_string();
     println!("{}", event_string);
     sentry::capture_message(&format!("mailchimp event string: {}", event_string), sentry::Level::Info);
     let qs_non_strict = QSConfig::new(10, false);
