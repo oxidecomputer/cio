@@ -58,6 +58,35 @@
         }
       }
     },
+    "/airtable/employees/edit": {
+      "post": {
+        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
+        "operationId": "listen_airtable_employees_edit_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/airtable/shipments/inbound/create": {
       "post": {
         "description": "Listen for rows created in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
@@ -145,6 +174,35 @@
         }
       }
     },
+    "/airtable/swag/inventory/items/edit": {
+      "post": {
+        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
+        "operationId": "listen_airtable_swag_inventory_items_edit_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/analytics/page_view": {
       "post": {
         "description": "Listen for analytics page view events.",
@@ -202,9 +260,19 @@
       }
     },
     "/docusign/callback": {
-      "post": {
+      "get": {
         "description": "Listen for callbacks to docusign auth.",
         "operationId": "listen_docusign_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
         "responses": {
           "202": {
             "description": "successfully enqueued operation",
@@ -453,12 +521,41 @@
     },
     "/shippo/tracking/update": {
       "post": {
-        "description": "Listen for shimpment tracking updated from Shippo.",
+        "description": "Listen for shipment tracking updated from Shippo.",
         "operationId": "listen_shippo_tracking_update_webhooks",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/order": {
+      "post": {
+        "description": "Listen for orders being created by the Oxide store.",
+        "operationId": "listen_store_order_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
             }
           },
           "required": true
@@ -1451,6 +1548,62 @@
           "time",
           "user_email"
         ]
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "description": "This is who they know at Oxide.",
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "street_1": {
+            "type": "string"
+          },
+          "street_2": {
+            "type": "string"
+          },
+          "zipcode": {
+            "type": "string"
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "This is the swag inventory item id.",
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
       },
       "Recipient": {
         "type": "object",

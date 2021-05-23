@@ -1371,6 +1371,10 @@
           "manager": {
             "type": "string"
           },
+          "print_home_address_label": {
+            "description": "The following is populated by Airtable and triggers a webhook.",
+            "type": "boolean"
+          },
           "public_ssh_keys": {
             "description": "The following field does not exist in the config files but is populated by the GitHub API before the record gets saved in the database.",
             "type": "array",
