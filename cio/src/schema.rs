@@ -437,6 +437,24 @@ table! {
 }
 
 table! {
+    rack_line_subscribers (id) {
+        id -> Int4,
+        email -> Varchar,
+        name -> Varchar,
+        company -> Varchar,
+        company_size -> Varchar,
+        interest -> Text,
+        date_added -> Timestamptz,
+        date_optin -> Timestamptz,
+        date_last_changed -> Timestamptz,
+        notes -> Text,
+        tags -> Array<Text>,
+        link_to_people -> Array<Text>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     recorded_meetings (id) {
         id -> Int4,
         name -> Varchar,
@@ -603,6 +621,7 @@ allow_tables_to_appear_in_same_query!(
     mailing_list_subscribers,
     outbound_shipments,
     page_views,
+    rack_line_subscribers,
     recorded_meetings,
     rfds,
     software_vendors,
