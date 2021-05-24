@@ -475,6 +475,99 @@ pub struct Invitation {
     pub report_id: String,
 }
 
+/// The data type for a webhook event.
+#[derive(Clone, Debug, JsonSchema, Serialize, Deserialize)]
+pub struct WebhookEvent {
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub account_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub object: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type", deserialize_with = "deserialize_null_string::deserialize")]
+    pub type_: String,
+    pub created_at: DateTime<Utc>,
+
+    #[serde(default)]
+    pub data: EventData,
+}
+
+#[derive(Clone, Default, Debug, JsonSchema, Serialize, Deserialize)]
+pub struct EventData {
+    #[serde(default)]
+    pub object: EventObject,
+}
+
+#[derive(Clone, Default, Debug, JsonSchema, Serialize, Deserialize)]
+pub struct EventObject {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type", deserialize_with = "deserialize_null_string::deserialize")]
+    pub adjudication: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub arrest_search_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub assessment: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub candidate_id: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub candidate_story_ids: Vec<String>,
+    pub completed_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub county_criminal_search_ids: Vec<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub document_ids: Vec<String>,
+    pub due_time: Option<DateTime<Utc>>,
+    pub estimated_completion_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub facis_search_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub federal_criminal_search_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub global_watchlist_search_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub motor_vehicle_report_id: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub municipal_criminal_search_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub national_criminal_search_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub object: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub package: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub personal_reference_verification_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pointer_state_criminal_search_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub professional_license_verification_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub professional_reference_verification_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub result: String,
+    pub revised_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub self_disclosure_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub sex_offender_search_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub source: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub ssn_trace_id: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub state_criminal_search_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub terrorist_watchlist_search_id: String,
+    pub upgraded_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub uri: String,
+}
+
 pub mod deserialize_null_string {
     use serde::{self, Deserialize, Deserializer};
 
