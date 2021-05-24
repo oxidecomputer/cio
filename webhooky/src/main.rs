@@ -33,7 +33,7 @@ use serde_qs::Config as QSConfig;
 use sheets::Sheets;
 
 use cio_api::analytics::NewPageView;
-use cio_api::applicants::{get_role_from_sheet_id, refresh_background_checks, Applicant, NewApplicant};
+use cio_api::applicants::{get_role_from_sheet_id, Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
 use cio_api::mailing_list::{MailchimpWebhook, MailingListSubscriber};
@@ -1114,6 +1114,36 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
     sentry::capture_message(&format!("checkr: {:?}", event), sentry::Level::Info);
 
     // Run the update of the background checks.
+    // If we have a candidate ID let's get them from checkr.
+    if event.data.object.candidate_id.is_empty() || event.data.object.package.is_empty() || event.data.object.status.is_empty() {
+        // Return early we don't care.
+        sentry::capture_message(&format!("checkr candidate id is empty for event: {:?}", event), sentry::Level::Info);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    let candidate = api_context.checkr.get_candidate(&event.data.object.candidate_id).await.unwrap();
+    let result = applicants::dsl::applicants
+        .filter(
+            applicants::dsl::email
+                .eq(candidate.email.to_string())
+                // TODO: matching on name might be a bad idea here.
+                .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
+        )
+        .filter(applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()))
+        .first::<Applicant>(&api_context.db.conn());
+    if result.is_ok() {
+        let mut applicant = result.unwrap();
+        // Set the status for the report.
+        if event.data.object.package.contains("premium_criminal") {
+            applicant.criminal_background_check_status = event.data.object.status.to_string();
+        }
+        if event.data.object.package.contains("motor_vehicle") {
+            applicant.motor_vehicle_background_check_status = event.data.object.status.to_string();
+        }
+
+        // Update the applicant.
+        applicant.update(&api_context.db).await;
+    }
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }

@@ -2345,6 +2345,7 @@ pub async fn refresh_background_checks(db: &Database) {
         for (_, sheet_id) in get_sheets_map() {
             // Match on their email or their name.
             // TODO: name is working for now but might want to make it more fuzzy in the future.
+            // This could be problematic if we have two John Smiths join in the same week.
             if let Ok(mut applicant) = applicants::dsl::applicants
                 .filter(
                     applicants::dsl::email
@@ -2352,6 +2353,7 @@ pub async fn refresh_background_checks(db: &Database) {
                         .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
                 )
                 .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
+                .filter(applicants::dsl::status.eq(crate::applicant_status::Status::Onboarding.to_string()))
                 .first::<Applicant>(&db.conn())
             {
                 for report_id in &candidate.report_ids {
