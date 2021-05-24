@@ -662,8 +662,9 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
         }
 
         // Parse the shipment out of the row information.
-        let shipment = NewOutboundShipment::parse_from_row(&event.event.named_values);
+        let mut shipment = NewOutboundShipment::parse_from_row(&event.event.named_values);
         // Create or update the shipment in airtable.
+        shipment.notes = format!("Automatically generated from the Google sheet {}", event.spreadsheet.id);
         shipment.upsert(db).await;
 
         // Handle if the event is for a swag spreadsheet.
@@ -854,6 +855,11 @@ async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestCo
 
     // Get the row from airtable.
     let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
+
+    // If it is a row we created from our internal store do nothing.
+    if shipment.notes.contains("Oxide store") || shipment.notes.contains("Google sheet") {
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
 
     if shipment.email.is_empty() {
         sentry::capture_message("Got an empty email for row", sentry::Level::Fatal);

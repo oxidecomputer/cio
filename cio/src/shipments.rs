@@ -1167,9 +1167,10 @@ pub async fn refresh_outbound_shipments(db: &Database) {
             }
 
             // Parse the shipment out of the row information.
-            let (shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(db, &columns, &row);
+            let (mut shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(db, &columns, &row);
 
             if !sent {
+                shipment.notes = format!("Automatically generated from the Google sheet {}", sheet_id);
                 let mut new_shipment = shipment.upsert(db).await;
                 // Create or update the shipment from shippo.
                 new_shipment.create_or_get_shippo_shipment(db).await;
