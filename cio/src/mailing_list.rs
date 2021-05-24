@@ -15,6 +15,7 @@ use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBl
 
 use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE};
 use crate::db::Database;
+use crate::rack_line::NewRackLineSubscriber;
 use crate::schema::mailing_list_subscribers;
 
 /// The data type for a MailingListSubscriber.
@@ -177,7 +178,7 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 }
 
 /// Returns the response from the Mailchimp API with the list of subscribers.
-pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
+pub async fn get_all_mailchimp_subscribers(list_id: &str) -> Vec<MailchimpMember> {
     let client = reqwest::Client::new();
     let per_page = 500;
     let mut offset = 0;
@@ -187,12 +188,7 @@ pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
     let mut has_more_rows = true;
     while has_more_rows {
         let resp = client
-            .get(&format!(
-                "https://us20.api.mailchimp.com/3.0/lists/{}/members?count={}&offset={}",
-                env::var("MAILCHIMP_LIST_ID").unwrap_or_default(),
-                per_page,
-                offset,
-            ))
+            .get(&format!("https://us20.api.mailchimp.com/3.0/lists/{}/members?count={}&offset={}", list_id, per_page, offset,))
             .basic_auth("any_string", Some(env::var("MAILCHIMP_API_KEY").unwrap_or_default()))
             .send()
             .await
@@ -211,7 +207,7 @@ pub async fn get_all_mailchimp_subscribers() -> Vec<MailchimpMember> {
 
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
 pub async fn refresh_db_mailing_list_subscribers(db: &Database) {
-    let members = get_all_mailchimp_subscribers().await;
+    let members = get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID").unwrap_or_default()).await;
 
     // Sync subscribers.
     for member in members {
@@ -355,10 +351,16 @@ pub struct MailchimpMergeFields {
     pub first_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "LNAME")]
     pub last_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "COMPANY")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "NAME")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "COMPANY", alias = "CNAME")]
     pub company: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "CSIZE")]
+    pub company_size: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "INTEREST")]
     pub interest: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "NOTES")]
+    pub notes: String,
 }
 
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
@@ -511,6 +513,37 @@ impl MailchimpWebhook {
 
         signup
     }
+
+    /// Convert to a signup data type.
+    pub fn as_rack_line_subscriber(&self) -> NewRackLineSubscriber {
+        let mut signup: NewRackLineSubscriber = Default::default();
+
+        if self.data.merges.is_some() {
+            let merges = self.data.merges.as_ref().unwrap();
+
+            if let Some(e) = &merges.email {
+                signup.email = e.trim().to_string();
+            }
+            if let Some(f) = &merges.name {
+                signup.name = f.trim().to_string();
+            }
+            if let Some(c) = &merges.company {
+                signup.company = c.trim().to_string();
+            }
+            if let Some(c) = &merges.company_size {
+                signup.company_size = c.trim().to_string();
+            }
+            if let Some(i) = &merges.notes {
+                signup.interest = i.trim().to_string();
+            }
+        }
+
+        signup.date_added = self.fired_at;
+        signup.date_optin = self.fired_at;
+        signup.date_last_changed = self.fired_at;
+
+        signup
+    }
 }
 
 #[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
@@ -543,16 +576,22 @@ pub struct MailchimpWebhookMerges {
     pub first_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "LNAME")]
     pub last_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "NAME")]
+    pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "EMAIL")]
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "ADDRESS")]
     pub address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "PHONE")]
     pub phone: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "COMPANY")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "COMPANY", alias = "CNAME")]
     pub company: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "CSIZE")]
+    pub company_size: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "INTEREST")]
     pub interest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "NOTES")]
+    pub notes: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "BIRTHDAY")]
     pub birthday: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "GROUPINGS")]

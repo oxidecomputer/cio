@@ -1,0 +1,1 @@
+DROP TABLE rack_line_subscribers
