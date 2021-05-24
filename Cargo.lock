@@ -373,6 +373,19 @@ dependencies = [
 [[package]]
 name = "checkr"
 version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fa930f319242b83e88eee606061674527b107f0376f94e9fe770b0cf8fe636a"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "checkr"
+version = "0.0.10"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4622,6 +4635,7 @@ dependencies = [
 name = "webhooky"
 version = "0.1.0"
 dependencies = [
+ "checkr 0.0.9",
  "chrono",
  "chrono-humanize",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",

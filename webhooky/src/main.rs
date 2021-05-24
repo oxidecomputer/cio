@@ -33,8 +33,7 @@ use serde_qs::Config as QSConfig;
 use sheets::Sheets;
 
 use cio_api::analytics::NewPageView;
-use cio_api::applicants::get_role_from_sheet_id;
-use cio_api::applicants::{Applicant, NewApplicant};
+use cio_api::applicants::{get_role_from_sheet_id, refresh_background_checks, Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
 use cio_api::mailing_list::{MailchimpWebhook, MailingListSubscriber};
@@ -145,6 +144,7 @@ struct Context {
     github_org: String,
     influx: influx::Client,
     db: Database,
+    checkr: checkr::Checkr,
 
     schema: String,
 }
@@ -172,6 +172,7 @@ impl Context {
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
             db: Database::new(),
+            checkr: checkr::Checkr::new_from_env(),
             schema,
         }
     }
@@ -1107,9 +1108,12 @@ pub struct ShippoTrackingUpdateEvent {
     method = POST,
     path = "/checkr/background/update",
 }]
-async fn listen_checkr_background_update_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<checkr::WebhookEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let api_context = rqctx.context();
     let event = body_param.into_inner();
-    sentry::capture_message(&format!("checkr: {}", event.to_string()), sentry::Level::Info);
+    sentry::capture_message(&format!("checkr: {:?}", event), sentry::Level::Info);
+
+    // Run the update of the background checks.
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }

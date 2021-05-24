@@ -1,7 +1,7 @@
 [package]
 name = "checkr"
 description = "An API client for Checkr"
-version = "0.0.9"
+version = "0.0.10"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"

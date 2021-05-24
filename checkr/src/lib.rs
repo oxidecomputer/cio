@@ -149,6 +149,25 @@ impl Checkr {
         Ok(candidates)
     }
 
+    /// Get a candidate.
+    pub async fn get_candidate(&self, id: &str) -> Result<Candidate, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("candidates/{}", id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
     /// Create a new candidate.
     pub async fn create_candidate(&self, email: &str) -> Result<Candidate, APIError> {
         // Build the request.
