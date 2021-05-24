@@ -239,7 +239,9 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {}
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              }
             }
           },
           "required": true
@@ -422,10 +424,10 @@
         }
       }
     },
-    "/mailchimp": {
+    "/mailchimp/mailing_list": {
       "get": {
-        "description": "Ping endpoint for MailChimp webhooks.",
-        "operationId": "ping_mailchimp_webhooks",
+        "description": "Ping endpoint for MailChimp mailing list webhooks.",
+        "operationId": "ping_mailchimp_mailing_list_webhooks",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -441,14 +443,61 @@
         }
       },
       "post": {
-        "description": "Listen for MailChimp webhooks.",
-        "operationId": "listen_mailchimp_webhooks",
+        "description": "Listen for MailChimp mailing list webhooks.",
+        "operationId": "listen_mailchimp_mailing_list_webhooks",
         "requestBody": {
           "content": {
-            "application/json": {
+            "application/octet-stream": {
               "schema": {
-                "title": "String",
-                "type": "string"
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mailchimp/rack_line": {
+      "get": {
+        "description": "Ping endpoint for MailChimp rack line webhooks.",
+        "operationId": "ping_mailchimp_rack_line_webhooks",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Listen for MailChimp rack line webhooks.",
+        "operationId": "listen_mailchimp_rack_line_webhooks",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
               }
             }
           },
@@ -791,6 +840,166 @@
             "type": "string"
           },
           "message": {
+            "type": "string"
+          }
+        }
+      },
+      "EventData": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "$ref": "#/components/schemas/EventObject"
+          }
+        }
+      },
+      "EventObject": {
+        "type": "object",
+        "properties": {
+          "arrest_search_id": {
+            "type": "string"
+          },
+          "assessment": {
+            "type": "string"
+          },
+          "candidate_id": {
+            "type": "string"
+          },
+          "candidate_story_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "county_criminal_search_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "document_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "due_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estimated_completion_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "facis_search_id": {
+            "type": "string"
+          },
+          "federal_criminal_search_id": {
+            "type": "string"
+          },
+          "global_watchlist_search_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "motor_vehicle_report_id": {
+            "type": "string"
+          },
+          "municipal_criminal_search_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "national_criminal_search_id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "package": {
+            "type": "string"
+          },
+          "personal_reference_verification_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pointer_state_criminal_search_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "professional_license_verification_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "professional_reference_verification_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "result": {
+            "type": "string"
+          },
+          "revised_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "self_disclosure_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sex_offender_search_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "ssn_trace_id": {
+            "type": "string"
+          },
+          "state_criminal_search_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "terrorist_watchlist_search_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "upgraded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uri": {
             "type": "string"
           }
         }
@@ -1705,6 +1914,34 @@
           "required",
           "show",
           "value"
+        ]
+      },
+      "WebhookEvent": {
+        "description": "The data type for a webhook event.",
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "$ref": "#/components/schemas/EventData"
+          },
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at"
         ]
       }
     }
