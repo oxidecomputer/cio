@@ -1,3 +1,4 @@
+#![allow(clippy::from_over_into)]
 use std::env;
 
 use crate::core::UpdateAirtableRecord;
@@ -13,6 +14,7 @@ use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBl
 
 use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_RACK_LINE_SIGNUPS_TABLE};
 use crate::db::Database;
+use crate::mailchimp::{get_all_mailchimp_subscribers, MailchimpMember};
 use crate::schema::rack_line_subscribers;
 
 /// The data type for a RackLineSubscriber.
@@ -150,7 +152,7 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 
 /// Sync the rack_line_subscribers from Mailchimp with our database.
 pub async fn refresh_db_rack_line_subscribers(db: &Database) {
-    let members = crate::mailing_list::get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await;
+    let members = get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await;
 
     // Sync subscribers.
     for member in members {
@@ -159,7 +161,7 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database) {
     }
 }
 
-impl Into<NewRackLineSubscriber> for crate::mailing_list::MailchimpMember {
+impl Into<NewRackLineSubscriber> for MailchimpMember {
     fn into(self) -> NewRackLineSubscriber {
         let mut tags: Vec<String> = Default::default();
         for t in &self.tags {
