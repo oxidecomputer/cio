@@ -36,8 +36,10 @@ use cio_api::analytics::NewPageView;
 use cio_api::applicants::{get_role_from_sheet_id, Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
-use cio_api::mailing_list::{MailchimpWebhook, MailingListSubscriber};
+use cio_api::mailchimp::MailchimpWebhook;
+use cio_api::mailing_list::MailingListSubscriber;
 use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
+use cio_api::rack_line::RackLineSubscriber;
 use cio_api::rfds::is_image;
 use cio_api::schema::applicants;
 use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, NewOutboundShipment, OutboundShipment};
@@ -101,10 +103,12 @@ async fn main() -> Result<(), String> {
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
-    api.register(listen_mailchimp_webhooks).unwrap();
+    api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
+    api.register(listen_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
-    api.register(ping_mailchimp_webhooks).unwrap();
+    api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
+    api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(api_get_schema).unwrap();
 
@@ -1221,21 +1225,21 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext<Context>>
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
-/** Ping endpoint for MailChimp webhooks. */
+/** Ping endpoint for MailChimp mailing list webhooks. */
 #[endpoint {
     method = GET,
-    path = "/mailchimp",
+    path = "/mailchimp/mailing_list",
 }]
-async fn ping_mailchimp_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping_mailchimp_mailing_list_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("ok".to_string()))
 }
 
-/** Listen for MailChimp webhooks. */
+/** Listen for MailChimp mailing list webhooks. */
 #[endpoint {
     method = POST,
-    path = "/mailchimp",
+    path = "/mailchimp/mailing_list",
 }]
-async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -1254,7 +1258,7 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, body_par
     }
 
     // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = event.as_subscriber();
+    let new_subscriber = event.as_mailing_list_subscriber();
 
     let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
@@ -1264,6 +1268,60 @@ async fn listen_mailchimp_webhooks(rqctx: Arc<RequestContext<Context>>, body_par
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
         post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
+        println!("subscriber {} posted to Slack", subscriber.email);
+
+        println!("subscriber {} created successfully", subscriber.email);
+    } else {
+        println!("subscriber {} already exists", new_subscriber.email);
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Ping endpoint for MailChimp rack line webhooks. */
+#[endpoint {
+    method = GET,
+    path = "/mailchimp/rack_line",
+}]
+async fn ping_mailchimp_rack_line_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+    Ok(HttpResponseOk("ok".to_string()))
+}
+
+/** Listen for MailChimp rack line webhooks. */
+#[endpoint {
+    method = POST,
+    path = "/mailchimp/rack_line",
+}]
+async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // We should have a string, which we will then parse into our args.
+    let event_string = body_param.as_str().unwrap().to_string();
+    println!("{}", event_string);
+    let qs_non_strict = QSConfig::new(10, false);
+
+    let event: MailchimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
+    println!("mailchimp {:?}", event);
+
+    if event.webhook_type != *"subscribe" {
+        println!("not a `subscribe` event, got `{}`", event.webhook_type);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Parse the webhook as a new rack line subscriber.
+    let new_subscriber = event.as_rack_line_subscriber();
+
+    let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
+    if existing.is_none() {
+        // Update the subscriber in the database.
+        let subscriber = new_subscriber.upsert(db).await;
+
+        // Parse the signup into a slack message.
+        // Send the message to the slack channel.
+        //post_to_channel(get_customers_channel_post_url(), new_subscriber.as_slack_msg()).await;
         println!("subscriber {} posted to Slack", subscriber.email);
 
         println!("subscriber {} created successfully", subscriber.email);
