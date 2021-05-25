@@ -521,6 +521,7 @@ The Oxide Team",
         if row.len() > columns.value_in_tension_2 && columns.value_in_tension_2 != 0 {
             values_in_tension.push(row[columns.value_in_tension_2].trim().to_lowercase());
         }
+        values_in_tension.sort();
 
         // Check if we sent them an email that we received their application.
         let mut sent_email_received = true;
@@ -2250,6 +2251,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
                 if value_in_tension_2 != "n/a" && !value_in_tension_2.trim().is_empty() {
                     values_in_tension.push(value_in_tension_2);
                 }
+                values_in_tension.sort();
             }
 
             // Update each of the applicants.
