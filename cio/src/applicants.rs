@@ -653,6 +653,7 @@ The Oxide Team",
             }
             if !a.values_in_tension.is_empty() {
                 values_in_tension = a.values_in_tension.clone();
+                values_in_tension.sort();
             }
             // Set the scorers data so we don't keep adding new scorers.
             if !a.scorers.is_empty() {
