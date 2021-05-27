@@ -1820,45 +1820,49 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         // Unzip the file.
         let mut archive = zip::ZipArchive::new(file).unwrap();
         for i in 0..archive.len() {
-            let mut file = archive.by_index(i).unwrap();
-            output = env::temp_dir();
-            output.push("zip/");
-            output.push(file.name());
+            match archive.by_index(i) {
+                Ok(mut file) => {
+                    output = env::temp_dir();
+                    output.push("zip/");
+                    output.push(file.name());
 
-            {
-                let comment = file.comment();
-                if !comment.is_empty() {
-                    println!("[applicants] zip file {} comment: {}", i, comment);
-                }
-            }
-
-            if (&*file.name()).ends_with('/') {
-                println!("[applicants] zip file {} extracted to \"{}\"", i, output.as_path().display());
-                fs::create_dir_all(&output).unwrap();
-            } else {
-                println!("[applicants] zip file {} extracted to \"{}\" ({} bytes)", i, output.as_path().display(), file.size());
-
-                if let Some(p) = output.parent() {
-                    if !p.exists() {
-                        fs::create_dir_all(&p).unwrap();
+                    let comment = file.comment();
+                    if !comment.is_empty() {
+                        println!("[applicants] zip file {} comment: {}", i, comment);
                     }
-                }
-                let mut outfile = fs::File::create(&output).unwrap();
-                copy(&mut file, &mut outfile).unwrap();
 
-                let file_name = output.to_str().unwrap();
-                if !output.is_dir() && is_materials(file_name) {
-                    // Concatenate all the zip files into our result.
-                    result += &format!(
-                        "====================== zip file: {} ======================\n\n",
-                        output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
-                    );
-                    if output.as_path().extension().unwrap() == "pdf" {
-                        result += &read_pdf(&name, output.clone());
+                    if (&*file.name()).ends_with('/') {
+                        println!("[applicants] zip file {} extracted to \"{}\"", i, output.as_path().display());
+                        fs::create_dir_all(&output).unwrap();
                     } else {
-                        result += &fs::read_to_string(&output).unwrap();
+                        println!("[applicants] zip file {} extracted to \"{}\" ({} bytes)", i, output.as_path().display(), file.size());
+
+                        if let Some(p) = output.parent() {
+                            if !p.exists() {
+                                fs::create_dir_all(&p).unwrap();
+                            }
+                        }
+                        let mut outfile = fs::File::create(&output).unwrap();
+                        copy(&mut file, &mut outfile).unwrap();
+
+                        let file_name = output.to_str().unwrap();
+                        if !output.is_dir() && is_materials(file_name) {
+                            // Concatenate all the zip files into our result.
+                            result += &format!(
+                                "====================== zip file: {} ======================\n\n",
+                                output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                            );
+                            if output.as_path().extension().unwrap() == "pdf" {
+                                result += &read_pdf(&name, output.clone());
+                            } else {
+                                result += &fs::read_to_string(&output).unwrap();
+                            }
+                            result += "\n\n\n";
+                        }
                     }
-                    result += "\n\n\n";
+                }
+                Err(e) => {
+                    println!("[applicants] error unwrapping materials name {}: {}", name, e);
                 }
             }
         }
