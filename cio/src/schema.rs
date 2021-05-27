@@ -545,6 +545,7 @@ table! {
         name -> Varchar,
         description -> Varchar,
         image -> Varchar,
+        internal_only -> Bool,
         link_to_inventory -> Array<Text>,
         link_to_barcode_scans -> Array<Text>,
         link_to_order_january_2020 -> Array<Text>,

@@ -37,6 +37,8 @@ pub struct NewSwagItem {
     pub description: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
     pub image: String,
+    #[serde(default)]
+    pub internal_only: bool,
 
     /// This is populated by Airtable.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
