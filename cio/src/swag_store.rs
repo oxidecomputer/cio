@@ -87,6 +87,7 @@ impl Order {
             swag_inventory_item.update(db).await;
         }
     }
+
     pub async fn do_order(&self, db: &Database) {
         // If their email is empty return early.
         if self.email.is_empty()
