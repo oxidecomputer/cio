@@ -912,7 +912,7 @@ xoxo,
             for line in self.contents.lines() {
                 let mut ci: CustomsItem = Default::default();
                 ci.description = line.to_string();
-                let (prefix, _suffix) = line.split_once(" x ").unwrap();
+                let (prefix, _suffix) = line.split_once(" x ").unwrap_or(("1", ""));
                 // TODO: this will break if more than 9, fix for the future.
                 ci.quantity = prefix.parse().unwrap();
                 ci.net_weight = "0.25".to_string();
