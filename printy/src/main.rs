@@ -142,11 +142,13 @@ async fn listen_print_rollo_requests(_rqctx: Arc<RequestContext<Context>>, body_
     let printer = get_printer("rollo");
     println!("{:?}", printer);
 
-    // Save the contents of our URL to a file.
-    let file = save_url_to_file(url).await;
+    if !url.trim().is_empty() {
+        // Save the contents of our URL to a file.
+        let file = save_url_to_file(url).await;
 
-    // Print the file.
-    print_file(&printer, &file, "4.00x6.00", 1);
+        // Print the file.
+        print_file(&printer, &file, "4.00x6.00", 1);
+    }
 
     // Print the body to the rollo printer.
     sentry::end_session();
@@ -164,11 +166,13 @@ async fn listen_print_zebra_requests(_rqctx: Arc<RequestContext<Context>>, body_
     let printer = get_printer("zebra");
     println!("{:?}", printer);
 
-    // Save the contents of our URL to a file.
-    let file = save_url_to_file(r.url).await;
+    if !r.url.trim().is_empty() && r.quantity > 0 {
+        // Save the contents of our URL to a file.
+        let file = save_url_to_file(r.url).await;
 
-    // Print the file.
-    print_file(&printer, &file, "3.00x2.00", r.quantity);
+        // Print the file.
+        print_file(&printer, &file, "3.00x2.00", r.quantity);
+    }
 
     // Print the body to the rollo printer.
     sentry::end_session();
