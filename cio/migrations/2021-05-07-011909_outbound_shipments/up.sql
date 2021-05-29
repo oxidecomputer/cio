@@ -13,7 +13,7 @@ CREATE TABLE outbound_shipments (
     phone VARCHAR NOT NULL,
     status VARCHAR NOT NULL,
     carrier VARCHAR NOT NULL,
-    tracking_number VARCHAR NOT NULL UNIQUE,
+    tracking_number VARCHAR NOT NULL,
     tracking_link VARCHAR NOT NULL,
     oxide_tracking_link VARCHAR NOT NULL,
     tracking_status VARCHAR NOT NULL,
