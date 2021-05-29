@@ -657,6 +657,10 @@ impl OutboundShipment {
 
     /// Send the label to our printer.
     pub async fn print_label(&self) {
+        if self.label_link.trim().is_empty() {
+            // Return early.
+            return;
+        }
         let mut printer_url = env::var("PRINTER_URL").unwrap().trim_end_matches('/').to_string();
         printer_url = format!("{}/rollo", printer_url);
         let client = reqwest::Client::new();
@@ -938,6 +942,12 @@ xoxo,
 
             // Set the customs declarations.
             cd = Some(cd_inner);
+        }
+
+        if self.country == "Great Britain" {
+            self.country = "GB".to_string();
+        } else if self.country == "United States" {
+            self.country = "US".to_string();
         }
 
         // We need a phone number for the shipment.
