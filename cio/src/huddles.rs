@@ -13,7 +13,7 @@ use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
 use crate::db::Database;
 use crate::utils::{authenticate_github_jwt, get_gsuite_token, GSUITE_DOMAIN};
 
-async fn send_huddle_reminders() {
+pub async fn send_huddle_reminders() {
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
@@ -36,7 +36,7 @@ async fn send_huddle_reminders() {
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
 
         // Iterate over the airtable records and update the meeting notes where we have notes.
-        for (i, record) in records.iter().enumerate() {
+        for record in records {
             if record.fields.calendar_id.is_empty() || record.fields.calendar_event_id.is_empty() {
                 // We don't care we don't have the information we need.
                 continue;
