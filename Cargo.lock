@@ -457,7 +457,7 @@ dependencies = [
  "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.23",
+ "gsuite-api 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#16ddd4467604b7df02d2e0ce098d2a5dc9563e34"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#afc1cbf15a65ec25f5bf505568674a0af41e0081"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -707,9 +707,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52fb27eab85b17fbb9f6fd667089e07d6a2eb8743d02639ee7f6a7a7729c9c94"
+checksum = "4ec02e091aa634e2c3ada4a392989e7c3116673ef0ac5b72232439094d73b7fd"
 dependencies = [
  "cfg-if 1.0.0",
  "crossbeam-utils",
@@ -720,11 +720,10 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4feb231f0d4d6af81aed15928e58ecf5816aa62a2393e2c82f46973e92a9a278"
+checksum = "d82cfc11ce7f2c3faef78d8a684447b40d503d9681acebed6cb728d45940c4db"
 dependencies = [
- "autocfg",
  "cfg-if 1.0.0",
  "lazy_static",
 ]
@@ -1462,8 +1461,7 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a63de779f493eaee56cadb6094832ec2d0816442228b7573e236e9c48c20127"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#afc1cbf15a65ec25f5bf505568674a0af41e0081"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1476,6 +1474,20 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.23"
+dependencies = [
+ "chrono",
+ "rand 0.7.3",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "yup-oauth2",
+]
+
+[[package]]
+name = "gsuite-api"
+version = "0.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee5a2970ba05f5910d5da7d275722a2fcb04757a16455ee75fb409a1c3bb38e0"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2080,7 +2092,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#16ddd4467604b7df02d2e0ce098d2a5dc9563e34"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#afc1cbf15a65ec25f5bf505568674a0af41e0081"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3007,12 +3019,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae1ded71d66a4a97f5e961fd0cb25a5f366a42a41570d16a763a69c092c26ae4"
-dependencies = [
- "byteorder",
-]
+checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
 
 [[package]]
 name = "regex-cache"
@@ -3659,9 +3668,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16f1d0fef1604ba8f7a073c7e701f213e056707210e9020af4528e0101ce11a6"
+checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
 dependencies = [
  "libc",
 ]
