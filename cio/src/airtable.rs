@@ -28,7 +28,6 @@ pub static AIRTABLE_APPLICATIONS_TABLE: &str = "Applicants";
 pub static AIRTABLE_INTERVIEWS_TABLE: &str = "Interviews";
 pub static AIRTABLE_REVIEWER_LEADERBOARD_TABLE: &str = "Reviewer Leaderboard";
 
-pub static AIRTABLE_BASE_ID_PRODUCT_HUDDLE: &str = "appbQqnE3nykcnkbx";
 pub static AIRTABLE_DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
 pub static AIRTABLE_MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";
 

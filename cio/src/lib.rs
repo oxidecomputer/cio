@@ -12,6 +12,7 @@ pub mod core;
 pub mod db;
 pub mod finance;
 pub mod gsuite;
+pub mod huddles;
 pub mod interviews;
 pub mod journal_clubs;
 pub mod mailchimp;

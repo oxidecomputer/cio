@@ -69,12 +69,16 @@ pub struct Meeting {
     // Never modify this, it is a linked record.
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Proposed discussion")]
     pub proposed_discussion: Vec<String>,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Recording")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub recording: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Attendees")]
     pub attendees: Vec<AirtableUser>,
     #[serde(default)]
     pub reminder_email_sent: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub calendar_event_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub calendar_event_link: String,
 }
 
 /// The data type for sending reminders for meetings.

@@ -709,7 +709,7 @@ impl GSuite {
     /// List calendars for a user.
     pub async fn list_calendars(&self) -> Result<Vec<Calendar>, APIError> {
         // Build the request.
-        let request = self.request(CALENDAR_ENDPOINT, Method::GET, "users/me/calendarList", (), None);
+        let request = self.request(CALENDAR_ENDPOINT, Method::GET, "users/me/calendarList", (), Some(&[("maxResults", "250")]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -737,6 +737,34 @@ impl GSuite {
             &format!("calendars/{}/events", calendar_id),
             (),
             Some(&[("singleEvents", "true"), ("maxResults", "2500"), ("showDeleted", &show_deleted.to_string())]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        let value: CalendarEvents = resp.json().await.unwrap();
+
+        Ok(value.items)
+    }
+
+    /// List recurring event instances.
+    pub async fn list_recurring_event_instances(&self, calendar_id: &str, recurring_event_id: &str) -> Result<Vec<CalendarEvent>, APIError> {
+        // Build the request.
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::GET,
+            &format!("calendars/{}/events/{}/instances", calendar_id, recurring_event_id),
+            (),
+            Some(&[("maxResults", "2500"), ("showDeleted", "true")]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
