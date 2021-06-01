@@ -60,7 +60,7 @@ use std::sync::Arc;
 
 use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{DateTime, Duration};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
@@ -724,6 +724,41 @@ impl GSuite {
 
         // Try to deserialize the response.
         let value: Calendars = resp.json().await.unwrap();
+
+        Ok(value.items)
+    }
+
+    /// List events on a calendar with a query.
+    pub async fn list_calendar_events_query(&self, calendar_id: &str, query: &str) -> Result<Vec<CalendarEvent>, APIError> {
+        // Build the request.
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::GET,
+            &format!("calendars/{}/events", calendar_id),
+            (),
+            Some(&[
+                ("singleEvents", "false"),
+                ("maxResults", "2500"),
+                ("showDeleted", "true"),
+                ("q", query),
+                // This is one week into the future.
+                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(1)).unwrap().to_rfc3339()),
+            ]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        let value: CalendarEvents = resp.json().await.unwrap();
 
         Ok(value.items)
     }

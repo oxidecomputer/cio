@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::env;
 
 use airtable_api::{Airtable, Record};
-use chrono::NaiveDate;
+use chrono::{Duration, NaiveDate, Utc};
 use gsuite_api::{CalendarEvent, GSuite};
 
 use crate::airtable::AIRTABLE_MEETING_SCHEDULE_TABLE;
@@ -32,34 +32,49 @@ pub async fn sync_huddles() {
 
         // Iterate over the calendars.
         for calendar in calendars {
-            if calendar.id.ends_with(GSUITE_DOMAIN) {
-                gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, get_gsuite_token("").await);
+            if !calendar.id.ends_with(GSUITE_DOMAIN) {
+                // We don't care about this calendar.
+                // Continue early.
+                continue;
+            }
 
-                // Let's get all the events on this calendar and try and see if they
-                // have a meeting recorded.
-                println!("Getting events for {}", calendar.id);
-                let events = gsuite.list_calendar_events(&calendar.id, true).await.unwrap();
+            // Let's get all the events on this calendar and try and see if they
+            // have a meeting recorded.
+            println!("Getting events for calendar: {}", calendar.id);
+            let events = gsuite.list_calendar_events_query(&calendar.id, &huddle.calendar_event_fuzzy_search).await.unwrap();
 
-                // Iterate over all the events, searching for our search string.
-                for event in events {
-                    if event.summary.to_lowercase().contains(&huddle.calendar_event_fuzzy_search.to_lowercase()) {
-                        // Let's add the event to our HashMap.
-                        let date = event.start.date_time.unwrap().date().naive_utc();
-                        gcal_events.insert(date, event.clone());
-                        if !event.recurring_event_id.is_empty() {
-                            // TODO: make sure we don't repeat this.
-                            let instances = gsuite.list_calendar_events(&calendar.id, true).await.unwrap();
-                            // Get all the recurring events.
-                            for instance in instances {
-                                // Let's add the event to our HashMap.
-                                if instance.start.date_time.is_some() {
-                                    let date = instance.start.date_time.unwrap().date().naive_utc();
-                                    gcal_events.insert(date, instance.clone());
-                                }
-                            }
-                        }
+            // Iterate over all the events, searching for our search string.
+            let mut recurring_events: Vec<String> = Vec::new();
+            for event in events {
+                if !event.summary.to_lowercase().contains(&huddle.calendar_event_fuzzy_search.to_lowercase()) {
+                    // This isn't one of the events we are looking for.
+                    // Continue early.
+                    continue;
+                }
+
+                // Let's add the event to our HashMap.
+                let date = event.start.date_time.unwrap().date().naive_utc();
+                gcal_events.insert(date, event.clone());
+
+                if event.recurring_event_id.is_empty() || recurring_events.contains(&event.recurring_event_id) {
+                    // The event either isnt a recurring event OR we already iterated over
+                    // it.
+                    continue;
+                }
+
+                // Get all the recurring events.
+                let instances = gsuite.list_recurring_event_instances(&calendar.id, &event.recurring_event_id).await.unwrap();
+                for instance in instances {
+                    // Let's add the event to our HashMap.
+                    if instance.start.date_time.is_some() {
+                        let date = instance.start.date_time.unwrap().date().naive_utc();
+                        gcal_events.insert(date, instance.clone());
                     }
                 }
+
+                // Add it to our vector.
+                // So we don't repeat over it.
+                recurring_events.push(event.recurring_event_id);
             }
         }
 
@@ -92,11 +107,25 @@ pub async fn sync_huddles() {
                     // Send the updated record to Airtable.
                     airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
 
+                    // Delete it from our hashmap.
+                    // We do this so that we only have future dates left over.
+                    gcal_events.remove(&record.fields.date);
+
                     println!("[airtable] huddle {} date={} updated", slug, record.fields.date);
                 }
                 None => {
                     println!("WARN: no event matches: {}", record.fields.date);
                 }
+            }
+        }
+
+        // TODO: Create Airtable records for any future calendar dates.
+        for (date, event) in gcal_events {
+            // One week from now.
+            let in_one_week = Utc::now().checked_add_signed(Duration::weeks(1)).unwrap();
+            if date > Utc::now().date().naive_utc() && date <= in_one_week.date().naive_utc() {
+                // We are in the future.
+                println!("Got future {} event: {}", slug, date);
             }
         }
     }
