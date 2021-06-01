@@ -11,7 +11,7 @@ use crate::airtable::{AIRTABLE_DISCUSSION_TOPICS_TABLE, AIRTABLE_MEETING_SCHEDUL
 use crate::configs::{get_configs_from_repo, User};
 use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
 use crate::db::Database;
-use crate::utils::{authenticate_github_jwt, get_gsuite_token, GSUITE_DOMAIN};
+use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 pub async fn send_huddle_reminders() {
     let github = authenticate_github_jwt();
@@ -151,6 +151,53 @@ https://airtable-roadmap.corp.oxide.computer.
 
 See you soon,
 The Oxide Airtable Huddle Bot"#;
+
+/// Sync the huddle meeting notes with the GitHub reports repository.
+pub async fn sync_huddle_meeting_notes() {
+    let github = authenticate_github_jwt();
+    let configs = get_configs_from_repo(&github).await;
+
+    // Define the date format.
+    let date_format = "%A, %-d %B, %C%y";
+
+    // Get the reports repo client.
+    let reports_repo = github.repo(github_org(), "reports");
+
+    // Iterate over the huddle meetings.
+    for (name, huddle) in configs.huddles {
+        // Initialize the Airtable client.
+        let airtable = Airtable::new(airtable_api::api_key_from_env(), huddle.airtable_base_id, "");
+
+        // Get the meeting schedule table from airtable.
+        let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
+
+        // Iterate over the airtable records and update the meeting notes where we have notes.
+        for mut record in records {
+            if record.fields.notes.trim().is_empty() {
+                // Continue early if we have no notes.
+                continue;
+            }
+
+            let notes_path = format!("/{}/meetings/{}.txt", name, record.fields.date.format("%Y%m%d"));
+
+            if record.fields.action_items.is_empty() {
+                record.fields.action_items = "There were no action items as a result of this meeting".to_string();
+            }
+
+            let notes = format!(
+                "# {} Huddle on {}\n\n**Meeting Recording:** {}\n\n## Notes\n\n{}\n\n## Action Items\n\n{}",
+                name.replace("-", " ").to_uppercase(),
+                record.fields.date.format(date_format),
+                record.fields.recording,
+                record.fields.notes,
+                record.fields.action_items,
+            );
+
+            // Create or update the file in the repo.
+            create_or_update_file_in_github_repo(&reports_repo, "master", &notes_path, notes.as_bytes().to_vec()).await;
+        }
+    }
+}
 
 pub async fn sync_huddles() {
     let github = authenticate_github_jwt();
@@ -315,12 +362,14 @@ pub async fn sync_huddles() {
 
 #[cfg(test)]
 mod tests {
-    use crate::huddles::{send_huddle_reminders, sync_huddles};
+    use crate::huddles::{send_huddle_reminders, sync_huddle_meeting_notes, sync_huddles};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_sync_huddles() {
         sync_huddles().await;
+
+        sync_huddle_meeting_notes().await;
 
         send_huddle_reminders().await;
     }

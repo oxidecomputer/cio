@@ -2077,7 +2077,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
         // Parse the sheet columns.
         let columns = ApplicantFormSheetColumns::new();
 
-        let mut reviewer_pool = get_reviewer_pool(db);
+        /*let mut reviewer_pool = get_reviewer_pool(db);
 
         // We'll assign reviewers randomly but attempt to produce roughly even loads
         // across reviewers. To do this, we shuffle the list of reviewers, and then
@@ -2085,7 +2085,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
         // Whenever we need a group of 5 interviewers, we'll just take the next 5.
         let mut rng = rand::thread_rng();
         reviewer_pool.shuffle(&mut rng);
-        let mut reviewer_pool = reviewer_pool.iter().cloned().cycle();
+        reviewer_pool = reviewer_pool.iter().cloned().cycle();*/
 
         // Iterate over the rows.
         for (_, row) in values.iter().enumerate() {
@@ -2159,28 +2159,30 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     applicant.scoring_form_responses_url = form_responses_url.to_string();
 
                     // See if we already have scorers assigned.
-                    if applicant.scorers.is_empty() || (applicant.scorers.len() + applicant.scorers_completed.len()) < 5 {
-                        // Assign scorers and send email.
-                        // Choose next five reviewers.
-                        let mut random_five: Vec<String> = reviewer_pool.by_ref().take(5).collect();
-                        applicant.scorers.append(&mut random_five);
-                        // Remove any duplicates.
-                        applicant.scorers.sort_unstable();
-                        applicant.scorers.dedup();
-                    }
+                    /*
+                    DO NOT ASSIGN NEW SCORERS RANDOMLY.
+                     if applicant.scorers.is_empty() || (applicant.scorers.len() + applicant.scorers_completed.len()) < 5 {
+                         // Assign scorers and send email.
+                         // Choose next five reviewers.
+                         let mut random_five: Vec<String> = reviewer_pool.by_ref().take(5).collect();
+                         applicant.scorers.append(&mut random_five);
+                         // Remove any duplicates.
+                         applicant.scorers.sort_unstable();
+                         applicant.scorers.dedup();
+                     }
 
-                    // Remove anyone from the scorers if they have already completed their review.
-                    for _ in 0..5 {
-                        for (index, scorer) in applicant.scorers.clone().iter().enumerate() {
-                            if applicant.scorers_completed.contains(scorer) {
-                                applicant.scorers.remove(index);
-                                // Break the loop since now the indexes are all off.
-                                // The next cron run will catch it.
-                                // TODO: make this better.
-                                break;
-                            }
-                        }
-                    }
+                     // Remove anyone from the scorers if they have already completed their review.
+                     for _ in 0..5 {
+                         for (index, scorer) in applicant.scorers.clone().iter().enumerate() {
+                             if applicant.scorers_completed.contains(scorer) {
+                                 applicant.scorers.remove(index);
+                                 // Break the loop since now the indexes are all off.
+                                 // The next cron run will catch it.
+                                 // TODO: make this better.
+                                 break;
+                             }
+                         }
+                     }*/
 
                     // Update the applicant in the database.
                     applicant.update(db).await;
