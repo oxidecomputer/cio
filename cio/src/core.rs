@@ -82,6 +82,8 @@ pub struct Meeting {
     #[serde(default)]
     pub reminder_email_sent: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub calendar_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub calendar_event_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub calendar_event_link: String,
@@ -92,7 +94,6 @@ pub struct Meeting {
 pub struct MeetingReminderEmailData {
     pub date: String,
     pub topics: Vec<DiscussionTopic>,
-    pub last_meeting_reports_link: String,
     pub huddle_name: String,
     pub time: String,
     pub email: String,
