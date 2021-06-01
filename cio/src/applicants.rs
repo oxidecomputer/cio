@@ -2335,6 +2335,7 @@ fn is_materials(file_name: &str) -> bool {
         || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
         || (file_name.starts_with("Oxide_Candidate_Materials") && file_name.ends_with(".pdf"))
         || file_name.ends_with("Oxide Candidate Materials.pdf")
+        || file_name.ends_with("Oxide Candidate Materials.pdf.pdf")
         || file_name.ends_with("OxideQuestions.pdf")
         || file_name.ends_with("oxide-computer-candidate-materials.pdf")
         || file_name.ends_with("Questionnaire.pdf")
