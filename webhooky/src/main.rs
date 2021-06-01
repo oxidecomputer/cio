@@ -2322,9 +2322,9 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     let configs = get_configs_from_repo(&api_context.github).await;
 
     // Check if the links.toml file changed.
-    if commit.file_changed("configs/links.toml") {
+    if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
         // Update our links in the database.
-        sync_links(&api_context.db, configs.links).await;
+        sync_links(&api_context.db, configs.links, configs.huddles).await;
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&api_context.db, &github_repo).await;
