@@ -71,8 +71,14 @@ pub struct Meeting {
     pub proposed_discussion: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub recording: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Attendees")]
-    pub attendees: Vec<AirtableUser>,
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "Attendees",
+        serialize_with = "airtable_api::user_format_as_array_of_strings::serialize",
+        deserialize_with = "airtable_api::user_format_as_array_of_strings::deserialize"
+    )]
+    pub attendees: Vec<String>,
     #[serde(default)]
     pub reminder_email_sent: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]

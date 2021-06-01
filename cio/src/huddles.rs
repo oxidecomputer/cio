@@ -6,8 +6,9 @@ use chrono::{Duration, NaiveDate, Utc};
 use gsuite_api::{CalendarEvent, GSuite};
 
 use crate::airtable::AIRTABLE_MEETING_SCHEDULE_TABLE;
-use crate::configs::get_configs_from_repo;
+use crate::configs::{get_configs_from_repo, User};
 use crate::core::Meeting;
+use crate::db::Database;
 use crate::utils::{authenticate_github_jwt, get_gsuite_token, GSUITE_DOMAIN};
 
 pub async fn sync_huddles() {
@@ -16,7 +17,9 @@ pub async fn sync_huddles() {
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let mut gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+
+    let db = Database::new();
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
@@ -104,6 +107,18 @@ pub async fn sync_huddles() {
                         }
                     }
 
+                    // Update the attendees.
+                    let mut attendees: Vec<String> = Default::default();
+                    for attendee in event.attendees.clone() {
+                        if !attendee.resource && attendee.email.ends_with(GSUITE_DOMAIN) {
+                            // Make sure the person is still a user.
+                            if let Some(user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                                attendees.push(user.email());
+                            }
+                        }
+                    }
+                    record.fields.attendees = attendees;
+
                     // Send the updated record to Airtable.
                     airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
 
@@ -119,13 +134,34 @@ pub async fn sync_huddles() {
             }
         }
 
-        // TODO: Create Airtable records for any future calendar dates.
+        // Create Airtable records for any future calendar dates.
         for (date, event) in gcal_events {
             // One week from now.
             let in_one_week = Utc::now().checked_add_signed(Duration::weeks(1)).unwrap();
             if date > Utc::now().date().naive_utc() && date <= in_one_week.date().naive_utc() {
                 // We are in the future.
-                println!("Got future {} event: {}", slug, date);
+                // Create an Airtable record.
+                let meeting = Meeting {
+                    // This is a function so it needs to be empty.
+                    name: String::new(),
+                    notes: String::new(),
+                    action_items: String::new(),
+                    date: date,
+                    // This is a function so it needs to be empty.
+                    week: String::new(),
+                    proposed_discussion: Vec::new(),
+                    recording: String::new(),
+                    attendees: Vec::new(),
+                    reminder_email_sent: false,
+                    calendar_event_id: event.id.to_string(),
+                    calendar_event_link: event.html_link.to_string(),
+                };
+                let record: Record<Meeting> = Record {
+                    id: "".to_string(),
+                    fields: meeting,
+                    created_time: None,
+                };
+                airtable.create_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record]).await.unwrap();
             }
         }
     }
