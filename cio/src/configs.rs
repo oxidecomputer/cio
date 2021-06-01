@@ -1456,7 +1456,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 }
 
 /// Sync our links with our database and then update Airtable from the database.
-pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
+pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, huddles: BTreeMap<String, HuddleConfig>) {
     // Get all the links.
     let db_links = Links::get_from_db(db);
     // Create a BTreeMap
@@ -1468,6 +1468,33 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>) {
     for (name, mut link) in links {
         link.name = name.to_string();
         link.short_link = format!("https://{}.corp.{}", name, DOMAIN);
+
+        link.upsert(db).await;
+
+        // Remove the link from the BTreeMap.
+        link_map.remove(&link.name);
+    }
+    for (slug, huddle) in huddles {
+        // Create the link for the workspace.
+        let mut link = LinkConfig {
+            name: format!("{}-huddle", slug),
+            description: huddle.description.to_string(),
+            link: huddle.link_to_airtable_workspace.to_string(),
+            aliases: vec![format!("airtable-{}-huddle", slug)],
+            short_link: format!("https://{}-huddle.corp.{}", slug, DOMAIN),
+        };
+
+        link.upsert(db).await;
+
+        // Remove the link from the BTreeMap.
+        link_map.remove(&link.name);
+
+        // Update the link for the form.
+        link.name = format!("{}-huddle-form", slug);
+        link.link = huddle.link_to_airtable_form.to_string();
+        link.aliases = vec![format!("airtable-{}-huddle-form", slug)];
+        link.short_link = format!("https://{}-huddle-form.corp.{}", slug, DOMAIN);
+        link.description = format!("Form for submitting topics to the {}", huddle.description.to_lowercase());
 
         link.upsert(db).await;
 
@@ -1556,7 +1583,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     generate_terraform_files_for_aws_and_github(github, &db).await;
 
     // Sync links.
-    sync_links(&db, configs.links).await;
+    sync_links(&db, configs.links, configs.huddles).await;
 
     // Sync certificates.
     sync_certificates(&db, github, configs.certificates).await;

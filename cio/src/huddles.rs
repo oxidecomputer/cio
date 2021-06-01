@@ -94,7 +94,6 @@ pub async fn send_huddle_reminders() {
             // Initialize the SendGrid client.
             let sendgrid = SendGrid::new_from_env();
             // Send the email.
-            // TODO: pass in the domain like the other tools.
             sendgrid
                 .send_mail(
                     format!("Reminder {} huddle tomorrow", name),
@@ -211,8 +210,6 @@ pub async fn sync_huddles() {
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
-        // TODO: create all the shortURLs for the huddle.
-
         // Collect all the calendar events that match this search string.
         // The first part of the map should match the date field in airtable.
         let mut gcal_events: HashMap<NaiveDate, CalendarEvent> = HashMap::new();
