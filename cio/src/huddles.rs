@@ -366,7 +366,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_sync_huddles() {
+    async fn test_huddles() {
         sync_huddles().await;
 
         sync_huddle_meeting_notes().await;

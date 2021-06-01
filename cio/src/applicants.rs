@@ -21,7 +21,6 @@ use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
 use hubcaps::Github;
 use macros::db;
 use pandoc::OutputKind;
-use rand::seq::SliceRandom;
 use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
@@ -2047,7 +2046,7 @@ impl ApplicantFormSheetColumns {
     }
 }
 
-fn get_reviewer_pool(db: &Database) -> Vec<String> {
+pub fn get_reviewer_pool(db: &Database) -> Vec<String> {
     let users = Users::get_from_db(db);
 
     let mut reviewers: Vec<String> = Default::default();
