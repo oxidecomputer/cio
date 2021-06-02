@@ -79,6 +79,15 @@ pub async fn send_huddle_reminders() {
                     let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
                     g_owner.delete_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
                     println!("Cancelled calendar event for {} {} since within {} hours", slug, date, huddle.time_to_cancel);
+
+                    // Update Airtable since the meeting was cancelled.
+                    let mut r = record.clone();
+                    // Clear out the fields that are functions since the API cannot take values for those.
+                    r.fields.name = "".to_string();
+                    r.fields.week = "".to_string();
+                    r.fields.cancelled = true;
+                    airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
+
                     // Continue through our loop.
                     continue;
                 }
@@ -194,8 +203,8 @@ pub async fn sync_huddle_meeting_notes() {
 
         // Iterate over the airtable records and update the meeting notes where we have notes.
         for mut record in records {
-            if record.fields.notes.trim().is_empty() {
-                // Continue early if we have no notes.
+            if record.fields.notes.trim().is_empty() || record.fields.cancelled {
+                // Continue early if we have no notes or the meeting was cancelled.
                 continue;
             }
 
@@ -393,8 +402,8 @@ mod tests {
     async fn test_huddles() {
         sync_huddles().await;
 
-        sync_huddle_meeting_notes().await;
-
         send_huddle_reminders().await;
+
+        sync_huddle_meeting_notes().await;
     }
 }
