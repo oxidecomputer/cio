@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
+use google_geocode::Geocode;
 use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup};
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
@@ -287,6 +288,14 @@ impl UserConfig {
             self.work_address_country = "United States".to_string();
             self.home_address_country_code = "US".to_string();
         }
+
+        // Create the geocode client.
+        let geocode = Geocode::new_from_env();
+        // Get the latitude and longitude.
+        let result = geocode.get(&self.home_address_formatted).await.unwrap();
+        let location = result.geometry.location;
+        self.home_address_latitude = location.lat as f32;
+        self.home_address_longitude = location.lng as f32;
     }
 
     async fn populate_work_address(&mut self, db: &Database) {

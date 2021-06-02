@@ -276,9 +276,8 @@ impl From<User> for NewOutboundShipment {
             zipcode: user.home_address_zipcode.to_string(),
             country: user.home_address_country.to_string(),
             address_formatted: user.home_address_formatted,
-            // TODO: use the user latitude and longitude.
-            latitude: Default::default(),
-            longitude: Default::default(),
+            latitude: user.home_address_latitude,
+            longitude: user.home_address_longitude,
             contents: "Internal shipment: could be swag or tools, etc".to_string(),
             carrier: Default::default(),
             pickup_date: None,
