@@ -701,12 +701,15 @@ The Oxide Team",
 
         // If we know they have more than 1 interview AND their current status is "next steps",
         // THEN we can mark the applicant as in the "interviewing" state.
-        if interviews.len() > 1 && status == crate::applicant_status::Status::NextSteps {
+        if interviews.len() > 1 && (status == crate::applicant_status::Status::NextSteps || status == crate::applicant_status::Status::NeedsToBeTriaged) {
             status = crate::applicant_status::Status::Interviewing;
         }
         // If their status is "Onboarding" and it is after their start date.
         // Set their status to "Hired".
-        if status == crate::applicant_status::Status::Onboarding && start_date.is_some() && start_date.unwrap() <= Utc::now().date().naive_utc() {
+        if (status == crate::applicant_status::Status::Onboarding || status == crate::applicant_status::Status::GivingOffer)
+            && start_date.is_some()
+            && start_date.unwrap() <= Utc::now().date().naive_utc()
+        {
             // We shouldn't also check if we have an employee for the user, only if the employee had
             // been hired and left.
             status = crate::applicant_status::Status::Hired;
@@ -2605,6 +2608,7 @@ impl Applicant {
     pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
+        self.offer_created = envelope.created_date_time;
 
         // If the document is completed, let's save it to Google Drive.
         if envelope.status != "completed" {
@@ -2613,6 +2617,8 @@ impl Applicant {
             return;
         }
 
+        // Set the completed time.
+        self.offer_completed = envelope.completed_date_time;
         // Since the status is completed, let's set their status to "Onboarding".
         self.status = crate::applicant_status::Status::Onboarding.to_string();
         // Request their background check.
