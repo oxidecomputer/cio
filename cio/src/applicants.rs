@@ -2580,7 +2580,10 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     for mut applicant in applicants {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
-        if applicant.status != crate::applicant_status::Status::GivingOffer.to_string() && applicant.status != crate::applicant_status::Status::Onboarding.to_string() {
+        if applicant.status != crate::applicant_status::Status::GivingOffer.to_string()
+            && applicant.status != crate::applicant_status::Status::Onboarding.to_string()
+            && applicant.status != crate::applicant_status::Status::Hired.to_string()
+        {
             // We can return early.
             continue;
         }
@@ -2668,12 +2671,16 @@ impl Applicant {
 
         // Set the completed time.
         self.offer_completed = envelope.completed_date_time;
-        // Since the status is completed, let's set their status to "Onboarding".
-        self.status = crate::applicant_status::Status::Onboarding.to_string();
-        // Request their background check.
-        if self.criminal_background_check_status.is_empty() {
-            // Request the background check, since we previously have not requested one.
-            self.send_background_check_invitation(db).await;
+        if self.status == crate::applicant_status::Status::GivingOffer.to_string() {
+            // Since the status of the envelope is completed, let's set their status to "Onboarding".
+            // Only do this if they are not already hired.
+            self.status = crate::applicant_status::Status::Onboarding.to_string();
+
+            // Request their background check, if we have not already.
+            if self.criminal_background_check_status.is_empty() {
+                // Request the background check, since we previously have not requested one.
+                self.send_background_check_invitation(db).await;
+            }
         }
 
         // Get gsuite token.
