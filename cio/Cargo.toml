@@ -34,8 +34,8 @@ dropshot = "^0.5.0"
 futures-util = "0.3"
 google-drive = "^0.1.0"
 #google-drive = { path = "../drive" }
-gsuite-api = "^0.1.23"
-#gsuite-api = { path = "../gsuite" }
+#gsuite-api = "^0.1.24"
+gsuite-api = { path = "../gsuite" }
 gusto-api = "^0.1.1"
 #gusto-api = { path = "../gusto" }
 handlebars = "3.5.3"

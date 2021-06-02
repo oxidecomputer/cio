@@ -906,7 +906,13 @@ impl GSuite {
 
     pub async fn delete_calendar_event(&self, calendar_id: &str, event_id: &str) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(CALENDAR_ENDPOINT, Method::DELETE, &format!("calendars/{}/events/{}", calendar_id, event_id), (), None);
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::DELETE,
+            &format!("calendars/{}/events/{}", calendar_id, event_id),
+            (),
+            Some(&[("sendUpdates", "all")]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -1073,6 +1079,20 @@ pub struct CalendarEvent {
     pub end: Date,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attachments: Vec<Attachment>,
+    #[serde(default)]
+    pub organizer: EventOrganizer,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct EventOrganizer {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "displayName")]
+    pub display_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, rename = "self")]
+    pub self_: bool,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]

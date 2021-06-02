@@ -25,7 +25,7 @@ pub async fn send_huddle_reminders() {
     let date_format = "%A, %-d %B, %C%y";
 
     // Iterate over the huddle meetings.
-    for (name, huddle) in configs.huddles {
+    for (slug, huddle) in configs.huddles {
         // Create our email data struct.
         let mut email_data: MeetingReminderEmailData = Default::default();
 
@@ -44,6 +44,11 @@ pub async fn send_huddle_reminders() {
 
             // Get the event from Google Calendar.
             let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+            // If the event is cancelled, we can just carry on our merry way.
+            if event.status.to_lowercase().trim() == "cancelled" {
+                // The event was cancelled we want to just continue on our way.
+                continue;
+            }
             let date = event.start.date_time.unwrap();
             let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
 
@@ -62,6 +67,23 @@ pub async fn send_huddle_reminders() {
                 continue;
             }
 
+            if huddle.time_to_cancel > 0 && record.fields.proposed_discussion.is_empty() {
+                // We know that this huddle allows the automation to cancel their
+                // meetings.
+                // We need to check if we are within the threshold to be able to cancel the
+                // meeting.
+                if dur.num_hours() < huddle.time_to_cancel.into() {
+                    // We are within the threshold to automatically cancel the meeting.
+                    // Let's do it.
+                    // We need to impersonate the event owner.
+                    let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                    g_owner.delete_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+                    println!("Cancelled calendar event for {} {} since within {} hours", slug, date, huddle.time_to_cancel);
+                    // Continue through our loop.
+                    continue;
+                }
+            }
+
             // Check if we should even send the email.
             if record.fields.reminder_email_sent {
                 // If we have already sent the reminder email then break this loop.
@@ -70,7 +92,7 @@ pub async fn send_huddle_reminders() {
 
             // This is our next meeting!
             // Set the email data.
-            email_data.huddle_name = name.to_string();
+            email_data.huddle_name = slug.to_string();
             email_data.email = huddle.email.to_string();
             email_data.date = pacific_time.date().format(date_format).to_string();
 
@@ -96,7 +118,7 @@ pub async fn send_huddle_reminders() {
             // Send the email.
             sendgrid
                 .send_mail(
-                    format!("Reminder {} huddle tomorrow", name),
+                    format!("Reminder {} huddle tomorrow", slug),
                     template.to_string(),
                     vec![format!("{}@oxidecomputer.com", huddle.email)],
                     vec![],
@@ -105,7 +127,7 @@ pub async fn send_huddle_reminders() {
                 )
                 .await;
 
-            println!("successfully sent {} huddle reminder email to {}@oxidecomputer.com", name, huddle.email);
+            println!("successfully sent {} huddle reminder email to {}@oxidecomputer.com", slug, huddle.email);
 
             // Update the airtable record to show the email was sent.
             // Send the updated record to the airtable client.
@@ -116,7 +138,7 @@ pub async fn send_huddle_reminders() {
             r.fields.week = "".to_string();
             airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
 
-            println!("updated {} huddle meeting record to show the reminder email was sent", name);
+            println!("updated {} huddle meeting record to show the reminder email was sent", slug);
         }
     }
 }
@@ -126,7 +148,7 @@ static EMAIL_TEMPLATE: &str = r#"Greetings {{this.email}}@!
 
 This is your automated reminder that our regularly scheduled {{this.huddle_name}} huddle is
 happening tomorrow {{this.date}} at {{this.time}}. You can submit discussion topics using this form:
-https://{{this.huddle_name}}-huddle-form.corp.oxide.computer. Please submit topics before 12 PM PT
+https://{{this.huddle_name}}-huddle-form.corp.oxide.computer. Please submit topics before EOD
 today so people can do any pre-reading and come prepared tomorrow.
 
 {{#if this.topics}}The following topics have already been proposed, but it is not too late to add something
@@ -143,7 +165,7 @@ Past meeting notes are archived in GitHub:
 https://github.com/oxidecomputer/reports/blob/master/{{this.huddle_name}}/meetings
 
 You can also view the Airtable base for agenda, notes, action items here:
-https://airtable-{{this.huddle_name}}-huddle.corp.oxide.computer
+https://{{this.huddle_name}}-huddle.corp.oxide.computer
 
 You can also view the roadmap in Airtable here:
 https://airtable-roadmap.corp.oxide.computer.
@@ -284,6 +306,10 @@ pub async fn sync_huddles() {
                     record.fields.calendar_event_link = event.html_link.to_string();
                     // Set the calendar id.
                     record.fields.calendar_id = event.calendar_id.to_string();
+                    // Set if the event was cancelled.
+                    if event.status.to_lowercase().trim() == "cancelled" {
+                        record.fields.cancelled = true;
+                    }
 
                     // The name, day of week, and week fields are a formula so we need to zero it out.
                     record.fields.name = "".to_string();
@@ -345,6 +371,7 @@ pub async fn sync_huddles() {
                     calendar_id: event.calendar_id.to_string(),
                     calendar_event_id: event.id.to_string(),
                     calendar_event_link: event.html_link.to_string(),
+                    cancelled: event.status == "cancelled",
                 };
                 let record: Record<Meeting> = Record {
                     id: "".to_string(),

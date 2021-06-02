@@ -87,6 +87,8 @@ pub struct Meeting {
     pub calendar_event_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub calendar_event_link: String,
+    #[serde(default)]
+    pub cancelled: bool,
 }
 
 /// The data type for sending reminders for meetings.
