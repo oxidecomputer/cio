@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bc591b85e1aadcfdb5594a00d787cb0258971138"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#193a35ead28a9eab3ea8f6b44c77bdfad30de616"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -516,7 +516,7 @@ dependencies = [
  "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.24 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "gsuite-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1485,19 +1485,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gsuite-api"
-version = "0.1.24"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bc591b85e1aadcfdb5594a00d787cb0258971138"
-dependencies = [
- "chrono",
- "rand 0.7.3",
- "reqwest",
- "serde",
- "serde_json",
- "yup-oauth2",
-]
-
-[[package]]
 name = "gusto-api"
 version = "0.1.5"
 dependencies = [
@@ -2092,7 +2079,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bc591b85e1aadcfdb5594a00d787cb0258971138"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#193a35ead28a9eab3ea8f6b44c77bdfad30de616"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",

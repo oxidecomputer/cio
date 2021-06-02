@@ -56,25 +56,24 @@ pub struct DiscussionTopic {
 /// huddle meetings, etc.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Meeting {
-    #[serde(rename = "Name", skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(serialize_with = "gusto_api::date_format::serialize", deserialize_with = "gusto_api::date_format::deserialize", rename = "Date")]
+    #[serde(serialize_with = "gusto_api::date_format::serialize", deserialize_with = "gusto_api::date_format::deserialize")]
     pub date: NaiveDate,
-    #[serde(rename = "Week", skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub week: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Notes")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Action items")]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub action_items: String,
     // Never modify this, it is a linked record.
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Proposed discussion")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub proposed_discussion: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub recording: String,
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
-        rename = "Attendees",
         serialize_with = "airtable_api::user_format_as_array_of_strings::serialize",
         deserialize_with = "airtable_api::user_format_as_array_of_strings::deserialize"
     )]
