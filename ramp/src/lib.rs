@@ -172,7 +172,6 @@ impl Ramp {
                 let sb = b.into_owned();
                 new_pairs.push((sa, sb));
             }
-            println!("pairs: {:?}", new_pairs);
 
             request = self.request(Method::GET, "transactions", (), Some(new_pairs));
 
@@ -236,7 +235,6 @@ impl Ramp {
                 let sb = b.into_owned();
                 new_pairs.push((sa, sb));
             }
-            println!("pairs: {:?}", new_pairs);
 
             request = self.request(Method::GET, "users", (), Some(new_pairs));
 
@@ -267,13 +265,94 @@ impl Ramp {
     }
 
     /// Invite a new user.
-    pub async fn invite_new_user(&self) -> Result<User, APIError> {
+    pub async fn invite_new_user(&self, user: &User) -> Result<User, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, "users/deferred", (), None);
+        let request = self.request(Method::POST, "users/deferred", user, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Create a physical card.
+    pub async fn create_physical_card(&self) -> Result<Card, APIError> {
+        // Build the request.
+        let request = self.request(Method::POST, "cards/deferred/physical", (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Get a user.
+    pub async fn get_user(&self, id: &str) -> Result<User, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("users/{}", id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// List cards for a user.
+    pub async fn list_cards_for_user(&self, user_id: &str) -> Result<Vec<Card>, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, "cards", (), Some(vec![("user_id".to_string(), user_id.to_string())]));
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let r: Cards = resp.json().await.unwrap();
+        Ok(r.data)
+    }
+
+    /// Get a receipt.
+    pub async fn get_receipt(&self, id: &str) -> Result<Receipt, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("receipts/{}", id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
             s => {
                 return Err(APIError {
                     status_code: s,
@@ -388,10 +467,55 @@ pub struct Users {
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Cards {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<Card>,
+    #[serde(default)]
+    pub page: Page,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Card {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default)]
+    pub is_physical: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub display_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_four: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cardholder_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cardholder_name: String,
+    #[serde(default)]
+    pub fulfillment: Fulfillment,
+    #[serde(default)]
+    pub spending_restrictions: SpendingRestrictions,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Fulfillment {}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct SpendingRestrictions {
+    #[serde(default)]
+    pub amount: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub interval: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lock_date: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categories: Vec<i64>,
+    #[serde(default)]
+    pub transaction_amount_limit: i64,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct User {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub business_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub department_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
@@ -401,12 +525,45 @@ pub struct User {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub location_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub manager_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub phone: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub role: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Receipt {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub transaction_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub receipt_url: String,
+    pub created_at: DateTime<Utc>,
+}
+
+pub mod deserialize_null_string {
+    use serde::{self, Deserialize, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap_or_default();
+
+        Ok(s)
+    }
 }
