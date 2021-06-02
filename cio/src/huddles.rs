@@ -13,6 +13,55 @@ use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
 use crate::db::Database;
 use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
+/// Make sure if an event is moved in Google Calendar that Airtable is updated.
+pub async fn sync_changes_to_google_events() {
+    let github = authenticate_github_jwt();
+    let configs = get_configs_from_repo(&github).await;
+
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token("").await;
+    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+
+    // Iterate over the huddle meetings.
+    for (slug, huddle) in configs.huddles {
+        // Initialize the Airtable client.
+        let airtable = Airtable::new(airtable_api::api_key_from_env(), huddle.airtable_base_id, "");
+
+        // Get the meeting schedule table from airtable.
+        let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
+
+        // Iterate over the airtable records and update the meeting notes where we have notes.
+        for mut record in records {
+            if record.fields.calendar_id.is_empty() || record.fields.calendar_event_id.is_empty() {
+                // We don't care we don't have the information we need.
+                continue;
+            }
+
+            // Get the event from Google Calendar.
+            let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+            // If the event is cancelled, we can just carry on our merry way.
+            if event.status.to_lowercase().trim() == "cancelled" {
+                // Set the airtable record to cancelled.
+                record.fields.cancelled = true;
+            }
+
+            let date = event.start.date_time.unwrap();
+            let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
+            // Update the date of the meeting based on the calendar event.
+            record.fields.date = pacific_time.date().naive_utc();
+
+            // Clear out the fields that are functions since the API cannot take values for those.
+            record.fields.name = "".to_string();
+            record.fields.week = "".to_string();
+
+            // Update the Airtable
+            airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
+
+            println!("updated {} huddle meeting {} in Airtable", slug, pacific_time);
+        }
+    }
+}
+
 pub async fn send_huddle_reminders() {
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
@@ -395,11 +444,13 @@ pub async fn sync_huddles() {
 
 #[cfg(test)]
 mod tests {
-    use crate::huddles::{send_huddle_reminders, sync_huddle_meeting_notes, sync_huddles};
+    use crate::huddles::{send_huddle_reminders, sync_changes_to_google_events, sync_huddle_meeting_notes, sync_huddles};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_huddles() {
+        sync_changes_to_google_events().await;
+
         sync_huddles().await;
 
         send_huddle_reminders().await;
