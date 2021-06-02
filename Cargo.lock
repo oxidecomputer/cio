@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#58cd4b421de72ca02c3b1f32f02596914745a10a"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#77d4c8c3616c80d748c8cd70fdd3a8f49aad5d24"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1560,9 +1560,9 @@ checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
 
 [[package]]
 name = "heck"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87cbf45460356b7deeb5e3415b5563308c0a9b057c85e12b06ad551f98d0a6ac"
+checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -2092,7 +2092,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#58cd4b421de72ca02c3b1f32f02596914745a10a"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#77d4c8c3616c80d748c8cd70fdd3a8f49aad5d24"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
