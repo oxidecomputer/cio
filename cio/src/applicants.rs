@@ -203,6 +203,10 @@ pub struct NewApplicant {
     pub docusign_envelope_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub docusign_envelope_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offer_created: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offer_completed: Option<DateTime<Utc>>,
 }
 
 impl NewApplicant {
@@ -285,6 +289,8 @@ impl NewApplicant {
             geocode_cache: Default::default(),
             docusign_envelope_id: Default::default(),
             docusign_envelope_status: Default::default(),
+            offer_created: Default::default(),
+            offer_completed: Default::default(),
         }
     }
 
@@ -585,6 +591,9 @@ The Oxide Team",
         let mut docusign_envelope_id = "".to_string();
         let mut docusign_envelope_status = "".to_string();
 
+        let mut offer_created = None;
+        let mut offer_completed = None;
+
         // Try to get the applicant, if they exist.
         // This is a way around the stupid magic macro to make sure it
         // doesn't overwrite fields set by other functions on the upsert.
@@ -618,6 +627,12 @@ The Oxide Team",
             }
             if !a.docusign_envelope_status.is_empty() {
                 docusign_envelope_status = a.docusign_envelope_status.to_string();
+            }
+            if a.offer_created.is_some() {
+                offer_created = a.offer_created;
+            }
+            if a.offer_completed.is_some() {
+                offer_completed = a.offer_completed;
             }
 
             if !a.country_code.is_empty() {
@@ -760,6 +775,8 @@ The Oxide Team",
             geocode_cache: Default::default(),
             docusign_envelope_id,
             docusign_envelope_status,
+            offer_created,
+            offer_completed,
         }
     }
 

@@ -93,6 +93,8 @@ table! {
         geocode_cache -> Varchar,
         docusign_envelope_id -> Varchar,
         docusign_envelope_status -> Varchar,
+        offer_created -> Nullable<Timestamptz>,
+        offer_completed -> Nullable<Timestamptz>,
         airtable_record_id -> Varchar,
     }
 }

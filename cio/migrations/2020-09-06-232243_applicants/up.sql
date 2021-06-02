@@ -62,5 +62,7 @@ CREATE TABLE applicants (
     geocode_cache VARCHAR NOT NULL,
     docusign_envelope_id VARCHAR NOT NULL,
     docusign_envelope_status VARCHAR NOT NULL,
+    offer_created TIMESTAMPTZ DEFAULT NULL,
+    offer_completed TIMESTAMPTZ DEFAULT NULL,
     airtable_record_id VARCHAR NOT NULL
 )
