@@ -1121,7 +1121,6 @@ pub struct ShippoTrackingUpdateEvent {
 async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<checkr::WebhookEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     let api_context = rqctx.context();
     let event = body_param.into_inner();
-    sentry::capture_message(&format!("checkr: {:?}", event), sentry::Level::Info);
 
     // Run the update of the background checks.
     // If we have a candidate ID let's get them from checkr.
