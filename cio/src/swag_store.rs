@@ -125,6 +125,8 @@ impl From<Order> for NewOutboundShipment {
             notes: format!("Automatically generated order from the Oxide store. \"Who do you know at Oxide?\" {}", order.notes),
             // This will be populated when we update shippo.
             address_formatted: Default::default(),
+            latitude: Default::default(),
+            longitude: Default::default(),
             contents: order.format_contents(),
             // The rest will be populated when we update shippo and create a label.
             carrier: Default::default(),

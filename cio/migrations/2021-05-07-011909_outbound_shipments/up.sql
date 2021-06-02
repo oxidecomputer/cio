@@ -9,6 +9,8 @@ CREATE TABLE outbound_shipments (
     zipcode VARCHAR NOT NULL,
     country VARCHAR NOT NULL,
     address_formatted VARCHAR NOT NULL,
+    latitude REAL NOT NULL DEFAULT 0,
+    longitude REAL NOT NULL DEFAULT 0,
     email VARCHAR NOT NULL,
     phone VARCHAR NOT NULL,
     status VARCHAR NOT NULL,

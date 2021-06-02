@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use google_geocode::Geocode;
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
@@ -211,6 +212,10 @@ pub struct NewOutboundShipment {
     pub country: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub address_formatted: String,
+    #[serde(default)]
+    pub latitude: f32,
+    #[serde(default)]
+    pub longitude: f32,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -271,6 +276,9 @@ impl From<User> for NewOutboundShipment {
             zipcode: user.home_address_zipcode.to_string(),
             country: user.home_address_country.to_string(),
             address_formatted: user.home_address_formatted,
+            // TODO: use the user latitude and longitude.
+            latitude: Default::default(),
+            longitude: Default::default(),
             contents: "Internal shipment: could be swag or tools, etc".to_string(),
             carrier: Default::default(),
             pickup_date: None,
@@ -343,6 +351,8 @@ impl NewOutboundShipment {
             zipcode: get_value(values, "Zipcode").to_uppercase(),
             country,
             address_formatted: String::new(),
+            latitude: Default::default(),
+            longitude: Default::default(),
             contents: contents.trim().to_string(),
             carrier: Default::default(),
             pickup_date: None,
@@ -521,6 +531,8 @@ impl NewOutboundShipment {
         let mut messages = Default::default();
         let mut status = Default::default();
         let mut tracking_number = Default::default();
+        let mut latitude = Default::default();
+        let mut longitude = Default::default();
 
         // Let's try to get the record from the database.
         if let Ok(shipment) = outbound_shipments::dsl::outbound_shipments
@@ -549,6 +561,8 @@ impl NewOutboundShipment {
             messages = shipment.messages.to_string();
             status = shipment.status.to_string();
             tracking_number = shipment.tracking_number;
+            latitude = shipment.latitude;
+            longitude = shipment.longitude;
         }
 
         (
@@ -565,6 +579,8 @@ impl NewOutboundShipment {
                 country,
                 contents: contents.trim().to_string(),
                 address_formatted,
+                latitude,
+                longitude,
                 carrier,
                 pickup_date,
                 delivered_time,
@@ -815,6 +831,19 @@ xoxo,
 
         // Create the shippo client.
         let shippo_client = Shippo::new_from_env();
+        // Create the geocode client.
+        let geocode = Geocode::new_from_env();
+
+        // If we don't already have the latitude and longitude for the shipment
+        // let's update that first.
+        if self.latitude == 0.0 || self.longitude == 0.0 {
+            let result = geocode.get(&clean_address_string(&self.address_formatted)).await.unwrap();
+            let location = result.geometry.location;
+            self.latitude = location.lat as f32;
+            self.longitude = location.lng as f32;
+            // Update here just in case something goes wrong later.
+            self.update(db).await;
+        }
 
         // If we already have a shippo id, get the information for the label.
         if !self.shippo_id.is_empty() {
@@ -1238,6 +1267,16 @@ pub async fn refresh_inbound_shipments(db: &Database) {
         }
         shipment.update(&db).await;
     }
+}
+
+pub fn clean_address_string(s: &str) -> String {
+    if s == "DE" {
+        return "Germany".to_string();
+    } else if s == "GB" {
+        return "Great Britian".to_string();
+    }
+
+    s.to_string()
 }
 
 #[cfg(test)]

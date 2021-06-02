@@ -399,6 +399,8 @@ table! {
         zipcode -> Varchar,
         country -> Varchar,
         address_formatted -> Varchar,
+        latitude -> Float4,
+        longitude -> Float4,
         email -> Varchar,
         phone -> Varchar,
         status -> Varchar,
