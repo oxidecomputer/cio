@@ -1603,6 +1603,11 @@ Notes:
             return;
         }
 
+        // If we don't have a start date, return early.
+        if self.start_date.is_none() {
+            return;
+        }
+
         let split = self.name.splitn(2, ' ');
         let parts: Vec<&str> = split.collect();
         let first_name = parts[0];
