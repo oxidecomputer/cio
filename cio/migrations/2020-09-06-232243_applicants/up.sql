@@ -21,6 +21,7 @@ CREATE TABLE applicants (
     materials VARCHAR NOT NULL,
     sent_email_received BOOLEAN NOT NULL DEFAULT 'f',
     sent_email_follow_up BOOLEAN NOT NULL DEFAULT 'f',
+    rejection_sent_date_time TIMESTAMPTZ DEFAULT NULL,
     value_reflected VARCHAR NOT NULL,
     value_violated VARCHAR NOT NULL,
     values_in_tension TEXT [] NOT NULL,

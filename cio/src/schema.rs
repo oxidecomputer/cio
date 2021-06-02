@@ -52,6 +52,7 @@ table! {
         materials -> Varchar,
         sent_email_received -> Bool,
         sent_email_follow_up -> Bool,
+        rejection_sent_date_time -> Nullable<Timestamptz>,
         value_reflected -> Varchar,
         value_violated -> Varchar,
         values_in_tension -> Array<Text>,

@@ -101,6 +101,9 @@ pub struct NewApplicant {
     pub sent_email_received: bool,
     #[serde(default)]
     pub sent_email_follow_up: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejection_sent_date_time: Option<DateTime<Utc>>,
+
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value_reflected: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -275,6 +278,7 @@ impl NewApplicant {
             raw_status: get_value(values, "Status"),
             sent_email_received: false,
             sent_email_follow_up: false,
+            rejection_sent_date_time: None,
             value_reflected: Default::default(),
             value_violated: Default::default(),
             values_in_tension: Default::default(),
@@ -571,6 +575,8 @@ The Oxide Team",
             sent_email_follow_up = false;
         }
 
+        let mut rejection_sent_date_time = None;
+
         let email = row[columns.email].trim().to_string();
         let location = row[columns.location].trim().to_string();
         let mut latitude = 0.0;
@@ -657,6 +663,10 @@ The Oxide Team",
             }
             if a.interviews_completed.is_some() {
                 interviews_completed = a.interviews_completed;
+            }
+
+            if a.rejection_sent_date_time.is_some() {
+                rejection_sent_date_time = a.rejection_sent_date_time;
             }
 
             // If the database has them as "Onboarding" and we have them as "Giving offer",
@@ -828,6 +838,7 @@ The Oxide Team",
             raw_status,
             sent_email_received,
             sent_email_follow_up,
+            rejection_sent_date_time,
             role: sheet_name.to_string(),
             sheet_id: sheet_id.to_string(),
             value_reflected,
@@ -965,6 +976,9 @@ The Oxide Team",
                 // Update the cell in the google sheet so we know we sent the email.
                 // Mark the column as true not false.
                 sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
+
+                // Mark the time we sent the email.
+                self.rejection_sent_date_time = Some(Utc::now());
 
                 self.sent_email_follow_up = true;
             } else if status != crate::applicant_status::Status::NeedsToBeTriaged {
