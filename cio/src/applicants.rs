@@ -947,7 +947,7 @@ The Oxide Team",
 
         // If the application is as new as the last week then parse all the contents.
         // This takes a long time so we skip all the others.
-        if duration_from_now < Duration::days(5) && self.status != crate::applicant_status::Status::Declined.to_string() {
+        if duration_from_now < Duration::days(10) && self.status != crate::applicant_status::Status::Declined.to_string() {
             // Read the file contents.
             self.resume_contents = get_file_contents(drive_client, &self.resume).await;
             self.materials_contents = get_file_contents(drive_client, &self.materials).await;
