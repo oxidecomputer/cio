@@ -41,6 +41,8 @@ table! {
         phone -> Varchar,
         country_code -> Varchar,
         location -> Varchar,
+        latitude -> Float4,
+        longitude -> Float4,
         github -> Varchar,
         gitlab -> Varchar,
         linkedin -> Varchar,

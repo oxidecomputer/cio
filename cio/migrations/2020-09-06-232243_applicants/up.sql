@@ -10,6 +10,8 @@ CREATE TABLE applicants (
     phone VARCHAR NOT NULL,
     country_code VARCHAR NOT NULL,
     location VARCHAR NOT NULL,
+    latitude REAL NOT NULL DEFAULT 0,
+    longitude REAL NOT NULL DEFAULT 0,
     github VARCHAR NOT NULL,
     gitlab VARCHAR NOT NULL,
     linkedin VARCHAR NOT NULL,

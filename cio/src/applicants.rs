@@ -15,6 +15,7 @@ use chrono::{DateTime, Duration};
 use chrono_humanize::HumanTime;
 use docusign::DocuSign;
 use google_drive::GoogleDrive;
+use google_geocode::Geocode;
 use html2text::from_read;
 use hubcaps::comments::CommentOptions;
 use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
@@ -79,6 +80,10 @@ pub struct NewApplicant {
     pub country_code: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
+    #[serde(default)]
+    pub latitude: f32,
+    #[serde(default)]
+    pub longitude: f32,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub github: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -212,7 +217,7 @@ pub struct NewApplicant {
 impl NewApplicant {
     /// Parse the sheet columns from single Google Sheets row values.
     /// This is what we get back from the webhook.
-    pub fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
+    pub async fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
         // Fill in the data we know from what we got from the row.
         let (github, gitlab) = NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
 
@@ -226,13 +231,32 @@ impl NewApplicant {
             }
         }
 
+        let location = get_value(values, "Location (City, State or Region)");
+        // Create the geocode client.
+        let geocode = Geocode::new_from_env();
+        let mut latitude = 0.0;
+        let mut longitude = 0.0;
+        // Attempt to get the lat and lng.
+        match geocode.get(&location).await {
+            Ok(result) => {
+                let location = result.geometry.location;
+                latitude = location.lat as f32;
+                longitude = location.lng as f32;
+            }
+            Err(e) => {
+                println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
+            }
+        }
+
         NewApplicant {
             submitted_time: NewApplicant::parse_timestamp(&get_value(values, "Timestamp")),
             role: get_role_from_sheet_id(sheet_id),
             sheet_id: sheet_id.to_string(),
             name: get_value(values, "Name"),
             email: get_value(values, "Email Address"),
-            location: get_value(values, "Location (City, State or Region)"),
+            location,
+            latitude,
+            longitude,
             phone: get_value(values, "Phone Number"),
             country_code: Default::default(),
             github,
@@ -542,6 +566,8 @@ The Oxide Team",
 
         let email = row[columns.email].trim().to_string();
         let location = row[columns.location].trim().to_string();
+        let mut latitude = 0.0;
+        let mut longitude = 0.0;
         let phone = row[columns.phone].trim().to_string();
         let mut country_code = "".to_string();
         let resume = row[columns.resume].to_string();
@@ -638,6 +664,8 @@ The Oxide Team",
             if !a.country_code.is_empty() {
                 country_code = a.country_code.to_string();
             }
+            latitude = a.latitude;
+            longitude = a.longitude;
 
             if !a.interview_packet.is_empty() {
                 interview_packet = a.interview_packet.to_string();
@@ -715,11 +743,30 @@ The Oxide Team",
             status = crate::applicant_status::Status::Hired;
         }
 
+        // Get the latitude and longitude if we don't already have it.
+        if latitude == 0.0 && longitude == 0.0 {
+            // Create the geocode client.
+            let geocode = Geocode::new_from_env();
+            // Attempt to get the lat and lng.
+            match geocode.get(&location).await {
+                Ok(result) => {
+                    let location = result.geometry.location;
+                    latitude = location.lat as f32;
+                    longitude = location.lng as f32;
+                }
+                Err(e) => {
+                    println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
+                }
+            }
+        }
+
         NewApplicant {
             submitted_time: NewApplicant::parse_timestamp(&row[columns.timestamp]),
             name: row[columns.name].to_string(),
             email,
             location,
+            latitude,
+            longitude,
             phone,
             country_code,
             github,
@@ -2355,7 +2402,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
 fn is_materials(file_name: &str) -> bool {
     file_name.ends_with("responses.pdf")
         || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
-        || (file_name.starts_with("Oxide_Candidate_Materials") && file_name.ends_with(".pdf"))
+        || (file_name.contains("Oxide_Candidate_Materials") && file_name.ends_with(".pdf"))
         || file_name.ends_with("Oxide Candidate Materials.pdf")
         || file_name.ends_with("Oxide Candidate Materials.pdf.pdf")
         || file_name.ends_with("OxideQuestions.pdf")
