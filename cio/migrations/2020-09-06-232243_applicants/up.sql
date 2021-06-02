@@ -41,6 +41,8 @@ CREATE TABLE applicants (
     question_why_oxide TEXT NOT NULL,
     interview_packet VARCHAR NOT NULL,
 	interviews TEXT [] NOT NULL,
+    interviews_started TIMESTAMPTZ DEFAULT NULL,
+    interviews_completed TIMESTAMPTZ DEFAULT NULL,
 	scorers TEXT [] NOT NULL,
 	scorers_completed TEXT [] NOT NULL,
     scoring_form_id VARCHAR NOT NULL,

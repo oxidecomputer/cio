@@ -72,6 +72,8 @@ table! {
         question_why_oxide -> Text,
         interview_packet -> Varchar,
         interviews -> Array<Text>,
+        interviews_started -> Nullable<Timestamptz>,
+        interviews_completed -> Nullable<Timestamptz>,
         scorers -> Array<Text>,
         scorers_completed -> Array<Text>,
         scoring_form_id -> Varchar,

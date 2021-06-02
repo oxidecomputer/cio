@@ -36,8 +36,9 @@ use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_A
 use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
+use crate::interviews::ApplicantInterview;
 use crate::models::get_value;
-use crate::schema::{applicant_reviewers, applicants, users};
+use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
 use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
@@ -141,6 +142,10 @@ pub struct NewApplicant {
     /// Airtable fields.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interviews: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interviews_started: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interviews_completed: Option<DateTime<Utc>>,
 
     /// The scorers/reviewers assigned to the applicant.
     #[serde(
@@ -290,6 +295,8 @@ impl NewApplicant {
             question_why_oxide: Default::default(),
             interview_packet: Default::default(),
             interviews: Default::default(),
+            interviews_started: Default::default(),
+            interviews_completed: Default::default(),
             scorers: Default::default(),
             scorers_completed: Default::default(),
             scoring_form_id: Default::default(),
@@ -590,6 +597,8 @@ The Oxide Team",
         let mut question_why_oxide = String::new();
 
         let mut interviews: Vec<String> = Default::default();
+        let mut interviews_started = Default::default();
+        let mut interviews_completed = Default::default();
         let mut interview_packet = String::new();
 
         let mut scorers: Vec<String> = Default::default();
@@ -620,6 +629,8 @@ The Oxide Team",
         let mut offer_created = None;
         let mut offer_completed = None;
 
+        let mut airtable_record_id = "".to_string();
+
         // Try to get the applicant, if they exist.
         // This is a way around the stupid magic macro to make sure it
         // doesn't overwrite fields set by other functions on the upsert.
@@ -637,6 +648,15 @@ The Oxide Team",
                 scorers_completed = a.scorers_completed;
                 request_background_check = record.fields.request_background_check;
                 interviews = record.fields.interviews;
+            }
+
+            airtable_record_id = a.airtable_record_id.to_string();
+
+            if a.interviews_started.is_some() {
+                interviews_started = a.interviews_started;
+            }
+            if a.interviews_completed.is_some() {
+                interviews_completed = a.interviews_completed;
             }
 
             // If the database has them as "Onboarding" and we have them as "Giving offer",
@@ -760,6 +780,34 @@ The Oxide Team",
             }
         }
 
+        // If we have interviews for them, let's update the interviews_started and
+        // interviews_completed times.
+        if !interviews.is_empty() && !airtable_record_id.is_empty() {
+            // Since our length is at least one, we must have at least one interview.
+            // Let's query the interviews for this candidate.
+            let data = applicant_interviews::dsl::applicant_interviews
+                .filter(applicant_interviews::dsl::applicant.contains(vec![airtable_record_id.to_string()]))
+                .order_by(applicant_interviews::dsl::start_time.asc())
+                .load::<ApplicantInterview>(&db.conn())
+                .unwrap();
+            for (index, r) in data.iter().enumerate() {
+                if index == 0 {
+                    // We have the first record.
+                    // Let's update the started time.
+                    interviews_started = Some(r.start_time);
+                    // We continue here so we don't accidentally set the
+                    // completed_time if we only have one record.
+                    continue;
+                }
+                if index == data.len() - 1 {
+                    // We are on the last record.
+                    // Let's update the completed time.
+                    interviews_completed = Some(r.end_time);
+                    break;
+                }
+            }
+        }
+
         NewApplicant {
             submitted_time: NewApplicant::parse_timestamp(&row[columns.timestamp]),
             name: row[columns.name].to_string(),
@@ -802,6 +850,8 @@ The Oxide Team",
             question_why_oxide,
             interview_packet,
             interviews,
+            interviews_started,
+            interviews_completed,
             scorers,
             scorers_completed,
             scoring_form_id,
