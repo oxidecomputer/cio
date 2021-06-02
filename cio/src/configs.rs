@@ -586,8 +586,7 @@ https://github.com/{}/meta/blob/master/general/onboarding.md
 You can find information about internal processes and applications at:
 https://github.com/{}/meta/blob/master/general/README.md
 
-As a first contribution to one of our repos, you should add yourself to the
-website: https://github.com/{}/website#team-members or add a book
+As a first contribution to one of our repos, add a book
 to our internal library: https://github.com/{}/library
 
 We use Airtable for storing just about everything. You can login with single
@@ -597,11 +596,11 @@ To join our Airtable workspace you need to click this link:
 https://airtable-join.corp.oxide.computer.
 Poke around once you've joined :)
 
-We have both a Riot server and a Slack for chat. Josh (josh@oxide.computer) can get
+We have both a Riot server and a Slack for chat. Josh (josh@oxidecomputer.com) can get
 you set up with an account on the Riot server. You can use SSO to login to the Slack
 at https://oxidecomputer.slack.com.
 
-Lastly, be sure to order yourself some swag: https://swag-family.corp.oxide.computer
+Lastly, be sure to order yourself some swag: https://swag.oxide.computer
 
 xoxo,
   The Onboarding Bot",
