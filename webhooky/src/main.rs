@@ -673,7 +673,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
     }
 
     // Parse the applicant out of the row information.
-    let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values);
+    let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
 
     if applicant.email.is_empty() {
         sentry::capture_message(&format!("applicant has an empty email: {:?}", applicant), sentry::Level::Fatal);
