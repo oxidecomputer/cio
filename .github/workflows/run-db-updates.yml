@@ -102,3 +102,5 @@ jobs:
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
           OKTA_API_TOKEN: ${{ secrets.OKTA_API_TOKEN }}
           OKTA_DOMAIN: ${{ secrets.OKTA_DOMAIN }}
+          RAMP_CLIENT_ID: ${{ secrets.RAMP_CLIENT_ID }}
+          RAMP_CLIENT_SECRET: ${{ secrets.RAMP_CLIENT_ID }}

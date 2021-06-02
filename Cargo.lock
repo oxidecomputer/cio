@@ -471,6 +471,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
+ "ramp",
  "rand 0.8.3",
  "regex 1.5.4",
  "reqwest",
@@ -2856,6 +2857,16 @@ dependencies = [
  "log",
  "parking_lot",
  "scheduled-thread-pool",
+]
+
+[[package]]
+name = "ramp"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
 ]
 
 [[package]]

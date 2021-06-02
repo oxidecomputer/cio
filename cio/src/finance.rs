@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use gsuite_api::GSuite;
 use macros::db;
 use okta::Okta;
+use ramp::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -138,13 +139,34 @@ pub async fn refresh_software_vendors() {
     }
 }
 
+pub async fn refresh_transactions() {
+    // Create the Ramp client.
+    let ramp = Ramp::new_from_env().await;
+
+    let transactions = ramp.get_transactions().await.unwrap();
+    for transaction in transactions {
+        println!("{:?}", transaction);
+    }
+
+    let users = ramp.list_users().await.unwrap();
+    for user in users {
+        println!("{:?}", user);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::finance::refresh_software_vendors;
+    use crate::finance::{refresh_software_vendors, refresh_transactions};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_software_vendors() {
         refresh_software_vendors().await;
+    }
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_cron_transactions() {
+        refresh_transactions().await;
     }
 }

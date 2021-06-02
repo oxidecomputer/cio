@@ -1,0 +1,15 @@
+[package]
+name = "ramp"
+description = "An API client for the credit card service Ramp"
+version = "0.1.0"
+authors = ["Jess Frazelle <jess@oxide.computer>"]
+edition = "2018"
+license = "Apache-2.0"
+repository = "https://github.com/oxidecomputer/cio"
+documentation = "https://docs.rs/ramp"
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["json"] }
+schemars = { version = "0.8", features = ["chrono", "uuid"] }
+serde = { version = "1.0", features = ["derive"] }
