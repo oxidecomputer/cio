@@ -597,6 +597,12 @@ pub struct ErrorResponse {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct AttachmentShort {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Attachment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
@@ -743,7 +749,7 @@ pub mod user_format_as_string {
 }
 
 pub mod attachment_format_as_array_of_strings {
-    use super::{Attachment, AttachmentsVisitor};
+    use super::{AttachmentShort, AttachmentsVisitor};
     use serde::ser::SerializeSeq;
     use serde::{self, Deserializer, Serializer};
 
@@ -761,7 +767,7 @@ pub mod attachment_format_as_array_of_strings {
         // Make our array of Airtable attachment objects.
         let mut seq = serializer.serialize_seq(Some(array.len())).unwrap();
         for e in array {
-            let mut attachment: Attachment = Default::default();
+            let mut attachment: AttachmentShort = Default::default();
             attachment.url = e.to_string();
             seq.serialize_element(&attachment).unwrap();
         }

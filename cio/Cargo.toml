@@ -10,8 +10,8 @@ documentation = "https://docs.rs/cio-api"
 
 [dependencies]
 acme-lib = "^0.8.0"
-airtable-api = "^0.1.30"
-#airtable-api = { path = "../airtable" }
+#airtable-api = "^0.1.31"
+airtable-api = { path = "../airtable" }
 async-trait = "^0.1.0"
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = "^0.12"
