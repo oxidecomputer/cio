@@ -443,6 +443,7 @@ table! {
         messages -> Varchar,
         notes -> Varchar,
         geocode_cache -> Varchar,
+        local_pickup -> Bool,
         airtable_record_id -> Varchar,
     }
 }

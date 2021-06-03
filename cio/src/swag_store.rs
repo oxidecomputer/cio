@@ -144,6 +144,7 @@ impl From<Order> for NewOutboundShipment {
             eta: None,
             messages: Default::default(),
             geocode_cache: Default::default(),
+            local_pickup: false,
         }
     }
 }

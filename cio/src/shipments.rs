@@ -254,6 +254,10 @@ pub struct NewOutboundShipment {
     pub notes: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
+    /// Denotes the package was picked up by the user locally and we no longer
+    /// need to ship it.
+    #[serde(default)]
+    pub local_pickup: bool,
 }
 
 impl From<User> for NewOutboundShipment {
@@ -289,6 +293,7 @@ impl From<User> for NewOutboundShipment {
             messages: Default::default(),
             notes: Default::default(),
             geocode_cache: Default::default(),
+            local_pickup: Default::default(),
         }
     }
 }
@@ -360,12 +365,13 @@ impl NewOutboundShipment {
             messages: Default::default(),
             notes: Default::default(),
             geocode_cache: Default::default(),
+            local_pickup: false,
         }
     }
 
     /// Parse the shipment from a Google Sheets row, where we also happen to know the columns.
     /// This is how we get the spreadsheet back from the API.
-    pub fn parse_from_row_with_columns(db: &Database, columns: &SwagSheetColumns, row: &[String]) -> (Self, bool) {
+    pub async fn parse_from_row_with_columns(db: &Database, columns: &SwagSheetColumns, row: &[String]) -> (Self, bool) {
         // If the length of the row is greater than the sent column
         // then we have a sent status.
         let sent = if row.len() > columns.sent { row[columns.sent].to_lowercase().contains("true") } else { false };
@@ -517,6 +523,7 @@ impl NewOutboundShipment {
         let mut tracking_number = Default::default();
         let mut latitude = Default::default();
         let mut longitude = Default::default();
+        let mut local_pickup = Default::default();
 
         // Let's try to get the record from the database.
         if let Ok(shipment) = outbound_shipments::dsl::outbound_shipments
@@ -524,6 +531,10 @@ impl NewOutboundShipment {
             .filter(outbound_shipments::dsl::created_time.eq(created_time))
             .first::<OutboundShipment>(&db.conn())
         {
+            if let Some(existing) = shipment.get_existing_airtable_record().await {
+                // Take the field from Airtable.
+                local_pickup = existing.fields.local_pickup;
+            }
             // Let's set some other fields.
             carrier = shipment.carrier.to_string();
             address_formatted = shipment.address_formatted.to_string();
@@ -578,6 +589,7 @@ impl NewOutboundShipment {
                 messages,
                 notes,
                 geocode_cache,
+                local_pickup,
             },
             sent,
         )
@@ -821,6 +833,14 @@ xoxo,
             self.longitude = location.lng as f32;
             // Update here just in case something goes wrong later.
             self.update(db).await;
+        }
+
+        // If we did local_pickup, we can return early here.
+        if self.local_pickup {
+            self.status = "Picked up".to_string();
+            self.update(db).await;
+            // Return early.
+            return;
         }
 
         // If we already have a shippo id, get the information for the label.
@@ -1184,7 +1204,7 @@ pub async fn refresh_outbound_shipments(db: &Database) {
             }
 
             // Parse the shipment out of the row information.
-            let (mut shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(db, &columns, &row);
+            let (mut shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(db, &columns, &row).await;
 
             if !sent {
                 shipment.notes = format!("Automatically generated from the Google sheet {}", sheet_id);
@@ -1203,6 +1223,11 @@ pub async fn refresh_outbound_shipments(db: &Database) {
     // we do not.
     let shipments = OutboundShipments::get_from_db(&db);
     for mut s in shipments {
+        if let Some(existing) = s.get_existing_airtable_record().await {
+            // Take the field from Airtable.
+            s.local_pickup = existing.fields.local_pickup;
+        }
+
         // Update the shipment from shippo.
         s.create_or_get_shippo_shipment(db).await;
         // Update airtable and the database again.
