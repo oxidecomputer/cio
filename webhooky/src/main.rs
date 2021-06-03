@@ -2181,11 +2181,6 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
 
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
-                    sentry::capture_message(
-                        &format!("RFD {} has moved from state {} -> {}, on branch {}, opening a PR", rfd.number_string, old_rfd_state, rfd.state, branch),
-                        sentry::Level::Info,
-                    );
-
                     github_repo
                                     .pulls()
                                     .create(&hubcaps::pulls::PullOptions::new(
@@ -2207,14 +2202,6 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
             // If the RFD was merged into the default branch, but the RFD state is not `published`,
             // update the state of the RFD in GitHub to show it as `published`.
             if branch == event.repository.default_branch && rfd.state != "published" {
-                sentry::capture_message(
-                    &format!(
-                        "RFD {} is the branch {} but its state is {}, updating it to `published`",
-                        rfd.number_string, event.repository.default_branch, old_rfd_state,
-                    ),
-                    sentry::Level::Info,
-                );
-
                 //  Update the state of the RFD in GitHub to show it as `published`.
                 let mut rfd_mut = rfd.clone();
                 rfd_mut.update_state("published", file.ends_with(".md"));
@@ -2251,28 +2238,10 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
                         )
                         .await
                         .unwrap();
-                    sentry::capture_message(
-                        &format!(
-                            "deleted old pdf file `{}` in GitHub for  RFD {}, new file is `{}`",
-                            &pdf_path,
-                            new_rfd.number_string,
-                            rfd.get_pdf_filename()
-                        ),
-                        sentry::Level::Info,
-                    );
                 }
 
                 // Delete the old filename from drive.
                 drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
-                sentry::capture_message(
-                    &format!(
-                        "deleted old pdf file `{}` in Google Drive for RFD {}, new file is `{}`",
-                        &pdf_path,
-                        new_rfd.number_string,
-                        rfd.get_pdf_filename()
-                    ),
-                    sentry::Level::Info,
-                );
             }
 
             println!("RFD {} `push` operations completed", new_rfd.number_string);
@@ -2307,13 +2276,6 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     // Make sure this is to the default branch, we don't care about anything else.
     if branch != event.repository.default_branch {
         // We can throw this out, log it and return early.
-        sentry::capture_message(
-            &format!(
-                "`push` event commit `{}` is to the branch `{}` not the default branch `{}`",
-                commit.id, branch, event.repository.default_branch
-            ),
-            sentry::Level::Info,
-        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
