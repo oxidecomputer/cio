@@ -393,7 +393,10 @@ pub async fn sync_huddles() {
                     record.fields.attendees = attendees;
 
                     // Send the updated record to Airtable.
-                    airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
+                    match airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await {
+                        Ok(_) => (),
+                        Err(err) => println!("Error updating record `{}`: {}", json!(record.fields).to_string(), err),
+                    }
 
                     // Delete it from our hashmap.
                     // We do this so that we only have future dates left over.
