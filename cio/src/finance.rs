@@ -176,7 +176,7 @@ pub struct NewCreditCardTransaction {
     pub state: String,
     #[serde(default)]
     pub time: DateTime<Utc>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", deserialize_with = "airtable_api::attachment_format_as_array::deserialize")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", deserialize_with = "airtable_api::attachment_format_as_array_of_strings::deserialize")]
     pub receipts: Vec<String>,
 }
 

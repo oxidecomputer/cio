@@ -1,0 +1,1 @@
+DROP TABLE credit_card_transactions

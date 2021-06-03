@@ -10,8 +10,8 @@ documentation = "https://docs.rs/cio-api"
 
 [dependencies]
 acme-lib = "^0.8.0"
-airtable-api = "^0.1.29"
-#airtable-api = { path = "../airtable" }
+#airtable-api = "^0.1.30"
+airtable-api = { path = "../airtable" }
 async-trait = "^0.1.0"
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = "^0.12"
@@ -52,8 +52,8 @@ okta = "^0.0.6"
 openssl = "0.10"
 pandoc = "0.8"
 phonenumber = "0.2"
-#ramp-api = "^0.1.0"
-ramp-api = { path = "../ramp" }
+ramp-api = "^0.1.0"
+#ramp-api = { path = "../ramp" }
 rand = { version = "^0.8.3", features = ["alloc"] }
 regex = "1"
 reqwest = { version = "0.11", features = ["json"] }
