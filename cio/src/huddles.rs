@@ -38,7 +38,7 @@ pub async fn sync_changes_to_google_events() {
             }
 
             // Get the event from Google Calendar.
-            let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+            let mut event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
             // If the event is cancelled, we can just carry on our merry way.
             if event.status.to_lowercase().trim() == "cancelled" {
                 // Set the airtable record to cancelled.
@@ -56,6 +56,38 @@ pub async fn sync_changes_to_google_events() {
 
             // Update the Airtable
             airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
+
+            // Get the discussion topics for the meeting.
+            let mut discussion_topics = String::new();
+            for id in &record.fields.proposed_discussion {
+                // Get the topic from Airtable.
+                let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, &id).await.unwrap();
+
+                discussion_topics = format!("{}\n- {} from {}", discussion_topics, topic.fields.topic, topic.fields.submitter.name);
+            }
+            discussion_topics = discussion_topics.trim().to_string();
+            if !discussion_topics.is_empty() {
+                discussion_topics = format!("Discussion topics:\n{}", discussion_topics);
+            }
+
+            // Update the event description.
+            let description = format!(
+                "This is the event for {} huddles.
+
+You can submit topics at: https://{}-huddle-form.corp.oxide.computer
+
+The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
+
+{}",
+                slug.replace('-', " "),
+                slug,
+                slug,
+                discussion_topics
+            );
+            event.description = description.trim().to_string();
+            // Update the calendar event with the new description.
+            let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+            g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
 
             println!("updated {} huddle meeting {} in Airtable", slug, pacific_time);
         }
