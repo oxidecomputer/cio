@@ -460,7 +460,7 @@ The Oxide Team",
             .send_mail(
                 format!("New {} Application: {}", self.role, self.name),
                 self.as_company_notification_email(),
-                vec![format!("all@{}", DOMAIN)],
+                vec![format!("applications@{}", DOMAIN)],
                 vec![],
                 vec![],
                 format!("applications@{}", DOMAIN),

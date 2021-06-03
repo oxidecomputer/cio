@@ -85,9 +85,13 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
                 discussion_topics
             );
             event.description = description.trim().to_string();
-            // Update the calendar event with the new description.
-            let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
-            g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
+
+            if event.recurring_event_id != event.id {
+                // Update the calendar event with the new description.
+                let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                println!("{:?}", event);
+                g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
+            }
 
             println!("updated {} huddle meeting {} in Airtable", slug, pacific_time);
         }
@@ -156,17 +160,20 @@ pub async fn send_huddle_reminders() {
                 if dur.num_hours() < huddle.time_to_cancel.into() {
                     // We are within the threshold to automatically cancel the meeting.
                     // Let's do it.
-                    // We need to impersonate the event owner.
 
-                    let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
-                    // We need to update the event instance, not delete it, and set the status to
-                    // cancelled.
-                    event.status = "cancelled".to_string();
-                    g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
-                    println!(
-                        "Cancelled calendar event for {} {} since within {} hours, owner {}",
-                        slug, date, huddle.time_to_cancel, event.organizer.email
-                    );
+                    if event.recurring_event_id != event.id {
+                        // We need to impersonate the event owner.
+                        let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                        // We need to update the event instance, not delete it, and set the status to
+                        // cancelled.
+                        // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
+                        event.status = "cancelled".to_string();
+                        g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
+                        println!(
+                            "Cancelled calendar event for {} {} since within {} hours, owner {}",
+                            slug, date, huddle.time_to_cancel, event.organizer.email
+                        );
+                    }
 
                     // Update Airtable since the meeting was cancelled.
                     let mut r = record.clone();
@@ -359,14 +366,17 @@ pub async fn sync_huddles() {
                     continue;
                 }
 
-                // Let's add the event to our HashMap.
-                event.calendar_id = calendar.id.to_string();
-                let date = event.start.date_time.unwrap().date().naive_utc();
-                gcal_events.insert(date, event.clone());
-
                 if event.recurring_event_id.is_empty() || recurring_events.contains(&event.recurring_event_id) {
                     // The event either isnt a recurring event OR we already iterated over
                     // it.
+                    if event.recurring_event_id.is_empty() {
+                        // This is a single event, we need to add it.
+                        event.calendar_id = calendar.id.to_string();
+                        // Let's add the event to our HashMap.
+                        let date = event.start.date_time.unwrap().date().naive_utc();
+                        gcal_events.insert(date, event.clone());
+                    }
+
                     continue;
                 }
 
@@ -376,6 +386,7 @@ pub async fn sync_huddles() {
                     // Let's add the event to our HashMap.
                     if instance.start.date_time.is_some() {
                         instance.calendar_id = calendar.id.to_string();
+                        // Let's add the event to our HashMap.
                         let date = instance.start.date_time.unwrap().date().naive_utc();
                         gcal_events.insert(date, instance.clone());
                     }
