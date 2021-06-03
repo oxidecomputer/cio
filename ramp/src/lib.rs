@@ -6,7 +6,7 @@
  * Example:
  *
  * ```
- * use ramp::Ramp;
+ * use ramp_api::Ramp;
  *
  * async fn get_transactions() {
  *     // Initialize the Ramp client.

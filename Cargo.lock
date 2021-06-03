@@ -471,7 +471,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "ramp",
+ "ramp-api",
  "rand 0.8.3",
  "regex 1.5.4",
  "reqwest",
@@ -2860,7 +2860,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ramp"
+name = "ramp-api"
 version = "0.1.0"
 dependencies = [
  "chrono",

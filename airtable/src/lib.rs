@@ -742,6 +742,54 @@ pub mod user_format_as_string {
     }
 }
 
+pub mod attachment_format_as_array_of_strings {
+    use super::{Attachment, AttachmentsVisitor};
+    use serde::ser::SerializeSeq;
+    use serde::{self, Deserializer, Serializer};
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(array: &[String], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Make our array of Airtable attachment objects.
+        let mut seq = serializer.serialize_seq(Some(array.len())).unwrap();
+        for e in array {
+            let mut attachment: Attachment = Default::default();
+            attachment.url = e.to_string();
+            seq.serialize_element(&attachment).unwrap();
+        }
+        seq.end()
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let airtable_attachments = deserializer.deserialize_seq(AttachmentsVisitor {}).unwrap();
+
+        let mut attachments: Vec<String> = Default::default();
+        for a in airtable_attachments {
+            attachments.push(a.url.to_string());
+        }
+
+        Ok(attachments)
+    }
+}
+
 pub mod attachment_format_as_string {
     use super::{Attachment, AttachmentsVisitor};
     use serde::ser::SerializeSeq;

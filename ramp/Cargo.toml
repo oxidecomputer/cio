@@ -1,5 +1,5 @@
 [package]
-name = "ramp"
+name = "ramp-api"
 description = "An API client for the credit card service Ramp"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
