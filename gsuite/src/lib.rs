@@ -1055,12 +1055,28 @@ pub struct CalendarEvent {
     pub status: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "htmlLink")]
     pub html_link: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated: Option<DateTime<Utc>>,
+    #[serde(default, rename = "originalStartTime", skip_serializing_if = "Option::is_none")]
+    pub original_start_time: Option<Date>,
+    #[serde(default, rename = "conferenceData", skip_serializing_if = "Option::is_none")]
+    pub conference_data: Option<serde_json::Value>,
+    #[serde(default, rename = "extendedProperties", skip_serializing_if = "Option::is_none")]
+    pub extended_properties: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gadget: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub summary: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "colorId")]
+    pub color_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "hangoutLink")]
+    pub hangout_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1081,6 +1097,40 @@ pub struct CalendarEvent {
     pub attachments: Vec<Attachment>,
     #[serde(default)]
     pub organizer: EventOrganizer,
+    #[serde(default)]
+    pub creator: EventCreator,
+    #[serde(default, rename = "guestsCanModify")]
+    pub guests_can_modify: bool,
+    #[serde(default, rename = "guestsCanInviteOthers")]
+    pub guests_can_invite_others: bool,
+    #[serde(default, rename = "guestsCanSeeOtherGuests")]
+    pub guests_can_see_other_guests: bool,
+    #[serde(default, rename = "anyoneCanAddSelf")]
+    pub anyone_can_add_self: bool,
+    #[serde(default, rename = "attendeesOmitted")]
+    pub attendees_omitted: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "iCalUID")]
+    pub ical_uid: String,
+    #[serde(default)]
+    pub reminders: EventReminders,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct EventReminders {
+    #[serde(default, rename = "useDefault")]
+    pub use_default: bool,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct EventCreator {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "displayName")]
+    pub display_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, rename = "self")]
+    pub self_: bool,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]

@@ -38,7 +38,7 @@ pub async fn sync_changes_to_google_events() {
             }
 
             // Get the event from Google Calendar.
-            let mut event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+            let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
             // If the event is cancelled, we can just carry on our merry way.
             if event.status.to_lowercase().trim() == "cancelled" {
                 // Set the airtable record to cancelled.
@@ -84,13 +84,21 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
                 slug,
                 discussion_topics
             );
-            event.description = description.trim().to_string();
 
             if event.recurring_event_id != event.id {
                 // Update the calendar event with the new description.
                 let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
-                println!("{:?}", event);
-                g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
+                // Get the event under the right user.
+                let id = event.id.to_string();
+                let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
+
+                // Modify the properties of the event so we can update it.
+                event.description = description.trim().to_string();
+
+                match g_owner.update_calendar_event(&event.organizer.email, &id, &event).await {
+                    Ok(_) => (),
+                    Err(err) => println!("could not update event description {}: {}", serde_json::to_string_pretty(&json!(event)).unwrap().to_string(), err),
+                }
             }
 
             println!("updated {} huddle meeting {} in Airtable", slug, pacific_time);
@@ -128,7 +136,7 @@ pub async fn send_huddle_reminders() {
             }
 
             // Get the event from Google Calendar.
-            let mut event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+            let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
             // If the event is cancelled, we can just carry on our merry way.
             if event.status.to_lowercase().trim() == "cancelled" {
                 // The event was cancelled we want to just continue on our way.
@@ -164,11 +172,13 @@ pub async fn send_huddle_reminders() {
                     if event.recurring_event_id != event.id {
                         // We need to impersonate the event owner.
                         let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                        // Get the event under the right user.
+                        let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
                         // We need to update the event instance, not delete it, and set the status to
                         // cancelled.
                         // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
                         event.status = "cancelled".to_string();
-                        g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
+                        g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await.unwrap();
                         println!(
                             "Cancelled calendar event for {} {} since within {} hours, owner {}",
                             slug, date, huddle.time_to_cancel, event.organizer.email
@@ -366,17 +376,18 @@ pub async fn sync_huddles() {
                     continue;
                 }
 
-                if event.recurring_event_id.is_empty() || recurring_events.contains(&event.recurring_event_id) {
-                    // The event either isnt a recurring event OR we already iterated over
-                    // it.
-                    if event.recurring_event_id.is_empty() {
-                        // This is a single event, we need to add it.
-                        event.calendar_id = calendar.id.to_string();
-                        // Let's add the event to our HashMap.
-                        let date = event.start.date_time.unwrap().date().naive_utc();
-                        gcal_events.insert(date, event.clone());
-                    }
+                if event.recurring_event_id.is_empty() || event.recurring_event_id != event.id {
+                    // This is a single event, we need to add it.
+                    event.calendar_id = calendar.id.to_string();
+                    // Let's add the event to our HashMap.
+                    let date = event.start.date_time.unwrap().date().naive_utc();
+                    gcal_events.insert(date, event.clone());
 
+                    continue;
+                }
+
+                if recurring_events.contains(&event.recurring_event_id) {
+                    // We have already iterated over this event.
                     continue;
                 }
 
