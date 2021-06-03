@@ -625,7 +625,7 @@ impl RFD {
         }
 
         // TODO: maybe use some sort of converter if it exists so we catch all these.
-        result.replace("²", "<sup>2</sup>").to_string()
+        result.replace("²", "<sup>2</sup>")
     }
 
     /// Convert an RFD into JSON as Slack message.
