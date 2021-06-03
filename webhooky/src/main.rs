@@ -1045,10 +1045,8 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
         Default::default()
     });
 
-    sentry::capture_message(&format!("shippo: {:?}", body), sentry::Level::Info);
-
     let ts = body.data;
-    if ts.address_from.unwrap_or_default().country.is_empty() && ts.tracking_history.is_empty() {
+    if ts.tracking_number.is_empty() || ts.carrier.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
         sentry::end_session();
