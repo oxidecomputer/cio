@@ -1105,6 +1105,11 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
             user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
             user.home_address_country = airtable_record.fields.home_address_country.to_string();
             user.birthday = airtable_record.fields.birthday;
+
+            // Keep the start date in airtable if we already have one.
+            if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
+                user.start_date = airtable_record.fields.start_date;
+            }
         }
 
         user.expand(db).await;
