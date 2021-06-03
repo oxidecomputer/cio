@@ -268,12 +268,38 @@ fn clean_vendor_name(s: &str) -> String {
         "Google Workspace".to_string()
     } else if s == "Atlassian" {
         "Statuspage.io".to_string()
-    } else if s == " Rev.com" {
+    } else if s == "Rev.com" {
         "Rev.ai".to_string()
     } else if s == "Intuit Quickbooks" {
         "QuickBooks".to_string()
     } else if s == "Github" {
         "GitHub".to_string()
+    } else if s == "Texas Instruments Incorpo" {
+        "Texas Instruments".to_string()
+    } else if s == "Packlane, Inc." {
+        "Packlane".to_string()
+    } else if s == "Yeti" {
+        "YETI".to_string()
+    } else if s == "TaskRabbit Support" {
+        "TaskRabbit".to_string()
+    } else if s == "Amazon Business Prime" {
+        "Amazon".to_string()
+    } else if s == "lululemon" {
+        "Lululemon".to_string()
+    } else if s == "HP Store" {
+        "Hewlett Packard".to_string()
+    } else if s == "The UPS Store" {
+        "UPS".to_string()
+    } else if s == "Microchip Technology" {
+        "Microchip".to_string()
+    } else if s == "Mouser Electronics" {
+        "Mouser".to_string()
+    } else if s == "Amphenol Cables on Demand" {
+        "Amphenol".to_string()
+    } else if s == "Pcbway" {
+        "PCBWay".to_string()
+    } else if s == "Ebay" {
+        "eBay".to_string()
     } else {
         s.to_string()
     }
@@ -285,13 +311,9 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_software_vendors() {
+    async fn test_cron_finance() {
         refresh_software_vendors().await;
-    }
 
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_transactions() {
         refresh_transactions().await;
     }
 }
