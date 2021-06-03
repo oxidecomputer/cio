@@ -624,6 +624,7 @@ impl RFD {
             fs::remove_dir_all(pdir).unwrap();
         }
 
+        println!("size of result is: {}", result.len());
         result.to_string()
     }
 
