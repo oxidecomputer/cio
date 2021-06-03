@@ -498,7 +498,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#03a31a9e1b32e30e209bb8aa2c6775a62023b9d0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#2e3a640295585d413fa1777a93b1109b1ac453e0"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -513,6 +513,7 @@ dependencies = [
  "cloudflare",
  "comrak",
  "csv",
+ "deunicode",
  "diesel",
  "diffy",
  "docusign 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2101,7 +2102,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#03a31a9e1b32e30e209bb8aa2c6775a62023b9d0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#2e3a640295585d413fa1777a93b1109b1ac453e0"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
