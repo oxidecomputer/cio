@@ -90,7 +90,7 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
                 let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
                 // Get the event under the right user.
                 let id = event.id.to_string();
-                if let Ok(event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
+                if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
                     // Modify the properties of the event so we can update it.
                     event.description = description.trim().to_string();
 
