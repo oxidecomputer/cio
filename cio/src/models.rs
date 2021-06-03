@@ -624,8 +624,8 @@ impl RFD {
             fs::remove_dir_all(pdir).unwrap();
         }
 
-        println!("size of result is: {}", result.len());
-        result.to_string()
+        // TODO: maybe use some sort of converter if it exists so we catch all these.
+        result.replace("²", "<sup>2</sup>").to_string()
     }
 
     /// Convert an RFD into JSON as Slack message.
