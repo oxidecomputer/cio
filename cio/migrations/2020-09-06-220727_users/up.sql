@@ -28,7 +28,6 @@ CREATE TABLE users (
     home_address_formatted VARCHAR NOT NULL,
     home_address_latitude REAL NOT NULL DEFAULT 0,
     home_address_longitude REAL NOT NULL DEFAULT 0,
-    print_home_address_label BOOLEAN NOT NULL DEFAULT 'f',
     work_address_street_1 VARCHAR NOT NULL,
     work_address_street_2 VARCHAR NOT NULL,
     work_address_city VARCHAR NOT NULL,

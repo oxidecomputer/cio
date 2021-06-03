@@ -236,13 +236,7 @@ pub struct NewOutboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
     pub label_link: String,
     #[serde(default)]
-    pub reprint_label: bool,
-    #[serde(default)]
-    pub resend_email_to_recipient: bool,
-    #[serde(default)]
     pub cost: f32,
-    #[serde(default)]
-    pub schedule_pickup: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pickup_date: Option<NaiveDate>,
     pub created_time: DateTime<Utc>,
@@ -515,9 +509,6 @@ impl NewOutboundShipment {
         let mut shippo_id = Default::default();
         let mut pickup_date = Default::default();
         let mut delivered_time = Default::default();
-        let mut reprint_label = Default::default();
-        let mut schedule_pickup = Default::default();
-        let mut resend_email_to_recipient = Default::default();
         let mut shipped_time = Default::default();
         let mut tracking_link = Default::default();
         let mut oxide_tracking_link = Default::default();
@@ -545,9 +536,6 @@ impl NewOutboundShipment {
             shippo_id = shipment.shippo_id.to_string();
             pickup_date = shipment.pickup_date;
             delivered_time = shipment.delivered_time;
-            reprint_label = shipment.reprint_label;
-            schedule_pickup = shipment.schedule_pickup;
-            resend_email_to_recipient = shipment.resend_email_to_recipient;
             shipped_time = shipment.shipped_time;
             tracking_link = shipment.tracking_link.to_string();
             oxide_tracking_link = shipment.oxide_tracking_link.to_string();
@@ -583,9 +571,6 @@ impl NewOutboundShipment {
                 carrier,
                 pickup_date,
                 delivered_time,
-                reprint_label,
-                schedule_pickup,
-                resend_email_to_recipient,
                 shipped_time,
                 shippo_id,
                 status,

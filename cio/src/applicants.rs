@@ -195,8 +195,6 @@ pub struct NewApplicant {
     #[serde(default)]
     pub scoring_underwhelming_materials_count: i32,
 
-    #[serde(default)]
-    pub request_background_check: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub criminal_background_check_status: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -316,7 +314,6 @@ impl NewApplicant {
             scoring_inapplicable_experience_count: Default::default(),
             scoring_job_function_yet_needed_count: Default::default(),
             scoring_underwhelming_materials_count: Default::default(),
-            request_background_check: Default::default(),
             criminal_background_check_status: Default::default(),
             motor_vehicle_background_check_status: Default::default(),
             start_date: None,
@@ -625,7 +622,6 @@ The Oxide Team",
         let mut scoring_job_function_yet_needed_count = 0;
         let mut scoring_underwhelming_materials_count = 0;
 
-        let mut request_background_check = false;
         let mut criminal_background_check_status = "".to_string();
         let mut motor_vehicle_background_check_status = "".to_string();
 
@@ -652,7 +648,6 @@ The Oxide Team",
             if let Some(record) = a.get_existing_airtable_record().await {
                 scorers = record.fields.scorers;
                 scorers_completed = a.scorers_completed;
-                request_background_check = record.fields.request_background_check;
                 interviews = record.fields.interviews;
             }
 
@@ -878,7 +873,6 @@ The Oxide Team",
             scoring_inapplicable_experience_count,
             scoring_job_function_yet_needed_count,
             scoring_underwhelming_materials_count,
-            request_background_check,
             criminal_background_check_status,
             motor_vehicle_background_check_status,
             start_date,
@@ -1375,7 +1369,6 @@ impl Applicant {
                     checkr.create_invitation(&candidate.id, "premium_criminal").await.unwrap();
 
                     // Update the database.
-                    self.request_background_check = true;
                     self.criminal_background_check_status = "requested".to_string();
 
                     self.update(db).await;
@@ -1394,7 +1387,6 @@ impl Applicant {
         checkr.create_invitation(&candidate.id, "premium_criminal").await.unwrap();
 
         // Update the database.
-        self.request_background_check = true;
         self.criminal_background_check_status = "requested".to_string();
 
         self.update(db).await;
@@ -2263,7 +2255,6 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                     // This ensures if we had any one offs added in airtable that they stay intact.
                     if let Some(record) = applicant.get_existing_airtable_record().await {
                         applicant.scorers = record.fields.scorers;
-                        applicant.request_background_check = record.fields.request_background_check;
                         applicant.interviews = record.fields.interviews;
                     }
                     applicant.scorers_completed = scorers_completed.clone();
