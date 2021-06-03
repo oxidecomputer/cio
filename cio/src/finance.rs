@@ -300,6 +300,8 @@ fn clean_vendor_name(s: &str) -> String {
         "PCBWay".to_string()
     } else if s == "Ebay" {
         "eBay".to_string()
+    } else if s == "Pccablescom Inc" {
+        "PC Cables".to_string()
     } else {
         s.to_string()
     }

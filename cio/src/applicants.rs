@@ -460,10 +460,10 @@ The Oxide Team",
             .send_mail(
                 format!("New {} Application: {}", self.role, self.name),
                 self.as_company_notification_email(),
-                vec![format!("applications@{}", DOMAIN)],
+                vec![format!("applications@{}", GSUITE_DOMAIN)],
                 vec![],
                 vec![],
-                format!("applications@{}", DOMAIN),
+                format!("applications@{}", GSUITE_DOMAIN),
             )
             .await;
     }
