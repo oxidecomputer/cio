@@ -125,9 +125,13 @@ pub async fn send_huddle_reminders() {
                     // We are within the threshold to automatically cancel the meeting.
                     // Let's do it.
                     // We need to impersonate the event owner.
+
                     let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
                     g_owner.delete_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
-                    println!("Cancelled calendar event for {} {} since within {} hours", slug, date, huddle.time_to_cancel);
+                    println!(
+                        "Cancelled calendar event for {} {} since within {} hours, owner {}",
+                        slug, date, huddle.time_to_cancel, event.organizer.email
+                    );
 
                     // Update Airtable since the meeting was cancelled.
                     let mut r = record.clone();
@@ -162,7 +166,7 @@ pub async fn send_huddle_reminders() {
                 email_data.topics.push(topic.fields);
             }
 
-            email_data.time = pacific_time.time().format("%r %Z").to_string();
+            email_data.time = pacific_time.format("%r %Z").to_string();
 
             // Format the email template.
             // Initialize handlebars.
