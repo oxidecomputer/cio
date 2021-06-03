@@ -69,9 +69,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.29"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f29e4379b90791817a33313ff9dbab088b36075d56f49b2149acd0fa889af2e3"
+version = "0.1.30"
 dependencies = [
  "chrono",
  "reqwest",
@@ -83,6 +81,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d94b58c847710fe6dfdbc280e27e5c95405b1419d7d342127fd48e40572039c3"
 dependencies = [
  "chrono",
  "reqwest",
@@ -439,7 +439,7 @@ name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.30",
+ "airtable-api 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "barcoders",
  "base64 0.12.3",
@@ -497,10 +497,10 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#3641011009488d8389525134ef9002867c567efc"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#a648057e1f755549faba3fb89a493807f90e4234"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.29",
+ "airtable-api 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "barcoders",
  "base64 0.12.3",
@@ -532,6 +532,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
+ "ramp",
  "rand 0.8.3",
  "regex 1.5.4",
  "reqwest",
@@ -1008,7 +1009,7 @@ dependencies = [
 [[package]]
 name = "dropshot"
 version = "0.5.2-dev"
-source = "git+https://github.com/oxidecomputer/dropshot?branch=main#bdbda2f970d83bf85c84318e61bf3eaa9638d2a4"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#e0201cf97431c4326423998dc575b91fc86970ed"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
@@ -1052,7 +1053,7 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.5.2-dev"
-source = "git+https://github.com/oxidecomputer/dropshot?branch=main#bdbda2f970d83bf85c84318e61bf3eaa9638d2a4"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#e0201cf97431c4326423998dc575b91fc86970ed"
 dependencies = [
  "proc-macro2 1.0.27",
  "quote 1.0.9",
@@ -2093,7 +2094,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#3641011009488d8389525134ef9002867c567efc"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#a648057e1f755549faba3fb89a493807f90e4234"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2857,6 +2858,17 @@ dependencies = [
  "log",
  "parking_lot",
  "scheduled-thread-pool",
+]
+
+[[package]]
+name = "ramp"
+version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#a648057e1f755549faba3fb89a493807f90e4234"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
 ]
 
 [[package]]

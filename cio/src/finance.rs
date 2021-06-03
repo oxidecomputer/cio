@@ -3,6 +3,7 @@ use std::env;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use google_drive::GoogleDrive;
 use gsuite_api::GSuite;
 use macros::db;
 use okta::Okta;
@@ -176,7 +177,12 @@ pub struct NewCreditCardTransaction {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
     pub time: DateTime<Utc>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", deserialize_with = "airtable_api::attachment_format_as_array_of_strings::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "airtable_api::attachment_format_as_array_of_strings::deserialize",
+        serialize_with = "airtable_api::attachment_format_as_array_of_strings::serialize"
+    )]
     pub receipts: Vec<String>,
 }
 
@@ -190,7 +196,16 @@ pub async fn refresh_transactions() {
     // Create the Ramp client.
     let ramp = Ramp::new_from_env().await;
 
+    // Initialize the database.
     let db = Database::new();
+
+    // Get gsuite token.
+    let token = get_gsuite_token("").await;
+
+    // Initialize the Google Drive client.
+    let drive_client = GoogleDrive::new(token);
+
+    let bucket = "oxide_automated_documents";
 
     // List all our users.
     let users = ramp.list_users().await.unwrap();
@@ -205,7 +220,12 @@ pub async fn refresh_transactions() {
         // Get the reciept for the transaction, if they exist.
         for receipt_id in transaction.receipts {
             let receipt = ramp.get_receipt(&receipt_id).await.unwrap();
-            attachments.push(receipt.receipt_url.to_string());
+            // Download the reciept.
+            let bytes = reqwest::get(receipt.receipt_url).await.unwrap().bytes().await.unwrap();
+            let file_name = format!("receipts/ramp/{}.pdf", receipt_id);
+            // Upload the reciept to our google cloud.
+            let receipt_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "application/pdf", &bytes, true).await.unwrap();
+            attachments.push(receipt_file.media_link.to_string());
         }
 
         // Get the user's email for the transaction.
@@ -223,6 +243,8 @@ pub async fn refresh_transactions() {
             card_id: transaction.card_id.to_string(),
             time: transaction.user_transaction_time,
         };
+
+        println!("{}", json!(nt).to_string());
 
         nt.upsert(&db).await;
     }

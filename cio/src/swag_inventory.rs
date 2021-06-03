@@ -206,7 +206,7 @@ impl NewSwagInventoryItem {
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
             let png_bytes = png.generate(&encoded[..]).unwrap();
-            let mut file_name = format!("{}.png", self.name.replace('/', ""));
+            let mut file_name = format!("swag/barcodes/png/{}.png", self.name.replace('/', ""));
 
             // Create or update the files in the google_drive.
             let png_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "image/png", &png_bytes, true).await.unwrap();
@@ -217,7 +217,7 @@ impl NewSwagInventoryItem {
             let svg_data: String = svg.generate(&encoded).unwrap();
             let svg_bytes = svg_data.as_bytes();
 
-            file_name = format!("{}.svg", self.name.replace('/', ""));
+            file_name = format!("swag/barcodes/svg/{}.svg", self.name.replace('/', ""));
 
             // Create or update the files in the google_drive.
             let svg_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "image/svg+xml", &svg_bytes, true).await.unwrap();
@@ -225,7 +225,7 @@ impl NewSwagInventoryItem {
 
             // Generate the barcode label.
             let label_bytes = self.generate_pdf_barcode_label(&png_bytes);
-            file_name = format!("{} - Barcode Label.pdf", self.name.replace('/', ""));
+            file_name = format!("swag/barcodes/pdf/{} - Barcode Label.pdf", self.name.replace('/', ""));
             // Create or update the files in the google_drive.
             let label_file = drive_client.upload_to_cloud_storage(bucket, &file_name, "application/pdf", &label_bytes, true).await.unwrap();
             self.barcode_pdf_label = label_file.media_link;
