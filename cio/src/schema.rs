@@ -220,6 +220,24 @@ table! {
 }
 
 table! {
+    credit_card_transactions (id) {
+        id -> Int4,
+        ramp_id -> Varchar,
+        amount -> Float4,
+        employee_email -> Varchar,
+        card_id -> Varchar,
+        merchant_id -> Varchar,
+        merchant_name -> Varchar,
+        category_id -> Int4,
+        category_name -> Varchar,
+        state -> Varchar,
+        time -> Timestamptz,
+        receipts -> Array<Text>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     github_repos (id) {
         id -> Int4,
         github_id -> Varchar,
@@ -624,6 +642,7 @@ allow_tables_to_appear_in_same_query!(
     buildings,
     certificates,
     conference_rooms,
+    credit_card_transactions,
     github_repos,
     groups,
     inbound_shipments,
