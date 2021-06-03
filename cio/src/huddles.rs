@@ -395,7 +395,7 @@ pub async fn sync_huddles() {
                     // Send the updated record to Airtable.
                     match airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await {
                         Ok(_) => (),
-                        Err(_)=> (),
+                        Err(err) => println!("Error updating record `{}`: {}", json!(record.fields).to_string(), err),
                     }
 
                     // Delete it from our hashmap.
