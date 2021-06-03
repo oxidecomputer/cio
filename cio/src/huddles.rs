@@ -89,12 +89,14 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
                 // Update the calendar event with the new description.
                 let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
                 // Get the event under the right user.
-                let id = event.id.to_string();
                 if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
                     // Modify the properties of the event so we can update it.
                     event.description = description.trim().to_string();
+                    // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
+                    // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
+                    event.recurrence = vec![];
 
-                    match g_owner.update_calendar_event(&event.organizer.email, &id, &event).await {
+                    match g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await {
                         Ok(_) => (),
                         Err(err) => println!("could not update event description {}: {}", serde_json::to_string_pretty(&json!(event)).unwrap().to_string(), err),
                     }
@@ -178,6 +180,10 @@ pub async fn send_huddle_reminders() {
                         // cancelled.
                         // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
                         event.status = "cancelled".to_string();
+                        // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
+                        // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
+                        event.recurrence = vec![];
+
                         g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await.unwrap();
                         println!(
                             "Cancelled calendar event for {} {} since within {} hours, owner {}",
