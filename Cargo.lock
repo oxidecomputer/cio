@@ -69,9 +69,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.30"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d94b58c847710fe6dfdbc280e27e5c95405b1419d7d342127fd48e40572039c3"
+version = "0.1.31"
 dependencies = [
  "chrono",
  "reqwest",
@@ -83,6 +81,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35fbfe7cc6be8c7269c92a49e6a3d28efd361d51fd184461d3040f8aa37a9253"
 dependencies = [
  "chrono",
  "reqwest",
@@ -439,7 +439,7 @@ name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.31",
+ "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "barcoders",
  "base64 0.12.3",
@@ -497,10 +497,10 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a648057e1f755549faba3fb89a493807f90e4234"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#117691d0bf0d2b876cdef9425e3c98a23b730cd5"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.30",
+ "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait",
  "barcoders",
  "base64 0.12.3",
@@ -532,7 +532,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "ramp",
+ "ramp-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.3",
  "regex 1.5.4",
  "reqwest",
@@ -2094,7 +2094,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a648057e1f755549faba3fb89a493807f90e4234"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#117691d0bf0d2b876cdef9425e3c98a23b730cd5"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2858,17 +2858,6 @@ dependencies = [
  "log",
  "parking_lot",
  "scheduled-thread-pool",
-]
-
-[[package]]
-name = "ramp"
-version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a648057e1f755549faba3fb89a493807f90e4234"
-dependencies = [
- "chrono",
- "reqwest",
- "schemars",
- "serde",
 ]
 
 [[package]]
