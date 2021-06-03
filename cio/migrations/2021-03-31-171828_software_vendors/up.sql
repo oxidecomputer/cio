@@ -3,6 +3,7 @@ CREATE TABLE software_vendors (
     name VARCHAR NOT NULL UNIQUE,
     status VARCHAR NOT NULL,
     description VARCHAR NOT NULL,
+    category VARCHAR NOT NULL,
     website VARCHAR NOT NULL,
     has_okta_integration BOOLEAN NOT NULL DEFAULT 'f',
     used_purely_for_api BOOLEAN NOT NULL DEFAULT 'f',

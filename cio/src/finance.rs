@@ -35,6 +35,8 @@ pub struct NewSoftwareVendor {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub category: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub website: String,
     #[serde(default)]
     pub has_okta_integration: bool,

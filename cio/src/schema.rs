@@ -531,6 +531,7 @@ table! {
         name -> Varchar,
         status -> Varchar,
         description -> Varchar,
+        category -> Varchar,
         website -> Varchar,
         has_okta_integration -> Bool,
         used_purely_for_api -> Bool,
