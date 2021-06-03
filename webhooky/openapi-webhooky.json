@@ -29,10 +29,10 @@
         }
       }
     },
-    "/airtable/applicants/edit": {
+    "/airtable/applicants/request_background_check": {
       "post": {
-        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
-        "operationId": "listen_airtable_applicants_edit_webhooks",
+        "description": "Listen for a button pressed to request a background check for an applicant.",
+        "operationId": "listen_airtable_applicants_request_background_check_webhooks",
         "requestBody": {
           "content": {
             "application/json": {
@@ -58,10 +58,10 @@
         }
       }
     },
-    "/airtable/employees/edit": {
+    "/airtable/employees/print_home_address_label": {
       "post": {
-        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
-        "operationId": "listen_airtable_employees_edit_webhooks",
+        "description": "Listen for a button pressed to print a home address label for employees.",
+        "operationId": "listen_airtable_employees_print_home_address_label_webhooks",
         "requestBody": {
           "content": {
             "application/json": {
@@ -145,10 +145,10 @@
         }
       }
     },
-    "/airtable/shipments/outbound/edit": {
+    "/airtable/shipments/outbound/reprint_label": {
       "post": {
-        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
-        "operationId": "listen_airtable_shipments_outbound_edit_webhooks",
+        "description": "Listen for a button pressed to reprint a label for an outbound shipment.",
+        "operationId": "listen_airtable_shipments_outbound_reprint_label_webhooks",
         "requestBody": {
           "content": {
             "application/json": {
@@ -174,10 +174,68 @@
         }
       }
     },
-    "/airtable/swag/inventory/items/edit": {
+    "/airtable/shipments/outbound/resend_shipment_status_email_to_recipient": {
       "post": {
-        "description": "Listen for rows edited in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
-        "operationId": "listen_airtable_swag_inventory_items_edit_webhooks",
+        "description": "Listen for a button pressed to resend a shipment status email to the recipient for an outbound shipment.",
+        "operationId": "listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/airtable/shipments/outbound/schedule_pickup": {
+      "post": {
+        "description": "Listen for a button pressed to schedule a pickup for an outbound shipment.",
+        "operationId": "listen_airtable_shipments_outbound_schedule_pickup_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/airtable/swag/inventory/items/print_barcode_labels": {
+      "post": {
+        "description": "Listen for a button pressed to print barcode labels for a swag inventory item.",
+        "operationId": "listen_airtable_swag_inventory_items_print_barcode_labels_webhooks",
         "requestBody": {
           "content": {
             "application/json": {
