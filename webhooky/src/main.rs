@@ -90,12 +90,14 @@ async fn main() -> Result<(), String> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
-    api.register(listen_airtable_applicants_edit_webhooks).unwrap();
-    api.register(listen_airtable_employees_edit_webhooks).unwrap();
+    api.register(listen_airtable_applicants_request_background_check_webhooks).unwrap();
+    api.register(listen_airtable_employees_print_home_address_label_webhooks).unwrap();
     api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
-    api.register(listen_airtable_shipments_outbound_edit_webhooks).unwrap();
-    api.register(listen_airtable_swag_inventory_items_edit_webhooks).unwrap();
+    api.register(listen_airtable_shipments_outbound_reprint_label_webhooks).unwrap();
+    api.register(listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks).unwrap();
+    api.register(listen_airtable_shipments_outbound_schedule_pickup_webhooks).unwrap();
+    api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks).unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_callback).unwrap();
@@ -725,14 +727,13 @@ pub struct GoogleSpreadsheetRowCreateEvent {
 }
 
 /**
- * Listen for rows edited in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
+ * Listen for a button pressed to print a home address label for employees.
  */
 #[endpoint {
     method = POST,
-    path = "/airtable/employees/edit",
+    path = "/airtable/employees/print_home_address_label",
 }]
-async fn listen_airtable_employees_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_employees_print_home_address_label_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -746,32 +747,27 @@ async fn listen_airtable_employees_edit_webhooks(rqctx: Arc<RequestContext<Conte
     }
 
     // Get the row from airtable.
-    let mut user = User::get_from_airtable(&event.record_id).await;
-    if user.print_home_address_label {
-        // Create a new shipment for the employee and print the label.
-        user.create_shipment_to_home_address(&api_context.db).await;
+    let user = User::get_from_airtable(&event.record_id).await;
 
-        // Reset the field to false.
-        user.print_home_address_label = false;
-        // Update it in the database.
-        user.update(&api_context.db).await;
-    }
+    // Create a new shipment for the employee and print the label.
+    user.create_shipment_to_home_address(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**
- * Listen for rows edited in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
+ * Listen for a button pressed to print barcode labels for a swag inventory item.
  */
 #[endpoint {
     method = POST,
-    path = "/airtable/swag/inventory/items/edit",
+    path = "/airtable/swag/inventory/items/print_barcode_labels",
 }]
-async fn listen_airtable_swag_inventory_items_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -783,31 +779,24 @@ async fn listen_airtable_swag_inventory_items_edit_webhooks(rqctx: Arc<RequestCo
     }
 
     // Get the row from airtable.
-    let mut swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id).await;
-    if swag_inventory_item.print_barcode_label {
-        // Print the barcode label.
-        swag_inventory_item.print_label().await;
-        println!("swag inventory item {} printed label", swag_inventory_item.name);
+    let swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id).await;
 
-        // Reset the field to false.
-        swag_inventory_item.print_barcode_label = false;
-        // Update it in the database.
-        swag_inventory_item.update(&api_context.db).await;
-    }
+    // Print the barcode label(s).
+    swag_inventory_item.print_label().await;
+    println!("swag inventory item {} printed label", swag_inventory_item.name);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**
- * Listen for rows edited in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
+ * Listen for a button pressed to request a background check for an applicant.
  */
 #[endpoint {
     method = POST,
-    path = "/airtable/applicants/edit",
+    path = "/airtable/applicants/request_background_check",
 }]
-async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_applicants_request_background_check_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -822,7 +811,7 @@ async fn listen_airtable_applicants_edit_webhooks(rqctx: Arc<RequestContext<Cont
 
     // Get the row from airtable.
     let mut applicant = Applicant::get_from_airtable(&event.record_id).await;
-    if applicant.request_background_check && applicant.criminal_background_check_status.is_empty() {
+    if applicant.criminal_background_check_status.is_empty() {
         // Request the background check, since we previously have not requested one.
         applicant.send_background_check_invitation(&api_context.db).await;
         println!("sent background check invitation to applicant: {}", applicant.email);
@@ -887,14 +876,13 @@ pub struct AirtableRowEvent {
 }
 
 /**
- * Listen for rows edited in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
+ * Listen for a button pressed to reprint a label for an outbound shipment.
  */
 #[endpoint {
     method = POST,
-    path = "/airtable/shipments/outbound/edit",
+    path = "/airtable/shipments/outbound/reprint_label",
 }]
-async fn listen_airtable_shipments_outbound_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_reprint_label_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -907,43 +895,78 @@ async fn listen_airtable_shipments_outbound_edit_webhooks(rqctx: Arc<RequestCont
 
     let api_context = rqctx.context();
 
-    // Use a variable to track whether or not we need to update Airtable at the end.
-    // Sometimes we will do nothing and we shouldn't waste the time to update Airtable,
-    // or worse if we maybe updated when another function was updating.
-    // So we make sure to only update Airtable if we know we should.
-    let mut update_airtable = false;
-
     // Get the row from airtable.
     let mut shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
-    if shipment.reprint_label {
-        // Reprint the label.
-        shipment.print_label().await;
-        println!("shipment {} reprinted label", shipment.email);
 
-        // Update the field.
-        shipment.reprint_label = false;
-        shipment.status = "Label printed".to_string();
+    // Reprint the label.
+    shipment.print_label().await;
+    println!("shipment {} reprinted label", shipment.email);
 
-        update_airtable = true;
+    // Update the field.
+    shipment.status = "Label printed".to_string();
+
+    // Update Airtable.
+    shipment.update(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for a button pressed to resend a shipment status email to the recipient for an outbound shipment.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/shipments/outbound/resend_shipment_status_email_to_recipient",
+}]
+async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    if shipment.resend_email_to_recipient {
-        // Resend the email to the recipient.
-        shipment.send_email_to_recipient().await;
-        println!("resent the shipment email to the recipient {}", shipment.email);
+    // Get the row from airtable.
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
 
-        // Update the field.
-        shipment.resend_email_to_recipient = false;
+    // Resend the email to the recipient.
+    shipment.send_email_to_recipient().await;
+    println!("resent the shipment email to the recipient {}", shipment.email);
 
-        update_airtable = true;
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for a button pressed to schedule a pickup for an outbound shipment.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/shipments/outbound/schedule_pickup",
+}]
+async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // TODO: schedule a pickup.
+    // Get the row from airtable.
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
+    println!("shipment: {:?}", shipment);
 
-    if update_airtable {
-        // Update airtable again.
-        shipment.update(&api_context.db).await;
-    }
+    // TODO: schedule the pickup.
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

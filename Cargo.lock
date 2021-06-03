@@ -458,7 +458,7 @@ dependencies = [
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.24",
  "gusto-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#c68a88c764cb2e909b1df64f2419bd5e316edec1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#bb20c33991ba5247c1bd50ce507ef56920f22615"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -519,7 +519,7 @@ dependencies = [
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.24",
  "gusto-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1476,6 +1476,8 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aaea20e33425d762b0d9bb688e8d20ba1af03ef2f2459c515ebc3970db45206"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1487,9 +1489,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aaea20e33425d762b0d9bb688e8d20ba1af03ef2f2459c515ebc3970db45206"
+version = "0.1.25"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2094,7 +2094,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#c68a88c764cb2e909b1df64f2419bd5e316edec1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#bb20c33991ba5247c1bd50ce507ef56920f22615"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
