@@ -56,6 +56,9 @@ pub struct NewSoftwareVendor {
     pub total_cost_per_month: f32,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub groups: Vec<String>,
+    /// This is linked to another table.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_transactions: Vec<String>,
 }
 
 /// This is only used for serialize
@@ -66,9 +69,11 @@ fn is_zero(num: &f32) -> bool {
 /// Implement updating the Airtable record for a SoftwareVendor.
 #[async_trait]
 impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
-    async fn update_airtable_record(&mut self, _record: SoftwareVendor) {
+    async fn update_airtable_record(&mut self, record: SoftwareVendor) {
         // This is a function so we can't change it through the API.
         self.total_cost_per_month = 0.0;
+        // Keep this the same, we update it from the transactions.
+        self.link_to_transactions = record.link_to_transactions;
     }
 }
 
@@ -121,7 +126,7 @@ pub async fn refresh_software_vendors() {
 
         // Airtable, Brex, Gusto, Expensify are all the same number of users as
         // in all@.
-        if vendor.name == "Airtable" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
+        if vendor.name == "Airtable" || vendor.name == "Ramp" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
             let group = Group::get_from_db(&db, "all".to_string()).unwrap();
             let airtable_group = group.get_existing_airtable_record().await.unwrap();
             vendor.users = airtable_group.fields.members.len() as i32;
@@ -183,6 +188,9 @@ pub struct NewCreditCardTransaction {
         serialize_with = "airtable_api::attachment_format_as_array_of_strings::serialize"
     )]
     pub receipts: Vec<String>,
+    /// This is linked to another table.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_vendor: Vec<String>,
 }
 
 /// Implement updating the Airtable record for a CreditCardTransaction.
@@ -216,6 +224,19 @@ pub async fn refresh_transactions() {
 
         // Get the user's email for the transaction.
         let email = ramp_users.get(&format!("{}{}", transaction.card_holder.first_name, transaction.card_holder.last_name)).unwrap();
+
+        let mut link_to_vendor: Vec<String> = Default::default();
+        let vendor = clean_vendor_name(&transaction.merchant_name);
+        // Try to find the merchant in our list of vendors.
+        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+            Some(v) => {
+                link_to_vendor = vec![v.airtable_record_id.to_string()];
+            }
+            None => {
+                println!("could not find vendor that matches {}", vendor);
+            }
+        }
+
         let nt = NewCreditCardTransaction {
             ramp_id: transaction.id,
             employee_email: email.to_string(),
@@ -228,9 +249,31 @@ pub async fn refresh_transactions() {
             receipts: attachments,
             card_id: transaction.card_id.to_string(),
             time: transaction.user_transaction_time,
+            link_to_vendor,
         };
 
         nt.upsert(&db).await;
+    }
+}
+
+// Changes the vendor name to one that matches our existing list.
+fn clean_vendor_name(s: &str) -> String {
+    if s == "Clara Labs" {
+        "Claralabs".to_string()
+    } else if s == "Ubiquiti Labs, Llc" {
+        "Ubiquiti".to_string()
+    } else if s == "Google G Suite" {
+        "Google Workspace".to_string()
+    } else if s == "Atlassian" {
+        "Statuspage.io".to_string()
+    } else if s == " Rev.com" {
+        "Rev.ai".to_string()
+    } else if s == "Intuit Quickbooks" {
+        "QuickBooks".to_string()
+    } else if s == "Github" {
+        "GitHub".to_string()
+    } else {
+        s.to_string()
     }
 }
 

@@ -14,5 +14,6 @@ CREATE TABLE software_vendors (
     flat_cost_per_month REAL NOT NULL DEFAULT 0,
     total_cost_per_month REAL NOT NULL DEFAULT 0,
     groups TEXT [] NOT NULL,
+    link_to_transactions TEXT [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

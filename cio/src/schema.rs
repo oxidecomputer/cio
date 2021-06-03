@@ -232,6 +232,7 @@ table! {
         state -> Varchar,
         time -> Timestamptz,
         receipts -> Array<Text>,
+        link_to_vendor -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }
@@ -540,6 +541,7 @@ table! {
         flat_cost_per_month -> Float4,
         total_cost_per_month -> Float4,
         groups -> Array<Text>,
+        link_to_transactions -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }

@@ -11,5 +11,6 @@ CREATE TABLE credit_card_transactions (
     state VARCHAR NOT NULL,
     time TIMESTAMPTZ NOT NULL,
     receipts TEXT [] NOT NULL,
+    link_to_vendor TEXT [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )
