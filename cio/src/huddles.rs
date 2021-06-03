@@ -92,7 +92,7 @@ pub async fn send_huddle_reminders() {
             }
 
             // Get the event from Google Calendar.
-            let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+            let mut event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
             // If the event is cancelled, we can just carry on our merry way.
             if event.status.to_lowercase().trim() == "cancelled" {
                 // The event was cancelled we want to just continue on our way.
@@ -127,7 +127,10 @@ pub async fn send_huddle_reminders() {
                     // We need to impersonate the event owner.
 
                     let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
-                    g_owner.delete_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
+                    // We need to update the event instance, not delete it, and set the status to
+                    // cancelled.
+                    event.status = "cancelled".to_string();
+                    g_owner.update_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id, &event).await.unwrap();
                     println!(
                         "Cancelled calendar event for {} {} since within {} hours, owner {}",
                         slug, date, huddle.time_to_cancel, event.organizer.email
