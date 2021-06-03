@@ -624,8 +624,7 @@ impl RFD {
             fs::remove_dir_all(pdir).unwrap();
         }
 
-        // TODO: maybe use some sort of converter if it exists so we catch all these.
-        result.replace("²", "<sup>2</sup>")
+        deunicode::deunicode(result)
     }
 
     /// Convert an RFD into JSON as Slack message.

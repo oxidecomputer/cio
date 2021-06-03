@@ -78,7 +78,7 @@ pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str
         create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, image.content.to_vec()).await;
     }
 
-    (decoded, is_markdown, sha)
+    (deunicode::deunicode(&decoded), is_markdown, sha)
 }
 
 // Get all the images in a specific directory of a GitHub branch.

@@ -25,6 +25,7 @@ clap = {version = "2", features = ["yaml"]}
 cloudflare = "^0.8.0"
 csv = "1.1"
 comrak = "0.8"
+deunicode = "1.3.0"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
 diffy = "^0.2.0"
 docusign = "^0.1.0"
