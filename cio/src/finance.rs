@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::env;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use gsuite_api::GSuite;
 use macros::db;
 use okta::Okta;
-use ramp::Ramp;
+use ramp_api::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +14,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTION
 use crate::configs::Group;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::software_vendors;
+use crate::schema::{credit_card_transactions, software_vendors};
 use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 #[db {
@@ -143,7 +144,7 @@ pub async fn refresh_software_vendors() {
 #[db {
     new_struct_name = "CreditCardTransaction",
     airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
-    airtable_table = "AIRTABLE_SOFTWARE_VENDORS_TABLE",
+    airtable_table = "AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE",
     match_on = {
         "ramp_id" = "String",
     },
@@ -174,7 +175,6 @@ pub struct NewCreditCardTransaction {
     pub category_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
-    #[serde(default)]
     pub time: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", deserialize_with = "airtable_api::attachment_format_as_array_of_strings::deserialize")]
     pub receipts: Vec<String>,
@@ -190,6 +190,8 @@ pub async fn refresh_transactions() {
     // Create the Ramp client.
     let ramp = Ramp::new_from_env().await;
 
+    let db = Database::new();
+
     // List all our users.
     let users = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, String> = Default::default();
@@ -199,16 +201,30 @@ pub async fn refresh_transactions() {
 
     let transactions = ramp.get_transactions().await.unwrap();
     for transaction in transactions {
-        println!("transaction: {:?}", transaction);
+        let mut attachments = Vec::new();
         // Get the reciept for the transaction, if they exist.
         for receipt_id in transaction.receipts {
             let receipt = ramp.get_receipt(&receipt_id).await.unwrap();
-            println!("receipt: {:?}", receipt);
+            attachments.push(receipt.receipt_url.to_string());
         }
 
         // Get the user's email for the transaction.
         let email = ramp_users.get(&format!("{}{}", transaction.card_holder.first_name, transaction.card_holder.last_name)).unwrap();
-        println!("email: {:?}", email);
+        let nt = NewCreditCardTransaction {
+            ramp_id: transaction.id,
+            employee_email: email.to_string(),
+            amount: transaction.amount as f32,
+            category_id: transaction.sk_category_id as i32,
+            category_name: transaction.sk_category_name.to_string(),
+            merchant_id: transaction.merchant_id.to_string(),
+            merchant_name: transaction.merchant_name.to_string(),
+            state: transaction.state.to_string(),
+            receipts: attachments,
+            card_id: transaction.card_id.to_string(),
+            time: transaction.user_transaction_time,
+        };
+
+        nt.upsert(&db).await;
     }
 }
 
