@@ -432,8 +432,8 @@ pub struct Transaction {
     pub sk_category_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
-    // TODO: Parse this as a DateTime<Utc>
-    pub user_transaction_time: String,
+    #[serde(deserialize_with = "ramp_date_format::deserialize")]
+    pub user_transaction_time: DateTime<Utc>,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
@@ -545,6 +545,7 @@ pub struct Receipt {
     pub user_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub receipt_url: String,
+    #[serde(deserialize_with = "ramp_date_format::deserialize")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -565,5 +566,38 @@ pub mod deserialize_null_string {
         let s = String::deserialize(deserializer).unwrap_or_default();
 
         Ok(s)
+    }
+}
+
+mod ramp_date_format {
+    use chrono::{DateTime, TimeZone, Utc};
+    use serde::{self, Deserialize, Deserializer};
+
+    // The date format Ramp returns looks like this: "2021-04-24T01:03:21"
+    const FORMAT: &str = "%Y-%m-%dT%H:%M:%S%:z";
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut s = String::deserialize(deserializer).unwrap();
+        match Utc.datetime_from_str(&s, "%+") {
+            Ok(t) => Ok(t),
+            Err(_) => {
+                s = format!("{}+00:00", s);
+                // Try both ways to parse the date.
+                match Utc.datetime_from_str(&s, FORMAT) {
+                    Ok(r) => Ok(r),
+                    Err(_) => Utc.datetime_from_str(&s, "%+").map_err(serde::de::Error::custom),
+                }
+            }
+        }
     }
 }

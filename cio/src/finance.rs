@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 
 use async_trait::async_trait;
@@ -8,7 +9,7 @@ use ramp::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_FINANCE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
+use crate::airtable::{AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
 use crate::configs::Group;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -139,18 +140,75 @@ pub async fn refresh_software_vendors() {
     }
 }
 
+#[db {
+    new_struct_name = "CreditCardTransaction",
+    airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
+    airtable_table = "AIRTABLE_SOFTWARE_VENDORS_TABLE",
+    match_on = {
+        "ramp_id" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "credit_card_transactions"]
+pub struct NewCreditCardTransaction {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ramp_id: String,
+    #[serde(default)]
+    pub amount: f32,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        serialize_with = "airtable_api::user_format_as_string::serialize",
+        deserialize_with = "airtable_api::user_format_as_string::deserialize"
+    )]
+    pub employee_email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub card_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub merchant_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub merchant_name: String,
+    #[serde(default)]
+    pub category_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub category_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default)]
+    pub time: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", deserialize_with = "airtable_api::attachment_format_as_array::deserialize")]
+    pub receipts: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a CreditCardTransaction.
+#[async_trait]
+impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
+    async fn update_airtable_record(&mut self, _record: CreditCardTransaction) {}
+}
+
 pub async fn refresh_transactions() {
     // Create the Ramp client.
     let ramp = Ramp::new_from_env().await;
 
-    let transactions = ramp.get_transactions().await.unwrap();
-    for transaction in transactions {
-        println!("{:?}", transaction);
+    // List all our users.
+    let users = ramp.list_users().await.unwrap();
+    let mut ramp_users: HashMap<String, String> = Default::default();
+    for user in users {
+        ramp_users.insert(format!("{}{}", user.first_name, user.last_name), user.email.to_string());
     }
 
-    let users = ramp.list_users().await.unwrap();
-    for user in users {
-        println!("{:?}", user);
+    let transactions = ramp.get_transactions().await.unwrap();
+    for transaction in transactions {
+        println!("transaction: {:?}", transaction);
+        // Get the reciept for the transaction, if they exist.
+        for receipt_id in transaction.receipts {
+            let receipt = ramp.get_receipt(&receipt_id).await.unwrap();
+            println!("receipt: {:?}", receipt);
+        }
+
+        // Get the user's email for the transaction.
+        let email = ramp_users.get(&format!("{}{}", transaction.card_holder.first_name, transaction.card_holder.last_name)).unwrap();
+        println!("email: {:?}", email);
     }
 }
 
