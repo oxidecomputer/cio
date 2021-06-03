@@ -36,8 +36,8 @@ google-drive = "^0.1.0"
 #google-drive = { path = "../drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
-#gsuite-api = "^0.1.25"
-gsuite-api = { path = "../gsuite" }
+gsuite-api = "^0.1.25"
+#gsuite-api = { path = "../gsuite" }
 gusto-api = "^0.1.1"
 #gusto-api = { path = "../gusto" }
 handlebars = "3.5.3"

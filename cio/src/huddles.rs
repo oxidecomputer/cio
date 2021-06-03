@@ -90,14 +90,14 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
                 let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
                 // Get the event under the right user.
                 let id = event.id.to_string();
-                let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
+                if let Ok(event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
+                    // Modify the properties of the event so we can update it.
+                    event.description = description.trim().to_string();
 
-                // Modify the properties of the event so we can update it.
-                event.description = description.trim().to_string();
-
-                match g_owner.update_calendar_event(&event.organizer.email, &id, &event).await {
-                    Ok(_) => (),
-                    Err(err) => println!("could not update event description {}: {}", serde_json::to_string_pretty(&json!(event)).unwrap().to_string(), err),
+                    match g_owner.update_calendar_event(&event.organizer.email, &id, &event).await {
+                        Ok(_) => (),
+                        Err(err) => println!("could not update event description {}: {}", serde_json::to_string_pretty(&json!(event)).unwrap().to_string(), err),
+                    }
                 }
             }
 
