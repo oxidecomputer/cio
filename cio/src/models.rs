@@ -587,7 +587,7 @@ impl RFD {
         path.push("contents.adoc");
 
         // Write the contents to a temporary file.
-        write_file(&path, &self.content);
+        write_file(&path, &deunicode::deunicode(&self.content));
 
         // If the file contains inline images, we need to save those images locally.
         // TODO: we don't need to save all the images, only the inline ones, clean this up
@@ -624,7 +624,7 @@ impl RFD {
             fs::remove_dir_all(pdir).unwrap();
         }
 
-        deunicode::deunicode(result)
+        result.to_string()
     }
 
     /// Convert an RFD into JSON as Slack message.

@@ -237,7 +237,8 @@ table! {
 table! {
     credit_card_transactions (id) {
         id -> Int4,
-        ramp_id -> Varchar,
+        transaction_id -> Varchar,
+        card_vendor -> Varchar,
         amount -> Float4,
         employee_email -> Varchar,
         card_id -> Varchar,

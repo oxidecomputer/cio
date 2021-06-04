@@ -157,14 +157,16 @@ pub async fn refresh_software_vendors() {
     airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
     airtable_table = "AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE",
     match_on = {
-        "ramp_id" = "String",
+        "transaction_id" = "String",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "credit_card_transactions"]
 pub struct NewCreditCardTransaction {
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub ramp_id: String,
+    pub transaction_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub card_vendor: String,
     #[serde(default)]
     pub amount: f32,
     #[serde(
@@ -244,7 +246,8 @@ pub async fn refresh_transactions() {
         }
 
         let nt = NewCreditCardTransaction {
-            ramp_id: transaction.id,
+            transaction_id: transaction.id,
+            card_vendor: "Ramp".to_string(),
             employee_email: email.to_string(),
             amount: transaction.amount as f32,
             category_id: transaction.sk_category_id as i32,

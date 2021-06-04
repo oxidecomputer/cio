@@ -1,6 +1,7 @@
 CREATE TABLE credit_card_transactions (
     id SERIAL PRIMARY KEY,
-    ramp_id VARCHAR NOT NULL UNIQUE,
+    transaction_id VARCHAR NOT NULL UNIQUE,
+    card_vendor VARCHAR NOT NULL,
     amount REAL NOT NULL DEFAULT 0,
     employee_email VARCHAR NOT NULL,
     card_id VARCHAR NOT NULL,
