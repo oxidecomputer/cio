@@ -302,6 +302,10 @@ fn clean_vendor_name(s: &str) -> String {
         "eBay".to_string()
     } else if s == "Pccablescom Inc" {
         "PC Cables".to_string()
+    } else if s == "UL Standards Sales Site" {
+        "UL Standards".to_string()
+    } else if s == "Elektronik Billiger Ug" {
+        "Elektronik Billiger".to_string()
     } else {
         s.to_string()
     }
