@@ -151,6 +151,8 @@ pub async fn refresh_software_vendors() {
 
         db_vendor.update(&db).await;
     }
+
+    SoftwareVendors::get_from_db(&db).update_airtable().await
 }
 
 #[db {
@@ -268,16 +270,44 @@ pub async fn refresh_ramp_transactions() {
 
         nt.upsert(&db).await;
     }
+
+    CreditCardTransactions::get_from_db(&db).update_airtable().await;
 }
 
 // Changes the vendor name to one that matches our existing list.
 fn clean_vendor_name(s: &str) -> String {
     if s == "Clara Labs" {
         "Claralabs".to_string()
+    } else if (s.contains("Paypal") && (s.ends_with("Eb") || s.contains("Ebay") || s.ends_with("Eba")))
+        || s == "Ebay"
+        || s == "Paypal Transaction Allknagoods"
+        || s == "Paypal Transaction Intuitimage"
+        || s == "Paypal Transaction Djjrubs"
+        || s == "PayPal Transaction - Frantiques"
+    {
+        "eBay".to_string()
+    } else if s == "Creative Safety Supply LLC" {
+        "Creative Safety Supply".to_string()
+    } else if s == "USENIX Association" {
+        "USENIX".to_string()
     } else if s == "Grubhub" {
         "GrubHub".to_string()
-    } else if s == "Ubiquiti Labs, Llc" || s == "Ubiquiti Inc." {
+    } else if s == "Amazon Web Services" {
+        "AWS".to_string()
+    } else if s == "Ubiquiti Labs, Llc" || s == "Ubiquiti Inc." || s == "Ubiquiti Networks" {
         "Ubiquiti".to_string()
+    } else if s == "IEEE Standards Association" || s == "IEEE SA - Products & Services" {
+        "IEEE".to_string()
+    } else if s == "Solarwinds" {
+        "Pingdom".to_string()
+    } else if s == "GoTanscript" || s == "PAYPAL *GOTRANSCRIP" {
+        "GoTranscript".to_string()
+    } else if s == "Chelsio Communications" {
+        "Chelsio".to_string()
+    } else if s == "The Linux Foundation" {
+        "Linux Foundation".to_string()
+    } else if s == "SparkFun Electronics" {
+        "SparkFun".to_string()
     } else if s == "Google G Suite" {
         "Google Workspace".to_string()
     } else if s == "Atlassian" || s == "Atlassian Statuspage" {
@@ -296,15 +326,35 @@ fn clean_vendor_name(s: &str) -> String {
         "Packlane".to_string()
     } else if s == "Yeti" {
         "YETI".to_string()
-    } else if s == "TaskRabbit Support" {
+    } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo" {
         "TaskRabbit".to_string()
     } else if s == "Dell Inc" {
         "Dell".to_string()
-    } else if s == "Amazon Business Prime" {
+    } else if s == "Sonix AI" {
+        "Sonix.ai".to_string()
+    } else if s == "WPG Americas Inc" {
+        "WPG Americas".to_string()
+    } else if s == "PAYPAL *PC ENGINES" {
+        "PC Engines".to_string()
+    } else if s == "The Linley Group" {
+        "Linley Group".to_string()
+    } else if s == "Finisar Corporation" {
+        "Finisar".to_string()
+    } else if s == "AISense, Inc." {
+        "Otter.ai".to_string()
+    } else if s == "Amazon Business Prime" || s == "Amzn Mktp Uk" || s == "Amazon Digital Services" || s == "Amazon.com" {
         "Amazon".to_string()
+    } else if s == "FS.COM - Fiberstore" {
+        "Fiber Store".to_string()
+    } else if s == "FAX.PLUS" || s == "FAXPLUS" {
+        "Fax.plus".to_string()
+    } else if s == "The Container Store" {
+        "Container Store".to_string()
+    } else if s == "Avnet Electronics" {
+        "Avnet".to_string()
     } else if s == "lululemon" {
         "Lululemon".to_string()
-    } else if s == "HP Store" {
+    } else if s == "HP Store" || s == "HP" {
         "Hewlett Packard".to_string()
     } else if s == "The UPS Store" {
         "UPS".to_string()
@@ -314,20 +364,26 @@ fn clean_vendor_name(s: &str) -> String {
         "Mouser".to_string()
     } else if s == "Amphenol Cables on Demand" {
         "Amphenol".to_string()
-    } else if s == "Pcbway" {
+    } else if s == "Pcbway" || s == "pcbway" {
         "PCBWay".to_string()
-    } else if s == "Ebay" {
-        "eBay".to_string()
     } else if s == "Pccablescom Inc" {
         "PC Cables".to_string()
     } else if s == "UL Standards Sales Site" {
         "UL Standards".to_string()
     } else if s == "Elektronik Billiger Ug" {
         "Elektronik Billiger".to_string()
+    } else if s == "Saleae, Inc." {
+        "Saleae".to_string()
     } else if s == "DigiKey Electronics" {
         "Digi-Key".to_string()
     } else if s == "GANDI.net" {
         "Gandi.net".to_string()
+    } else if s == "Temi.com" {
+        "Temi".to_string()
+    } else if s == "Tequipment" || s == "Tequipment.net" {
+        "TEquipment".to_string()
+    } else if s == "1-800-GOT-JUNK?" {
+        "Junk Removal".to_string()
     } else if s == "ZEIT" {
         "Vercel".to_string()
     } else if s == "TAILSCALE" {
@@ -340,7 +396,7 @@ fn clean_vendor_name(s: &str) -> String {
         "Mindshare".to_string()
     } else if s == "Future Electronics Corp (MA)" {
         "Future Electronics".to_string()
-    } else if s == "Zoom.us" {
+    } else if s == "Zoom.us" || s == "Zoom Video Communications" {
         "Zoom".to_string()
     } else if s == "Hardware Security Training and Research" {
         "Hardware Security Training".to_string()
@@ -368,6 +424,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Cadence".to_string()
     } else if s == "FOLGER LEVIN LLP" {
         "Folger Levin".to_string()
+    } else if s == "Sager Electronics" {
+        "Sager".to_string()
     } else if s == "Morrison & Foerster LLP" {
         "Morrison & Foerster".to_string()
     } else if s == "Spec" {
@@ -380,9 +438,11 @@ fn clean_vendor_name(s: &str) -> String {
         "TYAN".to_string()
     } else if s == "510 Investments LLC" {
         "510 Investments".to_string()
+    } else if s == "The Association for Computing Machinery" || s == "Association for Computing Machinery" {
+        "ACM".to_string()
     } else if s == "LATHAM&WATKINS" {
         "Latham & Watkins".to_string()
-    } else if s == "cleverbridge" {
+    } else if s == "cleverbridge" || s == "Cleverbridge" {
         "Parallels".to_string()
     } else {
         s.to_string()
