@@ -376,8 +376,12 @@ fn clean_vendor_name(s: &str) -> String {
         "Saleae".to_string()
     } else if s == "DigiKey Electronics" {
         "Digi-Key".to_string()
+    } else if s == "McAfee Software" {
+        "McAfee".to_string()
     } else if s == "GANDI.net" {
         "Gandi.net".to_string()
+    } else if s == "Buywee.com" {
+        "BuyWee".to_string()
     } else if s == "Temi.com" {
         "Temi".to_string()
     } else if s == "Tequipment" || s == "Tequipment.net" {
