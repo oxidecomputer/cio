@@ -1,1 +1,1 @@
-DROP TABLE accounts_payable
+DROP TABLE accounts_payables

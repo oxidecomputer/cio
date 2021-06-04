@@ -1,4 +1,4 @@
-CREATE TABLE accounts_payable (
+CREATE TABLE accounts_payables (
     id SERIAL PRIMARY KEY,
     confirmation_number VARCHAR NOT NULL UNIQUE,
     amount REAL NOT NULL DEFAULT 0,

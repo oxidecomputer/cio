@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::env;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use gsuite_api::GSuite;
 use macros::db;
 use okta::Okta;
@@ -10,11 +10,11 @@ use ramp_api::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
+use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
 use crate::configs::Group;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::{credit_card_transactions, software_vendors};
+use crate::schema::{accounts_payables, credit_card_transactions, software_vendors};
 use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 #[db {
@@ -61,6 +61,8 @@ pub struct NewSoftwareVendor {
     /// This is linked to another table.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_transactions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_accounts_payable: Vec<String>,
 }
 
 /// This is only used for serialize
@@ -76,6 +78,8 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
         self.total_cost_per_month = 0.0;
         // Keep this the same, we update it from the transactions.
         self.link_to_transactions = record.link_to_transactions;
+        // Keep this the same, we update it from the accounts payable.
+        self.link_to_accounts_payable = record.link_to_accounts_payable;
     }
 }
 
@@ -306,19 +310,125 @@ fn clean_vendor_name(s: &str) -> String {
         "UL Standards".to_string()
     } else if s == "Elektronik Billiger Ug" {
         "Elektronik Billiger".to_string()
+    } else if s == "Formidable Labs, LLC" {
+        "Formidable".to_string()
+    } else if s == "Mindshare Benefits & Insurance Service, Inc" {
+        "Mindshare".to_string()
+    } else if s == "Future Electronics Corp (MA)" {
+        "Future Electronics".to_string()
+    } else if s == "Intel Corporation" {
+        "Intel".to_string()
+    } else if s == "Advanced Micro Devices, Inc." {
+        "AMD".to_string()
+    } else if s == "Benchmark Electronics, Inc." {
+        "Benchmark".to_string()
+    } else if s == "HumblePod LLC" {
+        "Chris Hill".to_string()
+    } else if s == "Kruze Consulting, Inc." {
+        "Kruze".to_string()
+    } else if s == "Okta Inc" {
+        "Okta".to_string()
+    } else if s == "EMA Design Automation" {
+        "Cadence".to_string()
+    } else if s == "FOLGER LEVIN LLP" {
+        "Folger Levin".to_string()
+    } else if s == "Morrison & Foerster LLP" {
+        "Morrison & Foerster".to_string()
+    } else if s == "Spec" {
+        "John McMaster".to_string()
+    } else if s == "JN Engineering LLC" {
+        "Jon Nydell".to_string()
+    } else if s == "Wiwynn International Corp" {
+        "Wiwynn".to_string()
+    } else if s == "Tyan Computer Corporation" {
+        "TYAN".to_string()
+    } else if s == "510 Investments LLC" {
+        "510 Investments".to_string()
+    } else if s == "LATHAM&WATKINS" {
+        "Latham & Watkins".to_string()
     } else {
         s.to_string()
     }
 }
 
+#[db {
+    new_struct_name = "AccountsPayable",
+    airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
+    airtable_table = "AIRTABLE_ACCOUNTS_PAYABLE_TABLE",
+    match_on = {
+        "confirmation_number" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "accounts_payables"]
+pub struct NewAccountsPayable {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub confirmation_number: String,
+    #[serde(default)]
+    pub amount: f32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub invoice_number: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub vendor: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub currency: String,
+    pub date: NaiveDate,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub payment_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    /// This is linked to another table.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_vendor: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a AccountsPayable.
+#[async_trait]
+impl UpdateAirtableRecord<AccountsPayable> for AccountsPayable {
+    async fn update_airtable_record(&mut self, _record: AccountsPayable) {}
+}
+
+/// Sync accounts payable.
+pub async fn refresh_accounts_payable() {
+    let db = Database::new();
+
+    // Get all the records from Airtable.
+    let results: Vec<airtable_api::Record<AccountsPayable>> = AccountsPayable::airtable().list_records(&AccountsPayable::airtable_table(), "Grid view", vec![]).await.unwrap();
+    for bill_record in results {
+        let mut bill: NewAccountsPayable = bill_record.fields.into();
+
+        let vendor = clean_vendor_name(&bill.vendor);
+        // Try to find the merchant in our list of vendors.
+        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+            Some(v) => {
+                bill.link_to_vendor = vec![v.airtable_record_id.to_string()];
+            }
+            None => {
+                println!("could not find vendor that matches {}", vendor);
+            }
+        }
+
+        // Upsert the record in our database.
+        let mut db_bill = bill.upsert_in_db(&db);
+
+        if db_bill.airtable_record_id.is_empty() {
+            db_bill.airtable_record_id = bill_record.id;
+        }
+
+        db_bill.update(&db).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::finance::{refresh_software_vendors, refresh_transactions};
+    use crate::finance::{refresh_accounts_payable, refresh_software_vendors, refresh_transactions};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_finance() {
         refresh_software_vendors().await;
+
+        refresh_accounts_payable().await;
 
         refresh_transactions().await;
     }
