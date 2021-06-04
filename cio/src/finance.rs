@@ -346,6 +346,8 @@ fn clean_vendor_name(s: &str) -> String {
         "510 Investments".to_string()
     } else if s == "LATHAM&WATKINS" {
         "Latham & Watkins".to_string()
+    } else if s == "cleverbridge" {
+        "Parallels".to_string()
     } else {
         s.to_string()
     }
