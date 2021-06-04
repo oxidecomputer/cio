@@ -384,8 +384,18 @@ fn clean_vendor_name(s: &str) -> String {
         "TEquipment".to_string()
     } else if s == "1-800-GOT-JUNK?" {
         "Junk Removal".to_string()
+    } else if s == "Intuit Transaction - Fiberopticcablesho" {
+        "Fiber Optic Cable Shop".to_string()
     } else if s == "ZEIT" {
         "Vercel".to_string()
+    } else if s == "FTDI Chipshop USA" {
+        "FTDI Chip".to_string()
+    } else if s == "RS COMPONENTS LTD" {
+        "RS Components".to_string()
+    } else if s == "Pearson Education" {
+        "Pearson".to_string()
+    } else if s == "Paypal - Sensepeekab" {
+        "Sensepeek".to_string()
     } else if s == "TAILSCALE" {
         "Tailscale".to_string()
     } else if s == "Formidable Labs, LLC" {
