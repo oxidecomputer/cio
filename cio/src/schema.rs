@@ -1,4 +1,20 @@
 table! {
+    accounts_payable (id) {
+        id -> Int4,
+        confirmation_number -> Varchar,
+        amount -> Float4,
+        invoice_number -> Varchar,
+        vendor -> Varchar,
+        currency -> Varchar,
+        date -> Date,
+        payment_type -> Varchar,
+        status -> Varchar,
+        link_to_vendor -> Array<Text>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     applicant_interviews (id) {
         id -> Int4,
         start_time -> Timestamptz,
@@ -620,17 +636,13 @@ table! {
         work_address_country -> Varchar,
         work_address_country_code -> Varchar,
         work_address_formatted -> Varchar,
-        start_date -> Date,
-        birthday -> Date,
-        public_ssh_keys -> Array<Text>,
-        typev -> Varchar,
-        google_anniversary_event_id -> Varchar,
-        geocode_cache -> Varchar,
-        airtable_record_id -> Varchar,
+        home_address_latitude -> Float4,
+        home_address_longitude -> Float4,
     }
 }
 
 allow_tables_to_appear_in_same_query!(
+    accounts_payable,
     applicant_interviews,
     applicant_reviewers,
     applicants,
