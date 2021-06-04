@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::fs::File;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -11,10 +12,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
-use crate::configs::Group;
+use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::{accounts_payables, credit_card_transactions, software_vendors};
+use crate::schema::{accounts_payables, credit_card_transactions, software_vendors, users};
 use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 #[db {
@@ -163,11 +164,11 @@ pub async fn refresh_software_vendors() {
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "credit_card_transactions"]
 pub struct NewCreditCardTransaction {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Id")]
     pub transaction_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub card_vendor: String,
-    #[serde(default)]
+    #[serde(default, alias = "Amount")]
     pub amount: f32,
     #[serde(
         default,
@@ -176,18 +177,21 @@ pub struct NewCreditCardTransaction {
         deserialize_with = "airtable_api::user_format_as_string::deserialize"
     )]
     pub employee_email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Last 4")]
     pub card_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "User")]
     pub merchant_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Merchant Name")]
     pub merchant_name: String,
     #[serde(default)]
     pub category_id: i32,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Brex Category")]
     pub category_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Memo")]
+    pub memo: String,
+    #[serde(alias = "Swipe Time (UTC)")]
     pub time: DateTime<Utc>,
     #[serde(
         default,
@@ -207,7 +211,7 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
     async fn update_airtable_record(&mut self, _record: CreditCardTransaction) {}
 }
 
-pub async fn refresh_transactions() {
+pub async fn refresh_ramp_transactions() {
     // Create the Ramp client.
     let ramp = Ramp::new_from_env().await;
 
@@ -258,6 +262,7 @@ pub async fn refresh_transactions() {
             receipts: attachments,
             card_id: transaction.card_id.to_string(),
             time: transaction.user_transaction_time,
+            memo: String::new(),
             link_to_vendor,
         };
 
@@ -269,15 +274,19 @@ pub async fn refresh_transactions() {
 fn clean_vendor_name(s: &str) -> String {
     if s == "Clara Labs" {
         "Claralabs".to_string()
-    } else if s == "Ubiquiti Labs, Llc" {
+    } else if s == "Grubhub" {
+        "GrubHub".to_string()
+    } else if s == "Ubiquiti Labs, Llc" || s == "Ubiquiti Inc." {
         "Ubiquiti".to_string()
     } else if s == "Google G Suite" {
         "Google Workspace".to_string()
-    } else if s == "Atlassian" {
+    } else if s == "Atlassian" || s == "Atlassian Statuspage" {
         "Statuspage.io".to_string()
+    } else if s == "Digitalocean" {
+        "DigitalOcean".to_string()
     } else if s == "Rev.com" {
         "Rev.ai".to_string()
-    } else if s == "Intuit Quickbooks" {
+    } else if s == "Intuit Quickbooks" || s == "Intuit" {
         "QuickBooks".to_string()
     } else if s == "Github" {
         "GitHub".to_string()
@@ -289,6 +298,8 @@ fn clean_vendor_name(s: &str) -> String {
         "YETI".to_string()
     } else if s == "TaskRabbit Support" {
         "TaskRabbit".to_string()
+    } else if s == "Dell Inc" {
+        "Dell".to_string()
     } else if s == "Amazon Business Prime" {
         "Amazon".to_string()
     } else if s == "lululemon" {
@@ -313,19 +324,41 @@ fn clean_vendor_name(s: &str) -> String {
         "UL Standards".to_string()
     } else if s == "Elektronik Billiger Ug" {
         "Elektronik Billiger".to_string()
+    } else if s == "DigiKey Electronics" {
+        "Digi-Key".to_string()
+    } else if s == "GANDI.net" {
+        "Gandi.net".to_string()
+    } else if s == "ZEIT" {
+        "Vercel".to_string()
+    } else if s == "TAILSCALE" {
+        "Tailscale".to_string()
     } else if s == "Formidable Labs, LLC" {
         "Formidable".to_string()
+    } else if s == "YouTube Premium" {
+        "YouTube".to_string()
     } else if s == "Mindshare Benefits & Insurance Service, Inc" {
         "Mindshare".to_string()
     } else if s == "Future Electronics Corp (MA)" {
         "Future Electronics".to_string()
+    } else if s == "Zoom.us" {
+        "Zoom".to_string()
+    } else if s == "Hardware Security Training and Research" {
+        "Hardware Security Training".to_string()
+    } else if s == "Rudys Cant Fail Cafe" {
+        "Rudy's Can't Fail Cafe".to_string()
+    } else if s == "The Home Depot" {
+        "Home Depot".to_string()
+    } else if s == "Owl Lads" {
+        "Owl Labs".to_string()
+    } else if s == "PITCH.COM" {
+        "Pitch".to_string()
     } else if s == "Intel Corporation" {
         "Intel".to_string()
     } else if s == "Advanced Micro Devices, Inc." {
         "AMD".to_string()
     } else if s == "Benchmark Electronics, Inc." {
         "Benchmark".to_string()
-    } else if s == "HumblePod LLC" {
+    } else if s == "HumblePod LLC" || s == "HumblePod" {
         "Chris Hill".to_string()
     } else if s == "Kruze Consulting, Inc." {
         "Kruze".to_string()
@@ -353,6 +386,83 @@ fn clean_vendor_name(s: &str) -> String {
         "Parallels".to_string()
     } else {
         s.to_string()
+    }
+}
+
+/// Read the Brex transactions from a csv.
+/// We don't run this except locally.
+pub async fn refresh_brex_transactions() {
+    // Initialize the database.
+    let db = Database::new();
+
+    let mut path = env::current_dir().unwrap();
+    path.push("brex.csv");
+
+    if !path.exists() {
+        // Return early the path does not exist.
+        println!("Brex csv at {} does not exist, returning early", path.to_str().unwrap());
+        return;
+    }
+
+    println!("Reading csv from {}", path.to_str().unwrap());
+    let f = File::open(&path).unwrap();
+    let mut rdr = csv::Reader::from_reader(f);
+    for result in rdr.deserialize() {
+        let mut record: NewCreditCardTransaction = result.unwrap();
+        record.card_vendor = "Brex".to_string();
+        record.state = "CLEARED".to_string();
+
+        // Parse the user's last name.
+        // We stored it in the merchant ID as a hack.
+        let name = record.merchant_id.trim().to_string();
+        let split = name.split(' ');
+        let vec: Vec<&str> = split.collect();
+        // Get the last item in the vector.
+        let last_name = vec.last().unwrap().to_string();
+
+        // Reset the merchand id so it is clean.
+        record.merchant_id = "".to_string();
+
+        // Try to get the user by their last name.
+        match users::dsl::users.filter(users::dsl::last_name.eq(last_name.to_string())).first::<User>(&db.conn()) {
+            Ok(user) => {
+                // Set the user's email.
+                record.employee_email = user.email();
+            }
+            Err(e) => {
+                if last_name == "Volpe" {
+                    record.employee_email = "jared@oxidecomputer.com".to_string();
+                    continue;
+                } else if last_name == "Randal" {
+                    record.employee_email = "allison@oxidecomputer.com".to_string();
+                    continue;
+                }
+
+                println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
+            }
+        }
+
+        // Make sure we have a transaction id.
+        if record.transaction_id.is_empty() {
+            println!("transaction_id is missing: {:?}", record);
+            // We don't want to save it to our database.
+            continue;
+        }
+
+        // Try to link to the correct vendor.
+        let vendor = clean_vendor_name(&record.merchant_name);
+        // Try to find the merchant in our list of vendors.
+        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+            Some(v) => {
+                record.link_to_vendor = vec![v.airtable_record_id.to_string()];
+            }
+            None => {
+                println!("could not find vendor that matches {}", vendor);
+            }
+        }
+
+        // Let's add the record to our database.
+        record.upsert(&db).await;
     }
 }
 
@@ -426,7 +536,12 @@ pub async fn refresh_accounts_payable() {
 
 #[cfg(test)]
 mod tests {
-    use crate::finance::{refresh_accounts_payable, refresh_software_vendors, refresh_transactions};
+    use crate::finance::{refresh_accounts_payable, refresh_brex_transactions, refresh_ramp_transactions, refresh_software_vendors};
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_cron_brex() {
+        refresh_brex_transactions().await;
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
@@ -435,6 +550,6 @@ mod tests {
 
         refresh_accounts_payable().await;
 
-        refresh_transactions().await;
+        refresh_ramp_transactions().await;
     }
 }

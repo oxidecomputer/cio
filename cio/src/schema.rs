@@ -247,6 +247,7 @@ table! {
         category_id -> Int4,
         category_name -> Varchar,
         state -> Varchar,
+        memo -> Varchar,
         time -> Timestamptz,
         receipts -> Array<Text>,
         link_to_vendor -> Array<Text>,

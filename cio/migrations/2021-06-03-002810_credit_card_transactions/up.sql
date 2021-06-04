@@ -10,6 +10,7 @@ CREATE TABLE credit_card_transactions (
     category_id INTEGER DEFAULT 0 NOT NULL,
     category_name VARCHAR NOT NULL,
     state VARCHAR NOT NULL,
+    memo VARCHAR NOT NULL,
     time TIMESTAMPTZ NOT NULL,
     receipts TEXT [] NOT NULL,
     link_to_vendor TEXT [] NOT NULL,
