@@ -39,6 +39,7 @@ pub static AIRTABLE_BASE_ID_FINANCE: &str = "appduLHDVQ332gKyf";
 pub static AIRTABLE_SOFTWARE_VENDORS_TABLE: &str = "Vendors";
 pub static AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE: &str = "Credit Card Transactions";
 pub static AIRTABLE_ACCOUNTS_PAYABLE_TABLE: &str = "Accounts Payable";
+pub static AIRTABLE_EXPENSED_ITEMS_TABLE: &str = "Expensed Items";
 
 pub static AIRTABLE_BASE_ID_SWAG: &str = "appjveIuMELa6BYw3";
 pub static AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE: &str = "Inventory";

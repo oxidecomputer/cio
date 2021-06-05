@@ -11,11 +11,11 @@ use ramp_api::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
+use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
 use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::{accounts_payables, credit_card_transactions, software_vendors, users};
+use crate::schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users};
 use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 #[db {
@@ -64,6 +64,8 @@ pub struct NewSoftwareVendor {
     pub link_to_transactions: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_accounts_payable: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_expensed_items: Vec<String>,
 }
 
 /// This is only used for serialize
@@ -81,6 +83,8 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
         self.link_to_transactions = record.link_to_transactions;
         // Keep this the same, we update it from the accounts payable.
         self.link_to_accounts_payable = record.link_to_accounts_payable;
+        // Keep this the same, we update it from the expensed items.
+        self.link_to_expensed_items = record.link_to_expensed_items;
     }
 }
 
@@ -372,7 +376,9 @@ fn clean_vendor_name(s: &str) -> String {
         "UL Standards".to_string()
     } else if s == "Elektronik Billiger Ug" {
         "Elektronik Billiger".to_string()
-    } else if s == "Saleae, Inc." {
+    } else if s == "Dribbble Holdings Ltd." {
+        "Dribbble".to_string()
+    } else if s == "Saleae, Inc." || s == "SALEAE" {
         "Saleae".to_string()
     } else if s == "DigiKey Electronics" {
         "Digi-Key".to_string()
@@ -458,6 +464,32 @@ fn clean_vendor_name(s: &str) -> String {
         "Latham & Watkins".to_string()
     } else if s == "cleverbridge" || s == "Cleverbridge" {
         "Parallels".to_string()
+    } else if s == "Expensify, Inc." {
+        "Expensify".to_string()
+    } else if s == "Apple Inc." {
+        "Apple".to_string()
+    } else if s == "Little Snitch Mac Tool" {
+        "Little Snitch".to_string()
+    } else if s == "VMware" {
+        "VMWare".to_string()
+    } else if s == "Bakesale Betty's" {
+        "Bakesale Betty".to_string()
+    } else if s == "Bed Bath and Beyond #26" {
+        "Bed Bath and Beyond".to_string()
+    } else if s == "Delta Air Lines" || s == "Delta" {
+        "Delta Airlines".to_string()
+    } else if s == "National Passenger Rail Corporation" || s == "National Passenger Railroad Corporation" {
+        "Amtrak".to_string()
+    } else if s == "TRINET" || s == "Trinet Cobra" {
+        "TriNet".to_string()
+    } else if s == "Four Points By Sheraton" || s == "Sheraton Hotels and Resorts" {
+        "Four Points by Sheraton San Francisco Bay Bridge".to_string()
+    } else if s == "Clipper card" {
+        "Clipper".to_string()
+    } else if s == "LinkedIn Corporation" {
+        "LinkedIn".to_string()
+    } else if s == "American Portwell Technology, Inc" {
+        "Portwell".to_string()
     } else {
         s.to_string()
     }
@@ -608,9 +640,174 @@ pub async fn refresh_accounts_payable() {
     }
 }
 
+#[db {
+    new_struct_name = "ExpensedItem",
+    airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
+    airtable_table = "AIRTABLE_EXPENSED_ITEMS_TABLE",
+    match_on = {
+        "transaction_id" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "expensed_items"]
+pub struct NewExpensedItem {
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Id")]
+    pub transaction_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub expenses_vendor: String,
+    #[serde(default, alias = "Amount")]
+    pub amount: f32,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        serialize_with = "airtable_api::user_format_as_string::serialize",
+        deserialize_with = "airtable_api::user_format_as_string::deserialize"
+    )]
+    pub employee_email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Receipt")]
+    pub card_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Attendees")]
+    pub merchant_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Merchant")]
+    pub merchant_name: String,
+    #[serde(default)]
+    pub category_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Category")]
+    pub category_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Description")]
+    pub memo: String,
+    #[serde(alias = "Timestamp")]
+    pub time: DateTime<Utc>,
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "airtable_api::attachment_format_as_array_of_strings::deserialize",
+        serialize_with = "airtable_api::attachment_format_as_array_of_strings::serialize"
+    )]
+    pub receipts: Vec<String>,
+    /// This is linked to another table.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_vendor: Vec<String>,
+}
+
+/// Implement updating the Airtable record for a ExpensedItem.
+#[async_trait]
+impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
+    async fn update_airtable_record(&mut self, _record: ExpensedItem) {}
+}
+
+/// Read the Expensify transactions from a csv.
+/// We don't run this except locally.
+pub async fn refresh_expensify_transactions() {
+    // Initialize the database.
+    let db = Database::new();
+
+    let mut path = env::current_dir().unwrap();
+    path.push("expensify.csv");
+
+    if !path.exists() {
+        // Return early the path does not exist.
+        println!("Expensify csv at {} does not exist, returning early", path.to_str().unwrap());
+        return;
+    }
+
+    println!("Reading csv from {}", path.to_str().unwrap());
+    let f = File::open(&path).unwrap();
+    let mut rdr = csv::Reader::from_reader(f);
+    for result in rdr.deserialize() {
+        let mut record: NewExpensedItem = result.unwrap();
+        record.expenses_vendor = "Expensify".to_string();
+        record.state = "CLEARED".to_string();
+
+        // Parse the user's last name.
+        // We stored it in the merchant ID as a hack.
+        let name = record.merchant_id.trim().to_string();
+        let split = name.split(' ');
+        let vec: Vec<&str> = split.collect();
+        // Get the last item in the vector.
+        let last_name = vec.last().unwrap().trim_end_matches("@oxidecomputer.com").to_string();
+
+        // Reset the merchand id so it is clean.
+        record.merchant_id = "".to_string();
+
+        // Try to get the user by their last name.
+        match users::dsl::users
+            .filter(users::dsl::last_name.eq(last_name.to_string()).or(users::dsl::username.eq(last_name.to_string())))
+            .first::<User>(&db.conn())
+        {
+            Ok(user) => {
+                // Set the user's email.
+                record.employee_email = user.email();
+            }
+            Err(e) => {
+                if last_name == "Volpe" || last_name == "jared" {
+                    record.employee_email = "jared@oxidecomputer.com".to_string();
+                    continue;
+                } else if last_name == "Randal" || last_name == "allison" {
+                    record.employee_email = "allison@oxidecomputer.com".to_string();
+                    continue;
+                }
+
+                println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
+            }
+        }
+
+        // Grab the card_id and set it as part of receipts.
+        if !record.card_id.is_empty() {
+            // Get the URL.
+            let body = reqwest::get(&record.card_id).await.unwrap().text().await.unwrap();
+            let split = body.split(' ');
+            let vec: Vec<&str> = split.collect();
+
+            for word in vec {
+                if word.contains("https://www.expensify.com/receipts/") || word.contains("https://s3.amazonaws.com/receipts.expensify.com/") {
+                    record.receipts = vec![word.trim_start_matches("href=\"").trim_end_matches("\">Download").to_string()];
+
+                    // Stop the loop.
+                    break;
+                }
+            }
+
+            // Reset the card id.
+            record.card_id = String::new();
+        }
+
+        // Make sure we have a transaction id.
+        if record.transaction_id.is_empty() {
+            println!("transaction_id is missing: {:?}", record);
+            // We don't want to save it to our database.
+            continue;
+        }
+
+        // Try to link to the correct vendor.
+        let vendor = clean_vendor_name(&record.merchant_name);
+        // Try to find the merchant in our list of vendors.
+        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+            Some(v) => {
+                record.link_to_vendor = vec![v.airtable_record_id.to_string()];
+            }
+            None => {
+                println!("could not find vendor that matches {}", vendor);
+            }
+        }
+
+        // Let's add the record to our database.
+        record.upsert(&db).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::finance::{refresh_accounts_payable, refresh_brex_transactions, refresh_ramp_transactions, refresh_software_vendors};
+    use crate::finance::{refresh_accounts_payable, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_transactions, refresh_software_vendors};
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_cron_expensify() {
+        refresh_expensify_transactions().await;
+    }
+
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_brex() {

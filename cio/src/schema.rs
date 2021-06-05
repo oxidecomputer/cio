@@ -256,6 +256,27 @@ table! {
 }
 
 table! {
+    expensed_items (id) {
+        id -> Int4,
+        transaction_id -> Varchar,
+        expenses_vendor -> Varchar,
+        amount -> Float4,
+        employee_email -> Varchar,
+        card_id -> Varchar,
+        merchant_id -> Varchar,
+        merchant_name -> Varchar,
+        category_id -> Int4,
+        category_name -> Varchar,
+        state -> Varchar,
+        memo -> Varchar,
+        time -> Timestamptz,
+        receipts -> Array<Text>,
+        link_to_vendor -> Array<Text>,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     github_repos (id) {
         id -> Int4,
         github_id -> Varchar,
@@ -563,6 +584,7 @@ table! {
         groups -> Array<Text>,
         link_to_transactions -> Array<Text>,
         link_to_accounts_payable -> Array<Text>,
+        link_to_expensed_items -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }
@@ -661,6 +683,7 @@ allow_tables_to_appear_in_same_query!(
     certificates,
     conference_rooms,
     credit_card_transactions,
+    expensed_items,
     github_repos,
     groups,
     inbound_shipments,

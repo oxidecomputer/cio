@@ -17,5 +17,6 @@ CREATE TABLE software_vendors (
     groups TEXT [] NOT NULL,
     link_to_transactions TEXT [] NOT NULL,
     link_to_accounts_payable TEXT [] NOT NULL,
+    link_to_expensed_items TEXT [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )
