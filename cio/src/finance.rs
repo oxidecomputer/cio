@@ -312,7 +312,7 @@ fn clean_vendor_name(s: &str) -> String {
         "Linux Foundation".to_string()
     } else if s == "SparkFun Electronics" {
         "SparkFun".to_string()
-    } else if s == "Google G Suite" {
+    } else if s == "Google G Suite" || s == "Google" {
         "Google Workspace".to_string()
     } else if s == "Atlassian" || s == "Atlassian Statuspage" {
         "Statuspage.io".to_string()
@@ -755,7 +755,7 @@ pub async fn refresh_expensify_transactions() {
         }
 
         // Grab the card_id and set it as part of receipts.
-        if !record.card_id.is_empty() {
+        if !record.card_id.is_empty() && record.employee_email != "allison@oxidecomputer.com" {
             // Get the URL.
             let body = reqwest::get(&record.card_id).await.unwrap().text().await.unwrap();
             let split = body.split(' ');
@@ -763,7 +763,9 @@ pub async fn refresh_expensify_transactions() {
 
             for word in vec {
                 if word.contains("https://www.expensify.com/receipts/") || word.contains("https://s3.amazonaws.com/receipts.expensify.com/") {
-                    record.receipts = vec![word.trim_start_matches("href=\"").trim_end_matches("\">Download").to_string()];
+                    let receipt = word.trim_start_matches("href=\"").trim_end_matches("\">Download").to_string();
+                    println!("{}", receipt);
+                    record.receipts = vec![receipt.to_string()];
 
                     // Stop the loop.
                     break;
