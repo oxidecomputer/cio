@@ -491,6 +491,8 @@ fn clean_vendor_name(s: &str) -> String {
         "LinkedIn".to_string()
     } else if s == "American Portwell Technology, Inc" {
         "Portwell".to_string()
+    } else if s == "PAYPAL *QUICKLUTION QU" {
+        "Mail Merge for Avery Labels".to_string()
     } else {
         s.to_string()
     }
@@ -902,6 +904,8 @@ fn clean_merchant_name(s: &str) -> String {
         "Chelsio Communications".to_string()
     } else if s == "Temicom" {
         "Temi.com".to_string()
+    } else if s == "Ubiquity Global Services Inc" {
+        "Ubiquiti Inc.".to_string()
     } else {
         s.to_string()
     }

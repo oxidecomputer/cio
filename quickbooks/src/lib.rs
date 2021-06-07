@@ -218,6 +218,96 @@ impl QuickBooks {
         Ok(r.query_response.attachable)
     }
 
+    pub async fn list_attachments_for_bill_payment(&self, bill_payment_id: &str) -> Result<Vec<Attachment>, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            &format!("company/{}/query", self.company_id),
+            (),
+            Some(&[(
+                "query",
+                &format!(
+                    "select * from attachable where AttachableRef.EntityRef.Type = 'billpayment' and AttachableRef.EntityRef.value = '{}' MAXRESULTS {}",
+                    bill_payment_id, QUERY_PAGE_SIZE
+                ),
+            )]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: AttachmentResponse = resp.json().await.unwrap();
+
+        Ok(r.query_response.attachable)
+    }
+
+    pub async fn fetch_bill_payment_page(&self, start_position: i64) -> Result<Vec<BillPayment>, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            &format!("company/{}/query", self.company_id),
+            (),
+            Some(&[(
+                "query",
+                &format!("SELECT * FROM BillPayment ORDERBY Id STARTPOSITION {} MAXRESULTS {}", start_position, QUERY_PAGE_SIZE),
+            )]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: BillPaymentResponse = resp.json().await.unwrap();
+
+        Ok(r.query_response.bill_payment)
+    }
+
+    pub async fn list_bill_payments(&self) -> Result<Vec<BillPayment>, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("company/{}/query", self.company_id), (), Some(&[("query", "SELECT COUNT(*) FROM BillPayment")]));
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: CountResponse = resp.json().await.unwrap();
+        let mut bill_payments: Vec<BillPayment> = Vec::new();
+
+        let mut i = 0;
+        while i < r.query_response.total_count {
+            let mut page = self.fetch_bill_payment_page(i + 1).await.unwrap();
+
+            // Add our page to our array.
+            bill_payments.append(&mut page);
+
+            i += QUERY_PAGE_SIZE;
+        }
+
+        Ok(bill_payments)
+    }
+
     pub async fn fetch_purchase_page(&self, start_position: i64) -> Result<Vec<Purchase>, APIError> {
         // Build the request.
         let request = self.request(
@@ -356,6 +446,8 @@ pub struct QueryResponse {
     pub purchase: Vec<Purchase>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Attachable")]
     pub attachable: Vec<Attachment>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "BillPayment")]
+    pub bill_payment: Vec<BillPayment>,
     #[serde(default, rename = "startPosition")]
     pub start_position: i64,
     #[serde(default, rename = "maxResults")]
@@ -439,6 +531,13 @@ pub struct MetaData {
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct PurchaseResponse {
+    #[serde(default, rename = "QueryResponse")]
+    pub query_response: QueryResponse,
+    pub time: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct BillPaymentResponse {
     #[serde(default, rename = "QueryResponse")]
     pub query_response: QueryResponse,
     pub time: String,
@@ -564,4 +663,48 @@ pub struct AttachableRef {
     pub entity_ref: NtRef,
     #[serde(default, rename = "IncludeOnSend")]
     pub include_on_send: bool,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct BillPayment {
+    #[serde(default, rename = "VendorRef")]
+    pub vendor_ref: NtRef,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PayType")]
+    pub pay_type: String,
+    #[serde(default, rename = "CheckPayment")]
+    pub check_payment: Payment,
+    #[serde(default, rename = "TotalAmt")]
+    pub total_amt: f64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(default)]
+    pub sparse: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
+    pub sync_token: String,
+    #[serde(rename = "MetaData")]
+    pub meta_data: MetaData,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "DocNumber")]
+    pub doc_number: String,
+    #[serde(rename = "TxnDate")]
+    pub txn_date: NaiveDate,
+    #[serde(default, rename = "CurrencyRef")]
+    pub currency_ref: NtRef,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Line")]
+    pub line: Vec<Line>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PrivateNote")]
+    pub private_note: String,
+    #[serde(default, rename = "CreditCardPayment")]
+    pub credit_card_payment: Payment,
+}
+
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+pub struct Payment {
+    #[serde(default, rename = "CCAccountRef")]
+    pub cc_account_ref: NtRef,
+    #[serde(default, rename = "BankAccountRef")]
+    pub bank_account_ref: NtRef,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PrintStatus")]
+    pub print_status: String,
 }
