@@ -1185,6 +1185,10 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
 pub struct AuthCallback {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "realmId")]
+    pub realm_id: String,
 }
 
 /** Listen for callbacks to QuickBooks auth. */

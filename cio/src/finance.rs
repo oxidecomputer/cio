@@ -7,6 +7,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use gsuite_api::GSuite;
 use macros::db;
 use okta::Okta;
+use quickbooks::QuickBooks;
 use ramp_api::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -800,9 +801,22 @@ pub async fn refresh_expensify_transactions() {
     }
 }
 
+pub async fn sync_quickbooks() {
+    let qb = QuickBooks::new_from_env().await;
+
+    let invoices = qb.list_items().await.unwrap();
+    println!("invoices: {:?}", invoices);
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::finance::{refresh_accounts_payable, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_transactions, refresh_software_vendors};
+    use crate::finance::{refresh_accounts_payable, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_transactions, refresh_software_vendors, sync_quickbooks};
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_cron_quickbooks() {
+        sync_quickbooks().await;
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
