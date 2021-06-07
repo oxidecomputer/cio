@@ -101,6 +101,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_callback).unwrap();
+    api.register(listen_quickbooks_callback).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
@@ -1186,14 +1187,33 @@ pub struct AuthCallback {
     pub code: String,
 }
 
+/** Listen for callbacks to QuickBooks auth. */
+#[endpoint {
+    method = GET,
+    path = "/quickbooks/callback",
+}]
+async fn listen_quickbooks_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = query_args.into_inner();
+
+    sentry::capture_message(&format!("quickbooks callback: {:?}", event), sentry::Level::Info);
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
 /** Listen for callbacks to docusign auth. */
 #[endpoint {
     method = GET,
     path = "/docusign/callback",
 }]
 async fn listen_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let _event = query_args.into_inner();
+    sentry::start_session();
+    let event = query_args.into_inner();
 
+    sentry::capture_message(&format!("docusign callback: {:?}", event), sentry::Level::Info);
+
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1203,6 +1223,7 @@ async fn listen_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_ar
     path = "/docusign/envelope/update",
 }]
 async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<docusign::Envelope>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -1226,6 +1247,7 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
         }
     }
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
