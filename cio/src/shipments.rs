@@ -1289,7 +1289,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_shipments() {
+    async fn test_shipments() {
         let db = Database::new();
 
         refresh_outbound_shipments(&db).await;
