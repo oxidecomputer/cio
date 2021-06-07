@@ -822,7 +822,7 @@ pub async fn sync_quickbooks() {
             // This is a brex transaction, let's try to find it in our database to update it.
             // We know we have attachments as well.
             let time_start = NaiveTime::from_hms_milli(0, 0, 0, 0);
-            let sdt = purchase.txn_date.checked_sub_signed(Duration::days(1)).unwrap().and_time(time_start);
+            let sdt = purchase.txn_date.checked_sub_signed(Duration::days(2)).unwrap().and_time(time_start);
             let time_end = NaiveTime::from_hms_milli(23, 59, 59, 59);
             let edt = purchase.txn_date.and_time(time_end);
             match credit_card_transactions::dsl::credit_card_transactions
@@ -837,7 +837,6 @@ pub async fn sync_quickbooks() {
                 .first::<CreditCardTransaction>(&db.conn())
             {
                 Ok(mut transaction) => {
-                    println!("transaction: {:?}", transaction);
                     // Add the receipt.
                     // Clear out existing receipts.
                     transaction.receipts = vec![];
@@ -849,7 +848,7 @@ pub async fn sync_quickbooks() {
                 }
                 Err(e) => {
                     println!(
-                        "WARN: could not find transaction with merchant_name `{}` amount `{}` date `{}` --> start `{} end `{}`: {}",
+                        "WARN: could not find transaction with merchant_name `{}` amount `{}` date `{}` --> less than `{}` greater than `{}`: {}",
                         purchase.entity_ref.name, purchase.total_amt, purchase.txn_date, sdt, edt, e
                     );
                 }
