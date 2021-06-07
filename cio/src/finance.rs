@@ -804,8 +804,11 @@ pub async fn refresh_expensify_transactions() {
 pub async fn sync_quickbooks() {
     let qb = QuickBooks::new_from_env().await;
 
-    let invoices = qb.list_items().await.unwrap();
-    println!("invoices: {:?}", invoices);
+    let purchases = qb.list_purchases().await.unwrap();
+    for purchase in purchases.clone() {
+        println!("purchase: {:?}", purchase);
+    }
+    println!("len: {}", purchases.len());
 }
 
 #[cfg(test)]

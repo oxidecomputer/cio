@@ -10,13 +10,13 @@
  * use quickbooks::QuickBooks;
  * use serde::{Deserialize, Serialize};
  *
- * async fn list_invoices() {
+ * async fn list_purchases() {
  *     // Initialize the QuickBooks client.
  *     let quickbooks = QuickBooks::new_from_env().await;
  *
- *     let payments = quickbooks.list_invoices().await.unwrap();
+ *     let purchases = quickbooks.list_purchases().await.unwrap();
  *
- *     println!("{:?}", payments);
+ *     println!("{:?}", purchases);
  * }
  * ```
  */
@@ -25,12 +25,15 @@ use std::error;
 use std::fmt;
 use std::sync::Arc;
 
+use chrono::{DateTime, Utc};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the QuickBooks API.
 const ENDPOINT: &str = "https://quickbooks.api.intuit.com/v3/";
+
+const QUERY_PAGE_SIZE: i64 = 1000;
 
 /// Entrypoint for interacting with the QuickBooks API.
 #[derive(Debug, Clone)]
@@ -184,35 +187,13 @@ impl QuickBooks {
         Ok(())
     }
 
-    pub async fn list_invoices(&self) -> Result<(), APIError> {
-        // Build the request.
-        let request = self.request(Method::GET, &format!("company/{}/query", self.company_id), (), Some(&[("query", "SELECT COUNT(*) FROM Invoice")]));
-
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let r: CountResponse = resp.json().await.unwrap();
-
-        println!("{}", r.query_response.total_count);
-
-        Ok(())
-    }
-
-    pub async fn list_items(&self) -> Result<(), APIError> {
+    pub async fn fetch_purchase_page(&self, start_position: i64) -> Result<Vec<Purchase>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
             &format!("company/{}/query", self.company_id),
             (),
-            Some(&[("query", "SELECT * FROM Item MAXRESULTS 10000")]),
+            Some(&[("query", &format!("SELECT * FROM Purchase ORDERBY Id STARTPOSITION {} MAXRESULTS {}", start_position, QUERY_PAGE_SIZE))]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -226,9 +207,65 @@ impl QuickBooks {
             }
         };
 
-        println!("{}", resp.text().await.unwrap());
+        let r: PurchaseResponse = resp.json().await.unwrap();
 
-        Ok(())
+        Ok(r.query_response.purchase)
+    }
+
+    pub async fn list_purchases(&self) -> Result<Vec<Purchase>, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("company/{}/query", self.company_id), (), Some(&[("query", "SELECT COUNT(*) FROM Purchase")]));
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: CountResponse = resp.json().await.unwrap();
+        let mut purchases: Vec<Purchase> = Vec::new();
+
+        let mut i = 0;
+        while i < r.query_response.total_count {
+            let mut page = self.fetch_purchase_page(i + 1).await.unwrap();
+
+            // Add our page to our array.
+            purchases.append(&mut page);
+
+            i += QUERY_PAGE_SIZE;
+        }
+
+        Ok(purchases)
+    }
+
+    pub async fn list_items(&self) -> Result<Vec<Item>, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            &format!("company/{}/query", self.company_id),
+            (),
+            Some(&[("query", &format!("SELECT * FROM Item MAXRESULTS {}", QUERY_PAGE_SIZE))]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let items: ItemsResponse = resp.json().await.unwrap();
+
+        Ok(items.query_response.item)
     }
 }
 
@@ -280,6 +317,179 @@ pub struct CountResponse {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct QueryResponse {
-    #[serde(default, rename = "TotalCount")]
+    #[serde(default, rename = "totalCount")]
     pub total_count: i64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Item")]
+    pub item: Vec<Item>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Purchase")]
+    pub purchase: Vec<Purchase>,
+    #[serde(default, rename = "startPosition")]
+    pub start_position: i64,
+    #[serde(default, rename = "maxResults")]
+    pub max_results: i64,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct ItemsResponse {
+    #[serde(default, rename = "QueryResponse")]
+    pub query_response: QueryResponse,
+    pub time: DateTime<Utc>,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Item {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Name")]
+    pub name: String,
+    #[serde(default, rename = "Active")]
+    pub active: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FullyQualifiedName")]
+    pub fully_qualified_name: String,
+    #[serde(default, rename = "Taxable")]
+    pub taxable: bool,
+    #[serde(default, rename = "UnitPrice")]
+    pub unit_price: f64,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Type")]
+    pub item_type: String,
+    #[serde(default, rename = "PurchaseCost")]
+    pub purchase_cost: f64,
+    #[serde(default, rename = "ExpenseAccountRef")]
+    pub expense_account_ref: NtRef,
+    #[serde(default, rename = "TrackQtyOnHand")]
+    pub track_qty_on_hand: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(default)]
+    pub sparse: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
+    pub sync_token: String,
+    #[serde(rename = "MetaData")]
+    pub meta_data: MetaData,
+    #[serde(default, rename = "SubItem")]
+    pub sub_item: bool,
+    #[serde(default, rename = "ParentRef")]
+    pub parent_ref: NtRef,
+    #[serde(default, rename = "Level")]
+    pub level: i64,
+    #[serde(default, rename = "IncomeAccountRef")]
+    pub income_account_ref: NtRef,
+    #[serde(default, rename = "AssetAccountRef")]
+    pub asset_account_ref: NtRef,
+    #[serde(default, rename = "QtyOnHand")]
+    pub qty_on_hand: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "InvStartDate")]
+    pub inv_start_date: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Description")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PurchaseDesc")]
+    pub purchase_desc: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct NtRef {
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Value")]
+    pub value: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Name")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
+    pub entity_ref_type: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct MetaData {
+    #[serde(rename = "CreateTime")]
+    pub create_time: DateTime<Utc>,
+    #[serde(rename = "LastUpdatedTime")]
+    pub last_updated_time: DateTime<Utc>,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct PurchaseResponse {
+    #[serde(default, rename = "QueryResponse")]
+    pub query_response: QueryResponse,
+    pub time: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Purchase {
+    #[serde(default, rename = "AccountRef")]
+    pub account_ref: NtRef,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PaymentType")]
+    pub payment_type: String,
+    #[serde(default, rename = "EntityRef")]
+    pub entity_ref: NtRef,
+    #[serde(default, rename = "TotalAmt")]
+    pub total_amt: f64,
+    #[serde(default, rename = "PurchaseEx")]
+    pub purchase_ex: PurchaseEx,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    pub sparse: bool,
+    #[serde(rename = "Id")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
+    pub sync_token: String,
+    #[serde(rename = "MetaData")]
+    pub meta_data: MetaData,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TxnDate")]
+    pub txn_date: String,
+    #[serde(default, rename = "CurrencyRef")]
+    pub currency_ref: NtRef,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Line")]
+    pub line: Vec<Line>,
+    #[serde(default, rename = "Credit")]
+    pub credit: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "DocNumber")]
+    pub doc_number: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PrivateNote")]
+    pub private_note: String,
+}
+
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+pub struct Line {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Description")]
+    pub description: String,
+    #[serde(default, rename = "Amount")]
+    pub amount: f64,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "DetailType")]
+    pub detail_type: String,
+    #[serde(default, rename = "AccountBasedExpenseLineDetail")]
+    pub account_based_expense_line_detail: AccountBasedExpenseLineDetail,
+}
+
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+pub struct AccountBasedExpenseLineDetail {
+    #[serde(default, rename = "AccountRef")]
+    pub account_ref: NtRef,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "BillableStatus")]
+    pub billable_status: String,
+    #[serde(default, rename = "TaxCodeRef")]
+    pub tax_code_ref: NtRef,
+}
+
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+pub struct PurchaseEx {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub any: Vec<Any>,
+}
+
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+pub struct Any {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "declaredType")]
+    pub declared_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scope: String,
+    #[serde(default)]
+    pub value: NtRef,
+    #[serde(default)]
+    pub nil: bool,
+    #[serde(default, rename = "globalScope")]
+    pub global_scope: bool,
+    #[serde(default, rename = "typeSubstituted")]
+    pub type_substituted: bool,
 }
