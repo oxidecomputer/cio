@@ -584,20 +584,21 @@ pub async fn refresh_brex_transactions() {
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "accounts_payables"]
 pub struct NewAccountsPayable {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "CONFIRMATION #")]
     pub confirmation_number: String,
     #[serde(default)]
     pub amount: f32,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "INVOICE #")]
     pub invoice_number: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "VENDOR")]
     pub vendor: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "CURRENCY")]
     pub currency: String,
+    #[serde(alias = "PROCESS DATE")]
     pub date: NaiveDate,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT TYPE")]
     pub payment_type: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT STATUS")]
     pub status: String,
     #[serde(
         default,
@@ -829,13 +830,14 @@ pub async fn sync_quickbooks() {
             // This is a brex transaction, let's try to find it in our database to update it.
             // We know we have attachments as well.
             let time_start = NaiveTime::from_hms_milli(0, 0, 0, 0);
-            let sdt = purchase.txn_date.checked_sub_signed(Duration::days(3)).unwrap().and_time(time_start);
+            let sdt = purchase.txn_date.checked_sub_signed(Duration::days(10)).unwrap().and_time(time_start);
             let time_end = NaiveTime::from_hms_milli(23, 59, 59, 59);
             let edt = purchase.txn_date.and_time(time_end);
+            let merchant_name = clean_merchant_name(&purchase.entity_ref.name);
             match credit_card_transactions::dsl::credit_card_transactions
                 .filter(
                     credit_card_transactions::dsl::merchant_name
-                        .eq(purchase.entity_ref.name.to_string())
+                        .eq(merchant_name.to_string())
                         .and(credit_card_transactions::dsl::card_vendor.eq("Brex".to_string()))
                         .and(credit_card_transactions::dsl::amount.eq(purchase.total_amt))
                         .and(credit_card_transactions::dsl::time.ge(DateTime::<Utc>::from_utc(sdt, Utc)))
@@ -855,8 +857,8 @@ pub async fn sync_quickbooks() {
                 }
                 Err(e) => {
                     println!(
-                        "WARN: could not find transaction with merchant_name `{}` amount `{}` date `{}` --> less than `{}` greater than `{}`: {}",
-                        purchase.entity_ref.name, purchase.total_amt, purchase.txn_date, sdt, edt, e
+                        "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` date `{}` --> less than `{}` greater than `{}`: {}",
+                        purchase.entity_ref.name, merchant_name, purchase.total_amt, purchase.txn_date, sdt, edt, e
                     );
                 }
             }
@@ -865,6 +867,44 @@ pub async fn sync_quickbooks() {
         }
     }
     println!("len: {}", purchases.len());
+}
+
+fn clean_merchant_name(s: &str) -> String {
+    if s == "Rudys Cant Fail Cafe" {
+        "Rudy's Can't Fail Cafe".to_string()
+    } else if s == "IKEA" {
+        "Ikea".to_string()
+    } else if s == "Zoomus" {
+        "Zoom.us".to_string()
+    } else if s == "MailChimp" {
+        "Mailchimp".to_string()
+    } else if s == "PAYPAL QUICKLUTION QU" {
+        "PAYPAL *QUICKLUTION QU".to_string()
+    } else if s == "PCISIG" {
+        "PCI-SIG".to_string()
+    } else if s == "PAYPAL PC ENGINES" {
+        "PAYPAL *PC ENGINES".to_string()
+    } else if s == "Paypal Transaction  Eventjarcom Eb" {
+        "Paypal Transaction - Eventjarcom Eb".to_string()
+    } else if s == "IEEE SA  Products  Services" {
+        "IEEE SA - Products & Services".to_string()
+    } else if s == "Zeit" {
+        "ZEIT".to_string()
+    } else if s == "FSCOM  Fiberstore" {
+        "FS.COM - Fiberstore".to_string()
+    } else if s == "keychroncom" {
+        "keychron.com".to_string()
+    } else if s == "DURO ENTERPRISE" {
+        "Duro".to_string()
+    } else if s == "PITCHCOM" {
+        "PITCH.COM".to_string()
+    } else if s == "SP  CHELSIO WEB STORE" {
+        "Chelsio Communications".to_string()
+    } else if s == "Temicom" {
+        "Temi.com".to_string()
+    } else {
+        s.to_string()
+    }
 }
 
 #[cfg(test)]
