@@ -817,25 +817,25 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_quickbooks() {
+    async fn test_finance_quickbooks() {
         sync_quickbooks().await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_expensify() {
+    async fn test_finance_expensify() {
         refresh_expensify_transactions().await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_brex() {
+    async fn test_finance_brex() {
         refresh_brex_transactions().await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_finance() {
+    async fn test_finance() {
         refresh_software_vendors().await;
 
         refresh_accounts_payable().await;
