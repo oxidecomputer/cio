@@ -25,7 +25,7 @@ use std::error;
 use std::fmt;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -472,8 +472,8 @@ pub struct Purchase {
     pub sync_token: String,
     #[serde(rename = "MetaData")]
     pub meta_data: MetaData,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TxnDate")]
-    pub txn_date: String,
+    #[serde(rename = "TxnDate")]
+    pub txn_date: NaiveDate,
     #[serde(default, rename = "CurrencyRef")]
     pub currency_ref: NtRef,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Line")]
