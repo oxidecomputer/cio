@@ -599,6 +599,13 @@ pub struct NewAccountsPayable {
     pub payment_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "airtable_api::attachment_format_as_array_of_strings::deserialize",
+        serialize_with = "airtable_api::attachment_format_as_array_of_strings::serialize"
+    )]
+    pub invoices: Vec<String>,
     /// This is linked to another table.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_vendor: Vec<String>,
@@ -822,7 +829,7 @@ pub async fn sync_quickbooks() {
             // This is a brex transaction, let's try to find it in our database to update it.
             // We know we have attachments as well.
             let time_start = NaiveTime::from_hms_milli(0, 0, 0, 0);
-            let sdt = purchase.txn_date.checked_sub_signed(Duration::days(2)).unwrap().and_time(time_start);
+            let sdt = purchase.txn_date.checked_sub_signed(Duration::days(3)).unwrap().and_time(time_start);
             let time_end = NaiveTime::from_hms_milli(23, 59, 59, 59);
             let edt = purchase.txn_date.and_time(time_end);
             match credit_card_transactions::dsl::credit_card_transactions
@@ -853,6 +860,8 @@ pub async fn sync_quickbooks() {
                     );
                 }
             }
+        } else {
+            println!("got transaction type: {}", purchase.account_ref.name);
         }
     }
     println!("len: {}", purchases.len());

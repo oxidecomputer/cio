@@ -9,6 +9,7 @@ table! {
         date -> Date,
         payment_type -> Varchar,
         status -> Varchar,
+        invoices -> Array<Text>,
         link_to_vendor -> Array<Text>,
         airtable_record_id -> Varchar,
     }

@@ -8,6 +8,7 @@ CREATE TABLE accounts_payables (
     date DATE NOT NULL,
     payment_type VARCHAR NOT NULL,
     status VARCHAR NOT NULL,
+    invoices TEXT [] NOT NULL,
     link_to_vendor TEXT [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )
