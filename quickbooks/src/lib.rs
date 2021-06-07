@@ -187,6 +187,37 @@ impl QuickBooks {
         Ok(())
     }
 
+    pub async fn list_attachments_for_purchase(&self, purchase_id: &str) -> Result<Vec<Attachment>, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            &format!("company/{}/query", self.company_id),
+            (),
+            Some(&[(
+                "query",
+                &format!(
+                    "select * from attachable where AttachableRef.EntityRef.Type = 'purchase' and AttachableRef.EntityRef.value = '{}' MAXRESULTS {}",
+                    purchase_id, QUERY_PAGE_SIZE
+                ),
+            )]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: AttachmentResponse = resp.json().await.unwrap();
+
+        Ok(r.query_response.attachable)
+    }
+
     pub async fn fetch_purchase_page(&self, start_position: i64) -> Result<Vec<Purchase>, APIError> {
         // Build the request.
         let request = self.request(
@@ -323,6 +354,8 @@ pub struct QueryResponse {
     pub item: Vec<Item>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Purchase")]
     pub purchase: Vec<Purchase>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Attachable")]
+    pub attachable: Vec<Attachment>,
     #[serde(default, rename = "startPosition")]
     pub start_position: i64,
     #[serde(default, rename = "maxResults")]
@@ -347,11 +380,11 @@ pub struct Item {
     #[serde(default, rename = "Taxable")]
     pub taxable: bool,
     #[serde(default, rename = "UnitPrice")]
-    pub unit_price: f64,
+    pub unit_price: f32,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Type")]
     pub item_type: String,
     #[serde(default, rename = "PurchaseCost")]
-    pub purchase_cost: f64,
+    pub purchase_cost: f32,
     #[serde(default, rename = "ExpenseAccountRef")]
     pub expense_account_ref: NtRef,
     #[serde(default, rename = "TrackQtyOnHand")]
@@ -412,6 +445,13 @@ pub struct PurchaseResponse {
 }
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct AttachmentResponse {
+    #[serde(default, rename = "QueryResponse")]
+    pub query_response: QueryResponse,
+    pub time: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Purchase {
     #[serde(default, rename = "AccountRef")]
     pub account_ref: NtRef,
@@ -420,7 +460,7 @@ pub struct Purchase {
     #[serde(default, rename = "EntityRef")]
     pub entity_ref: NtRef,
     #[serde(default, rename = "TotalAmt")]
-    pub total_amt: f64,
+    pub total_amt: f32,
     #[serde(default, rename = "PurchaseEx")]
     pub purchase_ex: PurchaseEx,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -453,7 +493,7 @@ pub struct Line {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Description")]
     pub description: String,
     #[serde(default, rename = "Amount")]
-    pub amount: f64,
+    pub amount: f32,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "DetailType")]
     pub detail_type: String,
     #[serde(default, rename = "AccountBasedExpenseLineDetail")]
@@ -492,4 +532,36 @@ pub struct Any {
     pub global_scope: bool,
     #[serde(default, rename = "typeSubstituted")]
     pub type_substituted: bool,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Attachment {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FileName")]
+    pub file_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FileAccessUri")]
+    pub file_access_uri: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TempDownloadUri")]
+    pub temp_download_uri: String,
+    #[serde(default, rename = "Size")]
+    pub size: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(default)]
+    pub sparse: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
+    pub sync_token: String,
+    #[serde(rename = "MetaData")]
+    pub meta_data: MetaData,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "AttachableRef")]
+    pub attachable_ref: Vec<AttachableRef>,
+}
+
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+pub struct AttachableRef {
+    #[serde(default, rename = "EntityRef")]
+    pub entity_ref: NtRef,
+    #[serde(default, rename = "IncludeOnSend")]
+    pub include_on_send: bool,
 }

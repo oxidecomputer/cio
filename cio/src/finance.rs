@@ -802,11 +802,51 @@ pub async fn refresh_expensify_transactions() {
 }
 
 pub async fn sync_quickbooks() {
+    // Initialize the database.
+    let db = Database::new();
+
+    // Initialize the QuickBooks client.
     let qb = QuickBooks::new_from_env().await;
 
     let purchases = qb.list_purchases().await.unwrap();
     for purchase in purchases.clone() {
-        println!("purchase: {:?}", purchase);
+        // Let's try to match the Brex reciepts to the transactions.
+        if purchase.account_ref.name == "Credit Cards: Brex" {
+            // See if we even have attachments.
+            let attachments = qb.list_attachments_for_purchase(&purchase.id).await.unwrap();
+            if attachments.is_empty() {
+                // We can continue early since we don't have attachments.
+                continue;
+            }
+
+            // This is a brex transaction, let's try to find it in our database to update it.
+            // We know we have attachments as well.
+            println!("purchase: {:?}", purchase);
+            println!("attachments: {:?}", attachments);
+            let txn_date_start = DateTime::parse_from_rfc3339(&format!("{}T00:00:00-00:00", purchase.txn_date)).unwrap();
+            let txn_date_end = DateTime::parse_from_rfc3339(&format!("{}T23:59:59-00:00", purchase.txn_date)).unwrap();
+            match credit_card_transactions::dsl::credit_card_transactions
+                .filter(
+                    credit_card_transactions::dsl::merchant_name
+                        .eq(purchase.entity_ref.name.to_string())
+                        .and(credit_card_transactions::dsl::card_vendor.eq("Brex".to_string()))
+                        .and(credit_card_transactions::dsl::amount.eq(purchase.total_amt))
+                        .and(credit_card_transactions::dsl::time.ge(txn_date_start))
+                        .and(credit_card_transactions::dsl::time.le(txn_date_end)),
+                )
+                .first::<CreditCardTransaction>(&db.conn())
+            {
+                Ok(transaction) => {
+                    println!("transaction: {:?}", transaction);
+                }
+                Err(e) => {
+                    println!(
+                        "WARN: could not find transaction with merchant_name `{}` amount `{}`: {}",
+                        purchase.entity_ref.name, purchase.total_amt, e
+                    );
+                }
+            }
+        }
     }
     println!("len: {}", purchases.len());
 }
