@@ -472,7 +472,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "quickbooks",
+ "quickbooks 0.1.2",
  "ramp-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.3",
  "regex 1.5.4",
@@ -499,7 +499,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#83d913e1161e08858eb4bffca2be2c752ec2a72e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#5e6d3fb3bcf86b9ba3cecc346b77f21a3061dcdb"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -535,6 +535,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
+ "quickbooks 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.3",
  "regex 1.5.4",
@@ -2103,7 +2104,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#83d913e1161e08858eb4bffca2be2c752ec2a72e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#5e6d3fb3bcf86b9ba3cecc346b77f21a3061dcdb"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2846,6 +2847,19 @@ dependencies = [
 [[package]]
 name = "quickbooks"
 version = "0.1.2"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "quickbooks"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68e16dd02f91fc121765e30797a40572203d3cb53242645c5cc7dca32269128f"
 dependencies = [
  "chrono",
  "reqwest",

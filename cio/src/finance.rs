@@ -818,6 +818,58 @@ pub async fn sync_quickbooks() {
     // Initialize the QuickBooks client.
     let qb = QuickBooks::new_from_env().await;
 
+    let bill_payments = qb.list_bill_payments().await.unwrap();
+    for bill_payment in bill_payments {
+        // Let's check if there are any attachments.
+        let attachments = qb.list_attachments_for_bill_payment(&bill_payment.id).await.unwrap();
+
+        if (attachments.is_empty() && bill_payment.line.is_empty()) || bill_payment.total_amt == 0.0 {
+            // Continue early if we have no lines on the bill.
+            continue;
+        }
+
+        let merchant_name = bill_payment.vendor_ref.name.to_string();
+        match accounts_payables::dsl::accounts_payables
+            .filter(
+                accounts_payables::dsl::vendor
+                    .eq(merchant_name.to_string())
+                    .and(accounts_payables::dsl::amount.eq(bill_payment.total_amt))
+                    .and(accounts_payables::dsl::date.eq(bill_payment.txn_date)),
+            )
+            .first::<AccountsPayable>(&db.conn())
+        {
+            Ok(mut transaction) => {
+                // Add the receipt.
+                // Clear out existing invoices.
+                transaction.invoices = vec![];
+                for line in bill_payment.line {
+                    // Iterate over each of the linked transactions.
+                    for txn in line.linked_txn {
+                        if txn.txn_type == "Bill" {
+                            // Get the bill.
+                            let bill = qb.get_bill(&txn.txn_id).await.unwrap();
+                            // Get the attachments for the bill.
+                            let attachments = qb.list_attachments_for_bill(&bill.id).await.unwrap();
+                            for attachment in attachments {
+                                transaction.invoices.push(attachment.temp_download_uri.to_string());
+                            }
+                        }
+                    }
+                }
+
+                transaction.update(&db).await;
+                continue;
+            }
+            Err(e) => {
+                println!("bill payment: {:?}", bill_payment);
+                println!(
+                    "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` date `{}`: {}",
+                    bill_payment.vendor_ref.name, merchant_name, bill_payment.total_amt, bill_payment.txn_date, e
+                );
+            }
+        }
+    }
+
     let purchases = qb.list_purchases().await.unwrap();
     for purchase in purchases.clone() {
         // Let's try to match the Brex reciepts to the transactions.

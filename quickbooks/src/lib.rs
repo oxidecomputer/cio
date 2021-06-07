@@ -218,6 +218,37 @@ impl QuickBooks {
         Ok(r.query_response.attachable)
     }
 
+    pub async fn list_attachments_for_bill(&self, bill_id: &str) -> Result<Vec<Attachment>, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            &format!("company/{}/query", self.company_id),
+            (),
+            Some(&[(
+                "query",
+                &format!(
+                    "select * from attachable where AttachableRef.EntityRef.Type = 'bill' and AttachableRef.EntityRef.value = '{}' MAXRESULTS {}",
+                    bill_id, QUERY_PAGE_SIZE
+                ),
+            )]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: AttachmentResponse = resp.json().await.unwrap();
+
+        Ok(r.query_response.attachable)
+    }
+
     pub async fn list_attachments_for_bill_payment(&self, bill_payment_id: &str) -> Result<Vec<Attachment>, APIError> {
         // Build the request.
         let request = self.request(
@@ -247,6 +278,26 @@ impl QuickBooks {
         let r: AttachmentResponse = resp.json().await.unwrap();
 
         Ok(r.query_response.attachable)
+    }
+
+    pub async fn get_bill(&self, bill_id: &str) -> Result<Bill, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("company/{}/bill/{}", self.company_id, bill_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: BillResponse = resp.json().await.unwrap();
+
+        Ok(r.bill)
     }
 
     pub async fn fetch_bill_payment_page(&self, start_position: i64) -> Result<Vec<BillPayment>, APIError> {
@@ -597,6 +648,16 @@ pub struct Line {
     pub detail_type: String,
     #[serde(default, rename = "AccountBasedExpenseLineDetail")]
     pub account_based_expense_line_detail: AccountBasedExpenseLineDetail,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "LinkedTxn")]
+    pub linked_txn: Vec<LinkedTxn>,
+}
+
+#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+pub struct LinkedTxn {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TxnId")]
+    pub txn_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TxnType")]
+    pub txn_type: String,
 }
 
 #[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
@@ -674,7 +735,7 @@ pub struct BillPayment {
     #[serde(default, rename = "CheckPayment")]
     pub check_payment: Payment,
     #[serde(default, rename = "TotalAmt")]
-    pub total_amt: f64,
+    pub total_amt: f32,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub domain: String,
     #[serde(default)]
@@ -707,4 +768,45 @@ pub struct Payment {
     pub bank_account_ref: NtRef,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "PrintStatus")]
     pub print_status: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct BillResponse {
+    #[serde(rename = "Bill")]
+    pub bill: Bill,
+    pub time: DateTime<Utc>,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Bill {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
+    pub sync_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
+    pub id: String,
+    #[serde(default, rename = "APAccountRef")]
+    pub ap_account_ref: NtRef,
+    #[serde(default, rename = "VendorRef")]
+    pub vendor_ref: NtRef,
+    #[serde(rename = "TxnDate")]
+    pub txn_date: NaiveDate,
+    #[serde(default, rename = "TotalAmt")]
+    pub total_amt: f64,
+    #[serde(default, rename = "CurrencyRef")]
+    pub currency_ref: NtRef,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "LinkedTxn")]
+    pub linked_txn: Vec<LinkedTxn>,
+    #[serde(default, rename = "SalesTermRef")]
+    pub sales_term_ref: NtRef,
+    #[serde(rename = "DueDate")]
+    pub due_date: NaiveDate,
+    #[serde(default)]
+    pub sparse: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Line")]
+    pub line: Vec<Line>,
+    #[serde(default, rename = "Balance")]
+    pub balance: i64,
+    #[serde(rename = "MetaData")]
+    pub meta_data: MetaData,
 }
