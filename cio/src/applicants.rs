@@ -2638,7 +2638,7 @@ pub async fn get_docusign_template_id(ds: &DocuSign) -> String {
     let templates = ds.list_templates().await.unwrap();
     for template in templates {
         if template.name == "Employee Offer Letter (US)" {
-            return template.template_id.to_string();
+            return template.template_id;
         }
     }
 
