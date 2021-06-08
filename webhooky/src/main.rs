@@ -1240,7 +1240,7 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     let mut qb = QuickBooks::new_from_env().await;
     // Let's get the token from the code.
     let t = qb.get_access_token(&event.code).await.unwrap();
-    // TODO: Save the token to the database.
+    // Save the token to the database.
     let token = NewAPIToken {
         product: "quickbooks".to_string(),
         token_type: t.token_type.to_string(),

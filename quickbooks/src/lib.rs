@@ -12,7 +12,7 @@
  *
  * async fn list_purchases() {
  *     // Initialize the QuickBooks client.
- *     let quickbooks = QuickBooks::new_from_env().await;
+ *     let quickbooks = QuickBooks::new_from_env("", "").await;
  *
  *     let purchases = quickbooks.list_purchases().await.unwrap();
  *
@@ -54,12 +54,14 @@ impl QuickBooks {
     /// Create a new QuickBooks client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub async fn new<I, K, B, R>(client_id: I, client_secret: K, company_id: B, redirect_uri: R) -> Self
+    pub async fn new<I, K, B, R, T, Q>(client_id: I, client_secret: K, company_id: B, redirect_uri: R, token: T, refresh_token: Q) -> Self
     where
         I: ToString,
         K: ToString,
         B: ToString,
         R: ToString,
+        T: ToString,
+        Q: ToString,
     {
         let client = Client::builder().build();
         match client {
@@ -69,8 +71,8 @@ impl QuickBooks {
                     client_secret: client_secret.to_string(),
                     company_id: company_id.to_string(),
                     redirect_uri: redirect_uri.to_string(),
-                    token: env::var("QUICKBOOKS_TOKEN").unwrap_or_default(),
-                    refresh_token: env::var("QUICKBOOKS_REFRESH_TOKEN").unwrap_or_default(),
+                    token: token.to_string(),
+                    refresh_token: refresh_token.to_string(),
 
                     client: Arc::new(c),
                 };
@@ -94,13 +96,19 @@ impl QuickBooks {
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key and your requests will work.
-    pub async fn new_from_env() -> Self {
+    /// We pass in the token and refresh token to the client so if you are storing
+    /// it in a database, you can get it first.
+    pub async fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    where
+        T: ToString,
+        R: ToString,
+    {
         let client_id = env::var("QUICKBOOKS_CLIENT_ID").unwrap();
         let client_secret = env::var("QUICKBOOKS_CLIENT_SECRET").unwrap();
         let company_id = env::var("QUICKBOOKS_COMPANY_ID").unwrap();
         let redirect_uri = env::var("QUICKBOOKS_REDIRECT_URI").unwrap();
 
-        QuickBooks::new(client_id, client_secret, company_id, redirect_uri).await
+        QuickBooks::new(client_id, client_secret, company_id, redirect_uri, token, refresh_token).await
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
