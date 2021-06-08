@@ -862,6 +862,7 @@ pub async fn refresh_bill_com_transactions() {
         // Get the amount from the notes.
         let sa = record.notes.replace('$', "").replace(',', "");
         record.amount = sa.parse::<f32>().unwrap();
+        record.notes = "".to_string();
 
         // Make sure we have a transaction id.
         if record.confirmation_number.is_empty() {
