@@ -2641,6 +2641,8 @@ pub async fn get_docusign_template_id(ds: &DocuSign) -> String {
             return template.template_id.to_string();
         }
     }
+
+    "".to_string()
 }
 
 impl Applicant {
