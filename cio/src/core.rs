@@ -1,7 +1,6 @@
 use airtable_api::User as AirtableUser;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
-use gusto_api::date_format;
 use serde::{Deserialize, Serialize};
 
 /// Define the trait for doing logic in updating Airtable.
@@ -58,7 +57,6 @@ pub struct DiscussionTopic {
 pub struct Meeting {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(serialize_with = "gusto_api::date_format::serialize", deserialize_with = "gusto_api::date_format::deserialize")]
     pub date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub week: String,

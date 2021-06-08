@@ -11,7 +11,7 @@
  *
  * async fn get_current_user() {
  *     // Initialize the Gusto client.
- *     let gusto = Gusto::new_from_env();
+ *     let gusto = Gusto::new_from_env("", "");
  *
  *     // Get the current user.
  *     let current_user = gusto.current_user().await.unwrap();

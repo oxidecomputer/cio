@@ -1237,7 +1237,7 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
 
     sentry::capture_message(&format!("auth quickbooks callback: {:?}", event), sentry::Level::Info);
     // Initialize the QuickBooks client.
-    let mut qb = QuickBooks::new_from_env("", "").await;
+    let mut qb = QuickBooks::new_from_env("", "");
     // Let's get the token from the code.
     let t = qb.get_access_token(&event.code).await.unwrap();
     // Save the token to the database.

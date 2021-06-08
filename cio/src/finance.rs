@@ -816,7 +816,7 @@ pub async fn sync_quickbooks() {
     let db = Database::new();
 
     // Initialize the QuickBooks client.
-    let qb = QuickBooks::new_from_env("", "").await;
+    let qb = QuickBooks::new_from_env("", "");
 
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {
