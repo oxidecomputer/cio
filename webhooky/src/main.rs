@@ -26,6 +26,7 @@ use dropshot::{
 use google_drive::GoogleDrive;
 use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
+use quickbooks::QuickBooks;
 use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
@@ -1231,6 +1232,9 @@ async fn listen_auth_quickbooks_callback(_rqctx: Arc<RequestContext<Context>>, q
     let event = query_args.into_inner();
 
     sentry::capture_message(&format!("auth quickbooks callback: {:?}", event), sentry::Level::Info);
+    // Initialize the QuickBooks client.
+    let qb = QuickBooks::new_from_env().await;
+    // Let's get the token from the code.
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

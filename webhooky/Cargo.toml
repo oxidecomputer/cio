@@ -24,6 +24,7 @@ http = "0.2.0"
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
 #influxdb = { version = "0.3.0", features = ["derive"] }
 influxdb = { git = "https://github.com/jessfraz/influxdb-rust", branch = "cloud", features = ["derive"] }
+quickbooks = "^0.1.0"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sentry = "^0.22.0"
 serde = { version = "1.0", features = ["derive"] }

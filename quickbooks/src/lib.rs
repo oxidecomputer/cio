@@ -80,7 +80,9 @@ impl QuickBooks {
                     // auth without using the browser.
                     println!("quickbooks consent URL: {}", qb.user_consent_url());
                 }
-                qb.refresh_access_token().await.unwrap();
+                if qb.refresh_token.is_empty() {
+                    qb.refresh_access_token().await.unwrap();
+                }
 
                 qb
             }
@@ -140,6 +142,11 @@ impl QuickBooks {
     }
 
     pub async fn refresh_access_token(&mut self) -> Result<(), APIError> {
+        if self.refresh_token.is_empty() {
+            // Return early.
+            return Ok(());
+        }
+
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
