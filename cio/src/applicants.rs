@@ -37,7 +37,7 @@ use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::interviews::ApplicantInterview;
-use crate::models::get_value;
+use crate::models::{get_value, truncate};
 use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
 use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
@@ -1761,6 +1761,9 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
     async fn update_airtable_record(&mut self, record: Applicant) {
         self.interviews = record.interviews;
         self.geocode_cache = record.geocode_cache;
+        self.resume_contents = truncate(&self.resume_contents, 100000);
+        self.materials_contents = truncate(&self.materials_contents, 100000);
+        self.question_why_oxide = truncate(&self.question_why_oxide, 100000);
     }
 }
 
