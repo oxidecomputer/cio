@@ -2623,33 +2623,40 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     let ds = DocuSign::new_from_env().await;
 
     // Get the template we need.
-    let mut template_id = "".to_string();
-    let templates = ds.list_templates().await.unwrap();
-    for template in templates {
-        if template.name == "Employee Offer Letter (US)" {
-            template_id = template.template_id;
-            // We can break our loop.
-            break;
-        }
-    }
+    let template_id = get_docusign_template_id(&ds).await;
 
     // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db);
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
+        applicant.do_docusign(db, &ds, &template_id).await;
+    }
+}
+
+pub async fn get_docusign_template_id(ds: &DocuSign) -> String {
+    let templates = ds.list_templates().await.unwrap();
+    for template in templates {
+        if template.name == "Employee Offer Letter (US)" {
+            return template.template_id;
+        }
+    }
+}
+
+impl Applicant {
+    pub async fn do_docusign(&mut self, db: &Database, ds: &DocuSign, template_id: &str) {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
-        if applicant.status != crate::applicant_status::Status::GivingOffer.to_string()
-            && applicant.status != crate::applicant_status::Status::Onboarding.to_string()
-            && applicant.status != crate::applicant_status::Status::Hired.to_string()
+        if self.status != crate::applicant_status::Status::GivingOffer.to_string()
+            && self.status != crate::applicant_status::Status::Onboarding.to_string()
+            && self.status != crate::applicant_status::Status::Hired.to_string()
         {
             // We can return early.
-            continue;
+            return;
         }
 
-        if applicant.docusign_envelope_id.is_empty() && applicant.status == crate::applicant_status::Status::GivingOffer.to_string() {
-            println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", applicant.name);
+        if self.docusign_envelope_id.is_empty() && self.status == crate::applicant_status::Status::GivingOffer.to_string() {
+            println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", self.name);
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
             let mut new_envelope: docusign::Envelope = Default::default();
@@ -2677,16 +2684,16 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
                     routing_order: "1".to_string(),
                     // Make Steve's email notification different than the actual applicant.
                     email_notification: docusign::EmailNotification {
-                        email_subject: format!("Complete the offer letter for {}", applicant.name),
-                        email_body: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!", applicant.name, applicant.name, applicant.email),
+                        email_subject: format!("Complete the offer letter for {}", self.name),
+                        email_body: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!", self.name, self.name, self.email),
                         language: Default::default(),
                     },
                 },
                 docusign::TemplateRole {
-                    name: applicant.name.to_string(),
+                    name: self.name.to_string(),
                     role_name: "Applicant".to_string(),
-                    email: applicant.email.to_string(),
-                    signer_name: applicant.name.to_string(),
+                    email: self.email.to_string(),
+                    signer_name:self.name.to_string(),
                     routing_order: "2".to_string(),
                     email_notification: docusign::EmailNotification {
                         email_subject: "Sign your Oxide Computer Company Offer Letter".to_string(),
@@ -2700,23 +2707,21 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
             let envelope = ds.create_envelope(new_envelope.clone()).await.unwrap();
 
             // Set the id of the envelope.
-            applicant.docusign_envelope_id = envelope.envelope_id.to_string();
+            self.docusign_envelope_id = envelope.envelope_id.to_string();
             // Set the status of the envelope.
-            applicant.docusign_envelope_status = envelope.status.to_string();
+            self.docusign_envelope_status = envelope.status.to_string();
 
             // Update the applicant in the database.
-            applicant.update(db).await;
-        } else if !applicant.docusign_envelope_id.is_empty() {
+            self.update(db).await;
+        } else if !self.docusign_envelope_id.is_empty() {
             // We have sent their offer.
             // Let's get the status of the envelope in Docusign.
-            let envelope = ds.get_envelope(&applicant.docusign_envelope_id).await.unwrap();
+            let envelope = ds.get_envelope(&self.docusign_envelope_id).await.unwrap();
 
-            applicant.update_applicant_from_docusign_envelope(db, &ds, envelope).await;
+            self.update_applicant_from_docusign_envelope(db, &ds, envelope).await;
         }
     }
-}
 
-impl Applicant {
     pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
