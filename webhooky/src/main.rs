@@ -1205,6 +1205,7 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
 pub struct AuthCallback {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub code: String,
+    /// The state that we had passed in through the user consent URL.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "realmId")]
