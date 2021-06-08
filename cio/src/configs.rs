@@ -1,5 +1,6 @@
 #![allow(clippy::from_over_into)]
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::str::from_utf8;
@@ -13,6 +14,7 @@ use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarRe
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
+use ramp_api::Ramp;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
@@ -1062,6 +1064,19 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
     let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
+    // Initialize the Ramp client.
+    let ramp = Ramp::new_from_env().await;
+    let ru = ramp.list_users().await.unwrap();
+    let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
+    for r in ru {
+        ramp_users.insert(r.email.to_string(), r);
+    }
+    let rd = ramp.list_departments().await.unwrap();
+    let mut ramp_departments: HashMap<String, ramp_api::Department> = HashMap::new();
+    let r in rd {
+        ramp_departments.insert(r.name.to_string(), r);
+    }
+
     // Find the anniversary calendar.
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -1121,6 +1136,28 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
                 new_user.send_email_new_consultant().await;
             } else {
                 new_user.send_email_new_user().await;
+            }
+        }
+
+        // Check if we have a Ramp user for the user.
+        match ramp_users.get(&new_user.email()) {
+            // We have the user, we don't need to do anything.
+            Some(_) => (),
+            None => {
+                println!("inviting new ramp user {}", new_user.username);
+                // Invite the new ramp user.
+                let mut ramp_user: ramp_api::User = Default::default();
+                ramp_user.email = new_user.email();
+                ramp_user.first_name = new_user.first_name.to_string();
+                ramp_user.last_name = new_user.last_name.to_string();
+                ramp_user.phone = new_user.recovery_phone.to_string();
+                ramp_user.role = "BUSINESS_USER".to_string();
+                if let Some(department) = ramp_departments.get(&new_user.department) {
+                    ramp_user.department = department.id.to_string();
+                }
+                let r = ramp.invite_new_user(&new_user).await.unwrap();
+
+                // TODO: Create them a card.
             }
         }
 

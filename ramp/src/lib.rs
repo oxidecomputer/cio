@@ -201,6 +201,69 @@ impl Ramp {
         Ok(transactions)
     }
 
+    /// List all the departments.
+    pub async fn list_departments(&self) -> Result<Vec<Department>, APIError> {
+        // Build the request.
+        let mut request = self.request(Method::GET, "departments", (), None);
+
+        let mut resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let mut r: Departments = resp.json().await.unwrap();
+
+        let mut departments = r.data;
+
+        let mut page = r.page.next;
+
+        // Paginate if we should.
+        // TODO: make this more DRY
+        while !page.is_empty() {
+            let url = Url::parse(&page).unwrap();
+            let pairs: Vec<(Cow<'_, str>, Cow<'_, str>)> = url.query_pairs().collect();
+            let mut new_pairs: Vec<(String, String)> = Vec::new();
+            for (a, b) in pairs {
+                let sa = a.into_owned();
+                let sb = b.into_owned();
+                new_pairs.push((sa, sb));
+            }
+
+            request = self.request(Method::GET, "departments", (), Some(new_pairs));
+
+            resp = self.client.execute(request).await.unwrap();
+            match resp.status() {
+                StatusCode::OK => (),
+                s => {
+                    return Err(APIError {
+                        status_code: s,
+                        body: resp.text().await.unwrap(),
+                    })
+                }
+            };
+
+            // Try to deserialize the response.
+            r = resp.json().await.unwrap();
+
+            departments.append(&mut r.data);
+
+            if !r.page.next.is_empty() && r.page.next != page {
+                page = r.page.next;
+            } else {
+                page = "".to_string();
+            }
+        }
+
+        Ok(departments)
+    }
+
     /// List all the users.
     pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
@@ -284,10 +347,30 @@ impl Ramp {
         Ok(resp.json().await.unwrap())
     }
 
-    /// Create a physical card.
-    pub async fn create_physical_card(&self) -> Result<Card, APIError> {
+    /// Update a user.
+    pub async fn update_user(&self, id: &str, user: &User) -> Result<User, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, "cards/deferred/physical", (), None);
+        let request = self.request(Method::PATCH, &format!("users/{}", id), user, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Create a physical card.
+    pub async fn create_physical_card(&self, card: &Card) -> Result<Card, APIError> {
+        // Build the request.
+        let request = self.request(Method::POST, "cards/deferred/physical", card, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -467,11 +550,27 @@ pub struct Users {
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Departments {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<Department>,
+    #[serde(default)]
+    pub page: Page,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Cards {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub data: Vec<Card>,
     #[serde(default)]
     pub page: Page,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Department {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
