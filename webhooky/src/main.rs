@@ -34,6 +34,7 @@ use serde_qs::Config as QSConfig;
 use sheets::Sheets;
 
 use cio_api::analytics::NewPageView;
+use cio_api::api_tokens::NewAPIToken;
 use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
@@ -1159,6 +1160,7 @@ pub struct ShippoTrackingUpdateEvent {
     path = "/checkr/background/update",
 }]
 async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<checkr::WebhookEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     let api_context = rqctx.context();
     let event = body_param.into_inner();
 
@@ -1194,6 +1196,7 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
         applicant.update(&api_context.db).await;
     }
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1227,16 +1230,28 @@ async fn listen_auth_gusto_callback(_rqctx: Arc<RequestContext<Context>>, query_
     method = GET,
     path = "/auth/quickbooks/callback",
 }]
-async fn listen_auth_quickbooks_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let api_context = rqctx.context();
     let event = query_args.into_inner();
 
     sentry::capture_message(&format!("auth quickbooks callback: {:?}", event), sentry::Level::Info);
     // Initialize the QuickBooks client.
-    let qb = QuickBooks::new_from_env().await;
+    let mut qb = QuickBooks::new_from_env().await;
     // Let's get the token from the code.
-    let t = qb.get_access_token().await.unwrap();
+    let t = qb.get_access_token(&event.code).await.unwrap();
     // TODO: Save the token to the database.
+    let token = NewAPIToken {
+        product: "quickbooks".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        last_updated_at: Utc::now(),
+    };
+    // Update it in the database.
+    token.upsert(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
