@@ -13,6 +13,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
+use crate::api_tokens::APIToken;
 use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -815,8 +816,18 @@ pub async fn sync_quickbooks() {
     // Initialize the database.
     let db = Database::new();
 
+    // Get the APIToken from the database.
+    let mut t = APIToken::get_from_db(&db, "quickbooks".to_string()).unwrap();
     // Initialize the QuickBooks client.
-    let qb = QuickBooks::new_from_env("", "");
+    let mut qb = QuickBooks::new_from_env(t.access_token, t.refresh_token);
+    let nt = qb.refresh_access_token().await.unwrap();
+    t.access_token = nt.access_token.to_string();
+    t.expires_in = nt.expires_in as i32;
+    t.refresh_token = nt.refresh_token.to_string();
+    t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+    t.last_updated_at = Utc::now();
+    // Update the token in the database.
+    t.update(&db).await;
 
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {
