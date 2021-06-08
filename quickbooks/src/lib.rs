@@ -97,14 +97,14 @@ impl QuickBooks {
     /// given a valid API key and your requests will work.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
-    pub fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    pub fn new_from_env<C, T, R>(company_id: C, token: T, refresh_token: R) -> Self
     where
+        C: ToString,
         T: ToString,
         R: ToString,
     {
         let client_id = env::var("QUICKBOOKS_CLIENT_ID").unwrap();
         let client_secret = env::var("QUICKBOOKS_CLIENT_SECRET").unwrap();
-        let company_id = env::var("QUICKBOOKS_COMPANY_ID").unwrap();
         let redirect_uri = env::var("QUICKBOOKS_REDIRECT_URI").unwrap();
 
         QuickBooks::new(client_id, client_secret, company_id, redirect_uri, token, refresh_token)
