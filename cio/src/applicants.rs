@@ -5,7 +5,6 @@ use std::fs;
 use std::io::{copy, stderr, stdout, Write};
 use std::process::Command;
 use std::str::FromStr;
-use std::thread;
 
 use async_trait::async_trait;
 use checkr::Checkr;
