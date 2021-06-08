@@ -494,6 +494,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Portwell".to_string()
     } else if s == "PAYPAL *QUICKLUTION QU" {
         "Mail Merge for Avery Labels".to_string()
+    } else if s == "Pentagram Design LTD" {
+        "Pentagram".to_string()
     } else {
         s.to_string()
     }
@@ -641,7 +643,7 @@ pub mod bill_com_date_format {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer).unwrap_or_default();
-        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap())
+        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap_or_else(|_| crate::utils::default_date()))
     }
 }
 
