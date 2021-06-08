@@ -32,7 +32,7 @@ use reqwest::{header, Client, Method, RequestBuilder, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Gusto API.
-const ENDPOINT: &str = "https://api.gusto.com";
+const ENDPOINT: &str = "https://api.gusto-demo.com";
 
 /// Entrypoint for interacting with the Gusto API.
 pub struct Gusto {
