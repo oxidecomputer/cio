@@ -516,7 +516,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 a.update(db).await;
 
                 // Authenticate DocuSign.
-                let ds = DocuSign::new_from_env().await;
+                let ds = docusign::DocuSign::new_from_env().await;
 
                 // Get the template we need.
                 let template_id = get_docusign_template_id(&ds).await;
