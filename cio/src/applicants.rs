@@ -1072,7 +1072,7 @@ The Oxide Team",
 
         // If the application is as new as the last week then parse all the contents.
         // This takes a long time so we skip all the others.
-        if (duration_from_now < Duration::days(2) || (duration_from_now < Duration::days(10) && self.question_why_oxide.is_empty()))
+        if (duration_from_now < Duration::days(2) || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
             && self.status != crate::applicant_status::Status::Declined.to_string()
         {
             // Read the file contents.
