@@ -1139,25 +1139,27 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
             }
         }
 
-        // Check if we have a Ramp user for the user.
-        match ramp_users.get(&new_user.email()) {
-            // We have the user, we don't need to do anything.
-            Some(_) => (),
-            None => {
-                println!("inviting new ramp user {}", new_user.username);
-                // Invite the new ramp user.
-                let mut ramp_user: ramp_api::User = Default::default();
-                ramp_user.email = new_user.email();
-                ramp_user.first_name = new_user.first_name.to_string();
-                ramp_user.last_name = new_user.last_name.to_string();
-                ramp_user.phone = new_user.recovery_phone.to_string();
-                ramp_user.role = "BUSINESS_USER".to_string();
-                if let Some(department) = ramp_departments.get(&new_user.department) {
-                    ramp_user.department_id = department.id.to_string();
-                }
-                let _r = ramp.invite_new_user(&ramp_user).await.unwrap();
+        if !new_user.is_consultant() && !new_user.is_system_account() {
+            // Check if we have a Ramp user for the user.
+            match ramp_users.get(&new_user.email()) {
+                // We have the user, we don't need to do anything.
+                Some(_) => (),
+                None => {
+                    println!("inviting new ramp user {}", new_user.username);
+                    // Invite the new ramp user.
+                    let mut ramp_user: ramp_api::User = Default::default();
+                    ramp_user.email = new_user.email();
+                    ramp_user.first_name = new_user.first_name.to_string();
+                    ramp_user.last_name = new_user.last_name.to_string();
+                    ramp_user.phone = new_user.recovery_phone.to_string();
+                    ramp_user.role = "BUSINESS_USER".to_string();
+                    if let Some(department) = ramp_departments.get(&new_user.department) {
+                        ramp_user.department_id = department.id.to_string();
+                    }
+                    let _r = ramp.invite_new_user(&ramp_user).await.unwrap();
 
-                // TODO: Create them a card.
+                    // TODO: Create them a card.
+                }
             }
         }
 
