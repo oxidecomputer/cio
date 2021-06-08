@@ -87,7 +87,10 @@ impl Ramp {
     async fn get_token(&mut self) -> Result<(), APIError> {
         let client = reqwest::Client::new();
 
-        let params = [("grant_type", "client_credentials"), ("scope", "transactions:read users:read users:write receipts:read cards:read")];
+        let params = [
+            ("grant_type", "client_credentials"),
+            ("scope", "transactions:read users:read users:write receipts:read cards:read departments:read"),
+        ];
         let resp = client.post(TOKEN_ENDPOINT).form(&params).basic_auth(&self.client_id, Some(&self.client_secret)).send().await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
