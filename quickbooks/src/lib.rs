@@ -170,7 +170,7 @@ impl QuickBooks {
         Ok(())
     }
 
-    pub async fn get_access_token(&mut self, code: &str) -> Result<(), APIError> {
+    pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
@@ -189,9 +189,9 @@ impl QuickBooks {
         let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token;
+        self.refresh_token = t.refresh_token.to_string();
 
-        Ok(())
+        Ok(t)
     }
 
     pub async fn list_attachments_for_purchase(&self, purchase_id: &str) -> Result<Vec<Attachment>, APIError> {
