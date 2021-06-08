@@ -2772,7 +2772,7 @@ impl Applicant {
                 // In order to not "over excessively poll the API here, we need to sleep for 15
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
-                thread::sleep(std::time::Duration::from_secs(15));
+                //thread::sleep(std::time::Duration::from_secs(15));
                 bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
             }
 
@@ -2791,7 +2791,7 @@ impl Applicant {
         // In order to not "over excessively poll the API here, we need to sleep for 15
         // min before getting each of the documents.
         // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
-        thread::sleep(std::time::Duration::from_secs(900));
+        //thread::sleep(std::time::Duration::from_secs(900));
         let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
 
         // Let's get the employee for the applicant.
