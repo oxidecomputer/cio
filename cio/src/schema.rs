@@ -19,6 +19,7 @@ table! {
     api_tokens (id) {
         id -> Int4,
         product -> Varchar,
+        company_id -> Varchar,
         token_type -> Varchar,
         access_token -> Varchar,
         expires_in -> Int4,

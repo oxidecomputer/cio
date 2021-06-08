@@ -1,6 +1,7 @@
 CREATE TABLE api_tokens (
     id SERIAL PRIMARY KEY,
     product VARCHAR NOT NULL UNIQUE,
+    company_id VARCHAR NOT NULL UNIQUE,
     token_type VARCHAR NOT NULL,
     access_token VARCHAR NOT NULL,
     expires_in INTEGER DEFAULT 0 NOT NULL,

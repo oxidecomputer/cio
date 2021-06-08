@@ -22,6 +22,8 @@ pub struct NewAPIToken {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub product: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub company_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub token_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub access_token: String,
