@@ -1155,7 +1155,7 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
                 if let Some(department) = ramp_departments.get(&new_user.department) {
                     ramp_user.department_id = department.id.to_string();
                 }
-                let r = ramp.invite_new_user(&ramp_user).await.unwrap();
+                let _r = ramp.invite_new_user(&ramp_user).await.unwrap();
 
                 // TODO: Create them a card.
             }
