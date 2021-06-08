@@ -12,7 +12,7 @@
  *
  * async fn list_purchases() {
  *     // Initialize the QuickBooks client.
- *     let quickbooks = QuickBooks::new_from_env("", "").await;
+ *     let quickbooks = QuickBooks::new_from_env("", "");
  *
  *     let purchases = quickbooks.list_purchases().await.unwrap();
  *
@@ -54,7 +54,7 @@ impl QuickBooks {
     /// Create a new QuickBooks client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub async fn new<I, K, B, R, T, Q>(client_id: I, client_secret: K, company_id: B, redirect_uri: R, token: T, refresh_token: Q) -> Self
+    pub fn new<I, K, B, R, T, Q>(client_id: I, client_secret: K, company_id: B, redirect_uri: R, token: T, refresh_token: Q) -> Self
     where
         I: ToString,
         K: ToString,
@@ -97,7 +97,7 @@ impl QuickBooks {
     /// given a valid API key and your requests will work.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
-    pub async fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    pub fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
     where
         T: ToString,
         R: ToString,
@@ -107,7 +107,7 @@ impl QuickBooks {
         let company_id = env::var("QUICKBOOKS_COMPANY_ID").unwrap();
         let redirect_uri = env::var("QUICKBOOKS_REDIRECT_URI").unwrap();
 
-        QuickBooks::new(client_id, client_secret, company_id, redirect_uri, token, refresh_token).await
+        QuickBooks::new(client_id, client_secret, company_id, redirect_uri, token, refresh_token)
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request

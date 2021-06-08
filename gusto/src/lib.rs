@@ -29,14 +29,22 @@ use std::sync::Arc;
 
 use chrono::naive::NaiveDate;
 use reqwest::{header, Client, Method, RequestBuilder, StatusCode, Url};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Gusto API.
-const ENDPOINT: &str = "https://api.gusto-demo.com";
+const ENDPOINT: &str = "https://api.gusto-demo.com/";
 
 /// Entrypoint for interacting with the Gusto API.
 pub struct Gusto {
-    key: String,
+    token: String,
+    // This expires in 101 days. It is hardcoded in the GitHub Actions secrets,
+    // We might want something a bit better like storing it in the database.
+    refresh_token: String,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+    company_id: String,
 
     client: Arc<Client>,
 }
@@ -44,18 +52,40 @@ pub struct Gusto {
 impl Gusto {
     /// Create a new Gusto client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API Key your requests will work.
-    pub fn new<K>(key: K) -> Self
+    /// given a valid API key your requests will work.
+    pub fn new<I, K, B, R, T, Q>(client_id: I, client_secret: K, company_id: B, redirect_uri: R, token: T, refresh_token: Q) -> Self
     where
+        I: ToString,
         K: ToString,
+        B: ToString,
+        R: ToString,
+        T: ToString,
+        Q: ToString,
     {
         let client = Client::builder().build();
         match client {
-            Ok(c) => Self {
-                key: key.to_string(),
+            Ok(c) => {
+                let g = Gusto {
+                    client_id: client_id.to_string(),
+                    client_secret: client_secret.to_string(),
+                    company_id: company_id.to_string(),
+                    redirect_uri: redirect_uri.to_string(),
+                    token: token.to_string(),
+                    refresh_token: refresh_token.to_string(),
 
-                client: Arc::new(c),
-            },
+                    client: Arc::new(c),
+                };
+
+                if g.token.is_empty() || g.refresh_token.is_empty() {
+                    // This is super hacky and a work around since there is no way to
+                    // auth without using the browser.
+                    println!("gusto consent URL: {}", g.user_consent_url());
+                }
+                // We do not refresh the access token since we leave that up to the
+                // user to do so they can re-save it to their database.
+
+                g
+            }
             Err(e) => panic!("creating client failed: {:?}", e),
         }
     }
@@ -63,16 +93,20 @@ impl Gusto {
     /// Create a new Gusto client struct from environment variables. It
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API your requests will work.
-    pub fn new_from_env() -> Self {
-        let key = env::var("GUSTO_API_KEY").unwrap();
+    /// given a valid API key and your requests will work.
+    /// We pass in the token and refresh token to the client so if you are storing
+    /// it in a database, you can get it first.
+    pub fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    where
+        T: ToString,
+        R: ToString,
+    {
+        let client_id = env::var("GUSTO_CLIENT_ID").unwrap();
+        let client_secret = env::var("GUSTO_CLIENT_SECRET").unwrap();
+        let company_id = env::var("GUSTO_COMPANY_ID").unwrap();
+        let redirect_uri = env::var("GUSTO_REDIRECT_URI").unwrap();
 
-        Gusto::new(key)
-    }
-
-    /// Get the currently set API key.
-    pub fn get_key(&self) -> &str {
-        &self.key
+        Gusto::new(client_id, client_secret, company_id, redirect_uri, token, refresh_token)
     }
 
     fn request<P>(&self, method: Method, path: P) -> RequestBuilder
@@ -88,7 +122,7 @@ impl Gusto {
         }
         let url = base.join(&p).unwrap();
 
-        let bt = format!("Bearer {}", self.key);
+        let bt = format!("Token {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -97,6 +131,56 @@ impl Gusto {
         headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
         self.client.request(method, url).headers(headers)
+    }
+
+    pub fn user_consent_url(&self) -> String {
+        format!("{}oauth/authorize?client_id={}&response_type=code&redirect_uri={}", ENDPOINT, self.client_id, self.redirect_uri)
+    }
+
+    pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+        let params = [
+            ("grant_type", "refresh_token"),
+            ("refresh_token", &self.refresh_token),
+            ("redirect_uri", &self.redirect_uri),
+            ("client_id", &self.client_id),
+            ("client_secret", &self.client_secret),
+        ];
+        let client = reqwest::Client::new();
+        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).form(&params).send().await.unwrap();
+
+        // Unwrap the response.
+        let t: AccessToken = resp.json().await.unwrap();
+
+        self.token = t.access_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();
+
+        Ok(t)
+    }
+
+    pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+        let params = [
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("redirect_uri", &self.redirect_uri),
+            ("client_id", &self.client_id),
+            ("client_secret", &self.client_secret),
+        ];
+        let client = reqwest::Client::new();
+        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).form(&params).send().await.unwrap();
+
+        // Unwrap the response.
+        let t: AccessToken = resp.json().await.unwrap();
+
+        self.token = t.access_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();
+
+        Ok(t)
     }
 
     /// Get information about the current user.
@@ -123,9 +207,9 @@ impl Gusto {
     }
 
     /// List all employees by company.
-    pub async fn list_employees_by_company_id(&self, company_id: &u64) -> Result<Vec<Employee>, APIError> {
+    pub async fn list_employees_by_company_id(&self) -> Result<Vec<Employee>, APIError> {
         // Build the request.
-        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", company_id));
+        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", self.company_id));
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -174,7 +258,7 @@ impl error::Error for APIError {
 
 /// An employee.
 /// FROM: https://docs.gusto.com/v1/employees
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct Employee {
     #[serde(default)]
     pub id: u64,
@@ -197,7 +281,6 @@ pub struct Employee {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub ssn: String,
     // In the format YYYY-MM-DD.
-    #[serde(with = "date_format")]
     pub date_of_birth: NaiveDate,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub jobs: Vec<Job>,
@@ -216,7 +299,7 @@ pub struct Employee {
 
 /// A job.
 /// FROM: https://docs.gusto.com/v1/jobs
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct Job {
     #[serde(default)]
     pub id: u64,
@@ -228,7 +311,6 @@ pub struct Job {
     pub location_id: u64,
     pub location: Location,
     // In the format YYYY-MM-DD.
-    #[serde(with = "date_format")]
     pub hire_date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title: String,
@@ -246,7 +328,7 @@ pub struct Job {
 
 /// A location.
 /// FROM: https://docs.gusto.com/v1/locations
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Location {
     #[serde(default)]
     pub id: u64,
@@ -274,7 +356,7 @@ pub struct Location {
 
 /// A compensation.
 /// FROM: https://docs.gusto.com/v1/compensations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct Compensation {
     #[serde(default)]
     pub id: u64,
@@ -289,13 +371,12 @@ pub struct Compensation {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub flsa_status: String,
     // In the format YYYY-MM-DD.
-    #[serde(with = "date_format")]
     pub effective_date: NaiveDate,
 }
 
 /// An address.
 /// FROM: https://docs.gusto.com/v1/employee_home_address
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Address {
     #[serde(default)]
     pub id: u64,
@@ -321,7 +402,7 @@ pub struct Address {
 
 /// A garnishment.
 /// FROM: https://docs.gusto.com/v1/garnishments
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Garnishment {
     #[serde(default)]
     pub id: u64,
@@ -349,7 +430,7 @@ pub struct Garnishment {
 
 /// Paid time off.
 /// FROM: https://docs.gusto.com/v1/paid_time_off
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct PaidTimeOff {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -369,7 +450,7 @@ pub struct PaidTimeOff {
 
 /// Termination.
 /// FROM: https://docs.gusto.com/v1/terminations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct Termination {
     #[serde(default)]
     pub id: u64,
@@ -380,7 +461,6 @@ pub struct Termination {
     #[serde(default)]
     pub active: bool,
     // In the format YYYY-MM-DD.
-    #[serde(with = "date_format")]
     pub effective_date: NaiveDate,
     #[serde(default)]
     pub run_termination_payroll: bool,
@@ -388,7 +468,7 @@ pub struct Termination {
 
 /// Current user.
 /// FROM: https://docs.gusto.com/v1/current_user
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct CurrentUser {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
@@ -398,7 +478,7 @@ pub struct CurrentUser {
 
 /// A role.
 /// FROM: https://docs.gusto.com/v1/current_user
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct Role {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub companies: Vec<Company>,
@@ -406,7 +486,7 @@ pub struct Role {
 
 /// A company.
 /// FROM: https://docs.gusto.com/v1/companies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct Company {
     #[serde(default)]
     pub id: u64,
@@ -428,41 +508,16 @@ pub struct Company {
     pub primary_payroll_admin: Employee,
 }
 
-/// Convert the date format `%Y-%m-%d` to a NaiveDate.
-pub mod date_format {
-    use chrono::naive::NaiveDate;
-    use serde::{self, Deserialize, Deserializer, Serializer};
-
-    const FORMAT: &str = "%Y-%m-%d";
-
-    // The signature of a serialize_with function must follow the pattern:
-    //
-    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
-    //    where
-    //        S: Serializer
-    //
-    // although it may also be generic over the input types T.
-    pub fn serialize<S>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let s = format!("{}", date.format(FORMAT));
-        serializer.serialize_str(&s)
-    }
-
-    // The signature of a deserialize_with function must follow the pattern:
-    //
-    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
-    //    where
-    //        D: Deserializer<'de>
-    //
-    // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-
-        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap())
-    }
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct AccessToken {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub access_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token_type: String,
+    #[serde(default)]
+    pub expires_in: i64,
+    #[serde(default)]
+    pub x_refresh_token_expires_in: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub refresh_token: String,
 }
