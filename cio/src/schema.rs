@@ -12,6 +12,23 @@ table! {
         invoices -> Array<Text>,
         link_to_vendor -> Array<Text>,
         airtable_record_id -> Varchar,
+        invoices -> Array<Text>,
+    }
+}
+
+table! {
+    api_tokens (id) {
+        id -> Int4,
+        product -> Varchar,
+        token_type -> Varchar,
+        access_token -> Varchar,
+        expires_in -> Int4,
+        refresh_token -> Varchar,
+        refresh_token_expires_in -> Int4,
+        state -> Varchar,
+        memo -> Varchar,
+        last_updated_at -> Timestamptz,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -662,18 +679,14 @@ table! {
         work_address_country -> Varchar,
         work_address_country_code -> Varchar,
         work_address_formatted -> Varchar,
-        start_date -> Date,
-        birthday -> Date,
-        public_ssh_keys -> Array<Text>,
-        typev -> Varchar,
-        google_anniversary_event_id -> Varchar,
-        geocode_cache -> Varchar,
-        airtable_record_id -> Varchar,
+        home_address_latitude -> Float4,
+        home_address_longitude -> Float4,
     }
 }
 
 allow_tables_to_appear_in_same_query!(
     accounts_payables,
+    api_tokens,
     applicant_interviews,
     applicant_reviewers,
     applicants,
