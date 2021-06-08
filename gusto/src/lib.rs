@@ -44,7 +44,6 @@ pub struct Gusto {
     client_id: String,
     client_secret: String,
     redirect_uri: String,
-    company_id: String,
 
     client: Arc<Client>,
 }
@@ -53,11 +52,10 @@ impl Gusto {
     /// Create a new Gusto client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, B, R, T, Q>(client_id: I, client_secret: K, company_id: B, redirect_uri: R, token: T, refresh_token: Q) -> Self
+    pub fn new<I, K, R, T, Q>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q) -> Self
     where
         I: ToString,
         K: ToString,
-        B: ToString,
         R: ToString,
         T: ToString,
         Q: ToString,
@@ -68,7 +66,6 @@ impl Gusto {
                 let g = Gusto {
                     client_id: client_id.to_string(),
                     client_secret: client_secret.to_string(),
-                    company_id: company_id.to_string(),
                     redirect_uri: redirect_uri.to_string(),
                     token: token.to_string(),
                     refresh_token: refresh_token.to_string(),
@@ -103,10 +100,9 @@ impl Gusto {
     {
         let client_id = env::var("GUSTO_CLIENT_ID").unwrap();
         let client_secret = env::var("GUSTO_CLIENT_SECRET").unwrap();
-        let company_id = env::var("GUSTO_COMPANY_ID").unwrap();
         let redirect_uri = env::var("GUSTO_REDIRECT_URI").unwrap();
 
-        Gusto::new(client_id, client_secret, company_id, redirect_uri, token, refresh_token)
+        Gusto::new(client_id, client_secret, redirect_uri, token, refresh_token)
     }
 
     fn request<P>(&self, method: Method, path: P) -> RequestBuilder
@@ -206,10 +202,20 @@ impl Gusto {
         Ok(result)
     }
 
-    /// List all employees by company.
-    pub async fn list_employees_by_company_id(&self) -> Result<Vec<Employee>, APIError> {
+    /// List all employees.
+    pub async fn list_employees(&self) -> Result<Vec<Employee>, APIError> {
+        // First we need to get the company id.
+        let current_user = self.current_user().await.unwrap();
+        let mut company_id = String::new();
+        for (t, role) in current_user.roles {
+            if t == "payroll_admin" {
+                company_id = role.companies[0].id.to_string();
+                break;
+            }
+        }
+
         // Build the request.
-        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", self.company_id));
+        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", company_id));
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
