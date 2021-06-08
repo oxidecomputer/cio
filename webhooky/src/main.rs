@@ -24,6 +24,7 @@ use dropshot::{
     UntypedBody,
 };
 use google_drive::GoogleDrive;
+use gusto_api::Gusto;
 use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
 use quickbooks::QuickBooks;
@@ -1215,11 +1216,30 @@ pub struct AuthCallback {
     method = GET,
     path = "/auth/gusto/callback",
 }]
-async fn listen_auth_gusto_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let api_context = rqctx.context();
     let event = query_args.into_inner();
 
     sentry::capture_message(&format!("auth gusto callback: {:?}", event), sentry::Level::Info);
+
+    // Initialize the Gusto client.
+    let mut g = Gusto::new_from_env("", "");
+
+    // Let's get the token from the code.
+    let t = g.get_access_token(&event.code).await.unwrap();
+    // Save the token to the database.
+    let token = NewAPIToken {
+        product: "gusto".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        last_updated_at: Utc::now(),
+    };
+    // Update it in the database.
+    token.upsert(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1235,7 +1255,6 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     let api_context = rqctx.context();
     let event = query_args.into_inner();
 
-    sentry::capture_message(&format!("auth quickbooks callback: {:?}", event), sentry::Level::Info);
     // Initialize the QuickBooks client.
     let mut qb = QuickBooks::new_from_env("", "");
     // Let's get the token from the code.

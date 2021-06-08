@@ -499,7 +499,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#25e0194a8617837725d90d84a35e09564234abd0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#63a543c6c65b8f7a562c5b046c01d03bb4cd33e1"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2106,7 +2106,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#25e0194a8617837725d90d84a35e09564234abd0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#63a543c6c65b8f7a562c5b046c01d03bb4cd33e1"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -4716,6 +4716,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
  "influxdb",
