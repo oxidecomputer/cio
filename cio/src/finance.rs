@@ -597,12 +597,14 @@ pub struct NewAccountsPayable {
     pub vendor: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "CURRENCY")]
     pub currency: String,
-    #[serde(alias = "PROCESS DATE")]
+    #[serde(alias = "PROCESS DATE", deserialize_with = "bill_com_date_format::deserialize")]
     pub date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT TYPE")]
     pub payment_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT STATUS")]
     pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT AMOUNT")]
+    pub notes: String,
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
@@ -619,6 +621,28 @@ pub struct NewAccountsPayable {
 #[async_trait]
 impl UpdateAirtableRecord<AccountsPayable> for AccountsPayable {
     async fn update_airtable_record(&mut self, _record: AccountsPayable) {}
+}
+
+pub mod bill_com_date_format {
+    use chrono::NaiveDate;
+    use serde::{self, Deserialize, Deserializer};
+
+    const FORMAT: &str = "%m/%d/%y";
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap_or_default();
+        Ok(NaiveDate::parse_from_str(&s, FORMAT).unwrap())
+    }
 }
 
 /// Sync accounts payable.
@@ -812,6 +836,55 @@ pub async fn refresh_expensify_transactions() {
     }
 }
 
+/// Read the Bill.com payments from a csv.
+/// We don't run this except locally.
+pub async fn refresh_bill_com_transactions() {
+    // Initialize the database.
+    let db = Database::new();
+
+    let mut path = env::current_dir().unwrap();
+    path.push("bill.com.csv");
+
+    if !path.exists() {
+        // Return early the path does not exist.
+        println!("Bill.com csv at {} does not exist, returning early", path.to_str().unwrap());
+        return;
+    }
+
+    println!("Reading csv from {}", path.to_str().unwrap());
+    let f = File::open(&path).unwrap();
+    let mut rdr = csv::Reader::from_reader(f);
+    for result in rdr.deserialize() {
+        let mut record: NewAccountsPayable = result.unwrap();
+
+        // Get the amount from the notes.
+        let sa = record.notes.replace('$', "").replace(',', "");
+        record.amount = sa.parse::<f32>().unwrap();
+
+        // Make sure we have a transaction id.
+        if record.confirmation_number.is_empty() {
+            println!("transaction_id is missing: {:?}", record);
+            // We don't want to save it to our database.
+            continue;
+        }
+
+        // Try to link to the correct vendor.
+        let vendor = clean_vendor_name(&record.vendor);
+        // Try to find the merchant in our list of vendors.
+        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+            Some(v) => {
+                record.link_to_vendor = vec![v.airtable_record_id.to_string()];
+            }
+            None => {
+                println!("could not find vendor that matches {}", vendor);
+            }
+        }
+
+        // Let's add the record to our database.
+        record.upsert(&db).await;
+    }
+}
+
 pub async fn sync_quickbooks() {
     // Initialize the database.
     let db = Database::new();
@@ -976,12 +1049,20 @@ fn clean_merchant_name(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::finance::{refresh_accounts_payable, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_transactions, refresh_software_vendors, sync_quickbooks};
+    use crate::finance::{
+        refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_transactions, refresh_software_vendors, sync_quickbooks,
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_quickbooks() {
         sync_quickbooks().await;
+    }
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_finance_bill_com() {
+        refresh_bill_com_transactions().await;
     }
 
     #[ignore]
