@@ -66,7 +66,7 @@ impl QuickBooks {
         let client = Client::builder().build();
         match client {
             Ok(c) => {
-                let mut qb = QuickBooks {
+                let qb = QuickBooks {
                     client_id: client_id.to_string(),
                     client_secret: client_secret.to_string(),
                     company_id: company_id.to_string(),
@@ -82,9 +82,8 @@ impl QuickBooks {
                     // auth without using the browser.
                     println!("quickbooks consent URL: {}", qb.user_consent_url());
                 }
-                if qb.refresh_token.is_empty() {
-                    qb.refresh_access_token().await.unwrap();
-                }
+                // We do not refresh the access token since we leave that up to the
+                // user to do so they can re-save it to their database.
 
                 qb
             }
@@ -149,12 +148,7 @@ impl QuickBooks {
         )
     }
 
-    pub async fn refresh_access_token(&mut self) -> Result<(), APIError> {
-        if self.refresh_token.is_empty() {
-            // Return early.
-            return Ok(());
-        }
-
+    pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
@@ -173,9 +167,9 @@ impl QuickBooks {
         let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token;
+        self.refresh_token = t.refresh_token.to_string();
 
-        Ok(())
+        Ok(t)
     }
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {

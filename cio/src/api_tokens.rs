@@ -25,10 +25,12 @@ pub struct NewAPIToken {
     pub token_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub access_token: String,
+    /// Seconds until the token expires.
     #[serde(default)]
     pub expires_in: i32,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub refresh_token: String,
+    /// Seconds until the refresh token expires.
     #[serde(default)]
     pub refresh_token_expires_in: i32,
     pub last_updated_at: DateTime<Utc>,
