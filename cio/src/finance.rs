@@ -819,7 +819,7 @@ pub async fn sync_quickbooks() {
     // Get the APIToken from the database.
     let mut t = APIToken::get_from_db(&db, "quickbooks".to_string()).unwrap();
     // Initialize the QuickBooks client.
-    let mut qb = QuickBooks::new_from_env(t.company_id, t.access_token, t.refresh_token);
+    let mut qb = QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
     let nt = qb.refresh_access_token().await.unwrap();
     t.access_token = nt.access_token.to_string();
     t.expires_in = nt.expires_in as i32;
