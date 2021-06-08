@@ -1073,7 +1073,7 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
     }
     let rd = ramp.list_departments().await.unwrap();
     let mut ramp_departments: HashMap<String, ramp_api::Department> = HashMap::new();
-    let r in rd {
+    for r in rd {
         ramp_departments.insert(r.name.to_string(), r);
     }
 
