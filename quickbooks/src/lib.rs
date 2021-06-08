@@ -12,7 +12,7 @@
  *
  * async fn list_purchases() {
  *     // Initialize the QuickBooks client.
- *     let quickbooks = QuickBooks::new_from_env("", "");
+ *     let quickbooks = QuickBooks::new_from_env("", "", "");
  *
  *     let purchases = quickbooks.list_purchases().await.unwrap();
  *

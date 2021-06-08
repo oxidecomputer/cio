@@ -472,7 +472,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "quickbooks 0.1.8",
+ "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.3",
  "regex 1.5.4",
@@ -499,7 +499,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#cdffd1e83d72e7295a86cc164f3753caeaaeb39c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#665af09dc315b55ed2d871aacfb6fc43fb78a3c4"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -535,7 +535,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "quickbooks 0.1.8",
+ "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.3",
  "regex 1.5.4",
@@ -2106,7 +2106,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#cdffd1e83d72e7295a86cc164f3753caeaaeb39c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#665af09dc315b55ed2d871aacfb6fc43fb78a3c4"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2848,9 +2848,7 @@ dependencies = [
 
 [[package]]
 name = "quickbooks"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8d3d69bbbb4f2eb8c9a0d46399f036002fce1c54b4c552fc95507003896a29c"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2862,6 +2860,8 @@ dependencies = [
 [[package]]
 name = "quickbooks"
 version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43311e0431ca1dff755c29c2d53189e9d41ca1646de049146a8e9ed04f038be8"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4720,7 +4720,7 @@ dependencies = [
  "http",
  "hubcaps",
  "influxdb",
- "quickbooks 0.1.8",
+ "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
  "sentry",
  "serde",

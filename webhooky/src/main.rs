@@ -1236,6 +1236,7 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        company_id: "".to_string(),
         last_updated_at: Utc::now(),
     };
     // Update it in the database.
@@ -1256,7 +1257,7 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     let event = query_args.into_inner();
 
     // Initialize the QuickBooks client.
-    let mut qb = QuickBooks::new_from_env("", "");
+    let mut qb = QuickBooks::new_from_env("", "", "");
     // Let's get the token from the code.
     let t = qb.get_access_token(&event.code).await.unwrap();
     // Save the token to the database.
@@ -1267,6 +1268,7 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        company_id: event.realm_id.to_string(),
         last_updated_at: Utc::now(),
     };
     // Update it in the database.
