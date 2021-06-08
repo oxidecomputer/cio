@@ -17,7 +17,7 @@ pub struct CustomerInteraction {
     pub name: String,
     #[serde(rename = "Company")]
     pub company: Vec<String>,
-    #[serde(with = "date_format", rename = "Date")]
+    #[serde(rename = "Date")]
     pub date: NaiveDate,
     #[serde(rename = "Type")]
     pub meeting_type: String,
