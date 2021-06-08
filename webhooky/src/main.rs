@@ -33,7 +33,7 @@ use serde_qs::Config as QSConfig;
 use sheets::Sheets;
 
 use cio_api::analytics::NewPageView;
-use cio_api::applicants::{get_role_from_sheet_id, Applicant, NewApplicant};
+use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant};
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
 use cio_api::mailchimp::MailchimpWebhook;
@@ -509,6 +509,20 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
         if !status.is_empty() {
             a.status = status;
             a.raw_status = event.event.value.to_string();
+
+            // If they changed their status to OnBoarding let's do the docusign updates.
+            if a.status == cio_api::applicant_status::Status::Onboarding.to_string() {
+                // First let's update the applicant.
+                a.update(db).await;
+
+                // Authenticate DocuSign.
+                let ds = DocuSign::new_from_env().await;
+
+                // Get the template we need.
+                let template_id = get_docusign_template_id(&ds).await;
+
+                a.do_docusign(db, &ds, &template_id).await;
+            }
         }
     } else if column_header.contains("start date") {
         if event.event.value.trim().is_empty() {
