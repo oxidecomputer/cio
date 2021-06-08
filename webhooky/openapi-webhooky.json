@@ -290,20 +290,37 @@
         }
       }
     },
-    "/checkr/background/update": {
-      "post": {
-        "description": "Listen for updates to our checkr background checks.",
-        "operationId": "listen_checkr_background_update_webhooks",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebhookEvent"
-              }
-            }
+    "/auth/docusign/callback": {
+      "get": {
+        "description": "Listen for callbacks to docusign auth.",
+        "operationId": "listen_auth_docusign_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
           },
-          "required": true
-        },
+          {
+            "in": "query",
+            "name": "realmId",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state that we had passed in through the user consent URL.",
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
         "responses": {
           "202": {
             "description": "successfully enqueued operation",
@@ -319,10 +336,10 @@
         }
       }
     },
-    "/docusign/callback": {
+    "/auth/gusto/callback": {
       "get": {
-        "description": "Listen for callbacks to docusign auth.",
-        "operationId": "listen_docusign_callback",
+        "description": "Listen for callbacks to Gusto auth.",
+        "operationId": "listen_auth_gusto_callback",
         "parameters": [
           {
             "in": "query",
@@ -331,8 +348,100 @@
               "type": "string"
             },
             "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "realmId",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state that we had passed in through the user consent URL.",
+              "type": "string"
+            },
+            "style": "form"
           }
         ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/quickbooks/callback": {
+      "get": {
+        "description": "Listen for callbacks to QuickBooks auth.",
+        "operationId": "listen_auth_quickbooks_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "realmId",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state that we had passed in through the user consent URL.",
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkr/background/update": {
+      "post": {
+        "description": "Listen for updates to our checkr background checks.",
+        "operationId": "listen_checkr_background_update_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "202": {
             "description": "successfully enqueued operation",
