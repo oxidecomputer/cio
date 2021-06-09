@@ -1284,16 +1284,16 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
-/** Listen for callbacks to Plaid auth. */
+/** Listen for webhooks from Plaid. */
 #[endpoint {
-    method = GET,
-    path = "/auth/plaid/callback",
+    method = POST,
+    path = "/plaid",
 }]
-async fn listen_auth_plaid_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_plaid_callback(_rqctx: Arc<RequestContext<Context>>, body_args: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = query_args.into_inner();
+    let event = body_args.into_inner();
 
-    sentry::capture_message(&format!("auth plaid callback: {:?}", event), sentry::Level::Info);
+    sentry::capture_message(&format!("plaid webhook: {:?}", event), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
