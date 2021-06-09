@@ -38,72 +38,73 @@ pub async fn sync_changes_to_google_events() {
             }
 
             // Get the event from Google Calendar.
-            let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
-            // If the event is cancelled, we can just carry on our merry way.
-            if event.status.to_lowercase().trim() == "cancelled" {
-                // Set the airtable record to cancelled.
-                record.fields.cancelled = true;
-            }
+            if let Ok(event) = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await {
+                // If the event is cancelled, we can just carry on our merry way.
+                if event.status.to_lowercase().trim() == "cancelled" {
+                    // Set the airtable record to cancelled.
+                    record.fields.cancelled = true;
+                }
 
-            let date = event.start.date_time.unwrap();
-            let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
-            // Update the date of the meeting based on the calendar event.
-            record.fields.date = pacific_time.date().naive_utc();
+                let date = event.start.date_time.unwrap();
+                let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
+                // Update the date of the meeting based on the calendar event.
+                record.fields.date = pacific_time.date().naive_utc();
 
-            // Clear out the fields that are functions since the API cannot take values for those.
-            record.fields.name = "".to_string();
-            record.fields.week = "".to_string();
+                // Clear out the fields that are functions since the API cannot take values for those.
+                record.fields.name = "".to_string();
+                record.fields.week = "".to_string();
 
-            // Update the Airtable
-            airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
+                // Update the Airtable
+                airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
 
-            // Get the discussion topics for the meeting.
-            let mut discussion_topics = String::new();
-            for id in &record.fields.proposed_discussion {
-                // Get the topic from Airtable.
-                let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, &id).await.unwrap();
+                // Get the discussion topics for the meeting.
+                let mut discussion_topics = String::new();
+                for id in &record.fields.proposed_discussion {
+                    // Get the topic from Airtable.
+                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, &id).await.unwrap();
 
-                discussion_topics = format!("{}\n- {} from {}", discussion_topics, topic.fields.topic, topic.fields.submitter.name);
-            }
-            discussion_topics = discussion_topics.trim().to_string();
-            if !discussion_topics.is_empty() {
-                discussion_topics = format!("Discussion topics:\n{}", discussion_topics);
-            }
+                    discussion_topics = format!("{}\n- {} from {}", discussion_topics, topic.fields.topic, topic.fields.submitter.name);
+                }
+                discussion_topics = discussion_topics.trim().to_string();
+                if !discussion_topics.is_empty() {
+                    discussion_topics = format!("Discussion topics:\n{}", discussion_topics);
+                }
 
-            // Update the event description.
-            let description = format!(
-                "This is the event for {} huddles.
+                // Update the event description.
+                let description = format!(
+                    "This is the event for {} huddles.
 
 You can submit topics at: https://{}-huddle-form.corp.oxide.computer
 
 The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
 
 {}",
-                slug.replace('-', " "),
-                slug,
-                slug,
-                discussion_topics
-            );
+                    slug.replace('-', " "),
+                    slug,
+                    slug,
+                    discussion_topics
+                );
 
-            if event.recurring_event_id != event.id {
-                // Update the calendar event with the new description.
-                let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
-                // Get the event under the right user.
-                if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
-                    // Modify the properties of the event so we can update it.
-                    event.description = description.trim().to_string();
-                    // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
-                    // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
-                    event.recurrence = vec![];
+                if event.recurring_event_id != event.id {
+                    // Update the calendar event with the new description.
+                    let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                    // Get the event under the right user.
+                    if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
+                        // Modify the properties of the event so we can update it.
+                        event.description = description.trim().to_string();
+                        // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
+                        // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
+                        event.recurrence = vec![];
 
-                    match g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await {
-                        Ok(_) => (),
-                        Err(err) => println!("could not update event description {}: {}", serde_json::to_string_pretty(&json!(event)).unwrap().to_string(), err),
+                        match g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await {
+                            Ok(_) => (),
+                            Err(err) => println!("could not update event description {}: {}", serde_json::to_string_pretty(&json!(event)).unwrap().to_string(), err),
+                        }
                     }
                 }
-            }
 
-            println!("updated {} huddle meeting {} in Airtable", slug, pacific_time);
+                println!("updated {} huddle meeting {} in Airtable", slug, pacific_time);
+            }
         }
     }
 }
