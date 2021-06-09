@@ -139,69 +139,70 @@ pub async fn send_huddle_reminders() {
             }
 
             // Get the event from Google Calendar.
-            let event = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await.unwrap();
-            // If the event is cancelled, we can just carry on our merry way.
-            if event.status.to_lowercase().trim() == "cancelled" {
-                // The event was cancelled we want to just continue on our way.
-                continue;
-            }
-            let date = event.start.date_time.unwrap();
-            let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
-
-            // Compare the dates.
-            let dur = date.signed_duration_since(Utc::now());
-
-            if dur.num_seconds() <= 0 || dur.num_days() >= 2 {
-                // Continue our loop since we don't care if it's in the past or way out in the
-                // future.
-                continue;
-            }
-
-            if dur.num_days() < 0 || dur.num_hours() >= 23 {
-                // Continue our loop since we don't care if it's in the past or way out in the
-                // future.
-                continue;
-            }
-
-            if huddle.time_to_cancel > 0 && record.fields.proposed_discussion.is_empty() {
-                // We know that this huddle allows the automation to cancel their
-                // meetings.
-                // We need to check if we are within the threshold to be able to cancel the
-                // meeting.
-                if dur.num_hours() < huddle.time_to_cancel.into() {
-                    // We are within the threshold to automatically cancel the meeting.
-                    // Let's do it.
-
-                    if event.recurring_event_id != event.id {
-                        // We need to impersonate the event owner.
-                        let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
-                        // Get the event under the right user.
-                        let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
-                        // We need to update the event instance, not delete it, and set the status to
-                        // cancelled.
-                        // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
-                        event.status = "cancelled".to_string();
-                        // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
-                        // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
-                        event.recurrence = vec![];
-
-                        g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await.unwrap();
-                        println!(
-                            "Cancelled calendar event for {} {} since within {} hours, owner {}",
-                            slug, date, huddle.time_to_cancel, event.organizer.email
-                        );
-                    }
-
-                    // Update Airtable since the meeting was cancelled.
-                    let mut r = record.clone();
-                    // Clear out the fields that are functions since the API cannot take values for those.
-                    r.fields.name = "".to_string();
-                    r.fields.week = "".to_string();
-                    r.fields.cancelled = true;
-                    airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
-
-                    // Continue through our loop.
+            if let Ok(event) = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await {
+                // If the event is cancelled, we can just carry on our merry way.
+                if event.status.to_lowercase().trim() == "cancelled" {
+                    // The event was cancelled we want to just continue on our way.
                     continue;
+                }
+                let date = event.start.date_time.unwrap();
+                let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
+
+                // Compare the dates.
+                let dur = date.signed_duration_since(Utc::now());
+
+                if dur.num_seconds() <= 0 || dur.num_days() >= 2 {
+                    // Continue our loop since we don't care if it's in the past or way out in the
+                    // future.
+                    continue;
+                }
+
+                if dur.num_days() < 0 || dur.num_hours() >= 23 {
+                    // Continue our loop since we don't care if it's in the past or way out in the
+                    // future.
+                    continue;
+                }
+
+                if huddle.time_to_cancel > 0 && record.fields.proposed_discussion.is_empty() {
+                    // We know that this huddle allows the automation to cancel their
+                    // meetings.
+                    // We need to check if we are within the threshold to be able to cancel the
+                    // meeting.
+                    if dur.num_hours() < huddle.time_to_cancel.into() {
+                        // We are within the threshold to automatically cancel the meeting.
+                        // Let's do it.
+
+                        if event.recurring_event_id != event.id {
+                            // We need to impersonate the event owner.
+                            let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                            // Get the event under the right user.
+                            let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
+                            // We need to update the event instance, not delete it, and set the status to
+                            // cancelled.
+                            // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
+                            event.status = "cancelled".to_string();
+                            // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
+                            // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
+                            event.recurrence = vec![];
+
+                            g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await.unwrap();
+                            println!(
+                                "Cancelled calendar event for {} {} since within {} hours, owner {}",
+                                slug, date, huddle.time_to_cancel, event.organizer.email
+                            );
+                        }
+
+                        // Update Airtable since the meeting was cancelled.
+                        let mut r = record.clone();
+                        // Clear out the fields that are functions since the API cannot take values for those.
+                        r.fields.name = "".to_string();
+                        r.fields.week = "".to_string();
+                        r.fields.cancelled = true;
+                        airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
+
+                        // Continue through our loop.
+                        continue;
+                    }
                 }
             }
 
