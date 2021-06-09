@@ -2706,6 +2706,18 @@ impl Applicant {
                         language: Default::default(),
                     },
                 },
+                docusign::TemplateRole {
+                    name: "Ruth Alexander".to_string(),
+                    role_name: "HR".to_string(),
+                    email: "ruth@mindsharegroup.com".to_string(),
+                    signer_name: "Ruth Alexander".to_string(),
+                    routing_order: "3".to_string(),
+                    email_notification: docusign::EmailNotification {
+                        email_subject: "Oxide Computer Company Offer Letter Signed".to_string(),
+                        email_body: "Attached is a newly signed offer letter, please set up benefits. Thank you!".to_string(),
+                        language: Default::default(),
+                    },
+                }
             ];
 
             // Let's create the envelope.
