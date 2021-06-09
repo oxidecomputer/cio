@@ -1239,6 +1239,8 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
         company_id: "".to_string(),
+        item_id: "".to_string(),
+        user_email: "".to_string(),
         last_updated_at: Utc::now(),
     };
     // Update it in the database.
@@ -1271,6 +1273,8 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
         company_id: event.realm_id.to_string(),
+        item_id: "".to_string(),
+        user_email: "".to_string(),
         last_updated_at: Utc::now(),
     };
     // Update it in the database.
