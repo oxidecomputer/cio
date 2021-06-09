@@ -204,63 +204,63 @@ pub async fn send_huddle_reminders() {
                         continue;
                     }
                 }
+
+                // Check if we should even send the email.
+                if record.fields.reminder_email_sent {
+                    // If we have already sent the reminder email then break this loop.
+                    break;
+                }
+
+                // This is our next meeting!
+                // Set the email data.
+                email_data.huddle_name = slug.to_string();
+                email_data.email = huddle.email.to_string();
+                email_data.date = pacific_time.date().format(date_format).to_string();
+
+                // Get the discussion topics for the meeting.
+                for id in &record.fields.proposed_discussion {
+                    // Get the topic from Airtable.
+                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, &id).await.unwrap();
+                    // Add it to our list for the email.
+                    email_data.topics.push(topic.fields);
+                }
+
+                email_data.time = pacific_time.format("%r %Z").to_string();
+
+                // Format the email template.
+                // Initialize handlebars.
+                let handlebars = Handlebars::new();
+                // Render the email template.
+                let template = &handlebars.render_template(EMAIL_TEMPLATE, &email_data).unwrap();
+
+                // Send the email.
+                // Initialize the SendGrid client.
+                let sendgrid = SendGrid::new_from_env();
+                // Send the email.
+                sendgrid
+                    .send_mail(
+                        format!("Reminder {} huddle tomorrow", slug),
+                        template.to_string(),
+                        vec![format!("{}@oxidecomputer.com", huddle.email)],
+                        vec![],
+                        vec![],
+                        "huddle-reminders@oxidecomputer.com".to_string(),
+                    )
+                    .await;
+
+                println!("successfully sent {} huddle reminder email to {}@oxidecomputer.com", slug, huddle.email);
+
+                // Update the airtable record to show the email was sent.
+                // Send the updated record to the airtable client.
+                let mut r = record.clone();
+                r.fields.reminder_email_sent = true;
+                // Clear out the fields that are functions since the API cannot take values for those.
+                r.fields.name = "".to_string();
+                r.fields.week = "".to_string();
+                airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
+
+                println!("updated {} huddle meeting record to show the reminder email was sent", slug);
             }
-
-            // Check if we should even send the email.
-            if record.fields.reminder_email_sent {
-                // If we have already sent the reminder email then break this loop.
-                break;
-            }
-
-            // This is our next meeting!
-            // Set the email data.
-            email_data.huddle_name = slug.to_string();
-            email_data.email = huddle.email.to_string();
-            email_data.date = pacific_time.date().format(date_format).to_string();
-
-            // Get the discussion topics for the meeting.
-            for id in &record.fields.proposed_discussion {
-                // Get the topic from Airtable.
-                let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, &id).await.unwrap();
-                // Add it to our list for the email.
-                email_data.topics.push(topic.fields);
-            }
-
-            email_data.time = pacific_time.format("%r %Z").to_string();
-
-            // Format the email template.
-            // Initialize handlebars.
-            let handlebars = Handlebars::new();
-            // Render the email template.
-            let template = &handlebars.render_template(EMAIL_TEMPLATE, &email_data).unwrap();
-
-            // Send the email.
-            // Initialize the SendGrid client.
-            let sendgrid = SendGrid::new_from_env();
-            // Send the email.
-            sendgrid
-                .send_mail(
-                    format!("Reminder {} huddle tomorrow", slug),
-                    template.to_string(),
-                    vec![format!("{}@oxidecomputer.com", huddle.email)],
-                    vec![],
-                    vec![],
-                    "huddle-reminders@oxidecomputer.com".to_string(),
-                )
-                .await;
-
-            println!("successfully sent {} huddle reminder email to {}@oxidecomputer.com", slug, huddle.email);
-
-            // Update the airtable record to show the email was sent.
-            // Send the updated record to the airtable client.
-            let mut r = record.clone();
-            r.fields.reminder_email_sent = true;
-            // Clear out the fields that are functions since the API cannot take values for those.
-            r.fields.name = "".to_string();
-            r.fields.week = "".to_string();
-            airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
-
-            println!("updated {} huddle meeting record to show the reminder email was sent", slug);
         }
     }
 }
