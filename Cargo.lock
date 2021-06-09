@@ -499,7 +499,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#6320d76ac1c8dc56ef60cd8b05fc32fe75a6a38b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0ab05cf24d34203baa376eb4ddf08bd6db8feafc"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2005,9 +2005,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.95"
+version = "0.2.96"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "789da6d93f1b866ffe175afc5322a4d76c038605a1c3319bb57b06967ca98a36"
+checksum = "5600b4e6efc5421841a2138a6b082e07fe12f9aaa12783d50e5d13325b26b4fc"
 
 [[package]]
 name = "libflate"
@@ -2106,7 +2106,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#6320d76ac1c8dc56ef60cd8b05fc32fe75a6a38b"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0ab05cf24d34203baa376eb4ddf08bd6db8feafc"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
