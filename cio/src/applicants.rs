@@ -339,7 +339,7 @@ impl NewApplicant {
 
 Thank you for submitting your application materials! We really appreciate all
 the time and thought everyone puts into their application. We will be in touch
-within the next couple weeks with more information.
+within the next few weeks with more information.
 
 Sincerely,
   The Oxide Team",
