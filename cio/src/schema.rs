@@ -21,6 +21,8 @@ table! {
         id -> Int4,
         product -> Varchar,
         company_id -> Varchar,
+        item_id -> Varchar,
+        user_email -> Varchar,
         token_type -> Varchar,
         access_token -> Varchar,
         expires_in -> Int4,

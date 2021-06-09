@@ -23,6 +23,11 @@ pub struct NewAPIToken {
     pub product: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub company_id: String,
+    /// This is only relevant for Plaid.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub item_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub token_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
