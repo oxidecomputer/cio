@@ -104,6 +104,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_gusto_callback).unwrap();
+    api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_quickbooks_callback).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
@@ -1279,7 +1280,22 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
-/** Listen for callbacks to docusign auth. */
+/** Listen for callbacks to Plaid auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/plaid/callback",
+}]
+async fn listen_auth_plaid_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = query_args.into_inner();
+
+    sentry::capture_message(&format!("auth plaid callback: {:?}", event), sentry::Level::Info);
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Listen for callbacks to DocuSign auth. */
 #[endpoint {
     method = GET,
     path = "/auth/docusign/callback",
