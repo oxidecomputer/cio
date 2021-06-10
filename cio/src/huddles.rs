@@ -92,9 +92,11 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
                     if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
                         // Modify the properties of the event so we can update it.
                         event.description = description.trim().to_string();
-                        // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
-                        // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
-                        event.recurrence = vec![];
+                        if !event.recurring_event_id.is_empty() {
+                            // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
+                            // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
+                            event.recurrence = vec![];
+                        }
 
                         match g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await {
                             Ok(_) => (),
@@ -181,9 +183,11 @@ pub async fn send_huddle_reminders() {
                             // cancelled.
                             // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
                             event.status = "cancelled".to_string();
-                            // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
-                            // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
-                            event.recurrence = vec![];
+                            if !event.recurring_event_id.is_empty() {
+                                // Individual instances are similar to single events. Unlike their parent recurring events, instances do not have the recurrence field set.
+                                // FROM: https://developers.google.com/calendar/recurringevents#ruby_1
+                                event.recurrence = vec![];
+                            }
 
                             g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await.unwrap();
                             println!(

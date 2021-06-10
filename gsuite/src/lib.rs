@@ -1055,9 +1055,9 @@ pub struct CalendarEvent {
     pub status: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "htmlLink")]
     pub html_link: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", serialize_with = "calendar_date_format::serialize")]
     pub created: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", serialize_with = "calendar_date_format::serialize")]
     pub updated: Option<DateTime<Utc>>,
     #[serde(default, rename = "originalStartTime", skip_serializing_if = "Option::is_none")]
     pub original_start_time: Option<Date>,
@@ -1149,9 +1149,9 @@ pub struct EventOrganizer {
 pub struct Date {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "timeZone")]
     pub time_zone: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub date: Option<NaiveDate>,
-    #[serde(default, rename = "dateTime")]
+    #[serde(default, rename = "dateTime", skip_serializing_if = "Option::is_none", serialize_with = "calendar_date_format::serialize")]
     pub date_time: Option<DateTime<Utc>>,
 }
 
@@ -2108,4 +2108,31 @@ pub struct BuildingAddress {
     /// Unstructured address lines describing the lower levels of an address.
     #[serde(rename = "addressLines", default, skip_serializing_if = "Vec::is_empty")]
     pub address_lines: Vec<String>,
+}
+
+mod calendar_date_format {
+    use chrono::{DateTime, Utc};
+    use serde::{self, Serializer};
+
+    // The date format Ramp returns looks like this: "2021-04-24T01:03:21"
+    const FORMAT: &str = "%Y-%m-%dT%H:%M:%S%.3fZ";
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(date: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if date.is_some() {
+            let s = format!("{}", date.unwrap().format(FORMAT));
+            return serializer.serialize_str(&s);
+        }
+
+        serializer.serialize_none()
+    }
 }
