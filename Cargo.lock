@@ -473,7 +473,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.4",
  "rand 0.8.3",
  "regex 1.5.4",
  "reqwest",
@@ -499,7 +499,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d7c1f736804ee2304d647b8e44e2f2182b529b3d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fc395026db571cf88050de7fe85d17e46a55d7c9"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -536,7 +536,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.4",
  "rand 0.8.3",
  "regex 1.5.4",
  "reqwest",
@@ -2106,7 +2106,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d7c1f736804ee2304d647b8e44e2f2182b529b3d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fc395026db571cf88050de7fe85d17e46a55d7c9"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2902,6 +2902,8 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99ae0cb7a7357d36da76285d9c7a62a428ed55807bcdebe2a8c52349ec798f3b"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2912,9 +2914,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99ae0cb7a7357d36da76285d9c7a62a428ed55807bcdebe2a8c52349ec798f3b"
+version = "0.1.5"
 dependencies = [
  "chrono",
  "reqwest",

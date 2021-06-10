@@ -1646,25 +1646,25 @@ cc @jessfraz @sdtuck @bcantrill
 
 ```
 [users.{}]
- first_name = '{}'
- last_name = '{}'
- username = '{}'
- aliases = []
- groups = [
-     'all',
-     'friends-of-oxide',
-     'hardware',
-     'manufacturing',
-     'pci-sig',
- ]
- recovery_email = '{}'
- recovery_phone = '{}'
- gender = ''
- github = '{}'
- chat = ''
- aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:saml-provider/GoogleApps'
- department = ''
- manager = ''
+first_name = '{}'
+last_name = '{}'
+username = '{}'
+aliases = []
+groups = [
+    'all',
+    'friends-of-oxide',
+    'hardware',
+    'manufacturing',
+    'pci-sig',
+]
+recovery_email = '{}'
+recovery_phone = '{}'
+gender = ''
+github = '{}'
+chat = ''
+aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:saml-provider/GoogleApps'
+department = ''
+manager = ''
 ```"#,
             self.start_date.unwrap().format("%A, %B %-d, %C%y").to_string(),
             self.email,
