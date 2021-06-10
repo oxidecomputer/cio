@@ -297,6 +297,7 @@ impl From<User> for NewOutboundShipment {
             notes: Default::default(),
             geocode_cache: Default::default(),
             local_pickup: Default::default(),
+            link_to_package_pickup: Default::default(),
         }
     }
 }
@@ -324,7 +325,7 @@ pub struct NewPackagePickup {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub tranactions: Vec<String>,
+    pub transactions: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_outbound_shipments: Vec<String>,
     pub requested_start_time: DateTime<Utc>,
@@ -368,9 +369,11 @@ impl OutboundShipments {
 
         // Get the transaction ids, these should be the same as the shippo_id.
         let mut transaction_ids: Vec<String> = Default::default();
-        for shipment in shipments {
+        let mut link_to_outbound_shipments: Vec<String> = Default::default();
+        for shipment in shipments.clone() {
             println!("Adding {} shipment to our pickup", shipment.name);
             transaction_ids.push(shipment.shippo_id.to_string());
+            link_to_outbound_shipments.push(shipment.airtable_record_id.to_string());
         }
 
         if transaction_ids.is_empty() {
@@ -385,7 +388,8 @@ impl OutboundShipments {
         let mut carrier_account_id = "".to_string();
         for ca in carrier_accounts {
             if ca.carrier.to_lowercase() == "usps" {
-                carrier_account_id = ca.account_id.to_string();
+                // Shippo docs say this is the object ID.
+                carrier_account_id = ca.object_id;
                 break;
             }
         }
@@ -410,7 +414,7 @@ impl OutboundShipments {
                 instructions: "Knock on the glass door and someone will come open it.".to_string(),
                 address: oxide_hq_address(),
             },
-            transactions: transaction_ids,
+            transactions: transaction_ids.clone(),
             requested_start_time: start_time,
             requested_end_time: end_time,
             metadata: "".to_string(),
@@ -418,6 +422,32 @@ impl OutboundShipments {
 
         let pickup = shippo_client.create_pickup(&new_pickup).await.unwrap();
         println!("{:?}", pickup);
+
+        // Let's create the new pickup in the database.
+        let np = NewPackagePickup {
+            shippo_id: pickup.object_id.to_string(),
+            confirmation_code: pickup.confirmation_code.to_string(),
+            carrier: "USPS".to_string(),
+            status: pickup.status.to_string(),
+            location: "Oxide HQ".to_string(),
+            transactions: transaction_ids,
+            link_to_outbound_shipments,
+            requested_start_time: start_time,
+            requested_end_time: end_time,
+            confirmed_start_time: pickup.confirmed_start_time,
+            confirmed_end_time: pickup.confirmed_end_time,
+            cancel_by_time: pickup.cancel_by_time,
+            messages: format!("{:?}", pickup.messages),
+        };
+
+        // Insert the new pickup into the database.
+        np.upsert(&db).await;
+
+        // For each of the shipments, let's set the pickup date.
+        for mut shipment in shipments {
+            shipment.pickup_date = Some(pickup_date);
+            shipment.update(&db).await;
+        }
     }
 }
 
@@ -536,6 +566,7 @@ impl NewOutboundShipment {
             notes: Default::default(),
             geocode_cache: Default::default(),
             local_pickup: false,
+            link_to_package_pickup: Default::default(),
         }
     }
 
@@ -694,6 +725,7 @@ impl NewOutboundShipment {
         let mut latitude = Default::default();
         let mut longitude = Default::default();
         let mut local_pickup = Default::default();
+        let mut link_to_package_pickup = Default::default();
 
         // Let's try to get the record from the database.
         if let Ok(shipment) = outbound_shipments::dsl::outbound_shipments
@@ -704,6 +736,7 @@ impl NewOutboundShipment {
             if let Some(existing) = shipment.get_existing_airtable_record().await {
                 // Take the field from Airtable.
                 local_pickup = existing.fields.local_pickup;
+                link_to_package_pickup = existing.fields.link_to_package_pickup;
             }
             // Let's set some other fields.
             carrier = shipment.carrier.to_string();
@@ -760,6 +793,7 @@ impl NewOutboundShipment {
                 notes,
                 geocode_cache,
                 local_pickup,
+                link_to_package_pickup,
             },
             sent,
         )

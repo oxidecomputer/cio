@@ -502,6 +502,8 @@ table! {
         notes -> Varchar,
         geocode_cache -> Varchar,
         local_pickup -> Bool,
+        link_to_package_pickup -> Array<Text>,
+        airtable_record_id -> Varchar,
     }
 }
 

@@ -145,6 +145,7 @@ impl From<Order> for NewOutboundShipment {
             messages: Default::default(),
             geocode_cache: Default::default(),
             local_pickup: false,
+            link_to_package_pickup: Default::default(),
         }
     }
 }
