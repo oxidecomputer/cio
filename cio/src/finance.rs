@@ -552,13 +552,11 @@ pub async fn refresh_brex_transactions() {
             Err(e) => {
                 if last_name == "Volpe" {
                     record.employee_email = "jared@oxidecomputer.com".to_string();
-                    continue;
                 } else if last_name == "Randal" {
                     record.employee_email = "allison@oxidecomputer.com".to_string();
-                    continue;
+                } else {
+                    println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
                 }
-
-                println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
             }
         }
 
@@ -790,13 +788,11 @@ pub async fn refresh_expensify_transactions() {
             Err(e) => {
                 if last_name == "Volpe" || last_name == "jared" {
                     record.employee_email = "jared@oxidecomputer.com".to_string();
-                    continue;
                 } else if last_name == "Randal" || last_name == "allison" {
                     record.employee_email = "allison@oxidecomputer.com".to_string();
-                    continue;
+                } else {
+                    println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
                 }
-
-                println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
             }
         }
 
