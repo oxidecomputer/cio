@@ -2030,7 +2030,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         }
     }
 
-    deunicode::deunicode(result.trim())
+    result.trim().to_string()
 }
 
 fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
