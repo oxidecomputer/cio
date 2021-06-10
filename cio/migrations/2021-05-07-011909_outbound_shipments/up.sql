@@ -31,5 +31,6 @@ CREATE TABLE outbound_shipments (
     notes VARCHAR NOT NULL,
     geocode_cache VARCHAR NOT NULL,
     local_pickup BOOLEAN NOT NULL DEFAULT 'f',
+	link_to_package_pickup TEXT [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

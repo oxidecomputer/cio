@@ -153,6 +153,28 @@ impl Shippo {
         Ok(resp.json().await.unwrap())
     }
 
+    /// List the carrier accounts.
+    /// FROM: https://goshippo.com/docs/reference#carrier-accounts
+    pub async fn list_carrier_accounts(&self) -> Result<Vec<CarrierAccount>, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, "carrier_accounts", (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: CarrierAccountsAPIResponse = resp.json().await.unwrap();
+
+        Ok(r.carrier_accounts)
+    }
+
     /// Get a shipment.
     /// FROM: https://goshippo.com/docs/reference#shipments-retrieve
     pub async fn get_shipment(&self, id: &str) -> Result<Shipment, APIError> {
@@ -175,7 +197,7 @@ impl Shippo {
 
     /// Create a pickup.
     /// FROM: https://goshippo.com/docs/reference#pickups-create
-    pub async fn create_pickup(&self, np: NewPickup) -> Result<Pickup, APIError> {
+    pub async fn create_pickup(&self, np: &NewPickup) -> Result<Pickup, APIError> {
         // Build the request.
         let request = self.request(Method::POST, "pickups", np, None);
 
@@ -374,6 +396,18 @@ pub struct APIResponse {
     pub shipments: Vec<Shipment>,
 }
 
+/// The data type for an API response for carrier accounts.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct CarrierAccountsAPIResponse {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub next: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub previous: String,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
+    pub carrier_accounts: Vec<CarrierAccount>,
+}
+
 /// The data type for a transactions API response.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TransactionsAPIResponse {
@@ -439,6 +473,35 @@ pub struct Shipment {
     /// will initially be empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rates: Vec<Rate>,
+    /// Indicates whether the object has been created in test mode.
+    #[serde(default)]
+    pub test: bool,
+}
+
+/// The data type for a carrier account.
+/// FROM: https://goshippo.com/docs/reference#carrier-accounts
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+pub struct CarrierAccount {
+    /// Unique identifier of the given CarrierAccount object.
+    pub object_id: String,
+    /// Username of the user who created the CarrierAccount object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_owner: String,
+    /// Name of the carrier. Please check the carrier accounts tutorial page
+    /// for all supported carrier names.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub carrier: String,
+    /// Unique identifier of the account.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub account_id: String,
+    /// An array of additional parameters for the account, such as e.g. password or token.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub parameters: HashMap<String, String>,
+    /// Determines whether the account is active. When creating a shipment, if
+    /// no carrier_accounts are explicitly passed Shippo will query all carrier
+    /// accounts that have this field set. By default, this is set to True.
+    #[serde(default)]
+    pub active: bool,
     /// Indicates whether the object has been created in test mode.
     #[serde(default)]
     pub test: bool,

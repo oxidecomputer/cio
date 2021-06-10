@@ -6,7 +6,7 @@ use std::env;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{DateTime, Duration, NaiveTime};
 use google_geocode::Geocode;
 use macros::db;
 use reqwest::StatusCode;
@@ -16,12 +16,12 @@ use serde::{Deserialize, Serialize};
 use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
-use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE};
+use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE};
 use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
-use crate::schema::{inbound_shipments, outbound_shipments};
+use crate::schema::{inbound_shipments, outbound_shipments, package_pickups};
 use crate::utils::{get_gsuite_token, DOMAIN};
 
 /// The data type for an inbound shipment.
@@ -258,6 +258,9 @@ pub struct NewOutboundShipment {
     /// need to ship it.
     #[serde(default)]
     pub local_pickup: bool,
+    /// This is automatically filled in by Airtbale.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_package_pickup: Vec<String>,
 }
 
 impl From<User> for NewOutboundShipment {
@@ -296,6 +299,173 @@ impl From<User> for NewOutboundShipment {
             local_pickup: Default::default(),
         }
     }
+}
+
+/// The data type for a shipment pickup.
+#[db {
+    new_struct_name = "PackagePickup",
+    airtable_base_id = "AIRTABLE_BASE_ID_SHIPMENTS",
+    airtable_table = "AIRTABLE_PACKAGE_PICKUPS_TABLE",
+    match_on = {
+        "shippo_id" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "package_pickups"]
+pub struct NewPackagePickup {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub shippo_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub confirmation_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub carrier: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub location: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tranactions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_outbound_shipments: Vec<String>,
+    pub requested_start_time: DateTime<Utc>,
+    pub requested_end_time: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirmed_start_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirmed_end_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cancel_by_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub messages: String,
+}
+
+/// Implement updating the Airtable record for an PackagePickup.
+#[async_trait]
+impl UpdateAirtableRecord<PackagePickup> for PackagePickup {
+    async fn update_airtable_record(&mut self, _record: PackagePickup) {}
+}
+
+impl OutboundShipments {
+    // Always schedule the pickup for the next business day.
+    // It will create a pickup for all the shipments that have "Label printed"
+    // status and no pickup date currently.
+    pub async fn create_pickup(db: &Database) {
+        // We should only do this for USPS, OR if we use DHL in the future.
+        let shipments = outbound_shipments::dsl::outbound_shipments
+            .filter(
+                outbound_shipments::dsl::status
+                    .eq("Label printed".to_string())
+                    .and(outbound_shipments::dsl::carrier.eq("USPS".to_string()))
+                    .and(outbound_shipments::dsl::pickup_date.is_null()),
+            )
+            .load::<OutboundShipment>(&db.conn())
+            .unwrap();
+
+        if shipments.is_empty() {
+            // We can return early.
+            return;
+        }
+
+        // Get the transaction ids, these should be the same as the shippo_id.
+        let mut transaction_ids: Vec<String> = Default::default();
+        for shipment in shipments {
+            println!("Adding {} shipment to our pickup", shipment.name);
+            transaction_ids.push(shipment.shippo_id.to_string());
+        }
+
+        if transaction_ids.is_empty() {
+            // We can return early.
+            return;
+        }
+
+        // Get the carrier ID for USPS.
+        // Create the shippo client.
+        let shippo_client = Shippo::new_from_env();
+        let carrier_accounts = shippo_client.list_carrier_accounts().await.unwrap();
+        let mut carrier_account_id = "".to_string();
+        for ca in carrier_accounts {
+            if ca.carrier.to_lowercase() == "usps" {
+                carrier_account_id = ca.account_id.to_string();
+                break;
+            }
+        }
+
+        if carrier_account_id.is_empty() {
+            // We can return early.
+            // This should not happen.
+            println!("[create_pickup] carrier account id for usps cannot be empty.");
+            return;
+        }
+
+        // Get the next buisness day for pickup.
+        let (start_time, end_time) = get_next_business_day();
+
+        let pickup_date = start_time.date().naive_utc();
+
+        let new_pickup = shippo::NewPickup {
+            carrier_account: carrier_account_id.to_string(),
+            location: shippo::Location {
+                building_location_type: "Office".to_string(),
+                building_type: "building".to_string(),
+                instructions: "Knock on the glass door and someone will come open it.".to_string(),
+                address: oxide_hq_address(),
+            },
+            transactions: transaction_ids,
+            requested_start_time: start_time,
+            requested_end_time: end_time,
+            metadata: "".to_string(),
+        };
+
+        let pickup = shippo_client.create_pickup(&new_pickup).await.unwrap();
+        println!("{:?}", pickup);
+    }
+}
+
+/// Returns the office phone number.
+pub fn oxide_hq_phone() -> String {
+    "(510) 922-1392".to_string()
+}
+
+/// Returns the shippo data structure for the address at the office.
+pub fn oxide_hq_address() -> Address {
+    Address {
+        company: "Oxide Computer Company".to_string(),
+        name: "The Oxide Shipping Bot".to_string(),
+        street1: "1251 Park Avenue".to_string(),
+        city: "Emeryville".to_string(),
+        state: "CA".to_string(),
+        zip: "94608".to_string(),
+        country: "US".to_string(),
+        phone: oxide_hq_phone(),
+        email: format!("packages@{}", DOMAIN),
+        is_complete: Default::default(),
+        object_id: Default::default(),
+        test: Default::default(),
+        street2: Default::default(),
+        validation_results: Default::default(),
+    }
+}
+
+/// Returns the next buisness day in terms of start and end.
+pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
+    let now = Utc::now();
+    let pacific_time = now.with_timezone(&chrono_tz::US::Pacific);
+
+    let mut next_day = pacific_time.checked_add_signed(Duration::days(1)).unwrap();
+    let day_of_week_string = next_day.format("%A").to_string();
+    if day_of_week_string == "Saturday" {
+        next_day = pacific_time.checked_add_signed(Duration::days(3)).unwrap();
+    } else if day_of_week_string == "Sunday" {
+        next_day = pacific_time.checked_add_signed(Duration::days(2)).unwrap();
+    }
+
+    // Let's create the start time, which should be around 9am.
+    let start_time = next_day.date().and_time(NaiveTime::from_hms(9, 0, 0)).unwrap();
+
+    // Let's create the end time, which should be around 5pm.
+    let end_time = next_day.date().and_time(NaiveTime::from_hms(17, 0, 0)).unwrap();
+
+    (start_time.with_timezone(&Utc), end_time.with_timezone(&Utc))
 }
 
 impl NewOutboundShipment {
@@ -600,6 +770,8 @@ impl NewOutboundShipment {
 #[async_trait]
 impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
     async fn update_airtable_record(&mut self, record: OutboundShipment) {
+        self.link_to_package_pickup = record.link_to_package_pickup;
+
         self.geocode_cache = record.geocode_cache;
 
         if self.status.is_empty() {
@@ -916,23 +1088,7 @@ xoxo,
         }
 
         // We need to create the label since we don't have one already.
-        let office_phone = "(510) 922-1392".to_string();
-        let address_from = Address {
-            company: "Oxide Computer Company".to_string(),
-            name: "The Oxide Shipping Bot".to_string(),
-            street1: "1251 Park Avenue".to_string(),
-            city: "Emeryville".to_string(),
-            state: "CA".to_string(),
-            zip: "94608".to_string(),
-            country: "US".to_string(),
-            phone: office_phone.to_string(),
-            email: format!("packages@{}", DOMAIN),
-            is_complete: Default::default(),
-            object_id: Default::default(),
-            test: Default::default(),
-            street2: Default::default(),
-            validation_results: Default::default(),
-        };
+        let address_from = oxide_hq_address();
 
         // If this is an international shipment, we need to define our customs
         // declarations.
@@ -980,7 +1136,7 @@ xoxo,
         // We need a phone number for the shipment.
         if self.phone.is_empty() {
             // Use the Oxide office line.
-            self.phone = office_phone;
+            self.phone = oxide_hq_phone();
         }
 
         // Create our shipment.
@@ -1285,7 +1441,15 @@ pub fn clean_address_string(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::db::Database;
-    use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments};
+    use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments, OutboundShipments};
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_pickup() {
+        let db = Database::new();
+
+        OutboundShipments::create_pickup(&db).await;
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
