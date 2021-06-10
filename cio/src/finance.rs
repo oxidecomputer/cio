@@ -322,8 +322,12 @@ fn clean_vendor_name(s: &str) -> String {
         "DigitalOcean".to_string()
     } else if s == "Rev.com" {
         "Rev.ai".to_string()
+    } else if s == "TTI, Inc." {
+        "TTI".to_string()
     } else if s == "Intuit Quickbooks" || s == "Intuit" {
         "QuickBooks".to_string()
+    } else if s == "Electronics Online" {
+        "Maplin".to_string()
     } else if s == "Github" {
         "GitHub".to_string()
     } else if s == "Texas Instruments Incorpo" {
@@ -332,6 +336,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Packlane".to_string()
     } else if s == "Yeti" {
         "YETI".to_string()
+    } else if s == "keychron.com" {
+        "Keychron".to_string()
     } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo" {
         "TaskRabbit".to_string()
     } else if s == "Dell Inc" {
