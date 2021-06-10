@@ -419,6 +419,7 @@ impl OutboundShipments {
             requested_end_time: end_time,
             metadata: "".to_string(),
         };
+        println!("{}", json!(new_pickup).to_string());
 
         let pickup = shippo_client.create_pickup(&new_pickup).await.unwrap();
         println!("{:?}", pickup);
@@ -453,7 +454,7 @@ impl OutboundShipments {
 
 /// Returns the office phone number.
 pub fn oxide_hq_phone() -> String {
-    "(510) 922-1392".to_string()
+    "+15109221392".to_string()
 }
 
 /// Returns the shippo data structure for the address at the office.
@@ -472,7 +473,7 @@ pub fn oxide_hq_address() -> Address {
         object_id: Default::default(),
         test: Default::default(),
         street2: Default::default(),
-        validation_results: Default::default(),
+        validation_results: None,
     }
 }
 

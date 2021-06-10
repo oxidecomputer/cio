@@ -24,6 +24,7 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
 use std::error;
@@ -76,7 +77,7 @@ impl Shippo {
         Shippo::new(token)
     }
 
-    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(String, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -157,9 +158,9 @@ impl Shippo {
     /// FROM: https://goshippo.com/docs/reference#carrier-accounts
     pub async fn list_carrier_accounts(&self) -> Result<Vec<CarrierAccount>, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, "carrier_accounts", (), None);
+        let mut request = self.request(Method::GET, "carrier_accounts", (), None);
 
-        let resp = self.client.execute(request).await.unwrap();
+        let mut resp = self.client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -170,9 +171,48 @@ impl Shippo {
             }
         };
 
-        let r: CarrierAccountsAPIResponse = resp.json().await.unwrap();
+        let mut r: CarrierAccountsAPIResponse = resp.json().await.unwrap();
+        let mut carrier_accounts = r.carrier_accounts;
+        let mut page = r.next;
 
-        Ok(r.carrier_accounts)
+        // Paginate if we should.
+        // TODO: make this more DRY
+        while !page.is_empty() {
+            let url = Url::parse(&page).unwrap();
+            let pairs: Vec<(Cow<'_, str>, Cow<'_, str>)> = url.query_pairs().collect();
+            let mut new_pairs: Vec<(String, String)> = Vec::new();
+            for (a, b) in pairs {
+                let sa = a.into_owned();
+                let sb = b.into_owned();
+                new_pairs.push((sa, sb));
+            }
+
+            request = self.request(Method::GET, "carrier_accounts", (), Some(new_pairs));
+
+            resp = self.client.execute(request).await.unwrap();
+            match resp.status() {
+                StatusCode::OK => (),
+                s => {
+                    return Err(APIError {
+                        status_code: s,
+                        body: resp.text().await.unwrap(),
+                    })
+                }
+            };
+
+            // Try to deserialize the response.
+            r = resp.json().await.unwrap();
+
+            carrier_accounts.append(&mut r.carrier_accounts);
+
+            if !r.next.is_empty() && r.next != page {
+                page = r.next;
+            } else {
+                page = "".to_string();
+            }
+        }
+
+        Ok(carrier_accounts)
     }
 
     /// Get a shipment.
@@ -199,7 +239,7 @@ impl Shippo {
     /// FROM: https://goshippo.com/docs/reference#pickups-create
     pub async fn create_pickup(&self, np: &NewPickup) -> Result<Pickup, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, "pickups", np, None);
+        let request = self.request(Method::POST, "pickups/", np, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -519,7 +559,7 @@ pub struct Address {
     /// Incomplete addresses have failed one or multiple validations.
     /// Incomplete Addresses are eligible for requesting rates but lack at
     /// least one required value for purchasing labels.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub is_complete: bool,
     /// First and Last Name of the addressee
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -564,13 +604,17 @@ pub struct Address {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     /// Indicates whether the object has been created in test mode.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub test: bool,
     /// object that contains information regarding if an address had been validated or not. Also
     /// contains any messages generated during validation. Children keys are is_valid(boolean) and
     /// messages(array).
-    #[serde(default)]
-    pub validation_results: ValidationResults,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_results: Option<ValidationResults>,
+}
+
+fn is_false(t: &bool) -> bool {
+    !t
 }
 
 impl Address {
