@@ -432,6 +432,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Rudy's Can't Fail Cafe".to_string()
     } else if s == "The Home Depot" {
         "Home Depot".to_string()
+    } else if s == "Eventbrite - Ba-1111 Online Int" {
+        "Barefoot Networks Tofino Class".to_string()
     } else if s == "Owl Lads" {
         "Owl Labs".to_string()
     } else if s == "PITCH.COM" {
