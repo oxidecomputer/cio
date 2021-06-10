@@ -1154,6 +1154,7 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
                     ramp_user.last_name = new_user.last_name.to_string();
                     ramp_user.phone = new_user.recovery_phone.to_string();
                     ramp_user.role = "BUSINESS_USER".to_string();
+                    ramp_user.amount_limit = "10000.00".to_string();
                     if let Some(department) = ramp_departments.get(&new_user.department) {
                         ramp_user.department_id = department.id.to_string();
                     }
