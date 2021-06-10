@@ -502,7 +502,25 @@ table! {
         notes -> Varchar,
         geocode_cache -> Varchar,
         local_pickup -> Bool,
-        link_to_package_pickup -> Array<Text>,
+    }
+}
+
+table! {
+    package_pickups (id) {
+        id -> Int4,
+        shippo_id -> Varchar,
+        confirmation_code -> Varchar,
+        carrier -> Varchar,
+        status -> Varchar,
+        location -> Varchar,
+        transactions -> Array<Text>,
+        link_to_outbound_shipments -> Array<Text>,
+        requested_start_time -> Timestamptz,
+        requested_end_time -> Timestamptz,
+        confirmed_start_time -> Nullable<Timestamptz>,
+        confirmed_end_time -> Nullable<Timestamptz>,
+        cancel_by_time -> Nullable<Timestamptz>,
+        messages -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
@@ -713,6 +731,7 @@ allow_tables_to_appear_in_same_query!(
     links,
     mailing_list_subscribers,
     outbound_shipments,
+    package_pickups,
     page_views,
     rack_line_subscribers,
     recorded_meetings,
