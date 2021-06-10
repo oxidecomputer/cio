@@ -45,7 +45,7 @@ use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rack_line::RackLineSubscriber;
 use cio_api::rfds::is_image;
 use cio_api::schema::applicants;
-use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, NewOutboundShipment, OutboundShipment};
+use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, NewOutboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::swag_inventory::SwagInventoryItem;
@@ -971,7 +971,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     method = POST,
     path = "/airtable/shipments/outbound/schedule_pickup",
 }]
-async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -982,11 +982,9 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(_rqctx: Arc
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
-    println!("shipment: {:?}", shipment);
-
-    // TODO: schedule the pickup.
+    // Schedule the pickup.
+    let api_context = rqctx.context();
+    OutboundShipments::create_pickup(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
