@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::str::from_utf8;
+use std::{thread, time};
 
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
@@ -1130,6 +1131,17 @@ pub async fn sync_users(db: &Database, users: BTreeMap<String, UserConfig>) {
         let new_user = user.upsert(db).await;
 
         if existing.is_none() {
+            // Now we need to update Okta to include the new user.
+            // We do this so that when we send emails from ramp and for the new user,
+            // they should have a Google account by then.
+            // Sync okta users and group from the database.
+            // Do this after we update the users and groups in the database.
+            generate_terraform_files_for_okta(github, &db).await;
+            // TODO: this is horrible, but we will sleep here to allow the terraform
+            // job to run.
+            // We also need a better way to ensure the terraform job passed...
+            thread::sleep(time::Duration::from_secs(120));
+
             // The user did not already exist in the database.
             // We should send them an email about setting up their account.
             println!("sending email to new user: {}", new_user.username);
