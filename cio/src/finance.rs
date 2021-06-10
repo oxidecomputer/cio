@@ -284,7 +284,9 @@ pub async fn refresh_ramp_transactions() {
 fn clean_vendor_name(s: &str) -> String {
     if s == "Clara Labs" {
         "Claralabs".to_string()
-    } else if (s.contains("Paypal") && (s.ends_with("Eb") || s.contains("Ebay") || s.ends_with("Eba")))
+    } else if s == "StickyLife" {
+        "Sticky Life".to_string()
+    } else if ((s.contains("Paypal") || s.contains("PayPal")) && (s.ends_with("Eb") || s.contains("Ebay") || s.ends_with("Eba")))
         || s == "Ebay"
         || s == "Paypal Transaction Allknagoods"
         || s == "Paypal Transaction Intuitimage"
@@ -292,6 +294,8 @@ fn clean_vendor_name(s: &str) -> String {
         || s == "PayPal Transaction - Frantiques"
     {
         "eBay".to_string()
+    } else if s == "Gumroad" {
+        "Chart".to_string()
     } else if s == "Creative Safety Supply LLC" {
         "Creative Safety Supply".to_string()
     } else if s == "USENIX Association" {
