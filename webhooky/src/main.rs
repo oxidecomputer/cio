@@ -867,7 +867,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestCo
     let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
 
     // If it is a row we created from our internal store do nothing.
-    if shipment.notes.contains("Oxide store") || shipment.notes.contains("Google sheet") {
+    if shipment.notes.contains("Oxide store") || shipment.notes.contains("Google sheet") || shipment.notes.contains("Internal") {
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 

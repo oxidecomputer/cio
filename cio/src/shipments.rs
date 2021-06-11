@@ -491,10 +491,10 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
     }
 
     // Let's create the start time, which should be around 9am.
-    let start_time = next_day.date().and_time(NaiveTime::from_hms(9, 0, 0)).unwrap();
+    let start_time = next_day.date().and_time(NaiveTime::from_hms(8, 59, 59)).unwrap();
 
     // Let's create the end time, which should be around 5pm.
-    let end_time = next_day.date().and_time(NaiveTime::from_hms(17, 0, 0)).unwrap();
+    let end_time = next_day.date().and_time(NaiveTime::from_hms(16, 59, 59)).unwrap();
 
     (start_time.with_timezone(&Utc), end_time.with_timezone(&Utc))
 }
