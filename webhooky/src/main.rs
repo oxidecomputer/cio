@@ -108,6 +108,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_quickbooks_callback).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
+    api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
     api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
@@ -985,6 +986,25 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<
     // Schedule the pickup.
     let api_context = rqctx.context();
     OutboundShipments::create_pickup(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for emails coming inbound from SendGrid's parse API.
+ * We use this for scanning for packages in emails.
+ */
+#[endpoint {
+    method = POST,
+    path = "/emails/incoming/sendgrid/parse",
+}]
+async fn listen_emails_incoming_sendgrid_parse_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    sentry::capture_message(&format!("sendgrid parse: {}", event), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
