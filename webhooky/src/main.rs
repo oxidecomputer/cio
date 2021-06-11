@@ -1051,6 +1051,10 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(_rqctx: Arc<RequestConte
 
     sentry::capture_message(&format!("sendgrid parse: {:?}", event), sentry::Level::Info);
 
+    // Parse the email MIME message.
+    let parsed = mailparse::parse_mail(event.email.as_bytes()).unwrap();
+    sentry::capture_message(&format!("sendgrid parsed: {:?}", parsed), sentry::Level::Info);
+
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
