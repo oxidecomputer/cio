@@ -1040,10 +1040,14 @@ pub struct IncomingEmail {
     method = POST,
     path = "/emails/incoming/sendgrid/parse",
 }]
-async fn listen_emails_incoming_sendgrid_parse_webhooks(_rqctx: Arc<RequestContext<Context>>, query_args: Query<HashMap<String, String>>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_emails_incoming_sendgrid_parse_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = query_args.into_inner();
-    println!("{:?}", event);
+    let event_string = body_param.as_str().unwrap().to_string();
+    sentry::capture_message(&format!("sendgrid parse event string: {}", event_string), sentry::Level::Info);
+
+    let qs_non_strict = QSConfig::new(10, false);
+
+    let event: IncomingEmail = qs_non_strict.deserialize_str(&event_string).unwrap();
 
     sentry::capture_message(&format!("sendgrid parse: {:?}", event), sentry::Level::Info);
 
