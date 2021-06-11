@@ -999,12 +999,15 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<
     method = POST,
     path = "/emails/incoming/sendgrid/parse",
 }]
-async fn listen_emails_incoming_sendgrid_parse_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_emails_incoming_sendgrid_parse_webhooks(
+    _rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<HashMap<String, serde_json::Value>>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
+    let event = query_args.into_inner();
     println!("{:?}", event);
 
-    sentry::capture_message(&format!("sendgrid parse: {}", event), sentry::Level::Info);
+    sentry::capture_message(&format!("sendgrid parse: {:?}", event), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
