@@ -339,7 +339,8 @@ impl NewApplicant {
 
 Thank you for submitting your application materials! We really appreciate all
 the time and thought everyone puts into their application. We will be in touch
-within the next few weeks with more information.
+within the next few weeks with more information. Just a heads up this could take
+up to 4-6 weeks.
 
 Sincerely,
   The Oxide Team",
