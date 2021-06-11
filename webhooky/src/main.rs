@@ -991,6 +991,47 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+/// A SendGrid incoming email event.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct IncomingEmail {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub headers: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub dkim: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "content-ids")]
+    pub content_ids: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub to: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cc: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub html: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub from: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sender_ip: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub spam_report: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub envelope: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub attachments: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub subject: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub spam_score: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "attachment-info")]
+    pub attachment_info: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub charsets: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "SPF")]
+    pub spf: String,
+}
+
 /**
  * Listen for emails coming inbound from SendGrid's parse API.
  * We use this for scanning for packages in emails.
@@ -999,10 +1040,7 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<
     method = POST,
     path = "/emails/incoming/sendgrid/parse",
 }]
-async fn listen_emails_incoming_sendgrid_parse_webhooks(
-    _rqctx: Arc<RequestContext<Context>>,
-    query_args: Query<HashMap<String, serde_json::Value>>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_emails_incoming_sendgrid_parse_webhooks(_rqctx: Arc<RequestContext<Context>>, query_args: Query<HashMap<String, String>>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = query_args.into_inner();
     println!("{:?}", event);
