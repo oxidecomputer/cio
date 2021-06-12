@@ -199,6 +199,39 @@ impl Sheets {
         // Try to deserialize the response.
         Ok(resp.json().await.unwrap())
     }
+
+    /// Update values in a range
+    pub async fn update_values_range(&self, sheet_id: &str, range: &str, values: Vec<Vec<String>>) -> Result<UpdateValuesResponse, APIError> {
+        // Build the request.
+        let request = self.request(
+            Method::PUT,
+            format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range.to_string()),
+            ValueRange {
+                range: Some(range.to_string()),
+                values: Some(values),
+                major_dimension: None,
+            },
+            Some(vec![
+                ("valueInputOption", "USER_ENTERED".to_string()),
+                ("responseValueRenderOption", "FORMATTED_VALUE".to_string()),
+                ("responseDateTimeRenderOption", "FORMATTED_STRING".to_string()),
+            ]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
 }
 
 /// Error type returned by our library.
