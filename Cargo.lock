@@ -534,7 +534,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#70896a2883021df913a9f7711f85ea216c372f52"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#b34998bfef89a739540ac36701e8685e150d9c44"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2201,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#70896a2883021df913a9f7711f85ea216c372f52"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#b34998bfef89a739540ac36701e8685e150d9c44"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3797,9 +3797,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "1.9.2"
+version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e3132bd01cfb74aac8b1b10083ad1f38dbf756df3176d5e63dd91e3f62a87f5"
+checksum = "6a3b379ba4fd515d3fdccfe8584eb9fcc6f7dd1bbe14636a12c98a36fbbfc850"
 dependencies = [
  "rustversion",
  "serde",
