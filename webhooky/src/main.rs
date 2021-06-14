@@ -1043,13 +1043,11 @@ pub struct IncomingEmail {
 async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
-    // Parse the body as a string.
-    let event_string = body_param.as_str().unwrap().to_string();
-    sentry::capture_message(&format!("sendgrid parse event string: {}", event_string), sentry::Level::Info);
+    // Parse the body as bytes.
+    let b = body_param.as_bytes();
 
     // Get the headers and parse the form data.
     let headers = rqctx.request.lock().await.headers().clone();
-    sentry::capture_message(&format!("sendgrid parse headers: {:?}", headers), sentry::Level::Info);
 
     let content_type = headers.get("content-type").unwrap();
     let content_length = headers.get("content-length").unwrap();
@@ -1057,7 +1055,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
     h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
 
-    let form_data = formdata::read_formdata(&mut event_string.as_bytes(), &h).unwrap();
+    let form_data = formdata::read_formdata(&mut b, &h).unwrap();
 
     // Parse the form body.
     for (name, value) in &form_data.fields {
