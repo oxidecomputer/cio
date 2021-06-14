@@ -604,7 +604,7 @@ pub struct Address {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     /// Indicates whether the object has been created in test mode.
-    #[serde(default, skip_serializing_if = "is_false")]
+    #[serde(default)]
     pub test: bool,
     /// object that contains information regarding if an address had been validated or not. Also
     /// contains any messages generated during validation. Children keys are is_valid(boolean) and
