@@ -1044,7 +1044,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     sentry::start_session();
 
     // Parse the body as bytes.
-    let b = body_param.as_bytes();
+    let mut b = body_param.as_bytes();
 
     // Get the headers and parse the form data.
     let headers = rqctx.request.lock().await.headers().clone();
