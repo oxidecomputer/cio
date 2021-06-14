@@ -25,6 +25,13 @@ pub fn parse_tracking_information(s: &str) -> (String, String) {
         }
     }
 
+    if s.to_lowercase().contains("http://texasinstruments.narvar.com/tracking/texasinstruments/dhl") {
+        let dhl = parse_usps(s);
+        if !dhl.is_empty() {
+            return ("DHL".to_string(), dhl);
+        }
+    }
+
     ("".to_string(), "".to_string())
 }
 
@@ -69,6 +76,15 @@ fn parse_usps(s: &str) -> String {
     }
 
     re = Regex::new(r"(?:[A-Z]{2})[0-9]{9}(?:[A-Z]{2})").unwrap();
+    for cap in re.captures_iter(s) {
+        return (&cap[0]).to_string();
+    }
+
+    "".to_string()
+}
+
+fn parse_dhl(s: &str) -> String {
+    let re = Regex::new(r"[0-9]{10}").unwrap();
     for cap in re.captures_iter(s) {
         return (&cap[0]).to_string();
     }
