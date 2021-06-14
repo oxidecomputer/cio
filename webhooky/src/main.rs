@@ -1058,16 +1058,45 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
 
     let form_data = formdata::read_formdata(&mut b, &h).unwrap();
 
+    // Start creating the new shipment.
+    let mut i: NewInboundShipment = Default::default();
+    let mut from = "".to_string();
     // Parse the form body.
     for (name, value) in &form_data.fields {
-        println!("Posted field name={} value={}", name, value);
+        if i.carrier.is_empty() && (name == "html" || name == "text" || name == "email") {
+            let (carrier, tracking_number) = crate::tracking_numbers::parse_tracking_information(&value);
+            if !carrier.is_empty() {
+                i.carrier = carrier.to_string();
+                i.tracking_number = tracking_number.to_string();
+                i.notes = value.to_string();
+            }
+        }
+
+        if name == "subject" {
+            i.name = format!("Email: {}", value);
+        }
+
+        if name == "from" {
+            from = value.to_string();
+        }
     }
 
-    for (name, file) in &form_data.files {
-        println!("Posted file name={} path={:?}", name, file.path);
+    i.notes = format!("Parsed email from {}:\n{}", from, i.notes);
+
+    if i.carrier.is_empty() {
+        sentry::capture_message(
+            &format!("could not find shipment for email:shipment: {:?}\nfields: {:?}\nfiles: {:?}", i, form_data.fields, form_data.files),
+            sentry::Level::Info,
+        );
+
+        // Return early.
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
     }
-    sentry::capture_message(&format!("sendgrid parse fields: {:?}", form_data.fields), sentry::Level::Info);
-    sentry::capture_message(&format!("sendgrid parse files: {:?}", form_data.files), sentry::Level::Info);
+
+    // Add the shipment to our database.
+    let api_context = rqctx.context();
+    i.upsert(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
