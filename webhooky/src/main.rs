@@ -4,6 +4,7 @@ use crate::event_types::EventType;
 pub mod repos;
 use crate::repos::Repo;
 pub mod influx;
+pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 

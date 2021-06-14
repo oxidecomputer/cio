@@ -4958,6 +4958,7 @@ dependencies = [
  "influxdb",
  "mailparse",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 1.5.4",
  "schemars",
  "sentry",
  "serde",
