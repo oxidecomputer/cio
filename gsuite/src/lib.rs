@@ -742,7 +742,7 @@ impl GSuite {
                 ("showDeleted", "true"),
                 ("q", query),
                 // This is one week into the future.
-                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(1)).unwrap().to_rfc3339()),
+                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(4)).unwrap().to_rfc3339()),
             ]),
         );
 
