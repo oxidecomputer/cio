@@ -1433,8 +1433,6 @@ pub fn get_shipments_spreadsheets() -> Vec<String> {
 
 // Sync the inbound shipments.
 pub async fn refresh_inbound_shipments(db: &Database) {
-    InboundShipments::get_from_db(&db).update_airtable().await;
-
     let is: Vec<airtable_api::Record<InboundShipment>> = InboundShipment::airtable().list_records(&InboundShipment::airtable_table(), "Grid view", vec![]).await.unwrap();
 
     for record in is {
@@ -1495,7 +1493,7 @@ mod tests {
     async fn test_shipments() {
         let db = Database::new();
 
-        //refresh_outbound_shipments(&db).await;
         refresh_inbound_shipments(&db).await;
+        refresh_outbound_shipments(&db).await;
     }
 }
