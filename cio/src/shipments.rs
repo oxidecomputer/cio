@@ -1461,6 +1461,8 @@ pub async fn refresh_inbound_shipments(db: &Database) {
         }
         shipment.update(&db).await;
     }
+
+    InboundShipments::get_from_db(&db).update_airtable().await;
 }
 
 pub fn clean_address_string(s: &str) -> String {
