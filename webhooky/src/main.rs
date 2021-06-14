@@ -1073,7 +1073,18 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
         }
 
         if name == "subject" {
-            i.name = format!("Email: {}", value);
+            if value.contains("from Mouser Electronics") {
+                i.name = format!(
+                    "Mouser #{}",
+                    value
+                        .replace("Fwd:", "")
+                        .replace("Shipment Notification on Your Purchase Order", "")
+                        .replace("from Mouser Electronics, Inc. Invoice Attached", "")
+                        .trim()
+                );
+            } else {
+                i.name = format!("Email: {}", value);
+            }
         }
 
         if name == "from" {
