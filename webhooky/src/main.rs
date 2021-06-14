@@ -1048,15 +1048,17 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     sentry::capture_message(&format!("sendgrid parse event string: {}", event_string), sentry::Level::Info);
 
     // Get the headers and parse the form data.
-    let req = rqctx.request.clone();
+    /*let req = rqctx.request.clone();
     let req_inner = Arc::try_unwrap(req).unwrap().into_inner();
-    let headers = req_inner.headers();
+    let headers = req_inner.headers();*/
+    let headers = rqctx.request.lock().await.headers().clone();
     sentry::capture_message(&format!("sendgrid parse headers: {:?}", headers), sentry::Level::Info);
 
+    let content_type = headers.get("content-type").unwrap();
+    let content_length = headers.get("content-length").unwrap();
     let mut h = hyper::header::Headers::new();
-    for (key, value) in headers.iter() {
-        h.set_raw(key.as_str(), vec![value.to_str().unwrap().as_bytes().to_vec()]);
-    }
+    h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
+    h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
 
     let form_data = formdata::read_formdata(&mut event_string.as_bytes(), &h).unwrap();
 
