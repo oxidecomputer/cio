@@ -4,19 +4,25 @@ use regex::Regex;
 /// This function returns a tracking number and a carrier.
 /// The carrier is first followed by the tracking number.
 pub fn parse_tracking_information(s: &str) -> (String, String) {
-    let ups = parse_ups(s);
-    if !ups.is_empty() {
-        return ("UPS".to_string(), ups);
+    if s.to_lowercase().contains("ups.com") {
+        let ups = parse_ups(s);
+        if !ups.is_empty() {
+            return ("UPS".to_string(), ups);
+        }
     }
 
-    let fedex = parse_fedex(s);
-    if !fedex.is_empty() {
-        return ("FedEx".to_string(), fedex);
+    if s.to_lowercase().contains("fedex.com") {
+        let fedex = parse_fedex(s);
+        if !fedex.is_empty() {
+            return ("FedEx".to_string(), fedex);
+        }
     }
 
-    let usps = parse_usps(s);
-    if !usps.is_empty() {
-        return ("USPS".to_string(), usps);
+    if s.to_lowercase().contains("usps.com") {
+        let usps = parse_usps(s);
+        if !usps.is_empty() {
+            return ("USPS".to_string(), usps);
+        }
     }
 
     ("".to_string(), "".to_string())
