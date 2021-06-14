@@ -1040,20 +1040,38 @@ pub struct IncomingEmail {
     method = POST,
     path = "/emails/incoming/sendgrid/parse",
 }]
-async fn listen_emails_incoming_sendgrid_parse_webhooks(_rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+
+    // Parse the body as a string.
     let event_string = body_param.as_str().unwrap().to_string();
     sentry::capture_message(&format!("sendgrid parse event string: {}", event_string), sentry::Level::Info);
 
-    let qs_non_strict = QSConfig::new(10, false);
+    // Get the headers and parse the form data.
+    /*let req = rqctx.request.clone();
+    let req_inner = Arc::try_unwrap(req).unwrap().into_inner();
+    let headers = req_inner.headers();*/
+    let headers = rqctx.request.lock().await.headers().clone();
+    sentry::capture_message(&format!("sendgrid parse headers: {:?}", headers), sentry::Level::Info);
 
-    let event: IncomingEmail = qs_non_strict.deserialize_str(&event_string).unwrap();
+    let content_type = headers.get("content-type").unwrap();
+    let content_length = headers.get("content-length").unwrap();
+    let mut h = hyper::header::Headers::new();
+    h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
+    h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
 
-    sentry::capture_message(&format!("sendgrid parse: {:?}", event), sentry::Level::Info);
+    let form_data = formdata::read_formdata(&mut event_string.as_bytes(), &h).unwrap();
 
-    // Parse the email MIME message.
-    let parsed = mailparse::parse_mail(event.email.as_bytes()).unwrap();
-    sentry::capture_message(&format!("sendgrid parsed: {:?}", parsed), sentry::Level::Info);
+    // Parse the form body.
+    for (name, value) in &form_data.fields {
+        println!("Posted field name={} value={}", name, value);
+    }
+
+    for (name, file) in &form_data.files {
+        println!("Posted file name={} path={:?}", name, file.path);
+    }
+    sentry::capture_message(&format!("sendgrid parse fields: {:?}", form_data.fields), sentry::Level::Info);
+    sentry::capture_message(&format!("sendgrid parse files: {:?}", form_data.files), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
