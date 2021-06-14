@@ -1048,9 +1048,6 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     sentry::capture_message(&format!("sendgrid parse event string: {}", event_string), sentry::Level::Info);
 
     // Get the headers and parse the form data.
-    /*let req = rqctx.request.clone();
-    let req_inner = Arc::try_unwrap(req).unwrap().into_inner();
-    let headers = req_inner.headers();*/
     let headers = rqctx.request.lock().await.headers().clone();
     sentry::capture_message(&format!("sendgrid parse headers: {:?}", headers), sentry::Level::Info);
 
