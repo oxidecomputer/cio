@@ -1082,6 +1082,21 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
                         .replace("from Mouser Electronics, Inc. Invoice Attached", "")
                         .trim()
                 );
+            } else if value.contains("Arrow Order") {
+                i.name = format!("Arrow #{}", value.replace("Fwd:", "").replace("Arrow Order #", "").trim());
+            } else if value.contains("Microchip Order #") {
+                i.name = format!("Microchip #{}", value.replace("Fwd:", "").replace("Your Microchip Order #", "").replace("Has Been Shipped", "").trim());
+            } else if value.contains("TI.com order") {
+                i.name = format!(
+                    "Texas Instruments #{}",
+                    value
+                        .replace("Fwd:", "")
+                        .replace("TI.com order", "")
+                        .replace("- DO NOT REPLY - Order", "")
+                        .replace("fulfilled", "")
+                        .replace("status update", "")
+                        .trim()
+                );
             } else {
                 i.name = format!("Email: {}", value);
             }
