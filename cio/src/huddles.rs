@@ -485,9 +485,9 @@ pub async fn sync_huddles() {
 
         // Create Airtable records for any future calendar dates.
         for (date, event) in gcal_events {
-            // One week from now.
-            let in_one_week = Utc::now().checked_add_signed(Duration::weeks(1)).unwrap();
-            if date > Utc::now().date().naive_utc() && date <= in_one_week.date().naive_utc() {
+            // Four weeks from now.
+            let in_range = Utc::now().checked_add_signed(Duration::weeks(4)).unwrap();
+            if date > Utc::now().date().naive_utc() && date <= in_range.date().naive_utc() {
                 // We are in the future.
                 // Create an Airtable record.
                 let meeting = Meeting {
