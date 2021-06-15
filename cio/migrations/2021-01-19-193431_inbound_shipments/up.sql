@@ -9,6 +9,7 @@ CREATE TABLE inbound_shipments (
     delivered_time TIMESTAMPTZ,
     eta TIMESTAMPTZ,
     messages VARCHAR NOT NULL,
+    order_number VARCHAR NOT NULL,
     name VARCHAR NOT NULL,
     notes VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''

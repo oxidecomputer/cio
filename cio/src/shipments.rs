@@ -55,6 +55,8 @@ pub struct NewInboundShipment {
     pub eta: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub messages: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub order_number: String,
 
     /// These fields are filled in by the Airtable and should not be edited by the
     /// API updating.
@@ -1451,6 +1453,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
             shipped_time: record.fields.shipped_time,
             eta: record.fields.eta,
             messages: record.fields.messages,
+            order_number: record.fields.order_number,
             oxide_tracking_link: record.fields.oxide_tracking_link,
             tracking_link: record.fields.tracking_link,
         };

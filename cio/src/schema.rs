@@ -402,6 +402,7 @@ table! {
         delivered_time -> Nullable<Timestamptz>,
         eta -> Nullable<Timestamptz>,
         messages -> Varchar,
+        order_number -> Varchar,
         name -> Varchar,
         notes -> Varchar,
         airtable_record_id -> Varchar,

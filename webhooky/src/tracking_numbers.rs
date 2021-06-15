@@ -26,7 +26,7 @@ pub fn parse_tracking_information(s: &str) -> (String, String) {
     }
 
     if s.to_lowercase().contains("http://texasinstruments.narvar.com/tracking/texasinstruments/dhl") {
-        let dhl = parse_usps(s);
+        let dhl = parse_dhl(s);
         if !dhl.is_empty() {
             return ("DHL".to_string(), dhl);
         }
