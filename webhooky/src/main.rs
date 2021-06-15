@@ -1074,29 +1074,29 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
 
         if name == "subject" {
             if value.contains("from Mouser Electronics") {
-                i.name = format!(
-                    "Mouser #{}",
-                    value
-                        .replace("Fwd:", "")
-                        .replace("Shipment Notification on Your Purchase Order", "")
-                        .replace("from Mouser Electronics, Inc. Invoice Attached", "")
-                        .trim()
-                );
+                i.name = "Mouser".to_string();
+                i.order_number = value
+                    .replace("Fwd:", "")
+                    .replace("Shipment Notification on Your Purchase Order", "")
+                    .replace("from Mouser Electronics, Inc. Invoice Attached", "")
+                    .trim()
+                    .to_string();
             } else if value.contains("Arrow Order") {
-                i.name = format!("Arrow #{}", value.replace("Fwd:", "").replace("Arrow Order #", "").trim());
+                i.name = "Arrow".to_string();
+                i.order_number = value.replace("Fwd:", "").replace("Arrow Order #", "").trim().to_string();
             } else if value.contains("Microchip Order #") {
-                i.name = format!("Microchip #{}", value.replace("Fwd:", "").replace("Your Microchip Order #", "").replace("Has Been Shipped", "").trim());
+                i.name = "Microchip".to_string();
+                i.order_number = value.replace("Fwd:", "").replace("Your Microchip Order #", "").replace("Has Been Shipped", "").trim().to_string();
             } else if value.contains("TI.com order") {
-                i.name = format!(
-                    "Texas Instruments #{}",
-                    value
-                        .replace("Fwd:", "")
-                        .replace("TI.com order", "")
-                        .replace("- DO NOT REPLY - Order", "")
-                        .replace("fulfilled", "")
-                        .replace("status update", "")
-                        .trim()
-                );
+                i.name = "Texas Instruments".to_string();
+                i.order_number = value
+                    .replace("Fwd:", "")
+                    .replace("TI.com order", "")
+                    .replace("- DO NOT REPLY - Order", "")
+                    .replace("fulfilled", "")
+                    .replace("status update", "")
+                    .trim()
+                    .to_string();
             } else {
                 i.name = format!("Email: {}", value);
             }
@@ -1170,6 +1170,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
         shipped_time: record.shipped_time,
         eta: record.eta,
         messages: record.messages,
+        order_number: record.order_number,
         oxide_tracking_link: record.oxide_tracking_link,
         tracking_link: record.tracking_link,
     };
