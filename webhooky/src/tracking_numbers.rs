@@ -18,7 +18,7 @@ pub fn parse_tracking_information(s: &str) -> (String, String) {
         }
     }
 
-    if s.to_lowercase().contains("usps.com") {
+    if s.to_lowercase().contains("usps.com") || s.to_lowercase().contains("carrier: usps") {
         let usps = parse_usps(s);
         if !usps.is_empty() {
             return ("USPS".to_string(), usps);
