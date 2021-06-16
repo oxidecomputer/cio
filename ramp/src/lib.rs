@@ -637,8 +637,6 @@ pub struct User {
     pub phone: String,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub role: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
-    pub amount_limit: String,
 }
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]

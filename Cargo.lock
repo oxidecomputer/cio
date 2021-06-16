@@ -508,7 +508,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.5",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -571,7 +571,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.5",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -3039,6 +3039,8 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8200ef674fb844dca7a813d411579b1b3dee8a3e3d59dbe786cabe16dd2660a1"
 dependencies = [
  "chrono",
  "reqwest",
@@ -3049,9 +3051,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8200ef674fb844dca7a813d411579b1b3dee8a3e3d59dbe786cabe16dd2660a1"
+version = "0.1.6"
 dependencies = [
  "chrono",
  "reqwest",
