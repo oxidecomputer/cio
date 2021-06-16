@@ -427,6 +427,14 @@ impl OutboundShipments {
         let pickup = shippo_client.create_pickup(&new_pickup).await.unwrap();
         println!("{:?}", pickup);
 
+        let mut messages = "".to_string();
+        if let Some(msg) = pickup.messages {
+            for m in msg {
+                messages = format!("{}\n{} {} {}", messages, m.code, m.source, m.text);
+            }
+        }
+        messages = messages.trim().to_string();
+
         // Let's create the new pickup in the database.
         let np = NewPackagePickup {
             shippo_id: pickup.object_id.to_string(),
@@ -441,7 +449,7 @@ impl OutboundShipments {
             confirmed_start_time: pickup.confirmed_start_time,
             confirmed_end_time: pickup.confirmed_end_time,
             cancel_by_time: pickup.cancel_by_time,
-            messages: format!("{:?}", pickup.messages),
+            messages,
         };
 
         // Insert the new pickup into the database.
@@ -1066,8 +1074,11 @@ xoxo,
             self.shippo_id = label.object_id;
             if label.status != "SUCCESS" {
                 // Print the messages in the messages field.
-                // TODO: make the way it prints more pretty.
-                self.messages = format!("{:?}", label.messages);
+                let mut messages = "".to_string();
+                for m in label.messages {
+                    messages = format!("{}\n{} {} {}", messages, m.code, m.source, m.text);
+                }
+                self.messages = messages.trim().to_string();
             }
             self.oxide_tracking_link = self.oxide_tracking_link();
 
@@ -1246,8 +1257,11 @@ xoxo,
                 if label.status != "SUCCESS" {
                     self.status = label.status.to_string();
                     // Print the messages in the messages field.
-                    // TODO: make the way it prints more pretty.
-                    self.messages = format!("{:?}", label.messages);
+                    let mut messages = "".to_string();
+                    for m in label.messages {
+                        messages = format!("{}\n{} {} {}", messages, m.code, m.source, m.text);
+                    }
+                    self.messages = messages.trim().to_string();
                 }
                 self.oxide_tracking_link = self.oxide_tracking_link();
 
@@ -1484,13 +1498,13 @@ mod tests {
     use crate::db::Database;
     use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments, OutboundShipments};
 
-    #[ignore]
+    /*#[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_pickup() {
         let db = Database::new();
 
         OutboundShipments::create_pickup(&db).await;
-    }
+    }*/
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
