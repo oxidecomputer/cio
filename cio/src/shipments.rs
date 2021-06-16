@@ -420,6 +420,7 @@ impl OutboundShipments {
             requested_start_time: start_time,
             requested_end_time: end_time,
             metadata: "".to_string(),
+            is_test: false,
         };
         println!("{}", json!(new_pickup).to_string());
 
