@@ -2005,7 +2005,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     } else if name.ends_with(".rtf") {
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
 
-        result = std::str::from_utf8(&contents).unwrap().to_string();
+        result = deunicode::deunicode(std::str::from_utf8(&contents).unwrap());
     } else {
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
         path.push(name.to_string());
