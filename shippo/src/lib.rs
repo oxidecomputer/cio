@@ -604,7 +604,7 @@ pub struct Address {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     /// Indicates whether the object has been created in test mode.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub test: bool,
     /// object that contains information regarding if an address had been validated or not. Also
     /// contains any messages generated during validation. Children keys are is_valid(boolean) and
@@ -854,7 +854,7 @@ pub struct Pickup {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub metadata: String,
     /// Indicates whether the object has been created in test mode.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub is_test: bool,
 }
 
@@ -885,11 +885,15 @@ pub struct Location {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NewPickup {
+    #[serde(default)]
     pub carrier_account: String,
     pub location: Location,
+    #[serde(default)]
     pub transactions: Vec<String>,
     pub requested_start_time: DateTime<Utc>,
     pub requested_end_time: DateTime<Utc>,
+    #[serde(default)]
+    pub is_test: bool,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub metadata: String,
 }
