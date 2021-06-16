@@ -1484,13 +1484,13 @@ mod tests {
     use crate::db::Database;
     use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments, OutboundShipments};
 
-    #[ignore]
+    /*#[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_pickup() {
         let db = Database::new();
 
         OutboundShipments::create_pickup(&db).await;
-    }
+    }*/
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
