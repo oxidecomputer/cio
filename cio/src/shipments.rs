@@ -22,7 +22,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
 use crate::schema::{inbound_shipments, outbound_shipments, package_pickups};
-use crate::utils::{get_gsuite_token, DOMAIN};
+use crate::utils::{get_gsuite_token, DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for an inbound shipment.
 #[db {
@@ -471,7 +471,7 @@ pub fn oxide_hq_address() -> Address {
         zip: "94608".to_string(),
         country: "US".to_string(),
         phone: oxide_hq_phone(),
-        email: format!("packages@{}", DOMAIN),
+        email: format!("packages@{}", GSUITE_DOMAIN),
         is_complete: Default::default(),
         object_id: Default::default(),
         test: Default::default(),
@@ -1484,13 +1484,13 @@ mod tests {
     use crate::db::Database;
     use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments, OutboundShipments};
 
-    /*#[ignore]
+    #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_pickup() {
         let db = Database::new();
 
         OutboundShipments::create_pickup(&db).await;
-    }*/
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

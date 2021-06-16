@@ -847,8 +847,8 @@ pub struct Pickup {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub timezone: String,
     /// An array containing strings of any messages generated during validation.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub messages: Vec<Message>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub messages: Option<Vec<Message>>,
     /// A string of up to 100 characters that can be filled with any additional
     /// information you want to attach to the object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
