@@ -1998,10 +1998,30 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                 }
             }
         }
-    } else if name.ends_with(".doc") || name.ends_with(".pptx") || name.ends_with(".jpg")
+    } else if name.ends_with(".pptx") || name.ends_with(".jpg")
     // TODO: handle these formats
     {
         println!("[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}", mime_type, name, path.to_str().unwrap());
+    } else if name.ends_with(".rtf") || name.ends_with(".doc") {
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        path.push(name.to_string());
+
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(&contents).unwrap();
+
+        output.push(format!("{}.txt", id));
+
+        let mut pandoc = pandoc::new();
+        pandoc.add_input(&path);
+        pandoc.set_output(OutputKind::File(output.clone()));
+        match pandoc.execute() {
+            Ok(_) => (),
+            Err(e) => {
+                println!("pandoc failed: {}", e);
+                return "".to_string();
+            }
+        }
+        result = fs::read_to_string(output.clone()).unwrap();
     } else {
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
         path.push(name.to_string());
