@@ -2002,10 +2002,6 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     // TODO: handle these formats
     {
         println!("[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}", mime_type, name, path.to_str().unwrap());
-    } else if name.ends_with(".rtf") {
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
-
-        result = deunicode::deunicode(std::str::from_utf8(&contents).unwrap());
     } else {
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
         path.push(name.to_string());
