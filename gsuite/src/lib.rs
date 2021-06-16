@@ -799,7 +799,11 @@ impl GSuite {
             Method::GET,
             &format!("calendars/{}/events/{}/instances", calendar_id, recurring_event_id),
             (),
-            Some(&[("maxResults", "2500"), ("showDeleted", "true")]),
+            Some(&[
+                ("maxResults", "2500"),
+                ("showDeleted", "true"),
+                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(4)).unwrap().to_rfc3339()),
+            ]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
