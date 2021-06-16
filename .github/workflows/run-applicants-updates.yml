@@ -15,13 +15,15 @@ jobs:
         shell: bash
         run: |
           sudo apt update -y && sudo apt install -y asciidoctor \
+            catdoc \
             libusb-1.0-0-dev \
             pandoc \
             poppler-utils \
             ruby \
             texlive-latex-base \
             texlive-fonts-recommended \
-            texlive-fonts-extra
+            texlive-fonts-extra \
+            unrtf
           sudo gem install asciidoctor-pdf rouge
       - name: Install SQL proxy
         shell: bash

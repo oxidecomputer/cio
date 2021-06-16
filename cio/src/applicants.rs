@@ -2002,6 +2002,26 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     // TODO: handle these formats
     {
         println!("[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}", mime_type, name, path.to_str().unwrap());
+    } else if name.ends_with(".rtf") {
+        // Get the RTF contents from Drive.
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        path.push(format!("{}.rtf", id));
+
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(&contents).unwrap();
+
+        result = read_rtf(path.clone());
+    } else if name.ends_with(".doc") {
+        // Get the RTF contents from Drive.
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        path.push(format!("{}.doc", id));
+
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(&contents).unwrap();
+
+        result = read_doc(path.clone());
     } else {
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
         path.push(name.to_string());
@@ -2032,6 +2052,38 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     }
 
     result.trim().to_string()
+}
+
+fn read_doc(path: std::path::PathBuf) -> String {
+    // Extract the text from the DOC
+    let cmd_output = Command::new("catdoc").args(&[path.to_str().unwrap()]).output().unwrap();
+
+    let result = String::from_utf8(cmd_output.stdout).unwrap();
+
+    // Delete the temporary file, if it exists.
+    for p in vec![path] {
+        if p.exists() && !p.is_dir() {
+            fs::remove_file(p).unwrap();
+        }
+    }
+
+    result
+}
+
+fn read_rtf(path: std::path::PathBuf) -> String {
+    // Extract the text from the RTF
+    let cmd_output = Command::new("unrtf").args(&["--text", path.to_str().unwrap()]).output().unwrap();
+
+    let result = String::from_utf8(cmd_output.stdout).unwrap();
+
+    // Delete the temporary file, if it exists.
+    for p in vec![path] {
+        if p.exists() && !p.is_dir() {
+            fs::remove_file(p).unwrap();
+        }
+    }
+
+    result
 }
 
 fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
