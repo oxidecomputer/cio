@@ -534,7 +534,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#016fabed45db15f549f3e57ba302a47cc44f9caf"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e4459c5313f6e2461cf07f463bdbcbfa0d7fb762"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2201,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#016fabed45db15f549f3e57ba302a47cc44f9caf"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e4459c5313f6e2461cf07f463bdbcbfa0d7fb762"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3215,9 +3215,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "742739e41cd49414de871ea5e549afb7e2a3ac77b589bcbebe8c82fab37147fc"
+checksum = "5ab49abadf3f9e1c4bc499e8845e152ad87d2ad2d30371841171169e9d75feee"
 dependencies = [
  "bitflags",
 ]
