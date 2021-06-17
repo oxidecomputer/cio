@@ -73,7 +73,7 @@ impl DocuSign {
                     redirect_uri: redirect_uri.to_string(),
                     token: token.to_string(),
                     refresh_token: refresh_token.to_string(),
-                    account_id: "".to_string(),
+                    account_id: env::var("DOCUSIGN_ACCOUNT_ID").unwrap(),
 
                     client: Arc::new(c),
                 };
