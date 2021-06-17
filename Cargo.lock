@@ -507,7 +507,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quickbooks 0.1.9",
  "ramp-api 0.1.7",
  "rand 0.8.4",
  "regex 1.5.4",
@@ -570,7 +570,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quickbooks 0.1.9",
  "ramp-api 0.1.7",
  "rand 0.8.4",
  "regex 1.5.4",
@@ -2980,6 +2980,8 @@ dependencies = [
 [[package]]
 name = "quickbooks"
 version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43311e0431ca1dff755c29c2d53189e9d41ca1646de049146a8e9ed04f038be8"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2990,15 +2992,14 @@ dependencies = [
 
 [[package]]
 name = "quickbooks"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43311e0431ca1dff755c29c2d53189e9d41ca1646de049146a8e9ed04f038be8"
+version = "0.1.10"
 dependencies = [
  "chrono",
  "reqwest",
  "schemars",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -4959,7 +4960,7 @@ dependencies = [
  "hyper 0.10.16",
  "influxdb",
  "mailparse",
- "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quickbooks 0.1.9",
  "ramp-api 0.1.7",
  "regex 1.5.4",
  "schemars",
