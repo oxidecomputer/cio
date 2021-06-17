@@ -1393,6 +1393,17 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code).await.unwrap();
+
+    // Let's get the company ID.
+    let current_user = g.current_user().await.unwrap();
+    let mut company_id = String::new();
+    for (t, role) in current_user.roles {
+        if t == "payroll_admin" {
+            company_id = role.companies[0].id.to_string();
+            break;
+        }
+    }
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "gusto".to_string(),
@@ -1401,9 +1412,9 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
-        company_id: "".to_string(),
+        company_id: company_id.to_string(),
         item_id: "".to_string(),
-        user_email: "".to_string(),
+        user_email: current_user.email.to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
