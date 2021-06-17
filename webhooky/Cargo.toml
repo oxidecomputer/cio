@@ -27,7 +27,6 @@ hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", fea
 hyper = { version = "0.10" }
 #influxdb = { version = "0.3.0", features = ["derive"] }
 influxdb = { git = "https://github.com/jessfraz/influxdb-rust", branch = "cloud", features = ["derive"] }
-mailparse = "^0.13.4"
 quickbooks = "^0.1.0"
 ramp-api = "^0.1.1"
 regex = "^1.5.4"
@@ -39,4 +38,3 @@ serde_qs = "0.8"
 sheets = "^0.1.0"
 shippo = "^0.1.12"
 tokio = { version = "1", features = ["full"] }
-urlencoding = "1"
