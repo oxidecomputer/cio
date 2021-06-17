@@ -9,6 +9,7 @@ use std::thread;
 use std::time;
 
 use chrono::Utc;
+use docusign::DocuSign;
 use futures_util::stream::TryStreamExt;
 use gusto_api::Gusto;
 use hubcaps::http_cache::FileBasedCache;
@@ -140,6 +141,27 @@ pub async fn authenticate_ramp(db: &Database) -> Ramp {
     }
 
     Ramp::new_from_env("", "")
+}
+
+/// Authenticate with DocuSign.
+pub async fn authenticate_docusign(db: &Database) -> DocuSign {
+    // Get the APIToken from the database.
+    if let Some(mut t) = APIToken::get_from_db(db, "docusign".to_string()) {
+        // Initialize the DocuSign client.
+        let mut ds = DocuSign::new_from_env(t.access_token, t.refresh_token);
+        let nt = ds.refresh_access_token().await.unwrap();
+        t.access_token = nt.access_token.to_string();
+        t.expires_in = nt.expires_in as i32;
+        t.refresh_token = nt.refresh_token.to_string();
+        t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+        t.last_updated_at = Utc::now();
+        // Update the token in the database.
+        t.update(&db).await;
+
+        return ds;
+    }
+
+    DocuSign::new_from_env("", "")
 }
 
 /// Authenticate with Gusto.

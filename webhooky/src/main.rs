@@ -1539,10 +1539,10 @@ async fn listen_auth_docusign_consent(_rqctx: Arc<RequestContext<Context>>) -> R
     sentry::start_session();
 
     // Initialize the DocuSign client.
-    /* let g = DocuSign::new_from_env("", ""); */
+    let g = DocuSign::new_from_env("", "");
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: "".to_string() }))
+    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
 }
 
 /** Listen for callbacks to DocuSign auth. */
@@ -1552,9 +1552,29 @@ async fn listen_auth_docusign_consent(_rqctx: Arc<RequestContext<Context>>) -> R
 }]
 async fn listen_auth_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let api_context = rqctx.context();
     let event = query_args.into_inner();
 
-    sentry::capture_message(&format!("auth docusign callback: {:?}", event), sentry::Level::Info);
+    // Initialize the DocuSign client.
+    let mut d = DocuSign::new_from_env("", "");
+    // Let's get the token from the code.
+    let t = d.get_access_token(&event.code).await.unwrap();
+    // Save the token to the database.
+    let token = NewAPIToken {
+        product: "docusign".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        // TODO: fill this in as well as the endpiont URL
+        company_id: "".to_string(),
+        item_id: "".to_string(),
+        user_email: "".to_string(),
+        last_updated_at: Utc::now(),
+    };
+    // Update it in the database.
+    token.upsert(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

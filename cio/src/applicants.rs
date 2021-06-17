@@ -39,7 +39,7 @@ use crate::interviews::ApplicantInterview;
 use crate::models::{get_value, truncate};
 use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::{authenticate_docusign, authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -2676,7 +2676,7 @@ pub async fn update_applicant_reviewers(db: &Database) {
 
 pub async fn refresh_docusign_for_applicants(db: &Database) {
     // Authenticate DocuSign.
-    let ds = DocuSign::new_from_env().await;
+    let ds = authenticate_docusign(db).await;
 
     // Get the template we need.
     let template_id = get_docusign_template_id(&ds).await;
