@@ -1396,7 +1396,7 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code).await.unwrap();
     // Save the token to the database.
-    let token = NewAPIToken {
+    let mut token = NewAPIToken {
         product: "gusto".to_string(),
         token_type: t.token_type.to_string(),
         access_token: t.access_token.to_string(),
@@ -1407,7 +1407,11 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         item_id: "".to_string(),
         user_email: "".to_string(),
         last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
     };
+    token.expand();
     // Update it in the database.
     token.upsert(&api_context.db).await;
 
@@ -1448,7 +1452,7 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code, &event.state).await.unwrap();
     // Save the token to the database.
-    let token = NewAPIToken {
+    let mut token = NewAPIToken {
         product: "ramp".to_string(),
         token_type: t.token_type.to_string(),
         access_token: t.access_token.to_string(),
@@ -1459,7 +1463,11 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
         item_id: "".to_string(),
         user_email: "".to_string(),
         last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
     };
+    token.expand();
     // Update it in the database.
     token.upsert(&api_context.db).await;
 
@@ -1497,7 +1505,7 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     // Let's get the token from the code.
     let t = qb.get_access_token(&event.code).await.unwrap();
     // Save the token to the database.
-    let token = NewAPIToken {
+    let mut token = NewAPIToken {
         product: "quickbooks".to_string(),
         token_type: t.token_type.to_string(),
         access_token: t.access_token.to_string(),
@@ -1508,7 +1516,12 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
         item_id: "".to_string(),
         user_email: "".to_string(),
         last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
     };
+    token.expand();
+
     // Update it in the database.
     token.upsert(&api_context.db).await;
 
@@ -1561,7 +1574,7 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
     // Let's get the token from the code.
     let t = d.get_access_token(&event.code).await.unwrap();
     // Save the token to the database.
-    let token = NewAPIToken {
+    let mut token = NewAPIToken {
         product: "docusign".to_string(),
         token_type: t.token_type.to_string(),
         access_token: t.access_token.to_string(),
@@ -1573,7 +1586,12 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
         item_id: "".to_string(),
         user_email: "".to_string(),
         last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
     };
+    token.expand();
+
     // Update it in the database.
     token.upsert(&api_context.db).await;
 

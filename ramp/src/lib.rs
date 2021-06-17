@@ -19,7 +19,6 @@
  * ```
  */
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::env;
 use std::error;
 use std::fmt;
