@@ -264,7 +264,6 @@ impl UserConfig {
     }
 
     async fn populate_home_address(&mut self) {
-        // TODO: actually get the data from Guso once we have credentials.
         let mut street_address = self.home_address_street_1.to_string();
         if !self.home_address_street_2.is_empty() {
             street_address = format!("{}\n{}", self.home_address_street_1, self.home_address_street_2,);
@@ -1066,6 +1065,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
     // Initialize the Gusto client.
     let gusto = authenticate_gusto(db).await;
+    let gu = gusto.list_employees().await.unwrap();
+    let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
+    for g in gu {
+        gusto_users.insert(g.email.to_string(), g);
+    }
+    println!("gusto users: {:?}", gusto_users);
 
     // Initialize the Ramp client.
     let ramp = authenticate_ramp(db).await;
