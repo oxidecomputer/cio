@@ -11,7 +11,7 @@
  *
  * async fn get_current_user() {
  *     // Initialize the Gusto client.
- *     let gusto = Gusto::new_from_env("", "");
+ *     let gusto = Gusto::new_from_env("", "", "");
  *
  *     // Get the current user.
  *     let current_user = gusto.current_user().await.unwrap();
@@ -44,6 +44,7 @@ pub struct Gusto {
     client_id: String,
     client_secret: String,
     redirect_uri: String,
+    company_id: String,
 
     client: Arc<Client>,
 }
@@ -52,13 +53,14 @@ impl Gusto {
     /// Create a new Gusto client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, R, T, Q>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q) -> Self
+    pub fn new<I, K, R, T, Q, C>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q, company_id: C) -> Self
     where
         I: ToString,
         K: ToString,
         R: ToString,
         T: ToString,
         Q: ToString,
+        C: ToString,
     {
         let client = Client::builder().build();
         match client {
@@ -69,6 +71,7 @@ impl Gusto {
                     redirect_uri: redirect_uri.to_string(),
                     token: token.to_string(),
                     refresh_token: refresh_token.to_string(),
+                    company_id: company_id.to_string(),
 
                     client: Arc::new(c),
                 };
@@ -93,16 +96,17 @@ impl Gusto {
     /// given a valid API key and your requests will work.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
-    pub fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    pub fn new_from_env<T, R, C>(token: T, refresh_token: R, company_id: C) -> Self
     where
         T: ToString,
         R: ToString,
+        C: ToString,
     {
         let client_id = env::var("GUSTO_CLIENT_ID").unwrap();
         let client_secret = env::var("GUSTO_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("GUSTO_REDIRECT_URI").unwrap();
 
-        Gusto::new(client_id, client_secret, redirect_uri, token, refresh_token)
+        Gusto::new(client_id, client_secret, redirect_uri, token, refresh_token, company_id)
     }
 
     fn request<P>(&self, method: Method, path: P) -> RequestBuilder
@@ -204,18 +208,8 @@ impl Gusto {
 
     /// List all employees.
     pub async fn list_employees(&self) -> Result<Vec<Employee>, APIError> {
-        // First we need to get the company id.
-        let current_user = self.current_user().await.unwrap();
-        let mut company_id = String::new();
-        for (t, role) in current_user.roles {
-            if t == "payroll_admin" {
-                company_id = role.companies[0].id.to_string();
-                break;
-            }
-        }
-
         // Build the request.
-        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", company_id));
+        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", self.company_id));
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
