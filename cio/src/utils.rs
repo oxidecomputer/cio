@@ -175,7 +175,7 @@ pub async fn authenticate_gusto(db: &Database) -> Gusto {
     // Get the APIToken from the database.
     if let Some(mut t) = APIToken::get_from_db(db, "gusto".to_string()) {
         // Initialize the Gusto client.
-        let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token);
+        let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string());
         let nt = gusto.refresh_access_token().await.unwrap();
         t.access_token = nt.access_token.to_string();
         t.expires_in = nt.expires_in as i32;
@@ -189,7 +189,7 @@ pub async fn authenticate_gusto(db: &Database) -> Gusto {
         return gusto;
     }
 
-    Gusto::new_from_env("", "")
+    Gusto::new_from_env("", "", "")
 }
 
 /// Authenticate with QuickBooks.
