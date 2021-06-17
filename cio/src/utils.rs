@@ -132,6 +132,12 @@ pub async fn authenticate_ramp(db: &Database) -> Ramp {
         t.access_token = nt.access_token.to_string();
         t.expires_in = nt.expires_in as i32;
         t.last_updated_at = Utc::now();
+        if !nt.refresh_token.is_empty() {
+            t.refresh_token = nt.refresh_token.to_string();
+        }
+        if nt.refresh_token_expires_in > 0 {
+            t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+        }
         t.expand();
         // Update the token in the database.
         t.update(&db).await;
