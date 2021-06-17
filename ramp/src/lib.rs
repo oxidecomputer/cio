@@ -113,7 +113,6 @@ impl Ramp {
 
         let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
-        println!("{:?}", bearer);
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
