@@ -1583,7 +1583,6 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
 
     // Let's get the user's info as well.
     let user_info = d.get_user_info().await.unwrap();
-    sentry::capture_message(&format!("docusign user info: {:?}", user_info), sentry::Level::Info);
 
     // Save the token to the database.
     let mut token = NewAPIToken {
