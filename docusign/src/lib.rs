@@ -12,7 +12,7 @@
  *
  * async fn get_envelope() {
  *     // Initialize the DocuSign client.
- *     let docusign = DocuSign::new_from_env("", "");
+ *     let docusign = DocuSign::new_from_env("", "", "", "");
  *
  *     let envelope = docusign.get_envelope("some-envelope-id").await.unwrap();
  *
@@ -33,10 +33,6 @@ use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Endpoint for the DocuSign API.
-/// For production use na4.
-const ENDPOINT: &str = "https://na4.docusign.net/restapi/v2.1/";
-
 /// Entrypoint for interacting with the DocuSign API.
 #[derive(Debug, Clone)]
 pub struct DocuSign {
@@ -48,6 +44,7 @@ pub struct DocuSign {
     client_secret: String,
     redirect_uri: String,
     account_id: String,
+    endpoint: String,
 
     client: Arc<Client>,
 }
@@ -56,13 +53,15 @@ impl DocuSign {
     /// Create a new DocuSign client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, R, T, Q>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q) -> Self
+    pub fn new<I, K, R, T, Q, A, E>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q, account_id: A, endpoint: E) -> Self
     where
         I: ToString,
         K: ToString,
         R: ToString,
         T: ToString,
         Q: ToString,
+        A: ToString,
+        E: ToString,
     {
         let client = Client::builder().build();
         match client {
@@ -73,7 +72,8 @@ impl DocuSign {
                     redirect_uri: redirect_uri.to_string(),
                     token: token.to_string(),
                     refresh_token: refresh_token.to_string(),
-                    account_id: env::var("DOCUSIGN_ACCOUNT_ID").unwrap(),
+                    account_id: account_id.to_string(),
+                    endpoint: endpoint.to_string(),
 
                     client: Arc::new(c),
                 };
@@ -96,16 +96,18 @@ impl DocuSign {
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key and your requests will work.
-    pub fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    pub fn new_from_env<T, R, A, E>(token: T, refresh_token: R, account_id: A, endpoint: E) -> Self
     where
         T: ToString,
         R: ToString,
+        A: ToString,
+        E: ToString,
     {
         let client_id = env::var("DOCUSIGN_INTEGRATION_KEY").unwrap();
         let client_secret = env::var("DOCUSIGN_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("DOCUSIGN_REDIRECT_URI").unwrap();
 
-        DocuSign::new(client_id, client_secret, redirect_uri, token, refresh_token)
+        DocuSign::new(client_id, client_secret, redirect_uri, token, refresh_token, account_id, endpoint)
     }
 
     /// user_consent_url creates a url allowing a user to consent to impersonation
@@ -131,7 +133,7 @@ impl DocuSign {
     where
         B: Serialize,
     {
-        let base = Url::parse(ENDPOINT).unwrap();
+        let base = Url::parse(&format!("{}/restapi/v2.1/", self.endpoint)).unwrap();
         let url = base.join(path).unwrap();
 
         let bt = format!("Bearer {}", self.token);
