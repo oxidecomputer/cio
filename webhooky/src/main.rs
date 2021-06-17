@@ -105,10 +105,14 @@ async fn main() -> Result<(), String> {
     api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks).unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
+    api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_gusto_callback).unwrap();
+    api.register(listen_auth_gusto_consent).unwrap();
     api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_ramp_callback).unwrap();
+    api.register(listen_auth_ramp_consent).unwrap();
     api.register(listen_auth_quickbooks_callback).unwrap();
+    api.register(listen_auth_quickbooks_consent).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
     api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
@@ -1342,6 +1346,12 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
 }
 
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct UserConsentURL {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct AuthCallback {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub code: String,
@@ -1350,6 +1360,21 @@ pub struct AuthCallback {
     pub state: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "realmId")]
     pub realm_id: String,
+}
+
+/** Get the consent URL for Gusto auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/gusto/consent",
+}]
+async fn listen_auth_gusto_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the Gusto client.
+    let g = Gusto::new_from_env("", "");
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
 }
 
 /** Listen for callbacks to Gusto auth. */
@@ -1389,6 +1414,21 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+/** Get the consent URL for Ramp auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/ramp/consent",
+}]
+async fn listen_auth_ramp_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the Ramp client.
+    let g = Ramp::new_from_env("", "");
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+}
+
 /** Listen for callbacks to Ramp auth. */
 #[endpoint {
     method = GET,
@@ -1424,6 +1464,21 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Get the consent URL for QuickBooks auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/quickbooks/consent",
+}]
+async fn listen_auth_quickbooks_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the QuickBooks client.
+    let g = QuickBooks::new_from_env("", "", "");
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
 }
 
 /** Listen for callbacks to QuickBooks auth. */
@@ -1473,6 +1528,21 @@ async fn listen_auth_plaid_callback(_rqctx: Arc<RequestContext<Context>>, body_a
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Get the consent URL for DocuSign auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/docusign/consent",
+}]
+async fn listen_auth_docusign_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the DocuSign client.
+    /* let g = DocuSign::new_from_env("", ""); */
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL { url: "".to_string() }))
 }
 
 /** Listen for callbacks to DocuSign auth. */
