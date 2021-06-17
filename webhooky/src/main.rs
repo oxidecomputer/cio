@@ -1388,8 +1388,6 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
     let api_context = rqctx.context();
     let event = query_args.into_inner();
 
-    sentry::capture_message(&format!("auth gusto callback: {:?}", event), sentry::Level::Info);
-
     // Initialize the Gusto client.
     let mut g = Gusto::new_from_env("", "");
 
@@ -1443,8 +1441,6 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
-
-    sentry::capture_message(&format!("auth ramp callback: {:?}", event), sentry::Level::Info);
 
     // Initialize the Ramp client.
     let mut g = Ramp::new_from_env("", "");
@@ -1583,12 +1579,12 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
         // TODO: fill this in as well as the endpiont URL
         company_id: "".to_string(),
+        endpoint: "".to_string(),
         item_id: "".to_string(),
         user_email: "".to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
-        endpoint: "".to_string(),
     };
     token.expand();
 
