@@ -167,7 +167,7 @@ pub async fn authenticate_docusign(db: &Database) -> DocuSign {
         return ds;
     }
 
-    DocuSign::new_from_env("", "")
+    DocuSign::new_from_env("", "", "", "")
 }
 
 /// Authenticate with Gusto.
