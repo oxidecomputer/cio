@@ -1566,7 +1566,7 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
     let event = query_args.into_inner();
 
     // Initialize the DocuSign client.
-    let mut d = DocuSign::new_from_env("", "");
+    let mut d = DocuSign::new_from_env("", "", "", "");
     // Let's get the token from the code.
     let t = d.get_access_token(&event.code).await.unwrap();
 
