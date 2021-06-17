@@ -7,7 +7,6 @@ use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use gsuite_api::GSuite;
 use macros::db;
 use okta::Okta;
-use ramp_api::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +15,7 @@ use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users};
-use crate::utils::{authenticate_github_jwt, authenticate_quickbooks, get_gsuite_token, github_org, GSUITE_DOMAIN};
+use crate::utils::{authenticate_github_jwt, authenticate_quickbooks, authenticate_ramp, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 #[db {
     new_struct_name = "SoftwareVendor",
@@ -218,11 +217,11 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
 }
 
 pub async fn refresh_ramp_transactions() {
-    // Create the Ramp client.
-    let ramp = Ramp::new_from_env("", "");
-
     // Initialize the database.
     let db = Database::new();
+
+    // Create the Ramp client.
+    let ramp = authenticate_ramp(&db).await;
 
     // List all our users.
     let users = ramp.list_users().await.unwrap();

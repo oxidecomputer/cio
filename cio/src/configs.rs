@@ -12,11 +12,9 @@ use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
 use google_geocode::Geocode;
 use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup};
-use gusto_api::Gusto;
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
-use ramp_api::Ramp;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
@@ -30,7 +28,7 @@ use crate::gsuite::{update_google_group_settings, update_group_aliases, update_g
 use crate::schema::{applicants, buildings, conference_rooms, groups, links, users};
 use crate::shipments::NewOutboundShipment;
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
-use crate::utils::{get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::{authenticate_gusto, authenticate_ramp, get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -1066,21 +1064,11 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     let token = get_gsuite_token("").await;
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
-    // Get the APIToken from the database.
-    //let mut t = APIToken::get_from_db(db, "gusto".to_string()).unwrap();
     // Initialize the Gusto client.
-    let mut gusto = Gusto::new_from_env("", "");
-    // Update the token in the database.
-    /*t.access_token = nt.access_token.to_string();
-    t.expires_in = nt.expires_in as i32;
-    t.refresh_token = nt.refresh_token.to_string();
-    t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-    t.last_updated_at = Utc::now();
-    // Update the token in the database.
-    t.update(&db).await;*/
+    let gusto = authenticate_gusto(db).await;
 
     // Initialize the Ramp client.
-    let ramp = Ramp::new_from_env("", "");
+    let ramp = authenticate_ramp(db).await;
     let ru = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
     for r in ru {

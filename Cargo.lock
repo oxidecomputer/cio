@@ -508,7 +508,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.7",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -534,7 +534,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#6db4a331e97196cb044c9101ccd168c42d874a16"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#32355e35a1a4baae4e8da5e94620f12a0664522f"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -571,7 +571,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.7",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -2201,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#6db4a331e97196cb044c9101ccd168c42d874a16"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#32355e35a1a4baae4e8da5e94620f12a0664522f"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3039,6 +3039,8 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "666a4731719b9865b02a16f7772294706fa1d4e638f9efa40696ce0e65b48bb6"
 dependencies = [
  "chrono",
  "reqwest",
@@ -3050,9 +3052,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "666a4731719b9865b02a16f7772294706fa1d4e638f9efa40696ce0e65b48bb6"
+version = "0.1.8"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4960,7 +4960,7 @@ dependencies = [
  "influxdb",
  "mailparse",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.7",
  "regex 1.5.4",
  "schemars",
  "sentry",
