@@ -507,7 +507,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "quickbooks 0.1.9",
+ "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.7",
  "rand 0.8.4",
  "regex 1.5.4",
@@ -534,7 +534,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1f00703ee719585880458601fcf4677a61e75c91"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#bf0f1da60e06de5efd49bd0933d826234ee77d7a"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -570,7 +570,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
- "quickbooks 0.1.9",
+ "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.7",
  "rand 0.8.4",
  "regex 1.5.4",
@@ -2201,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#1f00703ee719585880458601fcf4677a61e75c91"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#bf0f1da60e06de5efd49bd0933d826234ee77d7a"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2979,20 +2979,21 @@ dependencies = [
 
 [[package]]
 name = "quickbooks"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43311e0431ca1dff755c29c2d53189e9d41ca1646de049146a8e9ed04f038be8"
+version = "0.1.10"
 dependencies = [
  "chrono",
  "reqwest",
  "schemars",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
 name = "quickbooks"
 version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5304af5b84a98ec7857825063a60bb63ec2bcccb9236ef6a932131c1f6defc9"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4960,7 +4961,7 @@ dependencies = [
  "hyper 0.10.16",
  "influxdb",
  "mailparse",
- "quickbooks 0.1.9",
+ "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.7",
  "regex 1.5.4",
  "schemars",
