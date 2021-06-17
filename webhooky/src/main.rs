@@ -1405,7 +1405,7 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
     let mut g = Ramp::new_from_env("", "");
 
     // Let's get the token from the code.
-    let t = g.get_access_token(&event.code).await.unwrap();
+    let t = g.get_access_token(&event.code, &event.state).await.unwrap();
     // Save the token to the database.
     let token = NewAPIToken {
         product: "ramp".to_string(),
