@@ -102,10 +102,3 @@ jobs:
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
           OKTA_API_TOKEN: ${{ secrets.OKTA_API_TOKEN }}
           OKTA_DOMAIN: ${{ secrets.OKTA_DOMAIN }}
-          DOCUSIGN_REDIRECT_URI: ${{ secrets.DOCUSIGN_REDIRECT_URI }}
-          DOCUSIGN_RSA_KEY: ${{ secrets.DOCUSIGN_RSA_KEY }}
-          DOCUSIGN_KEY_PAIR_ID: ${{ secrets.DOCUSIGN_KEY_PAIR_ID }}
-          DOCUSIGN_INTEGRATION_KEY: ${{ secrets.DOCUSIGN_INTEGRATION_KEY }}
-          DOCUSIGN_API_USERNAME: ${{ secrets.DOCUSIGN_API_USERNAME }}
-          DOCUSIGN_ACCOUNT_ID: ${{ secrets.DOCUSIGN_ACCOUNT_ID }}
-          DOCUSIGN_WEBHOOK_ENDPOINT: ${{ secrets.DOCUSIGN_WEBHOOK_ENDPOINT }}
