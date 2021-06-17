@@ -118,7 +118,7 @@ impl Gusto {
         }
         let url = base.join(&p).unwrap();
 
-        let bt = format!("Token {}", self.token);
+        let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -140,12 +140,12 @@ impl Gusto {
         let params = [
             ("grant_type", "refresh_token"),
             ("refresh_token", &self.refresh_token),
-            ("redirect_uri", &self.redirect_uri),
             ("client_id", &self.client_id),
             ("client_secret", &self.client_secret),
+            ("redirect_uri", &self.redirect_uri),
         ];
         let client = reqwest::Client::new();
-        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).query(&params).send().await.unwrap();
+        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).form(&params).send().await.unwrap();
 
         // Unwrap the response.
         let t: AccessToken = resp.json().await.unwrap();
@@ -163,18 +163,21 @@ impl Gusto {
         let params = [
             ("grant_type", "authorization_code"),
             ("code", code),
-            ("redirect_uri", &self.redirect_uri),
             ("client_id", &self.client_id),
             ("client_secret", &self.client_secret),
+            ("redirect_uri", &self.redirect_uri),
         ];
         let client = reqwest::Client::new();
-        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).query(&params).send().await.unwrap();
+        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).form(&params).send().await.unwrap();
+
+        println!("{}", resp.text().await.unwrap());
 
         // Unwrap the response.
-        let t: AccessToken = resp.json().await.unwrap();
+        /*let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();*/
+        let t: AccessToken = Default::default();
 
         Ok(t)
     }

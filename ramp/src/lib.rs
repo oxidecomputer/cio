@@ -219,9 +219,11 @@ impl Ramp {
         params.insert("redirect_uri", &self.redirect_uri);
         params.insert("refresh_token", &self.refresh_token);
 
+        println!("{}", serde_json::json!(&params));
+
         let client = reqwest::Client::new();
         let resp = client
-            .post(&format!("{}token", ENDPOINT))
+            .post(TOKEN_ENDPOINT)
             .headers(headers)
             .json(&params)
             .basic_auth(&self.client_id, Some(&self.client_secret))
