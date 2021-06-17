@@ -467,7 +467,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.12",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -530,7 +530,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.12",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -1500,6 +1500,8 @@ dependencies = [
 [[package]]
 name = "gusto-api"
 version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5c407e607d065b5a0314fc77c7c5b5acf9d37a1ec321fbf6d916952a5f76d52"
 dependencies = [
  "chrono",
  "reqwest",
@@ -1510,9 +1512,7 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5c407e607d065b5a0314fc77c7c5b5acf9d37a1ec321fbf6d916952a5f76d52"
+version = "0.1.13"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4803,7 +4803,7 @@ dependencies = [
  "formdata",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.12",
  "http",
  "hubcaps",
  "hyper 0.10.16",
