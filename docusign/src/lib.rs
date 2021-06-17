@@ -12,7 +12,7 @@
  *
  * async fn get_envelope() {
  *     // Initialize the DocuSign client.
- *     let docusign = DocuSign::new_from_env().await;
+ *     let docusign = DocuSign::new_from_env("", "");
  *
  *     let envelope = docusign.get_envelope("some-envelope-id").await.unwrap();
  *
@@ -21,20 +21,14 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::collections::BTreeMap;
 use std::env;
 use std::error;
 use std::fmt;
-use std::ops::Add;
 use std::sync::Arc;
 
 use bytes::Bytes;
 use chrono::offset::Utc;
-use chrono::{DateTime, Duration};
-use jwt::header::HeaderType;
-use jwt::{AlgorithmType, Header, PKeyWithDigest, SignWithKey, Token};
-use openssl::hash::MessageDigest;
-use openssl::pkey::PKey;
+use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -47,7 +41,13 @@ const ENDPOINT: &str = "https://na4.docusign.net/restapi/v2.1/";
 #[derive(Debug, Clone)]
 pub struct DocuSign {
     token: String,
-    jwt_config: JWTConfig,
+    // This expires in 101 days. It is hardcoded in the GitHub Actions secrets,
+    // We might want something a bit better like storing it in the database.
+    refresh_token: String,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+    account_id: String,
 
     client: Arc<Client>,
 }
@@ -56,43 +56,37 @@ impl DocuSign {
     /// Create a new DocuSign client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub async fn new<I, K, B, P, A>(account_id: I, rsa_key: K, integration_key: B, key_pair_id: P, api_username: A) -> Self
+    pub fn new<I, K, R, T, Q>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q) -> Self
     where
         I: ToString,
         K: ToString,
-        B: ToString,
-        P: ToString,
-        A: ToString,
+        R: ToString,
+        T: ToString,
+        Q: ToString,
     {
         let client = Client::builder().build();
         match client {
             Ok(c) => {
-                let jwt_config = JWTConfig {
-                    account_id: account_id.to_string(),
-                    private_key: rsa_key.to_string(),
-                    integrator_key: integration_key.to_string(),
-                    key_pair_id: key_pair_id.to_string(),
-                    api_username: api_username.to_string(),
-                    is_demo: false,
-                };
-
-                // This is super hacky and a work arouind since there is no way to
-                // auth without using the browser.
-                println!("docusign consent URL: {}", jwt_config.user_consent_url());
-                let token = jwt_config.get_access_token().await;
-
-                let ds = DocuSign {
-                    jwt_config,
-                    token,
+                let g = DocuSign {
+                    client_id: client_id.to_string(),
+                    client_secret: client_secret.to_string(),
+                    redirect_uri: redirect_uri.to_string(),
+                    token: token.to_string(),
+                    refresh_token: refresh_token.to_string(),
+                    account_id: "".to_string(),
 
                     client: Arc::new(c),
                 };
 
-                // Create our webhook (this will make sure one doesn't already exist as well).
-                // Otherwise the API people will be mad at us for polling.
-                ds.create_webhook().await.unwrap();
+                if g.token.is_empty() || g.refresh_token.is_empty() {
+                    // This is super hacky and a work around since there is no way to
+                    // auth without using the browser.
+                    println!("docusign consent URL: {}", g.user_consent_url());
+                }
+                // We do not refresh the access token since we leave that up to the
+                // user to do so they can re-save it to their database.
 
-                ds
+                g
             }
             Err(e) => panic!("creating client failed: {:?}", e),
         }
@@ -102,14 +96,35 @@ impl DocuSign {
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key and your requests will work.
-    pub async fn new_from_env() -> Self {
-        let account_id = env::var("DOCUSIGN_ACCOUNT_ID").unwrap();
-        let rsa_key = env::var("DOCUSIGN_RSA_KEY").unwrap();
-        let integration_key = env::var("DOCUSIGN_INTEGRATION_KEY").unwrap();
-        let key_pair_id = env::var("DOCUSIGN_KEY_PAIR_ID").unwrap();
-        let api_username = env::var("DOCUSIGN_API_USERNAME").unwrap();
+    pub fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    where
+        T: ToString,
+        R: ToString,
+    {
+        let client_id = env::var("DOCUSIGN_INTEGRATION_KEY").unwrap();
+        let client_secret = env::var("DOCUSIGN_CLIENT_SECRET").unwrap();
+        let redirect_uri = env::var("DOCUSIGN_REDIRECT_URI").unwrap();
 
-        DocuSign::new(account_id, rsa_key, integration_key, key_pair_id, api_username).await
+        DocuSign::new(client_id, client_secret, redirect_uri, token, refresh_token)
+    }
+
+    /// user_consent_url creates a url allowing a user to consent to impersonation
+    /// https://developers.docusign.com/esign-rest-api/guides/authentication/obtaining-consent#individual-consent
+    pub fn user_consent_url(&self) -> String {
+        let scope = "signature impersonation";
+        let endpoint = "https://account.docusign.com/oauth/auth";
+
+        let state = uuid::Uuid::new_v4();
+
+        // docusign insists upon %20 not + in scope definition
+        return format!(
+            "{}?response_type=code&scope={}&client_id={}&redirect_uri={}&state={}",
+            endpoint,
+            scope.replace(" ", "%20"),
+            self.client_id,
+            self.redirect_uri,
+            state,
+        );
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
@@ -143,10 +158,58 @@ impl DocuSign {
         rb.build().unwrap()
     }
 
+    pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+        let params = [("grant_type", "refresh_token"), ("refresh_token", &self.refresh_token)];
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(&format!("{}oauth/token", ENDPOINT))
+            .headers(headers)
+            .form(&params)
+            .basic_auth(&self.client_id, Some(&self.client_secret))
+            .send()
+            .await
+            .unwrap();
+
+        // Unwrap the response.
+        let t: AccessToken = resp.json().await.unwrap();
+
+        self.token = t.access_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();
+
+        Ok(t)
+    }
+
+    pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+        let params = [("grant_type", "authorization_code"), ("code", code)];
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(&format!("{}oauth/token", ENDPOINT))
+            .headers(headers)
+            .form(&params)
+            .basic_auth(&self.client_id, Some(&self.client_secret))
+            .send()
+            .await
+            .unwrap();
+
+        // Unwrap the response.
+        let t: AccessToken = resp.json().await.unwrap();
+
+        self.token = t.access_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();
+
+        Ok(t)
+    }
+
     /// List templates.
     pub async fn list_templates(&self) -> Result<Vec<Template>, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("accounts/{}/templates", self.jwt_config.account_id), (), None);
+        let request = self.request(Method::GET, &format!("accounts/{}/templates", self.account_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -166,12 +229,7 @@ impl DocuSign {
     /// Get an envelope.
     pub async fn get_envelope(&self, envelope_id: &str) -> Result<Envelope, APIError> {
         // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("accounts/{}/envelopes/{}", self.jwt_config.account_id, envelope_id),
-            (),
-            Some(&[("include", "documents")]),
-        );
+        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}", self.account_id, envelope_id), (), Some(&[("include", "documents")]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -190,7 +248,7 @@ impl DocuSign {
     /// List webhooks with "Connect".
     pub async fn list_webhooks(&self) -> Result<Vec<Webhook>, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("accounts/{}/connect", self.jwt_config.account_id), (), None);
+        let request = self.request(Method::GET, &format!("accounts/{}/connect", self.account_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -244,7 +302,7 @@ impl DocuSign {
         }
 
         // Build the request.
-        let request = self.request(Method::POST, &format!("accounts/{}/connect", self.jwt_config.account_id), connect, None);
+        let request = self.request(Method::POST, &format!("accounts/{}/connect", self.account_id), connect, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -264,7 +322,7 @@ impl DocuSign {
     /// Create an envelope.
     pub async fn create_envelope(&self, envelope: Envelope) -> Result<Envelope, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, &format!("accounts/{}/envelopes", self.jwt_config.account_id), envelope, None);
+        let request = self.request(Method::POST, &format!("accounts/{}/envelopes", self.account_id), envelope, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -284,7 +342,7 @@ impl DocuSign {
     /// Get envelope form fields.
     pub async fn get_envelope_form_data(&self, envelope_id: &str) -> Result<Vec<FormDatum>, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}/form_data", self.jwt_config.account_id, envelope_id), (), None);
+        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}/form_data", self.account_id, envelope_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -306,7 +364,7 @@ impl DocuSign {
         // Build the request.
         let request = self.request(
             Method::GET,
-            &format!("accounts/{}/envelopes/{}/documents/{}/fields", self.jwt_config.account_id, envelope_id, document_id),
+            &format!("accounts/{}/envelopes/{}/documents/{}/fields", self.account_id, envelope_id, document_id),
             (),
             None,
         );
@@ -328,12 +386,7 @@ impl DocuSign {
     /// Get document.
     pub async fn get_document(&self, envelope_id: &str, document_id: &str) -> Result<Bytes, APIError> {
         // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("accounts/{}/envelopes/{}/documents/{}", self.jwt_config.account_id, envelope_id, document_id),
-            (),
-            None,
-        );
+        let request = self.request(Method::GET, &format!("accounts/{}/envelopes/{}/documents/{}", self.account_id, envelope_id, document_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -354,7 +407,7 @@ impl DocuSign {
         // Build the request.
         let request = self.request(
             Method::PUT,
-            &format!("accounts/{}/envelopes/{}/documents/{}/fields", self.jwt_config.account_id, envelope_id, document_id),
+            &format!("accounts/{}/envelopes/{}/documents/{}/fields", self.account_id, envelope_id, document_id),
             document_fields,
             None,
         );
@@ -648,119 +701,6 @@ pub struct LockInformation {
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct LockedByUser {}
 
-/// Options can specify how long the token will be valid. DocuSign
-/// limits this to 1 hour.  1 hour is assumed if left empty.  Offsets
-/// for expiring token may also be used.  Do not set FormValues or Custom Claims.
-#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
-pub struct JWTConfig {
-    /// see https://developers.docusign.com/esign-rest-api/guides/authentication/oauth2-jsonwebtoken#prerequisites
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub integrator_key: String,
-    /// Use developer sandbox
-    #[serde(default)]
-    pub is_demo: bool,
-    /// PEM encoding of an RSA Private Key.
-    /// see https://developers.docusign.com/esign-rest-api/guides/authentication/oauth2-jsonwebtoken#prerequisites
-    /// for how to create RSA keys to the application.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub private_key: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub key_pair_id: String,
-    /// DocuSign users may have more than one account.  If AccountID is
-    /// not set then the user's default account will be used.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub account_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub api_username: String,
-}
-
-impl JWTConfig {
-    /// UserConsentURL creates a url allowing a user to consent to impersonation
-    /// https://developers.docusign.com/esign-rest-api/guides/authentication/obtaining-consent#individual-consent
-    fn user_consent_url(&self) -> String {
-        let scope = "signature impersonation";
-        let mut endpoint = "https://account.docusign.com/oauth/auth";
-        if self.is_demo {
-            endpoint = "https://account-d.docusign.com/oauth/auth";
-        }
-
-        // docusign insists upon %20 not + in scope definition
-        return format!(
-            "{}?response_type=code&scope={}&client_id={}&redirect_uri={}",
-            endpoint,
-            scope.replace(" ", "%20"),
-            self.integrator_key,
-            env::var("DOCUSIGN_REDIRECT_URI").unwrap(),
-        );
-    }
-
-    fn get_jwt_token(&self) -> String {
-        let header = Header {
-            algorithm: AlgorithmType::Rs256,
-            type_: Some(HeaderType::JsonWebToken),
-            ..Default::default()
-        };
-
-        let mut claims = BTreeMap::new();
-        claims.insert("sub", self.api_username.to_string());
-        claims.insert("iss", self.integrator_key.to_string());
-        let mut audience = "account.docusign.com";
-        if self.is_demo {
-            audience = "account-d.docusign.com";
-        }
-        claims.insert("aud", audience.to_string());
-        claims.insert("scope", "signature impersonation".to_string());
-        claims.insert("exp", format!("{}", Utc::now().add(Duration::hours(1)).timestamp()));
-        claims.insert("iat", format!("{}", Utc::now().timestamp()));
-
-        let private_key = PKeyWithDigest {
-            digest: MessageDigest::sha256(),
-            key: PKey::private_key_from_pem(self.private_key.as_bytes()).unwrap(),
-        };
-
-        let t = Token::new(header, claims).sign_with_key(&private_key).unwrap();
-        t.as_str().to_string()
-    }
-
-    async fn get_access_token(&self) -> String {
-        let jwt_token = self.get_jwt_token();
-
-        let mut endpoint = "https://account.docusign.com/oauth/token";
-        if self.is_demo {
-            endpoint = "https://account-d.docusign.com/oauth/token";
-        }
-
-        let client = reqwest::Client::new();
-        let resp = client
-            .post(endpoint)
-            .form(&[("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"), ("assertion", &jwt_token)])
-            .send()
-            .await
-            .unwrap();
-
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                // TODO: do something better than a panic.
-                panic!("response for token failed with code {}: {}", s, resp.text().await.unwrap());
-            }
-        };
-
-        let t: AccessToken = resp.json().await.unwrap();
-        t.access_token
-    }
-}
-
-#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
-pub struct AccessToken {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub access_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub token_type: String,
-    #[serde(default)]
-    pub expires_in: i64,
-}
-
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct TemplatesResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeTemplates")]
@@ -979,4 +919,18 @@ pub struct WebhooksResponse {
     pub configurations: Vec<Webhook>,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "totalRecords")]
     pub total_records: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct AccessToken {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub access_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token_type: String,
+    #[serde(default)]
+    pub expires_in: i64,
+    #[serde(default)]
+    pub x_refresh_token_expires_in: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub refresh_token: String,
 }
