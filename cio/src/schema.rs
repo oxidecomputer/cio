@@ -28,6 +28,9 @@ table! {
         expires_in -> Int4,
         refresh_token -> Varchar,
         refresh_token_expires_in -> Int4,
+        expires_date -> Nullable<Timestamptz>,
+        refresh_token_expires_date -> Nullable<Timestamptz>,
+        endpoint -> Varchar,
         last_updated_at -> Timestamptz,
         airtable_record_id -> Varchar,
     }

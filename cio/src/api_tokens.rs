@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -40,6 +40,16 @@ pub struct NewAPIToken {
     /// Seconds until the refresh token expires.
     #[serde(default)]
     pub refresh_token_expires_in: i32,
+    /// Date when the token expires.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_date: Option<DateTime<Utc>>,
+    /// Date when the refresh token expires.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refresh_token_expires_date: Option<DateTime<Utc>>,
+    /// The optional endpoint, if the API has one, that is specific to
+    /// the user.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub endpoint: String,
     pub last_updated_at: DateTime<Utc>,
 }
 
@@ -47,6 +57,19 @@ pub struct NewAPIToken {
 #[async_trait]
 impl UpdateAirtableRecord<APIToken> for APIToken {
     async fn update_airtable_record(&mut self, _record: APIToken) {}
+}
+
+impl NewAPIToken {
+    pub fn expand(&mut self) {
+        if self.expires_in > 0 {
+            // Set the time the tokens expire.
+            self.expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.expires_in as i64)).unwrap());
+        }
+
+        if self.refresh_token_expires_in > 0 {
+            self.refresh_token_expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.refresh_token_expires_in as i64)).unwrap());
+        }
+    }
 }
 
 #[cfg(test)]

@@ -212,12 +212,8 @@ impl Ramp {
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
-        let mut params: HashMap<&str, &str> = HashMap::new();
-        params.insert("grant_type", "refresh_token");
-        params.insert("redirect_uri", &self.redirect_uri);
-        params.insert("refresh_token", &self.refresh_token);
+        let params = [("grant_type", "refresh_token"), ("refresh_token", &self.refresh_token), ("redirect_uri", &self.redirect_uri)];
 
         println!("{}", serde_json::json!(&params));
 
@@ -225,7 +221,7 @@ impl Ramp {
         let resp = client
             .post(TOKEN_ENDPOINT)
             .headers(headers)
-            .json(&params)
+            .form(&params)
             .basic_auth(&self.client_id, Some(&self.client_secret))
             .send()
             .await
