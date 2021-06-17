@@ -1074,7 +1074,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     for r in ru {
         ramp_users.insert(r.email.to_string(), r);
     }
-    println!("{:?}", ramp_users);
     let rd = ramp.list_departments().await.unwrap();
     let mut ramp_departments: HashMap<String, ramp_api::Department> = HashMap::new();
     for r in rd {

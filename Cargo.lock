@@ -508,7 +508,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.10",
+ "ramp-api 0.1.11",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -3054,7 +3054,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "chrono",
  "reqwest",

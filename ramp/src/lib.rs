@@ -221,7 +221,7 @@ impl Ramp {
 
         let client = reqwest::Client::new();
         let resp = client
-            .post(&format!("{}/token", ENDPOINT))
+            .post(&format!("{}token", ENDPOINT))
             .headers(headers)
             .json(&params)
             .basic_auth(&self.client_id, Some(&self.client_secret))
@@ -229,11 +229,17 @@ impl Ramp {
             .await
             .unwrap();
 
+        println!("{}", resp.text().await.unwrap());
+
         // Unwrap the response.
-        let t: AccessToken = resp.json().await.unwrap();
+        /*let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();*/
+
+        let mut t: AccessToken = Default::default();
+        t.access_token = self.token.to_string();
+        t.refresh_token = self.refresh_token.to_string();
 
         Ok(t)
     }
