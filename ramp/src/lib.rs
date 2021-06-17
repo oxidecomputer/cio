@@ -19,6 +19,7 @@
  * ```
  */
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::env;
 use std::error;
 use std::fmt;
@@ -211,19 +212,18 @@ impl Ramp {
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
-        let params = [
-            ("grant_type", "refresh_token"),
-            ("refresh_token", &self.refresh_token),
-            ("redirect_uri", &self.redirect_uri),
-            ("client_id", &self.client_id),
-            ("client_secret", &self.client_secret),
-        ];
+        let mut params: HashMap<&str, &str> = HashMap::new();
+        params.insert("grant_type", "refresh_token");
+        params.insert("redirect_uri", &self.redirect_uri);
+        params.insert("refresh_token", &self.refresh_token);
+
         let client = reqwest::Client::new();
         let resp = client
             .post(&format!("{}/token", ENDPOINT))
             .headers(headers)
-            .form(&params)
+            .json(&params)
             .basic_auth(&self.client_id, Some(&self.client_secret))
             .send()
             .await
