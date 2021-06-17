@@ -406,15 +406,15 @@ pub struct Address {
 pub struct Garnishment {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
     pub employee_id: u64,
     #[serde(default)]
     pub active: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub amount: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub description: String,
     #[serde(default)]
     pub court_ordered: bool,
@@ -422,9 +422,9 @@ pub struct Garnishment {
     pub times: u32,
     #[serde(default)]
     pub recurring: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub annual_maximum: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub deduct_as_percentage: String,
 }
 
@@ -432,17 +432,17 @@ pub struct Garnishment {
 /// FROM: https://docs.gusto.com/v1/paid_time_off
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct PaidTimeOff {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub accrual_unit: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub accrual_period: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub accrual_rate: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub accrual_balance: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub maximum_accrual_balance: String,
     #[serde(default)]
     pub paid_at_termination: bool,
@@ -454,7 +454,7 @@ pub struct PaidTimeOff {
 pub struct Termination {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
     pub employee_id: u64,
@@ -504,21 +504,23 @@ pub struct Company {
     pub location: Vec<Location>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub compensations: HashMap<String, Compensation>,
-    pub primary_signatory: Employee,
-    pub primary_payroll_admin: Employee,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_signatory: Option<Employee>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_payroll_admin: Option<Employee>,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct AccessToken {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub access_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub token_type: String,
     #[serde(default)]
     pub expires_in: i64,
     #[serde(default)]
     pub x_refresh_token_expires_in: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub refresh_token: String,
 }
 
