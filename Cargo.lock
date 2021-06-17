@@ -467,7 +467,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.10",
+ "gusto-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#65a47a2a5fc802961cfecfa8e6b72f5a625df3fa"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#853a2c1ec8d925755fac4f3de2c9b1f2806bf785"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -530,7 +530,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.10",
+ "gusto-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -1499,9 +1499,7 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16b5483aecd167a4ceb5cccda9a8cf32aea33e7809a72a946073d40f88f6001d"
+version = "0.1.11"
 dependencies = [
  "chrono",
  "reqwest",
@@ -1513,6 +1511,8 @@ dependencies = [
 [[package]]
 name = "gusto-api"
 version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "073a71478e4bcb44aa893b7c32d8c2df4481b3cf0af4f744fcfcab4bf53922a9"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2107,7 +2107,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#65a47a2a5fc802961cfecfa8e6b72f5a625df3fa"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#853a2c1ec8d925755fac4f3de2c9b1f2806bf785"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -4803,7 +4803,7 @@ dependencies = [
  "formdata",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.10",
+ "gusto-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
  "hyper 0.10.16",
