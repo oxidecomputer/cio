@@ -508,7 +508,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -534,7 +534,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a20431fca8a9092491f9836e10f4fcb223faed75"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#dc806b01d404979fb0380645364fb66d4890e674"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -571,7 +571,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -2201,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a20431fca8a9092491f9836e10f4fcb223faed75"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#dc806b01d404979fb0380645364fb66d4890e674"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3038,7 +3038,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "chrono",
  "reqwest",
@@ -3050,15 +3050,16 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be977511839fe6025c7e28ed0de627fa99c4efca9aff7cbfe1a6120373b5401b"
+checksum = "666a4731719b9865b02a16f7772294706fa1d4e638f9efa40696ce0e65b48bb6"
 dependencies = [
  "chrono",
  "reqwest",
  "schemars",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -4805,9 +4806,9 @@ dependencies = [
 
 [[package]]
 name = "vcpkg"
-version = "0.2.13"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "025ce40a007e1907e58d5bc1a594def78e5573bb0b1160bc389634e8f12e4faa"
+checksum = "70455df2fdf4e9bf580a92e443f1eb0303c390d682e2ea817312c9e81f8c3399"
 
 [[package]]
 name = "vec_map"
@@ -4959,6 +4960,7 @@ dependencies = [
  "influxdb",
  "mailparse",
  "quickbooks 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.5.4",
  "schemars",
  "sentry",

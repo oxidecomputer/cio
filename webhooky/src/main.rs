@@ -29,6 +29,7 @@ use gusto_api::Gusto;
 use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
 use quickbooks::QuickBooks;
+use ramp_api::Ramp;
 use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
@@ -1401,7 +1402,7 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
     sentry::capture_message(&format!("auth ramp callback: {:?}", event), sentry::Level::Info);
 
     // Initialize the Ramp client.
-    /*let mut g = Ramp::new_from_env("", "");
+    let mut g = Ramp::new_from_env("", "");
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code).await.unwrap();
@@ -1412,14 +1413,14 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
         access_token: t.access_token.to_string(),
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        refresh_token_expires_in: t.refresh_token_expires_in as i32,
         company_id: "".to_string(),
         item_id: "".to_string(),
         user_email: "".to_string(),
         last_updated_at: Utc::now(),
     };
     // Update it in the database.
-    token.upsert(&api_context.db).await;*/
+    token.upsert(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

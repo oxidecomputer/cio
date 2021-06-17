@@ -1080,7 +1080,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     t.update(&db).await;*/
 
     // Initialize the Ramp client.
-    let ramp = Ramp::new_from_env().await;
+    let ramp = Ramp::new_from_env("", "");
     let ru = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
     for r in ru {

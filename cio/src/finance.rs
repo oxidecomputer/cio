@@ -219,7 +219,7 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
 
 pub async fn refresh_ramp_transactions() {
     // Create the Ramp client.
-    let ramp = Ramp::new_from_env().await;
+    let ramp = Ramp::new_from_env("", "");
 
     // Initialize the database.
     let db = Database::new();
