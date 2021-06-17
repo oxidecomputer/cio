@@ -158,6 +158,20 @@ impl DocuSign {
         rb.build().unwrap()
     }
 
+    pub async fn get_user_info(&self) -> Result<UserInfo, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        let bt = format!("Bearer {}", self.token);
+        let bearer = header::HeaderValue::from_str(&bt).unwrap();
+        headers.append(header::AUTHORIZATION, bearer);
+
+        let client = reqwest::Client::new();
+        let resp = client.get("https://account.docusign.com/oauth/userinfo").headers(headers).send().await.unwrap();
+
+        // Unwrap the response.
+        Ok(resp.json().await.unwrap())
+    }
+
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
@@ -933,4 +947,34 @@ pub struct AccessToken {
     pub x_refresh_token_expires_in: i64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub refresh_token: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct UserInfo {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sub: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub given_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub family_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub created: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub accounts: Vec<Account>,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct Account {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub account_id: String,
+    #[serde(default)]
+    pub is_default: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub account_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub base_uri: String,
 }
