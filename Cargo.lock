@@ -495,7 +495,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.8",
+ "gusto-api 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -534,7 +534,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bf0f1da60e06de5efd49bd0933d826234ee77d7a"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6d1762297871a2e3ad18f04b108b0c6e6857dcbe"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -558,7 +558,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.8",
+ "gusto-api 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -571,7 +571,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.7",
+ "ramp-api 0.1.9",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -1567,9 +1567,7 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b1df7a583d9ff3e115c1ba34408de502dc13d90a851e30641575bd4cfe9faf6"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "reqwest",
@@ -1581,6 +1579,8 @@ dependencies = [
 [[package]]
 name = "gusto-api"
 version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bebf3c83f69933b86cb219fe0b81cf9abafdf4c5f1ca84ef18b8c2ea41a449e6"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2201,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bf0f1da60e06de5efd49bd0933d826234ee77d7a"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6d1762297871a2e3ad18f04b108b0c6e6857dcbe"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3040,9 +3040,22 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.7"
+version = "0.1.9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6d1762297871a2e3ad18f04b108b0c6e6857dcbe"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "ramp-api"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "666a4731719b9865b02a16f7772294706fa1d4e638f9efa40696ce0e65b48bb6"
+checksum = "e8cb38da9a6af5914fd871ad0187a214e39b87d4e1b688f6b24d46251bc18a63"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4955,14 +4968,14 @@ dependencies = [
  "formdata",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.8",
+ "gusto-api 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
  "hyper 0.10.16",
  "influxdb",
  "mailparse",
  "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.7",
+ "ramp-api 0.1.10",
  "regex 1.5.4",
  "schemars",
  "sentry",
