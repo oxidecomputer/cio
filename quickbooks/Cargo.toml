@@ -1,7 +1,7 @@
 [package]
 name = "quickbooks"
 description = "An API client for the QuickBooks API"
-version = "0.1.9"
+version = "0.1.10"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -14,3 +14,4 @@ reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+uuid = { version = "0.8", features = ["serde", "v4"] }

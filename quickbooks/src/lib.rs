@@ -142,9 +142,10 @@ impl QuickBooks {
     }
 
     pub fn user_consent_url(&self) -> String {
+        let state = uuid::Uuid::new_v4();
         format!(
-            "https://appcenter.intuit.com/connect/oauth2?client_id={}&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri={}&state=some_state",
-            self.client_id, self.redirect_uri
+            "https://appcenter.intuit.com/connect/oauth2?client_id={}&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri={}&state={}",
+            self.client_id, self.redirect_uri, state
         )
     }
 
