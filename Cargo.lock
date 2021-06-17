@@ -495,7 +495,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.8",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -508,7 +508,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.7",
+ "ramp-api 0.1.9",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -558,7 +558,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.8",
  "handlebars",
  "html2text",
  "hubcaps",
@@ -1568,6 +1568,8 @@ dependencies = [
 [[package]]
 name = "gusto-api"
 version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b1df7a583d9ff3e115c1ba34408de502dc13d90a851e30641575bd4cfe9faf6"
 dependencies = [
  "chrono",
  "reqwest",
@@ -1578,9 +1580,7 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b1df7a583d9ff3e115c1ba34408de502dc13d90a851e30641575bd4cfe9faf6"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "reqwest",
@@ -3054,7 +3054,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4955,7 +4955,7 @@ dependencies = [
  "formdata",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.8",
  "http",
  "hubcaps",
  "hyper 0.10.16",

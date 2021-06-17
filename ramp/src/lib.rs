@@ -113,6 +113,7 @@ impl Ramp {
 
         let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
+        println!("{:?}", bearer);
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
@@ -221,7 +222,7 @@ impl Ramp {
         ];
         let client = reqwest::Client::new();
         let resp = client
-            .post(TOKEN_ENDPOINT)
+            .post(&format!("{}/token", ENDPOINT))
             .headers(headers)
             .form(&params)
             .basic_auth(&self.client_id, Some(&self.client_secret))
