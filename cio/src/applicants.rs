@@ -2953,7 +2953,7 @@ mod tests {
         refresh_db_applicants(&db).await;
 
         // Update Airtable.
-        //Applicants::get_from_db(&db).update_airtable().await;
+        Applicants::get_from_db(&db).update_airtable().await;
 
         // Refresh DocuSign for the applicants.
         refresh_docusign_for_applicants(&db).await;
