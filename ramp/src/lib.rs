@@ -10,7 +10,7 @@
  *
  * async fn get_transactions() {
  *     // Initialize the Ramp client.
- *     let ramp = Ramp::new_from_env().await;
+ *     let ramp = Ramp::new_from_env("", "");
  *
  *     let transactions = ramp.get_transactions().await.unwrap();
  *
@@ -36,9 +36,13 @@ const TOKEN_ENDPOINT: &str = "https://api.ramp.com/v1/public/customer/token";
 
 /// Entrypoint for interacting with the Ramp API.
 pub struct Ramp {
+    token: String,
+    // This expires in 101 days. It is hardcoded in the GitHub Actions secrets,
+    // We might want something a bit better like storing it in the database.
+    refresh_token: String,
     client_id: String,
     client_secret: String,
-    token: String,
+    redirect_uri: String,
 
     client: Arc<Client>,
 }
@@ -47,26 +51,36 @@ impl Ramp {
     /// Create a new Ramp client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API client ID and secret your requests will work.
-    pub async fn new<K, S>(client_id: K, client_secret: S) -> Self
+    pub fn new<I, K, R, T, Q>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q) -> Self
     where
+        I: ToString,
         K: ToString,
-        S: ToString,
+        R: ToString,
+        T: ToString,
+        Q: ToString,
     {
         let client = Client::builder().build();
         match client {
             Ok(c) => {
-                let mut ramp = Self {
+                let g = Ramp {
                     client_id: client_id.to_string(),
                     client_secret: client_secret.to_string(),
-                    token: "".to_string(),
+                    redirect_uri: redirect_uri.to_string(),
+                    token: token.to_string(),
+                    refresh_token: refresh_token.to_string(),
 
                     client: Arc::new(c),
                 };
 
-                // Let's get the token.
-                ramp.get_token().await.unwrap();
+                if g.token.is_empty() || g.refresh_token.is_empty() {
+                    // This is super hacky and a work around since there is no way to
+                    // auth without using the browser.
+                    println!("ramp consent URL: {}", g.user_consent_url());
+                }
+                // We do not refresh the access token since we leave that up to the
+                // user to do so they can re-save it to their database.
 
-                ramp
+                g
             }
             Err(e) => panic!("creating client failed: {:?}", e),
         }
@@ -75,37 +89,19 @@ impl Ramp {
     /// Create a new Ramp client struct from environment variables. It
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API Key your requests will work.
-    pub async fn new_from_env() -> Self {
+    /// given a valid API key and your requests will work.
+    /// We pass in the token and refresh token to the client so if you are storing
+    /// it in a database, you can get it first.
+    pub fn new_from_env<T, R>(token: T, refresh_token: R) -> Self
+    where
+        T: ToString,
+        R: ToString,
+    {
         let client_id = env::var("RAMP_CLIENT_ID").unwrap();
         let client_secret = env::var("RAMP_CLIENT_SECRET").unwrap();
+        let redirect_uri = env::var("RAMP_REDIRECT_URI").unwrap();
 
-        Ramp::new(client_id, client_secret).await
-    }
-
-    // Sets the token for requests.
-    async fn get_token(&mut self) -> Result<(), APIError> {
-        let client = reqwest::Client::new();
-
-        let params = [
-            ("grant_type", "client_credentials"),
-            ("scope", "transactions:read users:read users:write receipts:read cards:read departments:read"),
-        ];
-        let resp = client.post(TOKEN_ENDPOINT).form(&params).basic_auth(&self.client_id, Some(&self.client_secret)).send().await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let at: AccessToken = resp.json().await.unwrap();
-        self.token = at.access_token;
-
-        Ok(())
+        Ramp::new(client_id, client_secret, redirect_uri, token, refresh_token)
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(String, String)>>) -> Request
@@ -202,6 +198,75 @@ impl Ramp {
         }
 
         Ok(transactions)
+    }
+
+    pub fn user_consent_url(&self) -> String {
+        let state = uuid::Uuid::new_v4();
+        format!(
+            "https://app.ramp.com/v1/authorize?client_id={}&response_type=code&redirect_uri={}&state={}&scope={}",
+            self.client_id, self.redirect_uri, state, "transactions:read users:read users:write receipts:read cards:read departments:read"
+        )
+    }
+
+    pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+        let params = [
+            ("grant_type", "refresh_token"),
+            ("refresh_token", &self.refresh_token),
+            ("redirect_uri", &self.redirect_uri),
+            ("client_id", &self.client_id),
+            ("client_secret", &self.client_secret),
+        ];
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(TOKEN_ENDPOINT)
+            .headers(headers)
+            .form(&params)
+            .basic_auth(&self.client_id, Some(&self.client_secret))
+            .send()
+            .await
+            .unwrap();
+
+        // Unwrap the response.
+        let t: AccessToken = resp.json().await.unwrap();
+
+        self.token = t.access_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();
+
+        Ok(t)
+    }
+
+    pub async fn get_access_token(&mut self, code: &str, state: &str) -> Result<AccessToken, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+        let params = [
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("redirect_uri", &self.redirect_uri),
+            ("client_id", &self.client_id),
+            ("client_secret", &self.client_secret),
+            ("state", &state),
+        ];
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(TOKEN_ENDPOINT)
+            .headers(headers)
+            .form(&params)
+            .basic_auth(&self.client_id, Some(&self.client_secret))
+            .send()
+            .await
+            .unwrap();
+
+        // Unwrap the response.
+        let t: AccessToken = resp.json().await.unwrap();
+
+        self.token = t.access_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();
+
+        Ok(t)
     }
 
     /// List all the departments.
@@ -488,6 +553,12 @@ pub struct AccessToken {
     pub token_type: String,
     #[serde(default)]
     pub expires_in: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scope: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub refresh_token: String,
+    #[serde(default)]
+    pub refresh_token_expires_in: i64,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]

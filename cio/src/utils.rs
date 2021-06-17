@@ -10,6 +10,7 @@ use std::time;
 
 use chrono::Utc;
 use futures_util::stream::TryStreamExt;
+use gusto_api::Gusto;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
 use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repository};
@@ -117,6 +118,24 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
             }
         })
         .collect()
+}
+
+/// Authenticate with Gusto.
+pub async fn authenticate_gusto(db: &Database) -> Gusto {
+    // Get the APIToken from the database.
+    let mut t = APIToken::get_from_db(&db, "gusto".to_string()).unwrap();
+    // Initialize the QuickBooks client.
+    let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token);
+    let nt = gusto.refresh_access_token().await.unwrap();
+    t.access_token = nt.access_token.to_string();
+    t.expires_in = nt.expires_in as i32;
+    t.refresh_token = nt.refresh_token.to_string();
+    t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+    t.last_updated_at = Utc::now();
+    // Update the token in the database.
+    t.update(&db).await;
+
+    gusto
 }
 
 /// Authenticate with QuickBooks.
