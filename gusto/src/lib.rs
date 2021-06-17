@@ -170,14 +170,11 @@ impl Gusto {
         let client = reqwest::Client::new();
         let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).form(&params).send().await.unwrap();
 
-        println!("{}", resp.text().await.unwrap());
-
         // Unwrap the response.
-        /*let t: AccessToken = resp.json().await.unwrap();
+        let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();*/
-        let t: AccessToken = Default::default();
+        self.refresh_token = t.refresh_token.to_string();
 
         Ok(t)
     }

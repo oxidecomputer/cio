@@ -1549,7 +1549,7 @@ async fn listen_auth_docusign_consent(_rqctx: Arc<RequestContext<Context>>) -> R
     sentry::start_session();
 
     // Initialize the DocuSign client.
-    let g = DocuSign::new_from_env("", "");
+    let g = DocuSign::new_from_env("", "", "", "");
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
