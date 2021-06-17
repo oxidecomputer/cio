@@ -165,7 +165,7 @@ impl DocuSign {
         let params = [("grant_type", "refresh_token"), ("refresh_token", &self.refresh_token)];
         let client = reqwest::Client::new();
         let resp = client
-            .post(&format!("{}oauth/token", ENDPOINT))
+            .post("https://account.docusign.com/oauth/token")
             .headers(headers)
             .form(&params)
             .basic_auth(&self.client_id, Some(&self.client_secret))
@@ -189,7 +189,7 @@ impl DocuSign {
         let params = [("grant_type", "authorization_code"), ("code", code)];
         let client = reqwest::Client::new();
         let resp = client
-            .post(&format!("{}oauth/token", ENDPOINT))
+            .post("https://account.docusign.com/oauth/token")
             .headers(headers)
             .form(&params)
             .basic_auth(&self.client_id, Some(&self.client_secret))
