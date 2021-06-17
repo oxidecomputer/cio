@@ -2950,7 +2950,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants() {
         let db = Database::new();
-        refresh_db_applicants(&db).await;
+        //refresh_db_applicants(&db).await;
 
         // Update Airtable.
         //Applicants::get_from_db(&db).update_airtable().await;

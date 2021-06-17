@@ -461,7 +461,7 @@ dependencies = [
  "deunicode",
  "diesel",
  "diffy",
- "docusign 0.1.16",
+ "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fcd5a0d60ab19b24ed1b4fd09eae5aad50df37e1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0cf8e1275ef4806c56ec8493f4085d3b35f0a021"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -524,7 +524,7 @@ dependencies = [
  "deunicode",
  "diesel",
  "diffy",
- "docusign 0.1.16",
+ "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -935,9 +935,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "docusign"
-version = "0.1.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ea036fafb105e563ff422d09a3c92a5ad901df705372f9678e077b59188682d"
+version = "0.1.17"
 dependencies = [
  "bytes",
  "chrono",
@@ -951,6 +949,8 @@ dependencies = [
 [[package]]
 name = "docusign"
 version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94bda4237e1e9ac0e8731387511c8e940c6c14d55c407738b2d2d740ca07c5aa"
 dependencies = [
  "bytes",
  "chrono",
@@ -2107,7 +2107,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fcd5a0d60ab19b24ed1b4fd09eae5aad50df37e1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0cf8e1275ef4806c56ec8493f4085d3b35f0a021"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -4798,7 +4798,7 @@ dependencies = [
  "chrono-humanize",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
- "docusign 0.1.16",
+ "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
