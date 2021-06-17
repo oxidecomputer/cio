@@ -127,13 +127,12 @@ pub async fn authenticate_ramp(db: &Database) -> Ramp {
     // Get the APIToken from the database.
     if let Some(mut t) = APIToken::get_from_db(db, "ramp".to_string()) {
         // Initialize the Ramp client.
-        let mut ramp = Ramp::new_from_env(t.access_token, t.refresh_token);
+        let mut ramp = Ramp::new_from_env(t.access_token, t.refresh_token.to_string());
         let nt = ramp.refresh_access_token().await.unwrap();
         t.access_token = nt.access_token.to_string();
         t.expires_in = nt.expires_in as i32;
-        t.refresh_token = nt.refresh_token.to_string();
-        t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
         t.last_updated_at = Utc::now();
+        t.expand();
         // Update the token in the database.
         t.update(&db).await;
 
@@ -155,6 +154,7 @@ pub async fn authenticate_docusign(db: &Database) -> DocuSign {
         t.refresh_token = nt.refresh_token.to_string();
         t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
         t.last_updated_at = Utc::now();
+        t.expand();
         // Update the token in the database.
         t.update(&db).await;
 
@@ -176,6 +176,7 @@ pub async fn authenticate_gusto(db: &Database) -> Gusto {
         t.refresh_token = nt.refresh_token.to_string();
         t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
         t.last_updated_at = Utc::now();
+        t.expand();
         // Update the token in the database.
         t.update(&db).await;
 
@@ -197,6 +198,7 @@ pub async fn authenticate_quickbooks(db: &Database) -> QuickBooks {
         t.refresh_token = nt.refresh_token.to_string();
         t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
         t.last_updated_at = Utc::now();
+        t.expand();
         // Update the token in the database.
         t.update(&db).await;
 

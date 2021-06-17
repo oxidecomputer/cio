@@ -72,6 +72,19 @@ impl NewAPIToken {
     }
 }
 
+impl APIToken {
+    pub fn expand(&mut self) {
+        if self.expires_in > 0 {
+            // Set the time the tokens expire.
+            self.expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.expires_in as i64)).unwrap());
+        }
+
+        if self.refresh_token_expires_in > 0 {
+            self.refresh_token_expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.refresh_token_expires_in as i64)).unwrap());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::api_tokens::APITokens;

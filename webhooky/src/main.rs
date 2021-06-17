@@ -1569,6 +1569,11 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
     let mut d = DocuSign::new_from_env("", "");
     // Let's get the token from the code.
     let t = d.get_access_token(&event.code).await.unwrap();
+
+    // Let's get the user's info as well.
+    let user_info = d.get_user_info().await.unwrap();
+    sentry::capture_message(&format!("docusign user info: {:?}", user_info), sentry::Level::Info);
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "docusign".to_string(),
@@ -1577,11 +1582,10 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
-        // TODO: fill this in as well as the endpiont URL
-        company_id: "".to_string(),
-        endpoint: "".to_string(),
+        company_id: user_info.accounts[0].account_id.to_string(),
+        endpoint: user_info.accounts[0].base_uri.to_string(),
         item_id: "".to_string(),
-        user_email: "".to_string(),
+        user_email: user_info.email.to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,

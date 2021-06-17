@@ -214,8 +214,6 @@ impl Ramp {
 
         let params = [("grant_type", "refresh_token"), ("refresh_token", &self.refresh_token), ("redirect_uri", &self.redirect_uri)];
 
-        println!("{}", serde_json::json!(&params));
-
         let client = reqwest::Client::new();
         let resp = client
             .post(TOKEN_ENDPOINT)
@@ -226,17 +224,10 @@ impl Ramp {
             .await
             .unwrap();
 
-        println!("{}", resp.text().await.unwrap());
-
         // Unwrap the response.
-        /*let t: AccessToken = resp.json().await.unwrap();
+        let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();*/
-
-        let mut t: AccessToken = Default::default();
-        t.access_token = self.token.to_string();
-        t.refresh_token = self.refresh_token.to_string();
 
         Ok(t)
     }
