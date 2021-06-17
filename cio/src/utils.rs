@@ -8,15 +8,18 @@ use std::str::from_utf8;
 use std::thread;
 use std::time;
 
+use chrono::Utc;
 use futures_util::stream::TryStreamExt;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
 use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repository};
 use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
+use quickbooks::QuickBooks;
 use reqwest::get;
 use reqwest::Client;
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
+use crate::api_tokens::APIToken;
 use crate::db::Database;
 use crate::models::{GithubRepo, GithubRepos, NewRepo};
 
@@ -114,6 +117,24 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
             }
         })
         .collect()
+}
+
+/// Authenticate with QuickBooks.
+pub async fn authenticate_quickbooks(db: &Database) -> QuickBooks {
+    // Get the APIToken from the database.
+    let mut t = APIToken::get_from_db(&db, "quickbooks".to_string()).unwrap();
+    // Initialize the QuickBooks client.
+    let mut qb = QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
+    let nt = qb.refresh_access_token().await.unwrap();
+    t.access_token = nt.access_token.to_string();
+    t.expires_in = nt.expires_in as i32;
+    t.refresh_token = nt.refresh_token.to_string();
+    t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+    t.last_updated_at = Utc::now();
+    // Update the token in the database.
+    t.update(&db).await;
+
+    qb
 }
 
 /// Authenticate with GitHub.

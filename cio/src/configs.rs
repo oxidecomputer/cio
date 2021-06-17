@@ -22,7 +22,6 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
-use crate::api_tokens::NewAPIToken;
 use crate::applicants::Applicant;
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::core::UpdateAirtableRecord;

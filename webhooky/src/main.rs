@@ -106,6 +106,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_gusto_callback).unwrap();
     api.register(listen_auth_plaid_callback).unwrap();
+    api.register(listen_auth_ramp_callback).unwrap();
     api.register(listen_auth_quickbooks_callback).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
@@ -1382,6 +1383,43 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
     };
     // Update it in the database.
     token.upsert(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Listen for callbacks to Ramp auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/ramp/callback",
+}]
+async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let event = query_args.into_inner();
+
+    sentry::capture_message(&format!("auth ramp callback: {:?}", event), sentry::Level::Info);
+
+    // Initialize the Ramp client.
+    /*let mut g = Ramp::new_from_env("", "");
+
+    // Let's get the token from the code.
+    let t = g.get_access_token(&event.code).await.unwrap();
+    // Save the token to the database.
+    let token = NewAPIToken {
+        product: "ramp".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        company_id: "".to_string(),
+        item_id: "".to_string(),
+        user_email: "".to_string(),
+        last_updated_at: Utc::now(),
+    };
+    // Update it in the database.
+    token.upsert(&api_context.db).await;*/
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

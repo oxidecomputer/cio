@@ -7,7 +7,6 @@ use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use gsuite_api::GSuite;
 use macros::db;
 use okta::Okta;
-use quickbooks::QuickBooks;
 use ramp_api::Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,7 +16,7 @@ use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users};
-use crate::utils::{authenticate_github_jwt, get_gsuite_token, github_org, GSUITE_DOMAIN};
+use crate::utils::{authenticate_github_jwt, authenticate_quickbooks, get_gsuite_token, github_org, GSUITE_DOMAIN};
 
 #[db {
     new_struct_name = "SoftwareVendor",
@@ -899,18 +898,8 @@ pub async fn sync_quickbooks() {
     // Initialize the database.
     let db = Database::new();
 
-    // Get the APIToken from the database.
-    let mut t = APIToken::get_from_db(&db, "quickbooks".to_string()).unwrap();
-    // Initialize the QuickBooks client.
-    let mut qb = QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
-    let nt = qb.refresh_access_token().await.unwrap();
-    t.access_token = nt.access_token.to_string();
-    t.expires_in = nt.expires_in as i32;
-    t.refresh_token = nt.refresh_token.to_string();
-    t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-    t.last_updated_at = Utc::now();
-    // Update the token in the database.
-    t.update(&db).await;
+    // Authenticate QuickBooks.
+    let qb = authenticate_quickbooks(&db).await;
 
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {
