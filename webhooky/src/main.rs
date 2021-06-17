@@ -20,6 +20,7 @@ use chrono::NaiveDate;
 use chrono::{DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use diesel::prelude::*;
+use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody,
     UntypedBody,
@@ -53,7 +54,7 @@ use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_p
 use cio_api::swag_inventory::SwagInventoryItem;
 use cio_api::swag_store::Order;
 use cio_api::templates::generate_terraform_files_for_okta;
-use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
+use cio_api::utils::{authenticate_docusign, authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -528,8 +529,8 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 // First let's update the applicant.
                 a.update(db).await;
 
-                // Authenticate DocuSign.
-                let ds = docusign::DocuSign::new_from_env().await;
+                // Create our docusign client.
+                let ds = authenticate_docusign(db).await;
 
                 // Get the template we need.
                 let template_id = get_docusign_template_id(&ds).await;
@@ -1550,7 +1551,7 @@ async fn listen_auth_docusign_consent(_rqctx: Arc<RequestContext<Context>>) -> R
     method = GET,
     path = "/auth/docusign/callback",
 }]
-async fn listen_auth_docusign_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
@@ -1599,7 +1600,7 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
     match result {
         Ok(mut applicant) => {
             // Create our docusign client.
-            let ds = docusign::DocuSign::new_from_env().await;
+            let ds = authenticate_docusign(db).await;
             applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
         }
         Err(e) => {
