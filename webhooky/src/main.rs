@@ -1372,7 +1372,7 @@ async fn listen_auth_gusto_consent(_rqctx: Arc<RequestContext<Context>>) -> Resu
     sentry::start_session();
 
     // Initialize the Gusto client.
-    let g = Gusto::new_from_env("", "");
+    let g = Gusto::new_from_env("", "", "");
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
@@ -1389,7 +1389,7 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
     let event = query_args.into_inner();
 
     // Initialize the Gusto client.
-    let mut g = Gusto::new_from_env("", "");
+    let mut g = Gusto::new_from_env("", "", "");
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code).await.unwrap();
