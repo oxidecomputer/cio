@@ -153,7 +153,7 @@ pub async fn authenticate_docusign(db: &Database) -> DocuSign {
     // Get the APIToken from the database.
     if let Some(mut t) = APIToken::get_from_db(db, "docusign".to_string()) {
         // Initialize the DocuSign client.
-        let mut ds = DocuSign::new_from_env(t.access_token, t.refresh_token, t.company_id, t.endpoint);
+        let mut ds = DocuSign::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string(), t.endpoint.to_string());
         let nt = ds.refresh_access_token().await.unwrap();
         t.access_token = nt.access_token.to_string();
         t.expires_in = nt.expires_in as i32;
