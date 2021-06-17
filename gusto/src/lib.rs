@@ -33,7 +33,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Gusto API.
-const ENDPOINT: &str = "https://api.gusto-demo.com/";
+const ENDPOINT: &str = "https://api.gusto.com/";
 
 /// Entrypoint for interacting with the Gusto API.
 pub struct Gusto {
