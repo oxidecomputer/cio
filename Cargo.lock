@@ -480,7 +480,7 @@ dependencies = [
  "deunicode",
  "diesel",
  "diffy",
- "docusign 0.1.14",
+ "docusign 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -525,7 +525,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#2b627c9f1b1bb1a79ba47f2c5705371c89dacbdc"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#dd157ed80db7213e8b92dd71dfa49fc1ff6c8935"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -543,7 +543,7 @@ dependencies = [
  "deunicode",
  "diesel",
  "diffy",
- "docusign 0.1.14",
+ "docusign 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.1",
  "futures-util",
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -954,9 +954,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "docusign"
-version = "0.1.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a2f766c9862053c8523027d01e0e4b1018fb68b550299aebc800c684ca1ad71"
+version = "0.1.16"
 dependencies = [
  "bytes",
  "chrono",
@@ -970,6 +968,8 @@ dependencies = [
 [[package]]
 name = "docusign"
 version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ea036fafb105e563ff422d09a3c92a5ad901df705372f9678e077b59188682d"
 dependencies = [
  "bytes",
  "chrono",
@@ -2126,7 +2126,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#2b627c9f1b1bb1a79ba47f2c5705371c89dacbdc"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#dd157ed80db7213e8b92dd71dfa49fc1ff6c8935"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2976,7 +2976,7 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.1.11"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#2b627c9f1b1bb1a79ba47f2c5705371c89dacbdc"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#dd157ed80db7213e8b92dd71dfa49fc1ff6c8935"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4853,7 +4853,7 @@ dependencies = [
  "chrono-humanize",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
- "docusign 0.1.14",
+ "docusign 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
