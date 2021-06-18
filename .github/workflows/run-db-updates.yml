@@ -76,7 +76,6 @@ jobs:
           CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
-          GITHUB_ORG: oxidecomputer
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           GOOGLE_GEOCODE_API_KEY: ${{ secrets.GOOGLE_GEOCODE_API_KEY }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
@@ -86,6 +85,7 @@ jobs:
           GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           INFLUX_DB_URL: ${{ secrets.INFLUX_DB_URL }}
+          INFLUX_DB_USER: ${{ secrets.INFLUX_DB_USER }}
           INFLUX_DB_TOKEN: ${{ secrets.INFLUX_DB_TOKEN }}
           MAILCHIMP_LIST_ID: ${{ secrets.MAILCHIMP_LIST_ID }}
           MAILCHIMP_LIST_ID_RACK_LINE: ${{ secrets.MAILCHIMP_LIST_ID_RACK_LINE }}
