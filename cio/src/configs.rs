@@ -1135,6 +1135,21 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             user.home_address_state = gusto_user.home_address.state.to_string();
             user.home_address_zipcode = gusto_user.home_address.zip.to_string();
             user.home_address_country = gusto_user.home_address.country.to_string();
+        } else if let Some(gusto_user) = gusto_users.get(&user.recovery_email) {
+            // Update the user's start date.
+            user.start_date = gusto_user.jobs[0].hire_date;
+
+            // Update the user's birthday.
+            user.birthday = gusto_user.date_of_birth;
+
+            // Update the user's home address.
+            // Gusto now becomes the source of truth for people's addresses.
+            user.home_address_street_1 = gusto_user.home_address.street_1.to_string();
+            user.home_address_street_2 = gusto_user.home_address.street_2.to_string();
+            user.home_address_city = gusto_user.home_address.city.to_string();
+            user.home_address_state = gusto_user.home_address.state.to_string();
+            user.home_address_zipcode = gusto_user.home_address.zip.to_string();
+            user.home_address_country = gusto_user.home_address.country.to_string();
         }
 
         user.expand(db).await;
