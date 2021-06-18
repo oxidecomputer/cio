@@ -55,6 +55,10 @@ impl UpdateAirtableRecord<Company> for Company {
 }
 
 impl Company {
+    pub fn get_from_github_org(org: &str) -> Self {
+        companys::dsl::companys.filter(companys::dsl::github_org.eq(org.to_string())).first::<Company>(&db.conn()).unwrap()
+    }
+
     /// Authenticate with Ramp.
     pub async fn authenticate_ramp(&self, db: &Database) -> Ramp {
         // Get the APIToken from the database.
