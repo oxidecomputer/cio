@@ -795,6 +795,7 @@ pub struct Repository {
 #[cfg(test)]
 mod tests {
     use crate::influx::Client;
+    use cio_api::companies::Company;
     use cio_api::db::Database;
 
     #[ignore]
