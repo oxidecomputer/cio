@@ -1120,6 +1120,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
 
         // See if we have a gusto user for the user.
+        // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&user.email()) {
             // Update the user's start date.
             user.start_date = gusto_user.jobs[0].hire_date;
@@ -1150,8 +1151,25 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             user.home_address_state = gusto_user.home_address.state.to_string();
             user.home_address_zipcode = gusto_user.home_address.zip.to_string();
             user.home_address_country = gusto_user.home_address.country.to_string();
+        } else {
+            // Grab their date of birth, start date, and address from Airtable.
+            if let Some(e) = existing.clone() {
+                let airtable_record = e.get_existing_airtable_record().await.unwrap();
+                user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
+                user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
+                user.home_address_city = airtable_record.fields.home_address_city.to_string();
+                user.home_address_state = airtable_record.fields.home_address_state.to_string();
+                user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
+                user.home_address_country = airtable_record.fields.home_address_country.to_string();
+                user.birthday = airtable_record.fields.birthday;
+                // Keep the start date in airtable if we already have one.
+                if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
+                    user.start_date = airtable_record.fields.start_date;
+                }
+            }
         }
 
+        // Expand the user.
         user.expand(db).await;
 
         let new_user = user.upsert(db).await;
