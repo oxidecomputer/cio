@@ -739,8 +739,12 @@ impl RFD {
         // Create or update the file in the github repository.
         create_or_update_file_in_github_repo(&rfd_repo, &repo.default_branch, &rfd_path, cmd_output.stdout.clone()).await;
 
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&Database::new(), "Oxide".to_string()).unwrap();
+
         // Get gsuite token.
-        let token = get_gsuite_token("").await;
+        let token = get_gsuite_token(&oxide, "").await;
 
         // Initialize the Google Drive client.
         let drive_client = GoogleDrive::new(token);

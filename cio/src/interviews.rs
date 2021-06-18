@@ -69,7 +69,7 @@ pub async fn refresh_interviews(db: &Database) {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Get the list of our calendars.
@@ -218,7 +218,7 @@ pub async fn compile_packets(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get gsuite token.
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);

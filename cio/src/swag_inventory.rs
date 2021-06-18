@@ -15,6 +15,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE};
+use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{barcode_scans, swag_inventory_items, swag_items};
@@ -73,10 +74,15 @@ impl UpdateAirtableRecord<SwagItem> for SwagItem {
 pub async fn refresh_swag_items() {
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SwagItem>> = SwagItem::airtable().list_records(&SwagItem::airtable_table(), "Grid view", vec![]).await.unwrap();
     for item_record in results {
-        let item: NewSwagItem = item_record.fields.into();
+        let mut item: NewSwagItem = item_record.fields.into();
+        item.cio_company_id = oxide.id;
 
         let mut db_item = item.upsert_in_db(&db);
         db_item.airtable_record_id = item_record.id.to_string();
@@ -444,8 +450,12 @@ pub fn image_to_pdf_object(mut doc: Document, png_bytes: &[u8]) -> (Document, St
 pub async fn refresh_swag_inventory_items() {
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Get gsuite token.
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
@@ -455,6 +465,7 @@ pub async fn refresh_swag_inventory_items() {
     for inventory_item_record in results {
         let mut inventory_item: NewSwagInventoryItem = inventory_item_record.fields.into();
         inventory_item.expand(&drive_client).await;
+        inventory_item.cio_company_id = oxide.id;
 
         let mut db_inventory_item = inventory_item.upsert_in_db(&db);
         db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
@@ -537,7 +548,7 @@ impl BarcodeScan {
                     link_to_item: swag_inventory_item.link_to_item,
                     barcode: barcode.to_string(),
                     name: swag_inventory_item.name.to_string(),
-                    cio_company_id: Default::default(),
+                    cio_company_id: swag_inventory_item.cio_company_id,
                 };
 
                 // Add our barcode scan to the database.

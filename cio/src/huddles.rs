@@ -24,7 +24,7 @@ pub async fn sync_changes_to_google_events() {
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddle meetings.
@@ -126,7 +126,7 @@ pub async fn send_huddle_reminders() {
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Define the date format.
@@ -366,7 +366,7 @@ pub async fn sync_huddles() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddles.

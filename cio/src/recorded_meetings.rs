@@ -1,5 +1,4 @@
 #![allow(clippy::from_over_into)]
-use std::env;
 use std::str::from_utf8;
 
 use async_trait::async_trait;
@@ -89,7 +88,7 @@ pub async fn refresh_recorded_meetings() {
 
     RecordedMeetings::get_from_db(&db).update_airtable().await;
 
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
     let mut gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
@@ -99,7 +98,7 @@ pub async fn refresh_recorded_meetings() {
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.id.ends_with(&oxide.gsuite_domain) {
-            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, get_gsuite_token("").await);
+            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, get_gsuite_token(&oxide, "").await);
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
@@ -124,7 +123,7 @@ pub async fn refresh_recorded_meetings() {
                         if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
                             owner = attendee.email.to_string()
                         } else {
-                            owner = env::var("GADMIN_SUBJECT").unwrap();
+                            owner = oxide.gsuite_subject.to_string();
                         }
                     }
                 }
@@ -145,7 +144,7 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
-                let delegated_token = get_gsuite_token(&owner).await;
+                let delegated_token = get_gsuite_token(&oxide, &owner).await;
                 let drive_client = GoogleDrive::new(delegated_token);
 
                 // If we have a chat log, we should download it.

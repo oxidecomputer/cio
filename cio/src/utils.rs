@@ -40,7 +40,7 @@ pub fn write_file(file: &Path, contents: &str) {
 }
 
 /// Get a GSuite token.
-pub async fn get_gsuite_token(subject: &str) -> AccessToken {
+pub async fn get_gsuite_token(company: &Company, subject: &str) -> AccessToken {
     let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
     // Get the GSuite credentials file.
     let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or_default();
@@ -60,7 +60,7 @@ pub async fn get_gsuite_token(subject: &str) -> AccessToken {
         gsuite_credential_file = file_path.to_str().unwrap().to_string();
     }
 
-    let mut gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
+    let mut gsuite_subject = company.gsuite_subject.to_string();
     if !subject.is_empty() {
         gsuite_subject = subject.to_string();
     }
