@@ -1733,6 +1733,8 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync github outside collaborators.
     sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
+
+    refresh_anniversary_events(&db, &oxide).await;
 }
 
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
@@ -1829,8 +1831,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::configs::{refresh_anniversary_events, refresh_db_configs_and_airtable};
-    use crate::db::Database;
+    use crate::configs::refresh_db_configs_and_airtable;
     use crate::utils::authenticate_github_jwt;
 
     #[ignore]
@@ -1838,7 +1839,5 @@ mod tests {
     async fn test_cron_configs() {
         let github = authenticate_github_jwt();
         refresh_db_configs_and_airtable(&github).await;
-        let db = Database::new();
-        refresh_anniversary_events(&db).await;
     }
 }
