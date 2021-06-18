@@ -26,7 +26,7 @@ use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRT
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_images_in_branch, get_rfd_contents_from_repo, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{github_repos, rfds as r_f_ds, rfds};
-use crate::utils::{create_or_update_file_in_github_repo, get_gsuite_token, github_org, write_file};
+use crate::utils::{create_or_update_file_in_github_repo, github_org, write_file};
 
 /// The data type for a GitHub user.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize)]
@@ -686,7 +686,7 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    pub async fn convert_and_upload_pdf(&mut self, github: &Github) {
+    pub async fn convert_and_upload_pdf(&mut self, github: &Github, drive_client: &GoogleDrive) {
         // Get the rfd repo client.
         let rfd_repo = github.repo(github_org(), "rfd");
         let repo = rfd_repo.get().await.unwrap();
@@ -738,16 +738,6 @@ impl RFD {
 
         // Create or update the file in the github repository.
         create_or_update_file_in_github_repo(&rfd_repo, &repo.default_branch, &rfd_path, cmd_output.stdout.clone()).await;
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&Database::new(), "Oxide".to_string()).unwrap();
-
-        // Get gsuite token.
-        let token = get_gsuite_token(&oxide, "").await;
-
-        // Initialize the Google Drive client.
-        let drive_client = GoogleDrive::new(token);
 
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"

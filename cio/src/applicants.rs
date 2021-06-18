@@ -2144,6 +2144,10 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 
 // Sync the applicants with our database.
 pub async fn refresh_db_applicants(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     let github = authenticate_github_jwt();
 
     // Get all the hiring issues on the configs repository.
@@ -2155,7 +2159,7 @@ pub async fn refresh_db_applicants(db: &Database) {
         .unwrap();
 
     // Get the GSuite token.
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2248,12 +2252,12 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
 }
 
 pub async fn update_applications_with_scoring_forms(db: &Database) {
-    // Get the GSuite token.
-    let token = get_gsuite_token("").await;
-
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
+    // Get the GSuite token.
+    let token = get_gsuite_token(&oxide, "").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2384,8 +2388,12 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
 }
 
 pub async fn update_applications_with_scoring_results(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     // Get the GSuite token.
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2623,8 +2631,12 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
 }
 
 pub async fn update_applicant_reviewers(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     // Get the GSuite token.
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2805,6 +2817,10 @@ impl Applicant {
     }
 
     pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
         self.offer_created = envelope.created_date_time;
@@ -2831,7 +2847,7 @@ impl Applicant {
         }
 
         // Get gsuite token.
-        let token = get_gsuite_token("").await;
+        let token = get_gsuite_token(&oxide, "").await;
 
         // Initialize the Google Drive client.
         let drive_client = GoogleDrive::new(token);

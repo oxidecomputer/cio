@@ -5,6 +5,7 @@ use chrono::{Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
 use futures_util::TryStreamExt;
+use google_drive::GoogleDrive;
 use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use regex::Regex;
@@ -13,7 +14,7 @@ use sendgrid_api::SendGrid;
 use crate::companies::Company;
 use crate::db::Database;
 use crate::models::{NewRFD, RFDs};
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, github_org};
+use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
 
 /// Get the RFDs from the rfd GitHub repo.
 pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
@@ -200,6 +201,16 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
 
 // Sync the rfds with our database.
 pub async fn refresh_db_rfds(db: &Database, github: &Github) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
+    // Get gsuite token.
+    let token = get_gsuite_token(&oxide, "").await;
+
+    // Initialize the Google Drive client.
+    let drive_client = GoogleDrive::new(token);
+
     let rfds = get_rfds_from_repo(github).await;
 
     // Sync rfds.
@@ -210,7 +221,7 @@ pub async fn refresh_db_rfds(db: &Database, github: &Github) {
         new_rfd.expand(github).await;
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(github).await;
+        new_rfd.convert_and_upload_pdf(github, &drive_client).await;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
