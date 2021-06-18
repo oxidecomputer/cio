@@ -479,11 +479,6 @@ impl OutboundShipments {
     }
 }
 
-/// Returns the office phone number.
-pub fn oxide_hq_phone() -> String {
-    "+15109221392".to_string()
-}
-
 /// Returns the shippo data structure for the address at the office.
 pub fn hq_address(company: &Company) -> Address {
     // TODO: make this the address for the company
@@ -495,7 +490,7 @@ pub fn hq_address(company: &Company) -> Address {
         state: "CA".to_string(),
         zip: "94608".to_string(),
         country: "US".to_string(),
-        phone: oxide_hq_phone(),
+        phone: company.phone.to_string(),
         email: format!("packages@{}", &company.gsuite_domain),
         is_complete: Default::default(),
         object_id: Default::default(),
@@ -902,7 +897,7 @@ xoxo,
         // We need a phone number for the shipment.
         if self.phone.is_empty() {
             // Use the Oxide office line.
-            self.phone = oxide_hq_phone();
+            self.phone = company.phone.to_string();
         }
 
         // Create our shipment.
@@ -1113,11 +1108,6 @@ pub async fn refresh_outbound_shipments(db: &Database) {
         // Update airtable and the database again.
         s.update(db).await;
     }
-}
-
-// Get the sheadsheets that contain shipments.
-pub fn get_shipments_spreadsheets() -> Vec<String> {
-    vec!["114nnvYnUq7xuf9dw1pT90OiVpYUE6YfE_pN1wllQuCU".to_string(), "1V2NgYMlNXxxVtp81NLd_bqGllc5aDvSK2ZRqp6n2U-Y".to_string()]
 }
 
 // Sync the inbound shipments.

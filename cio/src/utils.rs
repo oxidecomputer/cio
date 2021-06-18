@@ -27,8 +27,6 @@ use crate::companies::Company;
 use crate::db::Database;
 use crate::models::{GithubRepo, GithubRepos, NewRepo};
 
-pub static DOMAIN: &str = "oxide.computer";
-
 /// Write a file.
 pub fn write_file(file: &Path, contents: &str) {
     // create each directory.

@@ -10,9 +10,10 @@ use hubcaps::Github;
 use regex::Regex;
 use sendgrid_api::SendGrid;
 
+use crate::companies::Company;
 use crate::db::Database;
 use crate::models::{NewRFD, RFDs};
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, github_org, DOMAIN};
+use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, github_org};
 
 /// Get the RFDs from the rfd GitHub repo.
 pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
@@ -221,6 +222,11 @@ pub async fn refresh_db_rfds(db: &Database, github: &Github) {
 pub async fn send_rfd_changelog() {
     // Initialize our database.
     let db = Database::new();
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let github = authenticate_github_jwt();
     let seven_days_ago = Utc::now() - Duration::days(7);
     let week_format = format!("from {} to {}", seven_days_ago.format("%m-%d-%Y"), Utc::now().format("%m-%d-%Y"));
@@ -244,10 +250,10 @@ pub async fn send_rfd_changelog() {
         .send_mail(
             format!("RFD changelog for the week from {}", week_format),
             changelog,
-            vec![format!("all@{}", DOMAIN)],
+            vec![format!("all@{}", oxide.gsuite_domain)],
             vec![],
             vec![],
-            format!("rfds@{}", DOMAIN),
+            format!("rfds@{}", oxide.gsuite_domain),
         )
         .await;
 }

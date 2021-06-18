@@ -29,7 +29,7 @@ use crate::gsuite::{update_google_group_settings, update_group_aliases, update_g
 use crate::schema::{applicants, buildings, conference_rooms, groups, links, users};
 use crate::shipments::NewOutboundShipment;
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
-use crate::utils::{authenticate_gusto, authenticate_ramp, get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN};
+use crate::utils::{authenticate_gusto, authenticate_ramp, get_github_user_public_ssh_keys, get_gsuite_token, github_org};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -518,16 +518,16 @@ jess@{}.
 xoxo,
   The Onboarding Bot",
                     self.first_name,
-                    DOMAIN,
-                    DOMAIN,
+                    company.domain,
+                    company.domain,
                     self.email(company),
                     aliases,
-                    DOMAIN,
+                    company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(company), format!("jess@{}", DOMAIN)],
+                vec![self.email(company), format!("jess@{}", company.gsuite_domain)],
                 vec![],
-                format!("admin@{}", DOMAIN),
+                format!("admin@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -555,7 +555,7 @@ by going to https://github.com/{}.",
                 "We do not have a github account for you. You will need to create one at https://github.com
 OR let jess@{} know your handle, if you already have one. Either way, be sure to
 let jess@{} know what your GitHub handle is.",
-                DOMAIN, DOMAIN
+                company.gsuite_domain, company.gsuite_domain
             );
         }
 
@@ -612,20 +612,20 @@ Lastly, be sure to order yourself some swag: https://swag.oxide.computer
 xoxo,
   The Onboarding Bot",
                     self.first_name,
-                    DOMAIN,
-                    DOMAIN,
+                    company.domain,
+                    company.domain,
                     self.email(company),
                     aliases,
                     github_copy,
-                    DOMAIN,
+                    company.gsuite_domain,
                     github_org,
                     github_org,
                     github_org,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(company), format!("jess@{}", DOMAIN)],
+                vec![self.email(company), format!("jess@{}", company.gsuite_domain)],
                 vec![],
-                format!("admin@{}", DOMAIN),
+                format!("admin@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -1601,7 +1601,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
     // Sync links.
     for (name, mut link) in links {
         link.name = name.to_string();
-        link.short_link = format!("https://{}.corp.{}", name, DOMAIN);
+        link.short_link = format!("https://{}.corp.{}", name, company.domain);
         link.cio_company_id = company.id;
 
         link.upsert(db).await;
@@ -1616,7 +1616,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
             description: huddle.description.to_string(),
             link: huddle.link_to_airtable_workspace.to_string(),
             aliases: vec![format!("airtable-{}-huddle", slug)],
-            short_link: format!("https://{}-huddle.corp.{}", slug, DOMAIN),
+            short_link: format!("https://{}-huddle.corp.{}", slug, company.domain),
             cio_company_id: company.id,
         };
 
@@ -1629,7 +1629,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
         link.name = format!("{}-huddle-form", slug);
         link.link = huddle.link_to_airtable_form.to_string();
         link.aliases = vec![format!("airtable-{}-huddle-form", slug)];
-        link.short_link = format!("https://{}-huddle-form.corp.{}", slug, DOMAIN);
+        link.short_link = format!("https://{}-huddle-form.corp.{}", slug, company.domain);
         link.description = format!("Form for submitting topics to the {}", huddle.description.to_lowercase());
 
         link.upsert(db).await;
