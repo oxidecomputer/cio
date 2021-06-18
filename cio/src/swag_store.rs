@@ -57,14 +57,21 @@ impl Order {
     }
 
     pub async fn create_shipment_for_order(&self, db: &Database) {
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
         // Convert the shipment to an order.
-        let shipment: NewOutboundShipment = self.clone().into();
+        let mut shipment: NewOutboundShipment = self.clone().into();
+        shipment.cio_company_id = oxide.cio_company_id;
+
         // Add the shipment to the database.
         let mut new_shipment = shipment.upsert(db).await;
         // Create or update the shipment from shippo.
         new_shipment.create_or_get_shippo_shipment(db).await;
         // Update airtable and the database again.
         new_shipment.update(db).await;
+
         // Send an email to the person that we recieved their order and what they are
         // getting.
         let company = Company::get_by_id(db, new_shipment.cio_company_id);

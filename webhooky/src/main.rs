@@ -954,7 +954,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(rqctx: Arc<Re
     path = "/airtable/shipments/outbound/resend_shipment_status_email_to_recipient",
 }]
 async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
@@ -967,11 +967,15 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
+    let api_context = rqctx.context();
+
     // Get the row from airtable.
     let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
 
+    let company = Company::get_by_id(&api_context.db, shipment.cio_company_id);
+
     // Resend the email to the recipient.
-    shipment.send_email_to_recipient().await;
+    shipment.send_email_to_recipient(&company).await;
     println!("resent the shipment email to the recipient {}", shipment.email);
 
     sentry::end_session();

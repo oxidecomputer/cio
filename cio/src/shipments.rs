@@ -1,5 +1,4 @@
 #![allow(clippy::from_over_into)]
-use std::collections::HashMap;
 use std::convert::From;
 use std::env;
 
@@ -13,7 +12,6 @@ use reqwest::StatusCode;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
-use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE};
@@ -21,9 +19,7 @@ use crate::companies::Company;
 use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::models::get_value;
 use crate::schema::{inbound_shipments, outbound_shipments, package_pickups};
-use crate::utils::get_gsuite_token;
 
 /// The data type for an inbound shipment.
 #[db {
@@ -311,7 +307,7 @@ impl From<User> for NewOutboundShipment {
             geocode_cache: Default::default(),
             local_pickup: Default::default(),
             link_to_package_pickup: Default::default(),
-            cio_company_id: Default::default(),
+            cio_company_id: user.cio_company_id,
         }
     }
 }
@@ -469,7 +465,7 @@ impl OutboundShipments {
             confirmed_end_time: pickup.confirmed_end_time,
             cancel_by_time: pickup.cancel_by_time,
             messages,
-            cio_company_id: Default::default(),
+            cio_company_id: oxide.id,
         };
 
         // Insert the new pickup into the database.
@@ -529,310 +525,6 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
     let end_time = next_day.date().and_time(NaiveTime::from_hms(16, 59, 59)).unwrap();
 
     (start_time.with_timezone(&Utc), end_time.with_timezone(&Utc))
-}
-
-impl NewOutboundShipment {
-    fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
-        // Parse the time.
-        let time_str = timestamp.to_owned() + " -08:00";
-        DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z").unwrap().with_timezone(&Utc)
-    }
-
-    /// Parse the sheet columns from single Google Sheets row values.
-    /// This is what we get back from the webhook.
-    pub fn parse_from_row(values: &HashMap<String, Vec<String>>) -> Self {
-        let hoodie_size = get_value(values, "Hoodie");
-        let fleece_size = get_value(values, "Patagonia Fleece");
-        let womens_shirt_size = get_value(values, "Women's Tee");
-        let unisex_shirt_size = get_value(values, "Unisex Tee");
-        let kids_shirt_size = get_value(values, "Onesie / Toddler / Youth Sizes");
-        let mut contents = String::new();
-        if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
-            contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
-        }
-        if !fleece_size.is_empty() && !fleece_size.contains("N/A") {
-            contents += &format!("1 x Oxide Fleece, Size: {}\n", fleece_size);
-        }
-        if !womens_shirt_size.is_empty() && !womens_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Women's Shirt, Size: {}\n", womens_shirt_size);
-        }
-        if !unisex_shirt_size.is_empty() && !unisex_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Unisex Shirt, Size: {}\n", unisex_shirt_size);
-        }
-        if !kids_shirt_size.is_empty() && !kids_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Kids Shirt, Size: {}\n", kids_shirt_size);
-        }
-
-        let mut country = get_value(values, "Country");
-        if country.is_empty() {
-            country = "US".to_string();
-        }
-        NewOutboundShipment {
-            created_time: NewOutboundShipment::parse_timestamp(&get_value(values, "Timestamp")),
-            name: get_value(values, "Name"),
-            email: get_value(values, "Email Address").to_lowercase(),
-            phone: get_value(values, "Phone number"),
-            street_1: get_value(values, "Street address line 1").to_uppercase(),
-            street_2: get_value(values, "Street address line 2").to_uppercase(),
-            city: get_value(values, "City").to_uppercase(),
-            state: get_value(values, "State").to_uppercase(),
-            zipcode: get_value(values, "Zipcode").to_uppercase(),
-            country,
-            address_formatted: String::new(),
-            latitude: Default::default(),
-            longitude: Default::default(),
-            contents: contents.trim().to_string(),
-            carrier: Default::default(),
-            pickup_date: None,
-            delivered_time: None,
-            shipped_time: None,
-            shippo_id: Default::default(),
-            status: "Queued".to_string(),
-            tracking_link: Default::default(),
-            oxide_tracking_link: Default::default(),
-            tracking_number: Default::default(),
-            tracking_status: Default::default(),
-            cost: Default::default(),
-            label_link: Default::default(),
-            eta: None,
-            messages: Default::default(),
-            notes: Default::default(),
-            geocode_cache: Default::default(),
-            local_pickup: false,
-            link_to_package_pickup: Default::default(),
-            cio_company_id: Default::default(),
-        }
-    }
-
-    /// Parse the shipment from a Google Sheets row, where we also happen to know the columns.
-    /// This is how we get the spreadsheet back from the API.
-    pub async fn parse_from_row_with_columns(db: &Database, columns: &SwagSheetColumns, row: &[String]) -> (Self, bool) {
-        // If the length of the row is greater than the sent column
-        // then we have a sent status.
-        let sent = if row.len() > columns.sent { row[columns.sent].to_lowercase().contains("true") } else { false };
-
-        // If the length of the row is greater than the country column
-        // then we have a country.
-        let mut country = if row.len() > columns.country && columns.country != 0 {
-            row[columns.country].trim().to_uppercase()
-        } else {
-            "US".to_string()
-        };
-        if country.is_empty() {
-            country = "US".to_string();
-        }
-
-        // If the length of the row is greater than the name column
-        // then we have a name.
-        let name = if row.len() > columns.name && columns.name != 0 {
-            row[columns.name].trim().to_string()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the phone column
-        // then we have a phone.
-        let phone = if row.len() > columns.phone && columns.phone != 0 {
-            row[columns.phone].trim().to_lowercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the zipcode column
-        // then we have a zipcode.
-        let zipcode = if row.len() > columns.zipcode && columns.zipcode != 0 {
-            row[columns.zipcode].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the state column
-        // then we have a state.
-        let state = if row.len() > columns.state && columns.state != 0 {
-            row[columns.state].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the city column
-        // then we have a city.
-        let city = if row.len() > columns.city && columns.city != 0 {
-            row[columns.city].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the street_1 column
-        // then we have a street_1.
-        let street_1 = if row.len() > columns.street_1 && columns.street_1 != 0 {
-            row[columns.street_1].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the street_2 column
-        // then we have a street_2.
-        let street_2 = if row.len() > columns.street_2 && columns.street_2 != 0 {
-            row[columns.street_2].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the hoodie_size column
-        // then we have a hoodie_size.
-        let hoodie_size = if row.len() > columns.hoodie_size && columns.hoodie_size != 0 {
-            row[columns.hoodie_size].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the fleece_size column
-        // then we have a fleece_size.
-        let fleece_size = if row.len() > columns.fleece_size && columns.fleece_size != 0 {
-            row[columns.fleece_size].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the womens_shirt_size column
-        // then we have a womens_shirt_size.
-        let womens_shirt_size = if row.len() > columns.womens_shirt_size && columns.womens_shirt_size != 0 {
-            row[columns.womens_shirt_size].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the unisex_shirt_size column
-        // then we have a unisex_shirt_size.
-        let unisex_shirt_size = if row.len() > columns.unisex_shirt_size && columns.unisex_shirt_size != 0 {
-            row[columns.unisex_shirt_size].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // If the length of the row is greater than the kids_shirt_size column
-        // then we have a kids_shirt_size.
-        let kids_shirt_size = if row.len() > columns.kids_shirt_size && columns.kids_shirt_size != 0 {
-            row[columns.kids_shirt_size].trim().to_uppercase()
-        } else {
-            "".to_lowercase()
-        };
-
-        // TODO: make all these more DRY.
-        let email = row[columns.email].trim().to_lowercase();
-        let mut contents = String::new();
-        if !hoodie_size.is_empty() && !hoodie_size.contains("N/A") {
-            contents += &format!("1 x Oxide Hoodie, Size: {}\n", hoodie_size);
-        }
-        if !fleece_size.is_empty() && !fleece_size.contains("N/A") {
-            contents += &format!("1 x Oxide Fleece, Size: {}\n", fleece_size);
-        }
-        if !womens_shirt_size.is_empty() && !womens_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Women's Shirt, Size: {}\n", womens_shirt_size);
-        }
-        if !unisex_shirt_size.is_empty() && !unisex_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Unisex Shirt, Size: {}\n", unisex_shirt_size);
-        }
-        if !kids_shirt_size.is_empty() && !kids_shirt_size.contains("N/A") {
-            contents += &format!("1 x Oxide Kids Shirt, Size: {}\n", kids_shirt_size);
-        }
-
-        let created_time = NewOutboundShipment::parse_timestamp(&row[columns.timestamp]);
-
-        let mut carrier = Default::default();
-        let mut address_formatted = Default::default();
-        let mut shippo_id = Default::default();
-        let mut pickup_date = Default::default();
-        let mut delivered_time = Default::default();
-        let mut shipped_time = Default::default();
-        let mut tracking_link = Default::default();
-        let mut oxide_tracking_link = Default::default();
-        let mut cost = Default::default();
-        let mut tracking_status = Default::default();
-        let mut label_link = Default::default();
-        let mut eta = Default::default();
-        let mut notes = Default::default();
-        let mut geocode_cache = Default::default();
-        let mut messages = Default::default();
-        let mut status = Default::default();
-        let mut tracking_number = Default::default();
-        let mut latitude = Default::default();
-        let mut longitude = Default::default();
-        let mut local_pickup = Default::default();
-        let mut link_to_package_pickup = Default::default();
-
-        // Let's try to get the record from the database.
-        if let Ok(shipment) = outbound_shipments::dsl::outbound_shipments
-            .filter(outbound_shipments::dsl::email.eq(email.to_string()))
-            .filter(outbound_shipments::dsl::created_time.eq(created_time))
-            .first::<OutboundShipment>(&db.conn())
-        {
-            if let Some(existing) = shipment.get_existing_airtable_record().await {
-                // Take the field from Airtable.
-                local_pickup = existing.fields.local_pickup;
-                link_to_package_pickup = existing.fields.link_to_package_pickup;
-            }
-            // Let's set some other fields.
-            carrier = shipment.carrier.to_string();
-            address_formatted = shipment.address_formatted.to_string();
-            shippo_id = shipment.shippo_id.to_string();
-            pickup_date = shipment.pickup_date;
-            delivered_time = shipment.delivered_time;
-            shipped_time = shipment.shipped_time;
-            tracking_link = shipment.tracking_link.to_string();
-            oxide_tracking_link = shipment.oxide_tracking_link.to_string();
-            cost = shipment.cost;
-            tracking_status = shipment.tracking_status.to_string();
-            label_link = shipment.label_link.to_string();
-            eta = shipment.eta;
-            notes = shipment.notes.to_string();
-            geocode_cache = shipment.geocode_cache.to_string();
-            messages = shipment.messages.to_string();
-            status = shipment.status.to_string();
-            tracking_number = shipment.tracking_number;
-            latitude = shipment.latitude;
-            longitude = shipment.longitude;
-        }
-
-        (
-            NewOutboundShipment {
-                created_time,
-                name,
-                email,
-                phone,
-                street_1,
-                street_2,
-                city,
-                state,
-                zipcode,
-                country,
-                contents: contents.trim().to_string(),
-                address_formatted,
-                latitude,
-                longitude,
-                carrier,
-                pickup_date,
-                delivered_time,
-                shipped_time,
-                shippo_id,
-                status,
-                tracking_link,
-                oxide_tracking_link,
-                tracking_number,
-                tracking_status,
-                cost,
-                label_link,
-                eta,
-                messages,
-                notes,
-                geocode_cache,
-                local_pickup,
-                link_to_package_pickup,
-                cio_company_id: Default::default(),
-            },
-            sent,
-        )
-    }
 }
 
 /// Implement updating the Airtable record for an OutboundShipment.
@@ -1405,51 +1097,6 @@ impl SwagSheetColumns {
 
 // Sync the outbound shipments.
 pub async fn refresh_outbound_shipments(db: &Database) {
-    // Get the GSuite token.
-    let token = get_gsuite_token("").await;
-
-    // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token.clone());
-
-    // Iterate over the Google sheets and get the shipments.
-    for sheet_id in get_shipments_spreadsheets() {
-        // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:S1000".to_string()).await.unwrap();
-        let values = sheet_values.values.unwrap();
-
-        if values.is_empty() {
-            panic!("unable to retrieve any data values from Google sheet {}", sheet_id);
-        }
-
-        // Parse the sheet columns.
-        let columns = SwagSheetColumns::parse(&values);
-
-        // Iterate over the rows.
-        for (row_index, row) in values.iter().enumerate() {
-            if row_index == 0 {
-                // Continue the loop since we were on the header row.
-                continue;
-            } // End get header information.
-
-            // Break the loop early if we reached an empty row.
-            if row[columns.email].is_empty() {
-                break;
-            }
-
-            // Parse the shipment out of the row information.
-            let (mut shipment, sent) = NewOutboundShipment::parse_from_row_with_columns(db, &columns, &row).await;
-
-            if !sent {
-                shipment.notes = format!("Automatically generated from the Google sheet {}", sheet_id);
-                let mut new_shipment = shipment.upsert(db).await;
-                // Create or update the shipment from shippo.
-                new_shipment.create_or_get_shippo_shipment(db).await;
-                // Update airtable and the database again.
-                new_shipment.update(db).await;
-            }
-        }
-    }
-
     // Iterate over all the shipments in the database and update them.
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
@@ -1475,6 +1122,10 @@ pub fn get_shipments_spreadsheets() -> Vec<String> {
 
 // Sync the inbound shipments.
 pub async fn refresh_inbound_shipments(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     let is: Vec<airtable_api::Record<InboundShipment>> = InboundShipment::airtable().list_records(&InboundShipment::airtable_table(), "Grid view", vec![]).await.unwrap();
 
     for record in is {
@@ -1485,6 +1136,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
 
         let mut new_shipment: NewInboundShipment = record.fields.into();
         new_shipment.expand().await;
+        new_shipment.cio_company_id = oxide.id;
         let mut shipment = new_shipment.upsert_in_db(&db);
         if shipment.airtable_record_id.is_empty() {
             shipment.airtable_record_id = record.id;
