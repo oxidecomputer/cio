@@ -55,7 +55,7 @@ impl UpdateAirtableRecord<Company> for Company {
 }
 
 impl Company {
-    pub fn get_from_github_org(org: &str) -> Self {
+    pub fn get_from_github_org(db: &Database, org: &str) -> Self {
         companys::dsl::companys.filter(companys::dsl::github_org.eq(org.to_string())).first::<Company>(&db.conn()).unwrap()
     }
 
