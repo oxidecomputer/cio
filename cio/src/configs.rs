@@ -198,6 +198,9 @@ pub struct UserConfig {
     /// This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 pub mod null_date_format {
@@ -810,6 +813,9 @@ pub struct GroupConfig {
     /// Specifies whether a collaborative inbox will remain turned on for the group.
     #[serde(default)]
     pub enable_collaborative_inbox: bool,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl GroupConfig {
@@ -869,6 +875,9 @@ pub struct BuildingConfig {
     /// This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl BuildingConfig {
@@ -917,6 +926,9 @@ pub struct ResourceConfig {
     pub floor: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub section: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a ConferenceRoom.
@@ -961,6 +973,9 @@ pub struct LinkConfig {
     pub aliases: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub short_link: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a Link.
@@ -1593,6 +1608,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
             link: huddle.link_to_airtable_workspace.to_string(),
             aliases: vec![format!("airtable-{}-huddle", slug)],
             short_link: format!("https://{}-huddle.corp.{}", slug, DOMAIN),
+            cio_company_id: Default::default(),
         };
 
         link.upsert(db).await;

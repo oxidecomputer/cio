@@ -189,6 +189,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
         domain: domain.to_string(),
         valid_days_left: cert.valid_days_left() as i32,
         expiration_date: crate::utils::default_date(),
+        cio_company_id: Default::default(),
     }
 }
 
@@ -213,6 +214,9 @@ pub struct NewCertificate {
     pub valid_days_left: i32,
     #[serde(default = "crate::utils::default_date", serialize_with = "crate::configs::null_date_format::serialize")]
     pub expiration_date: NaiveDate,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl NewCertificate {

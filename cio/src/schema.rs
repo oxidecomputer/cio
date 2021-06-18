@@ -12,6 +12,7 @@ table! {
         notes -> Varchar,
         invoices -> Array<Text>,
         link_to_vendor -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -32,6 +33,7 @@ table! {
         refresh_token_expires_date -> Nullable<Timestamptz>,
         endpoint -> Varchar,
         last_updated_at -> Timestamptz,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -206,6 +208,7 @@ table! {
         item -> Varchar,
         barcode -> Varchar,
         link_to_item -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -225,6 +228,7 @@ table! {
         employees -> Array<Text>,
         conference_rooms -> Array<Text>,
         geocode_cache -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -237,6 +241,7 @@ table! {
         private_key -> Text,
         valid_days_left -> Int4,
         expiration_date -> Date,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -263,6 +268,7 @@ table! {
         capacity -> Int4,
         floor -> Varchar,
         section -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -284,6 +290,7 @@ table! {
         time -> Timestamptz,
         receipts -> Array<Text>,
         link_to_vendor -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -305,6 +312,7 @@ table! {
         time -> Timestamptz,
         receipts -> Array<Text>,
         link_to_vendor -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -378,6 +386,7 @@ table! {
         pushed_at -> Timestamptz,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -400,6 +409,7 @@ table! {
         who_can_view_group -> Varchar,
         who_can_view_membership -> Varchar,
         enable_collaborative_inbox -> Bool,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -419,6 +429,7 @@ table! {
         order_number -> Varchar,
         name -> Varchar,
         notes -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -457,6 +468,7 @@ table! {
         link -> Varchar,
         aliases -> Array<Text>,
         short_link -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -479,6 +491,7 @@ table! {
         notes -> Text,
         tags -> Array<Text>,
         link_to_people -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -518,6 +531,7 @@ table! {
         geocode_cache -> Varchar,
         local_pickup -> Bool,
         link_to_package_pickup -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -538,6 +552,7 @@ table! {
         confirmed_end_time -> Nullable<Timestamptz>,
         cancel_by_time -> Nullable<Timestamptz>,
         messages -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -551,6 +566,7 @@ table! {
         user_email -> Varchar,
         page_link -> Varchar,
         link_to_auth_user -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -590,6 +606,7 @@ table! {
         google_event_id -> Varchar,
         event_link -> Varchar,
         location -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -640,6 +657,7 @@ table! {
         link_to_transactions -> Array<Text>,
         link_to_accounts_payable -> Array<Text>,
         link_to_expensed_items -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -657,6 +675,7 @@ table! {
         barcode_pdf_label -> Varchar,
         print_barcode_label_quantity -> Int4,
         link_to_item -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -673,6 +692,7 @@ table! {
         link_to_order_january_2020 -> Array<Text>,
         link_to_order_october_2020 -> Array<Text>,
         link_to_order_may_2021 -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -722,6 +742,7 @@ table! {
         typev -> Varchar,
         google_anniversary_event_id -> Varchar,
         geocode_cache -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }

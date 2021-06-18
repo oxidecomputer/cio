@@ -58,6 +58,9 @@ pub struct NewRecordedMeeting {
     pub event_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a RecordedMeeting.
@@ -178,6 +181,7 @@ pub async fn refresh_recorded_meetings() {
                     location: event.location.to_string(),
                     google_event_id: event.id.to_string(),
                     event_link: event.html_link.to_string(),
+                    cio_company_id: Default::default(),
                 };
 
                 // Let's try to get the meeting.

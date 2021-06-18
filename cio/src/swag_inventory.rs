@@ -51,6 +51,9 @@ pub struct NewSwagItem {
     pub link_to_order_october_2020: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_order_may_2021: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a SwagItem.
@@ -124,6 +127,9 @@ pub struct NewSwagInventoryItem {
     /// This is populated by Airtable.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_item: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a SwagInventoryItem.
@@ -486,6 +492,9 @@ pub struct NewBarcodeScan {
     /// This is populated by Airtable.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_item: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a BarcodeScan.
@@ -528,6 +537,7 @@ impl BarcodeScan {
                     link_to_item: swag_inventory_item.link_to_item,
                     barcode: barcode.to_string(),
                     name: swag_inventory_item.name.to_string(),
+                    cio_company_id: Default::default(),
                 };
 
                 // Add our barcode scan to the database.

@@ -65,6 +65,9 @@ pub struct NewSoftwareVendor {
     pub link_to_accounts_payable: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_expensed_items: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// This is only used for serialize
@@ -208,6 +211,9 @@ pub struct NewCreditCardTransaction {
     /// This is linked to another table.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_vendor: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a CreditCardTransaction.
@@ -269,6 +275,7 @@ pub async fn refresh_ramp_transactions() {
             time: transaction.user_transaction_time,
             memo: String::new(),
             link_to_vendor,
+            cio_company_id: Default::default(),
         };
 
         nt.upsert(&db).await;
@@ -624,6 +631,9 @@ pub struct NewAccountsPayable {
     /// This is linked to another table.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_vendor: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a AccountsPayable.
@@ -735,6 +745,9 @@ pub struct NewExpensedItem {
     /// This is linked to another table.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_vendor: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a ExpensedItem.

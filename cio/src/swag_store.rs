@@ -146,6 +146,7 @@ impl From<Order> for NewOutboundShipment {
             geocode_cache: Default::default(),
             local_pickup: false,
             link_to_package_pickup: Default::default(),
+            cio_company_id: Default::default(),
         }
     }
 }

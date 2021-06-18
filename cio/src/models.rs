@@ -225,6 +225,9 @@ pub struct NewRepo {
     pub created_at: DateTime<Utc>,
     #[serde(deserialize_with = "crate::configs::null_date_format::deserialize")]
     pub updated_at: DateTime<Utc>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a GithubRepo.
@@ -345,6 +348,7 @@ impl NewRepo {
             pushed_at: DateTime::parse_from_rfc3339(&r.pushed_at).unwrap().with_timezone(&Utc),
             created_at: DateTime::parse_from_rfc3339(&r.created_at).unwrap().with_timezone(&Utc),
             updated_at: DateTime::parse_from_rfc3339(&r.updated_at).unwrap().with_timezone(&Utc),
+            cio_company_id: Default::default(),
         }
     }
 }

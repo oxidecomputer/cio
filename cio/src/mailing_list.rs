@@ -57,6 +57,9 @@ pub struct NewMailingListSubscriber {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_people: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl NewMailingListSubscriber {
@@ -163,6 +166,7 @@ impl Default for NewMailingListSubscriber {
             notes: String::new(),
             tags: Default::default(),
             link_to_people: Default::default(),
+            cio_company_id: Default::default(),
         }
     }
 }
@@ -214,6 +218,7 @@ impl Into<NewMailingListSubscriber> for MailchimpMember {
             notes: self.last_note.note,
             tags,
             link_to_people: Default::default(),
+            cio_company_id: Default::default(),
         }
     }
 }

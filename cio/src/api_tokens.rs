@@ -51,6 +51,9 @@ pub struct NewAPIToken {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub endpoint: String,
     pub last_updated_at: DateTime<Utc>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a APIToken.

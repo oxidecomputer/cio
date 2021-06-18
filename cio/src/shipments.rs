@@ -64,6 +64,9 @@ pub struct NewInboundShipment {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for an InboundShipment.
@@ -263,6 +266,9 @@ pub struct NewOutboundShipment {
     /// This is automatically filled in by Airtbale.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_package_pickup: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl From<User> for NewOutboundShipment {
@@ -300,6 +306,7 @@ impl From<User> for NewOutboundShipment {
             geocode_cache: Default::default(),
             local_pickup: Default::default(),
             link_to_package_pickup: Default::default(),
+            cio_company_id: Default::default(),
         }
     }
 }
@@ -340,6 +347,9 @@ pub struct NewPackagePickup {
     pub cancel_by_time: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub messages: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for an PackagePickup.
@@ -450,6 +460,7 @@ impl OutboundShipments {
             confirmed_end_time: pickup.confirmed_end_time,
             cancel_by_time: pickup.cancel_by_time,
             messages,
+            cio_company_id: Default::default(),
         };
 
         // Insert the new pickup into the database.
@@ -579,6 +590,7 @@ impl NewOutboundShipment {
             geocode_cache: Default::default(),
             local_pickup: false,
             link_to_package_pickup: Default::default(),
+            cio_company_id: Default::default(),
         }
     }
 
@@ -806,6 +818,7 @@ impl NewOutboundShipment {
                 geocode_cache,
                 local_pickup,
                 link_to_package_pickup,
+                cio_company_id: Default::default(),
             },
             sent,
         )
