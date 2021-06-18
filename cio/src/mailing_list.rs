@@ -183,11 +183,11 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
 pub async fn refresh_db_mailing_list_subscribers(db: &Database) {
-    let members = get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID").unwrap_or_default()).await;
-
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    let members = get_all_mailchimp_subscribers(&oxide.mailchimp_list_id).await;
 
     // Sync subscribers.
     for member in members {

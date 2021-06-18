@@ -86,7 +86,6 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           INFLUX_DB_URL: ${{ secrets.INFLUX_DB_URL }}
           INFLUX_DB_TOKEN: ${{ secrets.INFLUX_DB_TOKEN }}
-          MAILCHIMP_LIST_ID: ${{ secrets.MAILCHIMP_LIST_ID }}
           MAILCHIMP_LIST_ID_RACK_LINE: ${{ secrets.MAILCHIMP_LIST_ID_RACK_LINE }}
           MAILCHIMP_API_KEY: ${{ secrets.MAILCHIMP_API_KEY }}
           SHIPPO_API_TOKEN: ${{ secrets.SHIPPO_API_TOKEN }}
@@ -98,7 +97,6 @@ jobs:
           CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
           OKTA_API_TOKEN: ${{ secrets.OKTA_API_TOKEN }}
-          OKTA_DOMAIN: ${{ secrets.OKTA_DOMAIN }}
           RAMP_CLIENT_ID: ${{ secrets.RAMP_CLIENT_ID }}
           RAMP_CLIENT_SECRET: ${{ secrets.RAMP_CLIENT_SECRET }}
           QUICKBOOKS_CLIENT_ID: ${{ secrets.QUICKBOOKS_CLIENT_ID }}

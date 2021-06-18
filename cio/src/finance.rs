@@ -104,7 +104,7 @@ pub async fn refresh_software_vendors() {
 
     let github = authenticate_github_jwt();
 
-    let okta = Okta::new_from_env();
+    let okta = Okta::new(env::var("OKTA_API_TOKEN").unwrap(), &oxide.okta_domain);
 
     let slack = slack_chat_api::Slack::new_from_env();
 

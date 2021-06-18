@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#16266dc810548b8b2b4444f1e70bb1b63eb050eb"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#18ebc7d2941edbecea73b30021aa15333abea908"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2107,7 +2107,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#16266dc810548b8b2b4444f1e70bb1b63eb050eb"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#18ebc7d2941edbecea73b30021aa15333abea908"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -4332,9 +4332,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.7.0"
+version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c79ba603c337335df6ba6dd6afc38c38a7d5e1b0c871678439ea973cd62a118e"
+checksum = "5fb2ed024293bb19f7a5dc54fe83bf86532a44c12a2bb8ba40d64a4509395ca2"
 dependencies = [
  "autocfg",
  "bytes",
