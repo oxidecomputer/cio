@@ -530,8 +530,12 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 // First let's update the applicant.
                 a.update(db).await;
 
+                // Get the company id for Oxide.
+                // TODO: split this out per company.
+                let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
                 // Create our docusign client.
-                let ds = authenticate_docusign(db).await;
+                let ds = authenticate_docusign(db, &oxide).await;
 
                 // Get the template we need.
                 let template_id = get_docusign_template_id(&ds).await;
@@ -1619,8 +1623,12 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
         .first::<Applicant>(&db.conn());
     match result {
         Ok(mut applicant) => {
+            // Get the company id for Oxide.
+            // TODO: split this out per company.
+            let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
             // Create our docusign client.
-            let ds = authenticate_docusign(db).await;
+            let ds = authenticate_docusign(db, &oxide).await;
             applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
         }
         Err(e) => {
