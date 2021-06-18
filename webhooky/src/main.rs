@@ -55,7 +55,7 @@ use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_p
 use cio_api::swag_inventory::SwagInventoryItem;
 use cio_api::swag_store::Order;
 use cio_api::templates::generate_terraform_files_for_okta;
-use cio_api::utils::{authenticate_docusign, authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo, get_gsuite_token, github_org};
+use cio_api::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_file_content_from_repo};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -175,12 +175,18 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(schema: String) -> Context {
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
         // Create the context.
         Context {
             github: authenticate_github_jwt(),
-            github_org: github_org(),
+            github_org: oxide.github_org,
             influx: influx::Client::new_from_env(),
-            db: Database::new(),
+            db,
             checkr: checkr::Checkr::new_from_env(),
             schema,
         }
@@ -377,7 +383,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get gsuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
@@ -391,10 +397,10 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     }
     let mut rfd = result.unwrap();
     // Update the RFD.
-    rfd.expand(github).await;
+    rfd.expand(github, &oxide).await;
     println!("updated  RFD {}", rfd.number_string);
 
-    rfd.convert_and_upload_pdf(github, &drive_client).await;
+    rfd.convert_and_upload_pdf(github, &drive_client, &oxide).await;
     println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
@@ -456,7 +462,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
 
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
 
@@ -532,12 +538,8 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 // First let's update the applicant.
                 a.update(db).await;
 
-                // Get the company id for Oxide.
-                // TODO: split this out per company.
-                let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
                 // Create our docusign client.
-                let ds = authenticate_docusign(db, &oxide).await;
+                let ds = oxide.authenticate_docusign(db).await;
 
                 // Get the template we need.
                 let template_id = get_docusign_template_id(&ds).await;
@@ -589,12 +591,12 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
-        .repo(github_org(), "configs")
+        .repo(&oxide.github_org, "configs")
         .issues()
         .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
-    new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
+    new_applicant.create_github_onboarding_issue(db, &oxide, &github, &configs_issues).await;
 
     println!("applicant {} updated successfully", new_applicant.email);
     sentry::end_session();
@@ -683,7 +685,8 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
 
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
+
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
     // Initialize the Google Drive client.
@@ -1625,7 +1628,7 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
             let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
             // Create our docusign client.
-            let ds = authenticate_docusign(db, &oxide).await;
+            let ds = oxide.authenticate_docusign(db).await;
             applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
         }
         Err(e) => {
@@ -2461,7 +2464,7 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get gsuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
@@ -2579,7 +2582,7 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(db).await;
             // Update all the fields for the RFD.
-            rfd.expand(&api_context.github).await;
+            rfd.expand(&api_context.github, &oxide).await;
             rfd.update(db).await;
             println!("updated RFD {} in the database", new_rfd.number_string);
             println!("updated airtable for RFD {}", new_rfd.number_string);
@@ -2590,7 +2593,7 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(&api_context.github, &drive).await;
+            rfd.convert_and_upload_pdf(&api_context.github, &drive, &oxide).await;
             rfd.update(db).await;
             println!("updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
@@ -2726,12 +2729,12 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // Get the configs from our repo.
-    let configs = get_configs_from_repo(&api_context.github).await;
-
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+
+    // Get the configs from our repo.
+    let configs = get_configs_from_repo(&api_context.github, &oxide).await;
 
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
@@ -2758,7 +2761,7 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
         // Sync okta users and group from the database.
         // Do this after we update the users and groups in the database.
-        generate_terraform_files_for_okta(&api_context.github, &api_context.db).await;
+        generate_terraform_files_for_okta(&api_context.github, &api_context.db, &oxide).await;
     }
 
     // Check if the buildings.toml file changed.
@@ -2780,7 +2783,7 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     // Check if the github-outside-collaborators.toml file changed.
     if commit.file_changed("configs/github-outside-collaborators.toml") {
         // Sync github outside collaborators.
-        sync_github_outside_collaborators(&api_context.github, configs.github_outside_collaborators).await;
+        sync_github_outside_collaborators(&api_context.github, configs.github_outside_collaborators, &oxide).await;
     }
 
     // TODO: do huddles.
