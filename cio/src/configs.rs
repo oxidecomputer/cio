@@ -353,13 +353,16 @@ impl UserConfig {
     }
 
     pub fn populate_start_date(&mut self, db: &Database) {
-        if let Ok(a) = applicants::dsl::applicants
-            .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
-            .first::<Applicant>(&db.conn())
-        {
-            // Get their start date.
-            if a.start_date.is_some() {
-                self.start_date = a.start_date.unwrap();
+        // Only populate the start date, if we could not update it from Gusto.
+        if self.start_date == crate::utils::default_date() {
+            if let Ok(a) = applicants::dsl::applicants
+                .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
+                .first::<Applicant>(&db.conn())
+            {
+                // Get their start date.
+                if a.start_date.is_some() {
+                    self.start_date = a.start_date.unwrap();
+                }
             }
         }
     }
@@ -1070,7 +1073,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     for g in gu {
         gusto_users.insert(g.email.to_string(), g);
     }
-    println!("gusto users: {:?}", gusto_users);
 
     // Initialize the Ramp client.
     let ramp = authenticate_ramp(db).await;
@@ -1115,21 +1117,31 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Update or create the user in the database.
         if let Some(e) = existing.clone() {
             user.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
+        }
 
-            // TODO: remove this when we populate from Gusto.
-            let airtable_record = e.get_existing_airtable_record().await.unwrap();
-            user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
-            user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
-            user.home_address_city = airtable_record.fields.home_address_city.to_string();
-            user.home_address_state = airtable_record.fields.home_address_state.to_string();
-            user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
-            user.home_address_country = airtable_record.fields.home_address_country.to_string();
-            user.birthday = airtable_record.fields.birthday;
+        // See if we have a gusto user for the user.
+        match gusto_users.get(&user.email()) {
+            // We have the user, we don't need to do anything.
+            Some(gusto_user) => {
+                // Update the user's start date.
+                user.start_date = gusto_user.jobs[0].hire_date;
 
-            // Keep the start date in airtable if we already have one.
-            if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
-                user.start_date = airtable_record.fields.start_date;
+                // Update the user's birthday.
+                user.birthday = gusto_user.date_of_birth;
+
+                // Update the user's home address.
+                // Gusto now becomes the source of truth for people's addresses.
+                user.home_address_street_1 = gusto_user.home_address.street_1.to_string();
+                user.home_address_street_2 = gusto_user.home_address.street_2.to_string();
+                user.home_address_city = gusto_user.home_address.city.to_string();
+                user.home_address_state = gusto_user.home_address.state.to_string();
+                user.home_address_zipcode = gusto_user.home_address.zip.to_string();
+                user.home_address_country = gusto_user.home_address.country.to_string();
             }
+            // Do nothing.
+            // Maybe one day create them? But we should do that from On-boarding
+            // applicants.
+            None => (),
         }
 
         user.expand(db).await;
