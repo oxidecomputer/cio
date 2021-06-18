@@ -8,6 +8,7 @@ pub mod applicant_status;
 pub mod applicants;
 pub mod auth_logins;
 pub mod certs;
+pub mod companies;
 pub mod configs;
 pub mod core;
 pub mod db;

@@ -242,6 +242,17 @@ table! {
 }
 
 table! {
+    companys (id) {
+        id -> Int4,
+        name -> Varchar,
+        gsuite_domain -> Varchar,
+        github_org -> Varchar,
+        website -> Varchar,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
     conference_rooms (id) {
         id -> Int4,
         name -> Varchar,
@@ -726,9 +737,11 @@ allow_tables_to_appear_in_same_query!(
     barcode_scans,
     buildings,
     certificates,
+    companys,
     conference_rooms,
     credit_card_transactions,
     expensed_items,
+    github_labels,
     github_repos,
     groups,
     inbound_shipments,

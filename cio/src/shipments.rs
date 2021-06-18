@@ -1458,20 +1458,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
             continue;
         }
 
-        let mut new_shipment = NewInboundShipment {
-            carrier: record.fields.carrier,
-            tracking_number: record.fields.tracking_number,
-            tracking_status: record.fields.tracking_status,
-            name: record.fields.name,
-            notes: record.fields.notes,
-            delivered_time: record.fields.delivered_time,
-            shipped_time: record.fields.shipped_time,
-            eta: record.fields.eta,
-            messages: record.fields.messages,
-            order_number: record.fields.order_number,
-            oxide_tracking_link: record.fields.oxide_tracking_link,
-            tracking_link: record.fields.tracking_link,
-        };
+        let new_shipment: NewInboundShipment = record.fields.into();
         new_shipment.expand().await;
         let mut shipment = new_shipment.upsert_in_db(&db);
         if shipment.airtable_record_id.is_empty() {
