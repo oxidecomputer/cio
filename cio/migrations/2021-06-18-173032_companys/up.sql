@@ -6,5 +6,7 @@ CREATE TABLE companys (
     website VARCHAR NOT NULL UNIQUE,
     domain VARCHAR NOT NULL,
     gsuite_account_id VARCHAR NOT NULL,
+    gsuite_subject VARCHAR NOT NULL,
+    phone VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

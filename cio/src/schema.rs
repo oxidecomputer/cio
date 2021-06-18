@@ -255,6 +255,8 @@ table! {
         website -> Varchar,
         domain -> Varchar,
         gsuite_account_id -> Varchar,
+        gsuite_subject -> Varchar,
+        phone -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

@@ -49,7 +49,7 @@ use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rack_line::RackLineSubscriber;
 use cio_api::rfds::is_image;
 use cio_api::schema::applicants;
-use cio_api::shipments::{get_shipments_spreadsheets, InboundShipment, NewInboundShipment, NewOutboundShipment, OutboundShipment, OutboundShipments};
+use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::swag_inventory::SwagInventoryItem;
@@ -688,22 +688,8 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
-        // Check if the event is for a swag spreadsheet.
-        let swag_spreadsheets = get_shipments_spreadsheets();
-        if !swag_spreadsheets.contains(&event.spreadsheet.id) {
-            // Return early if not
-            println!("event is not for an application spreadsheet or a swag spreadsheet: {:?}", event);
-            sentry::end_session();
-            return Ok(HttpResponseAccepted("ok".to_string()));
-        }
-
-        // Parse the shipment out of the row information.
-        let mut shipment = NewOutboundShipment::parse_from_row(&event.event.named_values);
-        // Create or update the shipment in airtable.
-        shipment.notes = format!("Automatically generated from the Google sheet {}", event.spreadsheet.id);
-        shipment.upsert(db).await;
-
-        // Handle if the event is for a swag spreadsheet.
+        // Return early if not
+        println!("event is not for an application spreadsheet: {:?}", event);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }

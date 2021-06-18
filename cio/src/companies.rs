@@ -31,6 +31,10 @@ pub struct NewCompany {
     pub domain: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gsuite_account_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub gsuite_subject: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
 }
 
 /// Implement updating the Airtable record for a Company.
