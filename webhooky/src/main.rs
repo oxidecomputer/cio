@@ -1406,6 +1406,7 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
+        cio_company_id: Default::default(),
     };
     token.expand();
     // Update it in the database.
@@ -1460,6 +1461,7 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
+        cio_company_id: Default::default(),
     };
     token.expand();
     // Update it in the database.
@@ -1513,6 +1515,7 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
+        cio_company_id: Default::default(),
     };
     token.expand();
 
@@ -1586,6 +1589,7 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
+        cio_company_id: Default::default(),
     };
     token.expand();
 

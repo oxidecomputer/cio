@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#10d1054063a42c784d9cb29a814317606f461031"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e6e35c21ed4a229692130060fc87aacf015b1c18"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -584,9 +584,9 @@ dependencies = [
 
 [[package]]
 name = "cloudflare"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73d12edd02168d346742806d28d42796507aad648b81b7c3f65d5d648abae0c7"
+checksum = "4a461e90f8748b43fed5bd6f9fca4217c08a2187c2364c5b9c1b07e4a5c65d0c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2107,7 +2107,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#10d1054063a42c784d9cb29a814317606f461031"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e6e35c21ed4a229692130060fc87aacf015b1c18"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3258,9 +3258,9 @@ checksum = "cabe4fa914dec5870285fa7f71f602645da47c486e68486d2b4ceb4a343e90ac"
 
 [[package]]
 name = "rustc-demangle"
-version = "0.1.19"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "410f7acf3cb3a44527c5d9546bad4bf4e6c460915d5f9f2fc524498bfe8f70ce"
+checksum = "dead70b0b5e03e9c814bcb6b01e03e68f7c57a80aa48c72ec92152ab3e818d49"
 
 [[package]]
 name = "rustc_version"
@@ -3674,9 +3674,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "1.9.3"
+version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a3b379ba4fd515d3fdccfe8584eb9fcc6f7dd1bbe14636a12c98a36fbbfc850"
+checksum = "1ad9fdbb69badc8916db738c25efd04f0a65297d26c2f8de4b62e57b8c12bc72"
 dependencies = [
  "rustversion",
  "serde",
