@@ -28,7 +28,6 @@ use crate::db::Database;
 use crate::models::{GithubRepo, GithubRepos, NewRepo};
 
 pub static DOMAIN: &str = "oxide.computer";
-pub static GSUITE_DOMAIN: &str = "oxidecomputer.com";
 
 /// Write a file.
 pub fn write_file(file: &Path, contents: &str) {

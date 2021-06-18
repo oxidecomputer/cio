@@ -12,16 +12,22 @@ use crate::companies::Company;
 use crate::configs::{get_configs_from_repo, User};
 use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
 use crate::db::Database;
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org, GSUITE_DOMAIN};
+use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
 pub async fn sync_changes_to_google_events() {
+    let db = Database::new();
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
@@ -88,7 +94,7 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
 
                 if event.recurring_event_id != event.id {
                     // Update the calendar event with the new description.
-                    let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                    let g_owner = GSuite::new(&event.organizer.email, &oxide.gsuite_domain, token.clone());
                     // Get the event under the right user.
                     if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
                         // Modify the properties of the event so we can update it.
@@ -113,12 +119,18 @@ The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
 }
 
 pub async fn send_huddle_reminders() {
+    let db = Database::new();
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -177,7 +189,7 @@ pub async fn send_huddle_reminders() {
 
                         if event.recurring_event_id != event.id {
                             // We need to impersonate the event owner.
-                            let g_owner = GSuite::new(&event.organizer.email, GSUITE_DOMAIN, token.clone());
+                            let g_owner = GSuite::new(&event.organizer.email, &oxide.gsuite_domain, token.clone());
                             // Get the event under the right user.
                             let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
                             // We need to update the event instance, not delete it, and set the status to
@@ -373,7 +385,7 @@ pub async fn sync_huddles() {
 
         // Iterate over the calendars.
         for calendar in calendars {
-            if !calendar.id.ends_with(GSUITE_DOMAIN) {
+            if !calendar.id.ends_with(&oxide.gsuite_domain) {
                 // We don't care about this calendar.
                 // Continue early.
                 continue;
@@ -461,9 +473,9 @@ pub async fn sync_huddles() {
                     // Update the attendees.
                     let mut attendees: Vec<String> = Default::default();
                     for attendee in event.attendees.clone() {
-                        if !attendee.resource && attendee.email.ends_with(GSUITE_DOMAIN) {
+                        if !attendee.resource && attendee.email.ends_with(&oxide.gsuite_domain) {
                             // Make sure the person is still a user.
-                            if let Some(user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                            if let Some(user) = User::get_from_db(&db, attendee.email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
                                 attendees.push(user.email(&oxide));
                             }
                         }

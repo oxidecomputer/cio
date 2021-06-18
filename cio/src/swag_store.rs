@@ -2,6 +2,7 @@ use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::companies::Company;
 use crate::db::Database;
 use crate::shipments::NewOutboundShipment;
 use crate::swag_inventory::SwagInventoryItem;
@@ -66,7 +67,8 @@ impl Order {
         new_shipment.update(db).await;
         // Send an email to the person that we recieved their order and what they are
         // getting.
-        new_shipment.send_email_to_recipient_pre_shipping().await;
+        let company = Company::get_by_id(db, new_shipment.cio_company_id);
+        new_shipment.send_email_to_recipient_pre_shipping(&company).await;
     }
 
     pub async fn subtract_order_from_inventory(&self, db: &Database) {

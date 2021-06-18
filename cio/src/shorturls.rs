@@ -2,11 +2,12 @@ use hubcaps::repositories::Repository;
 use serde::Serialize;
 use tailscale_api::Tailscale;
 
+use crate::companies::Company;
 use crate::configs::Links;
 use crate::db::Database;
 use crate::models::{GithubRepos, RFDs};
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
-use crate::utils::{authenticate_github_jwt, github_org, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::{authenticate_github_jwt, github_org};
 
 /// Generate the files for the GitHub repository short URLs.
 pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
@@ -107,7 +108,7 @@ pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Reposito
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
-pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
+pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Company) {
     let subdomain = "internal";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -129,8 +130,8 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository) {
             .name
             .trim()
             .trim_end_matches(".local")
-            .trim_end_matches(GSUITE_DOMAIN)
-            .trim_end_matches(DOMAIN)
+            .trim_end_matches(&company.gsuite_domain)
+            .trim_end_matches(&company.domain)
             .trim_end_matches('.')
             .to_lowercase();
 
@@ -175,10 +176,14 @@ pub async fn refresh_shorturls() {
 
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     generate_shorturls_for_repos(&db, &repo).await;
     generate_shorturls_for_rfds(&db, &repo).await;
     generate_shorturls_for_configs_links(&db, &repo).await;
-    generate_dns_for_tailscale_devices(&repo).await;
+    generate_dns_for_tailscale_devices(&repo, &oxide).await;
 }
 
 /// The data type for a short URL that will be used in a template.

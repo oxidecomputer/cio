@@ -22,7 +22,7 @@ use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{applicant_interviews, applicants, users};
-use crate::utils::{get_gsuite_token, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::get_gsuite_token;
 
 #[db {
     new_struct_name = "ApplicantInterview",
@@ -123,8 +123,8 @@ pub async fn refresh_interviews(db: &Database) {
                 let end = &format!("({})", attendee.display_name);
                 // TODO: Sometimes Dave and Nils use their personal email, find a better way to do this other than
                 // a one-off.
-                if attendee.email.ends_with(GSUITE_DOMAIN)
-                    || attendee.email.ends_with(DOMAIN)
+                if attendee.email.ends_with(&oxide.gsuite_domain)
+                    || attendee.email.ends_with(&oxide.domain)
                     || event.summary.ends_with(end)
                     || attendee.email.starts_with("dave.pacheco")
                     || attendee.email.starts_with("nils.nieuwejaar")
@@ -135,7 +135,7 @@ pub async fn refresh_interviews(db: &Database) {
 
                     // If the email is not their oxide computer email, let's firgure it out based
                     // on the information from their user.
-                    if !email.ends_with(GSUITE_DOMAIN) && !email.ends_with(DOMAIN) {
+                    if !email.ends_with(&oxide.gsuite_domain) && !email.ends_with(&oxide.domain) {
                         match users::dsl::users.filter(users::dsl::recovery_email.eq(email.to_string())).limit(1).load::<User>(&db.conn()) {
                             Ok(r) => {
                                 if !r.is_empty() {
@@ -148,7 +148,7 @@ pub async fn refresh_interviews(db: &Database) {
                             }
                         }
                     } else {
-                        let username = email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').trim().to_string();
+                        let username = email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches(&oxide.domain).trim_end_matches('@').trim().to_string();
                         // Find the real user.
                         match users::dsl::users
                             .filter(users::dsl::username.eq(username.to_string()))
@@ -196,7 +196,7 @@ pub async fn refresh_interviews(db: &Database) {
             let mut interviewers = interview.interviewers.clone();
             interviewers
                 .iter_mut()
-                .for_each(|x| *x = x.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').to_string());
+                .for_each(|x| *x = x.trim_end_matches(&oxide.gsuite_domain).trim_end_matches(&oxide.domain).trim_end_matches('@').to_string());
 
             interview.name = format!("{} ({})", name, interviewers.join(", "));
 
@@ -214,6 +214,10 @@ pub async fn refresh_interviews(db: &Database) {
 
 /// Compile interview packets for each interviewee.
 pub async fn compile_packets(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     // Get gsuite token.
     let token = get_gsuite_token("").await;
 
@@ -264,7 +268,12 @@ pub async fn compile_packets(db: &Database) {
             existing = v.clone();
         }
         for interviewer in interview.interviewers {
-            let username = interviewer.trim_end_matches(GSUITE_DOMAIN).trim_end_matches(DOMAIN).trim_end_matches('@').trim().to_string();
+            let username = interviewer
+                .trim_end_matches(&oxide.gsuite_domain)
+                .trim_end_matches(&oxide.domain)
+                .trim_end_matches('@')
+                .trim()
+                .to_string();
             if let Ok(user) = users::dsl::users
                 .filter(users::dsl::username.eq(username.to_string()))
                 .or_filter(users::dsl::aliases.contains(vec![username.to_string()]))

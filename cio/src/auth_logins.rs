@@ -17,7 +17,6 @@ use crate::airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{auth_user_logins, auth_users};
-use crate::utils::{DOMAIN, GSUITE_DOMAIN};
 
 /// The data type for an NewAuthUser.
 #[db {
@@ -213,7 +212,7 @@ impl User {
     pub fn to_auth_user(&self) -> NewAuthUser {
         let mut company: &str = &self.company;
         // Check if we have an Oxide email address.
-        if self.email.ends_with(&format!("@{}", GSUITE_DOMAIN)) || self.email.ends_with(&format!("@{}", DOMAIN)) || *self.company.trim() == *"Oxide Computer Company" {
+        if self.email.ends_with("@oxidecomputer.com") || self.email.ends_with("@oxide.computer") || *self.company.trim() == *"Oxide Computer Company" {
             company = "@oxidecomputer";
         } else if self.email.ends_with("@bench.com") {
             // Check if we have a Benchmark Manufacturing email address.

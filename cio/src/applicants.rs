@@ -40,7 +40,10 @@ use crate::interviews::ApplicantInterview;
 use crate::models::{get_value, truncate};
 use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_docusign, authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::{authenticate_docusign, authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org};
+
+const GSUITE_DOMAIN: &str = "oxidecomputer.com";
+const DOMAIN: &str = "oxide.computer";
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";

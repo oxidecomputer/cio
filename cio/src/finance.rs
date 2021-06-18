@@ -16,7 +16,7 @@ use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users};
-use crate::utils::{authenticate_github_jwt, authenticate_quickbooks, authenticate_ramp, get_gsuite_token, github_org, GSUITE_DOMAIN};
+use crate::utils::{authenticate_github_jwt, authenticate_quickbooks, authenticate_ramp, get_gsuite_token, github_org};
 
 #[db {
     new_struct_name = "SoftwareVendor",
@@ -93,15 +93,15 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 
 /// Sync software vendors from Airtable.
 pub async fn refresh_software_vendors() {
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
-    let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
-
     let db = Database::new();
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
+    let token = get_gsuite_token("").await;
+    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
 
     let github = authenticate_github_jwt();
 

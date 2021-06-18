@@ -1549,7 +1549,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         update_group_aliases(&gsuite, &updated_group).await;
 
         // Update the groups settings.
-        update_google_group_settings(&gsuite, &group).await;
+        update_google_group_settings(&gsuite, &group, company).await;
 
         // Remove the group from the database map and continue.
         // This allows us to add all the remaining new groups after.
@@ -1580,7 +1580,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         update_group_aliases(&gsuite, &new_group).await;
 
         // Update the groups settings.
-        update_google_group_settings(&gsuite, &group).await;
+        update_google_group_settings(&gsuite, &group, company).await;
 
         println!("created group in gsuite: {}", name);
     }

@@ -19,7 +19,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::truncate;
 use crate::schema::recorded_meetings;
-use crate::utils::{get_gsuite_token, GSUITE_DOMAIN};
+use crate::utils::get_gsuite_token;
 
 /// The data type for a recorded meeting.
 #[db {
@@ -91,7 +91,7 @@ pub async fn refresh_recorded_meetings() {
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let mut gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+    let mut gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -99,8 +99,8 @@ pub async fn refresh_recorded_meetings() {
 
     // Iterate over the calendars.
     for calendar in calendars {
-        if calendar.id.ends_with(GSUITE_DOMAIN) {
-            gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, get_gsuite_token("").await);
+        if calendar.id.ends_with(&oxide.gsuite_domain) {
+            gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, get_gsuite_token("").await);
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
@@ -120,9 +120,9 @@ pub async fn refresh_recorded_meetings() {
                     if !attendee.resource {
                         attendees.push(attendee.email.to_string());
                     }
-                    if attendee.organizer && attendee.email.ends_with(GSUITE_DOMAIN) {
+                    if attendee.organizer && attendee.email.ends_with(&oxide.gsuite_domain) {
                         // Make sure the person is still a user.
-                        if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                        if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
                             owner = attendee.email.to_string()
                         } else {
                             owner = env::var("GADMIN_SUBJECT").unwrap();

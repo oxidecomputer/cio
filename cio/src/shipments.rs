@@ -23,7 +23,7 @@ use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::get_value;
 use crate::schema::{inbound_shipments, outbound_shipments, package_pickups};
-use crate::utils::{get_gsuite_token, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::get_gsuite_token;
 
 /// The data type for an inbound shipment.
 #[db {
@@ -368,6 +368,10 @@ impl OutboundShipments {
     // It will create a pickup for all the shipments that have "Label printed"
     // status and no pickup date currently.
     pub async fn create_pickup(db: &Database) {
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
         // We should only do this for USPS, OR if we use DHL in the future.
         let shipments = outbound_shipments::dsl::outbound_shipments
             .filter(
@@ -429,7 +433,7 @@ impl OutboundShipments {
                 building_location_type: "Office".to_string(),
                 building_type: "building".to_string(),
                 instructions: "Knock on the glass door and someone will come open it.".to_string(),
-                address: oxide_hq_address(),
+                address: hq_address(&oxide),
             },
             transactions: transaction_ids.clone(),
             requested_start_time: start_time,
@@ -485,7 +489,8 @@ pub fn oxide_hq_phone() -> String {
 }
 
 /// Returns the shippo data structure for the address at the office.
-pub fn oxide_hq_address() -> Address {
+pub fn hq_address(company: &Company) -> Address {
+    // TODO: make this the address for the company
     Address {
         company: "Oxide Computer Company".to_string(),
         name: "The Oxide Shipping Bot".to_string(),
@@ -495,7 +500,7 @@ pub fn oxide_hq_address() -> Address {
         zip: "94608".to_string(),
         country: "US".to_string(),
         phone: oxide_hq_phone(),
-        email: format!("packages@{}", GSUITE_DOMAIN),
+        email: format!("packages@{}", &company.gsuite_domain),
         is_complete: Default::default(),
         object_id: Default::default(),
         test: Default::default(),
@@ -927,7 +932,7 @@ impl OutboundShipment {
 
     /// Send an email to the recipient with their order information.
     /// This should happen before they get the email that it has been shipped.
-    pub async fn send_email_to_recipient_pre_shipping(&self) {
+    pub async fn send_email_to_recipient_pre_shipping(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -956,15 +961,15 @@ xoxo,
                     self.format_address(),
                 ),
                 vec![self.email.to_string()],
-                vec![format!("packages@{}", DOMAIN)],
+                vec![format!("packages@{}", &company.gsuite_domain)],
                 vec![],
-                format!("packages@{}", DOMAIN),
+                format!("packages@{}", &company.gsuite_domain),
             )
             .await;
     }
 
     /// Send an email to the recipient with their tracking code and information.
-    pub async fn send_email_to_recipient(&self) {
+    pub async fn send_email_to_recipient(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -995,15 +1000,15 @@ xoxo,
                     self.oxide_tracking_link
                 ),
                 vec![self.email.to_string()],
-                vec![format!("packages@{}", DOMAIN)],
+                vec![format!("packages@{}", &company.gsuite_domain)],
                 vec![],
-                format!("packages@{}", DOMAIN),
+                format!("packages@{}", &company.gsuite_domain),
             )
             .await;
     }
 
     /// Send an email internally that we need to package the shipment.
-    pub async fn send_email_internally(&self) {
+    pub async fn send_email_internally(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -1042,16 +1047,18 @@ xoxo,
                     self.oxide_tracking_link,
                     self.carrier,
                 ),
-                vec![format!("packages@{}", DOMAIN)],
+                vec![format!("packages@{}", &company.gsuite_domain)],
                 vec![],
                 vec![],
-                format!("packages@{}", DOMAIN),
+                format!("packages@{}", &company.gsuite_domain),
             )
             .await;
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
     pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) {
+        let company = Company::get_by_id(db, self.cio_company_id);
+
         // Update the formatted address.
         self.populate_formatted_address();
 
@@ -1116,7 +1123,7 @@ xoxo,
                 if self.status != *"Shipped" {
                     // Send an email to the recipient with their tracking link.
                     // Wait until it is in transit to do this.
-                    self.send_email_to_recipient().await;
+                    self.send_email_to_recipient(&company).await;
                     // We make sure it only does this one time.
                     // Set the shipped date as this first date.
                     self.shipped_time = tracking_status.status_date;
@@ -1155,7 +1162,7 @@ xoxo,
         }
 
         // We need to create the label since we don't have one already.
-        let address_from = oxide_hq_address();
+        let address_from = hq_address(&company);
 
         // If this is an international shipment, we need to define our customs
         // declarations.
@@ -1297,7 +1304,7 @@ xoxo,
                 self.status = "Label printed".to_string();
 
                 // Send an email to us that we need to package the shipment.
-                self.send_email_internally().await;
+                self.send_email_internally(&company).await;
 
                 break;
             }

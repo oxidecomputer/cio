@@ -2,8 +2,8 @@ use std::{thread, time};
 
 use gsuite_api::{Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup};
 
+use crate::companies::Company;
 use crate::configs::{Building, ConferenceRoom, Group};
-use crate::utils::GSUITE_DOMAIN;
 
 /// Update a group's aliases in GSuite to match our configuration files.
 pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
@@ -18,9 +18,9 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
 }
 
 /// Update a group's settings in GSuite to match our configuration files.
-pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group) {
+pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group, company: &Company) {
     // Get the current group settings.
-    let email = format!("{}@{}", group.name, GSUITE_DOMAIN);
+    let email = format!("{}@{}", group.name, company.gsuite_domain);
     let mut result = gsuite.get_group_settings(&email).await;
     if result.is_err() {
         // Try again.

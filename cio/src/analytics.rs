@@ -68,7 +68,7 @@ impl NewPageView {
         // Match the company ID with the link.
         let companies = Companys::get_from_db(db);
         for company in companies {
-            if self.domain.ends_with(company.website.trim_start_matches("https://")) {
+            if self.domain.ends_with(&company.domain) {
                 self.cio_company_id = company.id;
             }
         }
