@@ -2724,10 +2724,14 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     // Get the configs from our repo.
     let configs = get_configs_from_repo(&api_context.github).await;
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
         // Update our links in the database.
-        sync_links(&api_context.db, configs.links, configs.huddles).await;
+        sync_links(&api_context.db, configs.links, configs.huddles, &oxide).await;
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&api_context.db, &github_repo).await;
@@ -2738,12 +2742,12 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
     // added a new group to GSuite.
     if commit.file_changed("configs/groups.toml") {
-        sync_groups(&api_context.db, configs.groups).await;
+        sync_groups(&api_context.db, configs.groups, &oxide).await;
     }
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.db, &api_context.github, configs.users).await;
+        sync_users(&api_context.db, &api_context.github, configs.users, &oxide).await;
     }
 
     if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
@@ -2755,17 +2759,17 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     // Check if the buildings.toml file changed.
     // Buildings needs to be synchronized _before_ we move on to conference rooms.
     if commit.file_changed("configs/buildings.toml") {
-        sync_buildings(&api_context.db, configs.buildings).await;
+        sync_buildings(&api_context.db, configs.buildings, &oxide).await;
     }
 
     // Check if the resources.toml file changed.
     if commit.file_changed("configs/resources.toml") {
-        sync_conference_rooms(&api_context.db, configs.resources).await;
+        sync_conference_rooms(&api_context.db, configs.resources, &oxide).await;
     }
 
     // Check if the certificates.toml file changed.
     if commit.file_changed("configs/certificates.toml") {
-        sync_certificates(&api_context.db, &api_context.github, configs.certificates).await;
+        sync_certificates(&api_context.db, &api_context.github, configs.certificates, &oxide).await;
     }
 
     // Check if the github-outside-collaborators.toml file changed.
@@ -2774,7 +2778,7 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
         sync_github_outside_collaborators(&api_context.github, configs.github_outside_collaborators).await;
     }
 
-    // TODO: do huddles, labels, etc.
+    // TODO: do huddles.
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
