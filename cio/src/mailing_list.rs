@@ -13,6 +13,7 @@ use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE};
+use crate::companies::Company;
 use crate::db::Database;
 use crate::mailchimp::{get_all_mailchimp_subscribers, MailchimpMember};
 use crate::schema::mailing_list_subscribers;
@@ -184,9 +185,14 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 pub async fn refresh_db_mailing_list_subscribers(db: &Database) {
     let members = get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID").unwrap_or_default()).await;
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Sync subscribers.
     for member in members {
-        let ns: NewMailingListSubscriber = member.into();
+        let mut ns: NewMailingListSubscriber = member.into();
+        ns.cio_company_id = oxide.id;
         ns.upsert(db).await;
     }
 }

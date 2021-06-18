@@ -13,6 +13,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_RECORDED_MEETINGS_TABLE};
+use crate::companies::Company;
 use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -81,6 +82,11 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 /// Sync the recorded meetings.
 pub async fn refresh_recorded_meetings() {
     let db = Database::new();
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     RecordedMeetings::get_from_db(&db).update_airtable().await;
 
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
@@ -181,7 +187,7 @@ pub async fn refresh_recorded_meetings() {
                     location: event.location.to_string(),
                     google_event_id: event.id.to_string(),
                     event_link: event.html_link.to_string(),
-                    cio_company_id: Default::default(),
+                    cio_company_id: oxide.id,
                 };
 
                 // Let's try to get the meeting.

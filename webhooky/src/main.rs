@@ -40,6 +40,7 @@ use sheets::Sheets;
 use cio_api::analytics::NewPageView;
 use cio_api::api_tokens::NewAPIToken;
 use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant};
+use cio_api::companies::Company;
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
 use cio_api::mailchimp::MailchimpWebhook;
@@ -1689,6 +1690,10 @@ async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Contex
         println!("not a `subscribe` event, got `{}`", event.webhook_type);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     // Parse the webhook as a new mailing list subscriber.
     let new_subscriber = event.as_mailing_list_subscriber();

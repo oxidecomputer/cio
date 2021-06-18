@@ -138,7 +138,7 @@ mod mailchimp_date_format {
 
 impl MailchimpWebhook {
     /// Convert to a signup data type.
-    pub fn as_mailing_list_subscriber(&self) -> NewMailingListSubscriber {
+    pub fn as_mailing_list_subscriber(&self, cio_company_id: i32) -> NewMailingListSubscriber {
         let mut signup: NewMailingListSubscriber = Default::default();
 
         if self.data.merges.is_some() {
@@ -173,6 +173,8 @@ impl MailchimpWebhook {
         signup.date_optin = self.fired_at;
         signup.date_last_changed = self.fired_at;
         signup.name = format!("{} {}", signup.first_name, signup.last_name);
+
+        signup.cio_company_id = cio_company_id;
 
         signup
     }

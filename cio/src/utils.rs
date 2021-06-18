@@ -503,9 +503,9 @@ mod tests {
         let db = Database::new();
 
         // Get the company id for Oxide.
+        // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        // TODO: split this out per company.
         refresh_db_github_repos(&db, &github, &oxide).await;
 
         GithubRepos::get_from_db(&db).update_airtable().await;
