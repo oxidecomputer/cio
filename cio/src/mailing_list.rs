@@ -1,5 +1,4 @@
 #![allow(clippy::from_over_into)]
-use std::env;
 
 use crate::core::UpdateAirtableRecord;
 use async_trait::async_trait;
