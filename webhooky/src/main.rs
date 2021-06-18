@@ -1650,6 +1650,7 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext<Context>>
 
     // Expand the page_view.
     event.set_page_link();
+    event.set_company_id(db);
 
     // Add the page_view to the database and Airttable.
     let pv = event.create(db).await;
