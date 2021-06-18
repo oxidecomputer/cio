@@ -63,7 +63,7 @@ impl Order {
 
         // Convert the shipment to an order.
         let mut shipment: NewOutboundShipment = self.clone().into();
-        shipment.cio_company_id = oxide.cio_company_id;
+        shipment.cio_company_id = oxide.id;
 
         // Add the shipment to the database.
         let mut new_shipment = shipment.upsert(db).await;
