@@ -76,7 +76,6 @@ jobs:
           GITHUB_ORG: oxidecomputer
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
-          GADMIN_ACCOUNT_ID: ${{ secrets.GADMIN_ACCOUNT_ID }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           SLACK_HIRING_CHANNEL_POST_URL: ${{ secrets.SLACK_HIRING_CHANNEL_POST_URL }}
           GH_INSTALLATION_ID: ${{ secrets.GH_INSTALLATION_ID }}
