@@ -257,6 +257,8 @@ table! {
         gsuite_account_id -> Varchar,
         gsuite_subject -> Varchar,
         phone -> Varchar,
+        okta_domain -> Varchar,
+        mailchimp_list_id -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

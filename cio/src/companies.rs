@@ -46,6 +46,10 @@ pub struct NewCompany {
     pub gsuite_subject: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub phone: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub okta_domain: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub mailchimp_list_id: String,
 }
 
 /// Implement updating the Airtable record for a Company.

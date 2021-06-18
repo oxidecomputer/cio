@@ -8,5 +8,7 @@ CREATE TABLE companys (
     gsuite_account_id VARCHAR NOT NULL,
     gsuite_subject VARCHAR NOT NULL,
     phone VARCHAR NOT NULL,
+    okta_domain VARCHAR NOT NULL,
+    mailchimp_list_id VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )
