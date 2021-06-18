@@ -2865,7 +2865,7 @@ impl Applicant {
             let mut employee = result.unwrap();
             // Only do this if we don't have the employee's home address or start date.
             // This will help us to not override any changes then that are later made in gusto.
-            if employee.home_address_street_1.is_empty() || employee.start_date.is_empty() {
+            if employee.home_address_street_1.is_empty() || employee.start_date == crate::utils::default_date() {
                 // We have an employee, so we can update their data from the data in Docusign.
 
                 for fd in form_data.clone() {
