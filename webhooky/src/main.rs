@@ -161,7 +161,6 @@ async fn main() -> Result<(), String> {
  * Application-specific context (state shared by handler functions)
  */
 struct Context {
-    drive_rfd_shared_id: String,
     github: Github,
     github_org: String,
     influx: influx::Client,
@@ -176,20 +175,8 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(schema: String) -> Context {
-        // Get gsuite token.
-        let token = get_gsuite_token("").await;
-
-        // Initialize the Google Drive client.
-        let drive = GoogleDrive::new(token);
-
-        // Figure out where our directory is.
-        // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
-        let drive_rfd_shared_id = shared_drive.id;
-
         // Create the context.
         Context {
-            drive_rfd_shared_id,
             github: authenticate_github_jwt(),
             github_org: github_org(),
             influx: influx::Client::new_from_env(),
@@ -385,6 +372,16 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     let github = &api_context.github;
     let db = &api_context.db;
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
+    // Get gsuite token.
+    let token = get_gsuite_token(&oxide, "").await;
+
+    // Initialize the Google Drive client.
+    let drive_client = GoogleDrive::new(token);
+
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
@@ -397,7 +394,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     rfd.expand(github).await;
     println!("updated  RFD {}", rfd.number_string);
 
-    rfd.convert_and_upload_pdf(github).await;
+    rfd.convert_and_upload_pdf(github, &drive_client).await;
     println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
@@ -448,15 +445,20 @@ pub struct GitHubRateLimit {
 }]
 async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    // Get gsuite token.
-    // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token("").await;
-    // Initialize the GSuite sheets client.
-    let sheets = Sheets::new(token.clone());
 
     let api_context = rqctx.context();
     let db = &api_context.db;
     let github = &api_context.github;
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
+    // Get gsuite token.
+    // We re-get the token here since otherwise it will expire.
+    let token = get_gsuite_token(&oxide, "").await;
+    // Initialize the GSuite sheets client.
+    let sheets = Sheets::new(token.clone());
 
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -671,16 +673,21 @@ pub struct GoogleSpreadsheet {
 }]
 async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
-
-    let api_context = rqctx.context();
-    let db = &api_context.db;
 
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -2447,13 +2454,21 @@ async fn handle_rfd_pull_request(api_context: &Context, event: GitHubWebhook) ->
 
 /// Handle a `push` event for the rfd repo.
 async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let db = &api_context.db;
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     // Get gsuite token.
-    // We re-get the token here because otherwise it will expire.
-    let token = get_gsuite_token("").await;
+    let token = get_gsuite_token(&oxide, "").await;
+
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
 
-    let db = &api_context.db;
+    // Figure out where our directory is.
+    // It should be in the shared drive : "Automated Documents"/"rfds"
+    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
 
     // Get the repo.
     let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
@@ -2575,7 +2590,7 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(&api_context.github).await;
+            rfd.convert_and_upload_pdf(&api_context.github, &drive).await;
             rfd.update(db).await;
             println!("updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
@@ -2673,7 +2688,7 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
                 }
 
                 // Delete the old filename from drive.
-                drive.delete_file_by_name(&api_context.drive_rfd_shared_id, &old_rfd_pdf).await.unwrap();
+                drive.delete_file_by_name(&shared_drive.id, &old_rfd_pdf).await.unwrap();
             }
 
             println!("RFD {} `push` operations completed", new_rfd.number_string);

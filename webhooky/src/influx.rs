@@ -20,7 +20,7 @@ pub static FLUX_DATE_FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
 
 impl Client {
     pub fn new_from_env() -> Self {
-        Client(InfluxClient::new(env::var("INFLUX_DB_URL").unwrap(), "github_webhooks").with_auth(env::var("GADMIN_SUBJECT").unwrap(), env::var("INFLUX_DB_TOKEN").unwrap()))
+        Client(InfluxClient::new(env::var("INFLUX_DB_URL").unwrap(), "github_webhooks").with_auth(env::var("INFLUX_DB_USER").unwrap(), env::var("INFLUX_DB_TOKEN").unwrap()))
     }
 
     async fn exists(&self, table: &str, time: DateTime<Utc>, filter: &str) -> bool {
