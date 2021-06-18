@@ -39,8 +39,8 @@ google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
 gsuite-api = "^0.1.26"
 #gsuite-api = { path = "../gsuite" }
-gusto-api = "^0.1.1"
-#gusto-api = { path = "../gusto" }
+#gusto-api = "^0.1.1"
+gusto-api = { path = "../gusto" }
 handlebars = "3.5.3"
 html2text = "0.1"
 #hubcaps = { version = "0.6", features = ["httpcache"] }

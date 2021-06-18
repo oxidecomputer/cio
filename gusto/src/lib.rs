@@ -271,9 +271,9 @@ pub struct Employee {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub last_name: String,
     #[serde(default)]
-    pub company_id: u64,
+    pub company_id: Option<u64>,
     #[serde(default)]
-    pub manager_id: u64,
+    pub manager_id: Option<u64>,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub department: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
@@ -306,9 +306,9 @@ pub struct Job {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
-    pub employee_id: u64,
+    pub employee_id: Option<u64>,
     #[serde(default)]
-    pub location_id: u64,
+    pub location_id: Option<u64>,
     pub location: Location,
     // In the format YYYY-MM-DD.
     pub hire_date: NaiveDate,
@@ -321,7 +321,7 @@ pub struct Job {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub payment_unit: String,
     #[serde(default)]
-    pub current_compensation_id: u64,
+    pub current_compensation_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub compensations: Vec<Compensation>,
 }
@@ -335,7 +335,7 @@ pub struct Location {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
-    pub company_id: u64,
+    pub company_id: Option<u64>,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub phone_number: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
@@ -363,7 +363,7 @@ pub struct Compensation {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
-    pub job_id: u64,
+    pub job_id: Option<u64>,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub rate: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
@@ -383,7 +383,7 @@ pub struct Address {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
-    pub employee_id: u64,
+    pub employee_id: Option<u64>,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub street_1: String,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
@@ -409,7 +409,7 @@ pub struct Garnishment {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
-    pub employee_id: u64,
+    pub employee_id: Option<u64>,
     #[serde(default)]
     pub active: bool,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
@@ -457,7 +457,7 @@ pub struct Termination {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub version: String,
     #[serde(default)]
-    pub employee_id: u64,
+    pub employee_id: Option<u64>,
     #[serde(default)]
     pub active: bool,
     // In the format YYYY-MM-DD.

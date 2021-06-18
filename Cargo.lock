@@ -467,7 +467,7 @@ dependencies = [
  "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gusto-api 0.1.14",
  "handlebars",
  "html2text",
  "hubcaps",
