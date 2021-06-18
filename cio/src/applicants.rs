@@ -40,7 +40,7 @@ use crate::interviews::ApplicantInterview;
 use crate::models::{get_value, truncate};
 use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_docusign, authenticate_github_jwt, check_if_github_issue_exists, get_gsuite_token, github_org};
+use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists};
 
 const GSUITE_DOMAIN: &str = "oxidecomputer.com";
 const DOMAIN: &str = "oxide.computer";
@@ -1575,8 +1575,8 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         msg
     }
 
-    pub async fn create_github_onboarding_issue(&self, db: &Database, github: &Github, configs_issues: &[Issue]) {
-        let repo = github.repo(github_org(), "configs");
+    pub async fn create_github_onboarding_issue(&self, db: &Database, company: &Company, github: &Github, configs_issues: &[Issue]) {
+        let repo = github.repo(&company.github_org, "configs");
 
         // Check if we already have an issue for this user.
         let issue = check_if_github_issue_exists(&configs_issues, &self.name);
@@ -2152,14 +2152,14 @@ pub async fn refresh_db_applicants(db: &Database) {
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
-        .repo(github_org(), "configs")
+        .repo(&oxide.github_org, "configs")
         .issues()
         .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
 
     // Get the GSuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2209,7 +2209,7 @@ pub async fn refresh_db_applicants(db: &Database) {
 
             let new_applicant = applicant.upsert(db).await;
 
-            new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
+            new_applicant.create_github_onboarding_issue(db, &oxide, &github, &configs_issues).await;
         }
     }
 }
@@ -2257,7 +2257,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get the GSuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2393,7 +2393,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get the GSuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2636,7 +2636,7 @@ pub async fn update_applicant_reviewers(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get the GSuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2700,7 +2700,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Authenticate DocuSign.
-    let ds = authenticate_docusign(db, &oxide).await;
+    let ds = oxide.authenticate_docusign(db).await;
 
     // Get the template we need.
     let template_id = get_docusign_template_id(&ds).await;
@@ -2847,7 +2847,7 @@ impl Applicant {
         }
 
         // Get gsuite token.
-        let token = get_gsuite_token(&oxide, "").await;
+        let token = oxide.get_google_token("").await;
 
         // Initialize the Google Drive client.
         let drive_client = GoogleDrive::new(token);

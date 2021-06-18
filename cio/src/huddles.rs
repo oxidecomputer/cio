@@ -11,7 +11,7 @@ use crate::companies::Company;
 use crate::configs::{get_configs_from_repo, User};
 use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
 use crate::db::Database;
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
+use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo};
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
 pub async fn sync_changes_to_google_events() {
@@ -22,9 +22,9 @@ pub async fn sync_changes_to_google_events() {
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     let github = authenticate_github_jwt();
-    let configs = get_configs_from_repo(&github).await;
+    let configs = get_configs_from_repo(&github, &oxide).await;
 
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddle meetings.
@@ -124,9 +124,9 @@ pub async fn send_huddle_reminders() {
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     let github = authenticate_github_jwt();
-    let configs = get_configs_from_repo(&github).await;
+    let configs = get_configs_from_repo(&github, &oxide).await;
 
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Define the date format.
@@ -311,14 +311,20 @@ The Oxide Airtable Huddle Bot"#;
 
 /// Sync the huddle meeting notes with the GitHub reports repository.
 pub async fn sync_huddle_meeting_notes() {
+    let db = Database::new();
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let github = authenticate_github_jwt();
-    let configs = get_configs_from_repo(&github).await;
+    let configs = get_configs_from_repo(&github, &oxide).await;
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
 
     // Get the reports repo client.
-    let reports_repo = github.repo(github_org(), "reports");
+    let reports_repo = github.repo(&oxide.github_org, "reports");
 
     // Iterate over the huddle meetings.
     for (name, huddle) in configs.huddles {
@@ -357,16 +363,16 @@ pub async fn sync_huddle_meeting_notes() {
 }
 
 pub async fn sync_huddles() {
-    let github = authenticate_github_jwt();
-    let configs = get_configs_from_repo(&github).await;
-
     let db = Database::new();
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let token = get_gsuite_token(&oxide, "").await;
+    let github = authenticate_github_jwt();
+    let configs = get_configs_from_repo(&github, &oxide).await;
+
+    let token = oxide.get_google_token("").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddles.

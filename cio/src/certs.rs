@@ -25,9 +25,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_CERTIFICATES_TABLE};
+use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::schema::certificates;
-use crate::utils::{create_or_update_file_in_github_repo, github_org};
+use crate::utils::create_or_update_file_in_github_repo;
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
@@ -229,8 +230,8 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// GitHub, then fill in the rest.
-    pub async fn populate_from_github(&mut self, github: &Github) {
-        let repo = github.repo(github_org(), "configs");
+    pub async fn populate_from_github(&mut self, github: &Github, company: &Company) {
+        let repo = github.repo(&company.github_org, "configs");
         let r = repo.get().await.unwrap();
 
         if let Ok(cert) = repo.content().file(&self.get_github_path("fullchain.pem"), &r.default_branch).await {
@@ -281,8 +282,8 @@ impl NewCertificate {
     }
 
     /// Saves the fullchain certificate and privkey to the configs github repo.
-    pub async fn save_to_github_repo(&self, github: &Github) {
-        let repo = github.repo(github_org(), "configs");
+    pub async fn save_to_github_repo(&self, github: &Github, company: &Company) {
+        let repo = github.repo(&company.github_org, "configs");
         let r = repo.get().await.unwrap();
 
         // Write the files.

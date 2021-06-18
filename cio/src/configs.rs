@@ -28,7 +28,7 @@ use crate::gsuite::{update_google_group_settings, update_group_aliases, update_g
 use crate::schema::{applicants, buildings, conference_rooms, groups, links, users};
 use crate::shipments::NewOutboundShipment;
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
-use crate::utils::{authenticate_gusto, authenticate_ramp, get_github_user_public_ssh_keys, get_gsuite_token, github_org};
+use crate::utils::get_github_user_public_ssh_keys;
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -535,7 +535,6 @@ xoxo,
     async fn send_email_new_user(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
-        let github_org = github_org();
 
         // Get the user's aliases if they have one.
         let aliases = self.aliases.join(", ");
@@ -546,7 +545,7 @@ and various teams within it. GitHub should have sent an email with instructions 
 accepting the invitation to our organization to the email you used
 when you signed up for GitHub. Or you can alternatively accept our invitation
 by going to https://github.com/{}.",
-            self.github, github_org, github_org
+            self.github, company.github_org, company.github_org
         );
         if self.github.is_empty() {
             // Let the new hire know they need to create a GitHub account.
@@ -617,9 +616,9 @@ xoxo,
                     aliases,
                     github_copy,
                     company.gsuite_domain,
-                    github_org,
-                    github_org,
-                    github_org,
+                    company.github_org,
+                    company.github_org,
+                    company.github_org,
                 ),
                 vec![self.recovery_email.to_string()],
                 vec![self.email(company), format!("jess@{}", company.gsuite_domain)],
@@ -1018,8 +1017,8 @@ pub struct HuddleConfig {
 }
 
 /// Get the configs from the GitHub repository and parse them.
-pub async fn get_configs_from_repo(github: &Github) -> Config {
-    let repo = github.repo(github_org(), "configs");
+pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config {
+    let repo = github.repo(&company.github_org, "configs");
     let r = repo.get().await.unwrap();
     let repo_contents = repo.content();
 
@@ -1044,15 +1043,13 @@ pub async fn get_configs_from_repo(github: &Github) -> Config {
 }
 
 /// Sync GitHub outside collaborators with our configs.
-pub async fn sync_github_outside_collaborators(github: &Github, outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>) {
-    let github_org = github_org();
-
+pub async fn sync_github_outside_collaborators(github: &Github, outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>, company: &Company) {
     // Add the outside contributors to the specified repos.
     for (name, outside_collaborators_config) in outside_collaborators {
         println!("Running configuration for outside collaborators: {}", name);
         for repo in &outside_collaborators_config.repos {
             // Get the repository collaborators interface from hubcaps.
-            let repo_collaborators = github.repo(github_org.to_string(), repo.to_string()).collaborators();
+            let repo_collaborators = github.repo(&company.github_org, repo.to_string()).collaborators();
 
             let mut perm = Permissions::Pull;
             if outside_collaborators_config.perm == "push" {
@@ -1083,11 +1080,11 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = get_gsuite_token(company, "").await;
+    let token = company.get_google_token("").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Initialize the Gusto client.
-    let gusto = authenticate_gusto(db, company).await;
+    let gusto = company.authenticate_gusto(db).await;
     let gu = gusto.list_employees().await.unwrap();
     let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
     for g in gu {
@@ -1095,7 +1092,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     }
 
     // Initialize the Ramp client.
-    let ramp = authenticate_ramp(db, company).await;
+    let ramp = company.authenticate_ramp(db).await;
     let ru = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
     for r in ru {
@@ -1200,7 +1197,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // they should have a Google account by then.
             // Sync okta users and group from the database.
             // Do this after we update the users and groups in the database.
-            generate_terraform_files_for_okta(github, db).await;
+            generate_terraform_files_for_okta(github, db, company).await;
             // TODO: this is horrible, but we will sleep here to allow the terraform
             // job to run.
             // We also need a better way to ensure the terraform job passed...
@@ -1268,7 +1265,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = get_gsuite_token(company, "").await;
+    let token = company.get_google_token("").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing google buildings.
@@ -1363,7 +1360,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = get_gsuite_token(company, "").await;
+    let token = company.get_google_token("").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing GSuite calendar resources.
@@ -1461,7 +1458,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = get_gsuite_token(company, "").await;
+    let token = company.get_google_token("").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the GSuite groups.
@@ -1657,7 +1654,7 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     for (_, mut certificate) in certificates {
         certificate.cio_company_id = company.id;
 
-        certificate.populate_from_github(github).await;
+        certificate.populate_from_github(github, company).await;
 
         // If the cert is going to expire in less than 7 days, renew it.
         // Otherwise, return early.
@@ -1668,7 +1665,7 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
             certificate.populate().await;
 
             // Save the certificate to disk.
-            certificate.save_to_github_repo(github).await;
+            certificate.save_to_github_repo(github, company).await;
         }
 
         // Update the database and Airtable.
@@ -1691,14 +1688,14 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
 }
 
 pub async fn refresh_db_configs_and_airtable(github: &Github) {
-    let configs = get_configs_from_repo(github).await;
-
     // Initialize our database.
     let db = Database::new();
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    let configs = get_configs_from_repo(github, &oxide).await;
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
@@ -1716,9 +1713,9 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
-    generate_terraform_files_for_okta(github, &db).await;
+    generate_terraform_files_for_okta(github, &db, &oxide).await;
     // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(github, &db).await;
+    generate_terraform_files_for_aws_and_github(github, &db, &oxide).await;
 
     // Sync links.
     sync_links(&db, configs.links, configs.huddles, &oxide).await;
@@ -1727,7 +1724,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_certificates(&db, github, configs.certificates, &oxide).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
+    sync_github_outside_collaborators(github, configs.github_outside_collaborators, &oxide).await;
 
     refresh_anniversary_events(&db, &oxide).await;
 }
@@ -1735,7 +1732,7 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = get_gsuite_token(company, "").await;
+    let token = company.get_google_token("").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Find the anniversary calendar.

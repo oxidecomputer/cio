@@ -3,10 +3,11 @@ use hubcaps::repositories::Repository;
 use hubcaps::Github;
 use serde::{Deserialize, Serialize};
 
+use crate::companies::Company;
 use crate::configs::{Groups, User, Users};
 use crate::db::Database;
 use crate::shorturls::ShortUrl;
-use crate::utils::{create_or_update_file_in_github_repo, github_org};
+use crate::utils::create_or_update_file_in_github_repo;
 
 /// Helper function so the terraform names do not start with a number.
 /// Otherwise terraform will fail.
@@ -49,11 +50,11 @@ struct GitHubTeamMembers {
  *
  * This function uses the users.toml and the groups.toml file in the configs repo for information.
  */
-pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database) {
+pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database, company: &Company) {
     let users = Users::get_from_db(db);
     let groups = Groups::get_from_db(db);
 
-    let repo = github.repo(github_org(), "configs");
+    let repo = github.repo(&company.github_org, "configs");
     let r = repo.get().await.unwrap();
 
     // Set the paths for the files.
@@ -88,10 +89,10 @@ pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database) {
  *
  * This function uses the users.toml file in the configs repo for information.
  */
-pub async fn generate_terraform_files_for_aws_and_github(github: &Github, db: &Database) {
+pub async fn generate_terraform_files_for_aws_and_github(github: &Github, db: &Database, company: &Company) {
     let users = Users::get_from_db(db);
 
-    let repo = github.repo(github_org(), "configs");
+    let repo = github.repo(&company.github_org, "configs");
     let r = repo.get().await.unwrap();
 
     // Set the paths for the files.

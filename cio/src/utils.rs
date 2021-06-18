@@ -8,21 +8,14 @@ use std::str::from_utf8;
 use std::thread;
 use std::time;
 
-use chrono::Utc;
-use docusign::DocuSign;
 use futures_util::stream::TryStreamExt;
-use gusto_api::Gusto;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::issues::Issue;
 use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repository};
 use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
-use quickbooks::QuickBooks;
-use ramp_api::Ramp;
 use reqwest::get;
 use reqwest::Client;
-use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
-use crate::api_tokens::APIToken;
 use crate::companies::Company;
 use crate::db::Database;
 use crate::models::{GithubRepo, GithubRepos, NewRepo};
@@ -37,60 +30,6 @@ pub fn write_file(file: &Path, contents: &str) {
     f.write_all(contents.as_bytes()).unwrap();
 
     println!("wrote file: {}", file.to_str().unwrap());
-}
-
-/// Get a GSuite token.
-pub async fn get_gsuite_token(company: &Company, subject: &str) -> AccessToken {
-    let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
-    // Get the GSuite credentials file.
-    let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or_default();
-
-    if gsuite_credential_file.is_empty() && !gsuite_key.is_empty() {
-        let b = base64::decode(gsuite_key).unwrap();
-
-        // Save the gsuite key to a tmp file.
-        let mut file_path = env::temp_dir();
-        file_path.push("gsuite_key.json");
-
-        // Create the file and write to it.
-        let mut file = fs::File::create(file_path.clone()).unwrap();
-        file.write_all(&b).unwrap();
-
-        // Set the GSuite credential file to the temp path.
-        gsuite_credential_file = file_path.to_str().unwrap().to_string();
-    }
-
-    let mut gsuite_subject = company.gsuite_subject.to_string();
-    if !subject.is_empty() {
-        gsuite_subject = subject.to_string();
-    }
-    let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
-    let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
-        .subject(gsuite_subject.to_string())
-        .build()
-        .await
-        .expect("failed to create authenticator");
-
-    // Add the scopes to the secret and get the token.
-    let token = auth
-        .token(&[
-            "https://www.googleapis.com/auth/admin.directory.group",
-            "https://www.googleapis.com/auth/admin.directory.resource.calendar",
-            "https://www.googleapis.com/auth/admin.directory.user",
-            "https://www.googleapis.com/auth/calendar",
-            "https://www.googleapis.com/auth/apps.groups.settings",
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive",
-            "https://www.googleapis.com/auth/devstorage.full_control",
-        ])
-        .await
-        .expect("failed to get token");
-
-    if token.as_str().is_empty() {
-        panic!("empty token is not valid");
-    }
-
-    token
 }
 
 /// Check if a GitHub issue already exists.
@@ -118,98 +57,6 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
             }
         })
         .collect()
-}
-
-/// Authenticate with Ramp.
-pub async fn authenticate_ramp(db: &Database, company: &Company) -> Ramp {
-    // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, company.id, "ramp".to_string()) {
-        // Initialize the Ramp client.
-        let mut ramp = Ramp::new_from_env(t.access_token, t.refresh_token.to_string());
-        let nt = ramp.refresh_access_token().await.unwrap();
-        t.access_token = nt.access_token.to_string();
-        t.expires_in = nt.expires_in as i32;
-        t.last_updated_at = Utc::now();
-        if !nt.refresh_token.is_empty() {
-            t.refresh_token = nt.refresh_token.to_string();
-        }
-        if nt.refresh_token_expires_in > 0 {
-            t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-        }
-        t.expand();
-        // Update the token in the database.
-        t.update(&db).await;
-
-        return ramp;
-    }
-
-    Ramp::new_from_env("", "")
-}
-
-/// Authenticate with DocuSign.
-pub async fn authenticate_docusign(db: &Database, company: &Company) -> DocuSign {
-    // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, company.id, "docusign".to_string()) {
-        // Initialize the DocuSign client.
-        let mut ds = DocuSign::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string(), t.endpoint.to_string());
-        let nt = ds.refresh_access_token().await.unwrap();
-        t.access_token = nt.access_token.to_string();
-        t.expires_in = nt.expires_in as i32;
-        t.refresh_token = nt.refresh_token.to_string();
-        t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-        t.last_updated_at = Utc::now();
-        t.expand();
-        // Update the token in the database.
-        t.update(&db).await;
-
-        return ds;
-    }
-
-    DocuSign::new_from_env("", "", "", "")
-}
-
-/// Authenticate with Gusto.
-pub async fn authenticate_gusto(db: &Database, company: &Company) -> Gusto {
-    // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, company.id, "gusto".to_string()) {
-        // Initialize the Gusto client.
-        let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string());
-        let nt = gusto.refresh_access_token().await.unwrap();
-        t.access_token = nt.access_token.to_string();
-        t.expires_in = nt.expires_in as i32;
-        t.refresh_token = nt.refresh_token.to_string();
-        t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-        t.last_updated_at = Utc::now();
-        t.expand();
-        // Update the token in the database.
-        t.update(&db).await;
-
-        return gusto;
-    }
-
-    Gusto::new_from_env("", "", "")
-}
-
-/// Authenticate with QuickBooks.
-pub async fn authenticate_quickbooks(db: &Database, company: &Company) -> QuickBooks {
-    // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, company.id, "quickbooks".to_string()) {
-        // Initialize the QuickBooks client.
-        let mut qb = QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
-        let nt = qb.refresh_access_token().await.unwrap();
-        t.access_token = nt.access_token.to_string();
-        t.expires_in = nt.expires_in as i32;
-        t.refresh_token = nt.refresh_token.to_string();
-        t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-        t.last_updated_at = Utc::now();
-        t.expand();
-        // Update the token in the database.
-        t.update(&db).await;
-
-        return qb;
-    }
-
-    QuickBooks::new_from_env("", "", "")
 }
 
 /// Authenticate with GitHub.
@@ -255,10 +102,6 @@ pub fn authenticate_github_jwt() -> Github {
         Client::builder().build().unwrap(),
         http_cache,
     )
-}
-
-pub fn github_org() -> String {
-    env::var("GITHUB_ORG").unwrap()
 }
 
 /// List all the GitHub repositories for our org.

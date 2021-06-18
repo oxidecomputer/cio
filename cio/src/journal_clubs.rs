@@ -11,10 +11,10 @@ use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE};
+use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{journal_club_meetings, journal_club_papers};
-use crate::utils::github_org;
 
 /// The data type for a NewJournalClubMeeting.
 #[db {
@@ -271,13 +271,13 @@ impl Meeting {
 }
 
 /// Get the journal club meetings from the papers GitHub repo.
-pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
-    let repo = github.repo(github_org(), "papers");
+pub async fn get_meetings_from_repo(github: &Github, company: &Company) -> Vec<Meeting> {
+    let repo = github.repo(&company.github_org, "papers");
     let r = repo.get().await.unwrap();
 
     // Get the contents of the .helpers/meetings.csv file.
     let meetings_csv_content = github
-        .repo(github_org(), "papers")
+        .repo(&company.github_org, "papers")
         .content()
         .file("/.helpers/meetings.json", &r.default_branch)
         .await
@@ -293,7 +293,11 @@ pub async fn get_meetings_from_repo(github: &Github) -> Vec<Meeting> {
 
 // Sync the journal_club_meetings with our database.
 pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github) {
-    let journal_club_meetings = get_meetings_from_repo(github).await;
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
+    let journal_club_meetings = get_meetings_from_repo(github, &oxide).await;
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {

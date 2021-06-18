@@ -23,10 +23,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GITHUB_REPOS_TABLE, AIRTABLE_RFD_TABLE};
+use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_images_in_branch, get_rfd_contents_from_repo, parse_markdown, update_discussion_link, update_state};
 use crate::schema::{github_repos, rfds as r_f_ds, rfds};
-use crate::utils::{create_or_update_file_in_github_repo, github_org, write_file};
+use crate::utils::{create_or_update_file_in_github_repo, write_file};
 
 /// The data type for a GitHub user.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize)]
@@ -686,9 +687,9 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    pub async fn convert_and_upload_pdf(&mut self, github: &Github, drive_client: &GoogleDrive) {
+    pub async fn convert_and_upload_pdf(&mut self, github: &Github, drive_client: &GoogleDrive, company: &Company) {
         // Get the rfd repo client.
-        let rfd_repo = github.repo(github_org(), "rfd");
+        let rfd_repo = github.repo(&company.github_org, "rfd");
         let repo = rfd_repo.get().await.unwrap();
 
         let mut path = env::temp_dir();
@@ -763,8 +764,8 @@ impl RFD {
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    pub async fn expand(&mut self, github: &Github) {
-        let repo = github.repo(github_org(), "rfd");
+    pub async fn expand(&mut self, github: &Github, company: &Company) {
+        let repo = github.repo(&company.github_org, "rfd");
         let r = repo.get().await.unwrap();
 
         // Trim the title.
@@ -788,7 +789,7 @@ impl RFD {
 
         // Get the RFD contents from the branch.
         let rfd_dir = format!("/rfd/{}", self.number_string);
-        let (rfd_content, is_markdown, sha) = get_rfd_contents_from_repo(github, &branch, &rfd_dir).await;
+        let (rfd_content, is_markdown, sha) = get_rfd_contents_from_repo(github, &branch, &rfd_dir, company).await;
         self.content = rfd_content;
         self.sha = sha;
 
@@ -815,7 +816,7 @@ impl RFD {
         // Set the pdf link
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
-        self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", github_org(), rfd_path);
+        self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", company.github_org, rfd_path);
     }
 }
 

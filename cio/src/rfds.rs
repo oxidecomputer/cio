@@ -14,11 +14,11 @@ use sendgrid_api::SendGrid;
 use crate::companies::Company;
 use crate::db::Database;
 use crate::models::{NewRFD, RFDs};
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo, get_gsuite_token, github_org};
+use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo};
 
 /// Get the RFDs from the rfd GitHub repo.
-pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
-    let repo = github.repo(github_org(), "rfd");
+pub async fn get_rfds_from_repo(github: &Github, company: &Company) -> BTreeMap<i32, NewRFD> {
+    let repo = github.repo(&company.github_org, "rfd");
     let r = repo.get().await.unwrap();
 
     // Get the contents of the .helpers/rfd.csv file.
@@ -45,8 +45,8 @@ pub async fn get_rfds_from_repo(github: &Github) -> BTreeMap<i32, NewRFD> {
 }
 
 /// Try to get the markdown or asciidoc contents from the repo.
-pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str) -> (String, bool, String) {
-    let repo = github.repo(github_org(), "rfd");
+pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str, company: &Company) -> (String, bool, String) {
+    let repo = github.repo(&company.github_org, "rfd");
     let r = repo.get().await.unwrap();
     let repo_contents = repo.content();
     let mut is_markdown = false;
@@ -206,19 +206,19 @@ pub async fn refresh_db_rfds(db: &Database, github: &Github) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get gsuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
 
-    let rfds = get_rfds_from_repo(github).await;
+    let rfds = get_rfds_from_repo(github, &oxide).await;
 
     // Sync rfds.
     for (_, rfd) in rfds {
         let mut new_rfd = rfd.upsert(db).await;
 
         // Expand the fields in the RFD.
-        new_rfd.expand(github).await;
+        new_rfd.expand(github, &oxide).await;
 
         // Make and update the PDF versions.
         new_rfd.convert_and_upload_pdf(github, &drive_client).await;

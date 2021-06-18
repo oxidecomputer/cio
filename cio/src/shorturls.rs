@@ -7,7 +7,7 @@ use crate::configs::Links;
 use crate::db::Database;
 use crate::models::{GithubRepos, RFDs};
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
-use crate::utils::{authenticate_github_jwt, github_org};
+use crate::utils::authenticate_github_jwt;
 
 /// Generate the files for the GitHub repository short URLs.
 pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
@@ -171,14 +171,14 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Com
 
 /// Update all the short URLs and DNS.
 pub async fn refresh_shorturls() {
-    let github = authenticate_github_jwt();
-    let repo = github.repo(github_org(), "configs");
-
     let db = Database::new();
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    let github = authenticate_github_jwt();
+    let repo = github.repo(&oxide.github_org, "configs");
 
     generate_shorturls_for_repos(&db, &repo).await;
     generate_shorturls_for_rfds(&db, &repo).await;

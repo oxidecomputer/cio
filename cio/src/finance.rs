@@ -16,7 +16,7 @@ use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users};
-use crate::utils::{authenticate_github_jwt, authenticate_quickbooks, authenticate_ramp, get_gsuite_token, github_org};
+use crate::utils::authenticate_github_jwt;
 
 #[db {
     new_struct_name = "SoftwareVendor",
@@ -99,7 +99,7 @@ pub async fn refresh_software_vendors() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     let github = authenticate_github_jwt();
@@ -118,7 +118,7 @@ pub async fn refresh_software_vendors() {
 
         if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
-            let org = github.org(github_org()).get().await.unwrap();
+            let org = github.org(&oxide.github_org).get().await.unwrap();
             vendor.users = org.plan.filled_seats;
         }
 
@@ -238,7 +238,7 @@ pub async fn refresh_ramp_transactions() {
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     // Create the Ramp client.
-    let ramp = authenticate_ramp(&db, &oxide).await;
+    let ramp = oxide.authenticate_ramp(&db).await;
 
     // List all our users.
     let users = ramp.list_users().await.unwrap();
@@ -934,7 +934,7 @@ pub async fn sync_quickbooks() {
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     // Authenticate QuickBooks.
-    let qb = authenticate_quickbooks(&db, &oxide).await;
+    let qb = oxide.authenticate_quickbooks(&db).await;
 
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {

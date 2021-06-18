@@ -19,7 +19,6 @@ use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{barcode_scans, swag_inventory_items, swag_items};
-use crate::utils::get_gsuite_token;
 
 #[db {
     new_struct_name = "SwagItem",
@@ -455,7 +454,7 @@ pub async fn refresh_swag_inventory_items() {
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     // Get gsuite token.
-    let token = get_gsuite_token(&oxide, "").await;
+    let token = oxide.get_google_token("").await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
