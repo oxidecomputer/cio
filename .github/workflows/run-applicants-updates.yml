@@ -82,7 +82,6 @@ jobs:
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
           GITHUB_ORG: oxidecomputer
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
-          GADMIN_SUBJECT: ${{ secrets.GADMIN_SUBJECT }}
           GOOGLE_GEOCODE_API_KEY: ${{ secrets.GOOGLE_GEOCODE_API_KEY }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           SLACK_HIRING_CHANNEL_POST_URL: ${{ secrets.SLACK_HIRING_CHANNEL_POST_URL }}
