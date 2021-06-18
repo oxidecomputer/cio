@@ -162,7 +162,6 @@ async fn main() -> Result<(), String> {
  */
 struct Context {
     github: Github,
-    github_org: String,
     influx: influx::Client,
     db: Database,
     checkr: checkr::Checkr,
@@ -177,14 +176,9 @@ impl Context {
     pub async fn new(schema: String) -> Context {
         let db = Database::new();
 
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
         // Create the context.
         Context {
             github: authenticate_github_jwt(),
-            github_org: oxide.github_org,
             influx: influx::Client::new_from_env(),
             db,
             checkr: checkr::Checkr::new_from_env(),
@@ -315,8 +309,10 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param:
             let influx_event = event.as_influx_repository();
             api_context.influx.query(influx_event, event_type.name()).await;
 
+            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
+
             // Now let's handle the event.
-            let resp = handle_repository_event(api_context, event).await;
+            let resp = handle_repository_event(api_context, event, &company).await;
             sentry::end_session();
             return resp;
         }
@@ -327,15 +323,16 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param:
     if !event.repository.name.is_empty() {
         let repo = &event.repository;
         let repo_name = Repo::from_str(&repo.name).unwrap();
+        let company = Company::get_from_github_org(&api_context.db, &repo.owner.login);
         match repo_name {
             Repo::RFD => match event_type {
                 EventType::Push => {
-                    let resp = handle_rfd_push(api_context, event).await;
+                    let resp = handle_rfd_push(api_context, event, &company).await;
                     sentry::end_session();
                     return resp;
                 }
                 EventType::PullRequest => {
-                    let resp = handle_rfd_pull_request(api_context, event).await;
+                    let resp = handle_rfd_pull_request(api_context, event, &company).await;
                     sentry::end_session();
                     return resp;
                 }
@@ -343,7 +340,7 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param:
             },
             Repo::Configs => {
                 if let EventType::Push = event_type {
-                    let resp = handle_configs_push(api_context, event).await;
+                    let resp = handle_configs_push(api_context, event, &company).await;
                     sentry::end_session();
                     return resp;
                 }
@@ -2326,11 +2323,11 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
 }
 
 /// Handle a `pull_request` event for the rfd repo.
-async fn handle_rfd_pull_request(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_pull_request(api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), "rfd".to_string());
+    let github_repo = api_context.github.repo(&company.github_org, "rfd".to_string());
 
     // Let's get the RFD.
     let branch = event.pull_request.head.commit_ref.to_string();
@@ -2456,15 +2453,11 @@ async fn handle_rfd_pull_request(api_context: &Context, event: GitHubWebhook) ->
 }
 
 /// Handle a `push` event for the rfd repo.
-async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
     // Get gsuite token.
-    let token = oxide.get_google_token("").await;
+    let token = company.get_google_token("").await;
 
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
@@ -2474,7 +2467,7 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
     let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
 
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
+    let github_repo = api_context.github.repo(&company.github_org, event.repository.name.to_string());
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -2582,18 +2575,18 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(db).await;
             // Update all the fields for the RFD.
-            rfd.expand(&api_context.github, &oxide).await;
+            rfd.expand(&api_context.github, &company).await;
             rfd.update(db).await;
             println!("updated RFD {} in the database", new_rfd.number_string);
             println!("updated airtable for RFD {}", new_rfd.number_string);
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(&db, &api_context.github.repo(&api_context.github_org, "configs")).await;
+            generate_shorturls_for_rfds(&db, &api_context.github.repo(&company.github_org, "configs")).await;
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(&api_context.github, &drive, &oxide).await;
+            rfd.convert_and_upload_pdf(&api_context.github, &drive, &company).await;
             rfd.update(db).await;
             println!("updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
@@ -2635,7 +2628,7 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
                                     .pulls()
                                     .create(&hubcaps::pulls::PullOptions::new(
                 rfd.name.to_string(),
-                format!("{}:{}", api_context.github_org,branch),
+                format!("{}:{}", company.github_org, branch),
                 event.repository.default_branch.to_string(),
                 Some("Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your document and close this pull request."),
                                             ))
@@ -2704,9 +2697,9 @@ async fn handle_rfd_push(api_context: &Context, event: GitHubWebhook) -> Result<
 }
 
 /// Handle a `push` event for the configs repo.
-async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_configs_push(api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get the repo.
-    let github_repo = api_context.github.repo(api_context.github_org.to_string(), event.repository.name.to_string());
+    let github_repo = api_context.github.repo(&company.github_org, event.repository.name.to_string());
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -2729,17 +2722,13 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
-
     // Get the configs from our repo.
-    let configs = get_configs_from_repo(&api_context.github, &oxide).await;
+    let configs = get_configs_from_repo(&api_context.github, company).await;
 
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
         // Update our links in the database.
-        sync_links(&api_context.db, configs.links, configs.huddles, &oxide).await;
+        sync_links(&api_context.db, configs.links, configs.huddles, &company).await;
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&api_context.db, &github_repo).await;
@@ -2750,40 +2739,40 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
     // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
     // added a new group to GSuite.
     if commit.file_changed("configs/groups.toml") {
-        sync_groups(&api_context.db, configs.groups, &oxide).await;
+        sync_groups(&api_context.db, configs.groups, &company).await;
     }
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.db, &api_context.github, configs.users, &oxide).await;
+        sync_users(&api_context.db, &api_context.github, configs.users, &company).await;
     }
 
     if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
         // Sync okta users and group from the database.
         // Do this after we update the users and groups in the database.
-        generate_terraform_files_for_okta(&api_context.github, &api_context.db, &oxide).await;
+        generate_terraform_files_for_okta(&api_context.github, &api_context.db, &company).await;
     }
 
     // Check if the buildings.toml file changed.
     // Buildings needs to be synchronized _before_ we move on to conference rooms.
     if commit.file_changed("configs/buildings.toml") {
-        sync_buildings(&api_context.db, configs.buildings, &oxide).await;
+        sync_buildings(&api_context.db, configs.buildings, &company).await;
     }
 
     // Check if the resources.toml file changed.
     if commit.file_changed("configs/resources.toml") {
-        sync_conference_rooms(&api_context.db, configs.resources, &oxide).await;
+        sync_conference_rooms(&api_context.db, configs.resources, &company).await;
     }
 
     // Check if the certificates.toml file changed.
     if commit.file_changed("configs/certificates.toml") {
-        sync_certificates(&api_context.db, &api_context.github, configs.certificates, &oxide).await;
+        sync_certificates(&api_context.db, &api_context.github, configs.certificates, &company).await;
     }
 
     // Check if the github-outside-collaborators.toml file changed.
     if commit.file_changed("configs/github-outside-collaborators.toml") {
         // Sync github outside collaborators.
-        sync_github_outside_collaborators(&api_context.github, configs.github_outside_collaborators, &oxide).await;
+        sync_github_outside_collaborators(&api_context.github, configs.github_outside_collaborators, &company).await;
     }
 
     // TODO: do huddles.
@@ -2792,18 +2781,15 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
 }
 
 /// Handle the `repository` event for all repos.
-async fn handle_repository_event(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let repo = &api_context.github.repo(event.repository.owner.login, event.repository.name).get().await.unwrap();
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
-    let nr = NewRepo::new(repo.clone(), oxide.id);
+async fn handle_repository_event(api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let repo = &api_context.github.repo(&company.github_org, event.repository.name).get().await.unwrap();
+    let nr = NewRepo::new(repo.clone(), company.id);
     nr.upsert(&api_context.db).await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(&api_context.db, &api_context.github.repo(&api_context.github_org, "configs")).await;
+    generate_shorturls_for_repos(&api_context.db, &api_context.github.repo(&company.github_org, "configs")).await;
     println!("generated shorturls for all the GitHub repos");
 
     Ok(HttpResponseAccepted("ok".to_string()))
