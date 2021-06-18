@@ -257,7 +257,7 @@ pub mod deserialize_null_string {
 }
 
 impl NewRepo {
-    pub fn new(r: Repo) -> Self {
+    pub fn new(r: Repo, cio_company_id: i32) -> Self {
         // TODO: get the languages as well
         // https://docs.rs/hubcaps/0.6.1/hubcaps/repositories/struct.Repo.html
 
@@ -348,7 +348,7 @@ impl NewRepo {
             pushed_at: DateTime::parse_from_rfc3339(&r.pushed_at).unwrap().with_timezone(&Utc),
             created_at: DateTime::parse_from_rfc3339(&r.created_at).unwrap().with_timezone(&Utc),
             updated_at: DateTime::parse_from_rfc3339(&r.updated_at).unwrap().with_timezone(&Utc),
-            cio_company_id: Default::default(),
+            cio_company_id,
         }
     }
 }

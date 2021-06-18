@@ -23,6 +23,7 @@ use reqwest::Client;
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
 use crate::api_tokens::APIToken;
+use crate::companies::Company;
 use crate::db::Database;
 use crate::models::{GithubRepo, GithubRepos, NewRepo};
 
@@ -264,9 +265,9 @@ pub fn github_org() -> String {
 }
 
 /// List all the GitHub repositories for our org.
-pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
+pub async fn list_all_github_repos(github: &Github, company: &Company) -> Vec<NewRepo> {
     let github_repos = github
-        .org_repos(github_org())
+        .org_repos(&company.github_org)
         .iter(&OrganizationRepoListOptions::builder().per_page(100).repo_type(OrgRepoType::All).build())
         .try_collect::<Vec<hubcaps::repositories::Repo>>()
         .await
@@ -274,15 +275,15 @@ pub async fn list_all_github_repos(github: &Github) -> Vec<NewRepo> {
 
     let mut repos: Vec<NewRepo> = Default::default();
     for r in github_repos {
-        repos.push(NewRepo::new(r));
+        repos.push(NewRepo::new(r, company.id));
     }
 
     repos
 }
 
 /// Sync the repos with our database.
-pub async fn refresh_db_github_repos(db: &Database, github: &Github) {
-    let github_repos = list_all_github_repos(github).await;
+pub async fn refresh_db_github_repos(db: &Database, github: &Github, company: &Company) {
+    let github_repos = list_all_github_repos(github, company).await;
 
     // Get all the repos.
     let db_repos = GithubRepos::get_from_db(db);
@@ -488,6 +489,7 @@ pub fn default_date() -> chrono::naive::NaiveDate {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::models::GithubRepos;
     use crate::utils::{authenticate_github_jwt, refresh_db_github_repos};
@@ -500,7 +502,11 @@ mod tests {
         // Initialize our database.
         let db = Database::new();
 
-        refresh_db_github_repos(&db, &github).await;
+        // Get the company id for Oxide.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        // TODO: split this out per company.
+        refresh_db_github_repos(&db, &github, &oxide).await;
 
         GithubRepos::get_from_db(&db).update_airtable().await;
     }
