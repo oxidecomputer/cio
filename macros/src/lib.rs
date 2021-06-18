@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 extern crate proc_macro;
 
@@ -27,7 +27,7 @@ struct Params {
     #[serde(default)]
     custom_partial_eq: bool,
     /// The struct item and type that we will filter on to find unique database entries.
-    match_on: HashMap<String, String>,
+    match_on: BTreeMap<String, String>,
 }
 
 #[proc_macro_attribute]

@@ -124,9 +124,9 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
 }
 
 /// Authenticate with Ramp.
-pub async fn authenticate_ramp(db: &Database) -> Ramp {
+pub async fn authenticate_ramp(db: &Database, company: &Company) -> Ramp {
     // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, "ramp".to_string()) {
+    if let Some(mut t) = APIToken::get_from_db(db, company.id, "ramp".to_string()) {
         // Initialize the Ramp client.
         let mut ramp = Ramp::new_from_env(t.access_token, t.refresh_token.to_string());
         let nt = ramp.refresh_access_token().await.unwrap();
@@ -150,9 +150,9 @@ pub async fn authenticate_ramp(db: &Database) -> Ramp {
 }
 
 /// Authenticate with DocuSign.
-pub async fn authenticate_docusign(db: &Database) -> DocuSign {
+pub async fn authenticate_docusign(db: &Database, company: &Company) -> DocuSign {
     // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, "docusign".to_string()) {
+    if let Some(mut t) = APIToken::get_from_db(db, company.id, "docusign".to_string()) {
         // Initialize the DocuSign client.
         let mut ds = DocuSign::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string(), t.endpoint.to_string());
         let nt = ds.refresh_access_token().await.unwrap();
@@ -172,9 +172,9 @@ pub async fn authenticate_docusign(db: &Database) -> DocuSign {
 }
 
 /// Authenticate with Gusto.
-pub async fn authenticate_gusto(db: &Database) -> Gusto {
+pub async fn authenticate_gusto(db: &Database, company: &Company) -> Gusto {
     // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, "gusto".to_string()) {
+    if let Some(mut t) = APIToken::get_from_db(db, company.id, "gusto".to_string()) {
         // Initialize the Gusto client.
         let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string());
         let nt = gusto.refresh_access_token().await.unwrap();
@@ -194,9 +194,9 @@ pub async fn authenticate_gusto(db: &Database) -> Gusto {
 }
 
 /// Authenticate with QuickBooks.
-pub async fn authenticate_quickbooks(db: &Database) -> QuickBooks {
+pub async fn authenticate_quickbooks(db: &Database, company: &Company) -> QuickBooks {
     // Get the APIToken from the database.
-    if let Some(mut t) = APIToken::get_from_db(db, "quickbooks".to_string()) {
+    if let Some(mut t) = APIToken::get_from_db(db, company.id, "quickbooks".to_string()) {
         // Initialize the QuickBooks client.
         let mut qb = QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
         let nt = qb.refresh_access_token().await.unwrap();

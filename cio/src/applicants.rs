@@ -32,6 +32,7 @@ use tar::Archive;
 use walkdir::WalkDir;
 
 use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
+use crate::companies::Company;
 use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -2675,8 +2676,12 @@ pub async fn update_applicant_reviewers(db: &Database) {
 }
 
 pub async fn refresh_docusign_for_applicants(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     // Authenticate DocuSign.
-    let ds = authenticate_docusign(db).await;
+    let ds = authenticate_docusign(db, &oxide).await;
 
     // Get the template we need.
     let template_id = get_docusign_template_id(&ds).await;

@@ -11,6 +11,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
+use crate::companies::Company;
 use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -98,6 +99,10 @@ pub async fn refresh_software_vendors() {
 
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let github = authenticate_github_jwt();
 
     let okta = Okta::new_from_env();
@@ -108,6 +113,9 @@ pub async fn refresh_software_vendors() {
     let results: Vec<airtable_api::Record<SoftwareVendor>> = SoftwareVendor::airtable().list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![]).await.unwrap();
     for vendor_record in results {
         let mut vendor: NewSoftwareVendor = vendor_record.fields.into();
+
+        // Set the company id.
+        vendor.cio_company_id = oxide.id;
 
         if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
@@ -226,8 +234,12 @@ pub async fn refresh_ramp_transactions() {
     // Initialize the database.
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Create the Ramp client.
-    let ramp = authenticate_ramp(&db).await;
+    let ramp = authenticate_ramp(&db, &oxide).await;
 
     // List all our users.
     let users = ramp.list_users().await.unwrap();
@@ -275,7 +287,7 @@ pub async fn refresh_ramp_transactions() {
             time: transaction.user_transaction_time,
             memo: String::new(),
             link_to_vendor,
-            cio_company_id: Default::default(),
+            cio_company_id: oxide.id,
         };
 
         nt.upsert(&db).await;
@@ -910,8 +922,12 @@ pub async fn sync_quickbooks() {
     // Initialize the database.
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Authenticate QuickBooks.
-    let qb = authenticate_quickbooks(&db).await;
+    let qb = authenticate_quickbooks(&db, &oxide).await;
 
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {

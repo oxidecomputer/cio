@@ -13,6 +13,7 @@ use crate::schema::{api_tokens, api_tokens as a_p_i_tokens};
     airtable_base_id = "AIRTABLE_BASE_ID_CIO",
     airtable_table = "AIRTABLE_API_TOKENS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "product" = "String",
     },
 }]

@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
 use crate::applicants::Applicant;
 use crate::certs::{Certificate, Certificates, NewCertificate};
+use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource};
@@ -1075,6 +1076,10 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 
 /// Sync our users with our database and then update Airtable from the database.
 pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
@@ -1082,7 +1087,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
 
     // Initialize the Gusto client.
-    let gusto = authenticate_gusto(db).await;
+    let gusto = authenticate_gusto(db, &oxide).await;
     let gu = gusto.list_employees().await.unwrap();
     let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
     for g in gu {
@@ -1090,7 +1095,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     }
 
     // Initialize the Ramp client.
-    let ramp = authenticate_ramp(db).await;
+    let ramp = authenticate_ramp(db, &oxide).await;
     let ru = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
     for r in ru {
