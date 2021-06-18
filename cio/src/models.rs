@@ -645,8 +645,8 @@ impl RFD {
     }
 
     /// Get a changelog for the RFD.
-    pub async fn get_weekly_changelog(&self, github: &Github, since: DateTime<Utc>) -> String {
-        let repo = github.repo(github_org(), "rfd");
+    pub async fn get_weekly_changelog(&self, github: &Github, since: DateTime<Utc>, company: &Company) -> String {
+        let repo = github.repo(&company.github_org, "rfd");
         let r = repo.get().await.unwrap();
         let mut changelog = String::new();
 

@@ -221,7 +221,7 @@ pub async fn refresh_db_rfds(db: &Database, github: &Github) {
         new_rfd.expand(github, &oxide).await;
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(github, &drive_client).await;
+        new_rfd.convert_and_upload_pdf(github, &drive_client, &oxide).await;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
@@ -247,7 +247,7 @@ pub async fn send_rfd_changelog() {
     // Iterate over the RFDs.
     let rfds = RFDs::get_from_db(&db);
     for rfd in rfds {
-        let changes = rfd.get_weekly_changelog(&github, seven_days_ago).await;
+        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, &oxide).await;
         if !changes.is_empty() {
             changelog += &format!("\n{} {}\n{}", rfd.name, rfd.short_link, changes);
         }
