@@ -1,7 +1,6 @@
 #![allow(clippy::from_over_into)]
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::str::from_utf8;
 use std::{thread, time};
@@ -1084,9 +1083,8 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Initialize the Gusto client.
     let gusto = authenticate_gusto(db, company).await;
@@ -1270,9 +1268,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing google buildings.
     let gsuite_buildings = gsuite.list_buildings().await.unwrap();
@@ -1366,9 +1363,8 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing GSuite calendar resources.
     let g_suite_calendar_resources = gsuite.list_calendar_resources().await.unwrap();
@@ -1465,9 +1461,8 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the GSuite groups.
     let gsuite_groups = gsuite.list_groups().await.unwrap();
@@ -1740,9 +1735,8 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Find the anniversary calendar.
     // Get the list of our calendars.

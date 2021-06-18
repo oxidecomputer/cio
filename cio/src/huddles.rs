@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env;
 
 use airtable_api::{Airtable, Record};
 use chrono::{Duration, NaiveDate, Utc};
@@ -25,9 +24,8 @@ pub async fn sync_changes_to_google_events() {
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
@@ -128,9 +126,8 @@ pub async fn send_huddle_reminders() {
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -369,9 +366,8 @@ pub async fn sync_huddles() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {

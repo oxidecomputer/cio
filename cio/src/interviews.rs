@@ -69,9 +69,8 @@ pub async fn refresh_interviews(db: &Database) {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();

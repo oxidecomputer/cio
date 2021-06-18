@@ -89,9 +89,8 @@ pub async fn refresh_recorded_meetings() {
 
     RecordedMeetings::get_from_db(&db).update_airtable().await;
 
-    let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let mut gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
+    let mut gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -100,7 +99,7 @@ pub async fn refresh_recorded_meetings() {
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.id.ends_with(&oxide.gsuite_domain) {
-            gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, get_gsuite_token("").await);
+            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, get_gsuite_token("").await);
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
