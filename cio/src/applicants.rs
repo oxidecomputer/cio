@@ -2863,25 +2863,29 @@ impl Applicant {
         let result = users::dsl::users.filter(users::dsl::recovery_email.eq(self.email.to_string())).first::<User>(&db.conn());
         if result.is_ok() {
             let mut employee = result.unwrap();
-            // We have an employee, so we can update their data from the data in Docusign.
+            // Only do this if we don't have the employee's home address or start date.
+            // This will help us to not override any changes then that are later made in gusto.
+            if employee.home_address_street_1.is_empty() || employee.start_date.is_empty() {
+                // We have an employee, so we can update their data from the data in Docusign.
 
-            for fd in form_data.clone() {
-                // Save the data to the employee who matches this applicant.
-                if fd.name == "Applicant's Street Address" {
-                    employee.home_address_street_1 = fd.value.trim().to_string();
-                }
-                if fd.name == "Applicant's City" {
-                    employee.home_address_city = fd.value.trim().to_string();
-                }
-                if fd.name == "Applicant's State" {
-                    employee.home_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&fd.value);
-                }
-                if fd.name == "Applicant's Postal Code" {
-                    employee.home_address_zipcode = fd.value.trim().to_string();
-                }
-                if fd.name == "Start Date" {
-                    let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
-                    employee.start_date = start_date;
+                for fd in form_data.clone() {
+                    // Save the data to the employee who matches this applicant.
+                    if fd.name == "Applicant's Street Address" {
+                        employee.home_address_street_1 = fd.value.trim().to_string();
+                    }
+                    if fd.name == "Applicant's City" {
+                        employee.home_address_city = fd.value.trim().to_string();
+                    }
+                    if fd.name == "Applicant's State" {
+                        employee.home_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&fd.value);
+                    }
+                    if fd.name == "Applicant's Postal Code" {
+                        employee.home_address_zipcode = fd.value.trim().to_string();
+                    }
+                    if fd.name == "Start Date" {
+                        let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                        employee.start_date = start_date;
+                    }
                 }
             }
 
