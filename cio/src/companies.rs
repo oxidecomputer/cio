@@ -1,11 +1,11 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, Utc};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_CIO, AIRTABLE_COMPANIES_TABLE};
 use crate::core::UpdateAirtableRecord;
+use crate::db::Database;
 use crate::schema::companys;
 
 #[db {

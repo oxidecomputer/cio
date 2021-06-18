@@ -1167,20 +1167,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    let mut new_shipment = NewInboundShipment {
-        carrier: record.carrier,
-        tracking_number: record.tracking_number,
-        tracking_status: record.tracking_status,
-        name: record.name,
-        notes: record.notes,
-        delivered_time: record.delivered_time,
-        shipped_time: record.shipped_time,
-        eta: record.eta,
-        messages: record.messages,
-        order_number: record.order_number,
-        oxide_tracking_link: record.oxide_tracking_link,
-        tracking_link: record.tracking_link,
-    };
+    let mut new_shipment: NewInboundShipment = record.into();
 
     new_shipment.expand().await;
     let mut shipment = new_shipment.upsert_in_db(&db);

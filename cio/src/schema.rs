@@ -741,7 +741,6 @@ allow_tables_to_appear_in_same_query!(
     conference_rooms,
     credit_card_transactions,
     expensed_items,
-    github_labels,
     github_repos,
     groups,
     inbound_shipments,

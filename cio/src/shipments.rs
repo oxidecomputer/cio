@@ -1458,7 +1458,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
             continue;
         }
 
-        let new_shipment: NewInboundShipment = record.fields.into();
+        let mut new_shipment: NewInboundShipment = record.fields.into();
         new_shipment.expand().await;
         let mut shipment = new_shipment.upsert_in_db(&db);
         if shipment.airtable_record_id.is_empty() {
