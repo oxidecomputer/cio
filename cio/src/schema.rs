@@ -253,6 +253,8 @@ table! {
         gsuite_domain -> Varchar,
         github_org -> Varchar,
         website -> Varchar,
+        domain -> Varchar,
+        gsuite_account_id -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

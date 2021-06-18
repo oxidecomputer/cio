@@ -29,7 +29,7 @@ use crate::gsuite::{update_google_group_settings, update_group_aliases, update_g
 use crate::schema::{applicants, buildings, conference_rooms, groups, links, users};
 use crate::shipments::NewOutboundShipment;
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
-use crate::utils::{authenticate_gusto, authenticate_ramp, get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN, GSUITE_DOMAIN};
+use crate::utils::{authenticate_gusto, authenticate_ramp, get_github_user_public_ssh_keys, get_gsuite_token, github_org, DOMAIN};
 
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -406,7 +406,9 @@ impl UserConfig {
         }
     }
 
-    pub async fn expand(&mut self, db: &Database) {
+    pub async fn expand(&mut self, db: &Database, company: &Company) {
+        self.cio_company_id = company.id;
+
         // Do this first.
         self.populate_type();
 
@@ -430,8 +432,8 @@ impl UserConfig {
     }
 
     /// Generate the email address for the user.
-    pub fn email(&self) -> String {
-        format!("{}@{}", self.username, GSUITE_DOMAIN)
+    pub fn email(&self, company: &Company) -> String {
+        format!("{}@{}", self.username, company.gsuite_domain)
     }
 }
 
@@ -450,8 +452,8 @@ impl User {
     }
 
     /// Generate the email address for the user.
-    pub fn email(&self) -> String {
-        format!("{}@{}", self.username, GSUITE_DOMAIN)
+    pub fn email(&self, company: &Company) -> String {
+        format!("{}@{}", self.username, company.gsuite_domain)
     }
 
     /// Create an internal swag shipment to an employee's home address.
@@ -479,7 +481,7 @@ impl User {
     }
 
     /// Send an email to the new consultant about their account.
-    async fn send_email_new_consultant(&self) {
+    async fn send_email_new_consultant(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 
@@ -489,7 +491,7 @@ impl User {
         // Send the message.
         sendgrid
             .send_mail(
-                format!("Your New Email Account: {}", self.email()),
+                format!("Your New Email Account: {}", self.email(company)),
                 format!(
                     "Yoyoyo {},
 
@@ -518,12 +520,12 @@ xoxo,
                     self.first_name,
                     DOMAIN,
                     DOMAIN,
-                    self.email(),
+                    self.email(company),
                     aliases,
                     DOMAIN,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(), format!("jess@{}", DOMAIN)],
+                vec![self.email(company), format!("jess@{}", DOMAIN)],
                 vec![],
                 format!("admin@{}", DOMAIN),
             )
@@ -531,7 +533,7 @@ xoxo,
     }
 
     /// Send an email to the new user about their account.
-    async fn send_email_new_user(&self) {
+    async fn send_email_new_user(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
         let github_org = github_org();
@@ -560,7 +562,7 @@ let jess@{} know what your GitHub handle is.",
         // Send the message.
         sendgrid
             .send_mail(
-                format!("Your New Email Account: {}", self.email()),
+                format!("Your New Email Account: {}", self.email(company)),
                 format!(
                     "Yoyoyo {},
 
@@ -612,7 +614,7 @@ xoxo,
                     self.first_name,
                     DOMAIN,
                     DOMAIN,
-                    self.email(),
+                    self.email(company),
                     aliases,
                     github_copy,
                     DOMAIN,
@@ -621,7 +623,7 @@ xoxo,
                     github_org,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(), format!("jess@{}", DOMAIN)],
+                vec![self.email(company), format!("jess@{}", DOMAIN)],
                 vec![],
                 format!("admin@{}", DOMAIN),
             )
@@ -820,12 +822,14 @@ pub struct GroupConfig {
 }
 
 impl GroupConfig {
-    pub fn get_link(&self) -> String {
-        format!("https://groups.google.com/a/{}/forum/#!forum/{}", GSUITE_DOMAIN, self.name)
+    pub fn get_link(&self, company: &Company) -> String {
+        format!("https://groups.google.com/a/{}/forum/#!forum/{}", company.gsuite_domain, self.name)
     }
 
-    pub fn expand(&mut self) {
-        self.link = self.get_link();
+    pub fn expand(&mut self, company: &Company) {
+        self.link = self.get_link(company);
+
+        self.cio_company_id = company.id;
     }
 }
 
@@ -882,8 +886,10 @@ pub struct BuildingConfig {
 }
 
 impl BuildingConfig {
-    pub fn expand(&mut self) {
+    pub fn expand(&mut self, company: &Company) {
         self.address_formatted = format!("{}\n{}, {} {}, {}", self.street_address, self.city, self.state, self.zipcode, self.country);
+
+        self.cio_company_id = company.id;
     }
 }
 
@@ -1075,19 +1081,15 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 }
 
 /// Sync our users with our database and then update Airtable from the database.
-pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
 
     // Initialize the Gusto client.
-    let gusto = authenticate_gusto(db, &oxide).await;
+    let gusto = authenticate_gusto(db, company).await;
     let gu = gusto.list_employees().await.unwrap();
     let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
     for g in gu {
@@ -1095,7 +1097,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     }
 
     // Initialize the Ramp client.
-    let ramp = authenticate_ramp(db, &oxide).await;
+    let ramp = authenticate_ramp(db, company).await;
     let ru = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
     for r in ru {
@@ -1141,7 +1143,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
-        if let Some(gusto_user) = gusto_users.get(&user.email()) {
+        if let Some(gusto_user) = gusto_users.get(&user.email(company)) {
             // Update the user's start date.
             user.start_date = gusto_user.jobs[0].hire_date;
 
@@ -1190,7 +1192,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
 
         // Expand the user.
-        user.expand(db).await;
+        user.expand(db, company).await;
 
         let new_user = user.upsert(db).await;
 
@@ -1210,22 +1212,22 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // We should send them an email about setting up their account.
             println!("sending email to new user: {}", new_user.username);
             if new_user.is_consultant() {
-                new_user.send_email_new_consultant().await;
+                new_user.send_email_new_consultant(company).await;
             } else {
-                new_user.send_email_new_user().await;
+                new_user.send_email_new_user(company).await;
             }
         }
 
         if !new_user.is_consultant() && !new_user.is_system_account() {
             // Check if we have a Ramp user for the user.
-            match ramp_users.get(&new_user.email()) {
+            match ramp_users.get(&new_user.email(company)) {
                 // We have the user, we don't need to do anything.
                 Some(_) => (),
                 None => {
                     println!("inviting new ramp user {}", new_user.username);
                     // Invite the new ramp user.
                     let mut ramp_user: ramp_api::User = Default::default();
-                    ramp_user.email = new_user.email();
+                    ramp_user.email = new_user.email(company);
                     ramp_user.first_name = new_user.first_name.to_string();
                     ramp_user.last_name = new_user.last_name.to_string();
                     ramp_user.phone = new_user.recovery_phone.to_string();
@@ -1265,12 +1267,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
-pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>) {
+pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
 
     // Get the existing google buildings.
     let gsuite_buildings = gsuite.list_buildings().await.unwrap();
@@ -1284,7 +1286,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     }
     // Sync buildings.
     for (_, mut building) in buildings {
-        building.expand();
+        building.expand(company);
 
         building.upsert(db).await;
 
@@ -1361,12 +1363,12 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
-pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>) {
+pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
 
     // Get the existing GSuite calendar resources.
     let g_suite_calendar_resources = gsuite.list_calendar_resources().await.unwrap();
@@ -1379,7 +1381,8 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
         conference_room_map.insert(u.name.to_string(), u);
     }
     // Sync conference_rooms.
-    for (_, conference_room) in conference_rooms {
+    for (_, mut conference_room) in conference_rooms {
+        conference_room.cio_company_id = company.id;
         conference_room.upsert(db).await;
 
         // Remove the conference_room from the BTreeMap.
@@ -1459,12 +1462,12 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
-pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
+pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
 
     // Get the GSuite groups.
     let gsuite_groups = gsuite.list_groups().await.unwrap();
@@ -1478,7 +1481,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
     }
     // Sync groups.
     for (_, mut group) in groups {
-        group.expand();
+        group.expand(company);
 
         group.upsert(db).await;
 
@@ -1496,7 +1499,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 
         // Remove the group from GSuite.
         gsuite
-            .delete_group(&format!("{}@{}", name, GSUITE_DOMAIN))
+            .delete_group(&format!("{}@{}", name, &company.gsuite_domain))
             .await
             .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
         println!("deleted group from gsuite: {}", name);
@@ -1523,7 +1526,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
             // group from GSuite.
             println!("deleting group {} from gsuite", name);
             gsuite
-                .delete_group(&format!("{}@{}", name, GSUITE_DOMAIN))
+                .delete_group(&format!("{}@{}", name, &company.gsuite_domain))
                 .await
                 .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
             println!("deleted group from gsuite: {}", name);
@@ -1537,7 +1540,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
         // Write the group aliases.
         let mut aliases: Vec<String> = Default::default();
         for alias in &group.aliases {
-            aliases.push(format!("{}@{}", alias, GSUITE_DOMAIN));
+            aliases.push(format!("{}@{}", alias, &company.gsuite_domain));
         }
         updated_group.aliases = aliases;
 
@@ -1562,13 +1565,13 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 
         // TODO: Make this more DRY since it is repeated above as well.
         g.name = group.name.to_string();
-        g.email = format!("{}@{}", group.name, GSUITE_DOMAIN);
+        g.email = format!("{}@{}", group.name, company.gsuite_domain);
         g.description = group.description.to_string();
 
         // Write the group aliases.
         let mut aliases: Vec<String> = Default::default();
         for alias in &group.aliases {
-            aliases.push(format!("{}@{}", alias, GSUITE_DOMAIN));
+            aliases.push(format!("{}@{}", alias, &company.gsuite_domain));
         }
         g.aliases = aliases;
 
@@ -1587,7 +1590,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>) {
 }
 
 /// Sync our links with our database and then update Airtable from the database.
-pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, huddles: BTreeMap<String, HuddleConfig>) {
+pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, huddles: BTreeMap<String, HuddleConfig>, company: &Company) {
     // Get all the links.
     let db_links = Links::get_from_db(db);
     // Create a BTreeMap
@@ -1599,6 +1602,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
     for (name, mut link) in links {
         link.name = name.to_string();
         link.short_link = format!("https://{}.corp.{}", name, DOMAIN);
+        link.cio_company_id = company.id;
 
         link.upsert(db).await;
 
@@ -1613,7 +1617,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
             link: huddle.link_to_airtable_workspace.to_string(),
             aliases: vec![format!("airtable-{}-huddle", slug)],
             short_link: format!("https://{}-huddle.corp.{}", slug, DOMAIN),
-            cio_company_id: Default::default(),
+            cio_company_id: company.id,
         };
 
         link.upsert(db).await;
@@ -1646,7 +1650,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
-pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>) {
+pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>, company: &Company) {
     // Get all the certificates.
     let db_certificates = Certificates::get_from_db(db);
     // Create a BTreeMap
@@ -1656,6 +1660,8 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     }
     // Sync certificates.
     for (_, mut certificate) in certificates {
+        certificate.cio_company_id = company.id;
+
         certificate.populate_from_github(github).await;
 
         // If the cert is going to expire in less than 7 days, renew it.
@@ -1676,6 +1682,7 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
         // Remove the certificate from the BTreeMap.
         certificate_map.remove(&certificate.domain);
     }
+
     // Remove any certificates that should no longer be in the database.
     // This is found by the remaining certificates that are in the map since we removed
     // the existing repos from the map above.
@@ -1694,19 +1701,23 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     // Initialize our database.
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    sync_buildings(&db, configs.buildings).await;
+    sync_buildings(&db, configs.buildings, &oxide).await;
 
     // Sync conference rooms.
-    sync_conference_rooms(&db, configs.resources).await;
+    sync_conference_rooms(&db, configs.resources, &oxide).await;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
-    sync_groups(&db, configs.groups).await;
+    sync_groups(&db, configs.groups, &oxide).await;
 
     // Sync users.
-    sync_users(&db, github, configs.users).await;
+    sync_users(&db, github, configs.users, &oxide).await;
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
@@ -1715,21 +1726,21 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     generate_terraform_files_for_aws_and_github(github, &db).await;
 
     // Sync links.
-    sync_links(&db, configs.links, configs.huddles).await;
+    sync_links(&db, configs.links, configs.huddles, &oxide).await;
 
     // Sync certificates.
-    sync_certificates(&db, github, configs.certificates).await;
+    sync_certificates(&db, github, configs.certificates, &oxide).await;
 
     // Sync github outside collaborators.
     sync_github_outside_collaborators(github, configs.github_outside_collaborators).await;
 }
 
-pub async fn refresh_anniversary_events(db: &Database) {
+pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token);
+    let gsuite = GSuite::new(&gsuite_customer, &company.gsuite_domain, token);
 
     // Find the anniversary calendar.
     // Get the list of our calendars.
@@ -1784,7 +1795,7 @@ pub async fn refresh_anniversary_events(db: &Database) {
         new_event.transparency = "transparent".to_string();
         new_event.attendees = vec![Attendee {
             id: Default::default(),
-            email: user.email(),
+            email: user.email(company),
             display_name: Default::default(),
             organizer: false,
             resource: false,

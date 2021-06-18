@@ -27,6 +27,10 @@ pub struct NewCompany {
     pub github_org: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub website: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub gsuite_account_id: String,
 }
 
 /// Implement updating the Airtable record for a Company.

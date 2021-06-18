@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_INTERVIEWS_TABLE};
 use crate::applicants::Applicant;
+use crate::companies::Company;
 use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -64,9 +65,13 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
+    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
 
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -135,7 +140,7 @@ pub async fn refresh_interviews(db: &Database) {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    final_email = record.email();
+                                    final_email = record.email(&oxide);
                                 }
                             }
                             Err(e) => {
@@ -154,7 +159,7 @@ pub async fn refresh_interviews(db: &Database) {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    final_email = record.email();
+                                    final_email = record.email(&oxide);
                                 }
                             }
                             Err(e) => {

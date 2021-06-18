@@ -2232,13 +2232,13 @@ impl ApplicantFormSheetColumns {
     }
 }
 
-pub fn get_reviewer_pool(db: &Database) -> Vec<String> {
+pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
     let users = Users::get_from_db(db);
 
     let mut reviewers: Vec<String> = Default::default();
     for user in users {
         if user.typev == "full-time" && user.username != "robert.keith" && user.username != "robert" && user.username != "keith" && user.username != "thomas" && user.username != "arjen" {
-            reviewers.push(user.email());
+            reviewers.push(user.email(company));
         }
     }
     reviewers
@@ -2247,6 +2247,10 @@ pub fn get_reviewer_pool(db: &Database) -> Vec<String> {
 pub async fn update_applications_with_scoring_forms(db: &Database) {
     // Get the GSuite token.
     let token = get_gsuite_token("").await;
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2262,7 +2266,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
         // Parse the sheet columns.
         let columns = ApplicantFormSheetColumns::new();
 
-        /*let mut reviewer_pool = get_reviewer_pool(db);
+        /*let mut reviewer_pool = get_reviewer_pool(db, &oxide);
 
         // We'll assign reviewers randomly but attempt to produce roughly even loads
         // across reviewers. To do this, we shuffle the list of reviewers, and then
@@ -2291,7 +2295,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                 for s in scorers_completed_str {
                     match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
                         Some(user) => {
-                            scorers_completed.push(user.email());
+                            scorers_completed.push(user.email(&oxide));
                         }
                         None => {
                             println!("could not find user with email: {}", email);

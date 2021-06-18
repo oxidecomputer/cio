@@ -4,5 +4,7 @@ CREATE TABLE companys (
     gsuite_domain VARCHAR NOT NULL,
     github_org VARCHAR NOT NULL,
     website VARCHAR NOT NULL UNIQUE,
+    domain VARCHAR NOT NULL,
+    gsuite_account_id VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

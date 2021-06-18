@@ -17,6 +17,7 @@ use sheets::Sheets;
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
 use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE};
+use crate::companies::Company;
 use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -273,10 +274,14 @@ pub struct NewOutboundShipment {
 
 impl From<User> for NewOutboundShipment {
     fn from(user: User) -> Self {
+        let db = Database::new();
+
+        let company = Company::get_by_id(&db, user.cio_company_id);
+
         NewOutboundShipment {
             created_time: Utc::now(),
             name: user.full_name(),
-            email: user.email(),
+            email: user.email(&company),
             phone: user.recovery_phone,
             street_1: user.home_address_street_1.to_string(),
             street_2: user.home_address_street_2.to_string(),

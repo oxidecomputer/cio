@@ -535,6 +535,10 @@ pub async fn refresh_brex_transactions() {
     // Initialize the database.
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let mut path = env::current_dir().unwrap();
     path.push("brex.csv");
 
@@ -567,7 +571,7 @@ pub async fn refresh_brex_transactions() {
         match users::dsl::users.filter(users::dsl::last_name.eq(last_name.to_string())).first::<User>(&db.conn()) {
             Ok(user) => {
                 // Set the user's email.
-                record.employee_email = user.email();
+                record.employee_email = user.email(&oxide);
             }
             Err(e) => {
                 if last_name == "Volpe" {
@@ -774,6 +778,10 @@ pub async fn refresh_expensify_transactions() {
     // Initialize the database.
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let mut path = env::current_dir().unwrap();
     path.push("expensify.csv");
 
@@ -809,7 +817,7 @@ pub async fn refresh_expensify_transactions() {
         {
             Ok(user) => {
                 // Set the user's email.
-                record.employee_email = user.email();
+                record.employee_email = user.email(&oxide);
             }
             Err(e) => {
                 if last_name == "Volpe" || last_name == "jared" {

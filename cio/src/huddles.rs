@@ -8,6 +8,7 @@ use handlebars::Handlebars;
 use sendgrid_api::SendGrid;
 
 use crate::airtable::{AIRTABLE_DISCUSSION_TOPICS_TABLE, AIRTABLE_MEETING_SCHEDULE_TABLE};
+use crate::companies::Company;
 use crate::configs::{get_configs_from_repo, User};
 use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
 use crate::db::Database;
@@ -350,11 +351,15 @@ pub async fn sync_huddles() {
     let github = authenticate_github_jwt();
     let configs = get_configs_from_repo(&github).await;
 
+    let db = Database::new();
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     let gsuite_customer = env::var("GADMIN_ACCOUNT_ID").unwrap();
     let token = get_gsuite_token("").await;
-    let gsuite = GSuite::new(&gsuite_customer, GSUITE_DOMAIN, token.clone());
-
-    let db = Database::new();
+    let gsuite = GSuite::new(&gsuite_customer, &oxide.gsuite_domain, token.clone());
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
@@ -459,7 +464,7 @@ pub async fn sync_huddles() {
                         if !attendee.resource && attendee.email.ends_with(GSUITE_DOMAIN) {
                             // Make sure the person is still a user.
                             if let Some(user) = User::get_from_db(&db, attendee.email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
-                                attendees.push(user.email());
+                                attendees.push(user.email(&oxide));
                             }
                         }
                     }
