@@ -5,6 +5,7 @@ use std::{thread, time};
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
+use cio_api::companies::Company;
 use cio_api::utils::{authenticate_github_jwt, list_all_github_repos};
 use futures_util::stream::TryStreamExt;
 use influxdb::InfluxDbWriteable;
@@ -92,9 +93,9 @@ from(bucket:"github_webhooks")
         "".to_string()
     }
 
-    pub async fn update_issues_events(&self) {
+    pub async fn update_issues_events(&self, company: &Company) {
         let github = authenticate_github_jwt();
-        let repos = list_all_github_repos(&github).await;
+        let repos = list_all_github_repos(&github, company).await;
 
         // For each repo, get information on the pull requests.
         for repo in repos {
@@ -192,9 +193,9 @@ from(bucket:"github_webhooks")
         }
     }
 
-    pub async fn update_push_events(&self) {
+    pub async fn update_push_events(&self, company: &Company) {
         let github = authenticate_github_jwt();
-        let repos = list_all_github_repos(&github).await;
+        let repos = list_all_github_repos(&github, company).await;
 
         //let mut handles: Vec<tokio::task::JoinHandle<()>> = Default::default();
 
@@ -505,9 +506,9 @@ from(bucket:"github_webhooks")
         // }
     }
 
-    pub async fn update_pull_request_events(&self) {
+    pub async fn update_pull_request_events(&self, company: &Company) {
         let github = authenticate_github_jwt();
-        let repos = list_all_github_repos(&github).await;
+        let repos = list_all_github_repos(&github, company).await;
 
         // For each repo, get information on the pull requests.
         for repo in repos {
@@ -794,25 +795,38 @@ pub struct Repository {
 #[cfg(test)]
 mod tests {
     use crate::influx::Client;
+    use cio_api::db::Database;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_influx_push() {
         let influx = Client::new_from_env();
-        influx.update_push_events().await;
+        let db = Database::new();
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        influx.update_push_events(&oxide).await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_influx_pulls() {
         let influx = Client::new_from_env();
-        influx.update_pull_request_events().await;
+        let db = Database::new();
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        influx.update_pull_request_events(&oxide).await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_influx_issues() {
         let influx = Client::new_from_env();
-        influx.update_issues_events().await;
+        let db = Database::new();
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        influx.update_issues_events(&oxide).await;
     }
 }

@@ -1693,10 +1693,10 @@ async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Contex
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = event.as_mailing_list_subscriber();
+    let new_subscriber = event.as_mailing_list_subscriber(oxide.id);
 
     let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
@@ -2773,7 +2773,10 @@ async fn handle_configs_push(api_context: &Context, event: GitHubWebhook) -> Res
 /// Handle the `repository` event for all repos.
 async fn handle_repository_event(api_context: &Context, event: GitHubWebhook) -> Result<HttpResponseAccepted<String>, HttpError> {
     let repo = &api_context.github.repo(event.repository.owner.login, event.repository.name).get().await.unwrap();
-    let nr = NewRepo::new(repo.clone());
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+    let nr = NewRepo::new(repo.clone(), oxide.id);
     nr.upsert(&api_context.db).await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
