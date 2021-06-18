@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_PAGE_VIEWS_TABLE};
 use crate::auth_logins::AuthUsers;
+use crate::companies::Companys;
 use crate::core::UpdateAirtableRecord;
+use crate::db::Database;
 use crate::schema::page_views;
 
 #[db {
@@ -60,6 +62,16 @@ impl NewPageView {
     pub fn set_page_link(&mut self) {
         // Set the link.
         self.page_link = format!("https://{}/{}", self.domain, self.path.trim_start_matches('/'));
+    }
+
+    pub fn set_company_id(&mut self, db: &Database) {
+        // Match the company ID with the link.
+        let companies = Companys::get_from_db(db);
+        for company in companies {
+            if self.domain.ends_with(company.website.trim_start_matches("https://")) {
+                self.cio_company_id = company.id;
+            }
+        }
     }
 }
 
