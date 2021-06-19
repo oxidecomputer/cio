@@ -6,7 +6,7 @@ use std::{thread, time};
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
 use cio_api::companies::Company;
-use cio_api::utils::{authenticate_github_jwt, list_all_github_repos};
+use cio_api::utils::list_all_github_repos;
 use futures_util::stream::TryStreamExt;
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client as InfluxClient, Query as InfluxQuery};
@@ -94,7 +94,7 @@ from(bucket:"github_webhooks")
     }
 
     pub async fn update_issues_events(&self, company: &Company) {
-        let github = authenticate_github_jwt();
+        let github = company.authenticate_github();
         let repos = list_all_github_repos(&github, company).await;
 
         // For each repo, get information on the pull requests.
@@ -194,7 +194,7 @@ from(bucket:"github_webhooks")
     }
 
     pub async fn update_push_events(&self, company: &Company) {
-        let github = authenticate_github_jwt();
+        let github = company.authenticate_github();
         let repos = list_all_github_repos(&github, company).await;
 
         //let mut handles: Vec<tokio::task::JoinHandle<()>> = Default::default();
@@ -507,7 +507,7 @@ from(bucket:"github_webhooks")
     }
 
     pub async fn update_pull_request_events(&self, company: &Company) {
-        let github = authenticate_github_jwt();
+        let github = company.authenticate_github();
         let repos = list_all_github_repos(&github, company).await;
 
         // For each repo, get information on the pull requests.
