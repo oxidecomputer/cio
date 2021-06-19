@@ -84,7 +84,6 @@ jobs:
           GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           SLACK_HIRING_CHANNEL_POST_URL: ${{ secrets.SLACK_HIRING_CHANNEL_POST_URL }}
-          GH_INSTALLATION_ID: ${{ secrets.GH_INSTALLATION_ID }}
           GH_APP_ID: ${{ secrets.GH_APP_ID }}
           GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
