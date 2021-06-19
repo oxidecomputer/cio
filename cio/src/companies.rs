@@ -170,6 +170,18 @@ impl Company {
 
     /// Get a Google token.
     pub async fn get_google_token(&self, subject: &str) -> AccessToken {
+        /*let secret = get_google_credentials().await;
+
+        // Create an authenticator that uses an InstalledFlow to authenticate. The
+        // authentication tokens are persisted to a file named tokencache.json. The
+        // authenticator takes care of caching tokens to disk and refreshing tokens once
+        // they've expired.
+        let auth = InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
+            .persist_tokens_to_disk(&format!("tokencache-{}.json", self.github_org))
+            .build()
+            .await
+            .unwrap();*/
+
         let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
         // Get the GSuite credentials file.
         let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or_default();
@@ -201,19 +213,7 @@ impl Company {
             .expect("failed to create authenticator");
 
         // Add the scopes to the secret and get the token.
-        let token = auth
-            .token(&[
-                "https://www.googleapis.com/auth/admin.directory.group",
-                "https://www.googleapis.com/auth/admin.directory.resource.calendar",
-                "https://www.googleapis.com/auth/admin.directory.user",
-                "https://www.googleapis.com/auth/calendar",
-                "https://www.googleapis.com/auth/apps.groups.settings",
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive",
-                "https://www.googleapis.com/auth/devstorage.full_control",
-            ])
-            .await
-            .expect("failed to get token");
+        let token = auth.token(&get_google_scopes()).await.expect("failed to get token");
 
         if token.as_str().is_empty() {
             panic!("empty token is not valid");
@@ -272,6 +272,43 @@ pub async fn refresh_companies() {
         company.update(&db).await;
     }
     Companys::get_from_db(&db).update_airtable().await;
+}
+
+pub async fn get_google_consent_url() -> String {
+    let secret = get_google_credentials().await;
+    format!(
+        "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={}&redirect_uri={}&scope={}",
+        secret.client_id,
+        secret.redirect_uris[0],
+        get_google_scopes().join(" ")
+    )
+}
+
+pub async fn get_google_credentials() -> yup_oauth2::ApplicationSecret {
+    let google_key = env::var("GOOGLE_CIO_KEY_ENCODED").unwrap_or_default();
+    let b = base64::decode(google_key).unwrap();
+    // Save the google key to a tmp file.
+    let mut file_path = env::temp_dir();
+    file_path.push("google_key.json");
+    // Create the file and write to it.
+    let mut file = fs::File::create(file_path.clone()).unwrap();
+    file.write_all(&b).unwrap();
+    // Set the Google credential file to the temp path.
+    let google_credential_file = file_path.to_str().unwrap().to_string();
+
+    yup_oauth2::read_application_secret(google_credential_file).await.expect("failed to read google credential file")
+}
+
+pub fn get_google_scopes() -> Vec<String> {
+    vec![
+        "https://www.googleapis.com/auth/admin.directory.group".to_string(),
+        "https://www.googleapis.com/auth/admin.directory.resource.calendar".to_string(),
+        "https://www.googleapis.com/auth/admin.directory.user".to_string(),
+        "https://www.googleapis.com/auth/calendar".to_string(),
+        "https://www.googleapis.com/auth/apps.groups.settings".to_string(),
+        "https://www.googleapis.com/auth/spreadsheets".to_string(),
+        "https://www.googleapis.com/auth/drive".to_string(),
+    ]
 }
 
 #[cfg(test)]

@@ -110,6 +110,8 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_github_callback).unwrap();
     api.register(listen_auth_github_consent).unwrap();
+    api.register(listen_auth_google_callback).unwrap();
+    api.register(listen_auth_google_consent).unwrap();
     api.register(listen_auth_gusto_callback).unwrap();
     api.register(listen_auth_gusto_consent).unwrap();
     api.register(listen_auth_plaid_callback).unwrap();
