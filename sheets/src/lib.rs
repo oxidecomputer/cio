@@ -30,7 +30,7 @@
  *     }
  *
  *     // Initialize the Google Sheets client.
- *     let sheets_client = Sheets::new(token);
+ *     let sheets_client = Sheets::new(token.as_str().to_string());
  *
  *     // Get the values in the sheet.
  *     let sheet_values = sheets_client.get_values("sheet_id", "Form Responses 1!A1:S1000".to_string()).await.unwrap();
@@ -53,14 +53,13 @@ use std::sync::Arc;
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
-use yup_oauth2::AccessToken;
 
 /// Endpoint for the Google Sheets API.
 const ENDPOINT: &str = "https://sheets.googleapis.com/v4/";
 
 /// Entrypoint for interacting with the Google Sheets API.
 pub struct Sheets {
-    token: AccessToken,
+    token: String,
 
     client: Arc<Client>,
 }
@@ -69,7 +68,7 @@ impl Sheets {
     /// Create a new Sheets client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Secret your requests will work.
-    pub fn new(token: AccessToken) -> Self {
+    pub fn new(token: String) -> Self {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self { token, client: Arc::new(c) },
@@ -78,7 +77,7 @@ impl Sheets {
     }
 
     /// Get the currently set authorization token.
-    pub fn get_token(&self) -> &AccessToken {
+    pub fn get_token(&self) -> &str {
         &self.token
     }
 
@@ -89,12 +88,7 @@ impl Sheets {
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(&path).unwrap();
 
-        // Check if the token is expired and panic.
-        if self.token.is_expired() {
-            panic!("token is expired");
-        }
-
-        let bt = format!("Bearer {}", self.token.as_str());
+        let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.

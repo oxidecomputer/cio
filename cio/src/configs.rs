@@ -1080,7 +1080,7 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
 pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.get_google_token("").await;
+    let token = company.authenticate_google(&db, "").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Initialize the Gusto client.
@@ -1265,7 +1265,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.get_google_token("").await;
+    let token = company.authenticate_google(&db, "").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing google buildings.
@@ -1360,7 +1360,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.get_google_token("").await;
+    let token = company.authenticate_google(&db, "").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing GSuite calendar resources.
@@ -1458,7 +1458,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.get_google_token("").await;
+    let token = company.authenticate_google(&db, "").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the GSuite groups.
@@ -1734,7 +1734,7 @@ pub async fn refresh_db_configs_and_airtable() {
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.get_google_token("").await;
+    let token = company.authenticate_google(&db, "").await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Find the anniversary calendar.

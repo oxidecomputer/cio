@@ -464,9 +464,9 @@ dependencies = [
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.1",
  "futures-util",
- "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.19",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.29",
  "gusto-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -490,7 +490,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.7.2",
- "sheets 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.11",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -527,9 +527,9 @@ dependencies = [
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.1",
  "futures-util",
- "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.18",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.28",
  "gusto-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -553,7 +553,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.7.2",
- "sheets 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.10",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1432,6 +1432,8 @@ dependencies = [
 [[package]]
 name = "google-drive"
 version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67fe473f3853a7668300abb646ffb01b6eb7b97548f24575f73079b03e5c73b2"
 dependencies = [
  "bytes",
  "reqwest",
@@ -1441,9 +1443,7 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67fe473f3853a7668300abb646ffb01b6eb7b97548f24575f73079b03e5c73b2"
+version = "0.1.19"
 dependencies = [
  "bytes",
  "reqwest",
@@ -1474,6 +1474,8 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "667d443722e7dd51148cfab4aafa08b4889ac90dfe1816a36322ee0280a858f1"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1485,9 +1487,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "667d443722e7dd51148cfab4aafa08b4889ac90dfe1816a36322ee0280a858f1"
+version = "0.1.29"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -3728,6 +3728,8 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 [[package]]
 name = "sheets"
 version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d7fe7f05b20e1225324b2221374a750646aea0b3456f1d08186593e354c4215"
 dependencies = [
  "reqwest",
  "serde",
@@ -3736,9 +3738,7 @@ dependencies = [
 
 [[package]]
 name = "sheets"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d7fe7f05b20e1225324b2221374a750646aea0b3456f1d08186593e354c4215"
+version = "0.1.11"
 dependencies = [
  "reqwest",
  "serde",
@@ -4802,7 +4802,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.18",
  "gusto-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
@@ -4816,7 +4816,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs 0.8.3",
- "sheets 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.10",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
 ]

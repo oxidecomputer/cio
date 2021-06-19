@@ -30,7 +30,7 @@
  *     }
  *
  *     // Initialize the Google Drive client.
- *     let drive_client = GoogleDrive::new(token);
+ *     let drive_client = GoogleDrive::new(token.as_str().to_string());
  *
  *     // List drives.
  *     let drives = drive_client.list_drives().await.unwrap();
@@ -52,14 +52,13 @@ use std::time::Duration;
 use bytes::Bytes;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
-use yup_oauth2::AccessToken;
 
 /// The endpoint for the Google Drive API.
 const ENDPOINT: &str = "https://www.googleapis.com/drive/v3/";
 
 /// Entrypoint for interacting with the Google Drive API.
 pub struct GoogleDrive {
-    token: AccessToken,
+    token: String,
 
     client: Arc<Client>,
 }
@@ -68,7 +67,7 @@ impl GoogleDrive {
     /// Create a new Drive client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Secret your requests will work.
-    pub fn new(token: AccessToken) -> Self {
+    pub fn new(token: String) -> Self {
         let client = Client::builder().timeout(Duration::from_secs(360)).build();
         match client {
             Ok(c) => Self { token, client: Arc::new(c) },
@@ -77,7 +76,7 @@ impl GoogleDrive {
     }
 
     /// Get the currently set authorization token.
-    pub fn get_token(&self) -> &AccessToken {
+    pub fn get_token(&self) -> &str {
         &self.token
     }
 
@@ -96,12 +95,7 @@ impl GoogleDrive {
             Url::parse(&path).unwrap()
         };
 
-        // Check if the token is expired and panic.
-        if self.token.is_expired() {
-            panic!("token is expired");
-        }
-
-        let bt = format!("Bearer {}", self.token.as_str());
+        let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.

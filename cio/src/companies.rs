@@ -15,7 +15,6 @@ use ramp_api::Ramp;
 use reqwest::{header, Client};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
 use crate::airtable::{AIRTABLE_BASE_ID_CIO, AIRTABLE_COMPANIES_TABLE};
 use crate::api_tokens::{APIToken, NewAPIToken};
@@ -189,53 +188,14 @@ impl Company {
     }
 
     /// Get a Google token.
-    pub async fn get_google_token(&self, subject: &str) -> AccessToken {
+    pub async fn authenticate_google(&self, db: &Database, subject: &str) -> String {
         // Get the APIToken from the database.
-        /* if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
-            let nt = refresh_google_access_token(db, t).await.unwrap();
-            return nt.access_token.to_string();
+        if let Some(t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            let nt = refresh_google_access_token(db, t).await;
+            return nt.access_token;
         }
 
-        "".to_string()*/
-
-        let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
-        // Get the GSuite credentials file.
-        let mut gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap_or_default();
-
-        if gsuite_credential_file.is_empty() && !gsuite_key.is_empty() {
-            let b = base64::decode(gsuite_key).unwrap();
-
-            // Save the gsuite key to a tmp file.
-            let mut file_path = env::temp_dir();
-            file_path.push("gsuite_key.json");
-
-            // Create the file and write to it.
-            let mut file = fs::File::create(file_path.clone()).unwrap();
-            file.write_all(&b).unwrap();
-
-            // Set the GSuite credential file to the temp path.
-            gsuite_credential_file = file_path.to_str().unwrap().to_string();
-        }
-
-        let mut gsuite_subject = self.gsuite_subject.to_string();
-        if !subject.is_empty() {
-            gsuite_subject = subject.to_string();
-        }
-        let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
-        let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
-            .subject(gsuite_subject.to_string())
-            .build()
-            .await
-            .expect("failed to create authenticator");
-
-        // Add the scopes to the secret and get the token.
-        let token = auth.token(&get_google_scopes()).await.expect("failed to get token");
-
-        if token.as_str().is_empty() {
-            panic!("empty token is not valid");
-        }
-
-        token
+        "".to_string()
     }
 
     /// Authenticate GitHub with JSON web token credentials, for an application installation.
@@ -390,8 +350,10 @@ pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) -> APIT
 
     t.access_token = nt.access_token.to_string();
     t.expires_in = nt.expires_in as i32;
-    t.refresh_token = nt.refresh_token.to_string();
-    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+    if !nt.refresh_token.is_empty() {
+        t.refresh_token = nt.refresh_token.to_string();
+        t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+    }
     t.last_updated_at = Utc::now();
     t.expand();
 

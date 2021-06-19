@@ -206,7 +206,7 @@ pub async fn refresh_db_rfds(db: &Database, github: &Github) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get gsuite token.
-    let token = oxide.get_google_token("").await;
+    let token = oxide.authenticate_google(db, "").await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);

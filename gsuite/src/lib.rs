@@ -41,7 +41,7 @@
  *     }
  *
  *     // Initialize the GSuite client.
- *     let gsuite_client = GSuite::new("customer_id", "domain", token);
+ *     let gsuite_client = GSuite::new("customer_id", "domain", token.as_str().to_string());
  *
  *     // List users.
  *     let users = gsuite_client.list_users().await;
@@ -67,7 +67,6 @@ use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::Value;
-use yup_oauth2::AccessToken;
 
 /// The endpoint for the GSuite Directory API.
 const DIRECTORY_ENDPOINT: &str = "https://www.googleapis.com/admin/directory/v1/";
@@ -83,7 +82,7 @@ pub struct GSuite {
     customer: String,
     domain: String,
 
-    token: AccessToken,
+    token: String,
 
     client: Arc<Client>,
 }
@@ -92,7 +91,7 @@ impl GSuite {
     /// Create a new GSuite client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Key and Secret your requests will work.
-    pub fn new(customer: &str, domain: &str, token: AccessToken) -> Self {
+    pub fn new(customer: &str, domain: &str, token: String) -> Self {
         let client = Client::builder().build().expect("creating client failed");
         Self {
             customer: customer.to_string(),
@@ -103,7 +102,7 @@ impl GSuite {
     }
 
     /// Get the currently set authorization token.
-    pub fn get_token(&self) -> &AccessToken {
+    pub fn get_token(&self) -> &str {
         &self.token
     }
 
@@ -114,12 +113,7 @@ impl GSuite {
         let base = Url::parse(endpoint).unwrap();
         let url = base.join(path).unwrap();
 
-        // Check if the token is expired and panic.
-        if self.token.is_expired() {
-            panic!("token is expired");
-        }
-
-        let bt = format!("Bearer {}", self.token.as_str());
+        let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.

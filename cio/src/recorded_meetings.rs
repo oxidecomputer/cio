@@ -87,7 +87,7 @@ pub async fn refresh_recorded_meetings() {
 
     RecordedMeetings::get_from_db(&db).update_airtable().await;
 
-    let token = oxide.get_google_token("").await;
+    let token = oxide.authenticate_google(&db, "").await;
     let mut gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
@@ -97,7 +97,7 @@ pub async fn refresh_recorded_meetings() {
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.id.ends_with(&oxide.gsuite_domain) {
-            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, oxide.get_google_token("").await);
+            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, oxide.authenticate_google(&db, "").await);
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
@@ -143,7 +143,7 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
-                let delegated_token = oxide.get_google_token(&owner).await;
+                let delegated_token = oxide.authenticate_google(&db, &owner).await;
                 let drive_client = GoogleDrive::new(delegated_token);
 
                 // If we have a chat log, we should download it.

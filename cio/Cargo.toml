@@ -33,12 +33,12 @@ docusign = "^0.1.0"
 dropshot = "^0.5.0"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
-google-drive = "^0.1.0"
-#google-drive = { path = "../drive" }
+#google-drive = "^0.1.19"
+google-drive = { path = "../drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
-gsuite-api = "^0.1.26"
-#gsuite-api = { path = "../gsuite" }
+#gsuite-api = "^0.1.29"
+gsuite-api = { path = "../gsuite" }
 gusto-api = "^0.1.1"
 #gusto-api = { path = "../gusto" }
 handlebars = "3.5.3"
@@ -66,7 +66,8 @@ sendgrid-api = "^0.1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.7"
-sheets = "^0.1.0"
+#sheets = "^0.1.11"
+sheets = { path = "../sheets" }
 shippo = "^0.1.24"
 #shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.5"
