@@ -1687,7 +1687,7 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     Certificates::get_from_db(db).update_airtable().await;
 }
 
-pub async fn refresh_db_configs_and_airtable(github: &Github) {
+pub async fn refresh_db_configs_and_airtable() {
     // Initialize our database.
     let db = Database::new();
 
@@ -1695,7 +1695,9 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let configs = get_configs_from_repo(github, &oxide).await;
+    let github = oxide.authenticate_github();
+
+    let configs = get_configs_from_repo(&github, &oxide).await;
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
@@ -1709,22 +1711,22 @@ pub async fn refresh_db_configs_and_airtable(github: &Github) {
     sync_groups(&db, configs.groups, &oxide).await;
 
     // Sync users.
-    sync_users(&db, github, configs.users, &oxide).await;
+    sync_users(&db, &github, configs.users, &oxide).await;
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
-    generate_terraform_files_for_okta(github, &db, &oxide).await;
+    generate_terraform_files_for_okta(&github, &db, &oxide).await;
     // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(github, &db, &oxide).await;
+    generate_terraform_files_for_aws_and_github(&github, &db, &oxide).await;
 
     // Sync links.
     sync_links(&db, configs.links, configs.huddles, &oxide).await;
 
     // Sync certificates.
-    sync_certificates(&db, github, configs.certificates, &oxide).await;
+    sync_certificates(&db, &github, configs.certificates, &oxide).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(github, configs.github_outside_collaborators, &oxide).await;
+    sync_github_outside_collaborators(&github, configs.github_outside_collaborators, &oxide).await;
 
     refresh_anniversary_events(&db, &oxide).await;
 }
@@ -1823,12 +1825,10 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
 #[cfg(test)]
 mod tests {
     use crate::configs::refresh_db_configs_and_airtable;
-    use crate::utils::authenticate_github_jwt;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_configs() {
-        let github = authenticate_github_jwt();
-        refresh_db_configs_and_airtable(&github).await;
+        refresh_db_configs_and_airtable().await;
     }
 }

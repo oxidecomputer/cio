@@ -292,12 +292,8 @@ pub async fn get_meetings_from_repo(github: &Github, company: &Company) -> Vec<M
 }
 
 // Sync the journal_club_meetings with our database.
-pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
-    let journal_club_meetings = get_meetings_from_repo(github, &oxide).await;
+pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github, company: &Company) {
+    let journal_club_meetings = get_meetings_from_repo(github, company).await;
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {
@@ -313,17 +309,22 @@ pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github) {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::journal_clubs::{refresh_db_journal_club_meetings, JournalClubMeetings, JournalClubPapers};
-    use crate::utils::authenticate_github_jwt;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_journal_club_meetings_and_papers() {
-        let github = authenticate_github_jwt();
         let db = Database::new();
 
-        refresh_db_journal_club_meetings(&db, &github).await;
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        let github = oxide.authenticate_github();
+
+        refresh_db_journal_club_meetings(&db, &github, &oxide).await;
 
         JournalClubPapers::get_from_db(&db).update_airtable().await;
         JournalClubMeetings::get_from_db(&db).update_airtable().await;

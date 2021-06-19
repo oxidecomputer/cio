@@ -284,19 +284,19 @@ mod tests {
     use crate::companies::Company;
     use crate::db::Database;
     use crate::models::GithubRepos;
-    use crate::utils::{authenticate_github_jwt, refresh_db_github_repos};
+    use crate::utils::refresh_db_github_repos;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_github_repos() {
-        let github = authenticate_github_jwt();
-
         // Initialize our database.
         let db = Database::new();
 
         // Get the company id for Oxide.
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        let github = oxide.authenticate_github();
 
         refresh_db_github_repos(&db, &github, &oxide).await;
 

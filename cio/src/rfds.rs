@@ -271,6 +271,7 @@ pub async fn send_rfd_changelog() {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::models::{NewRFD, RFDs};
     use crate::rfds::{clean_rfd_html_links, refresh_db_rfds, send_rfd_changelog, update_discussion_link, update_state};
