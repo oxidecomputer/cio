@@ -413,12 +413,9 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 }
 
 // Sync the auth_users with our database.
-pub async fn refresh_auth_users_and_logins(db: &Database) {
+pub async fn refresh_auth_users_and_logins(db: &Database, company: &Company) {
     // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    let auth_users = get_auth_users("oxide".to_string(), db, &oxide).await;
+    let auth_users = get_auth_users("oxide".to_string(), db, company).await;
 
     // Sync auth users.
     for auth_user in auth_users {
@@ -429,6 +426,7 @@ pub async fn refresh_auth_users_and_logins(db: &Database) {
 #[cfg(test)]
 mod tests {
     use crate::auth_logins::{refresh_auth_users_and_logins, AuthUserLogins, AuthUsers};
+    use crate::companies::Company;
     use crate::db::Database;
 
     #[ignore]
@@ -437,10 +435,13 @@ mod tests {
         // Initialize our database.
         let db = Database::new();
 
-        refresh_auth_users_and_logins(&db).await;
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_auth_users_and_logins(&db, &oxide).await;
 
         // Update auth user and auth user logins in airtable.
-        AuthUserLogins::get_from_db(&db).update_airtable().await;
-        AuthUsers::get_from_db(&db).update_airtable().await;
+        AuthUserLogins::get_from_db(&db).update_airtable(&db, oxide.id).await;
+        AuthUsers::get_from_db(&db).update_airtable(&db, oxide.id).await;
     }
 }

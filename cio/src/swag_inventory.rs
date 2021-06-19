@@ -568,6 +568,7 @@ impl BarcodeScan {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::swag_inventory::{refresh_swag_inventory_items, refresh_swag_items, BarcodeScans};
 
@@ -587,6 +588,11 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_refresh_barcode_scans() {
         let db = Database::new();
-        BarcodeScans::get_from_db(&db).update_airtable().await;
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        BarcodeScans::get_from_db(&db).update_airtable(&db, oxide.id).await;
     }
 }

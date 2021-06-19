@@ -2158,23 +2158,19 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 }
 
 // Sync the applicants with our database.
-pub async fn refresh_db_applicants(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github();
+pub async fn refresh_db_applicants(db: &Database, company: &Company) {
+    let github = company.authenticate_github();
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
-        .repo(&oxide.github_org, "configs")
+        .repo(&company.github_org, "configs")
         .issues()
         .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
 
     // Get the GSuite token.
-    let token = oxide.authenticate_google(&db, "").await;
+    let token = company.authenticate_google(&db, "").await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2211,7 +2207,7 @@ pub async fn refresh_db_applicants(db: &Database) {
             // Parse the applicant out of the row information.
             let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row).await;
             applicant
-                .expand(&oxide, &drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
+                .expand(company, &drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
                 .await;
 
             if !applicant.sent_email_received {
@@ -2219,12 +2215,12 @@ pub async fn refresh_db_applicants(db: &Database) {
                 post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
                 // Send a company-wide email.
-                applicant.send_email_internally(&oxide).await;
+                applicant.send_email_internally(company).await;
             }
 
             let new_applicant = applicant.upsert(db).await;
 
-            new_applicant.create_github_onboarding_issue(db, &oxide, &github, &configs_issues).await;
+            new_applicant.create_github_onboarding_issue(db, company, &github, &configs_issues).await;
         }
     }
 }
@@ -2713,13 +2709,9 @@ pub async fn update_applicant_reviewers(db: &Database) {
     }
 }
 
-pub async fn refresh_docusign_for_applicants(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
     // Authenticate DocuSign.
-    let ds = oxide.authenticate_docusign(db).await;
+    let ds = company.authenticate_docusign(db).await;
 
     // Get the template we need.
     let template_id = get_docusign_template_id(&ds).await;
@@ -2729,7 +2721,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant.do_docusign(db, &ds, &template_id, &oxide).await;
+        applicant.do_docusign(db, &ds, &template_id, company).await;
     }
 }
 
@@ -2959,6 +2951,7 @@ mod tests {
         refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants, update_applicant_reviewers, update_applications_with_scoring_forms,
         update_applications_with_scoring_results, Applicant, Applicants,
     };
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::schema::applicants;
 
@@ -3001,13 +2994,16 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants() {
         let db = Database::new();
-        refresh_db_applicants(&db).await;
+
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_db_applicants(&db, &oxide).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db).update_airtable().await;
+        Applicants::get_from_db(&db).update_airtable(&db, oxide.id).await;
 
         // Refresh DocuSign for the applicants.
-        refresh_docusign_for_applicants(&db).await;
+        refresh_docusign_for_applicants(&db, &oxide).await;
     }
 
     #[ignore]

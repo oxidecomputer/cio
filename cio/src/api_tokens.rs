@@ -92,6 +92,7 @@ impl APIToken {
 #[cfg(test)]
 mod tests {
     use crate::api_tokens::APITokens;
+    use crate::companies::Company;
     use crate::db::Database;
 
     #[ignore]

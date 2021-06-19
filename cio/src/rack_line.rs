@@ -156,18 +156,14 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 }
 
 /// Sync the rack_line_subscribers from Mailchimp with our database.
-pub async fn refresh_db_rack_line_subscribers(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) {
     // TODO: remove this env variable.
     let members = get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await;
 
     // Sync subscribers.
     for member in members {
         let mut ns: NewRackLineSubscriber = member.into();
-        ns.cio_company_id = oxide.id;
+        ns.cio_company_id = company.id;
         ns.upsert(db).await;
     }
 }
@@ -198,6 +194,7 @@ impl Into<NewRackLineSubscriber> for MailchimpMember {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::rack_line::{refresh_db_rack_line_subscribers, RackLineSubscribers};
 
@@ -207,7 +204,11 @@ mod tests {
         // Initialize our database.
         let db = Database::new();
 
-        refresh_db_rack_line_subscribers(&db).await;
-        RackLineSubscribers::get_from_db(&db).update_airtable().await;
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_db_rack_line_subscribers(&db, &oxide).await;
+        RackLineSubscribers::get_from_db(&db).update_airtable(&db, oxide.id).await;
     }
 }
