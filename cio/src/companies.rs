@@ -273,7 +273,7 @@ pub async fn refresh_companies() {
 pub async fn get_google_consent_url() -> String {
     let secret = get_google_credentials().await;
     format!(
-        "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={}&redirect_uri={}&scope={}",
+        "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={}&redirect_uri={}&scope={}&access_type=offline",
         secret.client_id,
         secret.redirect_uris[0],
         get_google_scopes().join(" ")
