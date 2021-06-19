@@ -14,7 +14,7 @@ use sendgrid_api::SendGrid;
 use crate::companies::Company;
 use crate::db::Database;
 use crate::models::{NewRFD, RFDs};
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo};
+use crate::utils::create_or_update_file_in_github_repo;
 
 /// Get the RFDs from the rfd GitHub repo.
 pub async fn get_rfds_from_repo(github: &Github, company: &Company) -> BTreeMap<i32, NewRFD> {
@@ -238,7 +238,7 @@ pub async fn send_rfd_changelog() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let github = authenticate_github_jwt();
+    let github = oxide.authenticate_github();
     let seven_days_ago = Utc::now() - Duration::days(7);
     let week_format = format!("from {} to {}", seven_days_ago.format("%m-%d-%Y"), Utc::now().format("%m-%d-%Y"));
 
@@ -274,7 +274,6 @@ mod tests {
     use crate::db::Database;
     use crate::models::{NewRFD, RFDs};
     use crate::rfds::{clean_rfd_html_links, refresh_db_rfds, send_rfd_changelog, update_discussion_link, update_state};
-    use crate::utils::authenticate_github_jwt;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
@@ -282,7 +281,11 @@ mod tests {
         // Initialize our database.
         let db = Database::new();
 
-        let github = authenticate_github_jwt();
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        let github = oxide.authenticate_github();
         refresh_db_rfds(&db, &github).await;
 
         // Update rfds in airtable.

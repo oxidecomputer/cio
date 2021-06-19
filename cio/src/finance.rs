@@ -16,7 +16,6 @@ use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users};
-use crate::utils::authenticate_github_jwt;
 
 #[db {
     new_struct_name = "SoftwareVendor",
@@ -102,7 +101,7 @@ pub async fn refresh_software_vendors() {
     let token = oxide.get_google_token("").await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
-    let github = authenticate_github_jwt();
+    let github = oxide.authenticate_github();
 
     let okta = Okta::new(env::var("OKTA_API_TOKEN").unwrap(), &oxide.okta_domain);
 

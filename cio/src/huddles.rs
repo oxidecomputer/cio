@@ -11,7 +11,7 @@ use crate::companies::Company;
 use crate::configs::{get_configs_from_repo, User};
 use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
 use crate::db::Database;
-use crate::utils::{authenticate_github_jwt, create_or_update_file_in_github_repo};
+use crate::utils::create_or_update_file_in_github_repo;
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
 pub async fn sync_changes_to_google_events() {
@@ -21,7 +21,7 @@ pub async fn sync_changes_to_google_events() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let github = authenticate_github_jwt();
+    let github = oxide.authenticate_github();
     let configs = get_configs_from_repo(&github, &oxide).await;
 
     let token = oxide.get_google_token("").await;
@@ -123,7 +123,7 @@ pub async fn send_huddle_reminders() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let github = authenticate_github_jwt();
+    let github = oxide.authenticate_github();
     let configs = get_configs_from_repo(&github, &oxide).await;
 
     let token = oxide.get_google_token("").await;
@@ -317,7 +317,7 @@ pub async fn sync_huddle_meeting_notes() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let github = authenticate_github_jwt();
+    let github = oxide.authenticate_github();
     let configs = get_configs_from_repo(&github, &oxide).await;
 
     // Define the date format.
@@ -369,7 +369,7 @@ pub async fn sync_huddles() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let github = authenticate_github_jwt();
+    let github = oxide.authenticate_github();
     let configs = get_configs_from_repo(&github, &oxide).await;
 
     let token = oxide.get_google_token("").await;

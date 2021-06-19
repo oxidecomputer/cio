@@ -40,7 +40,7 @@ use crate::interviews::ApplicantInterview;
 use crate::models::{get_value, truncate};
 use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
-use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists};
+use crate::utils::check_if_github_issue_exists;
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -2153,7 +2153,7 @@ pub async fn refresh_db_applicants(db: &Database) {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
-    let github = authenticate_github_jwt();
+    let github = oxide.authenticate_github();
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
