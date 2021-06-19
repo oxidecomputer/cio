@@ -88,7 +88,6 @@ jobs:
           MAILCHIMP_CLIENT_SECRET: ${{ secrets.MAILCHIMP_CLIENT_SECRET }}
           MAILCHIMP_REDIRECT_URI: ${{ secrets.MAILCHIMP_REDIRECT_URI }}
           SHIPPO_API_TOKEN: ${{ secrets.SHIPPO_API_TOKEN }}
-          PRINTER_URL: ${{ secrets.PRINTER_URL }}
           TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
           TAILSCALE_DOMAIN: ${{ secrets.TAILSCALE_DOMAIN }}
           REVAI_API_KEY: ${{ secrets.REVAI_API_KEY }}
