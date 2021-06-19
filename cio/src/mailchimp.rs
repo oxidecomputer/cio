@@ -5,6 +5,8 @@ use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::companies::Company;
+use crate::db::Database;
 use crate::mailing_list::NewMailingListSubscriber;
 use crate::rack_line::NewRackLineSubscriber;
 
