@@ -21,7 +21,6 @@ async fn main() -> Result<(), String> {
     // Initialize sentry.
     // In addition to all the sentry env variables, you will also need to set
     //  - CIO_DATABASE_URL
-    //  - AIRTABLE_API_KEY
     let sentry_dsn = env::var("BARCODEY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
         dsn: sentry_dsn.into_dsn().unwrap(),

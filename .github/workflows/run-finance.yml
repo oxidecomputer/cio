@@ -73,7 +73,6 @@ jobs:
           GOOGLE_CIO_KEY_ENCODED: ${{ secrets.GOOGLE_CIO_KEY_ENCODED }}
           CIO_AUTH0_CLIENT_ID: ${{ secrets.CIO_AUTH0_CLIENT_ID }}
           CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
-          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
           GOOGLE_GEOCODE_API_KEY: ${{ secrets.GOOGLE_GEOCODE_API_KEY }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
@@ -89,7 +88,6 @@ jobs:
           PRINTER_URL: ${{ secrets.PRINTER_URL }}
           TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
           TAILSCALE_DOMAIN: ${{ secrets.TAILSCALE_DOMAIN }}
-          AIRTABLE_ENTERPRISE_ACCOUNT_ID: ${{ secrets.AIRTABLE_ENTERPRISE_ACCOUNT_ID }}
           REVAI_API_KEY: ${{ secrets.REVAI_API_KEY }}
           CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
