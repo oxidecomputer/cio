@@ -170,17 +170,13 @@ impl Company {
 
     /// Get a Google token.
     pub async fn get_google_token(&self, subject: &str) -> AccessToken {
-        /*let secret = get_google_credentials().await;
+        // Get the APIToken from the database.
+        /* if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            let nt = refresh_google_access_token(db, t).await.unwrap();
+            return nt.access_token.to_string();
+        }
 
-        // Create an authenticator that uses an InstalledFlow to authenticate. The
-        // authentication tokens are persisted to a file named tokencache.json. The
-        // authenticator takes care of caching tokens to disk and refreshing tokens once
-        // they've expired.
-        let auth = InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-            .persist_tokens_to_disk(&format!("tokencache-{}.json", self.github_org))
-            .build()
-            .await
-            .unwrap();*/
+        "".to_string()*/
 
         let gsuite_key = env::var("GSUITE_KEY_ENCODED").unwrap_or_default();
         // Get the GSuite credentials file.
@@ -354,7 +350,7 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
     token.upsert(db).await;
 }
 
-pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) {
+pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) -> APIToken {
     let secret = get_google_credentials().await;
 
     let mut headers = header::HeaderMap::new();
@@ -381,6 +377,8 @@ pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) {
 
     // Update the token in the database.
     t.update(&db).await;
+
+    t
 }
 
 #[cfg(test)]
