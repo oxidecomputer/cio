@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
-use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_RACK_LINE_SIGNUPS_TABLE};
+use crate::airtable::AIRTABLE_RACK_LINE_SIGNUPS_TABLE;
 use crate::db::Database;
 use crate::mailchimp::{get_all_mailchimp_subscribers, MailchimpMember};
 use crate::schema::rack_line_subscribers;
@@ -20,7 +20,7 @@ use crate::schema::rack_line_subscribers;
 /// The data type for a RackLineSubscriber.
 #[db {
     new_struct_name = "RackLineSubscriber",
-    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_base = "customer_leads",
     airtable_table = "AIRTABLE_RACK_LINE_SIGNUPS_TABLE",
     match_on = {
         "email" = "String",
@@ -48,6 +48,9 @@ pub struct NewRackLineSubscriber {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_people: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl NewRackLineSubscriber {

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
-use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_MAILING_LIST_SIGNUPS_TABLE};
+use crate::airtable::AIRTABLE_MAILING_LIST_SIGNUPS_TABLE;
 use crate::companies::Company;
 use crate::db::Database;
 use crate::mailchimp::{get_all_mailchimp_subscribers, MailchimpMember};
@@ -20,7 +20,7 @@ use crate::schema::mailing_list_subscribers;
 /// The data type for a MailingListSubscriber.
 #[db {
     new_struct_name = "MailingListSubscriber",
-    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_base = "customer_leads",
     airtable_table = "AIRTABLE_MAILING_LIST_SIGNUPS_TABLE",
     match_on = {
         "email" = "String",

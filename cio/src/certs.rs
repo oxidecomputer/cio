@@ -24,7 +24,7 @@ use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_CERTIFICATES_TABLE};
+use crate::airtable::AIRTABLE_CERTIFICATES_TABLE;
 use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::schema::certificates;
@@ -197,7 +197,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
 /// A data type to hold the values of a let's encrypt certificate for a domain.
 #[db {
     new_struct_name = "Certificate",
-    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_base = "misc",
     airtable_table = "AIRTABLE_CERTIFICATES_TABLE",
     match_on = {
         "domain" = "String",

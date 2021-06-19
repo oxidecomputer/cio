@@ -14,7 +14,7 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
-use crate::airtable::{AIRTABLE_BASE_ID_SHIPMENTS, AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE};
+use crate::airtable::{AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE};
 use crate::companies::Company;
 use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
@@ -24,11 +24,11 @@ use crate::schema::{inbound_shipments, outbound_shipments, package_pickups};
 /// The data type for an inbound shipment.
 #[db {
     new_struct_name = "InboundShipment",
-    airtable_base_id = "AIRTABLE_BASE_ID_SHIPMENTS",
+    airtable_base = "shipments",
     airtable_table = "AIRTABLE_INBOUND_TABLE",
     match_on = {
-        "tracking_number" = "String",
         "carrier" = "String",
+        "tracking_number" = "String",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -186,11 +186,11 @@ impl InboundShipment {
 /// The data type for an outbound shipment.
 #[db {
     new_struct_name = "OutboundShipment",
-    airtable_base_id = "AIRTABLE_BASE_ID_SHIPMENTS",
+    airtable_base = "shipments",
     airtable_table = "AIRTABLE_OUTBOUND_TABLE",
     match_on = {
-        "tracking_number" = "String",
         "carrier" = "String",
+        "tracking_number" = "String",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -315,7 +315,7 @@ impl From<User> for NewOutboundShipment {
 /// The data type for a shipment pickup.
 #[db {
     new_struct_name = "PackagePickup",
-    airtable_base_id = "AIRTABLE_BASE_ID_SHIPMENTS",
+    airtable_base = "shipments",
     airtable_table = "AIRTABLE_PACKAGE_PICKUPS_TABLE",
     match_on = {
         "shippo_id" = "String",

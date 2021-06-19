@@ -15,7 +15,7 @@ use pandoc::OutputKind;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_INTERVIEWS_TABLE};
+use crate::airtable::AIRTABLE_INTERVIEWS_TABLE;
 use crate::applicants::Applicant;
 use crate::companies::Company;
 use crate::configs::{User, Users};
@@ -25,7 +25,7 @@ use crate::schema::{applicant_interviews, applicants, users};
 
 #[db {
     new_struct_name = "ApplicantInterview",
-    airtable_base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
+    airtable_base = "hiring",
     airtable_table = "AIRTABLE_INTERVIEWS_TABLE",
     match_on = {
         "google_event_id" = "String",
@@ -54,6 +54,9 @@ pub struct NewApplicantInterview {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub applicant: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a ApplicantInterview.

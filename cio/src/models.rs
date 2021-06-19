@@ -22,7 +22,7 @@ use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_BASE_ID_RACK_ROADMAP, AIRTABLE_GITHUB_REPOS_TABLE, AIRTABLE_RFD_TABLE};
+use crate::airtable::{AIRTABLE_GITHUB_REPOS_TABLE, AIRTABLE_RFD_TABLE};
 use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::rfds::{clean_rfd_html_links, get_images_in_branch, get_rfd_contents_from_repo, parse_markdown, update_discussion_link, update_state};
@@ -90,7 +90,7 @@ impl ToSql<Jsonb, Pg> for GitHubUser {
 /// The data type for a GitHub repository.
 #[db {
     new_struct_name = "GithubRepo",
-    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_base = "misc",
     airtable_table = "AIRTABLE_GITHUB_REPOS_TABLE",
     match_on = {
         "github_id" = "String",
@@ -357,7 +357,7 @@ impl NewRepo {
 /// The data type for an RFD.
 #[db {
     new_struct_name = "RFD",
-    airtable_base_id = "AIRTABLE_BASE_ID_RACK_ROADMAP",
+    airtable_base = "roadmap",
     airtable_table = "AIRTABLE_RFD_TABLE",
     match_on = {
         "number" = "i32",
@@ -412,6 +412,9 @@ pub struct NewRFD {
     pub pdf_link_github: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub pdf_link_google_drive: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl NewRFD {

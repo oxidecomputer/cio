@@ -4,13 +4,13 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_API_TOKENS_TABLE, AIRTABLE_BASE_ID_CIO};
+use crate::airtable::AIRTABLE_API_TOKENS_TABLE;
 use crate::core::UpdateAirtableRecord;
 use crate::schema::{api_tokens, api_tokens as a_p_i_tokens};
 
 #[db {
     new_struct_name = "APIToken",
-    airtable_base_id = "AIRTABLE_BASE_ID_CIO",
+    airtable_base = "cio",
     airtable_table = "AIRTABLE_API_TOKENS_TABLE",
     match_on = {
         "cio_company_id" = "i32",

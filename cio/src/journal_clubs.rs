@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
-use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE};
+use crate::airtable::{AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE};
 use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -19,7 +19,7 @@ use crate::schema::{journal_club_meetings, journal_club_papers};
 /// The data type for a NewJournalClubMeeting.
 #[db {
     new_struct_name = "JournalClubMeeting",
-    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_base = "misc",
     airtable_table = "AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE",
     match_on = {
         "issue" = "String",
@@ -50,6 +50,9 @@ pub struct NewJournalClubMeeting {
     pub state: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub recording: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl JournalClubMeeting {
@@ -144,7 +147,7 @@ impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
 /// The data type for a NewJournalClubPaper.
 #[db {
     new_struct_name = "JournalClubPaper",
-    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_base = "misc",
     airtable_table = "AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE",
     match_on = {
         "link" = "String",
@@ -161,6 +164,9 @@ pub struct NewJournalClubPaper {
     pub meeting: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_meeting: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a JournalClubPaper.

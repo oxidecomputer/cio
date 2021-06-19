@@ -187,8 +187,13 @@ impl MailchimpWebhook {
     }
 
     /// Convert to a signup data type.
-    pub fn as_rack_line_subscriber(&self) -> NewRackLineSubscriber {
+    pub fn as_rack_line_subscriber(&self, db: &Database) -> NewRackLineSubscriber {
         let mut signup: NewRackLineSubscriber = Default::default();
+
+        let list_id = self.data.list_id.as_ref().unwrap();
+
+        // Get the company from the list id.
+        let company = Company::get_from_mailchimp_list_id(db, &list_id);
 
         if self.data.merges.is_some() {
             let merges = self.data.merges.as_ref().unwrap();
@@ -213,6 +218,8 @@ impl MailchimpWebhook {
         signup.date_added = self.fired_at;
         signup.date_optin = self.fired_at;
         signup.date_last_changed = self.fired_at;
+
+        signup.cio_company_id = company.id;
 
         signup
     }

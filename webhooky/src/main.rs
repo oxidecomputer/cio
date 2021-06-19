@@ -1250,7 +1250,7 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
     }
 
     // Update the inbound shipment, if it exists.
-    if let Some(mut shipment) = InboundShipment::get_from_db(&api_context.db, ts.tracking_number.to_string(), ts.carrier.to_string()) {
+    if let Some(mut shipment) = InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()) {
         // Get the tracking status for the shipment and fill in the details.
         shipment.tracking_number = ts.tracking_number.to_string();
         let tracking_status = ts.tracking_status.unwrap_or_default();
@@ -1285,7 +1285,7 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
     }
 
     // Update the outbound shipment if it exists.
-    if let Some(mut shipment) = OutboundShipment::get_from_db(&api_context.db, ts.tracking_number.to_string(), ts.carrier.to_string()) {
+    if let Some(mut shipment) = OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()) {
         // Update the shipment in shippo.
         // TODO: we likely don't need the extra request here, but it makes the code more DRY.
         // Clean this up eventually.

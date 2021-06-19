@@ -18,7 +18,7 @@ use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_DIRECTORY, AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
+use crate::airtable::{AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE};
 use crate::applicants::Applicant;
 use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::companies::Company;
@@ -82,7 +82,7 @@ impl Config {
 /// The data type for a user.
 #[db {
     new_struct_name = "User",
-    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_base = "directory",
     airtable_table = "AIRTABLE_EMPLOYEES_TABLE",
     match_on = {
         "username" = "String",
@@ -685,7 +685,7 @@ impl UpdateAirtableRecord<User> for User {
 /// The data type for a group. This applies to Google Groups.
 #[db {
     new_struct_name = "Group",
-    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_base = "directory",
     airtable_table = "AIRTABLE_GROUPS_TABLE",
     match_on = {
         "name" = "String",
@@ -843,7 +843,7 @@ impl UpdateAirtableRecord<Group> for Group {
 /// The data type for a building.
 #[db {
     new_struct_name = "Building",
-    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_base = "directory",
     airtable_table = "AIRTABLE_BUILDINGS_TABLE",
     match_on = {
         "name" = "String",
@@ -908,7 +908,7 @@ impl UpdateAirtableRecord<Building> for Building {
 /// through GSuite or Zoom.
 #[db {
     new_struct_name = "ConferenceRoom",
-    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_base = "directory",
     airtable_table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
     match_on = {
         "name" = "String",
@@ -960,7 +960,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
 #[db {
     new_struct_name = "Link",
-    airtable_base_id = "AIRTABLE_BASE_ID_DIRECTORY",
+    airtable_base = "directory",
     airtable_table = "AIRTABLE_LINKS_TABLE",
     match_on = {
         "name" = "String",

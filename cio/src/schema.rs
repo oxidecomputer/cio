@@ -49,6 +49,7 @@ table! {
         google_event_id -> Varchar,
         event_link -> Varchar,
         applicant -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -64,6 +65,7 @@ table! {
         pass -> Int4,
         no -> Int4,
         not_applicable -> Int4,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -139,6 +141,7 @@ table! {
         docusign_envelope_status -> Varchar,
         offer_created -> Nullable<Timestamptz>,
         offer_completed -> Nullable<Timestamptz>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -166,6 +169,7 @@ table! {
         is_mobile -> Bool,
         user_agent -> Varchar,
         link_to_auth_user -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -195,6 +199,7 @@ table! {
         link_to_people -> Array<Text>,
         link_to_auth_user_logins -> Array<Text>,
         link_to_page_views -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -271,6 +276,7 @@ table! {
         airtable_base_id_finance -> Varchar,
         airtable_base_id_swag -> Varchar,
         airtable_base_id_cio -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -463,6 +469,7 @@ table! {
         coordinator -> Varchar,
         state -> Varchar,
         recording -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -474,6 +481,7 @@ table! {
         link -> Varchar,
         meeting -> Varchar,
         link_to_meeting -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -603,6 +611,7 @@ table! {
         notes -> Text,
         tags -> Array<Text>,
         link_to_people -> Array<Text>,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
@@ -650,6 +659,7 @@ table! {
         relevant_components -> Array<Text>,
         pdf_link_github -> Varchar,
         pdf_link_google_drive -> Varchar,
+        cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }

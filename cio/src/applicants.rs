@@ -31,7 +31,7 @@ use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBl
 use tar::Archive;
 use walkdir::WalkDir;
 
-use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_BASE_ID_RECURITING_APPLICATIONS, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
+use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
 use crate::companies::Company;
 use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
@@ -56,7 +56,7 @@ static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 /// The data type for a NewApplicant.
 #[db {
     new_struct_name = "Applicant",
-    airtable_base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
+    airtable_base = "hiring",
     airtable_table = "AIRTABLE_APPLICATIONS_TABLE",
     match_on = {
         "email" = "String",
@@ -218,6 +218,9 @@ pub struct NewApplicant {
     pub offer_created: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub offer_completed: Option<DateTime<Utc>>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 impl NewApplicant {
@@ -323,6 +326,8 @@ impl NewApplicant {
             docusign_envelope_status: Default::default(),
             offer_created: Default::default(),
             offer_completed: Default::default(),
+            // TODO: update this.
+            cio_company_id: 1,
         }
     }
 
@@ -634,6 +639,8 @@ The Oxide Team",
 
         let mut airtable_record_id = "".to_string();
 
+        let mut cio_company_id = 1;
+
         // Try to get the applicant, if they exist.
         // This is a way around the stupid magic macro to make sure it
         // doesn't overwrite fields set by other functions on the upsert.
@@ -646,7 +653,7 @@ The Oxide Team",
         {
             // Try to get from airtable.
             // This ensures if we had any one offs added in airtable that they stay intact.
-            if let Some(record) = a.get_existing_airtable_record().await {
+            if let Some(record) = a.get_existing_airtable_record(db).await {
                 scorers = record.fields.scorers;
                 scorers_completed = a.scorers_completed;
                 interviews = record.fields.interviews;
@@ -751,6 +758,8 @@ The Oxide Team",
             if start_date.is_none() && a.start_date.is_some() {
                 start_date = a.start_date;
             }
+
+            cio_company_id = a.cio_company_id;
         }
 
         // If we know they have more than 1 interview AND their current status is "next steps",
@@ -883,6 +892,7 @@ The Oxide Team",
             docusign_envelope_status,
             offer_created,
             offer_completed,
+            cio_company_id,
         }
     }
 
@@ -2325,7 +2335,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                 {
                     // Try to get from airtable.
                     // This ensures if we had any one offs added in airtable that they stay intact.
-                    if let Some(record) = applicant.get_existing_airtable_record().await {
+                    if let Some(record) = applicant.get_existing_airtable_record(db).await {
                         applicant.scorers = record.fields.scorers;
                         applicant.interviews = record.fields.interviews;
                     }
@@ -2597,7 +2607,7 @@ pub async fn refresh_background_checks(db: &Database) {
 /// The data type for a ApplicantReviewer.
 #[db {
     new_struct_name = "ApplicantReviewer",
-    airtable_base_id = "AIRTABLE_BASE_ID_RECURITING_APPLICATIONS",
+    airtable_base = "hiring",
     airtable_table = "AIRTABLE_REVIEWER_LEADERBOARD_TABLE",
     match_on = {
         "email" = "String",
@@ -2627,6 +2637,9 @@ pub struct NewApplicantReviewer {
     pub no: i32,
     #[serde(default)]
     pub not_applicable: i32,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for an ApplicantReviewer.
@@ -2687,6 +2700,7 @@ pub async fn update_applicant_reviewers(db: &Database) {
                     pass,
                     no,
                     not_applicable,
+                    cio_company_id: user.cio_company_id,
                 };
 
                 // Upsert the applicant reviewer in the database.

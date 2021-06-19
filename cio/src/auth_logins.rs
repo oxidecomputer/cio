@@ -13,7 +13,7 @@ use reqwest::{Client, StatusCode};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE, AIRTABLE_BASE_ID_CUSTOMER_LEADS};
+use crate::airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{auth_user_logins, auth_users};
@@ -21,7 +21,7 @@ use crate::schema::{auth_user_logins, auth_users};
 /// The data type for an NewAuthUser.
 #[db {
     new_struct_name = "AuthUser",
-    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_base = "customer_leads",
     airtable_table = "AIRTABLE_AUTH_USERS_TABLE",
     custom_partial_eq = true,
     match_on = {
@@ -73,6 +73,9 @@ pub struct NewAuthUser {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_page_views: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a AuthUser.
@@ -100,7 +103,7 @@ impl PartialEq for AuthUser {
 /// The data type for a NewAuthUserLogin.
 #[db {
     new_struct_name = "AuthUserLogin",
-    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_base = "customer_leads",
     airtable_table = "AIRTABLE_AUTH_USER_LOGINS_TABLE",
     match_on = {
         "user_id" = "String",
@@ -150,6 +153,9 @@ pub struct NewAuthUserLogin {
     /// link to another table in Airtable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link_to_auth_user: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a AuthUserLogin.

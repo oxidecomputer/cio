@@ -11,7 +11,7 @@ use revai::RevAI;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_MISC, AIRTABLE_RECORDED_MEETINGS_TABLE};
+use crate::airtable::AIRTABLE_RECORDED_MEETINGS_TABLE;
 use crate::companies::Company;
 use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
@@ -22,7 +22,7 @@ use crate::schema::recorded_meetings;
 /// The data type for a recorded meeting.
 #[db {
     new_struct_name = "RecordedMeeting",
-    airtable_base_id = "AIRTABLE_BASE_ID_MISC",
+    airtable_base = "misc",
     airtable_table = "AIRTABLE_RECORDED_MEETINGS_TABLE",
     match_on = {
         "google_event_id" = "String",

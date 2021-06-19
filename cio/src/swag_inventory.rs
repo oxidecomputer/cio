@@ -14,7 +14,7 @@ use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_BASE_ID_SWAG, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE};
+use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE};
 use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -22,7 +22,7 @@ use crate::schema::{barcode_scans, swag_inventory_items, swag_items};
 
 #[db {
     new_struct_name = "SwagItem",
-    airtable_base_id = "AIRTABLE_BASE_ID_SWAG",
+    airtable_base = "swag",
     airtable_table = "AIRTABLE_SWAG_ITEMS_TABLE",
     match_on = {
         "name" = "String",
@@ -91,7 +91,7 @@ pub async fn refresh_swag_items() {
 
 #[db {
     new_struct_name = "SwagInventoryItem",
-    airtable_base_id = "AIRTABLE_BASE_ID_SWAG",
+    airtable_base = "swag",
     airtable_table = "AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE",
     match_on = {
         "item" = "String",
@@ -474,7 +474,7 @@ pub async fn refresh_swag_inventory_items() {
 
 #[db {
     new_struct_name = "BarcodeScan",
-    airtable_base_id = "AIRTABLE_BASE_ID_SWAG",
+    airtable_base = "swag",
     airtable_table = "AIRTABLE_BARCODE_SCANS_TABLE",
     match_on = {
         "item" = "String",

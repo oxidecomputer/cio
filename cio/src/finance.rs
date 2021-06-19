@@ -10,7 +10,7 @@ use okta::Okta;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_BASE_ID_FINANCE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
+use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
 use crate::companies::Company;
 use crate::configs::{Group, User};
 use crate::core::UpdateAirtableRecord;
@@ -19,7 +19,7 @@ use crate::schema::{accounts_payables, credit_card_transactions, expensed_items,
 
 #[db {
     new_struct_name = "SoftwareVendor",
-    airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
+    airtable_base = "finance",
     airtable_table = "AIRTABLE_SOFTWARE_VENDORS_TABLE",
     match_on = {
         "name" = "String",
@@ -169,7 +169,7 @@ pub async fn refresh_software_vendors() {
 
 #[db {
     new_struct_name = "CreditCardTransaction",
-    airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
+    airtable_base = "finance",
     airtable_table = "AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE",
     match_on = {
         "transaction_id" = "String",
@@ -608,7 +608,7 @@ pub async fn refresh_brex_transactions() {
 
 #[db {
     new_struct_name = "AccountsPayable",
-    airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
+    airtable_base = "finance",
     airtable_table = "AIRTABLE_ACCOUNTS_PAYABLE_TABLE",
     match_on = {
         "confirmation_number" = "String",
@@ -711,7 +711,7 @@ pub async fn refresh_accounts_payable() {
 
 #[db {
     new_struct_name = "ExpensedItem",
-    airtable_base_id = "AIRTABLE_BASE_ID_FINANCE",
+    airtable_base = "finance",
     airtable_table = "AIRTABLE_EXPENSED_ITEMS_TABLE",
     match_on = {
         "transaction_id" = "String",

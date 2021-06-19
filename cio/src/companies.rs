@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 use std::io::Write;
 
+use airtable_api::Airtable;
 use async_trait::async_trait;
 use chrono::Utc;
 use docusign::DocuSign;
@@ -16,7 +17,7 @@ use reqwest::{header, Client};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_CIO, AIRTABLE_COMPANIES_TABLE};
+use crate::airtable::AIRTABLE_COMPANIES_TABLE;
 use crate::api_tokens::{APIToken, NewAPIToken};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
@@ -24,7 +25,7 @@ use crate::schema::companys;
 
 #[db {
     new_struct_name = "Company",
-    airtable_base_id = "AIRTABLE_BASE_ID_CIO",
+    airtable_base = "cio",
     airtable_table = "AIRTABLE_COMPANIES_TABLE",
     match_on = {
         "name" = "String",
@@ -77,6 +78,9 @@ pub struct NewCompany {
     pub airtable_base_id_swag: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub airtable_base_id_cio: String,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a Company.
@@ -95,6 +99,11 @@ impl Company {
             .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
             .first::<Company>(&db.conn())
             .unwrap()
+    }
+
+    /// Authenticate with Airtable.
+    pub fn authenticate_airtable(&self, base_id: &str) -> Airtable {
+        Airtable::new(self.airtable_api_key, base_id, self.airtable_enterprise_account_id)
     }
 
     /// Authenticate with Ramp.

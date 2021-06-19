@@ -5,7 +5,7 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BASE_ID_CUSTOMER_LEADS, AIRTABLE_PAGE_VIEWS_TABLE};
+use crate::airtable::AIRTABLE_PAGE_VIEWS_TABLE;
 use crate::auth_logins::AuthUsers;
 use crate::companies::Companys;
 use crate::core::UpdateAirtableRecord;
@@ -14,7 +14,7 @@ use crate::schema::page_views;
 
 #[db {
     new_struct_name = "PageView",
-    airtable_base_id = "AIRTABLE_BASE_ID_CUSTOMER_LEADS",
+    airtable_base = "customer_leads",
     airtable_table = "AIRTABLE_PAGE_VIEWS_TABLE",
     match_on = {
         "time" = "DateTime<Utc>",
