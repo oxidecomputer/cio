@@ -144,7 +144,7 @@ impl MailchimpWebhook {
         let mut signup: NewMailingListSubscriber = Default::default();
 
         // Get the company from the list id.
-        let company = Company::get_from_mailchimp_list_id(db, &self.data.list_id);
+        let company = Company::get_from_mailchimp_list_id(db, &self.data.list_id.unwrap());
 
         if self.data.merges.is_some() {
             let merges = self.data.merges.as_ref().unwrap();
