@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ffdcdf5d3262f6625da002c328749955644117a5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6a3a43d65dd0187c27c38d6323cf26f75d99bfcb"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2107,7 +2107,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ffdcdf5d3262f6625da002c328749955644117a5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#6a3a43d65dd0187c27c38d6323cf26f75d99bfcb"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2486,9 +2486,9 @@ dependencies = [
 
 [[package]]
 name = "openssl"
-version = "0.10.34"
+version = "0.10.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d7830286ad6a3973c0f1d9b73738f69c76b739301d0229c4b96501695cbe4c8"
+checksum = "549430950c79ae24e6d02e0b7404534ecf311d94cc9f861e9e4020187d13d885"
 dependencies = [
  "bitflags",
  "cfg-if 1.0.0",
