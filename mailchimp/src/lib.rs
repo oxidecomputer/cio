@@ -594,7 +594,7 @@ pub struct Member {
 
 #[cfg(test)]
 mod tests {
-    use crate::mailchimp::MailchimpWebhook;
+    use super::*;
 
     use serde_qs::Config as QSConfig;
 
@@ -605,7 +605,7 @@ mod tests {
         let qs_non_strict = QSConfig::new(10, false);
 
         // Parse the request body as a MailchimpWebhook.
-        let webhook: MailchimpWebhook = qs_non_strict.deserialize_bytes(body.as_bytes()).unwrap();
+        let webhook: Webhook = qs_non_strict.deserialize_bytes(body.as_bytes()).unwrap();
 
         println!("{:#?}", webhook);
     }
