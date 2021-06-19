@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -53,6 +54,8 @@ pub struct NewCompany {
     pub okta_domain: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub mailchimp_list_id: String,
+    #[serde(default)]
+    pub github_app_installation_id: i32,
 }
 
 /// Implement updating the Airtable record for a Company.
@@ -224,8 +227,7 @@ impl Company {
         // Parse our env variables.
         let app_id_str = env::var("GH_APP_ID").unwrap();
         let app_id = app_id_str.parse::<u64>().unwrap();
-        let installation_id_str = env::var("GH_INSTALLATION_ID").unwrap();
-        let installation_id = installation_id_str.parse::<u64>().unwrap();
+
         let encoded_private_key = env::var("GH_PRIVATE_KEY").unwrap();
         let private_key = base64::decode(encoded_private_key).unwrap();
 
@@ -238,7 +240,7 @@ impl Company {
         // Create the HTTP cache.
         let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME").unwrap())));
 
-        let token_generator = InstallationTokenGenerator::new(installation_id, jwt);
+        let token_generator = InstallationTokenGenerator::new(self.github_app_installation_id.try_into().unwrap(), jwt);
 
         Github::custom(
             "https://api.github.com",

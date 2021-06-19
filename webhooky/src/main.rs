@@ -1391,7 +1391,6 @@ async fn listen_auth_github_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
 }]
 async fn listen_auth_github_callback(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
     let event = body_param.into_inner();
 
     sentry::capture_message(&format!("github callback: {:?}", event), sentry::Level::Info);

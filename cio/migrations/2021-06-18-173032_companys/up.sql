@@ -10,5 +10,6 @@ CREATE TABLE companys (
     phone VARCHAR NOT NULL,
     okta_domain VARCHAR NOT NULL,
     mailchimp_list_id VARCHAR NOT NULL,
+    github_app_installation_id INTEGER NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

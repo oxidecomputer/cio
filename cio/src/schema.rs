@@ -259,6 +259,7 @@ table! {
         phone -> Varchar,
         okta_domain -> Varchar,
         mailchimp_list_id -> Varchar,
+        github_app_installation_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
