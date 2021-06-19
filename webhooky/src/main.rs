@@ -1379,7 +1379,9 @@ async fn listen_auth_github_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
     sentry::start_session();
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: "".to_string() }))
+    Ok(HttpResponseOk(UserConsentURL {
+        url: "https://github.com/apps/oxidecomputerbot".to_string(),
+    }))
 }
 
 /** Listen for callbacks to GitHub auth. */
