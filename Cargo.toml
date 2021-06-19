@@ -12,6 +12,7 @@ members = [
 	"google-geocode",
 	"gusto",
 	"macros",
+	"mailchimp",
 	"okta",
 	"printy",
 	"quickbooks",

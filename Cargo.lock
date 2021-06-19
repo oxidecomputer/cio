@@ -474,6 +474,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0",
+ "mailchimp-api",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -489,7 +490,6 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "serde_qs 0.7.2",
  "sheets 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2115,6 +2115,18 @@ dependencies = [
  "serde",
  "serde_tokenstream",
  "syn 1.0.73",
+]
+
+[[package]]
+name = "mailchimp-api"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_qs 0.7.2",
 ]
 
 [[package]]
