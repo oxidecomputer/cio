@@ -1370,6 +1370,35 @@ pub struct AuthCallback {
     pub realm_id: String,
 }
 
+/** Get the consent URL for Google auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/google/consent",
+}]
+async fn listen_auth_google_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL {
+        url: "https://google.com/apps/oxidecomputerbot/installations/new".to_string(),
+    }))
+}
+
+/** Listen for callbacks to Google auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/google/callback",
+}]
+async fn listen_auth_google_callback(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+
+    sentry::capture_message(&format!("google callback: {:?}", event), sentry::Level::Info);
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
 /** Get the consent URL for GitHub auth. */
 #[endpoint {
     method = GET,
