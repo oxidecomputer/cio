@@ -42,9 +42,6 @@ use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users
 use crate::slack::{get_hiring_channel_post_url, post_to_channel};
 use crate::utils::{authenticate_github_jwt, check_if_github_issue_exists};
 
-const GSUITE_DOMAIN: &str = "oxidecomputer.com";
-const DOMAIN: &str = "oxide.computer";
-
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
 static QUESTION_WORK_PROUD_OF: &str = r"W(?s:.*)at work(?s:.*)ave you done that you(?s:.*)particularl(?s:.*)proud o(?s:.*)and why\?";
@@ -330,7 +327,7 @@ impl NewApplicant {
     }
 
     /// Send an email to the applicant that we recieved their application.
-    pub async fn send_email_recieved_application_to_applicant(&self) {
+    pub async fn send_email_recieved_application_to_applicant(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -351,15 +348,15 @@ Sincerely,
                     self.name
                 ),
                 vec![self.email.to_string()],
-                vec![format!("careers@{}", DOMAIN)],
+                vec![format!("careers@{}", company.gsuite_domain)],
                 vec![],
-                format!("careers@{}", DOMAIN),
+                format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
 
     /// Send an email to the applicant that we love them but they are too junior.
-    pub async fn send_email_rejection_junior_but_we_love_you(&self) {
+    pub async fn send_email_rejection_junior_but_we_love_you(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -387,15 +384,15 @@ The Oxide Team",
                     self.name
                 ),
                 vec![self.email.to_string()],
-                vec![format!("careers@{}", DOMAIN)],
+                vec![format!("careers@{}", company.gsuite_domain)],
                 vec![],
-                format!("careers@{}", DOMAIN),
+                format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
 
     /// Send an email to the applicant that they did not provide materials.
-    pub async fn send_email_rejection_did_not_provide_materials(&self) {
+    pub async fn send_email_rejection_did_not_provide_materials(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -414,15 +411,15 @@ The Oxide Team",
                     self.name
                 ),
                 vec![self.email.to_string()],
-                vec![format!("careers@{}", DOMAIN)],
+                vec![format!("careers@{}", company.gsuite_domain)],
                 vec![],
-                format!("careers@{}", DOMAIN),
+                format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
 
     /// Send an email to the applicant about timing.
-    pub async fn send_email_rejection_timing(&self) {
+    pub async fn send_email_rejection_timing(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -447,15 +444,15 @@ The Oxide Team",
                     self.name
                 ),
                 vec![self.email.to_string()],
-                vec![format!("careers@{}", DOMAIN)],
+                vec![format!("careers@{}", company.gsuite_domain)],
                 vec![],
-                format!("careers@{}", DOMAIN),
+                format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
 
     /// Send an email internally that we have a new application.
-    pub async fn send_email_internally(&self) {
+    pub async fn send_email_internally(&self, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -464,10 +461,10 @@ The Oxide Team",
             .send_mail(
                 format!("New {} Application: {}", self.role, self.name),
                 self.as_company_notification_email(),
-                vec![format!("applications@{}", GSUITE_DOMAIN)],
+                vec![format!("applications@{}", company.gsuite_domain)],
                 vec![],
                 vec![],
-                format!("applications@{}", GSUITE_DOMAIN),
+                format!("applications@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -930,11 +927,19 @@ The Oxide Team",
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(&mut self, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, sent_email_follow_up_index: usize, row_index: usize) {
+    pub async fn expand(
+        &mut self,
+        company: &Company,
+        drive_client: &GoogleDrive,
+        sheets_client: &Sheets,
+        sent_email_received_column_index: usize,
+        sent_email_follow_up_index: usize,
+        row_index: usize,
+    ) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
-            self.send_email_recieved_application_to_applicant().await;
+            self.send_email_recieved_application_to_applicant(company).await;
 
             // Mark the column as true not false.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
@@ -956,17 +961,17 @@ The Oxide Team",
                 // Check if we have sent the follow up email to them.unwrap_or_default().
                 if self.raw_status.contains("did not do materials") {
                     // Send the email.
-                    self.send_email_rejection_did_not_provide_materials().await;
+                    self.send_email_rejection_did_not_provide_materials(company).await;
 
                     println!("[applicant] sent email to {} tell them they did not do the materials", self.email);
                 } else if self.raw_status.contains("junior") {
                     // Send the email.
-                    self.send_email_rejection_junior_but_we_love_you().await;
+                    self.send_email_rejection_junior_but_we_love_you(company).await;
 
                     println!("[applicant] sent email to {} tell them we can't hire them at this stage", self.email);
                 } else {
                     // Send the email.
-                    self.send_email_rejection_timing().await;
+                    self.send_email_rejection_timing(company).await;
 
                     println!("[applicant] sent email to {} tell them about timing", self.email);
                 }
@@ -1503,7 +1508,7 @@ impl Applicant {
     }
 
     /// Send an email to a scorer that they are assigned to an applicant.
-    pub async fn send_email_to_scorer(&self, scorer: &str) {
+    pub async fn send_email_to_scorer(&self, scorer: &str, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -1515,7 +1520,7 @@ impl Applicant {
                 vec![scorer.to_string()],
                 vec![],
                 vec![],
-                format!("careers@{}", DOMAIN),
+                format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -2196,7 +2201,7 @@ pub async fn refresh_db_applicants(db: &Database) {
             // Parse the applicant out of the row information.
             let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row).await;
             applicant
-                .expand(&drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
+                .expand(&oxide, &drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
                 .await;
 
             if !applicant.sent_email_received {
@@ -2204,7 +2209,7 @@ pub async fn refresh_db_applicants(db: &Database) {
                 post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
                 // Send a company-wide email.
-                applicant.send_email_internally().await;
+                applicant.send_email_internally(&oxide).await;
             }
 
             let new_applicant = applicant.upsert(db).await;
@@ -2300,7 +2305,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                 let scorers_completed_string = row[columns.scorers_completed].to_string();
                 let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
                 for s in scorers_completed_str {
-                    match User::get_from_db(db, s.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+                    match User::get_from_db(db, s.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
                         Some(user) => {
                             scorers_completed.push(user.email(&oxide));
                         }
@@ -2671,7 +2676,7 @@ pub async fn update_applicant_reviewers(db: &Database) {
         let no = row[5].parse::<i32>().unwrap_or(0);
         let not_applicable = row[6].parse::<i32>().unwrap_or(0);
 
-        match User::get_from_db(db, email.trim_end_matches(GSUITE_DOMAIN).trim_end_matches('@').to_string()) {
+        match User::get_from_db(db, email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
             Some(user) => {
                 let reviewer = NewApplicantReviewer {
                     name: user.full_name(),
@@ -2710,7 +2715,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database) {
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant.do_docusign(db, &ds, &template_id).await;
+        applicant.do_docusign(db, &ds, &template_id, &oxide).await;
     }
 }
 
@@ -2726,7 +2731,7 @@ pub async fn get_docusign_template_id(ds: &DocuSign) -> String {
 }
 
 impl Applicant {
-    pub async fn do_docusign(&mut self, db: &Database, ds: &DocuSign, template_id: &str) {
+    pub async fn do_docusign(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
         if self.status != crate::applicant_status::Status::GivingOffer.to_string()
@@ -2761,7 +2766,7 @@ impl Applicant {
                 docusign::TemplateRole {
                     name: "Steve Tuck".to_string(),
                     role_name: "CEO".to_string(),
-                    email: format!("steve@{}", GSUITE_DOMAIN),
+                    email: format!("steve@{}", company.gsuite_domain),
                     signer_name: "Steve Tuck".to_string(),
                     routing_order: "1".to_string(),
                     // Make Steve's email notification different than the actual applicant.
