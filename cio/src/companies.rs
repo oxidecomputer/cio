@@ -58,6 +58,10 @@ pub struct NewCompany {
     #[serde(default)]
     pub github_app_installation_id: i32,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub checkr_api_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub printer_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub airtable_api_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub airtable_enterprise_account_id: String,
