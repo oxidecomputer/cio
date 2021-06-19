@@ -169,7 +169,6 @@ async fn main() -> Result<(), String> {
 struct Context {
     influx: influx::Client,
     db: Database,
-    checkr: checkr::Checkr,
 
     schema: String,
 }
@@ -185,7 +184,6 @@ impl Context {
         Context {
             influx: influx::Client::new_from_env(),
             db,
-            checkr: checkr::Checkr::new_from_env(),
             schema,
         }
     }
@@ -862,8 +860,9 @@ async fn listen_airtable_applicants_request_background_check_webhooks(rqctx: Arc
     // Get the row from airtable.
     let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
     if applicant.criminal_background_check_status.is_empty() {
+        let company = Company::get_by_id(&api_context.db, event.cio_company_id);
         // Request the background check, since we previously have not requested one.
-        applicant.send_background_check_invitation(&api_context.db).await;
+        applicant.send_background_check_invitation(&api_context.db, &company).await;
         println!("sent background check invitation to applicant: {}", applicant.email);
     }
 
@@ -1334,7 +1333,11 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    let candidate = api_context.checkr.get_candidate(&event.data.object.candidate_id).await.unwrap();
+    // TODO: change this to the real company name.
+    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+
+    let checkr = oxide.authenticate_checkr();
+    let candidate = checkr.get_candidate(&event.data.object.candidate_id).await.unwrap();
     let result = applicants::dsl::applicants
         .filter(
             applicants::dsl::email
@@ -1768,13 +1771,11 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
         .first::<Applicant>(&db.conn());
     match result {
         Ok(mut applicant) => {
-            // Get the company id for Oxide.
-            // TODO: split this out per company.
-            let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+            let company = Company::get_by_id(db, applicant.cio_company_id);
 
             // Create our docusign client.
-            let ds = oxide.authenticate_docusign(db).await;
-            applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
+            let ds = company.authenticate_docusign(db).await;
+            applicant.update_applicant_from_docusign_envelope(db, &ds, event, &company).await;
         }
         Err(e) => {
             sentry::capture_message(
