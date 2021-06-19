@@ -1389,7 +1389,7 @@ async fn listen_auth_github_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
     method = GET,
     path = "/auth/github/callback",
 }]
-async fn listen_auth_github_callback(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_github_callback(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
 
