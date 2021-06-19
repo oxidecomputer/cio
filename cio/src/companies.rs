@@ -311,7 +311,7 @@ pub fn get_google_scopes() -> Vec<String> {
     ]
 }
 
-pub async fn get_google_access_token(code: &str) {
+pub async fn get_google_access_token(db: &Database, code: &str) {
     let secret = get_google_credentials().await;
 
     let mut headers = header::HeaderMap::new();
@@ -328,8 +328,59 @@ pub async fn get_google_access_token(code: &str) {
     let resp = client.post("https://oauth2.googleapis.com/token").headers(headers).form(&params).send().await.unwrap();
 
     // Unwrap the response.
-    let t: NewAPIToken = resp.json().await.unwrap();
-    println!("{:?}", t);
+    let t: ramp_api::AccessToken = resp.json().await.unwrap();
+
+    // Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "google".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.refresh_token_expires_in as i32,
+        company_id: "".to_string(),
+        item_id: "".to_string(),
+        user_email: "".to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        // TODO: fill this in.
+        cio_company_id: 1,
+    };
+    token.expand();
+
+    // Update it in the database.
+    token.upsert(db).await;
+}
+
+pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) {
+    let secret = get_google_credentials().await;
+
+    let mut headers = header::HeaderMap::new();
+    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+    let params = [
+        ("grant_type", "refresh_token"),
+        ("refresh_token", &t.refresh_token),
+        ("client_id", &secret.client_id),
+        ("client_secret", &secret.client_secret),
+    ];
+    let client = Client::new();
+    let resp = client.post("https://oauth2.googleapis.com/token").headers(headers).form(&params).send().await.unwrap();
+
+    // Unwrap the response.
+    let nt: ramp_api::AccessToken = resp.json().await.unwrap();
+
+    t.access_token = nt.access_token.to_string();
+    t.expires_in = nt.expires_in as i32;
+    t.refresh_token = nt.refresh_token.to_string();
+    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+    t.last_updated_at = Utc::now();
+    t.expand();
+
+    // Update the token in the database.
+    t.update(&db).await;
 }
 
 #[cfg(test)]
