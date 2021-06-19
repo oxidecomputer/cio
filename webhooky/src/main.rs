@@ -1391,11 +1391,15 @@ async fn listen_auth_google_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
     method = GET,
     path = "/auth/google/callback",
 }]
-async fn listen_auth_google_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_google_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = query_args.into_inner();
 
     sentry::capture_message(&format!("google callback: {:?}", event), sentry::Level::Info);
+
+    let api_context = rqctx.context();
+
+    cio_api::companies::get_google_access_token(&api_context.db, &event.code).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
