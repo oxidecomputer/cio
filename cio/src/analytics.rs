@@ -79,6 +79,7 @@ impl NewPageView {
 #[cfg(test)]
 mod tests {
     use crate::analytics::PageViews;
+    use crate::companies::Company;
     use crate::db::Database;
 
     #[ignore]
@@ -87,6 +88,8 @@ mod tests {
         // Initialize our database.
         let db = Database::new();
 
-        PageViews::get_from_db(&db).update_airtable().await;
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        PageViews::get_from_db(&db).update_airtable(&db, oxide.id).await;
     }
 }
