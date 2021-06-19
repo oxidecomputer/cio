@@ -260,6 +260,16 @@ table! {
         okta_domain -> Varchar,
         mailchimp_list_id -> Varchar,
         github_app_installation_id -> Int4,
+        airtable_api_key -> Varchar,
+        airtable_enterprise_account_id -> Varchar,
+        airtable_base_id_customer_leads -> Varchar,
+        airtable_base_id_directory -> Varchar,
+        airtable_base_id_misc -> Varchar,
+        airtable_base_id_roadmap -> Varchar,
+        airtable_base_id_hiring -> Varchar,
+        airtable_base_id_shipments -> Varchar,
+        airtable_base_id_finance -> Varchar,
+        airtable_base_id_swag -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

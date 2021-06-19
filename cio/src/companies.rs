@@ -56,6 +56,26 @@ pub struct NewCompany {
     pub mailchimp_list_id: String,
     #[serde(default)]
     pub github_app_installation_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_api_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_enterprise_account_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_customer_leads: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_directory: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_misc: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_roadmap: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_hiring: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_shipments: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_finance: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_swag: String,
 }
 
 /// Implement updating the Airtable record for a Company.

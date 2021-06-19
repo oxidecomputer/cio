@@ -11,5 +11,15 @@ CREATE TABLE companys (
     okta_domain VARCHAR NOT NULL,
     mailchimp_list_id VARCHAR NOT NULL,
     github_app_installation_id INTEGER NOT NULL,
+    airtable_api_key VARCHAR NOT NULL,
+    airtable_enterprise_account_id VARCHAR NOT NULL,
+    airtable_base_id_customer_leads VARCHAR NOT NULL,
+    airtable_base_id_directory VARCHAR NOT NULL,
+    airtable_base_id_misc VARCHAR NOT NULL,
+    airtable_base_id_roadmap VARCHAR NOT NULL,
+    airtable_base_id_hiring VARCHAR NOT NULL,
+    airtable_base_id_shipments VARCHAR NOT NULL,
+    airtable_base_id_finance VARCHAR NOT NULL,
+    airtable_base_id_swag VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )
