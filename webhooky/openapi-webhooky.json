@@ -399,6 +399,70 @@
         }
       }
     },
+    "/auth/google/callback": {
+      "get": {
+        "description": "Listen for callbacks to Google auth.",
+        "operationId": "listen_auth_google_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "realmId",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state that we had passed in through the user consent URL.",
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/google/consent": {
+      "get": {
+        "description": "Get the consent URL for Google auth.",
+        "operationId": "listen_auth_google_consent",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserConsentURL"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/gusto/callback": {
       "get": {
         "description": "Listen for callbacks to Gusto auth.",
@@ -449,6 +513,70 @@
       "get": {
         "description": "Get the consent URL for Gusto auth.",
         "operationId": "listen_auth_gusto_consent",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserConsentURL"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mailchimp/callback": {
+      "get": {
+        "description": "Listen for callbacks to MailChimp auth.",
+        "operationId": "listen_auth_mailchimp_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "realmId",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state that we had passed in through the user consent URL.",
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mailchimp/consent": {
+      "get": {
+        "description": "Get the consent URL for MailChimp auth.",
+        "operationId": "listen_auth_mailchimp_consent",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -1018,6 +1146,10 @@
         "description": "An Airtable row event.",
         "type": "object",
         "properties": {
+          "cio_company_id": {
+            "type": "integer",
+            "format": "int32"
+          },
           "record_id": {
             "type": "string"
           }
