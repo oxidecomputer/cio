@@ -63,6 +63,13 @@ impl Company {
         companys::dsl::companys.filter(companys::dsl::github_org.eq(org.to_string())).first::<Company>(&db.conn()).unwrap()
     }
 
+    pub fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Self {
+        companys::dsl::companys
+            .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
+            .first::<Company>(&db.conn())
+            .unwrap()
+    }
+
     /// Authenticate with Ramp.
     pub async fn authenticate_ramp(&self, db: &Database) -> Ramp {
         // Get the APIToken from the database.

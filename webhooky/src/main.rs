@@ -541,7 +541,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 // Get the template we need.
                 let template_id = get_docusign_template_id(&ds).await;
 
-                a.do_docusign(db, &ds, &template_id).await;
+                a.do_docusign(db, &ds, &template_id, &oxide).await;
             }
         }
     } else if column_header.contains("start date") {
@@ -716,6 +716,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
     let sent_email_follow_up_index = event.event.range.column_end + 6;
     applicant
         .expand(
+            &oxide,
             &drive,
             &sheets,
             sent_email_received_column_index.try_into().unwrap(),
@@ -731,7 +732,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
         post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
         // Send a company-wide email.
-        applicant.send_email_internally().await;
+        applicant.send_email_internally(&oxide).await;
 
         applicant.sent_email_received = true;
     }
