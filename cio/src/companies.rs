@@ -5,6 +5,7 @@ use std::io::Write;
 
 use airtable_api::Airtable;
 use async_trait::async_trait;
+use checkr::Checkr;
 use chrono::Utc;
 use docusign::DocuSign;
 use gusto_api::Gusto;
@@ -104,6 +105,11 @@ impl Company {
             .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
             .first::<Company>(&db.conn())
             .unwrap()
+    }
+
+    /// Authenticate with Checkr.
+    pub fn authenticate_checkr(&self) -> Checkr {
+        Checkr::new(&self.checkr_api_key)
     }
 
     /// Authenticate with Airtable.

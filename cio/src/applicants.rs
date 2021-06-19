@@ -7,7 +7,6 @@ use std::process::Command;
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use checkr::Checkr;
 use chrono::offset::Utc;
 use chrono::NaiveDate;
 use chrono::{DateTime, Duration};
@@ -1374,9 +1373,8 @@ impl Applicant {
     }
 
     /// Send an invite to the applicant to do a background check.
-    pub async fn send_background_check_invitation(&mut self, db: &Database) {
-        // Initialize the Checker client.
-        let checkr = Checkr::new_from_env();
+    pub async fn send_background_check_invitation(&mut self, db: &Database, company: &Company) {
+        let checkr = company.authenticate_checkr();
 
         // Check if we already sent them an invitation.
         let candidates = checkr.list_candidates().await.unwrap();
@@ -2555,9 +2553,9 @@ fn is_materials(file_name: &str) -> bool {
         || file_name.ends_with("Operations Manager.pdf")
 }
 
-pub async fn refresh_background_checks(db: &Database) {
+pub async fn refresh_background_checks(db: &Database, company: &Company) {
     // Initialize the Checker client.
-    let checkr = Checkr::new_from_env();
+    let checkr = company.authenticate_checkr();
 
     // List the candidates.
     let candidates = checkr.list_candidates().await.unwrap();
@@ -2823,11 +2821,11 @@ impl Applicant {
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&self.docusign_envelope_id).await.unwrap();
 
-            self.update_applicant_from_docusign_envelope(db, &ds, envelope).await;
+            self.update_applicant_from_docusign_envelope(db, &ds, envelope, company).await;
         }
     }
 
-    pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+    pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope, company: &Company) {
         // Get the company id for Oxide.
         // TODO: split this out per company.
         let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
@@ -2853,7 +2851,7 @@ impl Applicant {
             // Request their background check, if we have not already.
             if self.criminal_background_check_status.is_empty() {
                 // Request the background check, since we previously have not requested one.
-                self.send_background_check_invitation(db).await;
+                self.send_background_check_invitation(db, company).await;
             }
         }
 
@@ -2987,7 +2985,9 @@ mod tests {
     async fn test_applicants_background_checks() {
         let db = Database::new();
 
-        refresh_background_checks(&db).await;
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_background_checks(&db, &oxide).await;
     }
 
     #[ignore]
