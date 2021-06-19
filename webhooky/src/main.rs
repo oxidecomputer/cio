@@ -1395,27 +1395,6 @@ async fn listen_auth_github_callback(_rqctx: Arc<RequestContext<Context>>, body_
 
     sentry::capture_message(&format!("github callback: {:?}", event), sentry::Level::Info);
 
-    /*// Save the token to the database.
-    let mut token = NewAPIToken {
-        product: "github".to_string(),
-        token_type: t.token_type.to_string(),
-        access_token: t.access_token.to_string(),
-        expires_in: t.expires_in as i32,
-        refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
-        company_id: company_id.to_string(),
-        item_id: "".to_string(),
-        user_email: current_user.email.to_string(),
-        last_updated_at: Utc::now(),
-        expires_date: None,
-        refresh_token_expires_date: None,
-        endpoint: "".to_string(),
-        cio_company_id: Default::default(),
-    };
-    token.expand();
-    // Update it in the database.
-    token.upsert(&api_context.db).await;*/
-
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
