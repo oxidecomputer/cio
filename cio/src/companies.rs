@@ -12,13 +12,13 @@ use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
 use macros::db;
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
-use reqwest::Client;
+use reqwest::{header, Client};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
 use crate::airtable::{AIRTABLE_BASE_ID_CIO, AIRTABLE_COMPANIES_TABLE};
-use crate::api_tokens::APIToken;
+use crate::api_tokens::{APIToken, NewAPIToken};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::companys;
@@ -309,6 +309,27 @@ pub fn get_google_scopes() -> Vec<String> {
         "https://www.googleapis.com/auth/spreadsheets".to_string(),
         "https://www.googleapis.com/auth/drive".to_string(),
     ]
+}
+
+pub async fn get_google_access_token(code: &str) {
+    let secret = get_google_credentials().await;
+
+    let mut headers = header::HeaderMap::new();
+    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+    let params = [
+        ("grant_type", "authorization_code"),
+        ("code", code),
+        ("redirect_uri", &secret.redirect_uris[0]),
+        ("client_id", &secret.client_id),
+        ("client_secret", &secret.client_secret),
+    ];
+    let client = Client::new();
+    let resp = client.post("https://oauth2.googleapis.com/token").headers(headers).form(&params).send().await.unwrap();
+
+    // Unwrap the response.
+    let t: NewAPIToken = resp.json().await.unwrap();
+    println!("{:?}", t);
 }
 
 #[cfg(test)]

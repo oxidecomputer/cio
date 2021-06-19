@@ -1382,7 +1382,7 @@ async fn listen_auth_google_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
-        url: "https://google.com/apps/oxidecomputerbot/installations/new".to_string(),
+        url: cio_api::companies::get_google_consent_url().await,
     }))
 }
 
@@ -1391,9 +1391,9 @@ async fn listen_auth_google_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
     method = GET,
     path = "/auth/google/callback",
 }]
-async fn listen_auth_google_callback(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_google_callback(_rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
+    let event = query_args.into_inner();
 
     sentry::capture_message(&format!("google callback: {:?}", event), sentry::Level::Info);
 
