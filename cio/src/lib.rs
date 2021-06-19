@@ -17,7 +17,6 @@ pub mod gsuite;
 pub mod huddles;
 pub mod interviews;
 pub mod journal_clubs;
-pub mod mailchimp;
 pub mod mailing_list;
 pub mod models;
 pub mod png;

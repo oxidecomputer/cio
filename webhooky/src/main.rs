@@ -43,7 +43,6 @@ use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Appl
 use cio_api::companies::Company;
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
-use cio_api::mailchimp::MailchimpWebhook;
 use cio_api::mailing_list::MailingListSubscriber;
 use cio_api::models::{GitHubUser, NewRFD, NewRepo, RFD};
 use cio_api::rack_line::RackLineSubscriber;
@@ -51,11 +50,12 @@ use cio_api::rfds::is_image;
 use cio_api::schema::applicants;
 use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
-use cio_api::slack::{get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
+use cio_api::slack::{get_customers_channel_post_url, get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::swag_inventory::SwagInventoryItem;
 use cio_api::swag_store::Order;
 use cio_api::templates::generate_terraform_files_for_okta;
 use cio_api::utils::{create_or_update_file_in_github_repo, get_file_content_from_repo};
+use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -114,6 +114,8 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_google_consent).unwrap();
     api.register(listen_auth_gusto_callback).unwrap();
     api.register(listen_auth_gusto_consent).unwrap();
+    api.register(listen_auth_mailchimp_callback).unwrap();
+    api.register(listen_auth_mailchimp_consent).unwrap();
     api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_ramp_callback).unwrap();
     api.register(listen_auth_ramp_consent).unwrap();
@@ -1437,6 +1439,67 @@ async fn listen_auth_github_callback(_rqctx: Arc<RequestContext<Context>>, body_
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+/** Get the consent URL for MailChimp auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/mailchimp/consent",
+}]
+async fn listen_auth_mailchimp_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the MailChimp client.
+    let g = MailChimp::new_from_env("", "", "");
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+}
+
+/** Listen for callbacks to MailChimp auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/mailchimp/callback",
+}]
+async fn listen_auth_mailchimp_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let event = query_args.into_inner();
+
+    // Initialize the MailChimp client.
+    let mut g = MailChimp::new_from_env("", "", "");
+
+    // Let's get the token from the code.
+    let t = g.get_access_token(&event.code).await.unwrap();
+
+    // Let's get the metadata.
+    let metadata = g.metadata().await.unwrap();
+
+    sentry::capture_message(&format!("mailchimp metadata: {:?}", metadata), sentry::Level::Info);
+
+    // Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "mailchimp".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        company_id: "".to_string(),
+        item_id: "".to_string(),
+        user_email: "".to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        cio_company_id: Default::default(),
+    };
+    token.expand();
+    // Update it in the database.
+    token.upsert(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
 /** Get the consent URL for Gusto auth. */
 #[endpoint {
     method = GET,
@@ -1774,7 +1837,7 @@ async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Contex
     println!("{}", event_string);
     let qs_non_strict = QSConfig::new(10, false);
 
-    let event: MailchimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
     println!("mailchimp {:?}", event);
 
     if event.webhook_type != *"subscribe" {
@@ -1828,7 +1891,7 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
     println!("{}", event_string);
     let qs_non_strict = QSConfig::new(10, false);
 
-    let event: MailchimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
     println!("mailchimp {:?}", event);
 
     if event.webhook_type != *"subscribe" {
@@ -1846,7 +1909,7 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
-        //post_to_channel(get_customers_channel_post_url(), new_subscriber.as_slack_msg()).await;
+        post_to_channel(get_customers_channel_post_url(), new_subscriber.as_slack_msg()).await;
         println!("subscriber {} posted to Slack", subscriber.email);
 
         println!("subscriber {} created successfully", subscriber.email);

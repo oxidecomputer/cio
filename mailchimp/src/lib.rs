@@ -392,8 +392,8 @@ pub struct Webhook {
     #[serde(rename = "type")]
     pub webhook_type: String,
     #[serde(deserialize_with = "mailchimp_date_format::deserialize", serialize_with = "mailchimp_date_format::serialize")]
-    fired_at: DateTime<Utc>,
-    data: WebhookData,
+    pub fired_at: DateTime<Utc>,
+    pub data: WebhookData,
 }
 
 mod mailchimp_date_format {

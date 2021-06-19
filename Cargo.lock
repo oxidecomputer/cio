@@ -474,7 +474,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0",
- "mailchimp-api",
+ "mailchimp-api 0.1.1",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bd7ccd1e9159b101609ce13f00cbba0aa2d242ad"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7b2493e45e5528a0f168265aeedf5c4896af66ab"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2107,7 +2107,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#bd7ccd1e9159b101609ce13f00cbba0aa2d242ad"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7b2493e45e5528a0f168265aeedf5c4896af66ab"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2120,6 +2120,20 @@ dependencies = [
 [[package]]
 name = "mailchimp-api"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "411d762ce41bd8cfb2ca18d605a0308e0fb2c91ac474c5a1e146a700bbadbd90"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_qs 0.7.2",
+]
+
+[[package]]
+name = "mailchimp-api"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4820,6 +4834,7 @@ dependencies = [
  "hubcaps",
  "hyper 0.10.16",
  "influxdb",
+ "mailchimp-api 0.1.0",
  "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.5.4",

@@ -15,7 +15,6 @@ use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBl
 use crate::airtable::AIRTABLE_RACK_LINE_SIGNUPS_TABLE;
 use crate::companies::Company;
 use crate::db::Database;
-use crate::mailchimp::{get_all_mailchimp_subscribers, MailchimpMember};
 use crate::schema::rack_line_subscribers;
 
 /// The data type for a RackLineSubscriber.
@@ -157,8 +156,9 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 
 /// Sync the rack_line_subscribers from Mailchimp with our database.
 pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) {
+    let mailchimp = company.authenticate_mailchimp(&db).await;
     // TODO: remove this env variable.
-    let members = get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await;
+    let members = mailchimp.get_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await;
 
     // Sync subscribers.
     for member in members {
@@ -168,7 +168,45 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
     }
 }
 
-impl Into<NewRackLineSubscriber> for MailchimpMember {
+/// Convert to a signup data type.
+pub fn as_rack_line_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> NewRackLineSubscriber {
+    let mut signup: NewRackLineSubscriber = Default::default();
+
+    let list_id = webhook.data.list_id.as_ref().unwrap();
+
+    // Get the company from the list id.
+    let company = Company::get_from_mailchimp_list_id(db, &list_id);
+
+    if webhook.data.merges.is_some() {
+        let merges = webhook.data.merges.as_ref().unwrap();
+
+        if let Some(e) = &merges.email {
+            signup.email = e.trim().to_string();
+        }
+        if let Some(f) = &merges.name {
+            signup.name = f.trim().to_string();
+        }
+        if let Some(c) = &merges.company {
+            signup.company = c.trim().to_string();
+        }
+        if let Some(c) = &merges.company_size {
+            signup.company_size = c.trim().to_string();
+        }
+        if let Some(i) = &merges.notes {
+            signup.interest = i.trim().to_string();
+        }
+    }
+
+    signup.date_added = webhook.fired_at;
+    signup.date_optin = webhook.fired_at;
+    signup.date_last_changed = webhook.fired_at;
+
+    signup.cio_company_id = company.id;
+
+    signup
+}
+
+impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
     fn into(self) -> NewRackLineSubscriber {
         let mut tags: Vec<String> = Default::default();
         for t in &self.tags {

@@ -11,6 +11,7 @@ use gusto_api::Gusto;
 use hubcaps::http_cache::FileBasedCache;
 use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
 use macros::db;
+use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
 use reqwest::{header, Client};
@@ -104,6 +105,32 @@ impl Company {
     /// Authenticate with Airtable.
     pub fn authenticate_airtable(&self, base_id: &str) -> Airtable {
         Airtable::new(&self.airtable_api_key, base_id, &self.airtable_enterprise_account_id)
+    }
+
+    /// Authenticate with MailChimp.
+    pub async fn authenticate_mailchimp(&self, db: &Database) -> MailChimp {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()) {
+            // Initialize the MailChimp client.
+            let mut mailchimp = MailChimp::new_from_env(t.access_token, t.refresh_token.to_string(), t.endpoint.to_string());
+            let nt = mailchimp.refresh_access_token().await.unwrap();
+            t.access_token = nt.access_token.to_string();
+            t.expires_in = nt.expires_in as i32;
+            t.last_updated_at = Utc::now();
+            if !nt.refresh_token.is_empty() {
+                t.refresh_token = nt.refresh_token.to_string();
+            }
+            if nt.x_refresh_token_expires_in > 0 {
+                t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+            }
+            t.expand();
+            // Update the token in the database.
+            t.update(&db).await;
+
+            return mailchimp;
+        }
+
+        MailChimp::new_from_env("", "", "")
     }
 
     /// Authenticate with Ramp.

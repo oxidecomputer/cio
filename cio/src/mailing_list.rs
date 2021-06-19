@@ -14,7 +14,6 @@ use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBl
 use crate::airtable::AIRTABLE_MAILING_LIST_SIGNUPS_TABLE;
 use crate::companies::Company;
 use crate::db::Database;
-use crate::mailchimp::{get_all_mailchimp_subscribers, MailchimpMember};
 use crate::schema::mailing_list_subscribers;
 
 /// The data type for a MailingListSubscriber.
@@ -182,7 +181,8 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
 pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Company) {
-    let members = get_all_mailchimp_subscribers(&company.mailchimp_list_id).await;
+    let mailchimp = company.authenticate_mailchimp(&db).await;
+    let members = mailchimp.get_subscribers(&company.mailchimp_list_id).await;
 
     // Sync subscribers.
     for member in members {
@@ -192,7 +192,54 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
     }
 }
 
-impl Into<NewMailingListSubscriber> for MailchimpMember {
+/// Convert to a signup data type.
+pub fn as_mailing_list_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> NewMailingListSubscriber {
+    let mut signup: NewMailingListSubscriber = Default::default();
+
+    let list_id = webhook.data.list_id.as_ref().unwrap();
+
+    // Get the company from the list id.
+    let company = Company::get_from_mailchimp_list_id(db, &list_id);
+
+    if webhook.data.merges.is_some() {
+        let merges = webhook.data.merges.as_ref().unwrap();
+
+        if let Some(e) = &merges.email {
+            signup.email = e.trim().to_string();
+        }
+        if let Some(f) = &merges.first_name {
+            signup.first_name = f.trim().to_string();
+        }
+        if let Some(l) = &merges.last_name {
+            signup.last_name = l.trim().to_string();
+        }
+        if let Some(c) = &merges.company {
+            signup.company = c.trim().to_string();
+        }
+        if let Some(i) = &merges.interest {
+            signup.interest = i.trim().to_string();
+        }
+
+        if merges.groupings.is_some() {
+            let groupings = merges.groupings.as_ref().unwrap();
+
+            signup.wants_podcast_updates = groupings[0].groups.is_some();
+            signup.wants_newsletter = groupings[1].groups.is_some();
+            signup.wants_product_updates = groupings[2].groups.is_some();
+        }
+    }
+
+    signup.date_added = webhook.fired_at;
+    signup.date_optin = webhook.fired_at;
+    signup.date_last_changed = webhook.fired_at;
+    signup.name = format!("{} {}", signup.first_name, signup.last_name);
+
+    signup.cio_company_id = company.id;
+
+    signup
+}
+
+impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
     fn into(self) -> NewMailingListSubscriber {
         let default_bool = false;
 
