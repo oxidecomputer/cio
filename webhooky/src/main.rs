@@ -1698,12 +1698,8 @@ async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Contex
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
     // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = event.as_mailing_list_subscriber(oxide.id);
+    let new_subscriber = event.as_mailing_list_subscriber(db);
 
     let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
