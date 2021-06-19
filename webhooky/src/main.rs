@@ -1846,7 +1846,7 @@ async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Contex
     }
 
     // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = event.as_mailing_list_subscriber(db);
+    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db);
 
     let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
@@ -1900,7 +1900,7 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
     }
 
     // Parse the webhook as a new rack line subscriber.
-    let new_subscriber = event.as_rack_line_subscriber(db);
+    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db);
 
     let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {

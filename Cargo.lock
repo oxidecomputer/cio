@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7b2493e45e5528a0f168265aeedf5c4896af66ab"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#22b88fdeeb0ad0c84eae8e73eb30f03627829f5c"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -537,6 +537,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "mailchimp-api 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -552,7 +553,6 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "serde_qs 0.7.2",
  "sheets 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2107,7 +2107,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7b2493e45e5528a0f168265aeedf5c4896af66ab"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#22b88fdeeb0ad0c84eae8e73eb30f03627829f5c"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
