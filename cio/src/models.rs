@@ -419,7 +419,9 @@ pub struct NewRFD {
 
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
-    pub async fn new_from_github(repo: &Repository, branch: &str, file_path: &str, commit_date: DateTime<Utc>) -> Self {
+    pub async fn new_from_github(company: &Company, repo: &Repository, branch: &str, file_path: &str, commit_date: DateTime<Utc>) -> Self {
+        let r = repo.get().await.unwrap();
+
         // Get the file from GitHub.
         let mut content = String::new();
         let mut link = String::new();
@@ -468,6 +470,7 @@ impl NewRFD {
             relevant_components: Default::default(),
             pdf_link_github: Default::default(),
             pdf_link_google_drive: Default::default(),
+            cio_company_id: company.id,
         }
     }
 
@@ -820,6 +823,8 @@ impl RFD {
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
         self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", company.github_org, rfd_path);
+
+        self.cio_company_id = company.id;
     }
 }
 

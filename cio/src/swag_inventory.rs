@@ -78,7 +78,11 @@ pub async fn refresh_swag_items() {
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SwagItem>> = SwagItem::airtable().list_records(&SwagItem::airtable_table(), "Grid view", vec![]).await.unwrap();
+    let results: Vec<airtable_api::Record<SwagItem>> = oxide
+        .authenticate_airtable(&oxide.airtable_base_id_swag)
+        .list_records(&SwagItem::airtable_table(), "Grid view", vec![])
+        .await
+        .unwrap();
     for item_record in results {
         let mut item: NewSwagItem = item_record.fields.into();
         item.cio_company_id = oxide.id;
@@ -460,7 +464,11 @@ pub async fn refresh_swag_inventory_items() {
     let drive_client = GoogleDrive::new(token);
 
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SwagInventoryItem>> = SwagInventoryItem::airtable().list_records(&SwagInventoryItem::airtable_table(), "Grid view", vec![]).await.unwrap();
+    let results: Vec<airtable_api::Record<SwagInventoryItem>> = oxide
+        .authenticate_airtable(&oxide.airtable_base_id_swag)
+        .list_records(&SwagInventoryItem::airtable_table(), "Grid view", vec![])
+        .await
+        .unwrap();
     for inventory_item_record in results {
         let mut inventory_item: NewSwagInventoryItem = inventory_item_record.fields.into();
         inventory_item.expand(&drive_client).await;

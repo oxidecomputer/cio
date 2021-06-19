@@ -98,6 +98,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_api_tokens() {
         let db = Database::new();
-        APITokens::get_from_db(&db).update_airtable().await;
+
+        // This should forever only be oxide.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        APITokens::get_from_db(&db).update_airtable(&db, oxide.id).await;
     }
 }

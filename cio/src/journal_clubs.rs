@@ -175,7 +175,8 @@ impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
     async fn update_airtable_record(&mut self, _record: JournalClubPaper) {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let journal_club_meetings = JournalClubMeetings::get_from_airtable().await;
+        let db = Database::new();
+        let journal_club_meetings = JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await;
 
         // Iterate over the journal_club_meetings and see if we find a match.
         for (_id, meeting_record) in journal_club_meetings {
@@ -256,7 +257,7 @@ pub mod meeting_date_format {
 }
 
 impl Meeting {
-    pub fn to_model(&self) -> NewJournalClubMeeting {
+    pub fn to_model(&self, company: &Company) -> NewJournalClubMeeting {
         let mut papers: Vec<String> = Default::default();
         for p in &self.papers {
             let paper = serde_json::to_string_pretty(&p).unwrap();
@@ -272,6 +273,7 @@ impl Meeting {
             coordinator: self.coordinator.to_string(),
             state: self.state.to_string(),
             recording: self.recording.to_string(),
+            cio_company_id: company.id,
         }
     }
 }
@@ -303,11 +305,12 @@ pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github, co
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {
-        journal_club_meeting.to_model().upsert(db).await;
+        journal_club_meeting.to_model(company).upsert(db).await;
 
         // Upsert the papers.
         for mut journal_club_paper in journal_club_meeting.papers {
             journal_club_paper.meeting = journal_club_meeting.issue.to_string();
+            journal_club_paper.cio_company_id = company.id;
             journal_club_paper.upsert(db).await;
         }
     }
@@ -332,7 +335,7 @@ mod tests {
 
         refresh_db_journal_club_meetings(&db, &github, &oxide).await;
 
-        JournalClubPapers::get_from_db(&db).update_airtable().await;
-        JournalClubMeetings::get_from_db(&db).update_airtable().await;
+        JournalClubPapers::get_from_db(&db).update_airtable(&db, oxide.id).await;
+        JournalClubMeetings::get_from_db(&db).update_airtable(&db, oxide.id).await;
     }
 }

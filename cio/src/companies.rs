@@ -242,7 +242,14 @@ impl Company {
 pub async fn refresh_companies() {
     let db = Database::new();
 
-    let is: Vec<airtable_api::Record<Company>> = Company::airtable().list_records(&Company::airtable_table(), "Grid view", vec![]).await.unwrap();
+    // This should forever only be oxide.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    let is: Vec<airtable_api::Record<Company>> = oxide
+        .authenticate_airtable(&oxide.airtable_base_id_cio)
+        .list_records(&Company::airtable_table(), "Grid view", vec![])
+        .await
+        .unwrap();
 
     for record in is {
         if record.fields.name.is_empty() || record.fields.website.is_empty() {
@@ -256,9 +263,10 @@ pub async fn refresh_companies() {
         if company.airtable_record_id.is_empty() {
             company.airtable_record_id = record.id;
         }
+        company.cio_company_id = oxide.id;
         company.update(&db).await;
     }
-    Companys::get_from_db(&db).update_airtable().await;
+    Companys::get_from_db(&db).update_airtable(&db, oxide.id).await;
 }
 
 pub async fn get_google_consent_url() -> String {

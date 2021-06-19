@@ -326,7 +326,7 @@ impl NewApplicant {
             docusign_envelope_status: Default::default(),
             offer_created: Default::default(),
             offer_completed: Default::default(),
-            // TODO: update this.
+            // TODO: update this, when we support multiple companies.
             cio_company_id: 1,
         }
     }
@@ -653,7 +653,7 @@ The Oxide Team",
         {
             // Try to get from airtable.
             // This ensures if we had any one offs added in airtable that they stay intact.
-            if let Some(record) = a.get_existing_airtable_record(db).await {
+            if let Some(record) = a.get_existing_airtable_record(&db).await {
                 scorers = record.fields.scorers;
                 scorers_completed = a.scorers_completed;
                 interviews = record.fields.interviews;

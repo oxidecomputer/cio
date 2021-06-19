@@ -13,6 +13,7 @@ use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::airtable::AIRTABLE_RACK_LINE_SIGNUPS_TABLE;
+use crate::companies::Company;
 use crate::db::Database;
 use crate::mailchimp::{get_all_mailchimp_subscribers, MailchimpMember};
 use crate::schema::rack_line_subscribers;
@@ -140,6 +141,7 @@ impl Default for NewRackLineSubscriber {
             notes: String::new(),
             tags: Default::default(),
             link_to_people: Default::default(),
+            cio_company_id: Default::default(),
         }
     }
 }
@@ -155,11 +157,17 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 
 /// Sync the rack_line_subscribers from Mailchimp with our database.
 pub async fn refresh_db_rack_line_subscribers(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    // TODO: remove this env variable.
     let members = get_all_mailchimp_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await;
 
     // Sync subscribers.
     for member in members {
-        let ns: NewRackLineSubscriber = member.into();
+        let mut ns: NewRackLineSubscriber = member.into();
+        ns.cio_company_id = oxide.id;
         ns.upsert(db).await;
     }
 }
@@ -183,6 +191,7 @@ impl Into<NewRackLineSubscriber> for MailchimpMember {
             notes: self.last_note.note,
             tags,
             link_to_people: Default::default(),
+            cio_company_id: Default::default(),
         }
     }
 }

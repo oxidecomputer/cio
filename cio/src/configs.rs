@@ -635,7 +635,8 @@ impl UpdateAirtableRecord<User> for User {
     async fn update_airtable_record(&mut self, record: User) {
         // Get the current groups in Airtable so we can link to them.
         // TODO: make this more dry so we do not call it every single damn time.
-        let groups = Groups::get_from_airtable().await;
+        let db = Database::new();
+        let groups = Groups::get_from_airtable(&db, self.cio_company_id).await;
 
         let mut links: Vec<String> = Default::default();
         // Iterate over the group names in our record and match it against the
@@ -667,7 +668,7 @@ impl UpdateAirtableRecord<User> for User {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let buildings = Buildings::get_from_airtable().await;
+        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await;
         // Iterate over the buildings to get the ID.
         for building in buildings.values() {
             if self.building == building.fields.name {
@@ -943,7 +944,8 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let buildings = Buildings::get_from_airtable().await;
+        let db = Database::new();
+        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await;
         // Iterate over the buildings to get the ID.
         for building in buildings.values() {
             if self.building == building.fields.name {
@@ -1171,7 +1173,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         } else {
             // Grab their date of birth, start date, and address from Airtable.
             if let Some(e) = existing.clone() {
-                let airtable_record = e.get_existing_airtable_record().await.unwrap();
+                let airtable_record = e.get_existing_airtable_record(db).await.unwrap();
                 user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
                 user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
                 user.home_address_city = airtable_record.fields.home_address_city.to_string();
@@ -1258,7 +1260,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     println!("updated configs users in the database");
 
     // Update users in airtable.
-    Users::get_from_db(db).update_airtable().await;
+    Users::get_from_db(db).update_airtable(db, company.id).await;
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
@@ -1353,7 +1355,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     }
 
     // Update buildings in airtable.
-    Buildings::get_from_db(db).update_airtable().await;
+    Buildings::get_from_db(db).update_airtable(db, company.id).await;
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
@@ -1451,7 +1453,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     }
 
     // Update conference_rooms in airtable.
-    ConferenceRooms::get_from_db(db).update_airtable().await;
+    ConferenceRooms::get_from_db(db).update_airtable(db, company.id).await;
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
@@ -1578,7 +1580,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     }
 
     // Update groups in airtable.
-    Groups::get_from_db(db).update_airtable().await;
+    Groups::get_from_db(db).update_airtable(db, company.id).await;
 }
 
 /// Sync our links with our database and then update Airtable from the database.
@@ -1638,7 +1640,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
     println!("updated configs links in the database");
 
     // Update links in airtable.
-    Links::get_from_db(db).update_airtable().await;
+    Links::get_from_db(db).update_airtable(db, company.id).await;
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
@@ -1684,7 +1686,7 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     println!("updated configs certificates in the database");
 
     // Update certificates in airtable.
-    Certificates::get_from_db(db).update_airtable().await;
+    Certificates::get_from_db(db).update_airtable(&db, company.id).await;
 }
 
 pub async fn refresh_db_configs_and_airtable() {

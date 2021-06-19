@@ -113,6 +113,7 @@ pub async fn refresh_interviews(db: &Database) {
                 google_event_id: event.id.to_string(),
                 event_link: event.html_link.to_string(),
                 applicant: Default::default(),
+                cio_company_id: oxide.id,
             };
 
             for attendee in event.attendees {
@@ -210,7 +211,7 @@ pub async fn refresh_interviews(db: &Database) {
         }
     }
 
-    ApplicantInterviews::get_from_db(db).update_airtable().await;
+    ApplicantInterviews::get_from_db(db).update_airtable(db, oxide.id).await;
 }
 
 /// Compile interview packets for each interviewee.

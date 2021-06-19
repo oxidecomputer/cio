@@ -1098,7 +1098,7 @@ pub async fn refresh_outbound_shipments(db: &Database) {
     // we do not.
     let shipments = OutboundShipments::get_from_db(&db);
     for mut s in shipments {
-        if let Some(existing) = s.get_existing_airtable_record().await {
+        if let Some(existing) = s.get_existing_airtable_record(&db).await {
             // Take the field from Airtable.
             s.local_pickup = existing.fields.local_pickup;
         }
@@ -1116,7 +1116,11 @@ pub async fn refresh_inbound_shipments(db: &Database) {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
-    let is: Vec<airtable_api::Record<InboundShipment>> = InboundShipment::airtable().list_records(&InboundShipment::airtable_table(), "Grid view", vec![]).await.unwrap();
+    let is: Vec<airtable_api::Record<InboundShipment>> = oxide
+        .authenticate_airtable(&oxide.airtable_base_id_shipments)
+        .list_records(&InboundShipment::airtable_table(), "Grid view", vec![])
+        .await
+        .unwrap();
 
     for record in is {
         if record.fields.carrier.is_empty() || record.fields.tracking_number.is_empty() {
@@ -1134,7 +1138,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
         shipment.update(&db).await;
     }
 
-    InboundShipments::get_from_db(&db).update_airtable().await;
+    InboundShipments::get_from_db(&db).update_airtable(&db, oxide.id).await;
 }
 
 pub fn clean_address_string(s: &str) -> String {

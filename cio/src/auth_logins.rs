@@ -14,6 +14,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE};
+use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::{auth_user_logins, auth_users};
@@ -164,7 +165,8 @@ impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
     async fn update_airtable_record(&mut self, _record: AuthUserLogin) {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let auth_users = AuthUsers::get_from_airtable().await;
+        let db = Database::new();
+        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await;
 
         // Iterate over the auth_users and see if we find a match.
         for (_id, auth_user_record) in auth_users {
@@ -215,7 +217,7 @@ pub struct User {
 
 impl User {
     /// Convert an auth0 user into a NewAuthUser.
-    pub fn to_auth_user(&self) -> NewAuthUser {
+    pub fn to_auth_user(&self, c: &Company) -> NewAuthUser {
         let mut company: &str = &self.company;
         // Check if we have an Oxide email address.
         if self.email.ends_with("@oxidecomputer.com") || self.email.ends_with("@oxide.computer") || *self.company.trim() == *"Oxide Computer Company" {
@@ -254,6 +256,7 @@ impl User {
             last_application_accessed: Default::default(),
             link_to_auth_user_logins: Default::default(),
             link_to_page_views: Default::default(),
+            cio_company_id: c.id,
         }
     }
 }
@@ -277,7 +280,7 @@ pub struct Token {
 }
 
 /// List users.
-pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
+pub async fn get_auth_users(domain: String, db: &Database, company: &Company) -> Vec<NewAuthUser> {
     let client = Client::new();
     // Get our token.
     let client_id = env::var("CIO_AUTH0_CLIENT_ID").unwrap();
@@ -315,7 +318,7 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
     let mut auth_users: Vec<NewAuthUser> = Default::default();
     for user in users {
         // Convert the user to an AuthUser.
-        let mut auth_user = user.to_auth_user();
+        let mut auth_user = user.to_auth_user(company);
 
         // Get the application they last accessed.
         let auth_user_logins = get_auth_logs_for_user(&token.access_token, &domain, &user.user_id).await;
@@ -336,6 +339,7 @@ pub async fn get_auth_users(domain: String, db: &Database) -> Vec<NewAuthUser> {
         // Update our database with all the auth_user_logins.
         for mut auth_user_login in auth_user_logins {
             auth_user_login.email = user.email.to_string();
+            auth_user_login.cio_company_id = company.id;
             auth_user_login.upsert(db).await;
         }
     }
@@ -410,7 +414,11 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
 
 // Sync the auth_users with our database.
 pub async fn refresh_auth_users_and_logins(db: &Database) {
-    let auth_users = get_auth_users("oxide".to_string(), db).await;
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    let auth_users = get_auth_users("oxide".to_string(), db, &oxide).await;
 
     // Sync auth users.
     for auth_user in auth_users {

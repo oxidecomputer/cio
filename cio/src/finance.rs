@@ -108,7 +108,11 @@ pub async fn refresh_software_vendors() {
     let slack = slack_chat_api::Slack::new_from_env();
 
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SoftwareVendor>> = SoftwareVendor::airtable().list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![]).await.unwrap();
+    let results: Vec<airtable_api::Record<SoftwareVendor>> = oxide
+        .authenticate_airtable(&oxide.airtable_base_id_finance)
+        .list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![])
+        .await
+        .unwrap();
     for vendor_record in results {
         let mut vendor: NewSoftwareVendor = vendor_record.fields.into();
 
@@ -147,7 +151,7 @@ pub async fn refresh_software_vendors() {
         // in all@.
         if vendor.name == "Airtable" || vendor.name == "Ramp" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
             let group = Group::get_from_db(&db, "all".to_string()).unwrap();
-            let airtable_group = group.get_existing_airtable_record().await.unwrap();
+            let airtable_group = group.get_existing_airtable_record(&db).await.unwrap();
             vendor.users = airtable_group.fields.members.len() as i32;
         }
 
@@ -164,7 +168,7 @@ pub async fn refresh_software_vendors() {
         db_vendor.update(&db).await;
     }
 
-    SoftwareVendors::get_from_db(&db).update_airtable().await
+    SoftwareVendors::get_from_db(&db).update_airtable(&db, oxide.id).await
 }
 
 #[db {
@@ -291,7 +295,7 @@ pub async fn refresh_ramp_transactions() {
         nt.upsert(&db).await;
     }
 
-    CreditCardTransactions::get_from_db(&db).update_airtable().await;
+    CreditCardTransactions::get_from_db(&db).update_airtable(&db, oxide.id).await;
 }
 
 // Changes the vendor name to one that matches our existing list.
@@ -682,8 +686,16 @@ pub mod bill_com_date_format {
 pub async fn refresh_accounts_payable() {
     let db = Database::new();
 
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<AccountsPayable>> = AccountsPayable::airtable().list_records(&AccountsPayable::airtable_table(), "Grid view", vec![]).await.unwrap();
+    let results: Vec<airtable_api::Record<AccountsPayable>> = oxide
+        .authenticate_airtable(&oxide.airtable_base_id_finance)
+        .list_records(&AccountsPayable::airtable_table(), "Grid view", vec![])
+        .await
+        .unwrap();
     for bill_record in results {
         let mut bill: NewAccountsPayable = bill_record.fields.into();
 
@@ -701,12 +713,16 @@ pub async fn refresh_accounts_payable() {
         // Upsert the record in our database.
         let mut db_bill = bill.upsert_in_db(&db);
 
+        db_bill.cio_company_id = oxide.id;
+
         if db_bill.airtable_record_id.is_empty() {
             db_bill.airtable_record_id = bill_record.id;
         }
 
         db_bill.update(&db).await;
     }
+
+    AccountsPayables::get_from_db(&db).update_airtable(&db, oxide.id).await;
 }
 
 #[db {
@@ -779,6 +795,8 @@ pub async fn refresh_expensify_transactions() {
     // Get the company id for Oxide.
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    ExpensedItems::get_from_db(&db).update_airtable(&db, oxide.id).await;
 
     let mut path = env::current_dir().unwrap();
     path.push("expensify.csv");

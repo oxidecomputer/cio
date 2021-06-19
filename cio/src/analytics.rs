@@ -44,7 +44,8 @@ impl UpdateAirtableRecord<PageView> for PageView {
     async fn update_airtable_record(&mut self, _record: PageView) {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let auth_users = AuthUsers::get_from_airtable().await;
+        let db = Database::new();
+        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await;
 
         // Iterate over the auth_users and see if we find a match.
         for (_id, auth_user_record) in auth_users {
