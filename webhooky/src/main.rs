@@ -794,7 +794,7 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(rqctx: Arc<
     }
 
     // Get the row from airtable.
-    let user = User::get_from_airtable(&event.record_id).await;
+    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Create a new shipment for the employee and print the label.
     user.create_shipment_to_home_address(&api_context.db).await;
@@ -811,10 +811,11 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(rqctx: Arc<
     path = "/airtable/swag/inventory/items/print_barcode_labels",
 }]
 async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let api_context = rqctx.context();
 
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -826,7 +827,7 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     }
 
     // Get the row from airtable.
-    let swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id).await;
+    let swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Print the barcode label(s).
     swag_inventory_item.print_label().await;
@@ -857,7 +858,7 @@ async fn listen_airtable_applicants_request_background_check_webhooks(rqctx: Arc
     }
 
     // Get the row from airtable.
-    let mut applicant = Applicant::get_from_airtable(&event.record_id).await;
+    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
     if applicant.criminal_background_check_status.is_empty() {
         // Request the background check, since we previously have not requested one.
         applicant.send_background_check_invitation(&api_context.db).await;
@@ -890,7 +891,8 @@ async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestCo
     }
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
+    // TODO: fix the company id.
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, 1).await;
 
     // If it is a row we created from our internal store do nothing.
     if shipment.notes.contains("Oxide store") || shipment.notes.contains("Google sheet") || shipment.notes.contains("Internal") {
@@ -920,6 +922,8 @@ async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestCo
 pub struct AirtableRowEvent {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub record_id: String,
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 /**
@@ -943,7 +947,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(rqctx: Arc<Re
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let mut shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
+    let mut shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Reprint the label.
     shipment.print_label().await;
@@ -983,7 +987,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id).await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     let company = Company::get_by_id(&api_context.db, shipment.cio_company_id);
 
@@ -1180,7 +1184,8 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     let db = &api_context.db;
 
     // Get the row from airtable.
-    let record = InboundShipment::get_from_airtable(&event.record_id).await;
+    // TODO: fix the company id
+    let record = InboundShipment::get_from_airtable(&event.record_id, db, 1).await;
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
@@ -1832,7 +1837,7 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
     }
 
     // Parse the webhook as a new rack line subscriber.
-    let new_subscriber = event.as_rack_line_subscriber();
+    let new_subscriber = event.as_rack_line_subscriber(db);
 
     let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
@@ -2635,7 +2640,7 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
             // in our database.
             println!("`push` event -> file {} was modified on branch {}", file, branch,);
             // Parse the RFD.
-            let new_rfd = NewRFD::new_from_github(&github_repo, branch, &file, commit.timestamp.unwrap()).await;
+            let new_rfd = NewRFD::new_from_github(company, &github_repo, branch, &file, commit.timestamp.unwrap()).await;
 
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.

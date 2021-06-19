@@ -420,8 +420,6 @@ pub struct NewRFD {
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
     pub async fn new_from_github(company: &Company, repo: &Repository, branch: &str, file_path: &str, commit_date: DateTime<Utc>) -> Self {
-        let r = repo.get().await.unwrap();
-
         // Get the file from GitHub.
         let mut content = String::new();
         let mut link = String::new();
