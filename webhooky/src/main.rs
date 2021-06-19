@@ -108,6 +108,8 @@ async fn main() -> Result<(), String> {
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
+    api.register(listen_auth_github_callback).unwrap();
+    api.register(listen_auth_github_consent).unwrap();
     api.register(listen_auth_gusto_callback).unwrap();
     api.register(listen_auth_gusto_consent).unwrap();
     api.register(listen_auth_plaid_callback).unwrap();
@@ -1353,6 +1355,55 @@ pub struct AuthCallback {
     pub realm_id: String,
 }
 
+/** Get the consent URL for GitHub auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/github/consent",
+}]
+async fn listen_auth_github_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL { url: "".to_string() }))
+}
+
+/** Listen for callbacks to GitHub auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/github/callback",
+}]
+async fn listen_auth_github_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let event = query_args.into_inner();
+
+    sentry::capture_message(&format!("github callback: {:?}", event), sentry::Level::Info);
+
+    /*// Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "github".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        company_id: company_id.to_string(),
+        item_id: "".to_string(),
+        user_email: current_user.email.to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        cio_company_id: Default::default(),
+    };
+    token.expand();
+    // Update it in the database.
+    token.upsert(&api_context.db).await;*/
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
 /** Get the consent URL for Gusto auth. */
 #[endpoint {
     method = GET,
@@ -1538,7 +1589,7 @@ async fn listen_auth_plaid_callback(_rqctx: Arc<RequestContext<Context>>, body_a
     sentry::start_session();
     let event = body_args.into_inner();
 
-    sentry::capture_message(&format!("plaid webhook: {:?}", event), sentry::Level::Info);
+    sentry::capture_message(&format!("plaid callback: {:?}", event), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
