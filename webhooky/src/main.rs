@@ -391,7 +391,7 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     let github = oxide.authenticate_github();
 
     // Get gsuite token.
-    let token = oxide.get_google_token("").await;
+    let token = oxide.authenticate_google(db, "").await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
@@ -478,7 +478,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
 
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = oxide.get_google_token("").await;
+    let token = oxide.authenticate_google(db, "").await;
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
 
@@ -701,7 +701,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
 
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
-    let token = oxide.get_google_token("").await;
+    let token = oxide.authenticate_google(db, "").await;
 
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
@@ -2533,7 +2533,7 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
     let db = &api_context.db;
 
     // Get gsuite token.
-    let token = company.get_google_token("").await;
+    let token = company.authenticate_google(db, "").await;
 
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
