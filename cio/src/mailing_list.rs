@@ -182,7 +182,7 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
 pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Company) {
     let mailchimp = company.authenticate_mailchimp(&db).await;
-    let members = mailchimp.get_subscribers(&company.mailchimp_list_id).await;
+    let members = mailchimp.get_subscribers(&company.mailchimp_list_id).await.unwrap();
 
     // Sync subscribers.
     for member in members {

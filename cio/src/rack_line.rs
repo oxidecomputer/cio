@@ -158,7 +158,7 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) {
     let mailchimp = company.authenticate_mailchimp(&db).await;
     // TODO: remove this env variable.
-    let members = mailchimp.get_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await;
+    let members = mailchimp.get_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default()).await.unwrap();
 
     // Sync subscribers.
     for member in members {
