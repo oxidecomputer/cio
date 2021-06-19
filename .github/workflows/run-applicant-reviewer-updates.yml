@@ -57,10 +57,8 @@ jobs:
       - name: Set up environment
         shell: bash
         run: |
-          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key \
-          && echo "$SQL_PROXY_KEY" > ${{ github.workspace }}/sql_proxy_key
+          echo "$SQL_PROXY_KEY" > ${{ github.workspace }}/sql_proxy_key
         env:
-          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
           SQL_PROXY_KEY: ${{ secrets.SQL_PROXY_KEY }}
       - name: Start the sql_proxy
         shell: bash

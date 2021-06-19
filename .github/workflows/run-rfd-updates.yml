@@ -61,10 +61,8 @@ jobs:
       - name: Set up environment
         shell: bash
         run: |
-          echo "$GSUITE_KEY" > ${{ github.workspace }}/gsuite_key \
-          && echo "$SQL_PROXY_KEY" > ${{ github.workspace }}/sql_proxy_key
+          echo "$SQL_PROXY_KEY" > ${{ github.workspace }}/sql_proxy_key
         env:
-          GSUITE_KEY: ${{ secrets.GSUITE_KEY }}
           SQL_PROXY_KEY: ${{ secrets.SQL_PROXY_KEY }}
       - name: Start the sql_proxy
         shell: bash
@@ -81,7 +79,6 @@ jobs:
           CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
-          GADMIN_CREDENTIAL_FILE: ${{ github.workspace }}/gsuite_key
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           SLACK_HIRING_CHANNEL_POST_URL: ${{ secrets.SLACK_HIRING_CHANNEL_POST_URL }}
           GH_APP_ID: ${{ secrets.GH_APP_ID }}
