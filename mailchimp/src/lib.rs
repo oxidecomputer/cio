@@ -14,7 +14,7 @@
  *     let mailchimp = MailChimp::new_from_env("", "", "");
  *
  *     // Get the subscribers for a mailing list.
- *     let subscribers = mailchimp.list_subscribers("some_id").await.unwrap();
+ *     let subscribers = mailchimp.get_subscribers("some_id").await.unwrap();
  *
  *     println!("{:?}", subscribers);
  * }
