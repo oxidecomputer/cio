@@ -829,8 +829,10 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     // Get the row from airtable.
     let swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
+    let company = Company::get_by_id(&api_context.db, swag_inventory_item.cio_company_id);
+
     // Print the barcode label(s).
-    swag_inventory_item.print_label().await;
+    swag_inventory_item.print_label(&company).await;
     println!("swag inventory item {} printed label", swag_inventory_item.name);
 
     sentry::end_session();
@@ -950,8 +952,10 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(rqctx: Arc<Re
     // Get the row from airtable.
     let mut shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
+    let company = Company::get_by_id(&api_context.db, shipment.cio_company_id);
+
     // Reprint the label.
-    shipment.print_label().await;
+    shipment.print_label(&company).await;
     println!("shipment {} reprinted label", shipment.email);
 
     // Update the field.
