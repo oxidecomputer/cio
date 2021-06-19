@@ -103,7 +103,7 @@ impl Company {
 
     /// Authenticate with Airtable.
     pub fn authenticate_airtable(&self, base_id: &str) -> Airtable {
-        Airtable::new(self.airtable_api_key, base_id, self.airtable_enterprise_account_id)
+        Airtable::new(&self.airtable_api_key, base_id, &self.airtable_enterprise_account_id)
     }
 
     /// Authenticate with Ramp.
