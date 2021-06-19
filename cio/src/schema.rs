@@ -270,6 +270,7 @@ table! {
         airtable_base_id_shipments -> Varchar,
         airtable_base_id_finance -> Varchar,
         airtable_base_id_swag -> Varchar,
+        airtable_base_id_cio -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

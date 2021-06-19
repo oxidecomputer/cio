@@ -75,6 +75,8 @@ pub struct NewCompany {
     pub airtable_base_id_finance: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub airtable_base_id_swag: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_cio: String,
 }
 
 /// Implement updating the Airtable record for a Company.
