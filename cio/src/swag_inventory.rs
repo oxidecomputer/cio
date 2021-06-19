@@ -1,5 +1,3 @@
-use std::env;
-
 use async_trait::async_trait;
 use barcoders::generators::image::*;
 use barcoders::generators::svg::*;
@@ -339,13 +337,12 @@ pub struct PrintLabelsRequest {
 
 impl SwagInventoryItem {
     /// Send the label to our printer.
-    pub async fn print_label(&self) {
+    pub async fn print_label(&self, company: &Company) {
         if self.barcode_pdf_label.trim().is_empty() {
             // Return early.
             return;
         }
-        let mut printer_url = env::var("PRINTER_URL").unwrap().trim_end_matches('/').to_string();
-        printer_url = format!("{}/zebra", printer_url);
+        let printer_url = format!("{}/zebra", company.printer_url);
         let client = reqwest::Client::new();
         let resp = client
             .post(&printer_url)

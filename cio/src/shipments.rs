@@ -1,6 +1,5 @@
 #![allow(clippy::from_over_into)]
 use std::convert::From;
-use std::env;
 
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
@@ -590,13 +589,12 @@ impl OutboundShipment {
     }
 
     /// Send the label to our printer.
-    pub async fn print_label(&self) {
+    pub async fn print_label(&self, company: &Company) {
         if self.label_link.trim().is_empty() {
             // Return early.
             return;
         }
-        let mut printer_url = env::var("PRINTER_URL").unwrap().trim_end_matches('/').to_string();
-        printer_url = format!("{}/rollo", printer_url);
+        let printer_url = format!("{}/rollo", company.printer_url);
         let client = reqwest::Client::new();
         let resp = client.post(&printer_url).body(json!(self.label_link).to_string()).send().await.unwrap();
         match resp.status() {
@@ -987,7 +985,7 @@ xoxo,
                 });
 
                 // Print the label.
-                self.print_label().await;
+                self.print_label(&company).await;
                 self.status = "Label printed".to_string();
 
                 // Send an email to us that we need to package the shipment.
