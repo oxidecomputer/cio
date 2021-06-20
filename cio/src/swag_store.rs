@@ -32,6 +32,9 @@ pub struct Order {
     pub notes: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub items: Vec<OrderItem>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
 }
 
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -57,13 +60,10 @@ impl Order {
     }
 
     pub async fn create_shipment_for_order(&self, db: &Database) {
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+        let company = Company::get_by_id(db, self.cio_company_id);
 
         // Convert the shipment to an order.
         let mut shipment: NewOutboundShipment = self.clone().into();
-        shipment.cio_company_id = oxide.id;
 
         // Add the shipment to the database.
         let mut new_shipment = shipment.upsert(db).await;
@@ -154,7 +154,7 @@ impl From<Order> for NewOutboundShipment {
             geocode_cache: Default::default(),
             local_pickup: false,
             link_to_package_pickup: Default::default(),
-            cio_company_id: Default::default(),
+            cio_company_id: order.cio_company_id,
         }
     }
 }
