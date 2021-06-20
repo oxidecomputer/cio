@@ -92,7 +92,7 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 
 /// Sync software vendors from Airtable.
 pub async fn refresh_software_vendors(db: &Database, company: &Company) {
-    let token = oxide.authenticate_google(&db).await;
+    let token = company.authenticate_google(&db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     let github = company.authenticate_github();
@@ -103,7 +103,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SoftwareVendor>> = company
-        .authenticate_airtable(&oxide.airtable_base_id_finance)
+        .authenticate_airtable(&company.airtable_base_id_finance)
         .list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![])
         .await
         .unwrap();
@@ -115,7 +115,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
         if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
-            let org = github.org(&oxide.github_org).get().await.unwrap();
+            let org = github.org(&company.github_org).get().await.unwrap();
             vendor.users = org.plan.filled_seats;
         }
 
@@ -144,7 +144,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         // Airtable, Brex, Gusto, Expensify are all the same number of users as
         // in all@.
         if vendor.name == "Airtable" || vendor.name == "Ramp" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
-            let group = Group::get_from_db(&db, oxide.id, "all".to_string()).unwrap();
+            let group = Group::get_from_db(&db, company.id, "all".to_string()).unwrap();
             let airtable_group = group.get_existing_airtable_record(&db).await.unwrap();
             vendor.users = airtable_group.fields.members.len() as i32;
         }
