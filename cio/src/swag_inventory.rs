@@ -342,7 +342,7 @@ impl SwagInventoryItem {
             return;
         }
 
-        let company = Company::get_by_id(db, self.cio_company_id);
+        let company = self.company(db);
 
         if company.printer_url.is_empty() {
             // Return early.

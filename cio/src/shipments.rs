@@ -271,7 +271,7 @@ impl From<User> for NewOutboundShipment {
     fn from(user: User) -> Self {
         let db = Database::new();
 
-        let company = Company::get_by_id(&db, user.cio_company_id);
+        let company = user.company(&db);
 
         NewOutboundShipment {
             created_time: Utc::now(),
@@ -595,7 +595,7 @@ impl OutboundShipment {
             return;
         }
 
-        let company = Company::get_by_id(db, self.cio_company_id);
+        let company = self.company(db);
 
         if company.printer_url.is_empty() {
             // Return early.
@@ -750,7 +750,7 @@ xoxo,
 
     /// Create or get a shipment in shippo that matches this shipment.
     pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) {
-        let company = Company::get_by_id(db, self.cio_company_id);
+        let company = self.company(db);
 
         // Update the formatted address.
         self.populate_formatted_address();

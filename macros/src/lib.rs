@@ -188,6 +188,9 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         /// Get the company object for a record.
+        pub fn company(&self, db: &crate::db::Database) -> crate::companies::Company {
+            crate::companies::Company::get_by_id(db, self.cio_company_id)
+        }
 
         /// Get the row in our airtable workspace.
         pub async fn get_from_airtable(id: &str, db: &crate::db::Database, cio_company_id: i32) -> Self {

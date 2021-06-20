@@ -74,8 +74,7 @@ impl Order {
 
         // Send an email to the person that we recieved their order and what they are
         // getting.
-        let company = Company::get_by_id(db, new_shipment.cio_company_id);
-        new_shipment.send_email_to_recipient_pre_shipping(&company).await;
+        new_shipment.send_email_to_recipient_pre_shipping(&oxide).await;
     }
 
     pub async fn subtract_order_from_inventory(&self, db: &Database) {
