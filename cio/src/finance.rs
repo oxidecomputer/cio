@@ -908,6 +908,8 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
             }
         }
 
+        record.cio_company_id = company.id;
+
         // Let's add the record to our database.
         record.upsert(&db).await;
     }
