@@ -91,24 +91,18 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 }
 
 /// Sync software vendors from Airtable.
-pub async fn refresh_software_vendors() {
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_software_vendors(db: &Database, company: &Company) {
     let token = oxide.authenticate_google(&db).await;
-    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
-    let github = oxide.authenticate_github();
+    let github = company.authenticate_github();
 
-    let okta = Okta::new(env::var("OKTA_API_TOKEN").unwrap(), &oxide.okta_domain);
+    let okta = Okta::new(env::var("OKTA_API_TOKEN").unwrap(), &company.okta_domain);
 
     let slack = slack_chat_api::Slack::new_from_env();
 
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SoftwareVendor>> = oxide
+    let results: Vec<airtable_api::Record<SoftwareVendor>> = company
         .authenticate_airtable(&oxide.airtable_base_id_finance)
         .list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![])
         .await
@@ -117,7 +111,7 @@ pub async fn refresh_software_vendors() {
         let mut vendor: NewSoftwareVendor = vendor_record.fields.into();
 
         // Set the company id.
-        vendor.cio_company_id = oxide.id;
+        vendor.cio_company_id = company.id;
 
         if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
@@ -168,7 +162,7 @@ pub async fn refresh_software_vendors() {
         db_vendor.update(&db).await;
     }
 
-    SoftwareVendors::get_from_db(&db, oxide.id).update_airtable(&db).await
+    SoftwareVendors::get_from_db(&db, company.id).update_airtable(&db).await
 }
 
 #[db {
@@ -232,16 +226,9 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
     async fn update_airtable_record(&mut self, _record: CreditCardTransaction) {}
 }
 
-pub async fn refresh_ramp_transactions() {
-    // Initialize the database.
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
     // Create the Ramp client.
-    let ramp = oxide.authenticate_ramp(&db).await;
+    let ramp = company.authenticate_ramp(&db).await;
 
     // List all our users.
     let users = ramp.list_users().await.unwrap();
@@ -289,13 +276,13 @@ pub async fn refresh_ramp_transactions() {
             time: transaction.user_transaction_time,
             memo: String::new(),
             link_to_vendor,
-            cio_company_id: oxide.id,
+            cio_company_id: company.id,
         };
 
         nt.upsert(&db).await;
     }
 
-    CreditCardTransactions::get_from_db(&db, oxide.id).update_airtable(&db).await;
+    CreditCardTransactions::get_from_db(&db, company.id).update_airtable(&db).await;
 }
 
 // Changes the vendor name to one that matches our existing list.
@@ -533,14 +520,7 @@ fn clean_vendor_name(s: &str) -> String {
 
 /// Read the Brex transactions from a csv.
 /// We don't run this except locally.
-pub async fn refresh_brex_transactions() {
-    // Initialize the database.
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
     let mut path = env::current_dir().unwrap();
     path.push("brex.csv");
 
@@ -571,12 +551,12 @@ pub async fn refresh_brex_transactions() {
 
         // Try to get the user by their last name.
         match users::dsl::users
-            .filter(users::dsl::last_name.eq(last_name.to_string()).and(users::dsl::cio_company_id.eq(oxide.id)))
+            .filter(users::dsl::last_name.eq(last_name.to_string()).and(users::dsl::cio_company_id.eq(company.id)))
             .first::<User>(&db.conn())
         {
             Ok(user) => {
                 // Set the user's email.
-                record.employee_email = user.email(&oxide);
+                record.employee_email = user.email(company);
             }
             Err(e) => {
                 if last_name == "Volpe" {
@@ -607,6 +587,8 @@ pub async fn refresh_brex_transactions() {
                 println!("could not find vendor that matches {}", vendor);
             }
         }
+
+        record.cio_company_id = company.id;
 
         // Let's add the record to our database.
         record.upsert(&db).await;
@@ -686,16 +668,10 @@ pub mod bill_com_date_format {
 }
 
 /// Sync accounts payable.
-pub async fn refresh_accounts_payable() {
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<AccountsPayable>> = oxide
-        .authenticate_airtable(&oxide.airtable_base_id_finance)
+    let results: Vec<airtable_api::Record<AccountsPayable>> = company
+        .authenticate_airtable(&company.airtable_base_id_finance)
         .list_records(&AccountsPayable::airtable_table(), "Grid view", vec![])
         .await
         .unwrap();
@@ -716,7 +692,7 @@ pub async fn refresh_accounts_payable() {
         // Upsert the record in our database.
         let mut db_bill = bill.upsert_in_db(&db);
 
-        db_bill.cio_company_id = oxide.id;
+        db_bill.cio_company_id = company.id;
 
         if db_bill.airtable_record_id.is_empty() {
             db_bill.airtable_record_id = bill_record.id;
@@ -725,7 +701,7 @@ pub async fn refresh_accounts_payable() {
         db_bill.update(&db).await;
     }
 
-    AccountsPayables::get_from_db(&db, oxide.id).update_airtable(&db).await;
+    AccountsPayables::get_from_db(&db, company.id).update_airtable(&db).await;
 }
 
 #[db {
@@ -791,15 +767,8 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
-pub async fn refresh_expensify_transactions() {
-    // Initialize the database.
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    ExpensedItems::get_from_db(&db, oxide.id).update_airtable(&db).await;
+pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
+    ExpensedItems::get_from_db(&db, company.id).update_airtable(&db).await;
 
     let mut path = env::current_dir().unwrap();
     path.push("expensify.csv");
@@ -817,6 +786,7 @@ pub async fn refresh_expensify_transactions() {
         let mut record: NewExpensedItem = result.unwrap();
         record.expenses_vendor = "Expensify".to_string();
         record.state = "CLEARED".to_string();
+        record.cio_company_id = company.id;
 
         // Parse the user's last name.
         // We stored it in the merchant ID as a hack.
@@ -832,12 +802,12 @@ pub async fn refresh_expensify_transactions() {
         // Try to get the user by their last name.
         match users::dsl::users
             .filter(users::dsl::last_name.eq(last_name.to_string()).or(users::dsl::username.eq(last_name.to_string())))
-            .filter(users::dsl::cio_company_id.eq(oxide.id))
+            .filter(users::dsl::cio_company_id.eq(company.id))
             .first::<User>(&db.conn())
         {
             Ok(user) => {
                 // Set the user's email.
-                record.employee_email = user.email(&oxide);
+                record.employee_email = user.email(&company);
             }
             Err(e) => {
                 if last_name == "Volpe" || last_name == "jared" {
@@ -898,10 +868,7 @@ pub async fn refresh_expensify_transactions() {
 
 /// Read the Bill.com payments from a csv.
 /// We don't run this except locally.
-pub async fn refresh_bill_com_transactions() {
-    // Initialize the database.
-    let db = Database::new();
-
+pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
     let mut path = env::current_dir().unwrap();
     path.push("bill.com.csv");
 
@@ -946,16 +913,9 @@ pub async fn refresh_bill_com_transactions() {
     }
 }
 
-pub async fn sync_quickbooks() {
-    // Initialize the database.
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn sync_quickbooks(db: &Database, company: &Company) {
     // Authenticate QuickBooks.
-    let qb = oxide.authenticate_quickbooks(&db).await;
+    let qb = company.authenticate_quickbooks(&db).await;
 
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {
@@ -995,6 +955,7 @@ pub async fn sync_quickbooks() {
                         }
                     }
                 }
+                transaction.cio_company_id = company.id;
 
                 transaction.update(&db).await;
                 continue;
@@ -1104,6 +1065,8 @@ fn clean_merchant_name(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
+    use crate::db::Database;
     use crate::finance::{
         refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_transactions, refresh_software_vendors, sync_quickbooks,
     };
@@ -1111,34 +1074,64 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_quickbooks() {
-        sync_quickbooks().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        sync_quickbooks(&db, &oxide).await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_bill_com() {
-        refresh_bill_com_transactions().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_bill_com_transactions(&db, &oxide).await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_expensify() {
-        refresh_expensify_transactions().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_expensify_transactions(&db, &oxide).await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_brex() {
-        refresh_brex_transactions().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_brex_transactions(&db, &oxide).await;
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance() {
-        refresh_software_vendors().await;
+        let db = Database::new();
 
-        refresh_accounts_payable().await;
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_ramp_transactions().await;
+        refresh_software_vendors(&db, &oxide).await;
+
+        refresh_accounts_payable(&db, &oxide).await;
+
+        refresh_ramp_transactions(&db, &oxide).await;
     }
 }
