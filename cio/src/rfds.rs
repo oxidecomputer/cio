@@ -201,28 +201,27 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
 }
 
 // Sync the rfds with our database.
-pub async fn refresh_db_rfds(db: &Database, github: &Github) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+pub async fn refresh_db_rfds(db: &Database, company: &Company) {
+    // Authenticate GitHub.
+    let github = company.authenticate_github();
 
     // Get gsuite token.
-    let token = oxide.authenticate_google(db).await;
+    let token = company.authenticate_google(db).await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
 
-    let rfds = get_rfds_from_repo(github, &oxide).await;
+    let rfds = get_rfds_from_repo(&github, &company).await;
 
     // Sync rfds.
     for (_, rfd) in rfds {
         let mut new_rfd = rfd.upsert(db).await;
 
         // Expand the fields in the RFD.
-        new_rfd.expand(github, &oxide).await;
+        new_rfd.expand(&github, &company).await;
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(github, &drive_client, &oxide).await;
+        new_rfd.convert_and_upload_pdf(&github, &drive_client, &company).await;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
@@ -231,24 +230,20 @@ pub async fn refresh_db_rfds(db: &Database, github: &Github) {
 }
 
 /// Create a changelog email for the RFDs.
-pub async fn send_rfd_changelog() {
+pub async fn send_rfd_changelog(company: &Company) {
     // Initialize our database.
     let db = Database::new();
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github();
+    let github = company.authenticate_github();
     let seven_days_ago = Utc::now() - Duration::days(7);
     let week_format = format!("from {} to {}", seven_days_ago.format("%m-%d-%Y"), Utc::now().format("%m-%d-%Y"));
 
     let mut changelog = format!("Changes to RFDs for the week {}:\n", week_format);
 
     // Iterate over the RFDs.
-    let rfds = RFDs::get_from_db(&db, oxide.id);
+    let rfds = RFDs::get_from_db(&db, company.id);
     for rfd in rfds {
-        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, &oxide).await;
+        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, &company).await;
         if !changes.is_empty() {
             changelog += &format!("\n{} {}\n{}", rfd.name, rfd.short_link, changes);
         }
@@ -262,10 +257,10 @@ pub async fn send_rfd_changelog() {
         .send_mail(
             format!("RFD changelog for the week from {}", week_format),
             changelog,
-            vec![format!("all@{}", oxide.gsuite_domain)],
+            vec![format!("all@{}", company.gsuite_domain)],
             vec![],
             vec![],
-            format!("rfds@{}", oxide.gsuite_domain),
+            format!("rfds@{}", company.gsuite_domain),
         )
         .await;
 }
@@ -287,8 +282,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        let github = oxide.authenticate_github();
-        refresh_db_rfds(&db, &github).await;
+        refresh_db_rfds(&db, &oxide).await;
 
         // Update rfds in airtable.
         RFDs::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
@@ -297,7 +291,14 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_monday_cron_rfds_changelog() {
-        send_rfd_changelog().await;
+        // Initialize our database.
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        send_rfd_changelog(&oxide).await;
     }
 
     #[test]
