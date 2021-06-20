@@ -98,7 +98,7 @@ impl UpdateAirtableRecord<Company> for Company {
 impl Company {
     pub fn get_from_github_org(db: &Database, org: &str) -> Self {
         companys::dsl::companys
-            .filter(companys::dsl::github_org.eq(org.to_string()))
+            .filter(companys::dsl::github_org.eq(org.to_string()).or(companys::dsl::github_org.eq(org.to_lowercase())))
             .first::<Company>(&db.conn())
             .unwrap_or_else(|e| panic!("could not find company matching github org {}: {}", org, e))
     }
