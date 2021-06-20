@@ -30,7 +30,7 @@ pub async fn sync_changes_to_google_events() {
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
         // Initialize the Airtable client.
-        let airtable = Airtable::new(airtable_api::api_key_from_env(), huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
@@ -138,7 +138,7 @@ pub async fn send_huddle_reminders() {
         let mut email_data: MeetingReminderEmailData = Default::default();
 
         // Initialize the Airtable client.
-        let airtable = Airtable::new(airtable_api::api_key_from_env(), huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
@@ -329,7 +329,7 @@ pub async fn sync_huddle_meeting_notes() {
     // Iterate over the huddle meetings.
     for (name, huddle) in configs.huddles {
         // Initialize the Airtable client.
-        let airtable = Airtable::new(airtable_api::api_key_from_env(), huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
@@ -443,7 +443,7 @@ pub async fn sync_huddles() {
         println!("found {} events for {}", gcal_events.len(), huddle.calendar_event_fuzzy_search);
 
         // Now let's get the Airtable records.
-        let airtable = Airtable::new(airtable_api::api_key_from_env(), huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
 
         // Iterate over the records and try to match to the google calendar ID.
