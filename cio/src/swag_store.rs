@@ -60,10 +60,8 @@ impl Order {
     }
 
     pub async fn create_shipment_for_order(&self, db: &Database) {
-        let company = Company::get_by_id(db, self.cio_company_id);
-
         // Convert the shipment to an order.
-        let mut shipment: NewOutboundShipment = self.clone().into();
+        let shipment: NewOutboundShipment = self.clone().into();
 
         // Add the shipment to the database.
         let mut new_shipment = shipment.upsert(db).await;
