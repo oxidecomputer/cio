@@ -226,7 +226,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// We do this in it's own function so our other functions are more DRY.
         fn airtable(&self, db: &crate::db::Database) -> airtable_api::Airtable {
             // Get the company for the company_id.
-            let company = crate::companies::Company::get_by_id(db, self.cio_company_id);
+            let company = self.company(db);
             company.authenticate_airtable(&company.#airtable_base)
         }
 
