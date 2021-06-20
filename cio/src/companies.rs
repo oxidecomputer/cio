@@ -100,7 +100,7 @@ impl Company {
         companys::dsl::companys
             .filter(companys::dsl::github_org.eq(org.to_string()))
             .first::<Company>(&db.conn())
-            .expect(&format!("could not find company matching github org {}", org))
+            .unwrap_or_else(|e| panic!("could not find company matching github org {}: {}", org, e))
     }
 
     pub fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Self {
