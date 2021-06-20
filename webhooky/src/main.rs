@@ -612,7 +612,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
         .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
         .await
         .unwrap();
-    new_applicant.create_github_onboarding_issue(db, &oxide, &github, &configs_issues).await;
+    new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
 
     println!("applicant {} updated successfully", new_applicant.email);
     sentry::end_session();
@@ -735,7 +735,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
     let sent_email_follow_up_index = event.event.range.column_end + 6;
     applicant
         .expand(
-            &oxide,
+            db,
             &drive,
             &sheets,
             sent_email_received_column_index.try_into().unwrap(),
@@ -751,7 +751,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
         post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
         // Send a company-wide email.
-        applicant.send_email_internally(&oxide).await;
+        applicant.send_email_internally(db).await;
 
         applicant.sent_email_received = true;
     }
@@ -860,9 +860,8 @@ async fn listen_airtable_applicants_request_background_check_webhooks(rqctx: Arc
     // Get the row from airtable.
     let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
     if applicant.criminal_background_check_status.is_empty() {
-        let company = Company::get_by_id(&api_context.db, event.cio_company_id);
         // Request the background check, since we previously have not requested one.
-        applicant.send_background_check_invitation(&api_context.db, &company).await;
+        applicant.send_background_check_invitation(&api_context.db).await;
         println!("sent background check invitation to applicant: {}", applicant.email);
     }
 
@@ -990,10 +989,8 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     // Get the row from airtable.
     let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
-    let company = Company::get_by_id(&api_context.db, shipment.cio_company_id);
-
     // Resend the email to the recipient.
-    shipment.send_email_to_recipient(&company).await;
+    shipment.send_email_to_recipient(&api_context.db).await;
     println!("resent the shipment email to the recipient {}", shipment.email);
 
     sentry::end_session();
@@ -1777,7 +1774,7 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
 
             // Create our docusign client.
             let ds = company.authenticate_docusign(db).await;
-            applicant.update_applicant_from_docusign_envelope(db, &ds, event, &company).await;
+            applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
         }
         Err(e) => {
             sentry::capture_message(
