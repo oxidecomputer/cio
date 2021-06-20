@@ -200,6 +200,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
     airtable_base = "misc",
     airtable_table = "AIRTABLE_CERTIFICATES_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "domain" = "String",
     },
 }]

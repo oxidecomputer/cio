@@ -1640,7 +1640,7 @@ Notes:
         // Let's check the user's database to see if we can give this person the
         // {first_name}@ email.
         let mut username = first_name.to_lowercase().to_string();
-        let existing_user = User::get_from_db(db, username.to_string());
+        let existing_user = User::get_from_db(db, company.id, username.to_string());
         if existing_user.is_some() {
             username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
         }
@@ -1660,8 +1660,7 @@ Twitter: [TWITTER HANDLE]
 GitHub: {}
 Phone: {}
 Location: {}
-cc @jessfraz @sdtuck @bcantrill
-
+cc @jessfraz
 
 ```
 [users.{}]
@@ -2310,7 +2309,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                 let scorers_completed_string = row[columns.scorers_completed].to_string();
                 let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
                 for s in scorers_completed_str {
-                    match User::get_from_db(db, s.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
+                    match User::get_from_db(db, oxide.id, s.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
                         Some(user) => {
                             scorers_completed.push(user.email(&oxide));
                         }
@@ -2684,7 +2683,7 @@ pub async fn update_applicant_reviewers(db: &Database) {
         let no = row[5].parse::<i32>().unwrap_or(0);
         let not_applicable = row[6].parse::<i32>().unwrap_or(0);
 
-        match User::get_from_db(db, email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
+        match User::get_from_db(db, oxide.id, email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
             Some(user) => {
                 let reviewer = NewApplicantReviewer {
                     name: user.full_name(),

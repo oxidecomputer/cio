@@ -85,6 +85,7 @@ impl Config {
     airtable_base = "directory",
     airtable_table = "AIRTABLE_EMPLOYEES_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "username" = "String",
     },
 }]
@@ -306,7 +307,7 @@ impl UserConfig {
         if !self.building.is_empty() {
             // The user has an actual building for their work address.
             // Let's get it.
-            let building = Building::get_from_db(db, self.building.to_string()).unwrap();
+            let building = Building::get_from_db(db, self.cio_company_id, self.building.to_string()).unwrap();
             // Now let's set their address to the building's address.
             self.work_address_street_1 = building.street_address.to_string();
             self.work_address_street_2 = "".to_string();
@@ -692,6 +693,7 @@ impl UpdateAirtableRecord<User> for User {
     airtable_base = "directory",
     airtable_table = "AIRTABLE_GROUPS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "name" = "String",
     },
 }]
@@ -850,6 +852,7 @@ impl UpdateAirtableRecord<Group> for Group {
     airtable_base = "directory",
     airtable_table = "AIRTABLE_BUILDINGS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "name" = "String",
     },
 }]
@@ -915,6 +918,7 @@ impl UpdateAirtableRecord<Building> for Building {
     airtable_base = "directory",
     airtable_table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "name" = "String",
     },
 }]
@@ -968,6 +972,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
     airtable_base = "directory",
     airtable_table = "AIRTABLE_LINKS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "name" = "String",
     },
 }]
@@ -1134,7 +1139,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     // Sync users.
     for (_, mut user) in users {
         // Check if we already have the new user in the database.
-        let existing = User::get_from_db(db, user.username.to_string());
+        let existing = User::get_from_db(db, company.id, user.username.to_string());
 
         // Update or create the user in the database.
         if let Some(e) = existing.clone() {

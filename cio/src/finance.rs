@@ -150,7 +150,7 @@ pub async fn refresh_software_vendors() {
         // Airtable, Brex, Gusto, Expensify are all the same number of users as
         // in all@.
         if vendor.name == "Airtable" || vendor.name == "Ramp" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
-            let group = Group::get_from_db(&db, "all".to_string()).unwrap();
+            let group = Group::get_from_db(&db, oxide.id, "all".to_string()).unwrap();
             let airtable_group = group.get_existing_airtable_record(&db).await.unwrap();
             vendor.users = airtable_group.fields.members.len() as i32;
         }
