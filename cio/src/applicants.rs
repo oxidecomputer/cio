@@ -2897,7 +2897,9 @@ impl Applicant {
 
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
-        let result = users::dsl::users.filter(users::dsl::recovery_email.eq(self.email.to_string())).first::<User>(&db.conn());
+        let result = users::dsl::users
+            .filter(users::dsl::recovery_email.eq(self.email.to_string()).and(users::dsl::cio_company_id.eq(oxide.id)))
+            .first::<User>(&db.conn());
         if result.is_ok() {
             let mut employee = result.unwrap();
             // Only do this if we don't have the employee's home address or start date.

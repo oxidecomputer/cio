@@ -570,7 +570,10 @@ pub async fn refresh_brex_transactions() {
         record.merchant_id = "".to_string();
 
         // Try to get the user by their last name.
-        match users::dsl::users.filter(users::dsl::last_name.eq(last_name.to_string())).first::<User>(&db.conn()) {
+        match users::dsl::users
+            .filter(users::dsl::last_name.eq(last_name.to_string()).and(users::dsl::cio_company_id.eq(oxide.id)))
+            .first::<User>(&db.conn())
+        {
             Ok(user) => {
                 // Set the user's email.
                 record.employee_email = user.email(&oxide);
@@ -829,6 +832,7 @@ pub async fn refresh_expensify_transactions() {
         // Try to get the user by their last name.
         match users::dsl::users
             .filter(users::dsl::last_name.eq(last_name.to_string()).or(users::dsl::username.eq(last_name.to_string())))
+            .filter(users::dsl::cio_company_id.eq(oxide.id))
             .first::<User>(&db.conn())
         {
             Ok(user) => {

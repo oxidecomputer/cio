@@ -138,7 +138,11 @@ pub async fn refresh_interviews(db: &Database) {
                     // If the email is not their oxide computer email, let's firgure it out based
                     // on the information from their user.
                     if !email.ends_with(&oxide.gsuite_domain) && !email.ends_with(&oxide.domain) {
-                        match users::dsl::users.filter(users::dsl::recovery_email.eq(email.to_string())).limit(1).load::<User>(&db.conn()) {
+                        match users::dsl::users
+                            .filter(users::dsl::recovery_email.eq(email.to_string()).and(users::dsl::cio_company_id.eq(oxide.id)))
+                            .limit(1)
+                            .load::<User>(&db.conn())
+                        {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
@@ -153,8 +157,8 @@ pub async fn refresh_interviews(db: &Database) {
                         let username = email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches(&oxide.domain).trim_end_matches('@').trim().to_string();
                         // Find the real user.
                         match users::dsl::users
-                            .filter(users::dsl::username.eq(username.to_string()))
-                            .or_filter(users::dsl::aliases.contains(vec![username.to_string()]))
+                            .filter(users::dsl::username.eq(username.to_string()).or(users::dsl::aliases.contains(vec![username.to_string()])))
+                            .filter(users::dsl::cio_company_id.eq(oxide.id))
                             .limit(1)
                             .load::<User>(&db.conn())
                         {
@@ -277,8 +281,8 @@ pub async fn compile_packets(db: &Database) {
                 .trim()
                 .to_string();
             if let Ok(user) = users::dsl::users
-                .filter(users::dsl::username.eq(username.to_string()))
-                .or_filter(users::dsl::aliases.contains(vec![username.to_string()]))
+                .filter(users::dsl::username.eq(username.to_string()).or(users::dsl::aliases.contains(vec![username.to_string()])))
+                .filter(users::dsl::cio_company_id.eq(oxide.id))
                 .first::<User>(&db.conn())
             {
                 existing.push((
