@@ -285,7 +285,7 @@ mod tests {
         refresh_db_rfds(&db, &oxide).await;
 
         // Update rfds in airtable.
-        RFDs::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        RFDs::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 
     #[ignore]

@@ -103,6 +103,6 @@ mod tests {
         // TODO: update this.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        APITokens::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        APITokens::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 }

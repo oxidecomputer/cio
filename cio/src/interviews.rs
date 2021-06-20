@@ -673,7 +673,7 @@ mod tests {
         let db = Database::new();
         // Get the company id for Oxide.
         // TODO: split this out per company.
-        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
         refresh_interviews(&db, &oxide).await;
         compile_packets(&db, &oxide).await;
     }

@@ -288,6 +288,6 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_db_mailing_list_subscribers(&db, &oxide).await;
-        MailingListSubscribers::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        MailingListSubscribers::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 }

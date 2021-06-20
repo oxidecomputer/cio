@@ -92,6 +92,6 @@ mod tests {
         // TODO: iterate over all the companies.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        PageViews::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        PageViews::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 }
