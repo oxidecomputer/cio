@@ -336,11 +336,19 @@ pub struct PrintLabelsRequest {
 
 impl SwagInventoryItem {
     /// Send the label to our printer.
-    pub async fn print_label(&self, company: &Company) {
+    pub async fn print_label(&self, db: &Database) {
         if self.barcode_pdf_label.trim().is_empty() {
             // Return early.
             return;
         }
+
+        let company = Company::get_by_id(db, self.cio_company_id);
+
+        if company.printer_url.is_empty() {
+            // Return early.
+            return;
+        }
+
         let printer_url = format!("{}/zebra", company.printer_url);
         let client = reqwest::Client::new();
         let resp = client

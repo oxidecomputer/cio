@@ -589,11 +589,19 @@ impl OutboundShipment {
     }
 
     /// Send the label to our printer.
-    pub async fn print_label(&self, company: &Company) {
+    pub async fn print_label(&self, db: &Database) {
         if self.label_link.trim().is_empty() {
             // Return early.
             return;
         }
+
+        let company = Company::get_by_id(db, self.cio_company_id);
+
+        if company.printer_url.is_empty() {
+            // Return early.
+            return;
+        }
+
         let printer_url = format!("{}/rollo", company.printer_url);
         let client = reqwest::Client::new();
         let resp = client.post(&printer_url).body(json!(self.label_link).to_string()).send().await.unwrap();
@@ -985,7 +993,7 @@ xoxo,
                 });
 
                 // Print the label.
-                self.print_label(&company).await;
+                self.print_label(db).await;
                 self.status = "Label printed".to_string();
 
                 // Send an email to us that we need to package the shipment.
