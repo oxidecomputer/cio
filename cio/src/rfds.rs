@@ -36,6 +36,7 @@ pub async fn get_rfds_from_repo(github: &Github, company: &Company) -> BTreeMap<
         // TODO: this whole thing is a mess jessfraz needs to cleanup
         rfd.number_string = NewRFD::generate_number_string(rfd.number);
         rfd.name = NewRFD::generate_name(rfd.number, &rfd.title);
+        rfd.cio_company_id = company.id;
 
         // Add this to our BTreeMap.
         rfds.insert(rfd.number, rfd);
