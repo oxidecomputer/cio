@@ -1496,6 +1496,8 @@ async fn listen_auth_mailchimp_callback(rqctx: Arc<RequestContext<Context>>, que
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
+        // Format the endpoint with the dc.
+        // https://${server}.api.mailchimp.com
         endpoint: "".to_string(),
         cio_company_id: Default::default(),
     };

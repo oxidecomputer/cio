@@ -176,12 +176,14 @@ impl MailChimp {
         let req = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).form(&params);
         println!("mailchimp req {:?}", req);
         let resp = req.send().await.unwrap();
+        println!("mailchimp resp {}", resp.text().await.unwrap(),);
 
         // Unwrap the response.
-        let t: AccessToken = resp.json().await.unwrap();
+        /*let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();
+        self.refresh_token = t.refresh_token.to_string();*/
+        let t: AccessToken = Default::default();
 
         Ok(t)
     }
@@ -495,6 +497,12 @@ pub struct WebhookGrouping {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<String>,
+}
+
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct Metadata {
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub dc: String,
 }
 
 /// The data type for the response to Mailchimp's API for listing members
