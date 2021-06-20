@@ -625,7 +625,9 @@ impl OutboundShipment {
 
     /// Send an email to the recipient with their order information.
     /// This should happen before they get the email that it has been shipped.
-    pub async fn send_email_to_recipient_pre_shipping(&self, company: &Company) {
+    pub async fn send_email_to_recipient_pre_shipping(&self, db: &Database) {
+        let company = self.company(db);
+
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -662,7 +664,8 @@ xoxo,
     }
 
     /// Send an email to the recipient with their tracking code and information.
-    pub async fn send_email_to_recipient(&self, company: &Company) {
+    pub async fn send_email_to_recipient(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -701,7 +704,8 @@ xoxo,
     }
 
     /// Send an email internally that we need to package the shipment.
-    pub async fn send_email_internally(&self, company: &Company) {
+    pub async fn send_email_internally(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -816,7 +820,7 @@ xoxo,
                 if self.status != *"Shipped" {
                     // Send an email to the recipient with their tracking link.
                     // Wait until it is in transit to do this.
-                    self.send_email_to_recipient(&company).await;
+                    self.send_email_to_recipient(db).await;
                     // We make sure it only does this one time.
                     // Set the shipped date as this first date.
                     self.shipped_time = tracking_status.status_date;
@@ -997,7 +1001,7 @@ xoxo,
                 self.status = "Label printed".to_string();
 
                 // Send an email to us that we need to package the shipment.
-                self.send_email_internally(&company).await;
+                self.send_email_internally(db).await;
 
                 break;
             }

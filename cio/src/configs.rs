@@ -480,7 +480,9 @@ impl User {
     }
 
     /// Send an email to the new consultant about their account.
-    async fn send_email_new_consultant(&self, company: &Company) {
+    async fn send_email_new_consultant(&self, db: &Database) {
+        let company = self.company(db);
+
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 
@@ -490,7 +492,7 @@ impl User {
         // Send the message.
         sendgrid
             .send_mail(
-                format!("Your New Email Account: {}", self.email(company)),
+                format!("Your New Email Account: {}", self.email(&company)),
                 format!(
                     "Yoyoyo {},
 
@@ -519,12 +521,12 @@ xoxo,
                     self.first_name,
                     company.domain,
                     company.domain,
-                    self.email(company),
+                    self.email(&company),
                     aliases,
                     company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(company), format!("jess@{}", company.gsuite_domain)],
+                vec![self.email(&company), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -532,7 +534,8 @@ xoxo,
     }
 
     /// Send an email to the new user about their account.
-    async fn send_email_new_user(&self, company: &Company) {
+    async fn send_email_new_user(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 
@@ -560,7 +563,7 @@ let jess@{} know what your GitHub handle is.",
         // Send the message.
         sendgrid
             .send_mail(
-                format!("Your New Email Account: {}", self.email(company)),
+                format!("Your New Email Account: {}", self.email(&company)),
                 format!(
                     "Yoyoyo {},
 
@@ -612,7 +615,7 @@ xoxo,
                     self.first_name,
                     company.domain,
                     company.domain,
-                    self.email(company),
+                    self.email(&company),
                     aliases,
                     github_copy,
                     company.gsuite_domain,
@@ -621,7 +624,7 @@ xoxo,
                     company.github_org,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(company), format!("jess@{}", company.gsuite_domain)],
+                vec![self.email(&company), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -1209,9 +1212,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // We should send them an email about setting up their account.
             println!("sending email to new user: {}", new_user.username);
             if new_user.is_consultant() {
-                new_user.send_email_new_consultant(company).await;
+                new_user.send_email_new_consultant(db).await;
             } else {
-                new_user.send_email_new_user(company).await;
+                new_user.send_email_new_user(db).await;
             }
         }
 

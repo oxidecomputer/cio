@@ -74,7 +74,7 @@ impl Order {
 
         // Send an email to the person that we recieved their order and what they are
         // getting.
-        new_shipment.send_email_to_recipient_pre_shipping(&oxide).await;
+        new_shipment.send_email_to_recipient_pre_shipping(db).await;
     }
 
     pub async fn subtract_order_from_inventory(&self, db: &Database) {

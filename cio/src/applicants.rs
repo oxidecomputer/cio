@@ -331,7 +331,8 @@ impl NewApplicant {
     }
 
     /// Send an email to the applicant that we recieved their application.
-    pub async fn send_email_recieved_application_to_applicant(&self, company: &Company) {
+    pub async fn send_email_recieved_application_to_applicant(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -360,7 +361,8 @@ Sincerely,
     }
 
     /// Send an email to the applicant that we love them but they are too junior.
-    pub async fn send_email_rejection_junior_but_we_love_you(&self, company: &Company) {
+    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -396,7 +398,8 @@ The Oxide Team",
     }
 
     /// Send an email to the applicant that they did not provide materials.
-    pub async fn send_email_rejection_did_not_provide_materials(&self, company: &Company) {
+    pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -423,7 +426,8 @@ The Oxide Team",
     }
 
     /// Send an email to the applicant about timing.
-    pub async fn send_email_rejection_timing(&self, company: &Company) {
+    pub async fn send_email_rejection_timing(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -456,7 +460,8 @@ The Oxide Team",
     }
 
     /// Send an email internally that we have a new application.
-    pub async fn send_email_internally(&self, company: &Company) {
+    pub async fn send_email_internally(&self, db: &Database) {
+        let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -1373,7 +1378,8 @@ impl Applicant {
     }
 
     /// Send an invite to the applicant to do a background check.
-    pub async fn send_background_check_invitation(&mut self, db: &Database, company: &Company) {
+    pub async fn send_background_check_invitation(&mut self, db: &Database) {
+        let company = self.company(db);
         let checkr = company.authenticate_checkr();
 
         // Check if we already sent them an invitation.
