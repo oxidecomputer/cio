@@ -78,7 +78,7 @@ pub async fn refresh_db_github_repos(db: &Database, github: &Github, company: &C
     let github_repos = list_all_github_repos(github, company).await;
 
     // Get all the repos.
-    let db_repos = GithubRepos::get_from_db(db);
+    let db_repos = GithubRepos::get_from_db(db, company.id);
 
     // Create a BTreeMap
     let mut repo_map: BTreeMap<String, GithubRepo> = Default::default();

@@ -215,7 +215,7 @@ pub async fn refresh_interviews(db: &Database) {
         }
     }
 
-    ApplicantInterviews::get_from_db(db).update_airtable(db, oxide.id).await;
+    ApplicantInterviews::get_from_db(db, oxide.id).update_airtable(db, oxide.id).await;
 }
 
 /// Compile interview packets for each interviewee.
@@ -240,7 +240,7 @@ pub async fn compile_packets(db: &Database) {
 
     // Iterate over each user we have in gsuite and download their materials
     // locally.
-    let employees = Users::get_from_db(db);
+    let employees = Users::get_from_db(db, oxide.id);
     for employee in employees {
         if employee.is_system_account() {
             continue;
@@ -264,7 +264,7 @@ pub async fn compile_packets(db: &Database) {
         download_materials(&drive_client, &materials_url, &employee.username).await;
     }
 
-    let interviews = ApplicantInterviews::get_from_db(db);
+    let interviews = ApplicantInterviews::get_from_db(db, oxide.id);
 
     // Let's group the interviewers into each interview.
     let mut interviewers: HashMap<String, Vec<(User, DateTime<Tz>, DateTime<Tz>)>> = HashMap::new();

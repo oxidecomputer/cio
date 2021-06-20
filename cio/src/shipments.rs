@@ -1102,11 +1102,15 @@ impl SwagSheetColumns {
 
 // Sync the outbound shipments.
 pub async fn refresh_outbound_shipments(db: &Database) {
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
     // Iterate over all the shipments in the database and update them.
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
     // we do not.
-    let shipments = OutboundShipments::get_from_db(&db);
+    let shipments = OutboundShipments::get_from_db(&db, oxide.id);
     for mut s in shipments {
         if let Some(existing) = s.get_existing_airtable_record(&db).await {
             // Take the field from Airtable.
@@ -1148,7 +1152,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
         shipment.update(&db).await;
     }
 
-    InboundShipments::get_from_db(&db).update_airtable(&db, oxide.id).await;
+    InboundShipments::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
 }
 
 pub fn clean_address_string(s: &str) -> String {

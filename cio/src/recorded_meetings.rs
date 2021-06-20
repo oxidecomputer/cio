@@ -84,7 +84,7 @@ pub async fn refresh_recorded_meetings() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    RecordedMeetings::get_from_db(&db).update_airtable(&db, oxide.id).await;
+    RecordedMeetings::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
 
     let token = oxide.authenticate_google(&db).await;
     let mut gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());

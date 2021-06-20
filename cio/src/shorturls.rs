@@ -9,13 +9,13 @@ use crate::models::{GithubRepos, RFDs};
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
 
 /// Generate the files for the GitHub repository short URLs.
-pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
+pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_company_id: i32) {
     let subdomain = "git";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the github repos from the database.
-    let repos = GithubRepos::get_from_db(db);
+    let repos = GithubRepos::get_from_db(db, cio_company_id);
 
     // Create the array of links.
     for repo in repos {
@@ -38,13 +38,13 @@ pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository) {
 }
 
 /// Generate the files for the RFD short URLs.
-pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository) {
+pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository, cio_company_id: i32) {
     let subdomain = "rfd";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the rfds from the database.
-    let rfds = RFDs::get_from_db(db);
+    let rfds = RFDs::get_from_db(db, cio_company_id);
     for rfd in rfds {
         let mut link = ShortUrl {
             name: rfd.number.to_string(),
@@ -69,13 +69,13 @@ pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository) {
 }
 
 /// Generate the files for the configs links.
-pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Repository) {
+pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Repository, cio_company_id: i32) {
     let subdomain = "corp";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the config.
-    let configs_links = Links::get_from_db(db);
+    let configs_links = Links::get_from_db(db, cio_company_id);
 
     // Create the array of links.
     for link in configs_links {
@@ -179,9 +179,9 @@ pub async fn refresh_shorturls() {
     let github = oxide.authenticate_github();
     let repo = github.repo(&oxide.github_org, "configs");
 
-    generate_shorturls_for_repos(&db, &repo).await;
-    generate_shorturls_for_rfds(&db, &repo).await;
-    generate_shorturls_for_configs_links(&db, &repo).await;
+    generate_shorturls_for_repos(&db, &repo, oxide.id).await;
+    generate_shorturls_for_rfds(&db, &repo, oxide.id).await;
+    generate_shorturls_for_configs_links(&db, &repo, oxide.id).await;
     generate_dns_for_tailscale_devices(&repo, &oxide).await;
 }
 

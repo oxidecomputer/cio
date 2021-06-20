@@ -2249,7 +2249,7 @@ impl ApplicantFormSheetColumns {
 }
 
 pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
-    let users = Users::get_from_db(db);
+    let users = Users::get_from_db(db, company.id);
 
     let mut reviewers: Vec<String> = Default::default();
     for user in users {
@@ -2715,7 +2715,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
     let template_id = get_docusign_template_id(&ds).await;
 
     // TODO: we could actually query the DB by status, but whatever.
-    let applicants = Applicants::get_from_db(db);
+    let applicants = Applicants::get_from_db(db, company.id);
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {

@@ -377,9 +377,10 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     impl #new_struct_name_plural {
         /// Get the current records for this type from the database.
-        pub fn get_from_db(db: &crate::db::Database) -> Self {
+        pub fn get_from_db(db: &crate::db::Database, cio_company_id: i32) -> Self {
             #new_struct_name_plural(
                 crate::schema::#db_schema::dsl::#db_schema
+                    .filter(crate::schema::#db_schema::dsl::cio_company_id.eq(cio_company_id))
                     .order_by(crate::schema::#db_schema::dsl::id.desc())
                     .load::<#new_struct_name>(&db.conn())
                     .unwrap()

@@ -246,7 +246,7 @@ pub async fn send_rfd_changelog() {
     let mut changelog = format!("Changes to RFDs for the week {}:\n", week_format);
 
     // Iterate over the RFDs.
-    let rfds = RFDs::get_from_db(&db);
+    let rfds = RFDs::get_from_db(&db, oxide.id);
     for rfd in rfds {
         let changes = rfd.get_weekly_changelog(&github, seven_days_ago, &oxide).await;
         if !changes.is_empty() {

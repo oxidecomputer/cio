@@ -67,7 +67,8 @@ impl NewPageView {
 
     pub fn set_company_id(&mut self, db: &Database) {
         // Match the company ID with the link.
-        let companies = Companys::get_from_db(db);
+        // All the companies are owned by Oxide.
+        let companies = Companys::get_from_db(db, 1);
         for company in companies {
             if self.domain.ends_with(&company.domain) {
                 self.cio_company_id = company.id;
