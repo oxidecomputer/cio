@@ -3002,7 +3002,7 @@ mod tests {
         refresh_db_applicants(&db, &oxide).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db).update_airtable(&db, oxide.id).await;
+        Applicants::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
 
         // Refresh DocuSign for the applicants.
         refresh_docusign_for_applicants(&db, &oxide).await;

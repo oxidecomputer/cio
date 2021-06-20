@@ -300,6 +300,6 @@ mod tests {
 
         refresh_db_github_repos(&db, &github, &oxide).await;
 
-        GithubRepos::get_from_db(&db).update_airtable(&db, oxide.id).await;
+        GithubRepos::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
     }
 }

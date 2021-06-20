@@ -335,7 +335,7 @@ mod tests {
 
         refresh_db_journal_club_meetings(&db, &github, &oxide).await;
 
-        JournalClubPapers::get_from_db(&db).update_airtable(&db, oxide.id).await;
-        JournalClubMeetings::get_from_db(&db).update_airtable(&db, oxide.id).await;
+        JournalClubPapers::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        JournalClubMeetings::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
     }
 }

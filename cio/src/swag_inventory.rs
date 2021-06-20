@@ -606,6 +606,6 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        BarcodeScans::get_from_db(&db).update_airtable(&db, oxide.id).await;
+        BarcodeScans::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
     }
 }

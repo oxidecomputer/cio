@@ -121,7 +121,7 @@ async fn api_get_auth_users(rqctx: Arc<RequestContext<Context>>) -> Result<HttpR
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(AuthUsers::get_from_db(db).0))
+    Ok(HttpResponseOk(AuthUsers::get_from_db(db, 1).0))
 }
 
 /**
@@ -135,7 +135,7 @@ async fn api_get_applicants(rqctx: Arc<RequestContext<Context>>) -> Result<HttpR
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(Applicants::get_from_db(db).0))
+    Ok(HttpResponseOk(Applicants::get_from_db(db, 1).0))
 }
 
 /**
@@ -149,7 +149,7 @@ async fn api_get_buildings(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(Buildings::get_from_db(db).0))
+    Ok(HttpResponseOk(Buildings::get_from_db(db, 1).0))
 }
 
 /**
@@ -164,7 +164,7 @@ async fn api_get_conference_rooms(rqctx: Arc<RequestContext<Context>>) -> Result
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(ConferenceRooms::get_from_db(db).0))
+    Ok(HttpResponseOk(ConferenceRooms::get_from_db(db, 1).0))
 }
 
 /**
@@ -178,7 +178,7 @@ async fn api_get_github_repos(rqctx: Arc<RequestContext<Context>>) -> Result<Htt
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(GithubRepos::get_from_db(db).0))
+    Ok(HttpResponseOk(GithubRepos::get_from_db(db, 1).0))
 }
 
 /**
@@ -192,7 +192,7 @@ async fn api_get_groups(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespo
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(Groups::get_from_db(db).0))
+    Ok(HttpResponseOk(Groups::get_from_db(db, 1).0))
 }
 
 /**
@@ -206,7 +206,7 @@ async fn api_get_journal_club_meetings(rqctx: Arc<RequestContext<Context>>) -> R
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(JournalClubMeetings::get_from_db(db).0))
+    Ok(HttpResponseOk(JournalClubMeetings::get_from_db(db, 1).0))
 }
 
 /**
@@ -220,7 +220,7 @@ async fn api_get_links(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespon
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(Links::get_from_db(db).0))
+    Ok(HttpResponseOk(Links::get_from_db(db, 1).0))
 }
 
 /**
@@ -234,7 +234,7 @@ async fn api_get_mailing_list_subscribers(rqctx: Arc<RequestContext<Context>>) -
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(MailingListSubscribers::get_from_db(db).0))
+    Ok(HttpResponseOk(MailingListSubscribers::get_from_db(db, 1).0))
 }
 
 /**
@@ -248,7 +248,7 @@ async fn api_get_rfds(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespons
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(RFDs::get_from_db(db).0))
+    Ok(HttpResponseOk(RFDs::get_from_db(db, 1).0))
 }
 
 /**
@@ -262,5 +262,5 @@ async fn api_get_users(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespon
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(Users::get_from_db(db).0))
+    Ok(HttpResponseOk(Users::get_from_db(db, 1).0))
 }

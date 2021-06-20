@@ -441,7 +441,7 @@ mod tests {
         refresh_auth_users_and_logins(&db, &oxide).await;
 
         // Update auth user and auth user logins in airtable.
-        AuthUserLogins::get_from_db(&db).update_airtable(&db, oxide.id).await;
-        AuthUsers::get_from_db(&db).update_airtable(&db, oxide.id).await;
+        AuthUserLogins::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        AuthUsers::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
     }
 }
