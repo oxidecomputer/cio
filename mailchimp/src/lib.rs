@@ -166,14 +166,16 @@ impl MailChimp {
 
         let params = [
             ("grant_type", "authorization_code"),
-            ("code", code),
             ("client_id", &self.client_id),
             ("client_secret", &self.client_secret),
             ("redirect_uri", &self.redirect_uri),
+            ("code", code),
         ];
-        println!("{:?}", params);
+        println!("mailchimp params {:?}", params);
         let client = reqwest::Client::new();
-        let resp = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).form(&params).send().await.unwrap();
+        let req = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).form(&params);
+        println!("mailchimp req {:?}", req);
+        let resp = req.send().await.unwrap();
 
         // Unwrap the response.
         let t: AccessToken = resp.json().await.unwrap();
