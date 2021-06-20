@@ -1773,7 +1773,7 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
         .first::<Applicant>(&db.conn());
     match result {
         Ok(mut applicant) => {
-            let company = Company::get_by_id(db, applicant.cio_company_id);
+            let company = applicant.company(db);
 
             // Create our docusign client.
             let ds = company.authenticate_docusign(db).await;
