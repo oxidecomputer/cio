@@ -135,6 +135,11 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             self.create_in_db(db)
         }
+
+        /// Get the company object for a record.
+        pub fn company(&self, db: &crate::db::Database) -> crate::companies::Company {
+            crate::companies::Company::get_by_id(db, self.cio_company_id)
+        }
     }
 
     impl From<#new_struct_name> for #og_struct_name {

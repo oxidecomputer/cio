@@ -643,6 +643,7 @@ The Oxide Team",
 
         let mut airtable_record_id = "".to_string();
 
+        // TODO: do not hard code the company id.
         let mut cio_company_id = 1;
 
         // Try to get the applicant, if they exist.
@@ -941,19 +942,11 @@ The Oxide Team",
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(
-        &mut self,
-        company: &Company,
-        drive_client: &GoogleDrive,
-        sheets_client: &Sheets,
-        sent_email_received_column_index: usize,
-        sent_email_follow_up_index: usize,
-        row_index: usize,
-    ) {
+    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, sent_email_follow_up_index: usize, row_index: usize) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
-            self.send_email_recieved_application_to_applicant(company).await;
+            self.send_email_recieved_application_to_applicant(db).await;
 
             // Mark the column as true not false.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
@@ -975,17 +968,17 @@ The Oxide Team",
                 // Check if we have sent the follow up email to them.unwrap_or_default().
                 if self.raw_status.contains("did not do materials") {
                     // Send the email.
-                    self.send_email_rejection_did_not_provide_materials(company).await;
+                    self.send_email_rejection_did_not_provide_materials(db).await;
 
                     println!("[applicant] sent email to {} tell them they did not do the materials", self.email);
                 } else if self.raw_status.contains("junior") {
                     // Send the email.
-                    self.send_email_rejection_junior_but_we_love_you(company).await;
+                    self.send_email_rejection_junior_but_we_love_you(db).await;
 
                     println!("[applicant] sent email to {} tell them we can't hire them at this stage", self.email);
                 } else {
                     // Send the email.
-                    self.send_email_rejection_timing(company).await;
+                    self.send_email_rejection_timing(db).await;
 
                     println!("[applicant] sent email to {} tell them about timing", self.email);
                 }
@@ -1594,7 +1587,9 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         msg
     }
 
-    pub async fn create_github_onboarding_issue(&self, db: &Database, company: &Company, github: &Github, configs_issues: &[Issue]) {
+    pub async fn create_github_onboarding_issue(&self, db: &Database, github: &Github, configs_issues: &[Issue]) {
+        let company = self.company(db);
+
         let repo = github.repo(&company.github_org, "configs");
 
         // Check if we already have an issue for this user.
@@ -2211,7 +2206,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
             // Parse the applicant out of the row information.
             let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row).await;
             applicant
-                .expand(company, &drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
+                .expand(db, &drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
                 .await;
 
             if !applicant.sent_email_received {
@@ -2219,12 +2214,12 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
                 post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
                 // Send a company-wide email.
-                applicant.send_email_internally(company).await;
+                applicant.send_email_internally(db).await;
             }
 
             let new_applicant = applicant.upsert(db).await;
 
-            new_applicant.create_github_onboarding_issue(db, company, &github, &configs_issues).await;
+            new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
         }
     }
 }
@@ -2827,11 +2822,11 @@ impl Applicant {
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&self.docusign_envelope_id).await.unwrap();
 
-            self.update_applicant_from_docusign_envelope(db, &ds, envelope, company).await;
+            self.update_applicant_from_docusign_envelope(db, &ds, envelope).await;
         }
     }
 
-    pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope, company: &Company) {
+    pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
         // Get the company id for Oxide.
         // TODO: split this out per company.
         let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
@@ -2857,7 +2852,7 @@ impl Applicant {
             // Request their background check, if we have not already.
             if self.criminal_background_check_status.is_empty() {
                 // Request the background check, since we previously have not requested one.
-                self.send_background_check_invitation(db, company).await;
+                self.send_background_check_invitation(db).await;
             }
         }
 
