@@ -382,7 +382,7 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
         // TODO: fill this in.
-        cio_company_id: 1,
+        cio_company_id: 2,
     };
     token.expand();
 
