@@ -168,7 +168,7 @@ impl MailChimp {
             ("grant_type", "authorization_code"),
             ("client_id", &self.client_id),
             ("client_secret", &self.client_secret),
-            ("redirect_uri", &self.redirect_uri),
+            ("redirect_uri", &urlencoding::encode(&self.redirect_uri)),
             ("code", code),
         ];
         println!("mailchimp params {:?}", params);
