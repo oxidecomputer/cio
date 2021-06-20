@@ -583,7 +583,7 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_swag_items(&db, &oxide).await;
-        SwagItems::get_from_db(&db, oxide.id).update_airtable(&db);
+        SwagItems::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 
     #[ignore]
@@ -596,7 +596,7 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_swag_inventory_items(&db, &oxide).await;
-        SwagInventoryItems::get_from_db(&db, oxide.id).update_airtable(&db);
+        SwagInventoryItems::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 
     #[ignore]
