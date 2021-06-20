@@ -2726,7 +2726,7 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(&db, &github.repo(&company.github_org, "configs")).await;
+            generate_shorturls_for_rfds(&db, &github.repo(&company.github_org, "configs"), company.id).await;
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
@@ -2875,7 +2875,7 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
         sync_links(&api_context.db, configs.links, configs.huddles, &company).await;
 
         // We need to update the short URLs for the links.
-        generate_shorturls_for_configs_links(&api_context.db, &github_repo).await;
+        generate_shorturls_for_configs_links(&api_context.db, &github_repo, company.id).await;
         println!("generated shorturls for the configs links");
     }
 
@@ -2933,7 +2933,7 @@ async fn handle_repository_event(github: &Github, api_context: &Context, event: 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(&api_context.db, &github.repo(&company.github_org, "configs")).await;
+    generate_shorturls_for_repos(&api_context.db, &github.repo(&company.github_org, "configs"), company.id).await;
     println!("generated shorturls for all the GitHub repos");
 
     Ok(HttpResponseAccepted("ok".to_string()))
