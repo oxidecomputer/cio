@@ -1558,7 +1558,8 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        cio_company_id: Default::default(),
+        // TODO: base this off the person's email?
+        cio_company_id: 2,
     };
     token.expand();
     // Update it in the database.
