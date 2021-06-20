@@ -1268,7 +1268,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     println!("updated configs users in the database");
 
     // Update users in airtable.
-    Users::get_from_db(db, company.id).update_airtable(db, company.id).await;
+    Users::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
@@ -1363,7 +1363,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     }
 
     // Update buildings in airtable.
-    Buildings::get_from_db(db, company.id).update_airtable(db, company.id).await;
+    Buildings::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
@@ -1461,7 +1461,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     }
 
     // Update conference_rooms in airtable.
-    ConferenceRooms::get_from_db(db, company.id).update_airtable(db, company.id).await;
+    ConferenceRooms::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
@@ -1588,7 +1588,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     }
 
     // Update groups in airtable.
-    Groups::get_from_db(db, company.id).update_airtable(db, company.id).await;
+    Groups::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our links with our database and then update Airtable from the database.
@@ -1648,7 +1648,7 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
     println!("updated configs links in the database");
 
     // Update links in airtable.
-    Links::get_from_db(db, company.id).update_airtable(db, company.id).await;
+    Links::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
@@ -1694,51 +1694,44 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     println!("updated configs certificates in the database");
 
     // Update certificates in airtable.
-    Certificates::get_from_db(db, company.id).update_airtable(&db, company.id).await;
+    Certificates::get_from_db(db, company.id).update_airtable(&db).await;
 }
 
-pub async fn refresh_db_configs_and_airtable() {
-    // Initialize our database.
-    let db = Database::new();
+pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
+    let github = company.authenticate_github();
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github();
-
-    let configs = get_configs_from_repo(&github, &oxide).await;
+    let configs = get_configs_from_repo(&github, &company).await;
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    sync_buildings(&db, configs.buildings, &oxide).await;
+    sync_buildings(&db, configs.buildings, &company).await;
 
     // Sync conference rooms.
-    sync_conference_rooms(&db, configs.resources, &oxide).await;
+    sync_conference_rooms(&db, configs.resources, &company).await;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
-    sync_groups(&db, configs.groups, &oxide).await;
+    sync_groups(&db, configs.groups, &company).await;
 
     // Sync users.
-    sync_users(&db, &github, configs.users, &oxide).await;
+    sync_users(&db, &github, configs.users, &company).await;
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
-    generate_terraform_files_for_okta(&github, &db, &oxide).await;
+    generate_terraform_files_for_okta(&github, &db, &company).await;
     // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(&github, &db, &oxide).await;
+    generate_terraform_files_for_aws_and_github(&github, &db, &company).await;
 
     // Sync links.
-    sync_links(&db, configs.links, configs.huddles, &oxide).await;
+    sync_links(&db, configs.links, configs.huddles, &company).await;
 
     // Sync certificates.
-    sync_certificates(&db, &github, configs.certificates, &oxide).await;
+    sync_certificates(&db, &github, configs.certificates, &company).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(&github, configs.github_outside_collaborators, &oxide).await;
+    sync_github_outside_collaborators(&github, configs.github_outside_collaborators, &company).await;
 
-    refresh_anniversary_events(&db, &oxide).await;
+    refresh_anniversary_events(&db, &company).await;
 }
 
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
@@ -1834,11 +1827,19 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::configs::refresh_db_configs_and_airtable;
+    use crate::db::Database;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_configs() {
-        refresh_db_configs_and_airtable().await;
+        // Initialize our database.
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        refresh_db_configs_and_airtable(&db, &oxide).await;
     }
 }

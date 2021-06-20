@@ -66,13 +66,9 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 }
 
 /// Sync interviews.
-pub async fn refresh_interviews(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
-    let token = oxide.authenticate_google(&db).await;
-    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
+pub async fn refresh_interviews(db: &Database, company: &Company) {
+    let token = company.authenticate_google(&db).await;
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -113,7 +109,7 @@ pub async fn refresh_interviews(db: &Database) {
                 google_event_id: event.id.to_string(),
                 event_link: event.html_link.to_string(),
                 applicant: Default::default(),
-                cio_company_id: oxide.id,
+                cio_company_id: company.id,
             };
 
             for attendee in event.attendees {
@@ -125,8 +121,8 @@ pub async fn refresh_interviews(db: &Database) {
                 let end = &format!("({})", attendee.display_name);
                 // TODO: Sometimes Dave and Nils use their personal email, find a better way to do this other than
                 // a one-off.
-                if attendee.email.ends_with(&oxide.gsuite_domain)
-                    || attendee.email.ends_with(&oxide.domain)
+                if attendee.email.ends_with(&company.gsuite_domain)
+                    || attendee.email.ends_with(&company.domain)
                     || event.summary.ends_with(end)
                     || attendee.email.starts_with("dave.pacheco")
                     || attendee.email.starts_with("nils.nieuwejaar")
@@ -135,18 +131,18 @@ pub async fn refresh_interviews(db: &Database) {
                     let email = attendee.email.to_string();
                     let mut final_email = "".to_string();
 
-                    // If the email is not their oxide computer email, let's firgure it out based
+                    // If the email is not their work email, let's firgure it out based
                     // on the information from their user.
-                    if !email.ends_with(&oxide.gsuite_domain) && !email.ends_with(&oxide.domain) {
+                    if !email.ends_with(&company.gsuite_domain) && !email.ends_with(&company.domain) {
                         match users::dsl::users
-                            .filter(users::dsl::recovery_email.eq(email.to_string()).and(users::dsl::cio_company_id.eq(oxide.id)))
+                            .filter(users::dsl::recovery_email.eq(email.to_string()).and(users::dsl::cio_company_id.eq(company.id)))
                             .limit(1)
                             .load::<User>(&db.conn())
                         {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    final_email = record.email(&oxide);
+                                    final_email = record.email(&company);
                                 }
                             }
                             Err(e) => {
@@ -154,18 +150,23 @@ pub async fn refresh_interviews(db: &Database) {
                             }
                         }
                     } else {
-                        let username = email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches(&oxide.domain).trim_end_matches('@').trim().to_string();
+                        let username = email
+                            .trim_end_matches(&company.gsuite_domain)
+                            .trim_end_matches(&company.domain)
+                            .trim_end_matches('@')
+                            .trim()
+                            .to_string();
                         // Find the real user.
                         match users::dsl::users
                             .filter(users::dsl::username.eq(username.to_string()).or(users::dsl::aliases.contains(vec![username.to_string()])))
-                            .filter(users::dsl::cio_company_id.eq(oxide.id))
+                            .filter(users::dsl::cio_company_id.eq(company.id))
                             .limit(1)
                             .load::<User>(&db.conn())
                         {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    final_email = record.email(&oxide);
+                                    final_email = record.email(company);
                                 }
                             }
                             Err(e) => {
@@ -202,7 +203,7 @@ pub async fn refresh_interviews(db: &Database) {
             let mut interviewers = interview.interviewers.clone();
             interviewers
                 .iter_mut()
-                .for_each(|x| *x = x.trim_end_matches(&oxide.gsuite_domain).trim_end_matches(&oxide.domain).trim_end_matches('@').to_string());
+                .for_each(|x| *x = x.trim_end_matches(&company.gsuite_domain).trim_end_matches(&company.domain).trim_end_matches('@').to_string());
 
             interview.name = format!("{} ({})", name, interviewers.join(", "));
 
@@ -215,17 +216,13 @@ pub async fn refresh_interviews(db: &Database) {
         }
     }
 
-    ApplicantInterviews::get_from_db(db, oxide.id).update_airtable(db, oxide.id).await;
+    ApplicantInterviews::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Compile interview packets for each interviewee.
-pub async fn compile_packets(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
+pub async fn compile_packets(db: &Database, company: &Company) {
     // Get gsuite token.
-    let token = oxide.authenticate_google(db).await;
+    let token = company.authenticate_google(db).await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
@@ -240,7 +237,7 @@ pub async fn compile_packets(db: &Database) {
 
     // Iterate over each user we have in gsuite and download their materials
     // locally.
-    let employees = Users::get_from_db(db, oxide.id);
+    let employees = Users::get_from_db(db, company.id);
     for employee in employees {
         if employee.is_system_account() {
             continue;
@@ -264,7 +261,7 @@ pub async fn compile_packets(db: &Database) {
         download_materials(&drive_client, &materials_url, &employee.username).await;
     }
 
-    let interviews = ApplicantInterviews::get_from_db(db, oxide.id);
+    let interviews = ApplicantInterviews::get_from_db(db, company.id);
 
     // Let's group the interviewers into each interview.
     let mut interviewers: HashMap<String, Vec<(User, DateTime<Tz>, DateTime<Tz>)>> = HashMap::new();
@@ -275,14 +272,14 @@ pub async fn compile_packets(db: &Database) {
         }
         for interviewer in interview.interviewers {
             let username = interviewer
-                .trim_end_matches(&oxide.gsuite_domain)
-                .trim_end_matches(&oxide.domain)
+                .trim_end_matches(&company.gsuite_domain)
+                .trim_end_matches(&company.domain)
                 .trim_end_matches('@')
                 .trim()
                 .to_string();
             if let Ok(user) = users::dsl::users
                 .filter(users::dsl::username.eq(username.to_string()).or(users::dsl::aliases.contains(vec![username.to_string()])))
-                .filter(users::dsl::cio_company_id.eq(oxide.id))
+                .filter(users::dsl::cio_company_id.eq(company.id))
                 .first::<User>(&db.conn())
             {
                 existing.push((
@@ -666,6 +663,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::interviews::{compile_packets, refresh_interviews};
 
@@ -673,7 +671,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_interviews() {
         let db = Database::new();
-        refresh_interviews(&db).await;
-        compile_packets(&db).await;
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+        refresh_interviews(&db, &oxide).await;
+        compile_packets(&db, &oxide).await;
     }
 }

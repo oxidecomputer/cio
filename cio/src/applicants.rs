@@ -2260,13 +2260,9 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
     reviewers
 }
 
-pub async fn update_applications_with_scoring_forms(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
+pub async fn update_applications_with_scoring_forms(db: &Database, company: &Company) {
     // Get the GSuite token.
-    let token = oxide.authenticate_google(&db).await;
+    let token = company.authenticate_google(&db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2282,7 +2278,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
         // Parse the sheet columns.
         let columns = ApplicantFormSheetColumns::new();
 
-        /*let mut reviewer_pool = get_reviewer_pool(db, &oxide);
+        /*let mut reviewer_pool = get_reviewer_pool(db, company);
 
         // We'll assign reviewers randomly but attempt to produce roughly even loads
         // across reviewers. To do this, we shuffle the list of reviewers, and then
@@ -2309,9 +2305,9 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
                 let scorers_completed_string = row[columns.scorers_completed].to_string();
                 let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
                 for s in scorers_completed_str {
-                    match User::get_from_db(db, oxide.id, s.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
+                    match User::get_from_db(db, company.id, s.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
                         Some(user) => {
-                            scorers_completed.push(user.email(&oxide));
+                            scorers_completed.push(user.email(company));
                         }
                         None => {
                             println!("could not find user with email: {}", email);
@@ -2396,13 +2392,9 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
     }
 }
 
-pub async fn update_applications_with_scoring_results(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
+pub async fn update_applications_with_scoring_results(db: &Database, company: &Company) {
     // Get the GSuite token.
-    let token = oxide.authenticate_google(&db).await;
+    let token = company.authenticate_google(&db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2642,13 +2634,9 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
     async fn update_airtable_record(&mut self, _record: ApplicantReviewer) {}
 }
 
-pub async fn update_applicant_reviewers(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
+pub async fn update_applicant_reviewers(db: &Database, company: &Company) {
     // Get the GSuite token.
-    let token = oxide.authenticate_google(&db).await;
+    let token = company.authenticate_google(&db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2683,7 +2671,7 @@ pub async fn update_applicant_reviewers(db: &Database) {
         let no = row[5].parse::<i32>().unwrap_or(0);
         let not_applicable = row[6].parse::<i32>().unwrap_or(0);
 
-        match User::get_from_db(db, oxide.id, email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
+        match User::get_from_db(db, company.id, email.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
             Some(user) => {
                 let reviewer = NewApplicantReviewer {
                     name: user.full_name(),
@@ -2826,9 +2814,7 @@ impl Applicant {
     }
 
     pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+        let company = self.company(db);
 
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
@@ -2856,7 +2842,7 @@ impl Applicant {
         }
 
         // Get gsuite token.
-        let token = oxide.authenticate_google(&db).await;
+        let token = company.authenticate_google(&db).await;
 
         // Initialize the Google Drive client.
         let drive_client = GoogleDrive::new(token);
@@ -2898,7 +2884,7 @@ impl Applicant {
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
         let result = users::dsl::users
-            .filter(users::dsl::recovery_email.eq(self.email.to_string()).and(users::dsl::cio_company_id.eq(oxide.id)))
+            .filter(users::dsl::recovery_email.eq(self.email.to_string()).and(users::dsl::cio_company_id.eq(company.id)))
             .first::<User>(&db.conn());
         if result.is_ok() {
             let mut employee = result.unwrap();
@@ -2979,7 +2965,9 @@ mod tests {
     async fn test_applicants_reviewer_leaderboard() {
         let db = Database::new();
 
-        update_applicant_reviewers(&db).await;
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        update_applicant_reviewers(&db, &oxide).await;
     }
 
     #[ignore]
@@ -3002,7 +2990,7 @@ mod tests {
         refresh_db_applicants(&db, &oxide).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        Applicants::get_from_db(&db, oxide.id).update_airtable(&db).await;
 
         // Refresh DocuSign for the applicants.
         refresh_docusign_for_applicants(&db, &oxide).await;
@@ -3012,12 +3000,15 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_reviewers() {
         let db = Database::new();
+
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-        update_applications_with_scoring_forms(&db).await;
+        update_applications_with_scoring_forms(&db, &oxide).await;
 
         // This must be after update_applications_with_scoring_forms, so that if someone
         // has done the application then we remove them from the scorers.
-        update_applications_with_scoring_results(&db).await;
+        update_applications_with_scoring_results(&db, &oxide).await;
     }
 }

@@ -77,17 +77,11 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 }
 
 /// Sync the recorded meetings.
-pub async fn refresh_recorded_meetings() {
-    let db = Database::new();
+pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
+    RecordedMeetings::get_from_db(&db, company.id).update_airtable(&db).await;
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    RecordedMeetings::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
-
-    let token = oxide.authenticate_google(&db).await;
-    let mut gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
+    let token = company.authenticate_google(&db).await;
+    let mut gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -95,9 +89,9 @@ pub async fn refresh_recorded_meetings() {
 
     // Iterate over the calendars.
     for calendar in calendars {
-        if calendar.id.ends_with(&oxide.gsuite_domain) {
+        if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
-            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, oxide.authenticate_google(&db).await);
+            gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, company.authenticate_google(&db).await);
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
@@ -134,7 +128,7 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
-                let delegated_token = oxide.authenticate_google(&db).await;
+                let delegated_token = company.authenticate_google(&db).await;
                 let drive_client = GoogleDrive::new(delegated_token);
 
                 // If we have a chat log, we should download it.
@@ -175,7 +169,7 @@ pub async fn refresh_recorded_meetings() {
                     location: event.location.to_string(),
                     google_event_id: event.id.to_string(),
                     event_link: event.html_link.to_string(),
-                    cio_company_id: oxide.id,
+                    cio_company_id: company.id,
                 };
 
                 // Let's try to get the meeting.
@@ -224,11 +218,18 @@ pub async fn refresh_recorded_meetings() {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
+    use crate::db::Database;
     use crate::recorded_meetings::refresh_recorded_meetings;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_recorded_meetings() {
-        refresh_recorded_meetings().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        refresh_recorded_meetings(&db, &oxide).await;
     }
 }

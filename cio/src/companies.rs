@@ -307,7 +307,7 @@ pub async fn refresh_companies() {
         company.update(&db).await;
     }
     // Companies are only stored with Oxide.
-    Companys::get_from_db(&db, 1).update_airtable(&db, oxide.id).await;
+    Companys::get_from_db(&db, 1).update_airtable(&db).await;
 }
 
 pub async fn get_google_consent_url() -> String {

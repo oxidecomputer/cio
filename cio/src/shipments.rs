@@ -1101,16 +1101,12 @@ impl SwagSheetColumns {
 }
 
 // Sync the outbound shipments.
-pub async fn refresh_outbound_shipments(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     // Iterate over all the shipments in the database and update them.
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
     // we do not.
-    let shipments = OutboundShipments::get_from_db(&db, oxide.id);
+    let shipments = OutboundShipments::get_from_db(&db, company.id);
     for mut s in shipments {
         if let Some(existing) = s.get_existing_airtable_record(&db).await {
             // Take the field from Airtable.
@@ -1122,16 +1118,14 @@ pub async fn refresh_outbound_shipments(db: &Database) {
         // Update airtable and the database again.
         s.update(db).await;
     }
+
+    OutboundShipments::get_from_db(&db, company.id).update_airtable(&db).await;
 }
 
 // Sync the inbound shipments.
-pub async fn refresh_inbound_shipments(db: &Database) {
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
-    let is: Vec<airtable_api::Record<InboundShipment>> = oxide
-        .authenticate_airtable(&oxide.airtable_base_id_shipments)
+pub async fn refresh_inbound_shipments(db: &Database, company: &Company) {
+    let is: Vec<airtable_api::Record<InboundShipment>> = company
+        .authenticate_airtable(&company.airtable_base_id_shipments)
         .list_records(&InboundShipment::airtable_table(), "Grid view", vec![])
         .await
         .unwrap();
@@ -1144,7 +1138,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
 
         let mut new_shipment: NewInboundShipment = record.fields.into();
         new_shipment.expand().await;
-        new_shipment.cio_company_id = oxide.id;
+        new_shipment.cio_company_id = company.id;
         let mut shipment = new_shipment.upsert_in_db(&db);
         if shipment.airtable_record_id.is_empty() {
             shipment.airtable_record_id = record.id;
@@ -1152,7 +1146,7 @@ pub async fn refresh_inbound_shipments(db: &Database) {
         shipment.update(&db).await;
     }
 
-    InboundShipments::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+    InboundShipments::get_from_db(&db, company.id).update_airtable(&db).await;
 }
 
 pub fn clean_address_string(s: &str) -> String {
@@ -1167,6 +1161,7 @@ pub fn clean_address_string(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
     use crate::db::Database;
     use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments, OutboundShipments};
 
@@ -1183,7 +1178,9 @@ mod tests {
     async fn test_shipments() {
         let db = Database::new();
 
-        refresh_inbound_shipments(&db).await;
-        refresh_outbound_shipments(&db).await;
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_inbound_shipments(&db, &oxide).await;
+        refresh_outbound_shipments(&db, &oxide).await;
     }
 }

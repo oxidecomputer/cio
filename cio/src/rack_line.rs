@@ -247,6 +247,6 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_db_rack_line_subscribers(&db, &oxide).await;
-        RackLineSubscribers::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        RackLineSubscribers::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 }

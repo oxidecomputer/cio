@@ -68,22 +68,16 @@ impl UpdateAirtableRecord<SwagItem> for SwagItem {
 }
 
 /// Sync swag items from Airtable.
-pub async fn refresh_swag_items() {
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_swag_items(db: &Database, company: &Company) {
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SwagItem>> = oxide
-        .authenticate_airtable(&oxide.airtable_base_id_swag)
+    let results: Vec<airtable_api::Record<SwagItem>> = company
+        .authenticate_airtable(&company.airtable_base_id_swag)
         .list_records(&SwagItem::airtable_table(), "Grid view", vec![])
         .await
         .unwrap();
     for item_record in results {
         let mut item: NewSwagItem = item_record.fields.into();
-        item.cio_company_id = oxide.id;
+        item.cio_company_id = company.id;
 
         let mut db_item = item.upsert_in_db(&db);
         db_item.airtable_record_id = item_record.id.to_string();
@@ -454,15 +448,9 @@ pub fn image_to_pdf_object(mut doc: Document, png_bytes: &[u8]) -> (Document, St
 }
 
 /// Sync swag inventory items from Airtable.
-pub async fn refresh_swag_inventory_items() {
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
+pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) {
     // Get gsuite token.
-    let token = oxide.authenticate_google(&db).await;
+    let token = company.authenticate_google(&db).await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
@@ -477,15 +465,15 @@ pub async fn refresh_swag_inventory_items() {
     let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
 
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SwagInventoryItem>> = oxide
-        .authenticate_airtable(&oxide.airtable_base_id_swag)
+    let results: Vec<airtable_api::Record<SwagInventoryItem>> = company
+        .authenticate_airtable(&company.airtable_base_id_swag)
         .list_records(&SwagInventoryItem::airtable_table(), "Grid view", vec![])
         .await
         .unwrap();
     for inventory_item_record in results {
         let mut inventory_item: NewSwagInventoryItem = inventory_item_record.fields.into();
         inventory_item.expand(&drive_client, &drive_id, &parent_id).await;
-        inventory_item.cio_company_id = oxide.id;
+        inventory_item.cio_company_id = company.id;
 
         let mut db_inventory_item = inventory_item.upsert_in_db(&db);
         db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
@@ -583,18 +571,32 @@ impl BarcodeScan {
 mod tests {
     use crate::companies::Company;
     use crate::db::Database;
-    use crate::swag_inventory::{refresh_swag_inventory_items, refresh_swag_items, BarcodeScans};
+    use crate::swag_inventory::{refresh_swag_inventory_items, refresh_swag_items, BarcodeScans, SwagInventoryItems, SwagItems};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_swag_items() {
-        refresh_swag_items().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_swag_items(&db, &oxide).await;
+        SwagItems::get_from_db(&db, oxide.id).update_airtable(&db);
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_swag_inventory_items() {
-        refresh_swag_inventory_items().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_swag_inventory_items(&db, &oxide).await;
+        SwagInventoryItems::get_from_db(&db, oxide.id).update_airtable(&db);
     }
 
     #[ignore]
@@ -606,6 +608,6 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        BarcodeScans::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+        BarcodeScans::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 }

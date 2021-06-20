@@ -404,8 +404,12 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         /// Update Airtable records in a table from a vector.
-        pub async fn update_airtable(&self, db: &crate::db::Database, cio_company_id: i32) {
-            let mut records = #new_struct_name_plural::get_from_airtable(db, cio_company_id).await;
+        pub async fn update_airtable(&self, db: &crate::db::Database) {
+            if self.0.is_empty() {
+                // Return early.
+                return;
+            }
+            let mut records = #new_struct_name_plural::get_from_airtable(db, self.0.get(0).unwrap().cio_company_id).await;
 
             for mut vec_record in self.0.clone() {
                 // See if we have it in our Airtable records.

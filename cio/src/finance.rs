@@ -168,7 +168,7 @@ pub async fn refresh_software_vendors() {
         db_vendor.update(&db).await;
     }
 
-    SoftwareVendors::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await
+    SoftwareVendors::get_from_db(&db, oxide.id).update_airtable(&db).await
 }
 
 #[db {
@@ -295,7 +295,7 @@ pub async fn refresh_ramp_transactions() {
         nt.upsert(&db).await;
     }
 
-    CreditCardTransactions::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+    CreditCardTransactions::get_from_db(&db, oxide.id).update_airtable(&db).await;
 }
 
 // Changes the vendor name to one that matches our existing list.
@@ -725,7 +725,7 @@ pub async fn refresh_accounts_payable() {
         db_bill.update(&db).await;
     }
 
-    AccountsPayables::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+    AccountsPayables::get_from_db(&db, oxide.id).update_airtable(&db).await;
 }
 
 #[db {
@@ -799,7 +799,7 @@ pub async fn refresh_expensify_transactions() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    ExpensedItems::get_from_db(&db, oxide.id).update_airtable(&db, oxide.id).await;
+    ExpensedItems::get_from_db(&db, oxide.id).update_airtable(&db).await;
 
     let mut path = env::current_dir().unwrap();
     path.push("expensify.csv");
