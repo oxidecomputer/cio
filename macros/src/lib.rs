@@ -187,6 +187,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 .first::<#new_struct_name>(&db.conn()).unwrap()
         }
 
+        /// Get the company object for a record.
+
         /// Get the row in our airtable workspace.
         pub async fn get_from_airtable(id: &str, db: &crate::db::Database, cio_company_id: i32) -> Self {
             let record = #new_struct_name::airtable_from_company_id(db, cio_company_id)
