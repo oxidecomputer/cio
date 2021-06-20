@@ -218,7 +218,7 @@ impl NewSwagInventoryItem {
 
             // Create or update the file in the google drive.
             let png_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "image/png", &png_bytes).await.unwrap();
-            self.barcode_png = format!("https://drive.google.com/open?id={}", png_file.id);
+            self.barcode_png = format!("https://drive.google.com/uc?export=download&id={}", png_file.id);
 
             // Now do the SVG.
             let svg = SVG::new(200); // You must specify the height in pixels.
@@ -229,14 +229,14 @@ impl NewSwagInventoryItem {
 
             // Create or update the file in the google drive.
             let svg_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "image/svg+xml", &svg_bytes).await.unwrap();
-            self.barcode_svg = format!("https://drive.google.com/open?id={}", svg_file.id);
+            self.barcode_svg = format!("https://drive.google.com/uc?export=download&id={}", svg_file.id);
 
             // Generate the barcode label.
             let label_bytes = self.generate_pdf_barcode_label(&png_bytes);
             file_name = format!("{} - Barcode Label.pdf", self.name.replace('/', ""));
             // Create or update the file in the google drive.
             let label_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "application/pdf", &label_bytes).await.unwrap();
-            self.barcode_pdf_label = format!("https://drive.google.com/open?id={}", label_file.id);
+            self.barcode_pdf_label = format!("https://drive.google.com/uc?export=download&id={}", label_file.id);
         }
     }
 
