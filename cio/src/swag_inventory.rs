@@ -455,7 +455,7 @@ pub async fn refresh_swag_inventory_items() {
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     // Get gsuite token.
-    let token = oxide.authenticate_google(&db, "").await;
+    let token = oxide.authenticate_google(&db).await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);

@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::airtable::AIRTABLE_RECORDED_MEETINGS_TABLE;
 use crate::companies::Company;
-use crate::configs::User;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::models::truncate;
@@ -87,7 +86,7 @@ pub async fn refresh_recorded_meetings() {
 
     RecordedMeetings::get_from_db(&db).update_airtable(&db, oxide.id).await;
 
-    let token = oxide.authenticate_google(&db, "").await;
+    let token = oxide.authenticate_google(&db).await;
     let mut gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
@@ -97,7 +96,8 @@ pub async fn refresh_recorded_meetings() {
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.id.ends_with(&oxide.gsuite_domain) {
-            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, oxide.authenticate_google(&db, "").await);
+            // We get a new token since likely our other has expired.
+            gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, oxide.authenticate_google(&db).await);
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
@@ -111,19 +111,10 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
-                let mut owner = "".to_string();
                 let mut attendees: Vec<String> = Default::default();
                 for attendee in event.attendees {
                     if !attendee.resource {
                         attendees.push(attendee.email.to_string());
-                    }
-                    if attendee.organizer && attendee.email.ends_with(&oxide.gsuite_domain) {
-                        // Make sure the person is still a user.
-                        if let Some(_user) = User::get_from_db(&db, attendee.email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
-                            owner = attendee.email.to_string()
-                        } else {
-                            owner = oxide.gsuite_subject.to_string();
-                        }
                     }
                 }
 
@@ -143,7 +134,7 @@ pub async fn refresh_recorded_meetings() {
                     continue;
                 }
 
-                let delegated_token = oxide.authenticate_google(&db, &owner).await;
+                let delegated_token = oxide.authenticate_google(&db).await;
                 let drive_client = GoogleDrive::new(delegated_token);
 
                 // If we have a chat log, we should download it.

@@ -236,7 +236,7 @@ impl Company {
     }
 
     /// Get a Google token.
-    pub async fn authenticate_google(&self, db: &Database, subject: &str) -> String {
+    pub async fn authenticate_google(&self, db: &Database) -> String {
         // Get the APIToken from the database.
         if let Some(t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             let nt = refresh_google_access_token(db, t).await;

@@ -2168,7 +2168,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
         .unwrap();
 
     // Get the GSuite token.
-    let token = company.authenticate_google(&db, "").await;
+    let token = company.authenticate_google(&db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2266,7 +2266,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get the GSuite token.
-    let token = oxide.authenticate_google(&db, "").await;
+    let token = oxide.authenticate_google(&db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2402,7 +2402,7 @@ pub async fn update_applications_with_scoring_results(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get the GSuite token.
-    let token = oxide.authenticate_google(&db, "").await;
+    let token = oxide.authenticate_google(&db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2648,7 +2648,7 @@ pub async fn update_applicant_reviewers(db: &Database) {
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     // Get the GSuite token.
-    let token = oxide.authenticate_google(&db, "").await;
+    let token = oxide.authenticate_google(&db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2856,7 +2856,7 @@ impl Applicant {
         }
 
         // Get gsuite token.
-        let token = oxide.authenticate_google(&db, "").await;
+        let token = oxide.authenticate_google(&db).await;
 
         // Initialize the Google Drive client.
         let drive_client = GoogleDrive::new(token);

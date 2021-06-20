@@ -98,7 +98,7 @@ pub async fn refresh_software_vendors() {
     // TODO: split this out per company.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-    let token = oxide.authenticate_google(&db, "").await;
+    let token = oxide.authenticate_google(&db).await;
     let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
 
     let github = oxide.authenticate_github();
