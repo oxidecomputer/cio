@@ -173,7 +173,7 @@ impl MailChimp {
         ];
         println!("mailchimp params {:?}", params);
         let client = reqwest::Client::new();
-        let req = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).form(&params);
+        let req = client.post("https://login.mailchimp.com/oauth2/token").form(&params);
         println!("mailchimp req {:?}", req);
         let resp = req.send().await.unwrap();
         println!("mailchimp resp {}", resp.text().await.unwrap(),);

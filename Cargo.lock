@@ -462,7 +462,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0",
- "mailchimp-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.5",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -525,7 +525,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
- "mailchimp-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.5",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -2108,6 +2108,8 @@ dependencies = [
 [[package]]
 name = "mailchimp-api"
 version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7599f1e5dd61e95d11bfd438b88fffa7b2d825282cacf1540f69cc4a8da2fa9c"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2120,9 +2122,7 @@ dependencies = [
 
 [[package]]
 name = "mailchimp-api"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7599f1e5dd61e95d11bfd438b88fffa7b2d825282cacf1540f69cc4a8da2fa9c"
+version = "0.1.6"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4830,7 +4830,7 @@ dependencies = [
  "hubcaps",
  "hyper 0.10.16",
  "influxdb",
- "mailchimp-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.5",
  "quickbooks 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.5.4",

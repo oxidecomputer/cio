@@ -97,7 +97,10 @@ impl UpdateAirtableRecord<Company> for Company {
 
 impl Company {
     pub fn get_from_github_org(db: &Database, org: &str) -> Self {
-        companys::dsl::companys.filter(companys::dsl::github_org.eq(org.to_string())).first::<Company>(&db.conn()).unwrap()
+        companys::dsl::companys
+            .filter(companys::dsl::github_org.eq(org.to_string()))
+            .first::<Company>(&db.conn())
+            .expect(&format!("could not find company matching github org {}", org))
     }
 
     pub fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Self {
