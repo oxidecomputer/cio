@@ -171,6 +171,7 @@ impl MailChimp {
             ("client_secret", &self.client_secret),
             ("redirect_uri", &self.redirect_uri),
         ];
+        println!("{:?}", params);
         let client = reqwest::Client::new();
         let resp = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).form(&params).send().await.unwrap();
 
