@@ -10,7 +10,7 @@ use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
 use google_geocode::Geocode;
-use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup};
+use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup, User as GSuiteUser};
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
@@ -24,7 +24,7 @@ use crate::certs::{Certificate, Certificates, NewCertificate};
 use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource};
+use crate::gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases, update_user_google_groups};
 use crate::schema::{applicants, buildings, conference_rooms, groups, links, users};
 use crate::shipments::NewOutboundShipment;
 use crate::templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta};
@@ -531,6 +531,65 @@ xoxo,
                     company.domain,
                     self.email(&company),
                     aliases,
+                    company.gsuite_domain,
+                ),
+                vec![self.recovery_email.to_string()],
+                vec![self.email(&company), format!("jess@{}", company.gsuite_domain)],
+                vec![],
+                format!("admin@{}", company.gsuite_domain),
+            )
+            .await;
+    }
+
+    /// Send an email to the GSuite user about their account.
+    async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) {
+        let company = self.company(db);
+
+        // Initialize the SendGrid client.
+        let sendgrid = SendGrid::new_from_env();
+
+        // Get the user's aliases if they have one.
+        let aliases = self.aliases.join(", ");
+
+        // Send the message.
+        sendgrid
+            .send_mail(
+                format!("Your New Email Account: {}", self.email(&company)),
+                format!(
+                    "Yoyoyo {},
+
+We have set up your account on mail.corp.{}. Details for accessing
+are below. You will be required to reset your password the next time you login.
+
+Website for Login: https://mail.corp.{}
+Email: {}
+Password: {}
+Aliases: {}
+
+Make sure you set up two-factor authentication for your account, or in one week
+you will be locked out.
+
+Your GitHub @{} has been added to our organization (https://github.com/{})
+and various teams within it. GitHub should have sent an email with instructions on
+accepting the invitation to our organization to the email you used
+when you signed up for GitHub. Or you can alternatively accept our invitation
+by going to https://github.com/{}.
+
+If you have any questions or your email does not work please email your
+administrator, who is cc-ed on this email. Spoiler alert it's Jess...
+jess@{}. If you want other email aliases, let Jess know as well.
+
+xoxo,
+  The Onboarding Bot",
+                    self.first_name,
+                    company.domain,
+                    company.domain,
+                    self.email(&company),
+                    password,
+                    aliases,
+                    self.github,
+                    company.github_org,
+                    company.github_org,
                     company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
@@ -1125,6 +1184,17 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
     }
 
+    // Get the existing GSuite users.
+    let gsuite_users = gsuite.list_users().await.unwrap();
+
+    // Get the GSuite groups.
+    let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
+    let groups = gsuite.list_groups().await.unwrap();
+    for g in groups {
+        // Add the group to our map.
+        gsuite_groups.insert(g.name.to_string(), g);
+    }
+
     // Find the anniversary calendar.
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -1278,10 +1348,93 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             println!("deleted user {} event {} from google", username, user.google_anniversary_event_id);
         }
 
+        if company.okta_domain.is_empty() {
+            // Delete the user from GSuite.
+            // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+            gsuite
+                .delete_user(&user.email(company))
+                .await
+                .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
+            println!("deleted user from gsuite: {}", username);
+        }
+
         // Delete the user from the database and Airtable.
         user.delete(db).await;
     }
     println!("updated configs users in the database");
+
+    if company.okta_domain.is_empty() {
+        // Update the users in GSuite.
+        // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+        // Get all the users.
+        let db_users = Users::get_from_db(db, company.id);
+        // Create a BTreeMap
+        let mut user_map: BTreeMap<String, User> = Default::default();
+        for u in db_users {
+            user_map.insert(u.username.to_string(), u);
+        }
+        // Iterate over the users already in GSuite.
+        for u in gsuite_users {
+            // Get the shorthand username and match it against our existing users.
+            let username = u.primary_email.trim_end_matches(&format!("@{}", company.gsuite_domain)).to_string();
+
+            // Check if we have that user already in our settings.
+            let user: User;
+            match user_map.get(&username) {
+                Some(val) => user = val.clone(),
+                None => {
+                    // If the user does not exist in our map we need to delete
+                    // them from GSuite.
+                    println!("deleting user {} from gsuite", username);
+                    gsuite
+                        .delete_user(&format!("{}@{}", username, company.gsuite_domain))
+                        .await
+                        .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
+
+                    println!("deleted user from gsuite: {}", username);
+                    continue;
+                }
+            }
+
+            // Update the user with the settings from the config for the user.
+            let gsuite_user = update_gsuite_user(&u, &user, false, company).await;
+
+            gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
+
+            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
+
+            // Add the user to their teams and groups.
+            update_user_google_groups(&gsuite, &user, gsuite_groups.clone(), company).await;
+
+            // Remove the user from the user map and continue.
+            // This allows us to add all the remaining new user after.
+            user_map.remove(&username);
+
+            println!("updated user in gsuite: {}", username);
+        }
+
+        // Create any remaining users from the database that we do not have in GSuite.
+        for (username, user) in user_map {
+            // Create the user.
+            let u: GSuiteUser = Default::default();
+
+            // The last argument here tell us to create a password!
+            // Make sure it is set to true.
+            let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
+
+            gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
+
+            // Send an email to the new user.
+            // Do this here in case another step fails.
+            user.send_email_new_gsuite_user(db, &gsuite_user.password).await;
+            println!("created new user in gsuite: {}", username);
+
+            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
+
+            // Add the user to their teams and groups.
+            update_user_google_groups(&gsuite, &user, gsuite_groups.clone(), company).await;
+        }
+    }
 
     // Update users in airtable.
     Users::get_from_db(db, company.id).update_airtable(db).await;
