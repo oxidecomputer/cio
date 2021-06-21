@@ -429,6 +429,8 @@ impl UserConfig {
     pub async fn expand(&mut self, db: &Database, company: &Company) {
         self.cio_company_id = company.id;
 
+        self.email = format!("{}@{}", self.username, company.gsuite_domain);
+
         // Do this first.
         self.populate_type();
 
