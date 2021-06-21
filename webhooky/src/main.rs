@@ -1334,7 +1334,14 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
     // TODO: change this to the real company name.
     let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
 
-    let checkr = oxide.authenticate_checkr();
+    let checkr_auth = oxide.authenticate_checkr();
+    if checkr_auth.is_none() {
+        // Return early.
+        sentry::capture_message(&format!("this company {:?} does not have a checkr api key: {:?}", oxide, event), sentry::Level::Info);
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    let checkr = checkr_auth.unwrap();
     let candidate = checkr.get_candidate(&event.data.object.candidate_id).await.unwrap();
     let result = applicants::dsl::applicants
         .filter(
