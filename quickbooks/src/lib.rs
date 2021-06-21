@@ -197,9 +197,9 @@ impl QuickBooks {
         Ok(t)
     }
 
-    pub async fn company_info(&self) -> Result<CompanyInfo, APIError> {
+    pub async fn company_info(&self, company_id: &str) -> Result<CompanyInfo, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("company/{}/query", self.company_id), (), Some(&[("query", "select * from CompanyInfo")]));
+        let request = self.request(Method::GET, &format!("company/{}/query", company_id), (), Some(&[("query", "select * from CompanyInfo")]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -212,9 +212,9 @@ impl QuickBooks {
             }
         };
 
-        let r: CompanyInfoResponse = resp.json().await.unwrap();
+        let r: QueryResponse = resp.json().await.unwrap();
 
-        Ok(r.company_info)
+        Ok(r.company_info.get(0).unwrap().clone())
     }
 
     pub async fn list_attachments_for_purchase(&self, purchase_id: &str) -> Result<Vec<Attachment>, APIError> {
@@ -529,6 +529,8 @@ pub struct QueryResponse {
     pub attachable: Vec<Attachment>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "BillPayment")]
     pub bill_payment: Vec<BillPayment>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "CompanyInfo")]
+    pub company_info: Vec<CompanyInfo>,
     #[serde(default, rename = "startPosition")]
     pub start_position: i64,
     #[serde(default, rename = "maxResults")]
@@ -839,13 +841,6 @@ pub struct Bill {
     pub balance: i64,
     #[serde(rename = "MetaData")]
     pub meta_data: MetaData,
-}
-
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct CompanyInfoResponse {
-    #[serde(rename = "CompanyInfo")]
-    pub company_info: CompanyInfo,
-    pub time: DateTime<Utc>,
 }
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
