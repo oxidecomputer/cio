@@ -9,6 +9,7 @@ CREATE TABLE companys (
     gsuite_subject VARCHAR NOT NULL,
     phone VARCHAR NOT NULL,
     okta_domain VARCHAR NOT NULL,
+    okta_api_key VARCHAR NOT NULL,
     mailchimp_list_id VARCHAR NOT NULL,
     github_app_installation_id INTEGER NOT NULL,
     cloudflare_api_key VARCHAR NOT NULL,

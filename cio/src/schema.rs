@@ -265,6 +265,7 @@ table! {
         gsuite_subject -> Varchar,
         phone -> Varchar,
         okta_domain -> Varchar,
+        okta_api_key -> Varchar,
         mailchimp_list_id -> Varchar,
         github_app_installation_id -> Int4,
         cloudflare_api_key -> Varchar,

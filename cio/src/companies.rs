@@ -56,6 +56,8 @@ pub struct NewCompany {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub okta_domain: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub okta_api_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub mailchimp_list_id: String,
     #[serde(default)]
     pub github_app_installation_id: i32,
