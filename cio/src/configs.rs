@@ -1187,6 +1187,11 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
     // Get the existing GSuite users.
     let gsuite_users = gsuite.list_users().await.unwrap();
+    let mut gsuite_users_map: BTreeMap<String, GSuiteUser> = BTreeMap::new();
+    for g in gsuite_users.clone() {
+        // Add the group to our map.
+        gsuite_users_map.insert(g.primary_email.to_string(), g);
+    }
 
     // Get the GSuite groups.
     let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();

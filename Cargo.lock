@@ -454,7 +454,7 @@ dependencies = [
  "futures-util",
  "google-drive 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -494,7 +494,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ea86195e4d55f97c44d6229dcb5a348e61788213"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d98673b72c47c072c457a79c2980bca26f4639cf"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -517,7 +517,7 @@ dependencies = [
  "futures-util",
  "google-drive 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -1461,7 +1461,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.29"
+version = "0.1.30"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1473,9 +1473,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.29"
+version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d016dde78ab79a2ff90452187f71e5e8857d2d4753e0c953ab83fa5b2e10fb9"
+checksum = "f139b4fa78f1221328a3491e524feb03e91889f8ad03bef0d19f2f5ddee2dada"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2095,7 +2095,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ea86195e4d55f97c44d6229dcb5a348e61788213"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d98673b72c47c072c457a79c2980bca26f4639cf"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2524,9 +2524,9 @@ checksum = "28988d872ab76095a6e6ac88d99b54fd267702734fd7ffe610ca27f533ddb95a"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.64"
+version = "0.9.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "209efc2fe0e980c8849efacdb567f975a1c80245c4f6980d6f012733bfa851af"
+checksum = "7a7907e3bfa08bb85105209cdfcb6c63d109f8f6c1ed6ca318fff5c1853fbc1d"
 dependencies = [
  "autocfg",
  "cc",
