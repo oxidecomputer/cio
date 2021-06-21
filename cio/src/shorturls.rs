@@ -10,6 +10,7 @@ use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generat
 
 /// Generate the files for the GitHub repository short URLs.
 pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_company_id: i32) {
+    let company = Company::get_by_id(db, cio_company_id);
     let subdomain = "git";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -25,6 +26,7 @@ pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_
             link: repo.html_url.to_string(),
             ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
+            domain: company.domain.to_string(),
             aliases: Default::default(),
             discussion: Default::default(),
         };
@@ -39,6 +41,7 @@ pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_
 
 /// Generate the files for the RFD short URLs.
 pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository, cio_company_id: i32) {
+    let company = Company::get_by_id(db, cio_company_id);
     let subdomain = "rfd";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -52,6 +55,7 @@ pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository, cio_c
             link: rfd.link,
             ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
+            domain: company.domain.to_string(),
             aliases: Default::default(),
             discussion: rfd.discussion,
         };
@@ -70,6 +74,7 @@ pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository, cio_c
 
 /// Generate the files for the configs links.
 pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Repository, cio_company_id: i32) {
+    let company = Company::get_by_id(db, cio_company_id);
     let subdomain = "corp";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -85,6 +90,7 @@ pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Reposito
             link: link.link,
             ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
+            domain: company.domain.to_string(),
             aliases: Default::default(),
             discussion: Default::default(),
         };
@@ -140,6 +146,7 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Com
             link: Default::default(),
             ip: json!(device.addresses.get(0).unwrap()).to_string(),
             subdomain: subdomain.to_string(),
+            domain: company.domain.to_string(),
             aliases: Default::default(),
             discussion: Default::default(),
         };
@@ -155,6 +162,7 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Com
                 link: Default::default(),
                 ip: json!(device.addresses.get(0).unwrap()).to_string(),
                 subdomain: subdomain.to_string(),
+                domain: company.domain.to_string(),
                 aliases: Default::default(),
                 discussion: Default::default(),
             };
@@ -197,6 +205,8 @@ pub struct ShortUrl {
     pub aliases: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub subdomain: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub discussion: String,
 }
