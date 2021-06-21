@@ -362,11 +362,7 @@ impl OutboundShipments {
     // Always schedule the pickup for the next business day.
     // It will create a pickup for all the shipments that have "Label printed"
     // status and no pickup date currently.
-    pub async fn create_pickup(db: &Database) {
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
+    pub async fn create_pickup(db: &Database, company: &Company) {
         // We should only do this for USPS, OR if we use DHL in the future.
         let shipments = outbound_shipments::dsl::outbound_shipments
             .filter(
@@ -428,7 +424,7 @@ impl OutboundShipments {
                 building_location_type: "Office".to_string(),
                 building_type: "building".to_string(),
                 instructions: "Knock on the glass door and someone will come open it.".to_string(),
-                address: hq_address(&oxide),
+                address: hq_address(&company),
             },
             transactions: transaction_ids.clone(),
             requested_start_time: start_time,
@@ -455,7 +451,7 @@ impl OutboundShipments {
             confirmation_code: pickup.confirmation_code.to_string(),
             carrier: "USPS".to_string(),
             status: pickup.status.to_string(),
-            location: "Oxide HQ".to_string(),
+            location: "HQ".to_string(),
             transactions: transaction_ids,
             link_to_outbound_shipments,
             requested_start_time: start_time,
@@ -464,7 +460,7 @@ impl OutboundShipments {
             confirmed_end_time: pickup.confirmed_end_time,
             cancel_by_time: pickup.cancel_by_time,
             messages,
-            cio_company_id: oxide.id,
+            cio_company_id: company.id,
         };
 
         // Insert the new pickup into the database.
@@ -481,6 +477,7 @@ impl OutboundShipments {
 /// Returns the shippo data structure for the address at the office.
 pub fn hq_address(company: &Company) -> Address {
     // TODO: make this the address for the company
+    // Use the buildings address.
     Address {
         company: "Oxide Computer Company".to_string(),
         name: "The Oxide Shipping Bot".to_string(),
@@ -1163,7 +1160,7 @@ pub fn clean_address_string(s: &str) -> String {
 mod tests {
     use crate::companies::Company;
     use crate::db::Database;
-    use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments, OutboundShipments};
+    use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments};
 
     /*#[ignore]
     #[tokio::test(flavor = "multi_thread")]
