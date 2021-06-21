@@ -94,7 +94,9 @@ pub struct NewApplicant {
     pub portfolio: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub website: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub resume: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub materials: String,
     #[serde(default)]
     pub sent_email_received: bool,
