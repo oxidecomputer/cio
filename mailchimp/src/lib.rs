@@ -162,7 +162,6 @@ impl MailChimp {
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        //headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
         headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/x-www-form-urlencoded"));
 
         let body = format!(
@@ -172,20 +171,16 @@ impl MailChimp {
             urlencoding::encode(&self.redirect_uri),
             code
         );
-        println!("mailchimp body {}", body);
 
         let client = reqwest::Client::new();
         let req = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).body(bytes::Bytes::from(body));
-        println!("mailchimp req {:?}", req);
         let resp = req.send().await.unwrap();
-        println!("mailchimp resp {}", resp.text().await.unwrap(),);
 
         // Unwrap the response.
-        /*let t: AccessToken = resp.json().await.unwrap();
+        let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();*/
-        let t: AccessToken = Default::default();
+        self.refresh_token = t.refresh_token.to_string();
 
         Ok(t)
     }

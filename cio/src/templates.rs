@@ -51,6 +51,11 @@ struct GitHubTeamMembers {
  * This function uses the users.toml and the groups.toml file in the configs repo for information.
  */
 pub async fn generate_terraform_files_for_okta(github: &Github, db: &Database, company: &Company) {
+    if company.okta_domain.is_empty() {
+        // Return early, the company does not use Okta.
+        return;
+    }
+
     let users = Users::get_from_db(db, company.id);
     let groups = Groups::get_from_db(db, company.id);
 
