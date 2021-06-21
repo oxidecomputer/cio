@@ -5,7 +5,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::airtable::AIRTABLE_API_TOKENS_TABLE;
+use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
+use crate::db::Database;
 use crate::schema::{api_tokens, api_tokens as a_p_i_tokens};
 
 #[db {
