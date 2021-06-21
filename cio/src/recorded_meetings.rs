@@ -218,18 +218,19 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
+    use crate::companies::Companys;
     use crate::db::Database;
     use crate::recorded_meetings::refresh_recorded_meetings;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_recorded_meetings() {
+        // Initialize our database.
         let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-        refresh_recorded_meetings(&db, &oxide).await;
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
+            refresh_recorded_meetings(&db, &company).await;
+        }
     }
 }

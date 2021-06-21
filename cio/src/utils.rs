@@ -281,7 +281,7 @@ pub fn default_date() -> chrono::naive::NaiveDate {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
+    use crate::companies::Companys;
     use crate::db::Database;
     use crate::models::GithubRepos;
     use crate::utils::refresh_db_github_repos;
@@ -291,15 +291,14 @@ mod tests {
     async fn test_cron_github_repos() {
         // Initialize our database.
         let db = Database::new();
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
+            let github = company.authenticate_github();
 
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+            refresh_db_github_repos(&db, &github, &company).await;
 
-        let github = oxide.authenticate_github();
-
-        refresh_db_github_repos(&db, &github, &oxide).await;
-
-        GithubRepos::get_from_db(&db, oxide.id).update_airtable(&db).await;
+            GithubRepos::get_from_db(&db, company.id).update_airtable(&db).await;
+        }
     }
 }
