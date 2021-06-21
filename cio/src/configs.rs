@@ -677,9 +677,8 @@ to our internal library: https://github.com/{}/library
 We use Airtable for storing just about everything. You can login with single
 sign-on (SSO) after setting up your email at:
 https://airtable.com/sso/login.
-To join our Airtable workspace you need to click this link:
-https://airtable-join.corp.oxide.computer.
-Poke around once you've joined :)
+You will automatically be added to the workspace after you are finished setting up
+your email.
 
 We have both a Riot server and a Slack for chat. Josh (josh@oxidecomputer.com) can get
 you set up with an account on the Riot server. You can use SSO to login to the Slack
@@ -2057,7 +2056,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_configs() {
+    async fn test_configs() {
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1);
