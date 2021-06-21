@@ -1170,6 +1170,16 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
     }
 
+    // Initialize the Okta client.
+    let mut okta_users: HashMap<String, okta::User> = HashMap::new();
+    let okta_auth = company.authenticate_okta();
+    if let Some(okta) = okta_auth {
+        let gu = okta.list_users().await.unwrap();
+        for g in gu {
+            okta_users.insert(g.profile.email.to_string(), g);
+        }
+    }
+
     // Initialize the Ramp client.
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
     let mut ramp_departments: HashMap<String, ramp_api::Department> = HashMap::new();
@@ -1239,6 +1249,11 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // See if we have a gsuite user for the user.
         if let Some(gsuite_user) = gsuite_users_map.get(&user.email) {
             user.google_id = gsuite_user.id.to_string();
+        }
+
+        // See if we have a okta user for the user.
+        if let Some(okta_user) = okta_users.get(&user.email) {
+            user.okta_id = okta_user.id.to_string();
         }
 
         // See if we have a gusto user for the user.
@@ -1405,7 +1420,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
 
         // Create any remaining users from the database that we do not have in GSuite.
-        for (username, user) in user_map {
+        for (username, mut user) in user_map {
             // Create the user.
             let u: GSuiteUser = Default::default();
 
@@ -1413,7 +1428,10 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // Make sure it is set to true.
             let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
 
-            gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
+            let new_gsuite_user = gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
+            user.google_id = new_gsuite_user.id.to_string();
+            // Update with any other changes we made to the user.
+            user.update(db).await;
 
             // Send an email to the new user.
             // Do this here in case another step fails.

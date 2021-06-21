@@ -6,7 +6,6 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use gsuite_api::GSuite;
 use macros::db;
-use okta::Okta;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -97,7 +96,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
     let github = company.authenticate_github();
 
-    let okta = Okta::new(env::var("OKTA_API_TOKEN").unwrap(), &company.okta_domain);
+    let okta_auth = company.authenticate_okta();
 
     let slack = slack_chat_api::Slack::new_from_env();
 
@@ -119,7 +118,8 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
             vendor.users = org.plan.filled_seats;
         }
 
-        if vendor.name == "Okta" {
+        if vendor.name == "Okta" && okta_auth.is_some() {
+            let okta = okta_auth.as_ref().unwrap();
             let users = okta.list_users().await.unwrap();
             vendor.users = users.len() as i32;
         }

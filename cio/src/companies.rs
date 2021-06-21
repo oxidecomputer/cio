@@ -14,6 +14,7 @@ use hubcaps::http_cache::FileBasedCache;
 use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
 use macros::db;
 use mailchimp_api::MailChimp;
+use okta::Okta;
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
 use reqwest::{header, Client};
@@ -145,6 +146,15 @@ impl Company {
             return None;
         }
         Some(Checkr::new(&self.checkr_api_key))
+    }
+
+    /// Authenticate with Okta.
+    pub fn authenticate_okta(&self) -> Option<Okta> {
+        if self.okta_api_key.is_empty() || self.okta_domain.is_empty() {
+            // Return early.
+            return None;
+        }
+        Some(Okta::new(&self.okta_api_key, &self.okta_domain))
     }
 
     /// Authenticate with Airtable.
