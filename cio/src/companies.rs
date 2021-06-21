@@ -110,6 +110,13 @@ impl Company {
             .unwrap()
     }
 
+    pub fn get_from_domain(db: &Database, domain: &str) -> Self {
+        companys::dsl::companys
+            .filter(companys::dsl::domain.eq(domain.to_string()).or(companys::dsl::gsuite_domain.eq(domain.to_string())))
+            .first::<Company>(&db.conn())
+            .unwrap()
+    }
+
     /// Authenticate with Checkr.
     pub fn authenticate_checkr(&self) -> Option<Checkr> {
         if self.checkr_api_key.is_empty() {
