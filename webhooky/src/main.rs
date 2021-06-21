@@ -1707,6 +1707,7 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     let t = qb.get_access_token(&event.code).await.unwrap();
 
     // Get the company info.
+    sentry::capture_message(&format!("quickbooks realm id: {}", event.realm_id), sentry::Level::Info);
     let company_info = qb.company_info(&event.realm_id).await.unwrap();
     sentry::capture_message(&format!("quickbooks company info: {:?}", company_info), sentry::Level::Info);
 
