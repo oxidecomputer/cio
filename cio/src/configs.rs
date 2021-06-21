@@ -1215,6 +1215,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&user.email) {
+            user.gusto_id = gusto_user.id.to_string();
+
             // Update the user's start date.
             user.start_date = gusto_user.jobs[0].hire_date;
 
@@ -1230,6 +1232,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             user.home_address_zipcode = gusto_user.home_address.zip.to_string();
             user.home_address_country = gusto_user.home_address.country.to_string();
         } else if let Some(gusto_user) = gusto_users.get(&user.recovery_email) {
+            user.gusto_id = gusto_user.id.to_string();
+
             // Update the user's start date.
             user.start_date = gusto_user.jobs[0].hire_date;
 
@@ -1266,7 +1270,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Expand the user.
         user.expand(db, company).await;
 
-        let new_user = user.upsert(db).await;
+        let mut new_user = user.upsert(db).await;
 
         if existing.is_none() && !company.okta_domain.is_empty() {
             // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
@@ -1297,12 +1301,14 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                 // Check if we have a Ramp user for the user.
                 match ramp_users.get(&new_user.email) {
                     // We have the user, we don't need to do anything.
-                    Some(_) => (),
+                    Some(ramp_user) => {
+                        new_user.ramp_id = ramp_user.id.to_string();
+                    }
                     None => {
                         println!("inviting new ramp user {}", new_user.username);
                         // Invite the new ramp user.
                         let mut ramp_user: ramp_api::User = Default::default();
-                        ramp_user.email = new_user.email;
+                        ramp_user.email = new_user.email.to_string();
                         ramp_user.first_name = new_user.first_name.to_string();
                         ramp_user.last_name = new_user.last_name.to_string();
                         ramp_user.phone = new_user.recovery_phone.to_string();
@@ -1310,13 +1316,17 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                         if let Some(department) = ramp_departments.get(&new_user.department) {
                             ramp_user.department_id = department.id.to_string();
                         }
-                        let _r = ramp.invite_new_user(&ramp_user).await.unwrap();
+                        let r = ramp.invite_new_user(&ramp_user).await.unwrap();
+                        new_user.ramp_id = r.id.to_string();
 
                         // TODO: Create them a card.
                     }
                 }
             }
         }
+
+        // Update with any other changes we made to the user.
+        new_user.update(db).await;
 
         // Remove the user from the BTreeMap.
         user_map.remove(&user.username);
