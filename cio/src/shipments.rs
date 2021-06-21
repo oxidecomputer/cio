@@ -480,7 +480,7 @@ pub fn hq_address(company: &Company) -> Address {
     // Use the buildings address.
     Address {
         company: "Oxide Computer Company".to_string(),
-        name: "The Oxide Shipping Bot".to_string(),
+        name: "The Shipping Bot".to_string(),
         street1: "1251 Park Avenue".to_string(),
         city: "Emeryville".to_string(),
         state: "CA".to_string(),
@@ -647,7 +647,7 @@ If you have any questions or concerns, please respond to this email!
 Have a splendid day!
 
 xoxo,
-  The Oxide Shipping Bot",
+  The Shipping Bot",
                     self.contents,
                     self.name,
                     self.format_address(),
@@ -686,7 +686,7 @@ If you have any questions or concerns, please respond to this email!
 Have a splendid day!
 
 xoxo,
-  The Oxide Shipping Bot",
+  The Shipping Bot",
                     self.contents,
                     self.name,
                     self.format_address(),
@@ -734,7 +734,7 @@ As always, the Airtable with all the shipments lives at:
 https://airtable-shipments.corp.oxide.computer.
 
 xoxo,
-  The Oxide Shipping Bot",
+  The Shipping Bot",
                     self.contents,
                     self.name,
                     self.format_address(),
