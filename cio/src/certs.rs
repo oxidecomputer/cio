@@ -179,7 +179,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
         domain: domain.to_string(),
         valid_days_left: cert.valid_days_left() as i32,
         expiration_date: crate::utils::default_date(),
-        cio_company_id: Default::default(),
+        cio_company_id: company.id,
     }
 }
 
