@@ -33,17 +33,24 @@ use crate::utils::get_github_user_public_ssh_keys;
 /// The data type for our configuration files.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Config {
+    #[serde(default)]
     pub users: BTreeMap<String, UserConfig>,
+    #[serde(default)]
     pub groups: BTreeMap<String, GroupConfig>,
 
+    #[serde(default)]
     pub buildings: BTreeMap<String, BuildingConfig>,
+
+    #[serde(default)]
     pub resources: BTreeMap<String, ResourceConfig>,
 
+    #[serde(default)]
     pub links: BTreeMap<String, LinkConfig>,
 
-    #[serde(alias = "github-outside-collaborators")]
+    #[serde(default, alias = "github-outside-collaborators")]
     pub github_outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
 
+    #[serde(default)]
     pub huddles: BTreeMap<String, HuddleConfig>,
 
     #[serde(default)]
@@ -1205,7 +1212,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         let new_user = user.upsert(db).await;
 
-        if existing.is_none() {
+        if existing.is_none() && !company.okta_domain.is_empty() {
+            // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
+            // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
             // Now we need to update Okta to include the new user.
             // We do this so that when we send emails from ramp and for the new user,
             // they should have a Google account by then.
