@@ -6,7 +6,7 @@ use std::{thread, time};
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
 use cio_api::companies::Company;
-use cio_api::utils::list_all_github_repos;
+use cio_api::repos::list_all_github_repos;
 use futures_util::stream::TryStreamExt;
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client as InfluxClient, Query as InfluxQuery};
