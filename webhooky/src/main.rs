@@ -1018,7 +1018,8 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<
 
     // Schedule the pickup.
     let api_context = rqctx.context();
-    OutboundShipments::create_pickup(&api_context.db).await;
+    let company = Company::get_by_id(&api_context.db, event.cio_company_id);
+    OutboundShipments::create_pickup(&api_context.db, &company).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

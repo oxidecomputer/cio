@@ -188,7 +188,7 @@ impl MailChimp {
     }
 
     /// Get metadata information.
-    pub async fn metadata(&self) -> Result<serde_json::Value, APIError> {
+    pub async fn metadata(&self) -> Result<Metadata, APIError> {
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
         headers.append(header::AUTHORIZATION, header::HeaderValue::from_str(&format!("OAuth {}", self.token)).unwrap());
@@ -207,9 +207,7 @@ impl MailChimp {
         };
 
         // Try to deserialize the response.
-        let result: serde_json::Value = resp.json().await.unwrap();
-
-        Ok(result)
+        Ok(resp.json().await.unwrap())
     }
 
     /// Returns a list of subscribers.
@@ -498,10 +496,36 @@ pub struct WebhookGrouping {
     pub groups: Option<String>,
 }
 
-#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Metadata {
-    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub dc: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub accountname: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub api_endpoint: String,
+    #[serde(default)]
+    pub login: Login,
+}
+
+#[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct Login {
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub avatar: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub login_email: String,
+    #[serde(default)]
+    pub login_id: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub login_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub login_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    pub role: String,
+    #[serde(default)]
+    pub user_id: i64,
 }
 
 /// The data type for the response to Mailchimp's API for listing members
