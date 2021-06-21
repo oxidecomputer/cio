@@ -267,6 +267,7 @@ table! {
         okta_domain -> Varchar,
         mailchimp_list_id -> Varchar,
         github_app_installation_id -> Int4,
+        cloudflare_api_key -> Varchar,
         checkr_api_key -> Varchar,
         printer_url -> Varchar,
         airtable_api_key -> Varchar,

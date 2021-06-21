@@ -7,6 +7,7 @@ use airtable_api::Airtable;
 use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::Utc;
+use cloudflare::framework::{async_api::Client as CloudflareClient, auth::Credentials as CloudflareCredentials, Environment, HttpApiClientConfig};
 use docusign::DocuSign;
 use gusto_api::Gusto;
 use hubcaps::http_cache::FileBasedCache;
@@ -58,6 +59,8 @@ pub struct NewCompany {
     pub mailchimp_list_id: String,
     #[serde(default)]
     pub github_app_installation_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cloudflare_api_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub checkr_api_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -115,6 +118,22 @@ impl Company {
             .filter(companys::dsl::domain.eq(domain.to_string()).or(companys::dsl::gsuite_domain.eq(domain.to_string())))
             .first::<Company>(&db.conn())
             .unwrap()
+    }
+
+    /// Authenticate with Cloudflare.
+    pub fn authenticate_cloudflare(&self) -> Option<CloudflareClient> {
+        if self.cloudflare_api_key.is_empty() || self.gsuite_subject.is_empty() {
+            // Return early.
+            return None;
+        }
+
+        // Create the Cloudflare client.
+        let cf_creds = CloudflareCredentials::UserAuthKey {
+            email: self.gsuite_subject.to_string(),
+            key: self.cloudflare_api_key.to_string(),
+        };
+        let api_client = CloudflareClient::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
+        Some(api_client)
     }
 
     /// Authenticate with Checkr.

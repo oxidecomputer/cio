@@ -13,11 +13,7 @@ use async_trait::async_trait;
 use chrono::NaiveDate;
 use chrono::{DateTime, TimeZone, Utc};
 use cloudflare::endpoints::{dns, zone};
-use cloudflare::framework::{
-    async_api::{ApiClient, Client},
-    auth::Credentials,
-    Environment, HttpApiClientConfig,
-};
+use cloudflare::framework::async_api::ApiClient;
 use hubcaps::Github;
 use macros::db;
 use openssl::x509::X509;
@@ -32,15 +28,8 @@ use crate::utils::create_or_update_file_in_github_repo;
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
-pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
-    let email = env::var("CLOUDFLARE_EMAIL").unwrap();
-
-    // Create the Cloudflare client.
-    let cf_creds = Credentials::UserAuthKey {
-        email: env::var("CLOUDFLARE_EMAIL").unwrap(),
-        key: env::var("CLOUDFLARE_TOKEN").unwrap(),
-    };
-    let api_client = Client::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
+pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCertificate {
+    let api_client = company.authenticate_cloudflare().unwrap();
 
     // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
     let persist = FilePersist::new(env::temp_dir());
@@ -52,7 +41,7 @@ pub async fn create_ssl_certificate(domain: &str) -> NewCertificate {
     // Reads the private account key from persistence, or
     // creates a new one before accessing the API to establish
     // that it's there.
-    let acc = dir.account(&email).unwrap();
+    let acc = dir.account(&company.gsuite_subject).unwrap();
 
     // Order a new TLS certificate for a domain.
     let mut ord_new = acc.new_order(domain, &[]).unwrap();
@@ -225,8 +214,8 @@ impl NewCertificate {
     /// For a certificate struct, populate the certificate fields for the domain.
     /// This will create the cert from Let's Encrypt and update Cloudflare TXT records for the
     /// verification.
-    pub async fn populate(&mut self) {
-        *self = create_ssl_certificate(&self.domain).await;
+    pub async fn populate(&mut self, company: &Company) {
+        *self = create_ssl_certificate(&self.domain, company).await;
     }
 
     /// For a certificate struct, populate the certificate and private_key fields from
@@ -272,6 +261,11 @@ impl NewCertificate {
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
     pub fn save_to_directory(&self, dir: &str) {
+        if self.certificate.is_empty() {
+            // Return early.
+            return;
+        }
+
         let path = self.get_path(dir);
 
         // Create the directory if it does not exist.
@@ -284,6 +278,11 @@ impl NewCertificate {
 
     /// Saves the fullchain certificate and privkey to the configs github repo.
     pub async fn save_to_github_repo(&self, github: &Github, company: &Company) {
+        if self.certificate.is_empty() {
+            // Return early.
+            return;
+        }
+
         let repo = github.repo(&company.github_org, "configs");
         let r = repo.get().await.unwrap();
 

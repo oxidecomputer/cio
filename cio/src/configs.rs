@@ -1688,10 +1688,15 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
             println!("cert {} is valid for {} more days, skipping", certificate.domain, certificate.valid_days_left);
         } else {
             // Populate the certificate.
-            certificate.populate().await;
+            certificate.populate(company).await;
 
             // Save the certificate to disk.
             certificate.save_to_github_repo(github, company).await;
+        }
+
+        if certificate.certificate.is_empty() {
+            // Continue early.
+            continue;
         }
 
         // Update the database and Airtable.
