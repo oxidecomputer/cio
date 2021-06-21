@@ -1182,18 +1182,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
     }
 
-    // Initialize the Airtable client.
-    /*let mut airtable_users: HashMap<String, airtable_api::User> = HashMap::new();
-    if !company.airtable_enterprise_account_id.is_empty() {
-        // We don't need a base id here since we are only using the enterprise api features.
-        let airtable_auth = company.authenticate_airtable("");
-        let gu = airtable_auth.list_users().await.unwrap();
-        for g in gu {
-            airtable_users.insert(g.email.to_string(), g);
-        }
-    }
-    println!("airtable users: {:?}", airtable_users);*/
-
     // Initialize the Ramp client.
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
     let mut ramp_departments: HashMap<String, ramp_api::Department> = HashMap::new();

@@ -69,9 +69,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35fbfe7cc6be8c7269c92a49e6a3d28efd361d51fd184461d3040f8aa37a9253"
+version = "0.1.32"
 dependencies = [
  "chrono",
  "reqwest",
@@ -83,6 +81,7 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.32"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#3f759b030954748b65d74ff21b8bf9bbbbcdbd2e"
 dependencies = [
  "chrono",
  "reqwest",
@@ -494,10 +493,10 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#45b569356692e5ff67a9c716e4061196e028b967"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#3f759b030954748b65d74ff21b8bf9bbbbcdbd2e"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.31",
+ "airtable-api 0.1.32 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "async-trait",
  "barcoders",
  "base64 0.12.3",
@@ -2095,7 +2094,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#45b569356692e5ff67a9c716e4061196e028b967"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#3f759b030954748b65d74ff21b8bf9bbbbcdbd2e"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
