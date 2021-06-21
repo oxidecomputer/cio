@@ -9,7 +9,8 @@ use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, Gro
 use cio_api::db::Database;
 use cio_api::journal_clubs::{JournalClubMeeting, JournalClubMeetings};
 use cio_api::mailing_list::{MailingListSubscriber, MailingListSubscribers};
-use cio_api::models::{GithubRepo, GithubRepos, RFDs, RFD};
+use cio_api::models::{RFDs, RFD};
+use cio_api::repos::{GithubRepo, GithubRepos};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {

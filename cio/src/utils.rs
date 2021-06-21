@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;
 use std::ops::Add;
@@ -9,13 +8,8 @@ use std::time;
 
 use futures_util::stream::TryStreamExt;
 use hubcaps::issues::Issue;
-use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repository};
-use hubcaps::Github;
+use hubcaps::repositories::Repository;
 use reqwest::get;
-
-use crate::companies::Company;
-use crate::db::Database;
-use crate::models::{GithubRepo, GithubRepos, NewRepo};
 
 /// Write a file.
 pub fn write_file(file: &Path, contents: &str) {
@@ -54,52 +48,6 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
             }
         })
         .collect()
-}
-
-/// List all the GitHub repositories for our org.
-pub async fn list_all_github_repos(github: &Github, company: &Company) -> Vec<NewRepo> {
-    let github_repos = github
-        .org_repos(&company.github_org)
-        .iter(&OrganizationRepoListOptions::builder().per_page(100).repo_type(OrgRepoType::All).build())
-        .try_collect::<Vec<hubcaps::repositories::Repo>>()
-        .await
-        .unwrap();
-
-    let mut repos: Vec<NewRepo> = Default::default();
-    for r in github_repos {
-        repos.push(NewRepo::new(r, company.id));
-    }
-
-    repos
-}
-
-/// Sync the repos with our database.
-pub async fn refresh_db_github_repos(db: &Database, github: &Github, company: &Company) {
-    let github_repos = list_all_github_repos(github, company).await;
-
-    // Get all the repos.
-    let db_repos = GithubRepos::get_from_db(db, company.id);
-
-    // Create a BTreeMap
-    let mut repo_map: BTreeMap<String, GithubRepo> = Default::default();
-    for r in db_repos {
-        repo_map.insert(r.name.to_string(), r);
-    }
-
-    // Sync github_repos.
-    for github_repo in github_repos {
-        github_repo.upsert(db).await;
-
-        // Remove the repo from the map.
-        repo_map.remove(&github_repo.name);
-    }
-
-    // Remove any repos that should no longer be in the database.
-    // This is found by the remaining repos that are in the map since we removed
-    // the existing repos from the map above.
-    for (_, repo) in repo_map {
-        repo.delete(db).await;
-    }
 }
 
 /// Get a files content from a repo.
@@ -277,28 +225,4 @@ impl SliceExt for Vec<u8> {
 
 pub fn default_date() -> chrono::naive::NaiveDate {
     chrono::naive::NaiveDate::parse_from_str("1970-01-01", "%Y-%m-%d").unwrap()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::companies::Companys;
-    use crate::db::Database;
-    use crate::models::GithubRepos;
-    use crate::utils::refresh_db_github_repos;
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_github_repos() {
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
-        // Iterate over the companies and update.
-        for company in companies {
-            let github = company.authenticate_github();
-
-            refresh_db_github_repos(&db, &github, &company).await;
-
-            GithubRepos::get_from_db(&db, company.id).update_airtable(&db).await;
-        }
-    }
 }
