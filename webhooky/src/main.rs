@@ -1482,7 +1482,15 @@ async fn listen_auth_mailchimp_callback(rqctx: Arc<RequestContext<Context>>, que
     // Let's get the metadata.
     let metadata = g.metadata().await.unwrap();
 
-    sentry::capture_message(&format!("mailchimp metadata: {:?}", metadata), sentry::Level::Info);
+    // Let's get the domain from the email.
+    let split = metadata.login.email.split('@');
+    let vec: Vec<&str> = split.collect();
+    let mut domain = "".to_string();
+    if vec.len() > 1 {
+        domain = vec.get(1).unwrap().to_string();
+    }
+
+    let company = Company::get_from_domain(&api_context.db, &domain);
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -1492,17 +1500,16 @@ async fn listen_auth_mailchimp_callback(rqctx: Arc<RequestContext<Context>>, que
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
-        company_id: "".to_string(),
+        company_id: metadata.accountname.to_string(),
         item_id: "".to_string(),
-        user_email: "".to_string(),
+        user_email: metadata.login.email.to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
         // Format the endpoint with the dc.
         // https://${server}.api.mailchimp.com
-        endpoint: "".to_string(),
-        // TODO: update this so it matches who is actually authenticating.
-        auth_company_id: 1,
+        endpoint: metadata.api_endpoint.to_string(),
+        auth_company_id: company.id,
         company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
         cio_company_id: 1,
