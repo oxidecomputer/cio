@@ -1266,7 +1266,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             let airtable_auth = company.authenticate_airtable("");
             let airtable_user = airtable_auth.get_enterprise_user(&user.email).await.unwrap();
             println!("airtable_user: {:?}", airtable_user);
-            user.airtable_id = airtable_user.user.id.to_string();
+            user.airtable_id = airtable_user.id.to_string();
         }
 
         // See if we have a gsuite user for the user.

@@ -348,7 +348,7 @@ impl Airtable {
     /// This is for an enterprise admin to do only.
     /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserGetInformationByEmail
     /// Permission level can be: owner | create | edit | comment | read
-    pub async fn get_enterprise_user(&self, email: &str) -> Result<Vec<EnterpriseUser>, APIError> {
+    pub async fn get_enterprise_user(&self, email: &str) -> Result<EnterpriseUser, APIError> {
         if self.enterprise_account_id.is_empty() {
             // Return an error early.
             return Err(APIError {
@@ -378,7 +378,14 @@ impl Airtable {
 
         let r: EnterpriseUsersResponse = resp.json().await.unwrap();
 
-        Ok(r.users)
+        if r.users.is_empty() {
+            return Err(APIError {
+                status_code: StatusCode::NOT_FOUND,
+                body: format!("Could not find user with email: {}", email),
+            });
+        }
+
+        Ok(r.users.get(0).unwrap().clone())
     }
 
     /// Add a collaborator to a workspace.
