@@ -555,12 +555,13 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 a.update(db).await;
 
                 // Create our docusign client.
-                let ds = oxide.authenticate_docusign(db).await;
+                let dsa = oxide.authenticate_docusign(db).await;
+                if let Some(ds) = dsa {
+                    // Get the template we need.
+                    let template_id = get_docusign_template_id(&ds).await;
 
-                // Get the template we need.
-                let template_id = get_docusign_template_id(&ds).await;
-
-                a.do_docusign(db, &ds, &template_id, &oxide).await;
+                    a.do_docusign(db, &ds, &template_id, &oxide).await;
+                }
             }
         }
     } else if column_header.contains("start date") {
@@ -1793,8 +1794,10 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
             let company = applicant.company(db);
 
             // Create our docusign client.
-            let ds = company.authenticate_docusign(db).await;
-            applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
+            let dsa = company.authenticate_docusign(db).await;
+            if let Some(ds) = dsa {
+                applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
+            }
         }
         Err(e) => {
             sentry::capture_message(

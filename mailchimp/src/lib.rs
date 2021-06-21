@@ -195,7 +195,7 @@ impl MailChimp {
 
         // Build the request.
         let client = reqwest::Client::new();
-        let resp = client.post("https://login.mailchimp.com/oauth2/metadata").headers(headers).send().await.unwrap();
+        let resp = client.get("https://login.mailchimp.com/oauth2/metadata").headers(headers).send().await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
