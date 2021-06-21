@@ -2,7 +2,7 @@ use hubcaps::repositories::Repository;
 use serde::Serialize;
 use tailscale_api::Tailscale;
 
-use crate::companies::Company;
+use crate::companies::{Company, Companys};
 use crate::configs::Links;
 use crate::db::Database;
 use crate::models::{GithubRepos, RFDs};
@@ -180,17 +180,20 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Com
 pub async fn refresh_shorturls() {
     let db = Database::new();
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+    let companies = Companys::get_from_db(&db, 1);
 
-    let github = oxide.authenticate_github();
-    let repo = github.repo(&oxide.github_org, "configs");
-
-    generate_shorturls_for_repos(&db, &repo, oxide.id).await;
-    generate_shorturls_for_rfds(&db, &repo, oxide.id).await;
-    generate_shorturls_for_configs_links(&db, &repo, oxide.id).await;
-    generate_dns_for_tailscale_devices(&repo, &oxide).await;
+    // Iterate over the companies and update.
+    for company in companies {
+        let github = company.authenticate_github();
+        let repo = github.repo(&company.github_org, "configs");
+        generate_shorturls_for_repos(&db, &repo, company.id).await;
+        generate_shorturls_for_rfds(&db, &repo, company.id).await;
+        generate_shorturls_for_configs_links(&db, &repo, company.id).await;
+        if company.name == "Oxide" {
+            // TODO: remove this when we have better tailscale auth.
+            generate_dns_for_tailscale_devices(&repo, &company).await;
+        }
+    }
 }
 
 /// The data type for a short URL that will be used in a template.

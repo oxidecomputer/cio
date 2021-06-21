@@ -282,7 +282,7 @@ pub static TEMPLATE_NGINX_PATHS: &str = r#"server {
 	server_name {{this.0.subdomain}};
 
 	location = / {
-		return 301 https://119.rfd.{{this.domain}};
+		return 301 https://119.rfd.{{this.0.domain}};
 	}
 
 	{{#each this}}
@@ -303,17 +303,17 @@ pub static TEMPLATE_NGINX_PATHS: &str = r#"server {
 server {
 	listen      [::]:443 ssl http2;
 	listen      443 ssl http2;
-	server_name {{this.0.subdomain}} {{this.0.subdomain}}.{{this.domain}};
+	server_name {{this.0.subdomain}} {{this.0.subdomain}}.{{this.0.domain}};
 
 	include ssl-params.conf;
 
 	# Note this certificate is NOT the wildcard, since these are paths.
-	ssl_certificate			/etc/nginx/ssl/{{this.0.subdomain}}.{{this.domain}}/fullchain.pem;
-	ssl_certificate_key		/etc/nginx/ssl/{{this.0.subdomain}}.{{this.domain}}/privkey.pem;
-	ssl_trusted_certificate	        /etc/nginx/ssl/{{this.0.subdomain}}.{{this.domain}}/fullchain.pem;
+	ssl_certificate			/etc/nginx/ssl/{{this.0.subdomain}}.{{this.0.domain}}/fullchain.pem;
+	ssl_certificate_key		/etc/nginx/ssl/{{this.0.subdomain}}.{{this.0.domain}}/privkey.pem;
+	ssl_trusted_certificate	        /etc/nginx/ssl/{{this.0.subdomain}}.{{this.0.domain}}/fullchain.pem;
 
 	location = / {
-		return 301 https://119.rfd.{{this.domain}};
+		return 301 https://119.rfd.{{this.0.domain}};
 	}
 
 	{{#each this}}
@@ -335,7 +335,7 @@ server {
 /// Template for creating DNS records in our Cloudflare terraform configs.
 pub static TEMPLATE_CLOUDFLARE_TERRAFORM: &str = r#"{{#each this}}
 resource "cloudflare_record" "{{terraformize this.name}}_{{this.subdomain}}_{{terraformize this.domain}}" {
-  zone_id  = var.zone_id-${{terraformize this.domain}}
+  zone_id  = var.zone_id-{{terraformize this.domain}}
   name     = "{{this.name}}.{{this.subdomain}}.{{this.domain}}"
   value    = {{{this.ip}}}
   type     = "A"
