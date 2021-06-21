@@ -203,6 +203,19 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub google_anniversary_event_id: String,
 
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub gusto_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub okta_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub google_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ramp_id: String,
+
     /// This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
