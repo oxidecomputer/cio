@@ -1264,9 +1264,33 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         if !company.airtable_enterprise_account_id.is_empty() {
             // We don't need a base id here since we are only using the enterprise api features.
             let airtable_auth = company.authenticate_airtable("");
-            let airtable_user = airtable_auth.get_enterprise_user(&user.email).await.unwrap();
-            println!("airtable_user: {:?}", airtable_user);
-            user.airtable_id = airtable_user.id.to_string();
+            match airtable_auth.get_enterprise_user(&user.email).await {
+                Ok(airtable_user) => {
+                    println!("airtable_user: {:?}", airtable_user);
+                    user.airtable_id = airtable_user.id.to_string();
+
+                    // If we don't have the airtable user added to our workspace,
+                    // we need to add them.
+                    let mut has_access_to_workspace = false;
+                    for collabs in airtable_user.collaborations.workspace_collaborations {
+                        if collabs.workspace_id == company.airtable_workspace_id {
+                            // We already have given the user the permissions.
+                            has_access_to_workspace = true;
+                            break;
+                        }
+                    }
+
+                    // Add the user, if we found out they did not already have permissions
+                    // to the workspace.
+                    if !has_access_to_workspace {
+                        println!("giving {} access to airtable workspace {}", user.email, company.airtable_workspace_id);
+                        //airtable_auth.add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create").await.unwrap();
+                    }
+                }
+                Err(e) => {
+                    println!("getting airtable enterprise user for {} failed: {}", user.email, e);
+                }
+            }
         }
 
         // See if we have a gsuite user for the user.

@@ -1,6 +1,6 @@
 on:
   schedule:
-    - cron: "0/30 * * * *"
+    - cron: "0/40 * * * *"
   workflow_dispatch:
     inputs:
 name: run applicant reviewers updates
