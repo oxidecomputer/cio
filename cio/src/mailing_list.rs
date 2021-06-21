@@ -297,9 +297,6 @@ mod tests {
         let companies = Companys::get_from_db(&db, 1);
         // Iterate over the companies and update the mailing list subscribers for both.
         for company in companies {
-            if company.name == "Oxide" {
-                continue;
-            }
             refresh_db_mailing_list_subscribers(&db, &company).await;
             MailingListSubscribers::get_from_db(&db, company.id).update_airtable(&db).await;
         }
