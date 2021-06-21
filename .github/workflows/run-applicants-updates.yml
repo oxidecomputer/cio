@@ -89,8 +89,6 @@ jobs:
           TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
           TAILSCALE_DOMAIN: ${{ secrets.TAILSCALE_DOMAIN }}
           REVAI_API_KEY: ${{ secrets.REVAI_API_KEY }}
-          CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
-          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
           OKTA_API_TOKEN: ${{ secrets.OKTA_API_TOKEN }}
           DOCUSIGN_REDIRECT_URI: ${{ secrets.DOCUSIGN_REDIRECT_URI }}
           DOCUSIGN_INTEGRATION_KEY: ${{ secrets.DOCUSIGN_INTEGRATION_KEY }}
