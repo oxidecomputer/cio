@@ -1373,7 +1373,13 @@ impl Applicant {
     /// Send an invite to the applicant to do a background check.
     pub async fn send_background_check_invitation(&mut self, db: &Database) {
         let company = self.company(db);
-        let checkr = company.authenticate_checkr();
+        let checkr_auth = company.authenticate_checkr();
+        if checkr_auth.is_none() {
+            // Return early.
+            return;
+        }
+
+        let checkr = checkr_auth.unwrap();
 
         // Check if we already sent them an invitation.
         let candidates = checkr.list_candidates().await.unwrap();
@@ -2547,7 +2553,13 @@ fn is_materials(file_name: &str) -> bool {
 
 pub async fn refresh_background_checks(db: &Database, company: &Company) {
     // Initialize the Checker client.
-    let checkr = company.authenticate_checkr();
+    let checkr_auth = company.authenticate_checkr();
+    if checkr_auth.is_none() {
+        // Return early.
+        return;
+    }
+
+    let checkr = checkr_auth.unwrap();
 
     // List the candidates.
     let candidates = checkr.list_candidates().await.unwrap();

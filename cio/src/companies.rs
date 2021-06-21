@@ -111,8 +111,12 @@ impl Company {
     }
 
     /// Authenticate with Checkr.
-    pub fn authenticate_checkr(&self) -> Checkr {
-        Checkr::new(&self.checkr_api_key)
+    pub fn authenticate_checkr(&self) -> Option<Checkr> {
+        if self.checkr_api_key.is_empty() {
+            // Return early.
+            return None;
+        }
+        Some(Checkr::new(&self.checkr_api_key))
     }
 
     /// Authenticate with Airtable.
