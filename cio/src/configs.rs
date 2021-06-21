@@ -1407,10 +1407,19 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         }
 
         if company.okta_domain.is_empty() {
-            // Delete the user from GSuite.
+            // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             gsuite.delete_user(&user.email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
             println!("deleted user from gsuite: {}", username);
+
+            // If we have an enterprise airtable account, let's delete the user from
+            // our Airtable.
+            if !company.airtable_enterprise_account_id.is_empty() {
+                // We don't need a base id here since we are only using the enterprise api features.
+                let airtable_auth = company.authenticate_airtable("");
+                airtable_auth.delete_internal_user_by_email(&user.email).await.unwrap();
+                println!("deleted user from airtable: {}", username);
+            }
         }
 
         // Delete the user from the database and Airtable.
