@@ -452,11 +452,6 @@ impl UserConfig {
         // Title case the department.
         self.department = titlecase::titlecase(&self.department);
     }
-
-    /// Generate the email address for the user.
-    pub fn email(&self, company: &Company) -> String {
-        format!("{}@{}", self.username, company.gsuite_domain)
-    }
 }
 
 impl User {
@@ -471,11 +466,6 @@ impl User {
 
     pub fn is_consultant(&self) -> bool {
         self.typev == "consultant"
-    }
-
-    /// Generate the email address for the user.
-    pub fn email(&self, company: &Company) -> String {
-        format!("{}@{}", self.username, company.gsuite_domain)
     }
 
     /// Create an internal swag shipment to an employee's home address.
@@ -515,7 +505,7 @@ impl User {
         // Send the message.
         sendgrid
             .send_mail(
-                format!("Your New Email Account: {}", self.email(&company)),
+                format!("Your New Email Account: {}", self.email),
                 format!(
                     "Yoyoyo {},
 
@@ -541,15 +531,10 @@ jess@{}.
 
 xoxo,
   The Onboarding Bot",
-                    self.first_name,
-                    company.domain,
-                    company.domain,
-                    self.email(&company),
-                    aliases,
-                    company.gsuite_domain,
+                    self.first_name, company.domain, company.domain, self.email, aliases, company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(&company), format!("jess@{}", company.gsuite_domain)],
+                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -569,7 +554,7 @@ xoxo,
         // Send the message.
         sendgrid
             .send_mail(
-                format!("Your New Email Account: {}", self.email(&company)),
+                format!("Your New Email Account: {}", self.email),
                 format!(
                     "Yoyoyo {},
 
@@ -596,19 +581,10 @@ jess@{}. If you want other email aliases, let Jess know as well.
 
 xoxo,
   The Onboarding Bot",
-                    self.first_name,
-                    company.domain,
-                    company.domain,
-                    self.email(&company),
-                    password,
-                    aliases,
-                    self.github,
-                    company.github_org,
-                    company.github_org,
-                    company.gsuite_domain,
+                    self.first_name, company.domain, company.domain, self.email, password, aliases, self.github, company.github_org, company.github_org, company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(&company), format!("jess@{}", company.gsuite_domain)],
+                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -645,7 +621,7 @@ let jess@{} know what your GitHub handle is.",
         // Send the message.
         sendgrid
             .send_mail(
-                format!("Your New Email Account: {}", self.email(&company)),
+                format!("Your New Email Account: {}", self.email),
                 format!(
                     "Yoyoyo {},
 
@@ -694,19 +670,10 @@ Lastly, be sure to order yourself some swag: https://swag.oxide.computer
 
 xoxo,
   The Onboarding Bot",
-                    self.first_name,
-                    company.domain,
-                    company.domain,
-                    self.email(&company),
-                    aliases,
-                    github_copy,
-                    company.gsuite_domain,
-                    company.github_org,
-                    company.github_org,
-                    company.github_org,
+                    self.first_name, company.domain, company.domain, self.email, aliases, github_copy, company.gsuite_domain, company.github_org, company.github_org, company.github_org,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email(&company), format!("jess@{}", company.gsuite_domain)],
+                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -1234,6 +1201,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     }
     // Sync users.
     for (_, mut user) in users {
+        // Set the user's email.
+        user.email = format!("{}@{}", user.username, company.gsuite_domain);
+
         // Check if we already have the new user in the database.
         let existing = User::get_from_db(db, company.id, user.username.to_string());
 
@@ -1244,7 +1214,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
-        if let Some(gusto_user) = gusto_users.get(&user.email(company)) {
+        if let Some(gusto_user) = gusto_users.get(&user.email) {
             // Update the user's start date.
             user.start_date = gusto_user.jobs[0].hire_date;
 
@@ -1325,14 +1295,14 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         if let Some(ref ramp) = ramp_auth {
             if !new_user.is_consultant() && !new_user.is_system_account() {
                 // Check if we have a Ramp user for the user.
-                match ramp_users.get(&new_user.email(company)) {
+                match ramp_users.get(&new_user.email) {
                     // We have the user, we don't need to do anything.
                     Some(_) => (),
                     None => {
                         println!("inviting new ramp user {}", new_user.username);
                         // Invite the new ramp user.
                         let mut ramp_user: ramp_api::User = Default::default();
-                        ramp_user.email = new_user.email(company);
+                        ramp_user.email = new_user.email;
                         ramp_user.first_name = new_user.first_name.to_string();
                         ramp_user.last_name = new_user.last_name.to_string();
                         ramp_user.phone = new_user.recovery_phone.to_string();
@@ -1366,10 +1336,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         if company.okta_domain.is_empty() {
             // Delete the user from GSuite.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-            gsuite
-                .delete_user(&user.email(company))
-                .await
-                .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
+            gsuite.delete_user(&user.email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
             println!("deleted user from gsuite: {}", username);
         }
 
@@ -1412,14 +1379,14 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             }
 
             // Update the user with the settings from the config for the user.
-            let gsuite_user = update_gsuite_user(&u, &user, false, company).await;
+            let gsuite_user = update_gsuite_user(&u, &user, false).await;
 
             gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
 
             // Add the user to their teams and groups.
-            update_user_google_groups(&gsuite, &user, gsuite_groups.clone(), company).await;
+            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
 
             // Remove the user from the user map and continue.
             // This allows us to add all the remaining new user after.
@@ -1435,7 +1402,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
             // The last argument here tell us to create a password!
             // Make sure it is set to true.
-            let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
+            let gsuite_user = update_gsuite_user(&u, &user, true).await;
 
             gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
 
@@ -1447,7 +1414,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
 
             // Add the user to their teams and groups.
-            update_user_google_groups(&gsuite, &user, gsuite_groups.clone(), company).await;
+            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
         }
     }
 
@@ -1982,7 +1949,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
         new_event.transparency = "transparent".to_string();
         new_event.attendees = vec![Attendee {
             id: Default::default(),
-            email: user.email(company),
+            email: user.email.to_string(),
             display_name: Default::default(),
             organizer: false,
             resource: false,

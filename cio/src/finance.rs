@@ -562,7 +562,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
         {
             Ok(user) => {
                 // Set the user's email.
-                record.employee_email = user.email(company);
+                record.employee_email = user.email;
             }
             Err(e) => {
                 if last_name == "Volpe" {
@@ -813,7 +813,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         {
             Ok(user) => {
                 // Set the user's email.
-                record.employee_email = user.email(&company);
+                record.employee_email = user.email;
             }
             Err(e) => {
                 if last_name == "Volpe" || last_name == "jared" {

@@ -142,7 +142,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    final_email = record.email(&company);
+                                    final_email = record.email;
                                 }
                             }
                             Err(e) => {
@@ -166,7 +166,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
                             Ok(r) => {
                                 if !r.is_empty() {
                                     let record = r.get(0).unwrap().clone();
-                                    final_email = record.email(company);
+                                    final_email = record.email;
                                 }
                             }
                             Err(e) => {

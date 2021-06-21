@@ -478,7 +478,7 @@ pub async fn sync_huddles() {
                         if !attendee.resource && attendee.email.ends_with(&oxide.gsuite_domain) {
                             // Make sure the person is still a user.
                             if let Some(user) = User::get_from_db(&db, oxide.id, attendee.email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
-                                attendees.push(user.email(&oxide));
+                                attendees.push(user.email);
                             }
                         }
                     }

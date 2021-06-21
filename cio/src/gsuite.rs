@@ -12,7 +12,7 @@ use crate::companies::Company;
 use crate::configs::{Building, ConferenceRoom, Group, User};
 
 /// Update a GSuite user.
-pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool, company: &Company) -> GSuiteUser {
+pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool) -> GSuiteUser {
     let mut gsuite_user = gu.clone();
 
     gsuite_user.name = UserName {
@@ -61,7 +61,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
         }];
     }
 
-    gsuite_user.primary_email = user.email(company);
+    gsuite_user.primary_email = user.email.to_string();
 
     if change_password {
         // Since we are creating a new user, we want to change their password
@@ -201,7 +201,7 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
 }
 
 /// Update a user's groups in GSuite to match our database.
-pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_groups: BTreeMap<String, GSuiteGroup>, company: &Company) {
+pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_groups: BTreeMap<String, GSuiteGroup>) {
     // Iterate over the groups and add the user as a member to it.
     for g in &user.groups {
         // Make sure the group exists.
@@ -210,8 +210,8 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
             Some(val) => group = val,
             // Continue through the loop and we will add the user later.
             None => {
-                println!("google group {} does not exist so cannot add user {}", g, user.email(company));
-                println!("google group {} does not exist so cannot add user {}", g, user.email(company));
+                println!("google group {} does not exist so cannot add user {}", g, user.email);
+                println!("google group {} does not exist so cannot add user {}", g, user.email);
                 continue;
             }
         }
@@ -222,19 +222,19 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         }
 
         // Check if the user is already a member of the group.
-        let is_member = gsuite.group_has_member(&group.id, &user.email(company)).await.unwrap();
+        let is_member = gsuite.group_has_member(&group.id, &user.email).await.unwrap();
         if is_member {
             // They are a member so we can just update their member status.
-            gsuite.group_update_member(&group.id, &user.email(company), &role).await.unwrap();
+            gsuite.group_update_member(&group.id, &user.email, &role).await.unwrap();
 
             // Continue through the other groups.
             continue;
         }
 
         // Add the user to the group.
-        gsuite.group_insert_member(&group.id, &user.email(company), &role).await.unwrap();
+        gsuite.group_insert_member(&group.id, &user.email, &role).await.unwrap();
 
-        println!("added {} to gsuite group {} as {}", user.email(company), group.name, role);
+        println!("added {} to gsuite group {} as {}", user.email, group.name, role);
     }
 
     // Iterate over all the groups and if the user is a member and should not
@@ -246,7 +246,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
 
         // Now we have a google group. The user should not be a member of it,
         // but we need to make sure they are not a member.
-        let is_member = gsuite.group_has_member(&group.id, &user.email(company)).await.unwrap();
+        let is_member = gsuite.group_has_member(&group.id, &user.email).await.unwrap();
 
         if !is_member {
             // They are not a member so we can continue early.
@@ -255,9 +255,9 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
 
         // They are a member of the group.
         // We need to remove them.
-        gsuite.group_remove_member(&group.id, &user.email(company)).await.unwrap();
+        gsuite.group_remove_member(&group.id, &user.email).await.unwrap();
 
-        println!("removed {} from gsuite group {}", user.email(company), group.name);
+        println!("removed {} from gsuite group {}", user.email, group.name);
     }
 }
 

@@ -269,14 +269,10 @@ pub struct NewOutboundShipment {
 
 impl From<User> for NewOutboundShipment {
     fn from(user: User) -> Self {
-        let db = Database::new();
-
-        let company = user.company(&db);
-
         NewOutboundShipment {
             created_time: Utc::now(),
             name: user.full_name(),
-            email: user.email(&company),
+            email: user.email,
             phone: user.recovery_phone,
             street_1: user.home_address_street_1.to_string(),
             street_2: user.home_address_street_2.to_string(),

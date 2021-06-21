@@ -2260,7 +2260,7 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
     let mut reviewers: Vec<String> = Default::default();
     for user in users {
         if user.typev == "full-time" && user.username != "robert.keith" && user.username != "robert" && user.username != "keith" && user.username != "thomas" && user.username != "arjen" {
-            reviewers.push(user.email(company));
+            reviewers.push(user.email);
         }
     }
     reviewers
@@ -2313,7 +2313,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
                 for s in scorers_completed_str {
                     match User::get_from_db(db, company.id, s.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
                         Some(user) => {
-                            scorers_completed.push(user.email(company));
+                            scorers_completed.push(user.email);
                         }
                         None => {
                             println!("could not find user with email: {}", email);
