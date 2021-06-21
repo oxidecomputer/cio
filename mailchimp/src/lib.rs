@@ -73,7 +73,7 @@ impl MailChimp {
                     client: Arc::new(c),
                 };
 
-                if g.token.is_empty() || g.refresh_token.is_empty() {
+                if g.token.is_empty() {
                     // This is super hacky and a work around since there is no way to
                     // auth without using the browser.
                     println!("mailchimp consent URL: {}", g.user_consent_url());
