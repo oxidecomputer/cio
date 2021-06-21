@@ -285,7 +285,7 @@ impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
+    use crate::companies::Companys;
     use crate::db::Database;
     use crate::mailing_list::{refresh_db_mailing_list_subscribers, MailingListSubscribers};
 
@@ -294,12 +294,14 @@ mod tests {
     async fn test_cron_mailing_list_subscribers() {
         // Initialize our database.
         let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_db_mailing_list_subscribers(&db, &oxide).await;
-        MailingListSubscribers::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update the mailing list subscribers for both.
+        for company in companies {
+            if company.name == "Oxide" {
+                continue;
+            }
+            refresh_db_mailing_list_subscribers(&db, &company).await;
+            MailingListSubscribers::get_from_db(&db, company.id).update_airtable(&db).await;
+        }
     }
 }

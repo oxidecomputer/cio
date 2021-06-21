@@ -360,6 +360,7 @@ pub fn get_google_scopes() -> Vec<String> {
         "https://www.googleapis.com/auth/spreadsheets".to_string(),
         "https://www.googleapis.com/auth/drive".to_string(),
         "https://www.googleapis.com/auth/userinfo.profile".to_string(),
+        "https://www.googleapis.com/auth/userinfo.email".to_string(),
     ]
 }
 
