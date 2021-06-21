@@ -28,7 +28,7 @@ hyper = { version = "0.10" }
 #influxdb = { version = "0.3.0", features = ["derive"] }
 influxdb = { git = "https://github.com/jessfraz/influxdb-rust", branch = "cloud", features = ["derive"] }
 mailchimp-api = "^0.1.11"
-quickbooks = "^0.1.0"
+quickbooks = "^0.1.11"
 ramp-api = "^0.1.1"
 regex = "^1.5.4"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }

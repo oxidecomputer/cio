@@ -55,7 +55,7 @@ okta = "^0.0.6"
 openssl = "0.10"
 pandoc = "0.8"
 phonenumber = "0.2"
-quickbooks = "^0.1.0"
+quickbooks = "^0.1.11"
 #quickbooks = { path = "../quickbooks" }
 ramp-api = "^0.1.1"
 #ramp-api = { path = "../ramp" }

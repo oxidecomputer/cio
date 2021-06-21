@@ -1706,6 +1706,10 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     // Let's get the token from the code.
     let t = qb.get_access_token(&event.code).await.unwrap();
 
+    // Get the company info.
+    let company_info = qb.company_info().await.unwrap();
+    sentry::capture_message(&format!("quickbooks company info: {:?}", company_info), sentry::Level::Info);
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "quickbooks".to_string(),
