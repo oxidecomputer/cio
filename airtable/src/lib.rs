@@ -364,6 +364,7 @@ impl Airtable {
             (),
             Some(vec![("email", email.to_string())]),
         );
+        println!("airtable request: {:?}", request);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {

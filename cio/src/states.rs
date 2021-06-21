@@ -13,7 +13,7 @@ impl StatesMap {
         map.insert("AR".to_string(), "Arkansas".to_string());
         map.insert("CA".to_string(), "California".to_string());
         map.insert("CO".to_string(), "Colorado".to_string());
-        map.insert("CO".to_string(), "Connecticut".to_string());
+        map.insert("CT".to_string(), "Connecticut".to_string());
         map.insert("DE".to_string(), "Delaware".to_string());
         map.insert("DC".to_string(), "District of Columbia".to_string());
         map.insert("FL".to_string(), "Florida".to_string());
