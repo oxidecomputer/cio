@@ -381,6 +381,10 @@ pub struct UserInfo {
     pub locale: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub hd: String,
+    #[serde(default)]
+    pub verified_email: bool,
 }
 
 pub async fn get_google_access_token(db: &Database, code: &str) {
@@ -411,8 +415,9 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
     let resp = client.get("https://www.googleapis.com/oauth2/v1/userinfo").headers(headers).query(&params).send().await.unwrap();
 
     // Unwrap the response.
-    let metadata: serde_json::Value = resp.json().await.unwrap();
-    println!("{:?}", metadata);
+    let metadata: UserInfo = resp.json().await.unwrap();
+
+    let company = Company::get_from_domain(db, &metadata.hd);
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -422,15 +427,14 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
         refresh_token_expires_in: t.refresh_token_expires_in as i32,
-        company_id: "".to_string(),
+        company_id: metadata.hd.to_string(),
         item_id: "".to_string(),
-        user_email: "".to_string(),
+        user_email: metadata.email.to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        // TODO: update this so it matches who is actually authenticating.
-        auth_company_id: 2,
+        auth_company_id: company.id,
         company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE, NO 1.
         cio_company_id: 1,
