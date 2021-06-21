@@ -11,5 +11,8 @@ CREATE TABLE api_tokens (
     refresh_token_expires_date TIMESTAMPTZ DEFAULT NULL,
     endpoint VARCHAR NOT NULL,
     last_updated_at TIMESTAMPTZ NOT NULL,
+    cio_company_id INTEGER NOT NULL,
+    company [] TEXT NOT NULL,
+    auth_company_id INTEGER NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

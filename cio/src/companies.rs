@@ -385,8 +385,10 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        // TODO: fill this in.
-        cio_company_id: 2,
+        company: Default::default(),
+        auth_company_id: 2,
+        // THIS SHOULD ALWAYS BE OXIDE, NO 1.
+        cio_company_id: 1,
     };
     token.expand();
 

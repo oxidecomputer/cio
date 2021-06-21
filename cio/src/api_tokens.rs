@@ -13,7 +13,7 @@ use crate::schema::{api_tokens, api_tokens as a_p_i_tokens};
     airtable_base = "cio",
     airtable_table = "AIRTABLE_API_TOKENS_TABLE",
     match_on = {
-        "cio_company_id" = "i32",
+        "auth_company_id" = "i32",
         "product" = "String",
     },
 }]
@@ -53,14 +53,22 @@ pub struct NewAPIToken {
     pub endpoint: String,
     pub last_updated_at: DateTime<Utc>,
     /// The CIO company ID.
+    /// This should always be Oxide so it saves to our Airtable.
     #[serde(default)]
     pub cio_company_id: i32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub company: Vec<String>,
+    /// This is the actual company that we match on for getting the token.
+    #[serde(default)]
+    pub auth_company_id: i32,
 }
 
 /// Implement updating the Airtable record for a APIToken.
 #[async_trait]
 impl UpdateAirtableRecord<APIToken> for APIToken {
-    async fn update_airtable_record(&mut self, _record: APIToken) {}
+    async fn update_airtable_record(&mut self, _record: APIToken) {
+        // Link to the correct company.
+    }
 }
 
 impl NewAPIToken {
@@ -100,7 +108,7 @@ mod tests {
     async fn test_cron_api_tokens() {
         let db = Database::new();
 
-        // TODO: update this.
+        // This should always be Oxide.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         APITokens::get_from_db(&db, oxide.id).update_airtable(&db).await;

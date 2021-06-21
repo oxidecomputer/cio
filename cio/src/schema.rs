@@ -34,6 +34,8 @@ table! {
         endpoint -> Varchar,
         last_updated_at -> Timestamptz,
         cio_company_id -> Int4,
+        company -> Array<Text>,
+        auth_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
 }
