@@ -68,6 +68,9 @@ pub struct NewAPIToken {
 impl UpdateAirtableRecord<APIToken> for APIToken {
     async fn update_airtable_record(&mut self, _record: APIToken) {
         // Link to the correct company.
+        let db = Database::new();
+        let company = Company::get_by_id(self.auth_company_id);
+        self.company = vec![company.airtable_record_id];
     }
 }
 

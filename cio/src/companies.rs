@@ -385,8 +385,9 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        company: Default::default(),
+        // TODO: update this so it matches who is actually authenticating.
         auth_company_id: 2,
+        company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE, NO 1.
         cio_company_id: 1,
     };

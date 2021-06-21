@@ -1492,7 +1492,11 @@ async fn listen_auth_mailchimp_callback(rqctx: Arc<RequestContext<Context>>, que
         // Format the endpoint with the dc.
         // https://${server}.api.mailchimp.com
         endpoint: "".to_string(),
-        cio_company_id: Default::default(),
+        // TODO: update this so it matches who is actually authenticating.
+        auth_company_id: 1,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
     };
     token.expand();
     // Update it in the database.
@@ -1558,8 +1562,11 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        // TODO: base this off the person's email?
-        cio_company_id: 2,
+        // TODO: update this so it matches who is actually authenticating.
+        auth_company_id: 2,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
     };
     token.expand();
     // Update it in the database.
@@ -1614,7 +1621,11 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        cio_company_id: Default::default(),
+        // TODO: update this so it matches who is actually authenticating.
+        auth_company_id: 2,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
     };
     token.expand();
     // Update it in the database.
@@ -1668,7 +1679,11 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        cio_company_id: Default::default(),
+        // TODO: update this so it matches who is actually authenticating.
+        auth_company_id: 1,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
     };
     token.expand();
 
@@ -1742,7 +1757,11 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
-        cio_company_id: Default::default(),
+        // TODO: update this so it matches who is actually authenticating.
+        auth_company_id: 1,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
     };
     token.expand();
 
