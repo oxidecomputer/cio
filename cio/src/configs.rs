@@ -1265,7 +1265,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // We don't need a base id here since we are only using the enterprise api features.
             let airtable_auth = company.authenticate_airtable("");
             let airtable_user = airtable_auth.get_enterprise_user(&user.email).await.unwrap();
-            println!("airtable user: {:?}", airtable_user);
+            println!("airtable_user: {:?}", airtable_user);
+            user.airtable_id = airtable_user.user.id.to_string();
         }
 
         // See if we have a gsuite user for the user.

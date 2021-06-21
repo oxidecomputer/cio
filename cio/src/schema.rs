@@ -273,6 +273,7 @@ table! {
         printer_url -> Varchar,
         airtable_api_key -> Varchar,
         airtable_enterprise_account_id -> Varchar,
+        airtable_workspace_id -> Varchar,
         airtable_base_id_customer_leads -> Varchar,
         airtable_base_id_directory -> Varchar,
         airtable_base_id_misc -> Varchar,

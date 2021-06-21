@@ -322,7 +322,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![("state", "provisioned".to_string())]),
         );
@@ -360,11 +360,10 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
-            Some(vec![("email", email.to_string())]),
+            Some(vec![("email", email.to_string()), ("include", "collaborations".to_string())]),
         );
-        println!("airtable request: {:?}", request);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -398,7 +397,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::POST,
-            format!("meta/workspaces/{}/collaborators", workspace_id),
+            format!("v0/meta/workspaces/{}/collaborators", workspace_id),
             NewCollaborator {
                 collaborators: vec![Collaborator {
                     user: User {
@@ -442,7 +441,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::DELETE,
-            format!("meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![("email", email.to_string())]),
         );
@@ -730,7 +729,7 @@ pub struct NewCollaborator {
 pub struct Collaborator {
     #[serde(default)]
     pub user: User,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "permissionLevel")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "permissionLevel")]
     pub permission_level: String,
 }
 
@@ -742,17 +741,22 @@ pub struct EnterpriseUsersResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnterpriseUser {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "lastActivityTime")]
     pub last_activity_time: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "invitedToAirtableByUserId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize",
+        rename = "invitedToAirtableByUserId"
+    )]
     pub invited_to_airtable_by_user_id: String,
     #[serde(rename = "createdTime")]
     pub created_time: DateTime<Utc>,
@@ -770,15 +774,15 @@ pub struct Collaborations {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Collaboration {
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "baseId")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "baseId")]
     pub base_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "permissionLevel")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "permissionLevel")]
     pub permission_level: String,
     #[serde(rename = "createdTime")]
     pub created_time: DateTime<Utc>,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "grantedByUserId")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "grantedByUserId")]
     pub granted_by_user_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "workspaceId")]
+    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "workspaceId")]
     pub workspace_id: String,
 }
 
@@ -1112,5 +1116,25 @@ pub mod barcode_format_as_string {
     {
         let barcode = deserializer.deserialize_struct("Barcode", BARCODEFIELDS, BarcodeVisitor).unwrap();
         Ok(barcode.text)
+    }
+}
+
+pub mod deserialize_null_string {
+    use serde::{self, Deserialize, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap_or_default();
+
+        Ok(s)
     }
 }
