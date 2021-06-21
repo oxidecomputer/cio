@@ -382,6 +382,18 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
     // Unwrap the response.
     let t: ramp_api::AccessToken = resp.json().await.unwrap();
 
+    // Let's get the company from information about the user.
+    let mut headers = header::HeaderMap::new();
+    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+    headers.append(header::AUTHORIZATION, header::HeaderValue::from_str(&format!("Bearer {}", t.access_token)).unwrap());
+
+    let params = [("alt", "json")];
+    let resp = client.get("https://www.googleapis.com/oauth2/v1/userinfo").headers(headers).query(&params).send().await.unwrap();
+
+    // Unwrap the response.
+    let metadata: serde_json::Value = resp.json().await.unwrap();
+    println!("{:?}", metadata);
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "google".to_string(),
