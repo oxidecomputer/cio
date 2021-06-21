@@ -1192,17 +1192,18 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         } else {
             // Grab their date of birth, start date, and address from Airtable.
             if let Some(e) = existing.clone() {
-                let airtable_record = e.get_existing_airtable_record(db).await.unwrap();
-                user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
-                user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
-                user.home_address_city = airtable_record.fields.home_address_city.to_string();
-                user.home_address_state = airtable_record.fields.home_address_state.to_string();
-                user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
-                user.home_address_country = airtable_record.fields.home_address_country.to_string();
-                user.birthday = airtable_record.fields.birthday;
-                // Keep the start date in airtable if we already have one.
-                if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
-                    user.start_date = airtable_record.fields.start_date;
+                if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
+                    user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
+                    user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
+                    user.home_address_city = airtable_record.fields.home_address_city.to_string();
+                    user.home_address_state = airtable_record.fields.home_address_state.to_string();
+                    user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
+                    user.home_address_country = airtable_record.fields.home_address_country.to_string();
+                    user.birthday = airtable_record.fields.birthday;
+                    // Keep the start date in airtable if we already have one.
+                    if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
+                        user.start_date = airtable_record.fields.start_date;
+                    }
                 }
             }
         }
@@ -1842,7 +1843,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
+    use crate::companies::Companys;
     use crate::configs::refresh_db_configs_and_airtable;
     use crate::db::Database;
 
@@ -1851,10 +1852,10 @@ mod tests {
     async fn test_cron_configs() {
         // Initialize our database.
         let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-        refresh_db_configs_and_airtable(&db, &oxide).await;
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
+            refresh_db_configs_and_airtable(&db, &company).await;
+        }
     }
 }
