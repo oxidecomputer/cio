@@ -162,18 +162,20 @@ impl MailChimp {
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        //headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/x-www-form-urlencoded"));
 
-        let params = [
-            ("grant_type", "authorization_code"),
-            ("client_id", &self.client_id),
-            ("client_secret", &self.client_secret),
-            ("redirect_uri", &urlencoding::encode(&self.redirect_uri)),
-            ("code", code),
-        ];
-        println!("mailchimp params {:?}", params);
+        let body = format!(
+            "grant_type=authorization_code&client_id={}&client_secret={}&redirect_uri={}&code={}",
+            self.client_id,
+            self.client_secret,
+            urlencoding::encode(&self.redirect_uri),
+            code
+        );
+        println!("mailchimp body {}", body);
+
         let client = reqwest::Client::new();
-        let req = client.post("https://login.mailchimp.com/oauth2/token").form(&params);
+        let req = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).body(bytes::Bytes::from(body));
         println!("mailchimp req {:?}", req);
         let resp = req.send().await.unwrap();
         println!("mailchimp resp {}", resp.text().await.unwrap(),);
