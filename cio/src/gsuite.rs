@@ -12,7 +12,7 @@ use crate::companies::Company;
 use crate::configs::{Building, ConferenceRoom, Group, User};
 
 /// Update a GSuite user.
-pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool) -> GSuiteUser {
+pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool, company: &Company) -> GSuiteUser {
     let mut gsuite_user = gu.clone();
 
     gsuite_user.name = UserName {
@@ -168,7 +168,12 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     if !user.github.is_empty() {
         contact.insert("GitHub_Username".to_string(), json!(user.github.to_string()));
     }
-    gsuite_user.custom_schemas.insert("Contact".to_string(), UserCustomProperties(Some(contact)));
+    // Oxide got set up weird but all the rest should be under miscellaneous.
+    if company.name == "Oxide" {
+        gsuite_user.custom_schemas.insert("Contact".to_string(), UserCustomProperties(Some(contact)));
+    } else {
+        gsuite_user.custom_schemas.insert("Miscellaneous".to_string(), UserCustomProperties(Some(contact)));
+    }
 
     // Get the AWS Role information.
     if !user.aws_role.is_empty() {

@@ -278,6 +278,25 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
+    fn update_from_gusto(&mut self, gusto_user: &gusto_api::Employee) {
+        self.gusto_id = gusto_user.id.to_string();
+
+        // Update the user's start date.
+        self.start_date = gusto_user.jobs[0].hire_date;
+
+        // Update the user's birthday.
+        self.birthday = gusto_user.date_of_birth;
+
+        // Update the user's home address.
+        // Gusto now becomes the source of truth for people's addresses.
+        self.home_address_street_1 = gusto_user.home_address.street_1.to_string();
+        self.home_address_street_2 = gusto_user.home_address.street_2.to_string();
+        self.home_address_city = gusto_user.home_address.city.to_string();
+        self.home_address_state = gusto_user.home_address.state.to_string();
+        self.home_address_zipcode = gusto_user.home_address.zip.to_string();
+        self.home_address_country = gusto_user.home_address.country.to_string();
+    }
+
     async fn populate_ssh_keys(&mut self) {
         if self.github.is_empty() {
             // Return early if we don't know their github handle.
@@ -1215,39 +1234,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&user.email) {
-            user.gusto_id = gusto_user.id.to_string();
-
-            // Update the user's start date.
-            user.start_date = gusto_user.jobs[0].hire_date;
-
-            // Update the user's birthday.
-            user.birthday = gusto_user.date_of_birth;
-
-            // Update the user's home address.
-            // Gusto now becomes the source of truth for people's addresses.
-            user.home_address_street_1 = gusto_user.home_address.street_1.to_string();
-            user.home_address_street_2 = gusto_user.home_address.street_2.to_string();
-            user.home_address_city = gusto_user.home_address.city.to_string();
-            user.home_address_state = gusto_user.home_address.state.to_string();
-            user.home_address_zipcode = gusto_user.home_address.zip.to_string();
-            user.home_address_country = gusto_user.home_address.country.to_string();
+            user.update_from_gusto(&gusto_user);
         } else if let Some(gusto_user) = gusto_users.get(&user.recovery_email) {
-            user.gusto_id = gusto_user.id.to_string();
-
-            // Update the user's start date.
-            user.start_date = gusto_user.jobs[0].hire_date;
-
-            // Update the user's birthday.
-            user.birthday = gusto_user.date_of_birth;
-
-            // Update the user's home address.
-            // Gusto now becomes the source of truth for people's addresses.
-            user.home_address_street_1 = gusto_user.home_address.street_1.to_string();
-            user.home_address_street_2 = gusto_user.home_address.street_2.to_string();
-            user.home_address_city = gusto_user.home_address.city.to_string();
-            user.home_address_state = gusto_user.home_address.state.to_string();
-            user.home_address_zipcode = gusto_user.home_address.zip.to_string();
-            user.home_address_country = gusto_user.home_address.country.to_string();
+            user.update_from_gusto(&gusto_user);
         } else {
             // Grab their date of birth, start date, and address from Airtable.
             if let Some(e) = existing.clone() {
@@ -1389,7 +1378,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             }
 
             // Update the user with the settings from the config for the user.
-            let gsuite_user = update_gsuite_user(&u, &user, false).await;
+            let gsuite_user = update_gsuite_user(&u, &user, false, company).await;
 
             gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
 
@@ -1412,7 +1401,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
             // The last argument here tell us to create a password!
             // Make sure it is set to true.
-            let gsuite_user = update_gsuite_user(&u, &user, true).await;
+            let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
 
             gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
 
