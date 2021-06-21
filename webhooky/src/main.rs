@@ -1631,6 +1631,21 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code, &event.state).await.unwrap();
+
+    let ru = g.list_users().await.unwrap();
+
+    // Let's get the domain from the email.
+    let mut domain = "".to_string();
+    if !ru.is_empty() {
+        let split = ru.get(0).unwrap().email.split('@');
+        let vec: Vec<&str> = split.collect();
+        if vec.len() > 1 {
+            domain = vec.get(1).unwrap().to_string();
+        }
+    }
+
+    let company = Company::get_from_domain(&api_context.db, &domain);
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "ramp".to_string(),
@@ -1646,8 +1661,7 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        // TODO: update this so it matches who is actually authenticating.
-        auth_company_id: 2,
+        auth_company_id: company.id,
         company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
         cio_company_id: 1,
