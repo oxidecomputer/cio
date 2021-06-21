@@ -121,7 +121,7 @@ impl Company {
     }
 
     /// Authenticate with MailChimp.
-    pub async fn authenticate_mailchimp(&self, db: &Database) -> MailChimp {
+    pub async fn authenticate_mailchimp(&self, db: &Database) -> Option<MailChimp> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()) {
             // Initialize the MailChimp client.
@@ -144,10 +144,10 @@ impl Company {
                 t.update(&db).await;
             }
 
-            return mailchimp;
+            return Some(mailchimp);
         }
 
-        MailChimp::new_from_env("", "", "")
+        None
     }
 
     /// Authenticate with Ramp.
@@ -177,7 +177,7 @@ impl Company {
     }
 
     /// Authenticate with DocuSign.
-    pub async fn authenticate_docusign(&self, db: &Database) -> DocuSign {
+    pub async fn authenticate_docusign(&self, db: &Database) -> Option<DocuSign> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "docusign".to_string()) {
             // Initialize the DocuSign client.
@@ -192,10 +192,10 @@ impl Company {
             // Update the token in the database.
             t.update(&db).await;
 
-            return ds;
+            return Some(ds);
         }
 
-        DocuSign::new_from_env("", "", "", "")
+        None
     }
 
     /// Authenticate with Gusto.
@@ -221,7 +221,7 @@ impl Company {
     }
 
     /// Authenticate with QuickBooks.
-    pub async fn authenticate_quickbooks(&self, db: &Database) -> QuickBooks {
+    pub async fn authenticate_quickbooks(&self, db: &Database) -> Option<QuickBooks> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "quickbooks".to_string()) {
             // Initialize the QuickBooks client.
@@ -236,10 +236,10 @@ impl Company {
             // Update the token in the database.
             t.update(&db).await;
 
-            return qb;
+            return Some(qb);
         }
 
-        QuickBooks::new_from_env("", "", "")
+        None
     }
 
     /// Get a Google token.

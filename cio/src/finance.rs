@@ -923,7 +923,12 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
 
 pub async fn sync_quickbooks(db: &Database, company: &Company) {
     // Authenticate QuickBooks.
-    let qb = company.authenticate_quickbooks(&db).await;
+    let qba = company.authenticate_quickbooks(&db).await;
+    if qba.is_none() {
+        // Return early.
+        return;
+    }
+    let qb = qba.unwrap();
 
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {

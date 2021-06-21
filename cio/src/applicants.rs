@@ -2697,7 +2697,12 @@ pub async fn update_applicant_reviewers(db: &Database, company: &Company) {
 
 pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
     // Authenticate DocuSign.
-    let ds = company.authenticate_docusign(db).await;
+    let dsa = company.authenticate_docusign(db).await;
+    if dsa.is_none() {
+        // Return early.
+        return;
+    }
+    let ds = dsa.unwrap();
 
     // Get the template we need.
     let template_id = get_docusign_template_id(&ds).await;
