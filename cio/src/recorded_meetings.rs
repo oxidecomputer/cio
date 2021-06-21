@@ -224,7 +224,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_recorded_meetings() {
+    async fn test_recorded_meetings() {
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1);
