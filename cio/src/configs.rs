@@ -1263,7 +1263,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             let airtable_auth = company.authenticate_airtable("");
             match airtable_auth.get_enterprise_user(&user.email).await {
                 Ok(airtable_user) => {
-                    println!("airtable_user: {:?}", airtable_user);
                     user.airtable_id = airtable_user.id.to_string();
 
                     // If we don't have the airtable user added to our workspace,
