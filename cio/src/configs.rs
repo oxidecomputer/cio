@@ -420,6 +420,12 @@ impl UserConfig {
         }
     }
 
+    pub fn is_full_time(&mut self) -> bool {
+        self.populate_type();
+
+        self.typev == "full-time"
+    }
+
     pub fn ensure_all_aliases(&mut self) {
         if !self.github.is_empty() && !self.aliases.contains(&self.github) {
             self.aliases.push(self.github.to_string());
@@ -485,6 +491,10 @@ impl User {
 
     pub fn is_consultant(&self) -> bool {
         self.typev == "consultant"
+    }
+
+    pub fn is_full_time(&self) -> bool {
+        self.typev == "full-time"
     }
 
     /// Create an internal swag shipment to an employee's home address.
@@ -1269,9 +1279,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
                     // Add the user, if we found out they did not already have permissions
                     // to the workspace.
-                    if !has_access_to_workspace {
+                    if !has_access_to_workspace && user.is_full_time() {
                         println!("giving {} access to airtable workspace {}", user.email, company.airtable_workspace_id);
-                        //airtable_auth.add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create").await.unwrap();
+                        airtable_auth.add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create").await.unwrap();
                     }
                 }
                 Err(e) => {
