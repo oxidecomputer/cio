@@ -1236,6 +1236,11 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             user.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
         }
 
+        // See if we have a gsuite user for the user.
+        if let Some(gsuite_user) = gsuite_users_map.get(&user.email) {
+            user.google_id = gsuite_user.id.to_string();
+        }
+
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&user.email) {

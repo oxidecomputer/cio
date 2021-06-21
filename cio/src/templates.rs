@@ -399,8 +399,8 @@ pub static TEMPLATE_TERRAFORM_OKTA_USER: &str = r#"# THIS IS A GENERATED FILE, D
 resource "okta_user" "{{terraformize this.username}}" {
   first_name                = "{{this.first_name}}"
   last_name                 = "{{this.last_name}}"
-  login                     = "{{this.username}}@oxidecomputer.com"
-  email                     = "{{this.username}}@oxidecomputer.com"
+  login                     = "{{this.email}}"
+  email                     = "{{this.email}}"
   display_name              = "{{this.first_name}} {{this.last_name}}"{{#if this.recovery_email}}
   mobile_phone              = "{{this.recovery_phone}}"
   primary_phone             = "{{this.recovery_phone}}"{{/if}}{{#if this.recovery_email}}
