@@ -1563,6 +1563,16 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         }
     }
 
+    // Let's get the domain from the email.
+    let split = current_user.email.split('@');
+    let vec: Vec<&str> = split.collect();
+    let mut domain = "".to_string();
+    if vec.len() > 1 {
+        domain = vec.get(1).unwrap().to_string();
+    }
+
+    let company = Company::get_from_domain(&api_context.db, &domain);
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "gusto".to_string(),
@@ -1578,8 +1588,7 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        // TODO: update this so it matches who is actually authenticating.
-        auth_company_id: 2,
+        auth_company_id: company.id,
         company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
         cio_company_id: 1,
@@ -1678,8 +1687,10 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
 
     // Initialize the QuickBooks client.
     let mut qb = QuickBooks::new_from_env("", "", "");
+
     // Let's get the token from the code.
     let t = qb.get_access_token(&event.code).await.unwrap();
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "quickbooks".to_string(),
@@ -1758,6 +1769,16 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
     // Let's get the user's info as well.
     let user_info = d.get_user_info().await.unwrap();
 
+    // Let's get the domain from the email.
+    let split = user_info.email.split('@');
+    let vec: Vec<&str> = split.collect();
+    let mut domain = "".to_string();
+    if vec.len() > 1 {
+        domain = vec.get(1).unwrap().to_string();
+    }
+
+    let company = Company::get_from_domain(&api_context.db, &domain);
+
     // Save the token to the database.
     let mut token = NewAPIToken {
         product: "docusign".to_string(),
@@ -1773,8 +1794,7 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
-        // TODO: update this so it matches who is actually authenticating.
-        auth_company_id: 1,
+        auth_company_id: company.id,
         company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
         cio_company_id: 1,
