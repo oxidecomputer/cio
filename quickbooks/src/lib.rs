@@ -197,6 +197,26 @@ impl QuickBooks {
         Ok(t)
     }
 
+    pub async fn company_info(&self) -> Result<CompanyInfo, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("company/{}/query", self.company_id), (), Some(&[("query", "select * from CompanyInfo")]));
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: CompanyInfoResponse = resp.json().await.unwrap();
+
+        Ok(r.company_info)
+    }
+
     pub async fn list_attachments_for_purchase(&self, purchase_id: &str) -> Result<Vec<Attachment>, APIError> {
         // Build the request.
         let request = self.request(
@@ -820,3 +840,81 @@ pub struct Bill {
     #[serde(rename = "MetaData")]
     pub meta_data: MetaData,
 }
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct CompanyInfoResponse {
+    #[serde(rename = "CompanyInfo")]
+    pub company_info: CompanyInfo,
+    pub time: DateTime<Utc>,
+}
+
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct CompanyInfo {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
+    pub sync_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
+    #[serde(default, rename = "LegalAddr")]
+    pub legal_addr: Addr,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SupportedLanguages")]
+    pub supported_languages: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "CompanyName")]
+    pub company_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Country")]
+    pub country: String,
+    #[serde(default, rename = "CompanyAddr")]
+    pub company_addr: Addr,
+    #[serde(default)]
+    pub sparse: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
+    pub id: String,
+    #[serde(default, rename = "WebAddr")]
+    pub web_addr: WebAddr,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FiscalYearStartMonth")]
+    pub fiscal_year_start_month: String,
+    #[serde(default, rename = "CustomerCommunicationAddr")]
+    pub customer_communication_addr: Addr,
+    #[serde(default, rename = "PrimaryPhone")]
+    pub primary_phone: PrimaryPhone,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "LegalName")]
+    pub legal_name: String,
+    #[serde(rename = "CompanyStartDate")]
+    pub company_start_date: NaiveDate,
+    #[serde(default, rename = "Email")]
+    pub email: Email,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "NameValue")]
+    pub name_value: Vec<NtRef>,
+    #[serde(rename = "MetaData")]
+    pub meta_data: MetaData,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Addr {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "City")]
+    pub city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Country")]
+    pub country: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Line1")]
+    pub line1: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PostalCode")]
+    pub postal_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "CountrySubDivisionCode")]
+    pub country_sub_division_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
+    pub id: String,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Email {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Address")]
+    pub address: String,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct PrimaryPhone {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FreeFormNumber")]
+    pub free_form_number: String,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct WebAddr {}
