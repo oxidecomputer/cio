@@ -151,7 +151,7 @@ impl Company {
     }
 
     /// Authenticate with Ramp.
-    pub async fn authenticate_ramp(&self, db: &Database) -> Ramp {
+    pub async fn authenticate_ramp(&self, db: &Database) -> Option<Ramp> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "ramp".to_string()) {
             // Initialize the Ramp client.
@@ -170,10 +170,10 @@ impl Company {
             // Update the token in the database.
             t.update(&db).await;
 
-            return ramp;
+            return Some(ramp);
         }
 
-        Ramp::new_from_env("", "")
+        None
     }
 
     /// Authenticate with DocuSign.
@@ -199,7 +199,7 @@ impl Company {
     }
 
     /// Authenticate with Gusto.
-    pub async fn authenticate_gusto(&self, db: &Database) -> Gusto {
+    pub async fn authenticate_gusto(&self, db: &Database) -> Option<Gusto> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()) {
             // Initialize the Gusto client.
@@ -214,10 +214,10 @@ impl Company {
             // Update the token in the database.
             t.update(&db).await;
 
-            return gusto;
+            return Some(gusto);
         }
 
-        Gusto::new_from_env("", "", "")
+        None
     }
 
     /// Authenticate with QuickBooks.

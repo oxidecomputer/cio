@@ -228,7 +228,13 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
 
 pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
     // Create the Ramp client.
-    let ramp = company.authenticate_ramp(&db).await;
+    let r = company.authenticate_ramp(&db).await;
+    if r.is_none() {
+        // Return early.
+        return;
+    }
+
+    let ramp = r.unwrap();
 
     // List all our users.
     let users = ramp.list_users().await.unwrap();

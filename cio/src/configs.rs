@@ -1094,24 +1094,28 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Initialize the Gusto client.
-    let gusto = company.authenticate_gusto(db).await;
-    let gu = gusto.list_employees().await.unwrap();
     let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
-    for g in gu {
-        gusto_users.insert(g.email.to_string(), g);
+    let gusto_auth = company.authenticate_gusto(db).await;
+    if let Some(gusto) = gusto_auth {
+        let gu = gusto.list_employees().await.unwrap();
+        for g in gu {
+            gusto_users.insert(g.email.to_string(), g);
+        }
     }
 
     // Initialize the Ramp client.
-    let ramp = company.authenticate_ramp(db).await;
-    let ru = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
-    for r in ru {
-        ramp_users.insert(r.email.to_string(), r);
-    }
-    let rd = ramp.list_departments().await.unwrap();
     let mut ramp_departments: HashMap<String, ramp_api::Department> = HashMap::new();
-    for r in rd {
-        ramp_departments.insert(r.name.to_string(), r);
+    let ramp_auth = company.authenticate_ramp(db).await;
+    if let Some(ref ramp) = ramp_auth {
+        let ru = ramp.list_users().await.unwrap();
+        for r in ru {
+            ramp_users.insert(r.email.to_string(), r);
+        }
+        let rd = ramp.list_departments().await.unwrap();
+        for r in rd {
+            ramp_departments.insert(r.name.to_string(), r);
+        }
     }
 
     // Find the anniversary calendar.
@@ -1223,26 +1227,28 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             }
         }
 
-        if !new_user.is_consultant() && !new_user.is_system_account() {
-            // Check if we have a Ramp user for the user.
-            match ramp_users.get(&new_user.email(company)) {
-                // We have the user, we don't need to do anything.
-                Some(_) => (),
-                None => {
-                    println!("inviting new ramp user {}", new_user.username);
-                    // Invite the new ramp user.
-                    let mut ramp_user: ramp_api::User = Default::default();
-                    ramp_user.email = new_user.email(company);
-                    ramp_user.first_name = new_user.first_name.to_string();
-                    ramp_user.last_name = new_user.last_name.to_string();
-                    ramp_user.phone = new_user.recovery_phone.to_string();
-                    ramp_user.role = "BUSINESS_USER".to_string();
-                    if let Some(department) = ramp_departments.get(&new_user.department) {
-                        ramp_user.department_id = department.id.to_string();
-                    }
-                    let _r = ramp.invite_new_user(&ramp_user).await.unwrap();
+        if let Some(ref ramp) = ramp_auth {
+            if !new_user.is_consultant() && !new_user.is_system_account() {
+                // Check if we have a Ramp user for the user.
+                match ramp_users.get(&new_user.email(company)) {
+                    // We have the user, we don't need to do anything.
+                    Some(_) => (),
+                    None => {
+                        println!("inviting new ramp user {}", new_user.username);
+                        // Invite the new ramp user.
+                        let mut ramp_user: ramp_api::User = Default::default();
+                        ramp_user.email = new_user.email(company);
+                        ramp_user.first_name = new_user.first_name.to_string();
+                        ramp_user.last_name = new_user.last_name.to_string();
+                        ramp_user.phone = new_user.recovery_phone.to_string();
+                        ramp_user.role = "BUSINESS_USER".to_string();
+                        if let Some(department) = ramp_departments.get(&new_user.department) {
+                            ramp_user.department_id = department.id.to_string();
+                        }
+                        let _r = ramp.invite_new_user(&ramp_user).await.unwrap();
 
-                    // TODO: Create them a card.
+                        // TODO: Create them a card.
+                    }
                 }
             }
         }
