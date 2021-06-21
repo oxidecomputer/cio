@@ -364,6 +364,25 @@ pub fn get_google_scopes() -> Vec<String> {
     ]
 }
 
+/// The data type for Google user info.
+#[derive(Default, Clone, Debug, JsonSchema, Serialize, Deserialize)]
+pub struct UserInfo {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub family_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub given_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub picture: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub locale: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+}
+
 pub async fn get_google_access_token(db: &Database, code: &str) {
     let secret = get_google_credentials().await;
 
