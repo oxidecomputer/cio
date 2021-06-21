@@ -1171,7 +1171,6 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             gusto_users_by_id.insert(g.id.to_string(), g);
         }
     }
-    println!("gusto users: {:?}", gusto_users);
 
     // Initialize the Okta client.
     let mut okta_users: HashMap<String, okta::User> = HashMap::new();
@@ -1182,6 +1181,18 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             okta_users.insert(g.profile.email.to_string(), g);
         }
     }
+
+    // Initialize the Airtable client.
+    /*let mut airtable_users: HashMap<String, airtable_api::User> = HashMap::new();
+    if !company.airtable_enterprise_account_id.is_empty() {
+        // We don't need a base id here since we are only using the enterprise api features.
+        let airtable_auth = company.authenticate_airtable("");
+        let gu = airtable_auth.list_users().await.unwrap();
+        for g in gu {
+            airtable_users.insert(g.email.to_string(), g);
+        }
+    }
+    println!("airtable users: {:?}", airtable_users);*/
 
     // Initialize the Ramp client.
     let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
@@ -1247,6 +1258,14 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Update or create the user in the database.
         if let Some(e) = existing.clone() {
             user.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
+        }
+
+        // Get the Airtable information for the user.
+        if !company.airtable_enterprise_account_id.is_empty() {
+            // We don't need a base id here since we are only using the enterprise api features.
+            let airtable_auth = company.authenticate_airtable("");
+            let airtable_user = airtable_auth.get_enterprise_user(&user.email).await.unwrap();
+            println!("airtable user: {:?}", airtable_user);
         }
 
         // See if we have a gsuite user for the user.

@@ -344,6 +344,87 @@ impl Airtable {
         Ok(result.users)
     }
 
+    /// Get an enterprise user.
+    /// This is for an enterprise admin to do only.
+    /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserGetInformationByEmail
+    /// Permission level can be: owner | create | edit | comment | read
+    pub async fn get_enterprise_user(&self, email: &str) -> Result<Vec<EnterpriseUser>, APIError> {
+        if self.enterprise_account_id.is_empty() {
+            // Return an error early.
+            return Err(APIError {
+                status_code: StatusCode::OK,
+                body: "An enterprise account id is required.".to_string(),
+            });
+        }
+
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            format!("meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            (),
+            Some(vec![("email", email.to_string())]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: EnterpriseUsersResponse = resp.json().await.unwrap();
+
+        Ok(r.users)
+    }
+
+    /// Add a collaborator to a workspace.
+    /// This is for an enterprise admin to do only.
+    /// FROM: https://airtable.com/api/enterprise#enterpriseWorkspaceAddCollaborator
+    /// Permission level can be: owner | create | edit | comment | read
+    pub async fn add_collaborator_to_workspace(&self, workspace_id: &str, user_id: &str, permission_level: &str) -> Result<(), APIError> {
+        if self.enterprise_account_id.is_empty() {
+            // Return an error early.
+            return Err(APIError {
+                status_code: StatusCode::OK,
+                body: "An enterprise account id is required.".to_string(),
+            });
+        }
+
+        // Build the request.
+        let request = self.request(
+            Method::POST,
+            format!("meta/workspaces/{}/collaborators", workspace_id),
+            NewCollaborator {
+                collaborators: vec![Collaborator {
+                    user: User {
+                        id: user_id.to_string(),
+                        email: Default::default(),
+                        name: Default::default(),
+                    },
+                    permission_level: permission_level.to_string(),
+                }],
+            },
+            None,
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
+    }
+
     /// Delete internal user by email.
     /// This is for an enterprise admin to do only.
     /// The user must be an internal user, meaning they have an email with the company domain.
@@ -636,6 +717,68 @@ pub struct Full {
     pub width: i64,
     #[serde(default)]
     pub height: i64,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct NewCollaborator {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub collaborators: Vec<Collaborator>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Collaborator {
+    #[serde(default)]
+    pub user: User,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "permissionLevel")]
+    pub permission_level: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct EnterpriseUsersResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub users: Vec<EnterpriseUser>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnterpriseUser {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "lastActivityTime")]
+    pub last_activity_time: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "invitedToAirtableByUserId")]
+    pub invited_to_airtable_by_user_id: String,
+    #[serde(rename = "createdTime")]
+    pub created_time: DateTime<Utc>,
+    #[serde(default)]
+    pub collaborations: Collaborations,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Collaborations {
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "workspaceCollaborations")]
+    pub workspace_collaborations: Vec<Collaboration>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "baseCollaborations")]
+    pub base_collaborations: Vec<Collaboration>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Collaboration {
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "baseId")]
+    pub base_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "permissionLevel")]
+    pub permission_level: String,
+    #[serde(rename = "createdTime")]
+    pub created_time: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "grantedByUserId")]
+    pub granted_by_user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "workspaceId")]
+    pub workspace_id: String,
 }
 
 struct AttachmentsVisitor;
