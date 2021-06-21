@@ -1162,13 +1162,16 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
     // Initialize the Gusto client.
     let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
+    let mut gusto_users_by_id: HashMap<String, gusto_api::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
     if let Some(gusto) = gusto_auth {
         let gu = gusto.list_employees().await.unwrap();
         for g in gu {
-            gusto_users.insert(g.email.to_string(), g);
+            gusto_users.insert(g.email.to_string(), g.clone());
+            gusto_users_by_id.insert(g.id.to_string(), g);
         }
     }
+    println!("gusto users: {:?}", gusto_users);
 
     // Initialize the Okta client.
     let mut okta_users: HashMap<String, okta::User> = HashMap::new();
@@ -1276,6 +1279,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     // Keep the start date in airtable if we already have one.
                     if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
                         user.start_date = airtable_record.fields.start_date;
+                    }
+                }
+
+                if !e.gusto_id.is_empty() {
+                    if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
+                        user.update_from_gusto(&gusto_user);
                     }
                 }
             }
