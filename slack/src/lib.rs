@@ -713,12 +713,12 @@ pub struct AccessToken {
     pub app_id: String,
     #[serde(default)]
     pub team: Team,
-    #[serde(default)]
-    pub enterprise: Enterprise,
-    #[serde(default)]
-    pub authed_user: AuthedUser,
-    #[serde(default)]
-    pub incoming_webhook: IncomingWebhook,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enterprise: Option<Enterprise>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authed_user: Option<AuthedUser>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub incoming_webhook: Option<IncomingWebhook>,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
