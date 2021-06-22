@@ -221,7 +221,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_shorturls() {
+    async fn test_shorturls() {
         refresh_shorturls().await;
     }
 }
