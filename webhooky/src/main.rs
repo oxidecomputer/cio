@@ -1727,7 +1727,6 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     }
 
     let company = Company::get_from_domain(&api_context.db, &domain);
-    sentry::capture_message(&format!("slack company: {:?}", company), sentry::Level::Info);
 
     let mut webhook = "".to_string();
     if let Some(wh) = t.incoming_webhook {
