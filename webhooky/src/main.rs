@@ -36,6 +36,7 @@ use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::Sheets;
+use slack_chat_api::Slack;
 
 use cio_api::analytics::NewPageView;
 use cio_api::api_tokens::NewAPIToken;
@@ -1746,7 +1747,7 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
         cio_company_id: 1,
     };
-    token.expand();*/
+    token.expand();
 
     // Update it in the database.
     token.upsert(&api_context.db).await;*/
