@@ -52,7 +52,6 @@ use cio_api::rfds::is_image;
 use cio_api::schema::applicants;
 use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
-use cio_api::slack::{get_customers_channel_post_url, get_hiring_channel_post_url, get_public_relations_channel_post_url, post_to_channel};
 use cio_api::swag_inventory::SwagInventoryItem;
 use cio_api::swag_store::Order;
 use cio_api::templates::generate_terraform_files_for_okta;
@@ -754,7 +753,7 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
         println!("applicant is new, sending internal notifications: {:?}", applicant);
 
         // Post to Slack.
-        post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
+        //post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
         // Send a company-wide email.
         applicant.send_email_internally(db).await;
@@ -2022,7 +2021,7 @@ async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Contex
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
-        post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
+        //post_to_channel(get_public_relations_channel_post_url(), new_subscriber.as_slack_msg()).await;
         println!("subscriber {} posted to Slack", subscriber.email);
 
         println!("subscriber {} created successfully", subscriber.email);
@@ -2076,7 +2075,7 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
-        post_to_channel(get_customers_channel_post_url(), new_subscriber.as_slack_msg()).await;
+        //post_to_channel(get_customers_channel_post_url(), new_subscriber.as_slack_msg()).await;
         println!("subscriber {} posted to Slack", subscriber.email);
 
         println!("subscriber {} created successfully", subscriber.email);
