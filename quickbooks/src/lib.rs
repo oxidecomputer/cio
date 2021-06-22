@@ -212,9 +212,9 @@ impl QuickBooks {
             }
         };
 
-        let r: QueryResponse = resp.json().await.unwrap();
+        let r: CompanyInfoResponse = resp.json().await.unwrap();
 
-        Ok(r.company_info.get(0).unwrap().clone())
+        Ok(r.query_response.company_info.get(0).unwrap().clone())
     }
 
     pub async fn list_attachments_for_purchase(&self, purchase_id: &str) -> Result<Vec<Attachment>, APIError> {
@@ -513,6 +513,12 @@ pub struct AccessToken {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct CountResponse {
+    #[serde(default, rename = "QueryResponse")]
+    pub query_response: QueryResponse,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct CompanyInfoResponse {
     #[serde(default, rename = "QueryResponse")]
     pub query_response: QueryResponse,
 }
