@@ -604,7 +604,7 @@ impl OutboundShipment {
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!("{}, your order from the Oxide Computer Company has been received!", self.name),
+                format!("{}, your order from {} has been received!", self.name, company.name),
                 format!(
                     "Below is the information for your order:
 
@@ -642,7 +642,7 @@ xoxo,
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!("{}, your package from the Oxide Computer Company is on the way!", self.name),
+                format!("{}, your package from {} is on the way!", self.name, company.name),
                 format!(
                     "Below is the information for your package:
 

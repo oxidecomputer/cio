@@ -26,7 +26,7 @@ pub struct Order {
     pub zipcode: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub country: String,
-    /// This is who they know at Oxide.
+    /// This is who they know at the company.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -116,6 +116,9 @@ impl Order {
 
 impl From<Order> for NewOutboundShipment {
     fn from(order: Order) -> Self {
+        let db = Database::new();
+        let company = Company::get_by_id(&db, order.cio_company_id);
+
         NewOutboundShipment {
             created_time: Utc::now(),
             name: order.name.to_string(),
@@ -127,7 +130,10 @@ impl From<Order> for NewOutboundShipment {
             state: order.state.to_string(),
             zipcode: order.zipcode.to_string(),
             country: order.country.to_string(),
-            notes: format!("Automatically generated order from the Oxide store. \"Who do you know at Oxide?\" {}", order.notes),
+            notes: format!(
+                "Automatically generated order from the {} store. \"Who do you know at {}?\" {}",
+                company.name, company.name, order.notes
+            ),
             // This will be populated when we update shippo.
             address_formatted: Default::default(),
             latitude: Default::default(),
