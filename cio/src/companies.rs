@@ -245,7 +245,7 @@ impl Company {
                 .first::<APIToken>(&db.conn())
             {
                 // Initialize the Slack client.
-                let slack = Slack::new_from_env(bot_token.company_id.to_string(), bot_token.access_token.to_string(), user_token.access_token.to_string());
+                let slack = Slack::new_from_env(bot_token.company_id.to_string(), bot_token.access_token, user_token.access_token);
                 // Slack does not give you refresh tokens.
                 // So we don't need to do any song and dance to refresh.
 

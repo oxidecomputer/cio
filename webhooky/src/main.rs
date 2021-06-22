@@ -1717,7 +1717,7 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     sentry::capture_message(&format!("slack token: {:?}", current_user), sentry::Level::Info);
 
     // Let's get the domain from the email.
-    let split = current_user.email.address.split('@');
+    let split = current_user.email.split('@');
     let vec: Vec<&str> = split.collect();
     let mut domain = "".to_string();
     if vec.len() > 1 {
