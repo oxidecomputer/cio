@@ -20,7 +20,7 @@ dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "main" 
 formdata = "^0.13.0"
 futures-util = "0.3"
 google-drive = "^0.1.0"
-gusto-api = "^0.1.0"
+gusto-api = "^0.1.16"
 http = "0.2.0"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
