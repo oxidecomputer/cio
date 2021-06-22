@@ -952,6 +952,8 @@ pub struct BuildingConfig {
     pub address_formatted: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub floors: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub employees: Vec<String>,

@@ -232,6 +232,7 @@ table! {
         country -> Varchar,
         address_formatted -> Varchar,
         floors -> Array<Text>,
+        phone -> Varchar,
         employees -> Array<Text>,
         conference_rooms -> Array<Text>,
         geocode_cache -> Varchar,

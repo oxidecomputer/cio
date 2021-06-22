@@ -9,6 +9,7 @@ CREATE TABLE buildings (
     country VARCHAR NOT NULL,
     address_formatted VARCHAR NOT NULL,
     floors TEXT [] NOT NULL,
+    phone VARCHAR NOT NULL,
     employees TEXT [] NOT NULL,
     conference_rooms TEXT [] NOT NULL,
     geocode_cache VARCHAR NOT NULL,
