@@ -34,9 +34,10 @@ use std::sync::Arc;
 use chrono::offset::Utc;
 use chrono::serde::ts_seconds;
 use chrono::DateTime;
-use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use reqwest::{header, Body, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// Endpoint for the Slack API.
 const ENDPOINT: &str = "https://slack.com/api/";
@@ -298,6 +299,24 @@ impl Slack {
         );
 
         let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
+    }
+
+    /// Post text to a channel.
+    pub async fn post_to_channel(url: String, v: Value) -> Result<(), APIError> {
+        let client = Client::new();
+        let resp = client.post(&url).body(Body::from(v.to_string())).send().await.unwrap();
+
         match resp.status() {
             StatusCode::OK => (),
             s => {
