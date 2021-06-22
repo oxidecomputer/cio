@@ -420,7 +420,7 @@ impl OutboundShipments {
                 building_location_type: "Office".to_string(),
                 building_type: "building".to_string(),
                 instructions: "Knock on the glass door and someone will come open it.".to_string(),
-                address: hq_address(&company),
+                address: company.hq_shipping_address(db),
             },
             transactions: transaction_ids.clone(),
             requested_start_time: start_time,
@@ -467,28 +467,6 @@ impl OutboundShipments {
             shipment.pickup_date = Some(pickup_date);
             shipment.update(&db).await;
         }
-    }
-}
-
-/// Returns the shippo data structure for the address at the office.
-pub fn hq_address(company: &Company) -> Address {
-    // TODO: make this the address for the company
-    // Use the buildings address.
-    Address {
-        company: "Oxide Computer Company".to_string(),
-        name: "The Shipping Bot".to_string(),
-        street1: "1251 Park Avenue".to_string(),
-        city: "Emeryville".to_string(),
-        state: "CA".to_string(),
-        zip: "94608".to_string(),
-        country: "US".to_string(),
-        phone: company.phone.to_string(),
-        email: format!("packages@{}", &company.gsuite_domain),
-        is_complete: Default::default(),
-        object_id: Default::default(),
-        test: Default::default(),
-        street2: Default::default(),
-        validation_results: None,
     }
 }
 
@@ -852,7 +830,7 @@ xoxo,
         }
 
         // We need to create the label since we don't have one already.
-        let address_from = hq_address(&company);
+        let address_from = company.hq_shipping_address(db);
 
         // If this is an international shipment, we need to define our customs
         // declarations.
@@ -899,7 +877,7 @@ xoxo,
 
         // We need a phone number for the shipment.
         if self.phone.is_empty() {
-            // Use the Oxide office line.
+            // Use the company phone line.
             self.phone = company.phone.to_string();
         }
 

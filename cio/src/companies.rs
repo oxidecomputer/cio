@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::airtable::AIRTABLE_COMPANIES_TABLE;
 use crate::api_tokens::{APIToken, NewAPIToken};
+use crate::configs::{Building, Buildings};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::companys;
@@ -104,6 +105,33 @@ impl UpdateAirtableRecord<Company> for Company {
 }
 
 impl Company {
+    /// Returns the shippo data structure for the address at the office
+    /// for the company.
+    pub fn hq_shipping_address(&self, db: &Database) -> shippo::Address {
+        // Get the buildings from the company.
+        let buildings: Vec<Building> = Buildings::get_from_db(&db, self.cio_company_id).into();
+        // Get the first one.
+        // TODO: when there is more than one building, figure this out.
+        let building = buildings.get(0).unwrap();
+
+        shippo::Address {
+            company: self.name.to_string(),
+            name: "The Shipping Bot".to_string(),
+            street1: building.street_address.to_string(),
+            city: building.city.to_string(),
+            state: building.state.to_string(),
+            zip: building.ziocode.to_string(),
+            country: building.to_string(),
+            phone: building.phone.to_string(),
+            email: format!("packages@{}", &self.gsuite_domain),
+            is_complete: Default::default(),
+            object_id: Default::default(),
+            test: Default::default(),
+            street2: Default::default(),
+            validation_results: None,
+        }
+    }
+
     pub fn get_from_github_org(db: &Database, org: &str) -> Self {
         companys::dsl::companys
             .filter(companys::dsl::github_org.eq(org.to_string()).or(companys::dsl::github_org.eq(org.to_lowercase())))
