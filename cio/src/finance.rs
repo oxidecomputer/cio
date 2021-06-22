@@ -98,7 +98,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
     let okta_auth = company.authenticate_okta();
 
-    let slack = company.authenticate_slack(db);
+    let slack_auth = company.authenticate_slack(db);
 
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SoftwareVendor>> = company
@@ -129,7 +129,8 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
             vendor.users = users.len() as i32;
         }
 
-        if vendor.name == "Slack" {
+        if vendor.name == "Slack" && slack_auth.is_some() {
+            let slack = slack_auth.as_ref().unwrap();
             let users = slack.billable_info().await.unwrap();
             let mut count = 0;
             for (_, user) in users {

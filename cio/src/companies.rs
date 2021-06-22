@@ -228,7 +228,7 @@ impl Company {
         // Get the bot token and user token from the database.
         if let Ok(bot_token) = api_tokens::dsl::api_tokens
             .filter(
-                api_tokens::dsl::company_id
+                api_tokens::dsl::cio_company_id
                     .eq(self.id)
                     .and(api_tokens::dsl::product.eq("slack".to_string()))
                     .and(api_tokens::dsl::token_type.eq("bot".to_string())),
@@ -237,7 +237,7 @@ impl Company {
         {
             if let Ok(user_token) = api_tokens::dsl::api_tokens
                 .filter(
-                    api_tokens::dsl::company_id
+                    api_tokens::dsl::cio_company_id
                         .eq(self.id)
                         .and(api_tokens::dsl::product.eq("slack".to_string()))
                         .and(api_tokens::dsl::token_type.eq("user".to_string())),
