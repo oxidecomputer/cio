@@ -1,6 +1,8 @@
 #![allow(clippy::field_reassign_with_default)]
 pub mod event_types;
 use crate::event_types::EventType;
+pub mod slack_commands;
+use crate::slack_commands::SlackCommand;
 pub mod repos;
 use crate::repos::Repo;
 pub mod influx;
@@ -39,7 +41,7 @@ use sheets::Sheets;
 use slack_chat_api::{BotCommand, Slack};
 
 use cio_api::analytics::NewPageView;
-use cio_api::api_tokens::NewAPIToken;
+use cio_api::api_tokens::{APIToken, NewAPIToken};
 use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant};
 use cio_api::companies::Company;
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
@@ -49,7 +51,7 @@ use cio_api::models::{NewRFD, RFD};
 use cio_api::rack_line::RackLineSubscriber;
 use cio_api::repos::{GitHubUser, NewRepo};
 use cio_api::rfds::is_image;
-use cio_api::schema::applicants;
+use cio_api::schema::{api_tokens, applicants};
 use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::swag_inventory::SwagInventoryItem;
@@ -1727,21 +1729,26 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     let company = Company::get_from_domain(&api_context.db, &domain);
     sentry::capture_message(&format!("slack company: {:?}", company), sentry::Level::Info);
 
-    // Save the token to the database.
-    /*let mut token = NewAPIToken {
+    let mut webhook = "".to_string();
+    if let Some(wh) = t.incoming_webhook {
+        webhook = wh.url;
+    }
+
+    // Save the bot token to the database.
+    let mut token = NewAPIToken {
         product: "slack".to_string(),
         token_type: t.token_type.to_string(),
         access_token: t.access_token.to_string(),
-        expires_in: t.expires_in as i32,
-        refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
-        company_id: event.realm_id.to_string(),
-        item_id: "".to_string(),
-        user_email: company_info.email.address.to_string(),
+        expires_in: 0,
+        refresh_token: "".to_string(),
+        refresh_token_expires_in: 0,
+        company_id: t.team.id.to_string(),
+        item_id: t.team.name.to_string(),
+        user_email: current_user.email.to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
-        endpoint: "".to_string(),
+        endpoint: webhook.to_string(),
         auth_company_id: company.id,
         company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
@@ -1750,7 +1757,66 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     token.expand();
 
     // Update it in the database.
-    token.upsert(&api_context.db).await;*/
+    let mut new_token = if let Ok(existing) = api_tokens::dsl::api_tokens
+        .filter(
+            api_tokens::dsl::cio_company_id
+                .eq(1)
+                .and(api_tokens::dsl::product.eq("slack".to_string()))
+                .and(api_tokens::dsl::token_type.eq(token.token_type.to_string())),
+        )
+        .first::<APIToken>(&api_context.db.conn())
+    {
+        diesel::update(&existing)
+            .set(token)
+            .get_result::<APIToken>(&api_context.db.conn())
+            .unwrap_or_else(|e| panic!("unable to update record {}: {}", existing.id, e))
+    } else {
+        token.create_in_db(&api_context.db)
+    };
+    new_token.upsert_in_airtable(&api_context.db).await;
+
+    // Save the user token to the database.
+    if let Some(authed_user) = t.authed_user {
+        let mut user_token = NewAPIToken {
+            product: "slack".to_string(),
+            token_type: authed_user.token_type.to_string(),
+            access_token: authed_user.access_token.to_string(),
+            expires_in: 0,
+            refresh_token: "".to_string(),
+            refresh_token_expires_in: 0,
+            company_id: t.team.id.to_string(),
+            item_id: t.team.name.to_string(),
+            user_email: current_user.email.to_string(),
+            last_updated_at: Utc::now(),
+            expires_date: None,
+            refresh_token_expires_date: None,
+            endpoint: webhook.to_string(),
+            auth_company_id: company.id,
+            company: Default::default(),
+            // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+            cio_company_id: 1,
+        };
+        user_token.expand();
+
+        // Update it in the database.
+        let mut new_user_token = if let Ok(existing) = api_tokens::dsl::api_tokens
+            .filter(
+                api_tokens::dsl::cio_company_id
+                    .eq(1)
+                    .and(api_tokens::dsl::product.eq("slack".to_string()))
+                    .and(api_tokens::dsl::token_type.eq(user_token.token_type.to_string())),
+            )
+            .first::<APIToken>(&api_context.db.conn())
+        {
+            diesel::update(&existing)
+                .set(user_token)
+                .get_result::<APIToken>(&api_context.db.conn())
+                .unwrap_or_else(|e| panic!("unable to update record {}: {}", existing.id, e))
+        } else {
+            user_token.create_in_db(&api_context.db)
+        };
+        new_user_token.upsert_in_airtable(&api_context.db).await;
+    }
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2098,11 +2164,21 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
     let db = &api_context.db;
 
     // We should have a string, which we will then parse into our args.
-    let event_string = body_param.as_str().unwrap().to_string();
-    sentry::capture_message(&format!("slack command string: {}", event_string), sentry::Level::Info);
     // Parse the request body as a Slack BotCommand.
-    let command: BotCommand = serde_urlencoded::from_bytes(&event_string.as_bytes()).unwrap();
-    sentry::capture_message(&format!("slack bot command: {:?}", command), sentry::Level::Info);
+    let bot_command: BotCommand = serde_urlencoded::from_bytes(&body_param.as_bytes()).unwrap();
+    sentry::capture_message(&format!("slack bot command: {:?}", bot_command), sentry::Level::Info);
+
+    let command = SlackCommand::from_str(&bot_command.command).unwrap();
+
+    // Filter by command type and do the command.
+    match command {
+        SlackCommand::RFD => {}
+        SlackCommand::Meet => {}
+        SlackCommand::Applicants => {}
+        SlackCommand::Applicant => {}
+        SlackCommand::Papers => {}
+        SlackCommand::Paper => {}
+    }
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
