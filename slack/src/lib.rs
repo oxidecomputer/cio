@@ -166,7 +166,14 @@ impl Slack {
             ("redirect_uri", self.redirect_uri.to_string()),
         ];
         let client = reqwest::Client::new();
-        let resp = client.post("https://slack.com/api/oauth.v2.access").headers(headers).form(&params).send().await.unwrap();
+        let resp = client
+            .post("https://slack.com/api/oauth.v2.access")
+            .basic_auth(&self.client_id, Some(&self.client_secret))
+            .headers(headers)
+            .form(&params)
+            .send()
+            .await
+            .unwrap();
 
         // Unwrap the response.
         let t: AccessToken = resp.json().await.unwrap();
