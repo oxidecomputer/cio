@@ -120,6 +120,8 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_ramp_callback).unwrap();
     api.register(listen_auth_ramp_consent).unwrap();
+    api.register(listen_auth_slack_callback).unwrap();
+    api.register(listen_auth_slack_consent).unwrap();
     api.register(listen_auth_quickbooks_callback).unwrap();
     api.register(listen_auth_quickbooks_consent).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
@@ -1670,6 +1672,82 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
     token.expand();
     // Update it in the database.
     token.upsert(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Get the consent URL for Slack auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/slack/consent",
+}]
+async fn listen_auth_slack_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the Slack client.
+    //let g = Slack::new_from_env("", "", "");
+
+    sentry::end_session();
+    //Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+    Ok(HttpResponseOk(UserConsentURL { url: "".to_string() }))
+}
+
+/** Listen for callbacks to Slack auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/slack/callback",
+}]
+async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let event = query_args.into_inner();
+
+    sentry::capture_message(&format!("slack callback: {:?}", event), sentry::Level::Info);
+
+    // Initialize the Slack client.
+    /*let mut qb = Slack::new_from_env("", "", "");
+
+    // Let's get the token from the code.
+    let t = qb.get_access_token(&event.code).await.unwrap();
+
+    // Get the company info.
+    let company_info = qb.company_info(&event.realm_id).await.unwrap();
+
+    // Let's get the domain from the email.
+    let split = company_info.email.address.split('@');
+    let vec: Vec<&str> = split.collect();
+    let mut domain = "".to_string();
+    if vec.len() > 1 {
+        domain = vec.get(1).unwrap().to_string();
+    }
+
+    let company = Company::get_from_domain(&api_context.db, &domain);
+
+    // Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "slack".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        company_id: event.realm_id.to_string(),
+        item_id: "".to_string(),
+        user_email: company_info.email.address.to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        auth_company_id: company.id,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
+    };
+    token.expand();
+
+    // Update it in the database.
+    token.upsert(&api_context.db).await;*/
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

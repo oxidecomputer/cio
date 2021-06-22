@@ -11,7 +11,7 @@
  *
  * async fn get_users() {
  *     // Initialize the Slack client.
- *     let slack = Slack::new_from_env();
+ *     let slack = Slack::new_from_env("", "", "");
  *
  *     // List the users.
  *     let users = slack.list_users().await.unwrap();
@@ -35,6 +35,7 @@ use chrono::offset::Utc;
 use chrono::serde::ts_seconds;
 use chrono::DateTime;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Endpoint for the Slack API.
@@ -43,6 +44,12 @@ const ENDPOINT: &str = "https://slack.com/api/";
 /// Entrypoint for interacting with the Slack API.
 pub struct Slack {
     token: String,
+    // This expires in 101 days. It is hardcoded in the GitHub Actions secrets,
+    // We might want something a bit better like storing it in the database.
+    user_token: String,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
     workspace_id: String,
 
     client: Arc<Client>,
@@ -52,19 +59,39 @@ impl Slack {
     /// Create a new Slack client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Token and Workspace ID your requests will work.
-    pub fn new<K, B>(token: K, workspace_id: B) -> Self
+    pub fn new<I, K, B, R, T, Q>(client_id: I, client_secret: K, workspace_id: B, redirect_uri: R, token: T, user_token: Q) -> Self
     where
+        I: ToString,
         K: ToString,
         B: ToString,
+        R: ToString,
+        T: ToString,
+        Q: ToString,
     {
         let client = Client::builder().build();
         match client {
-            Ok(c) => Self {
-                token: token.to_string(),
-                workspace_id: workspace_id.to_string(),
+            Ok(c) => {
+                let s = Slack {
+                    client_id: client_id.to_string(),
+                    client_secret: client_secret.to_string(),
+                    workspace_id: workspace_id.to_string(),
+                    redirect_uri: redirect_uri.to_string(),
+                    token: token.to_string(),
+                    user_token: user_token.to_string(),
 
-                client: Arc::new(c),
-            },
+                    client: Arc::new(c),
+                };
+
+                if s.token.is_empty() || s.user_token.is_empty() {
+                    // This is super hacky and a work around since there is no way to
+                    // auth without using the browser.
+                    println!("slack consent URL: {}", s.user_consent_url());
+                }
+                // We do not refresh the access token since we leave that up to the
+                // user to do so they can re-save it to their database.
+
+                s
+            }
             Err(e) => panic!("creating client failed: {:?}", e),
         }
     }
@@ -73,21 +100,27 @@ impl Slack {
     /// takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Token and Workspace ID your requests will work.
-    pub fn new_from_env() -> Self {
-        let token = env::var("SLACK_TOKEN").unwrap();
-        let workspace_id = env::var("SLACK_WORKSPACE_ID").unwrap_or_default();
+    pub fn new_from_env<C, T, R>(workspace_id: C, token: T, user_token: R) -> Self
+    where
+        C: ToString,
+        T: ToString,
+        R: ToString,
+    {
+        let client_id = env::var("SLACK_CLIENT_ID").unwrap();
+        let client_secret = env::var("SLACK_CLIENT_SECRET").unwrap();
+        let redirect_uri = env::var("SLACK_REDIRECT_URI").unwrap();
 
-        Slack::new(token, workspace_id)
+        Slack::new(client_id, client_secret, workspace_id, redirect_uri, token, user_token)
     }
 
-    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
+    fn request<B>(&self, token: &str, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(path).unwrap();
 
-        let bt = format!("Bearer {}", self.token);
+        let bt = format!("Bearer {}", token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -113,12 +146,42 @@ impl Slack {
         rb.build().unwrap()
     }
 
+    pub fn user_consent_url(&self) -> String {
+        let state = uuid::Uuid::new_v4();
+        format!(
+            "https://slack.com/oauth/v2/authorize?scope={}&client_id={}&user_scope={}&redirect_uri={}&state={}",
+            "incoming-webhook,commands,users:read,users.profile:read", self.client_id, "users.profile:write,users:read,users.profile:read,identity.basic,identity.email", self.redirect_uri, state
+        )
+    }
+
+    pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
+        let mut headers = header::HeaderMap::new();
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+
+        let params = [
+            ("client_id", self.client_id.to_string()),
+            ("client_secret", self.client_secret.to_string()),
+            ("code", code.to_string()),
+            ("redirect_uri", self.redirect_uri.to_string()),
+        ];
+        let client = reqwest::Client::new();
+        let resp = client.post("https://slack.com/api/oauth.v2.access").headers(headers).form(&params).send().await.unwrap();
+
+        // Unwrap the response.
+        let t: AccessToken = resp.json().await.unwrap();
+
+        self.token = t.access_token.to_string();
+        self.user_token = t.authed_user.access_token.to_string();
+
+        Ok(t)
+    }
+
     /// List users on a workspace.
     /// FROM: https://api.slack.com/methods/admin.users.list
     pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
         // TODO: paginate.
-        let request = self.request(Method::GET, "users.list", (), Some(vec![("limit", "100".to_string())]));
+        let request = self.request(&self.token, Method::GET, "users.list", (), Some(vec![("limit", "100".to_string())]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -136,12 +199,33 @@ impl Slack {
         Ok(r.users)
     }
 
+    /// Get the current user's identity.
+    /// FROM: https://api.slack.com/methods/users.identity
+    pub async fn current_user(&self) -> Result<CurrentUser, APIError> {
+        // Build the request.
+        let request = self.request(&self.user_token, Method::GET, "users.identity", (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: CurrentUserResponse = resp.json().await.unwrap();
+        Ok(r.user)
+    }
+
     /// Get billable info.
     /// FROM: https://api.slack.com/methods/team.billableInfo
     pub async fn billable_info(&self) -> Result<HashMap<String, BillableInfo>, APIError> {
         // Build the request.
         // TODO: paginate.
-        let request = self.request(Method::GET, "team.billableInfo", (), None);
+        let request = self.request(&self.user_token, Method::GET, "team.billableInfo", (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -162,7 +246,7 @@ impl Slack {
     /// FROM: https://api.slack.com/methods/admin.users.invite
     pub async fn invite_user(&self, invite: UserInvite) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(Method::POST, "admin.users.invite", invite, None);
+        let request = self.request(&self.user_token, Method::POST, "admin.users.invite", invite, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -185,7 +269,7 @@ impl Slack {
         let mut body: HashMap<&str, &str> = HashMap::new();
         body.insert("team_id", &self.workspace_id);
         body.insert("user_id", user_id);
-        let request = self.request(Method::POST, "admin.users.remove", body, None);
+        let request = self.request(&self.user_token, Method::POST, "admin.users.remove", body, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -205,7 +289,13 @@ impl Slack {
     /// FROM: https://api.slack.com/methods/users.profile.set
     pub async fn update_user_profile(&self, user_id: &str, profile: UserProfile) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(Method::POST, "users.profile.set", UpdateUserProfileRequest { user: user_id.to_string(), profile }, None);
+        let request = self.request(
+            &self.user_token,
+            Method::POST,
+            "users.profile.set",
+            UpdateUserProfileRequest { user: user_id.to_string(), profile },
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -579,4 +669,74 @@ pub struct BillableInfoResponse {
 pub struct BillableInfo {
     #[serde(default)]
     pub billing_active: bool,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct AccessToken {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub access_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scope: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub bot_user_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub app_id: String,
+    #[serde(default)]
+    pub team: Team,
+    #[serde(default)]
+    pub enterprise: Enterprise,
+    #[serde(default)]
+    pub authed_user: AuthedUser,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct Team {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct Enterprise {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct AuthedUser {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub access_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub scope: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct CurrentUserResponse {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub user: CurrentUser,
+    #[serde(default)]
+    pub team: Team,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct CurrentUser {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
 }
