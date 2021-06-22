@@ -2,6 +2,7 @@ use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::companies::Company;
 use crate::db::Database;
 use crate::shipments::NewOutboundShipment;
 use crate::swag_inventory::SwagInventoryItem;
