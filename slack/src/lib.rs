@@ -179,7 +179,9 @@ impl Slack {
         let t: AccessToken = resp.json().await.unwrap();
 
         self.token = t.access_token.to_string();
-        self.user_token = t.authed_user.access_token.to_string();
+        if let Some(ref user) = t.authed_user {
+            self.user_token = user.access_token.to_string();
+        }
 
         Ok(t)
     }
