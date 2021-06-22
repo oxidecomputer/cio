@@ -28,7 +28,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use chrono::naive::NaiveDate;
-use reqwest::{header, Client, Method, RequestBuilder, StatusCode, Url};
+use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -109,9 +109,9 @@ impl Gusto {
         Gusto::new(client_id, client_secret, redirect_uri, token, refresh_token, company_id)
     }
 
-    fn request<P>(&self, method: Method, path: P) -> RequestBuilder
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
     where
-        P: ToString,
+        B: Serialize,
     {
         // Build the url.
         let base = Url::parse(ENDPOINT).unwrap();
@@ -130,7 +130,19 @@ impl Gusto {
         headers.append(header::AUTHORIZATION, bearer);
         headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
 
-        self.client.request(method, url).headers(headers)
+        let mut rb = self.client.request(method.clone(), url).headers(headers);
+
+        if let Some(val) = query {
+            rb = rb.query(&val);
+        }
+
+        // Add the body, this is to ensure our GET and DELETE calls succeed.
+        if method != Method::GET && method != Method::DELETE {
+            rb = rb.json(&body);
+        }
+
+        // Build the request.
+        rb.build().unwrap()
     }
 
     pub fn user_consent_url(&self) -> String {
@@ -186,8 +198,7 @@ impl Gusto {
     /// Get information about the current user.
     pub async fn current_user(&self) -> Result<CurrentUser, APIError> {
         // Build the request.
-        let rb = self.request(Method::GET, "/v1/me");
-        let request = rb.build().unwrap();
+        let request = self.request(Method::GET, "/v1/me", (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -209,8 +220,7 @@ impl Gusto {
     /// List all employees.
     pub async fn list_employees(&self) -> Result<Vec<Employee>, APIError> {
         // Build the request.
-        let rb = self.request(Method::GET, &format!("/v1/companies/{}/employees", self.company_id));
-        let request = rb.build().unwrap();
+        let request = self.request(Method::GET, &format!("/v1/companies/{}/employees", self.company_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -227,6 +237,48 @@ impl Gusto {
         let result: Vec<Employee> = resp.json().await.unwrap();
 
         Ok(result)
+    }
+
+    /// Create employee.
+    pub async fn create_employee(&self, new_employee: &NewEmployee) -> Result<Employee, APIError> {
+        // Build the request.
+        let request = self.request(Method::POST, &format!("/v1/companies/{}/employees", self.company_id), new_employee, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Update employee home address.
+    pub async fn update_employee_home_address(&self, employee_id: &str, new_address: &NewAddress) -> Result<Address, APIError> {
+        // Build the request.
+        let request = self.request(Method::PUT, &format!("/v1/employees/{}/home_address", employee_id), new_address, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
     }
 }
 
@@ -254,6 +306,22 @@ impl error::Error for APIError {
         // Generic error, underlying cause isn't tracked.
         None
     }
+}
+
+/// A new employee.
+/// FROM: https://docs.gusto.com/docs/api/reference/Gusto-API.v1.yaml/paths/~1v1~1companies~1%7Bcompany_id%7D~1employees/post
+#[derive(Debug, Default, Clone, JsonSchema, Serialize, Deserialize)]
+pub struct NewEmployee {
+    pub first_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub middle_initial: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    // In the format YYYY-MM-DD.
+    pub date_of_birth: Option<NaiveDate>,
 }
 
 /// An employee.
@@ -372,6 +440,24 @@ pub struct Compensation {
     pub flsa_status: String,
     // In the format YYYY-MM-DD.
     pub effective_date: NaiveDate,
+}
+
+/// A new address.
+/// FROM: https://docs.gusto.com/docs/api/reference/Gusto-API.v1.yaml/paths/~1v1~1employees~1%7Bemployee_id%7D~1home_address/put
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct NewAddress {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub version: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub street_1: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub street_2: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub zip: String,
 }
 
 /// An address.

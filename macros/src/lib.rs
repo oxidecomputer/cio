@@ -246,11 +246,17 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         /// Create the row in the Airtable base.
         pub async fn create_in_airtable(&mut self, db: &crate::db::Database) -> airtable_api::Record<#new_struct_name> {
+            let mut mut_self = self.clone();
+            // Run the custom trait to update the new record from the old record.
+            // We do this because where we join Airtable tables, things tend to get a little
+            // weird if we aren't nit picky about this.
+            mut_self.update_airtable_record(self.clone()).await;
+
             // Create the record.
             let record = airtable_api::Record {
                 id: "".to_string(),
                 created_time: None,
-                fields: self.clone(),
+                fields: mut_self,
             };
 
             // Send the new record to the Airtable client.
