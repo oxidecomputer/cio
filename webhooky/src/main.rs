@@ -1707,9 +1707,17 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     let t = qb.get_access_token(&event.code).await.unwrap();
 
     // Get the company info.
-    sentry::capture_message(&format!("quickbooks realm id: {}", event.realm_id), sentry::Level::Info);
     let company_info = qb.company_info(&event.realm_id).await.unwrap();
-    sentry::capture_message(&format!("quickbooks company info: {:?}", company_info), sentry::Level::Info);
+
+    // Let's get the domain from the email.
+    let split = company_info.email.address.split('@');
+    let vec: Vec<&str> = split.collect();
+    let mut domain = "".to_string();
+    if vec.len() > 1 {
+        domain = vec.get(1).unwrap().to_string();
+    }
+
+    let company = Company::get_from_domain(&api_context.db, &domain);
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -1721,13 +1729,12 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
         refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
         company_id: event.realm_id.to_string(),
         item_id: "".to_string(),
-        user_email: "".to_string(),
+        user_email: company_info.email.address.to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,
         endpoint: "".to_string(),
-        // TODO: update this so it matches who is actually authenticating.
-        auth_company_id: 1,
+        auth_company_id: company.id,
         company: Default::default(),
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
         cio_company_id: 1,
