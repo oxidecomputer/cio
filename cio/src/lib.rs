@@ -28,7 +28,6 @@ pub mod rfds;
 pub mod schema;
 pub mod shipments;
 pub mod shorturls;
-pub mod slack;
 pub mod states;
 pub mod swag_inventory;
 pub mod swag_store;

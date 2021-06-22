@@ -38,7 +38,6 @@ use crate::db::Database;
 use crate::interviews::ApplicantInterview;
 use crate::models::{get_value, truncate};
 use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
-use crate::slack::{get_hiring_channel_post_url, post_to_channel};
 use crate::utils::check_if_github_issue_exists;
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
@@ -2218,7 +2217,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
 
             if !applicant.sent_email_received {
                 // Post to Slack.
-                post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
+                //post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
 
                 // Send a company-wide email.
                 applicant.send_email_internally(db).await;

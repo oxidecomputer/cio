@@ -76,10 +76,8 @@ jobs:
           CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          SLACK_HIRING_CHANNEL_POST_URL: ${{ secrets.SLACK_HIRING_CHANNEL_POST_URL }}
           GH_APP_ID: ${{ secrets.GH_APP_ID }}
           GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           INFLUX_DB_URL: ${{ secrets.INFLUX_DB_URL }}
           INFLUX_DB_TOKEN: ${{ secrets.INFLUX_DB_TOKEN }}
           SHIPPO_API_TOKEN: ${{ secrets.SHIPPO_API_TOKEN }}

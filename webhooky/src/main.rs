@@ -36,7 +36,7 @@ use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::Sheets;
-use slack_chat_api::Slack;
+use slack_chat_api::{BotCommand, Slack};
 
 use cio_api::analytics::NewPageView;
 use cio_api::api_tokens::NewAPIToken;
@@ -134,6 +134,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
     api.register(listen_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
+    api.register(listen_slack_commands_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
@@ -2082,6 +2083,27 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
     } else {
         println!("subscriber {} already exists", new_subscriber.email);
     }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Listen for Slack commands webhooks. */
+#[endpoint {
+    method = POST,
+    path = "/slack/commands",
+}]
+async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // We should have a string, which we will then parse into our args.
+    let event_string = body_param.as_str().unwrap().to_string();
+    sentry::capture_message(&format!("slack command string: {}", event_string), sentry::Level::Info);
+    // Parse the request body as a Slack BotCommand.
+    let command: BotCommand = serde_urlencoded::from_bytes(&event_string.as_bytes()).unwrap();
+    sentry::capture_message(&format!("slack bot command: {:?}", command), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
