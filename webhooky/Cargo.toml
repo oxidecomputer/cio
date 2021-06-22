@@ -39,5 +39,5 @@ serde_qs = "0.8"
 serde_urlencoded = "^0.7.0"
 sheets = "^0.1.0"
 shippo = "^0.1.12"
-slack-chat-api = "^0.1.9"
+slack-chat-api = "^0.1.11"
 tokio = { version = "1", features = ["full"] }

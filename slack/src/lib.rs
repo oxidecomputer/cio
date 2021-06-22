@@ -181,7 +181,7 @@ impl Slack {
     pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
         // TODO: paginate.
-        let request = self.request(&self.user_token, Method::GET, "users.list", (), Some(vec![("limit", "100".to_string())]));
+        let request = self.request(&self.token, Method::GET, "users.list", (), Some(vec![("limit", "100".to_string())]));
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -691,6 +691,8 @@ pub struct AccessToken {
     pub enterprise: Enterprise,
     #[serde(default)]
     pub authed_user: AuthedUser,
+    #[serde(default)]
+    pub incoming_webhook: IncomingWebhook,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
@@ -699,6 +701,18 @@ pub struct Team {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct IncomingWebhook {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub channel: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub channel_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub configuration_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
