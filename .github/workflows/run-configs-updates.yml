@@ -100,3 +100,6 @@ jobs:
           GUSTO_CLIENT_ID: ${{ secrets.GUSTO_CLIENT_ID }}
           GUSTO_CLIENT_SECRET: ${{ secrets.GUSTO_CLIENT_SECRET }}
           GUSTO_REDIRECT_URI: ${{ secrets.GUSTO_REDIRECT_URI }}
+          SLACK_CLIENT_ID: ${{ secrets.SLACK_CLIENT_ID }}
+          SLACK_CLIENT_SECRET: ${{ secrets.SLACK_CLIENT_SECRET }}
+          SLACK_REDIRECT_URI: ${{ secrets.SLACK_REDIRECT_URI }}
