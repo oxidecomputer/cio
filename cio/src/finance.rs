@@ -98,7 +98,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
     let okta_auth = company.authenticate_okta();
 
-    let slack = slack_chat_api::Slack::new_from_env();
+    let slack = company.authenticate_slack(db);
 
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SoftwareVendor>> = company

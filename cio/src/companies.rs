@@ -20,13 +20,14 @@ use ramp_api::Ramp;
 use reqwest::{header, Client};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use slack_chat_api::Slack;
 
 use crate::airtable::AIRTABLE_COMPANIES_TABLE;
 use crate::api_tokens::{APIToken, NewAPIToken};
 use crate::configs::{Building, Buildings};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::schema::companys;
+use crate::schema::{api_tokens, companys};
 
 #[db {
     new_struct_name = "Company",
@@ -217,6 +218,39 @@ impl Company {
             }
 
             return Some(mailchimp);
+        }
+
+        None
+    }
+
+    /// Authenticate with Slack.
+    pub fn authenticate_slack(&self, db: &Database) -> Option<Slack> {
+        // Get the bot token and user token from the database.
+        if let Ok(bot_token) = api_tokens::dsl::api_tokens
+            .filter(
+                api_tokens::dsl::company_id
+                    .eq(self.id)
+                    .and(api_tokens::dsl::product.eq("slack".to_string()))
+                    .and(api_tokens::dsl::token_type.eq("bot".to_string())),
+            )
+            .first::<APIToken>(&db.conn())
+        {
+            if let Ok(user_token) = api_tokens::dsl::api_tokens
+                .filter(
+                    api_tokens::dsl::company_id
+                        .eq(self.id)
+                        .and(api_tokens::dsl::product.eq("slack".to_string()))
+                        .and(api_tokens::dsl::token_type.eq("user".to_string())),
+                )
+                .first::<APIToken>(&db.conn())
+            {
+                // Initialize the Slack client.
+                let slack = Slack::new_from_env(bot_token.company_id.to_string(), bot_token.access_token.to_string(), user_token.access_token.to_string());
+                // Slack does not give you refresh tokens.
+                // So we don't need to do any song and dance to refresh.
+
+                return Some(slack);
+            }
         }
 
         None

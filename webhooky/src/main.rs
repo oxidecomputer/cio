@@ -1686,11 +1686,10 @@ async fn listen_auth_slack_consent(_rqctx: Arc<RequestContext<Context>>) -> Resu
     sentry::start_session();
 
     // Initialize the Slack client.
-    //let g = Slack::new_from_env("", "", "");
+    let s = Slack::new_from_env("", "", "");
 
     sentry::end_session();
-    //Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
-    Ok(HttpResponseOk(UserConsentURL { url: "".to_string() }))
+    Ok(HttpResponseOk(UserConsentURL { url: s.user_consent_url() }))
 }
 
 /** Listen for callbacks to Slack auth. */
@@ -1706,16 +1705,18 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     sentry::capture_message(&format!("slack callback: {:?}", event), sentry::Level::Info);
 
     // Initialize the Slack client.
-    /*let mut qb = Slack::new_from_env("", "", "");
+    let mut s = Slack::new_from_env("", "", "");
 
     // Let's get the token from the code.
-    let t = qb.get_access_token(&event.code).await.unwrap();
+    let t = s.get_access_token(&event.code).await.unwrap();
+    sentry::capture_message(&format!("slack token: {:?}", t), sentry::Level::Info);
 
-    // Get the company info.
-    let company_info = qb.company_info(&event.realm_id).await.unwrap();
+    // Get the current user.
+    let current_user = s.current_user().await.unwrap();
+    sentry::capture_message(&format!("slack token: {:?}", current_user), sentry::Level::Info);
 
     // Let's get the domain from the email.
-    let split = company_info.email.address.split('@');
+    let split = current_user.email.address.split('@');
     let vec: Vec<&str> = split.collect();
     let mut domain = "".to_string();
     if vec.len() > 1 {
@@ -1723,9 +1724,10 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     }
 
     let company = Company::get_from_domain(&api_context.db, &domain);
+    sentry::capture_message(&format!("slack company: {:?}", company), sentry::Level::Info);
 
     // Save the token to the database.
-    let mut token = NewAPIToken {
+    /*let mut token = NewAPIToken {
         product: "slack".to_string(),
         token_type: t.token_type.to_string(),
         access_token: t.access_token.to_string(),
@@ -1744,7 +1746,7 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
         // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
         cio_company_id: 1,
     };
-    token.expand();
+    token.expand();*/
 
     // Update it in the database.
     token.upsert(&api_context.db).await;*/
