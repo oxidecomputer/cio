@@ -10,6 +10,7 @@ use futures_util::stream::TryStreamExt;
 use hubcaps::issues::Issue;
 use hubcaps::repositories::Repository;
 use reqwest::get;
+use serde_json::Value;
 
 /// Write a file.
 pub fn write_file(file: &Path, contents: &str) {
@@ -225,4 +226,22 @@ impl SliceExt for Vec<u8> {
 
 pub fn default_date() -> chrono::naive::NaiveDate {
     chrono::naive::NaiveDate::parse_from_str("1970-01-01", "%Y-%m-%d").unwrap()
+}
+
+pub fn merge_json(a: &mut Value, b: Value) {
+    match (a, b) {
+        (a @ &mut Value::Object(_), Value::Object(b)) => {
+            let a = a.as_object_mut().unwrap();
+            for (k, v) in b {
+                merge_json(a.entry(k).or_insert(Value::Null), v);
+            }
+        }
+        (a @ &mut Value::Array(_), Value::Array(b)) => {
+            let a = a.as_array_mut().unwrap();
+            for v in b {
+                a.push(v);
+            }
+        }
+        (a, b) => *a = b,
+    }
 }
