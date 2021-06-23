@@ -33,12 +33,14 @@ use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::Sheets;
-use slack_chat_api::{BotCommand, Slack};
+use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
 
 use cio_api::analytics::NewPageView;
 use cio_api::api_tokens::{APIToken, NewAPIToken};
@@ -2153,7 +2155,7 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
     method = POST,
     path = "/slack/commands",
 }]
-async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseOk<MessageResponse>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -2166,9 +2168,21 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
     let command = SlackCommand::from_str(&bot_command.command).unwrap();
 
     // Filter by command type and do the command.
+    let mut response: MessageResponse = Default::default();
     match command {
         SlackCommand::RFD => {}
-        SlackCommand::Meet => {}
+        SlackCommand::Meet => {
+            let mut name = bot_command.text.trim().to_string().replace(" ", "-");
+            if name.is_empty() {
+                // Generate a new random string.
+                name = thread_rng().sample_iter(&Alphanumeric).take(6).collect();
+            }
+
+            response = MessageResponse {
+                response_type: MessageResponseType::InChannel,
+                text: format!("https://g.co/meet/oxide-{}", name.to_lowercase()),
+            }
+        }
         SlackCommand::Applicants => {}
         SlackCommand::Applicant => {}
         SlackCommand::Papers => {}
@@ -2176,7 +2190,7 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
     }
 
     sentry::end_session();
-    Ok(HttpResponseAccepted("ok".to_string()))
+    Ok(HttpResponseOk(response))
 }
 
 /// A GitHub organization.

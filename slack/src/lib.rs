@@ -369,7 +369,7 @@ impl error::Error for APIError {
 /// A message to be sent in Slack.
 ///
 /// Docs: https://api.slack.com/interactivity/slash-commands#responding_to_commands
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub struct MessageResponse {
     pub response_type: MessageResponseType,
     pub text: String,
@@ -380,7 +380,7 @@ pub struct MessageResponse {
 /// The `response_type` parameter in the JSON payload controls this visibility,
 /// by default it is set to `ephemeral`, but you can specify a value of
 /// `in_channel` to post the response into the channel
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub enum MessageResponseType {
     #[serde(rename = "ephemeral")]
     Ephemeral,
@@ -398,7 +398,7 @@ impl Default for MessageResponseType {
 /// A bot command to be run and sent back to Slack.
 ///
 /// Docs: https://api.slack.com/interactivity/slash-commands#app_command_handling
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
 pub struct BotCommand {
     pub user_name: String,
     pub command: String,
@@ -417,7 +417,7 @@ pub struct BotCommand {
 /// A formatted message to send to Slack.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub struct FormattedMessage {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub channel: String,
@@ -430,7 +430,7 @@ pub struct FormattedMessage {
 /// A Slack message block.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts#adding-blocks
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlock {
     #[serde(rename = "type")]
     pub block_type: MessageBlockType,
@@ -447,7 +447,7 @@ pub struct MessageBlock {
 }
 
 /// A message block type in Slack.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub enum MessageBlockType {
     #[serde(rename = "section")]
     Section,
@@ -464,7 +464,7 @@ impl Default for MessageBlockType {
 }
 
 /// Message block text in Slack.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlockText {
     #[serde(rename = "type")]
     pub text_type: MessageType,
@@ -472,7 +472,7 @@ pub struct MessageBlockText {
 }
 
 /// Message type in Slack.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub enum MessageType {
     #[serde(rename = "mrkdwn")]
     Markdown,
@@ -487,7 +487,7 @@ impl Default for MessageType {
 }
 
 /// Message block accessory in Slack.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlockAccessory {
     #[serde(rename = "type")]
     pub accessory_type: MessageType,
@@ -498,7 +498,7 @@ pub struct MessageBlockAccessory {
 /// A message attachment in Slack.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts#building-attachments
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub struct MessageAttachment {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blocks: Vec<MessageBlock>,
@@ -530,19 +530,19 @@ pub struct MessageAttachment {
     pub title: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title_link: String,
-    #[serde(with = "ts_seconds")]
+    #[serde(deserialize_with = "ts_seconds::deserialize", serialize_with = "ts_seconds::serialize")]
     pub ts: DateTime<Utc>,
 }
 
 /// A message attachment field in Slack.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub struct MessageAttachmentField {
     pub short: bool,
     pub title: String,
     pub value: String,
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, JsonSchema, Serialize, Deserialize)]
 pub struct UserProfile {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub avatar_hash: String,
@@ -592,7 +592,7 @@ pub struct UserProfile {
     pub title: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, JsonSchema, Deserialize)]
 pub struct UserProfileFields {
     pub alt: String,
     pub label: String,
@@ -601,7 +601,7 @@ pub struct UserProfileFields {
 
 /// The data type for an invited user.
 /// FROM: https://api.slack.com/methods/admin.users.invite
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct UserInvite {
     /// A comma-separated list of channel_ids for this user to join. At least one channel is required.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -624,7 +624,7 @@ pub struct UserInvite {
 }
 
 /// The data type for an API response.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct APIResponse {
     pub ok: bool,
 
@@ -634,7 +634,7 @@ pub struct APIResponse {
 
 /// The data type for a User.
 /// FROM: https://api.slack.com/types/user
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -679,13 +679,13 @@ pub struct User {
     pub locale: String,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct UpdateUserProfileRequest {
     pub user: String,
     pub profile: UserProfile,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct BillableInfoResponse {
     #[serde(default)]
     pub ok: bool,
@@ -693,7 +693,7 @@ pub struct BillableInfoResponse {
     pub billable_info: HashMap<String, BillableInfo>,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct BillableInfo {
     #[serde(default)]
     pub billing_active: bool,
