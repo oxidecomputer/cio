@@ -60,7 +60,7 @@ use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturl
 use cio_api::swag_inventory::SwagInventoryItem;
 use cio_api::swag_store::Order;
 use cio_api::templates::generate_terraform_files_for_okta;
-use cio_api::utils::{create_or_update_file_in_github_repo, get_file_content_from_repo};
+use cio_api::utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, merge_json};
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 
 #[tokio::main]
@@ -2247,10 +2247,37 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 })
             }
         }
-        SlackCommand::Papers => json!(MessageResponse {
-            response_type: MessageResponseType::InChannel,
-            text: format!("Sorry <@{}> :scream: I could not find a journal club meeting matching `{}`", bot_command.user_id, text),
-        }),
+        SlackCommand::Papers => {
+            // If we asked for the closed meetings then only show those, otherwise
+            // default to the open meetings.
+            let mut state = "open";
+            if text == "closed" {
+                state = "closed";
+            }
+            let meetings = journal_club_meetings::dsl::journal_club_meetings
+                .filter(journal_club_meetings::dsl::cio_company_id.eq(company.id).and(journal_club_meetings::dsl::state.eq(state.to_string())))
+                .load::<JournalClubMeeting>(&db.conn())
+                .unwrap();
+
+            let mut msg: serde_json::Value = Default::default();
+            for (i, m) in meetings.into_iter().enumerate() {
+                if i > 0 {
+                    // Merge a divider onto the stack.
+                    let object = json!({
+                        "blocks": [{
+                            "type": "divider"
+                        }]
+                    });
+
+                    merge_json(&mut msg, object);
+                }
+
+                let obj = m.as_slack_msg();
+                merge_json(&mut msg, obj);
+            }
+
+            msg
+        }
         SlackCommand::Paper => {
             if let Ok(meeting) = journal_club_meetings::dsl::journal_club_meetings
                 .filter(journal_club_meetings::dsl::cio_company_id.eq(company.id).and(journal_club_meetings::dsl::title.like(text.to_string())))
