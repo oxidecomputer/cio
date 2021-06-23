@@ -1205,7 +1205,13 @@ The Oxide Team",
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
-        let mut status_msg = format!("<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}", self.sheet_id, self.role, time);
+        let mut status_msg = format!(
+            "<https://docs.google.com/spreadsheets/d/{}|{}> | interested in: {} | applied {}",
+            self.sheet_id,
+            self.role,
+            self.interested_in.join(","),
+            time
+        );
         if !self.status.is_empty() {
             status_msg += &format!(" | status: *{}*", self.status);
         }
@@ -2547,6 +2553,7 @@ fn is_materials(file_name: &str) -> bool {
         || file_name.ends_with("questionnaire.md")
         || file_name.ends_with("Questionairre.pdf")
         || file_name.ends_with("Operations Manager.pdf")
+        || file_name.ends_with("README.md")
 }
 
 pub async fn refresh_background_checks(db: &Database, company: &Company) {

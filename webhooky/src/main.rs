@@ -2252,6 +2252,8 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 merge_json(&mut msg, obj);
             }
 
+            sentry::capture_message(&format!("applicants -> {}", msg.to_string()), sentry::Level::Info);
+
             msg
         }
         SlackCommand::Applicant => {
@@ -2296,6 +2298,7 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 merge_json(&mut msg, obj);
             }
 
+            sentry::capture_message(&format!("papers -> {}", msg.to_string()), sentry::Level::Info);
             msg
         }
         SlackCommand::Paper => {
