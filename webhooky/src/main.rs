@@ -48,12 +48,13 @@ use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Appl
 use cio_api::companies::Company;
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
+use cio_api::journal_clubs::JournalClubMeeting;
 use cio_api::mailing_list::MailingListSubscriber;
 use cio_api::models::{NewRFD, RFD};
 use cio_api::rack_line::RackLineSubscriber;
 use cio_api::repos::{GitHubUser, NewRepo};
 use cio_api::rfds::is_image;
-use cio_api::schema::{api_tokens, applicants, rfds};
+use cio_api::schema::{api_tokens, applicants, journal_club_meetings, rfds};
 use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::swag_inventory::SwagInventoryItem;
@@ -2155,7 +2156,7 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
     method = POST,
     path = "/slack/commands",
 }]
-async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseOk<MessageResponse>, HttpError> {
+async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -2184,37 +2185,37 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
             let num = text.parse::<i32>().unwrap_or(0);
             if num > 0 {
                 if let Ok(rfd) = rfds::dsl::rfds.filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num))).first::<RFD>(&db.conn()) {
-                    MessageResponse {
+                    json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: rfd.as_slack_msg(),
-                    }
+                    })
                 } else if let Ok(rfd) = rfds::dsl::rfds
                     .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.like(text.to_string())))
                     .first::<RFD>(&db.conn())
                 {
-                    MessageResponse {
+                    json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: rfd.as_slack_msg(),
-                    }
+                    })
                 } else {
-                    MessageResponse {
+                    json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: format!("Sorry <@{}> :scream: I could not find an RFD matching `{}`", bot_command.user_id, text),
-                    }
+                    })
                 }
             } else if let Ok(rfd) = rfds::dsl::rfds
                 .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.like(text.to_string())))
                 .first::<RFD>(&db.conn())
             {
-                MessageResponse {
+                json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
                     text: rfd.as_slack_msg(),
-                }
+                })
             } else {
-                MessageResponse {
+                json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
                     text: format!("Sorry <@{}> :scream: I could not find an RFD matching `{}`", bot_command.user_id, text),
-                }
+                })
             }
         }
         SlackCommand::Meet => {
@@ -2224,27 +2225,45 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 name = thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect();
             }
 
-            MessageResponse {
+            json!(MessageResponse {
                 response_type: MessageResponseType::InChannel,
                 text: format!("https://g.co/meet/oxide-{}", name.to_lowercase()),
+            })
+        }
+        SlackCommand::Applicants => json!(MessageResponse {
+            response_type: MessageResponseType::InChannel,
+            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
+        }),
+        SlackCommand::Applicant => {
+            if let Ok(applicant) = applicants::dsl::applicants
+                .filter(applicants::dsl::cio_company_id.eq(company.id).and(applicants::dsl::name.like(text.to_string())))
+                .first::<Applicant>(&db.conn())
+            {
+                applicant.as_slack_msg()
+            } else {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!("Sorry <@{}> :scream: I could not find an applicant matching `{}`", bot_command.user_id, text),
+                })
             }
         }
-        SlackCommand::Applicants => MessageResponse {
+        SlackCommand::Papers => json!(MessageResponse {
             response_type: MessageResponseType::InChannel,
-            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
-        },
-        SlackCommand::Applicant => MessageResponse {
-            response_type: MessageResponseType::InChannel,
-            text: format!("Sorry <@{}> :scream: I could not find an applicant matching `{}`", bot_command.user_id, text),
-        },
-        SlackCommand::Papers => MessageResponse {
-            response_type: MessageResponseType::InChannel,
-            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
-        },
-        SlackCommand::Paper => MessageResponse {
-            response_type: MessageResponseType::InChannel,
-            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
-        },
+            text: format!("Sorry <@{}> :scream: I could not find a journal club meeting matching `{}`", bot_command.user_id, text),
+        }),
+        SlackCommand::Paper => {
+            if let Ok(meeting) = journal_club_meetings::dsl::journal_club_meetings
+                .filter(journal_club_meetings::dsl::cio_company_id.eq(company.id).and(journal_club_meetings::dsl::title.like(text.to_string())))
+                .first::<JournalClubMeeting>(&db.conn())
+            {
+                meeting.as_slack_msg()
+            } else {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!("Sorry <@{}> :scream: I could not find a journal club meeting matching `{}`", bot_command.user_id, text),
+                })
+            }
+        }
     };
 
     sentry::end_session();
