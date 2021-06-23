@@ -1705,8 +1705,6 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     let api_context = rqctx.context();
     let event = query_args.into_inner();
 
-    sentry::capture_message(&format!("slack callback: {:?}", event), sentry::Level::Info);
-
     // Initialize the Slack client.
     let mut s = Slack::new_from_env("", "", "");
 
