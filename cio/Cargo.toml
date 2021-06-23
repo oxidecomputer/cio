@@ -71,7 +71,7 @@ sheets = "^0.1.11"
 #sheets = { path = "../sheets" }
 shippo = "^0.1.24"
 #shippo = { path = "../shippo" }
-slack-chat-api = "^0.1.15"
+slack-chat-api = "^0.1.16"
 #slack-chat-api = { path = "../slack" }
 tailscale-api = "^0.1.2"
 #tailscale-api = { path = "../tailscale" }

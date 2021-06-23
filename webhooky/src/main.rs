@@ -2167,15 +2167,20 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
 
     let command = SlackCommand::from_str(&bot_command.command).unwrap();
 
+    // Set the default response.
+    let mut response = MessageResponse {
+        response_type: MessageResponseType::InChannel,
+        text: format!("Sorry <@{}> :scream: I could not find command with `{}`", bot_command.user_id, bot_command.text.trim()),
+    };
+
     // Filter by command type and do the command.
-    let mut response: MessageResponse = Default::default();
     match command {
         SlackCommand::RFD => {}
         SlackCommand::Meet => {
             let mut name = bot_command.text.trim().to_string().replace(" ", "-");
             if name.is_empty() {
                 // Generate a new random string.
-                name = thread_rng().sample_iter(&Alphanumeric).take(6).collect();
+                name = thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect();
             }
 
             response = MessageResponse {
