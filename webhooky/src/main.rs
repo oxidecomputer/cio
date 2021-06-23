@@ -53,7 +53,7 @@ use cio_api::models::{NewRFD, RFD};
 use cio_api::rack_line::RackLineSubscriber;
 use cio_api::repos::{GitHubUser, NewRepo};
 use cio_api::rfds::is_image;
-use cio_api::schema::{api_tokens, applicants};
+use cio_api::schema::{api_tokens, applicants, rfds};
 use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
 use cio_api::swag_inventory::SwagInventoryItem;
@@ -2165,34 +2165,87 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
     let bot_command: BotCommand = serde_urlencoded::from_bytes(&body_param.as_bytes()).unwrap();
     sentry::capture_message(&format!("slack bot command: {:?}", bot_command), sentry::Level::Info);
 
+    // Get the company from the Slack team id.
+    let company = Company::get_from_slack_team_id(db, &bot_command.team_id);
+
+    // Get the command type.
     let command = SlackCommand::from_str(&bot_command.command).unwrap();
+    let text = bot_command.text.trim();
 
     // Set the default response.
-    let mut response = MessageResponse {
+    /*let mut response = MessageResponse {
         response_type: MessageResponseType::InChannel,
         text: format!("Sorry <@{}> :scream: I could not find command with `{}`", bot_command.user_id, bot_command.text.trim()),
-    };
+    };*/
 
     // Filter by command type and do the command.
-    match command {
-        SlackCommand::RFD => {}
+    let response = match command {
+        SlackCommand::RFD => {
+            let num = text.parse::<i32>().unwrap_or(0);
+            if num > 0 {
+                if let Ok(rfd) = rfds::dsl::rfds.filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num))).first::<RFD>(&db.conn()) {
+                    MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: rfd.as_slack_msg(),
+                    }
+                } else if let Ok(rfd) = rfds::dsl::rfds
+                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.like(text.to_string())))
+                    .first::<RFD>(&db.conn())
+                {
+                    MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: rfd.as_slack_msg(),
+                    }
+                } else {
+                    MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: format!("Sorry <@{}> :scream: I could not find an RFD matching `{}`", bot_command.user_id, text),
+                    }
+                }
+            } else if let Ok(rfd) = rfds::dsl::rfds
+                .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.like(text.to_string())))
+                .first::<RFD>(&db.conn())
+            {
+                MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: rfd.as_slack_msg(),
+                }
+            } else {
+                MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!("Sorry <@{}> :scream: I could not find an RFD matching `{}`", bot_command.user_id, text),
+                }
+            }
+        }
         SlackCommand::Meet => {
-            let mut name = bot_command.text.trim().to_string().replace(" ", "-");
+            let mut name = text.replace(" ", "-");
             if name.is_empty() {
                 // Generate a new random string.
                 name = thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect();
             }
 
-            response = MessageResponse {
+            MessageResponse {
                 response_type: MessageResponseType::InChannel,
                 text: format!("https://g.co/meet/oxide-{}", name.to_lowercase()),
             }
         }
-        SlackCommand::Applicants => {}
-        SlackCommand::Applicant => {}
-        SlackCommand::Papers => {}
-        SlackCommand::Paper => {}
-    }
+        SlackCommand::Applicants => MessageResponse {
+            response_type: MessageResponseType::InChannel,
+            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
+        },
+        SlackCommand::Applicant => MessageResponse {
+            response_type: MessageResponseType::InChannel,
+            text: format!("Sorry <@{}> :scream: I could not find an applicant matching `{}`", bot_command.user_id, text),
+        },
+        SlackCommand::Papers => MessageResponse {
+            response_type: MessageResponseType::InChannel,
+            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
+        },
+        SlackCommand::Paper => MessageResponse {
+            response_type: MessageResponseType::InChannel,
+            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
+        },
+    };
 
     sentry::end_session();
     Ok(HttpResponseOk(response))
