@@ -179,10 +179,11 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
 pub fn as_rack_line_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> NewRackLineSubscriber {
     let mut signup: NewRackLineSubscriber = Default::default();
 
-    let list_id = webhook.data.list_id.as_ref().unwrap();
+    let _list_id = webhook.data.list_id.as_ref().unwrap();
 
     // Get the company from the list id.
-    let company = Company::get_from_mailchimp_list_id(db, &list_id);
+    // TODO: eventually change this when we have more than one.
+    let company = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
     if webhook.data.merges.is_some() {
         let merges = webhook.data.merges.as_ref().unwrap();
