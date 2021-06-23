@@ -757,9 +757,6 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
     if !applicant.sent_email_received {
         println!("applicant is new, sending internal notifications: {:?}", applicant);
 
-        // Post to Slack.
-        //post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
-
         // Send a company-wide email.
         applicant.send_email_internally(db).await;
 

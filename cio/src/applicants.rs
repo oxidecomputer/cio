@@ -2216,9 +2216,6 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
                 .await;
 
             if !applicant.sent_email_received {
-                // Post to Slack.
-                //post_to_channel(get_hiring_channel_post_url(), applicant.as_slack_msg()).await;
-
                 // Send a company-wide email.
                 applicant.send_email_internally(db).await;
             }

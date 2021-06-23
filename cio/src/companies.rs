@@ -133,10 +133,20 @@ impl Company {
         }
     }
 
+    pub fn post_to_slack_channel(&self, db: &Database, value: serde_json::Value) {
+        // We need to get the url from the api tokens.
+        let token = api_tokens::dsl::api_tokens
+            .filter(api_tokens::dsl::auth_company_id.eq(self.id).and(api_tokens::dsl::product.eq("slack".to_lowercase())))
+            .first::<APIToken>(&db.conn())
+            .unwrap_or_else(|e| panic!("could not find slack api token matching auth company id {}: {}", self.id, e));
+
+        Slack::post_to_channel(token.endpoint, value);
+    }
+
     pub fn get_from_slack_team_id(db: &Database, team_id: &str) -> Self {
         // We need to get the token first with the matching team id.
         let token = api_tokens::dsl::api_tokens
-            .filter(api_tokens::dsl::company_id.eq(team_id.to_string()).or(api_tokens::dsl::product.eq("slack".to_lowercase())))
+            .filter(api_tokens::dsl::company_id.eq(team_id.to_string()).and(api_tokens::dsl::product.eq("slack".to_lowercase())))
             .first::<APIToken>(&db.conn())
             .unwrap_or_else(|e| panic!("could not find slack api token matching team id {}: {}", team_id, e));
 
