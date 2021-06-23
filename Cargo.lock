@@ -468,7 +468,6 @@ dependencies = [
  "hubcaps",
  "image 0.23.14",
  "lopdf",
- "lzma-rs",
  "macros 0.1.0",
  "mailchimp-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom_pem",

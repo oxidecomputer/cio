@@ -19,6 +19,7 @@ jobs:
             libusb-1.0-0-dev \
             pandoc \
             poppler-utils \
+            p7zip \
             ruby \
             texlive-latex-base \
             texlive-fonts-recommended \

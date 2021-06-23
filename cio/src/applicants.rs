@@ -1945,10 +1945,29 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         let mut file = fs::File::create(&path).unwrap();
         file.write_all(&contents).unwrap();
 
-        let mut f = std::io::BufReader::new(std::fs::File::open(&path).unwrap());
-        let mut decomp: Vec<u8> = Vec::new();
-        lzma_rs::lzma_decompress(&mut f, &mut decomp).unwrap();
-        result = String::from_utf8(decomp).unwrap();
+        output.push(id);
+
+        // Extract the text from the archive.
+        Command::new("7z").args(&["-o", output.to_str().unwrap(), "x", path.to_str().unwrap()]).output().unwrap();
+
+        // Walk the output directory trying to find our file.
+        for entry in WalkDir::new(&output).min_depth(1) {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if is_materials(path.file_name().unwrap().to_str().unwrap()) {
+                // Concatenate all the tar files into our result.
+                result += &format!(
+                    "====================== 7z file: {} ======================\n\n",
+                    path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                );
+                if path.extension().unwrap() == "pdf" {
+                    result += &read_pdf(&name, path.to_path_buf());
+                } else {
+                    result += &fs::read_to_string(&path).unwrap();
+                }
+                result += "\n\n\n";
+            }
+        }
     } else if name.ends_with(".tgz") || name.ends_with(".tar.gz") {
         // Get the ip contents from Drive.
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
