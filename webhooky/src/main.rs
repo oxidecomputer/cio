@@ -2230,10 +2230,36 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 text: format!("https://g.co/meet/oxide-{}", name.to_lowercase()),
             })
         }
-        SlackCommand::Applicants => json!(MessageResponse {
-            response_type: MessageResponseType::InChannel,
-            text: format!("Sorry <@{}> :scream: I could not find a journal club paper matching `{}`", bot_command.user_id, text),
-        }),
+        SlackCommand::Applicants => {
+            // Get the applicants that need to be triaged.
+            let applicants = applicants::dsl::applicants
+                .filter(
+                    applicants::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
+                )
+                .load::<Applicant>(&db.conn())
+                .unwrap();
+
+            let mut msg: serde_json::Value = Default::default();
+            for (i, a) in applicants.into_iter().enumerate() {
+                if i > 0 {
+                    // Merge a divider onto the stack.
+                    let object = json!({
+                        "blocks": [{
+                            "type": "divider"
+                        }]
+                    });
+
+                    merge_json(&mut msg, object);
+                }
+
+                let obj = a.as_slack_msg();
+                merge_json(&mut msg, obj);
+            }
+
+            msg
+        }
         SlackCommand::Applicant => {
             if let Ok(applicant) = applicants::dsl::applicants
                 .filter(applicants::dsl::cio_company_id.eq(company.id).and(applicants::dsl::name.like(text.to_string())))
