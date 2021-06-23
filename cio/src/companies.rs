@@ -133,6 +133,17 @@ impl Company {
         }
     }
 
+    pub fn get_from_slack_team_id(db: &Database, team_id: &str) -> Self {
+        // We need to get the token first with the matching team id.
+        let token = api_tokens::dsl::api_tokens
+            .filter(api_tokens::dsl::company_id.eq(team_id.to_string()).or(api_tokens::dsl::product.eq("slack".to_lowercase())))
+            .first::<APIToken>(&db.conn())
+            .unwrap_or_else(|e| panic!("could not find slack api token matching team id {}: {}", team_id, e));
+
+        // Now we can get the company.
+        Company::get_by_id(db, token.auth_company_id)
+    }
+
     pub fn get_from_github_org(db: &Database, org: &str) -> Self {
         companys::dsl::companys
             .filter(companys::dsl::github_org.eq(org.to_string()).or(companys::dsl::github_org.eq(org.to_lowercase())))
