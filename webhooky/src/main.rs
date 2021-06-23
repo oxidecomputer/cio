@@ -1712,11 +1712,9 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
 
     // Let's get the token from the code.
     let t = s.get_access_token(&event.code).await.unwrap();
-    sentry::capture_message(&format!("slack token: {:?}", t), sentry::Level::Info);
 
     // Get the current user.
     let current_user = s.current_user().await.unwrap();
-    sentry::capture_message(&format!("slack token: {:?}", current_user), sentry::Level::Info);
 
     // Let's get the domain from the email.
     let split = current_user.email.split('@');
