@@ -2183,7 +2183,7 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                         text: rfd.as_slack_msg(),
                     })
                 } else if let Ok(rfd) = rfds::dsl::rfds
-                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.like(text.to_string())))
+                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.ilike(format!("%{}%", text))))
                     .first::<RFD>(&db.conn())
                 {
                     json!(MessageResponse {
@@ -2197,7 +2197,7 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                     })
                 }
             } else if let Ok(rfd) = rfds::dsl::rfds
-                .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.like(text.to_string())))
+                .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.ilike(format!("%{}%", text))))
                 .first::<RFD>(&db.conn())
             {
                 json!(MessageResponse {
@@ -2255,7 +2255,7 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
         }
         SlackCommand::Applicant => {
             if let Ok(applicant) = applicants::dsl::applicants
-                .filter(applicants::dsl::cio_company_id.eq(company.id).and(applicants::dsl::name.like(text.to_string())))
+                .filter(applicants::dsl::cio_company_id.eq(company.id).and(applicants::dsl::name.ilike(format!("%{}%", text))))
                 .first::<Applicant>(&db.conn())
             {
                 applicant.as_slack_msg()
@@ -2299,7 +2299,11 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
         }
         SlackCommand::Paper => {
             if let Ok(meeting) = journal_club_meetings::dsl::journal_club_meetings
-                .filter(journal_club_meetings::dsl::cio_company_id.eq(company.id).and(journal_club_meetings::dsl::title.like(text.to_string())))
+                .filter(
+                    journal_club_meetings::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(journal_club_meetings::dsl::title.ilike(format!("%{}%", text))),
+                )
                 .first::<JournalClubMeeting>(&db.conn())
             {
                 meeting.as_slack_msg()
