@@ -457,6 +457,7 @@ dependencies = [
  "diffy",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.1",
+ "flate2",
  "futures-util",
  "google-drive 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",

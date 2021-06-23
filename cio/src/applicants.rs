@@ -12,6 +12,7 @@ use chrono::NaiveDate;
 use chrono::{DateTime, Duration};
 use chrono_humanize::HumanTime;
 use docusign::DocuSign;
+use flate2::read::GzDecoder;
 use google_drive::GoogleDrive;
 use google_geocode::Geocode;
 use html2text::from_read;
@@ -1948,6 +1949,40 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut f, &mut decomp).unwrap();
         result = String::from_utf8(decomp).unwrap();
+    } else if name.ends_with(".tgz") || name.ends_with(".tar.gz") {
+        // Get the ip contents from Drive.
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        path.push(format!("{}.tar.gz", id));
+
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(&contents).unwrap();
+
+        let tar_gz = fs::File::open(&path).unwrap();
+        let tar = GzDecoder::new(tar_gz);
+        let mut archive = Archive::new(tar);
+        output.push(id);
+        println!("unpacking tar gz: {:?} -> {:?}", path, output);
+        archive.unpack(&output).unwrap();
+
+        // Walk the output directory trying to find our file.
+        for entry in WalkDir::new(&output).min_depth(1) {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if is_materials(path.file_name().unwrap().to_str().unwrap()) {
+                // Concatenate all the tar files into our result.
+                result += &format!(
+                    "====================== tarball file: {} ======================\n\n",
+                    path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                );
+                if path.extension().unwrap() == "pdf" {
+                    result += &read_pdf(&name, path.to_path_buf());
+                } else {
+                    result += &fs::read_to_string(&path).unwrap();
+                }
+                result += "\n\n\n";
+            }
+        }
     } else if name.ends_with(".tar") {
         // Get the ip contents from Drive.
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
