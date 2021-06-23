@@ -47,6 +47,7 @@ html2text = "0.1"
 hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
 image = "0.23.14"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
+lzma-rs = "^0.2.0"
 macros = { path = "../macros" }
 mailchimp-api = "^0.1.11"
 #mailchimp-api = { path = "../mailchimp" }

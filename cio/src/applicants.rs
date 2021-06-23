@@ -1935,6 +1935,19 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         result = from_read(&contents[..], 80);
     } else if mime_type == "application/vnd.google-apps.document" {
         result = drive_client.get_file_contents_by_id(&id).await.unwrap();
+    } else if name.ends_with(".7z") {
+        // Get the ip contents from Drive.
+        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+
+        path.push(format!("{}.7z", id));
+
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(&contents).unwrap();
+
+        let mut f = std::io::BufReader::new(std::fs::File::open(&path).unwrap());
+        let mut decomp: Vec<u8> = Vec::new();
+        lzma_rs::lzma_decompress(&mut f, &mut decomp).unwrap();
+        result = String::from_utf8(decomp).unwrap();
     } else if name.ends_with(".tar") {
         // Get the ip contents from Drive.
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
@@ -1955,7 +1968,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
             let entry = entry.unwrap();
             let path = entry.path();
             if is_materials(path.file_name().unwrap().to_str().unwrap()) {
-                // Concatenate all the zip files into our result.
+                // Concatenate all the tar files into our result.
                 result += &format!(
                     "====================== tarball file: {} ======================\n\n",
                     path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
