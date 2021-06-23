@@ -2164,7 +2164,6 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack BotCommand.
     let bot_command: BotCommand = serde_urlencoded::from_bytes(&body_param.as_bytes()).unwrap();
-    sentry::capture_message(&format!("slack bot command: {:?}", bot_command), sentry::Level::Info);
 
     // Get the company from the Slack team id.
     let company = Company::get_from_slack_team_id(db, &bot_command.team_id);
@@ -2172,12 +2171,6 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
     // Get the command type.
     let command = SlackCommand::from_str(&bot_command.command).unwrap();
     let text = bot_command.text.trim();
-
-    // Set the default response.
-    /*let mut response = MessageResponse {
-        response_type: MessageResponseType::InChannel,
-        text: format!("Sorry <@{}> :scream: I could not find command with `{}`", bot_command.user_id, bot_command.text.trim()),
-    };*/
 
     // Filter by command type and do the command.
     let response = match command {
