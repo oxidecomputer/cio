@@ -378,6 +378,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Amazon".to_string()
     } else if s == "GoEngineer" {
         "SolidWorks".to_string()
+    } else if s == "Lattice Store" {
+        "Lattice".to_string()
     } else if s == "Duro Labs" {
         "Duro".to_string()
     } else if s == "Hotel Indigo Rochester" {
@@ -987,7 +989,6 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                 continue;
             }
             Err(e) => {
-                println!("bill payment: {:?}", bill_payment);
                 println!(
                     "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` date `{}`: {}",
                     bill_payment.vendor_ref.name, merchant_name, bill_payment.total_amt, bill_payment.txn_date, e
