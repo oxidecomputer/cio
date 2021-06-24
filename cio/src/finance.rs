@@ -354,6 +354,10 @@ fn clean_vendor_name(s: &str) -> String {
         "YETI".to_string()
     } else if s == "keychron.com" {
         "Keychron".to_string()
+    } else if s == "Uline" {
+        "ULINE".to_string()
+    } else if s == "Openphone" {
+        "OpenPhone".to_string()
     } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo" {
         "TaskRabbit".to_string()
     } else if s == "Dell Inc" {
@@ -370,8 +374,16 @@ fn clean_vendor_name(s: &str) -> String {
         "Finisar".to_string()
     } else if s == "AISense, Inc." {
         "Otter.ai".to_string()
-    } else if s == "Amazon Business Prime" || s == "Amzn Mktp Uk" || s == "Amazon Digital Services" || s == "Amazon.com" {
+    } else if s == "Amazon Business Prime" || s == "Amzn Mktp Uk" || s == "Amazon Digital Services" || s == "Amazon.com" || s == "Amazon.co.uk" {
         "Amazon".to_string()
+    } else if s == "GoEngineer" {
+        "SolidWorks".to_string()
+    } else if s == "Duro Labs" {
+        "Duro".to_string()
+    } else if s == "Hotel Indigo Rochester" {
+        "Hotel Indigo".to_string()
+    } else if s == "TestEquity LLC" {
+        "TestEquity".to_string()
     } else if s == "FS.COM - Fiberstore" {
         "Fiber Store".to_string()
     } else if s == "FAX.PLUS" || s == "FAXPLUS" {
