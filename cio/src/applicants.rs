@@ -1947,6 +1947,9 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
         output.push(id);
 
+        // Create the output directory.
+        fs::create_dir_all(&output).unwrap();
+
         // Extract the text from the archive.
         Command::new("7z").args(&["x", "-o", output.to_str().unwrap(), path.to_str().unwrap()]).output().unwrap();
 
