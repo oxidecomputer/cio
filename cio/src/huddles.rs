@@ -81,7 +81,7 @@ pub async fn sync_changes_to_google_events() {
 
 You can submit topics at: https://{}-huddle-form.corp.oxide.computer
 
-The Airtable workspace lives at: https://{}-huddle-corp.oxide.computer
+The Airtable workspace lives at: https://{}-huddle.corp.oxide.computer
 
 {}",
                     slug.replace('-', " "),
