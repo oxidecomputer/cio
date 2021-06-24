@@ -1948,7 +1948,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         output.push(id);
 
         // Extract the text from the archive.
-        Command::new("7z").args(&["-o", output.to_str().unwrap(), "x", path.to_str().unwrap()]).output().unwrap();
+        Command::new("7z").args(&["x", "-o", output.to_str().unwrap(), path.to_str().unwrap()]).output().unwrap();
 
         // Walk the output directory trying to find our file.
         for entry in WalkDir::new(&output).min_depth(1) {
