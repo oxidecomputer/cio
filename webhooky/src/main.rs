@@ -235,9 +235,25 @@ struct CounterResponse {
     method = GET,
     path = "/products/sold/count",
 }]
-async fn listen_products_sold_count_requests(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
-    // TODO: Hook this up to our actual database.
-    Ok(HttpResponseOk(CounterResponse { count: 0 }))
+async fn listen_products_sold_count_requests(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
+    let api_context = rqctx.context();
+
+    // TODO: find a better way to do this.
+    let company = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+
+    // TODO: change this one day to be the number of racks sold.
+    // For now, use it as number of applications that need to be triaged.
+    // Get the applicants that need to be triaged.
+    let applicants = applicants::dsl::applicants
+        .filter(
+            applicants::dsl::cio_company_id
+                .eq(company.id)
+                .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
+        )
+        .load::<Applicant>(&api_context.db.conn())
+        .unwrap();
+
+    Ok(HttpResponseOk(CounterResponse { count: applicants.len() as i32 }))
 }
 
 /** Listen for GitHub webhooks. */
