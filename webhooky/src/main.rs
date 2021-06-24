@@ -137,6 +137,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
     api.register(listen_mailchimp_rack_line_webhooks).unwrap();
+    api.register(listen_products_sold_count_requests).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(listen_slack_commands_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
@@ -222,6 +223,21 @@ async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespo
 }]
 async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
+}
+
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+struct CounterResponse {
+    count: i32,
+}
+
+/** Return the count of products sold. */
+#[endpoint {
+    method = GET,
+    path = "/products/sold/count",
+}]
+async fn listen_products_sold_count_requests(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
+    // TODO: Hook this up to our actual database.
+    Ok(HttpResponseOk(CounterResponse { count: 0 }))
 }
 
 /** Listen for GitHub webhooks. */
