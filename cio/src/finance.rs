@@ -452,8 +452,10 @@ fn clean_vendor_name(s: &str) -> String {
         "YouTube".to_string()
     } else if s == "Mindshare Benefits & Insurance Service, Inc" {
         "Mindshare".to_string()
-    } else if s == "Future Electronics Corp (MA)" {
+    } else if s == "Future Electronics Corp (MA)" || s == "Future Electronics (IL)" {
         "Future Electronics".to_string()
+    } else if s == "Fifth Column Ltd" {
+        "Fifth Column".to_string()
     } else if s == "Zoom.us" || s == "Zoom Video Communications" {
         "Zoom".to_string()
     } else if s == "Hardware Security Training and Research" {
@@ -534,6 +536,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Mail Merge for Avery Labels".to_string()
     } else if s == "Pentagram Design LTD" {
         "Pentagram".to_string()
+    } else if s == "Blackfish Sourcing Inc." {
+        "Blackfish".to_string()
     } else {
         s.to_string()
     }
