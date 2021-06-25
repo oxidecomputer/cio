@@ -243,6 +243,46 @@ impl GoogleDrive {
         Ok(files_response.files)
     }
 
+    /// Get a folder by it's name.
+    pub async fn get_folder_by_name(&self, drive_id: &str, parent_id: &str, name: &str) -> Result<Vec<File>, APIError> {
+        let mut query = format!("name = '{}' and mimeType = 'application/vnd.google-apps.folder'", name);
+        if !parent_id.is_empty() {
+            query = format!("{} and '{}' in parents", query, parent_id);
+        }
+
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            "files".to_string(),
+            (),
+            Some(vec![
+                ("corpora", "drive".to_string()),
+                ("supportsAllDrives", "true".to_string()),
+                ("includeItemsFromAllDrives", "true".to_string()),
+                ("driveId", drive_id.to_string()),
+                ("q", query),
+            ]),
+            &[],
+            "",
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        // Try to deserialize the response.
+        let files_response: FilesResponse = resp.json().await.unwrap();
+
+        Ok(files_response.files)
+    }
+
     /// List drives.
     pub async fn list_drives(&self) -> Result<Vec<Drive>, APIError> {
         // Build the request.
@@ -292,6 +332,13 @@ impl GoogleDrive {
             file.parents = vec![parent_id.to_string()];
         } else {
             file.parents = vec![drive_id.to_string()];
+        }
+
+        // Check if the folder exists.
+        let folders = self.get_folder_by_name(drive_id, parent_id, name).await.unwrap_or_default();
+        if !folders.is_empty() {
+            let f = folders.get(0).unwrap().clone();
+            return Ok(f.id);
         }
 
         // Make the request and return the ID.
