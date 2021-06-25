@@ -19,7 +19,7 @@ diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "
 dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "main" }
 formdata = "^0.13.0"
 futures-util = "0.3"
-google-drive = "^0.1.0"
+google-drive = "^0.1.20"
 gusto-api = "^0.1.16"
 http = "0.2.0"
 #hubcaps = { version = "0.6", features = ["httpcache"] }
