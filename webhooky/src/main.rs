@@ -1313,8 +1313,9 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
         let ct = mime_guess::from_ext(&extension).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", user_name, name, extension);
-        println!("file name: {}", file_name);
+        println!("file name: {}, content type: {}", file_name, content_type);
 
+        println!("thing: {:?}", buffer);
         /*let drive_file = drive.create_or_update_file(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
         let link = format!("https://drive.google.com/open?id={}", drive_file.id);
         // Add it to our response.
