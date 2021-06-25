@@ -13,7 +13,9 @@ extern crate serde_json;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
+use std::fs;
 use std::fs::File;
+use std::io::Read;
 use std::str::{from_utf8, FromStr};
 use std::sync::Arc;
 
@@ -1197,6 +1199,112 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for files being uploaded for incoming job applications */
+#[endpoint {
+    method = POST,
+    path = "/application/files/upload",
+}]
+async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
+    sentry::start_session();
+
+    // Parse the body as bytes.
+    let mut b = body_param.as_bytes();
+
+    // Get the headers and parse the form data.
+    let headers = rqctx.request.lock().await.headers().clone();
+
+    let content_type = headers.get("content-type").unwrap();
+    let content_length = headers.get("content-length").unwrap();
+    let mut h = hyper::header::Headers::new();
+    h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
+    h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
+
+    let form_data = formdata::read_formdata(&mut b, &h).unwrap();
+
+    let mut email = "".to_string();
+    let mut role = "".to_string();
+    let mut cio_company_id = 0;
+    let mut user_name = "".to_string();
+    for (name, value) in &form_data.fields {
+        if name == "email" {
+            email = value.to_string();
+        } else if name == "role" {
+            role = value.to_string();
+        } else if name == "cio_company_id" {
+            cio_company_id = value.parse::<i32>().unwrap();
+        } else if name == "user_name" {
+            user_name = value.to_string();
+        }
+    }
+
+    // We will return a key value of the name of file and the link in google drive.
+    let mut response: HashMap<String, String> = Default::default();
+
+    if email.is_empty() || role.is_empty() || cio_company_id <= 0 || form_data.files.is_empty() || user_name.is_empty() {
+        sentry::capture_message(
+            &format!("could not get applicant information for fields: {:?}\nfiles: {:?}", form_data.fields, form_data.files),
+            sentry::Level::Info,
+        );
+
+        // Return early.
+        sentry::end_session();
+        return Ok(HttpResponseOk(response));
+    }
+
+    // TODO: Add the files to google drive.
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    let company = Company::get_by_id(db, cio_company_id);
+
+    // Get gsuite token.
+    let token = company.authenticate_google(db).await;
+
+    // Initialize the Google Drive client.
+    let drive = GoogleDrive::new(token);
+
+    // Figure out where our directory is.
+    // It should be in the shared drive : "Automated Documents"/"application_content"
+    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+
+    // Get the directory by the name.
+    let drive_dir = drive.get_file_by_name(&shared_drive.id, "application_content").await.unwrap();
+    let parent_id = drive_dir.get(0).unwrap().id.to_string();
+
+    // Create the folder for our candidate with their email.
+    let email_folder_id = drive.create_folder(&shared_drive.id, &parent_id, &email).await.unwrap();
+
+    // Create the folder for our candidate with the role.
+    let role_folder_id = drive.create_folder(&shared_drive.id, &email_folder_id, &role).await.unwrap();
+
+    // Iterate over our files and create them in google drive.
+    // Create or update the file in the google_drive.
+    for (name, file) in &form_data.files {
+        let extension = file.path.extension().unwrap().to_str().unwrap().to_string();
+
+        // Read the file.
+        let mut f = File::open(&file.path).expect("no file found");
+        let metadata = fs::metadata(&file.path).expect("unable to read metadata");
+        let mut buffer = Vec::new();
+        f.read_to_end(&mut buffer).unwrap();
+
+        // Get the extension from the content type.
+        let ct = mime_guess::from_ext(&extension).first().unwrap();
+        let content_type = ct.essence_str().to_string();
+        let file_name = format!("{} - {}.{}", user_name, name, extension);
+        println!("file name: {}", file_name);
+
+        /*let drive_file = drive.create_or_update_file(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
+        let link = format!("https://drive.google.com/open?id={}", drive_file.id);
+        // Add it to our response.
+        response.insert(name.to_string(), link.to_string());*/
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseOk(response))
 }
 
 /**
