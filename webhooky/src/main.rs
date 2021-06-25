@@ -114,6 +114,8 @@ async fn main() -> Result<(), String> {
     api.register(listen_airtable_shipments_outbound_schedule_pickup_webhooks).unwrap();
     api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks).unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
+    api.register(listen_application_submit_requests).unwrap();
+    api.register(listen_application_files_upload_requests).unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_github_callback).unwrap();
@@ -1048,7 +1050,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
 async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("{:?}", event);
+    println!("pickup shipment {:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1196,6 +1198,22 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     // Add the shipment to our database.
     let api_context = rqctx.context();
     i.upsert(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for applications being submitted for incoming job applications */
+#[endpoint {
+    method = POST,
+    path = "/application/submit",
+}]
+async fn listen_application_submit_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+
+    sentry::capture_message(&format!("application submit: {}", event.to_string()), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
