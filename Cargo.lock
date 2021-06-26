@@ -470,7 +470,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.11",
+ "ramp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d62683a0b4fb705bcafe7547dc1ea3b824b45aa1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e8c11016f74e24f54cf3c3729f070594d9b231e8"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -534,7 +534,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.11",
+ "ramp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -2098,7 +2098,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d62683a0b4fb705bcafe7547dc1ea3b824b45aa1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e8c11016f74e24f54cf3c3729f070594d9b231e8"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2733,9 +2733,9 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc0e1f259c92177c30a4c9d177246edd0a3568b25756a977d0632cf8fa37e905"
+checksum = "8d31d11c69a6b52a174b42bdc0c30e5e11670f90788b2c471c31c1d17d449443"
 
 [[package]]
 name = "pin-utils"
@@ -2934,9 +2934,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4231a7f249400de2451357191c7f13811f6f6cd5783fac9d0e5d752043a97e13"
+version = "0.1.12"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2949,6 +2947,8 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cb8401125e6051cfa08ed42c6da9f2bd37cb2da0d2340c7e5da2dc0152e296f"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4842,7 +4842,7 @@ dependencies = [
  "mailchimp-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.11",
+ "ramp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "schemars",
