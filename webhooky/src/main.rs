@@ -3489,7 +3489,7 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
     // Check if the huddles file changed.
     if commit.file_changed("configs/huddles.toml") {
         // Sync github outside collaborators.
-        cio_api::huddles::sync_huddles().await;
+        cio_api::huddles::sync_huddles(&api_context.db, &company).await;
     }
 
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -3505,6 +3505,11 @@ async fn handle_repository_event(github: &Github, api_context: &Context, event: 
     // make this a bit better.
     // Update the short urls for all the repos.
     generate_shorturls_for_repos(&api_context.db, &github.repo(&company.github_org, "configs"), company.id).await;
+
+    // TODO: since we know only one repo changed we don't need to refresh them all,
+    // make this a bit better.
+    cio_api::repos::sync_repo_settings(&api_context.db, github, company).await;
+
     println!("generated shorturls for all the GitHub repos");
 
     Ok(HttpResponseAccepted("ok".to_string()))
