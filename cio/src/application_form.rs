@@ -1,9 +1,12 @@
 use chrono::Utc;
+use google_drive::GoogleDrive;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::applicants::NewApplicant;
+use crate::companies::Company;
 use crate::db::Database;
+use hubcaps::issues::{IssueListOptions, State};
 
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct ApplicationForm {
@@ -49,8 +52,28 @@ impl ApplicationForm {
 
         // Add the applicant to the database.
         let mut applicant = new_applicant.upsert(db).await;
+
+        let company = Company::get_by_id(db, self.cio_company_id);
+
+        // Get the GSuite token.
+        let token = company.authenticate_google(&db).await;
+
+        // Initialize the GSuite sheets client.
+        let drive_client = GoogleDrive::new(token.clone());
+
+        let github = company.authenticate_github();
+
+        // Get all the hiring issues on the configs repository.
+        let configs_issues = github
+            .repo(&company.github_org, "configs")
+            .issues()
+            .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+            .await
+            .unwrap();
+
         // Expand the application.
-        applicant.expand(db).await;
+        applicant.expand(db, &drive_client, &github, &configs_issues).await;
+
         // Update airtable and the database again.
         applicant.update(db).await;
     }

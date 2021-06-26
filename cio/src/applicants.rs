@@ -1323,7 +1323,7 @@ The Oxide Team",
 
     /// Get the applicant's information in the form of the body of an email for a
     /// company wide notification that we received a new application.
-    pub fn as_company_notification_email(&self) -> String {
+    fn as_company_notification_email(&self) -> String {
         let time = self.human_duration();
 
         let mut msg = format!(
@@ -2826,7 +2826,7 @@ pub async fn get_docusign_template_id(ds: &DocuSign) -> String {
 
 impl Applicant {
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) {
+    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive, github: &Github, configs_issues: &[Issue]) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
@@ -2836,6 +2836,8 @@ impl Applicant {
             self.update(db).await;
 
             println!("[applicant] sent email to {} that we received their application", self.email);
+            // Send the email internally.
+            self.send_email_internally(db).await;
         }
 
         self.cleanup_phone();
@@ -2854,6 +2856,81 @@ impl Applicant {
             self.materials_contents = get_file_contents(drive_client, &self.materials).await;
             self.parse_materials();
         }
+
+        self.create_github_onboarding_issue(db, github, configs_issues).await;
+    }
+
+    /// Get the applicant's information in the form of the body of an email for a
+    /// company wide notification that we received a new application.
+    fn as_company_notification_email(&self) -> String {
+        let time = self.human_duration();
+
+        let mut msg = format!(
+            "## Applicant Information for {}
+
+Submitted {}
+Name: {}
+Email: {}",
+            self.role, time, self.name, self.email
+        );
+
+        if !self.location.is_empty() {
+            msg += &format!("\nLocation: {}", self.location);
+        }
+        if !self.phone.is_empty() {
+            msg += &format!("\nPhone: {}", self.phone);
+        }
+
+        if !self.github.is_empty() {
+            msg += &format!("\nGitHub: {} (https://github.com/{})", self.github, self.github.trim_start_matches('@'));
+        }
+        if !self.gitlab.is_empty() {
+            msg += &format!("\nGitLab: {} (https://gitlab.com/{})", self.gitlab, self.gitlab.trim_start_matches('@'));
+        }
+        if !self.linkedin.is_empty() {
+            msg += &format!("\nLinkedIn: {}", self.linkedin);
+        }
+        if !self.portfolio.is_empty() {
+            msg += &format!("\nPortfolio: {}", self.portfolio);
+        }
+        if !self.website.is_empty() {
+            msg += &format!("\nWebsite: {}", self.website);
+        }
+
+        msg += &format!(
+            "\nResume: {}
+Oxide Candidate Materials: {}
+Interested in: {}
+
+## Reminder
+
+The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
+",
+            self.resume,
+            self.materials,
+            self.interested_in.join(", ")
+        );
+
+        msg
+    }
+
+    /// Send an email internally that we have a new application.
+    async fn send_email_internally(&self, db: &Database) {
+        let company = self.company(db);
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("New {} Application: {}", self.role, self.name),
+                self.as_company_notification_email(),
+                vec![format!("applications@{}", company.gsuite_domain)],
+                vec![],
+                vec![],
+                format!("applications@{}", company.gsuite_domain),
+            )
+            .await;
     }
 
     /// Send an email to the applicant that we recieved their application.
