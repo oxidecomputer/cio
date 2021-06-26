@@ -1125,8 +1125,6 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     // Get the headers and parse the form data.
     let headers = rqctx.request.lock().await.headers().clone();
 
-    println!("{:?}", headers);
-
     let content_type = headers.get("content-type").unwrap();
     let content_length = headers.get("content-length").unwrap();
     let mut h = hyper::header::Headers::new();
@@ -1232,9 +1230,12 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
 
     // Parse the body as bytes.
     let mut b = body_param.as_bytes();
+    println!("{}", body_param.as_str().unwrap());
 
     // Get the headers and parse the form data.
     let headers = rqctx.request.lock().await.headers().clone();
+
+    println!("{:?}", headers);
 
     let content_type = headers.get("content-type").unwrap();
     let content_length = headers.get("content-length").unwrap();

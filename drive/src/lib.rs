@@ -111,9 +111,9 @@ impl GoogleDrive {
 
         if method == Method::POST && path == "files" {
             // We are likely uploading a file so add the right headers.
-            headers.append(header::HeaderName::from_static("X-Upload-Content-Type"), header::HeaderValue::from_static("application/octet-stream"));
+            headers.append(header::HeaderName::from_static("x-upload-content-type"), header::HeaderValue::from_static("application/octet-stream"));
             headers.append(
-                header::HeaderName::from_static("X-Upload-Content-Length"),
+                header::HeaderName::from_static("x-upload-content-length"),
                 header::HeaderValue::from_bytes(format!("{}", content.len()).as_bytes()).unwrap(),
             );
         }

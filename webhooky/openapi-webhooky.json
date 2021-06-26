@@ -290,6 +290,66 @@
         }
       }
     },
+    "/application/files/upload": {
+      "post": {
+        "description": "Listen for files being uploaded for incoming job applications",
+        "operationId": "listen_application_files_upload_requests",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Map_of_String",
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application/submit": {
+      "post": {
+        "description": "Listen for applications being submitted for incoming job applications",
+        "operationId": "listen_application_submit_requests",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/docusign/callback": {
       "get": {
         "description": "Listen for callbacks to DocuSign auth.",
@@ -719,6 +779,70 @@
         }
       }
     },
+    "/auth/slack/callback": {
+      "get": {
+        "description": "Listen for callbacks to Slack auth.",
+        "operationId": "listen_auth_slack_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "realmId",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state that we had passed in through the user consent URL.",
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/slack/consent": {
+      "get": {
+        "description": "Get the consent URL for Slack auth.",
+        "operationId": "listen_auth_slack_consent",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserConsentURL"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/checkr/background/update": {
       "post": {
         "description": "Listen for updates to our checkr background checks.",
@@ -1052,6 +1176,24 @@
         }
       }
     },
+    "/products/sold/count": {
+      "get": {
+        "description": "Return the count of products sold.",
+        "operationId": "listen_products_sold_count_requests",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rfd/{num}": {
       "post": {
         "description": "Trigger an update for an RFD.",
@@ -1104,6 +1246,33 @@
                   "title": "String",
                   "type": "string"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/slack/commands": {
+      "post": {
+        "description": "Listen for Slack commands webhooks.",
+        "operationId": "listen_slack_commands_webhooks",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -1165,6 +1334,18 @@
             "type": "string"
           }
         }
+      },
+      "CounterResponse": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "count"
+        ]
       },
       "CustomFields": {
         "type": "object",
@@ -2285,6 +2466,11 @@
       "Order": {
         "type": "object",
         "properties": {
+          "cio_company_id": {
+            "description": "The CIO company ID.",
+            "type": "integer",
+            "format": "int32"
+          },
           "city": {
             "type": "string"
           },
@@ -2304,7 +2490,7 @@
             "type": "string"
           },
           "notes": {
-            "description": "This is who they know at Oxide.",
+            "description": "This is who they know at the company.",
             "type": "string"
           },
           "phone": {
