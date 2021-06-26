@@ -14,23 +14,17 @@ use crate::db::Database;
 use crate::utils::create_or_update_file_in_github_repo;
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
-pub async fn sync_changes_to_google_events() {
-    let db = Database::new();
+pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
+    let github = company.authenticate_github();
+    let configs = get_configs_from_repo(&github, company).await;
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github();
-    let configs = get_configs_from_repo(&github, &oxide).await;
-
-    let token = oxide.authenticate_google(&db).await;
-    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
+    let token = company.authenticate_google(&db).await;
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
         // Initialize the Airtable client.
-        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
@@ -79,20 +73,22 @@ pub async fn sync_changes_to_google_events() {
                 let description = format!(
                     "This is the event for {} huddles.
 
-You can submit topics at: https://{}-huddle-form.corp.oxide.computer
+You can submit topics at: https://{}-huddle-form.corp.{}
 
-The Airtable workspace lives at: https://{}-huddle.corp.oxide.computer
+The Airtable workspace lives at: https://{}-huddle.corp.{}
 
 {}",
                     slug.replace('-', " "),
                     slug,
+                    company.domain,
                     slug,
+                    company.domain,
                     discussion_topics
                 );
 
                 if event.recurring_event_id != event.id {
                     // Update the calendar event with the new description.
-                    let g_owner = GSuite::new(&event.organizer.email, &oxide.gsuite_domain, token.clone());
+                    let g_owner = GSuite::new(&event.organizer.email, &company.gsuite_domain, token.clone());
                     // Get the event under the right user.
                     if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
                         // Modify the properties of the event so we can update it.
@@ -116,18 +112,12 @@ The Airtable workspace lives at: https://{}-huddle.corp.oxide.computer
     }
 }
 
-pub async fn send_huddle_reminders() {
-    let db = Database::new();
+pub async fn send_huddle_reminders(db: &Database, company: &Company) {
+    let github = company.authenticate_github();
+    let configs = get_configs_from_repo(&github, company).await;
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github();
-    let configs = get_configs_from_repo(&github, &oxide).await;
-
-    let token = oxide.authenticate_google(&db).await;
-    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
+    let token = company.authenticate_google(&db).await;
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -138,7 +128,7 @@ pub async fn send_huddle_reminders() {
         let mut email_data: MeetingReminderEmailData = Default::default();
 
         // Initialize the Airtable client.
-        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
@@ -186,7 +176,7 @@ pub async fn send_huddle_reminders() {
 
                         if event.recurring_event_id != event.id {
                             // We need to impersonate the event owner.
-                            let g_owner = GSuite::new(&event.organizer.email, &oxide.gsuite_domain, token.clone());
+                            let g_owner = GSuite::new(&event.organizer.email, &company.gsuite_domain, token.clone());
                             // Get the event under the right user.
                             let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
                             // We need to update the event instance, not delete it, and set the status to
@@ -255,14 +245,14 @@ pub async fn send_huddle_reminders() {
                     .send_mail(
                         format!("Reminder {} huddle tomorrow", slug),
                         template.to_string(),
-                        vec![format!("{}@oxidecomputer.com", huddle.email)],
+                        vec![format!("{}@{}", huddle.email, company.gsuite_domain)],
                         vec![],
                         vec![],
-                        "huddle-reminders@oxidecomputer.com".to_string(),
+                        format!("huddle-reminders@{}", company.gsuite_domain),
                     )
                     .await;
 
-                println!("successfully sent {} huddle reminder email to {}@oxidecomputer.com", slug, huddle.email);
+                println!("successfully sent {} huddle reminder email to {}@{}", slug, huddle.email, company.gsuite_domain);
 
                 // Update the airtable record to show the email was sent.
                 // Send the updated record to the airtable client.
@@ -307,29 +297,23 @@ You can also view the roadmap in Airtable here:
 https://airtable-roadmap.corp.oxide.computer.
 
 See you soon,
-The Oxide Airtable Huddle Bot"#;
+The Airtable Huddle Bot"#;
 
 /// Sync the huddle meeting notes with the GitHub reports repository.
-pub async fn sync_huddle_meeting_notes() {
-    let db = Database::new();
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github();
-    let configs = get_configs_from_repo(&github, &oxide).await;
+pub async fn sync_huddle_meeting_notes(db: &Database, company: &Company) {
+    let github = company.authenticate_github();
+    let configs = get_configs_from_repo(&github, company).await;
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
 
     // Get the reports repo client.
-    let reports_repo = github.repo(&oxide.github_org, "reports");
+    let reports_repo = github.repo(&company.github_org, "reports");
 
     // Iterate over the huddle meetings.
     for (name, huddle) in configs.huddles {
         // Initialize the Airtable client.
-        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
@@ -362,18 +346,12 @@ pub async fn sync_huddle_meeting_notes() {
     }
 }
 
-pub async fn sync_huddles() {
-    let db = Database::new();
+pub async fn sync_huddles(db: &Database, company: &Company) {
+    let github = company.authenticate_github();
+    let configs = get_configs_from_repo(&github, company).await;
 
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github();
-    let configs = get_configs_from_repo(&github, &oxide).await;
-
-    let token = oxide.authenticate_google(&db).await;
-    let gsuite = GSuite::new(&oxide.gsuite_account_id, &oxide.gsuite_domain, token.clone());
+    let token = company.authenticate_google(&db).await;
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
@@ -387,7 +365,7 @@ pub async fn sync_huddles() {
 
         // Iterate over the calendars.
         for calendar in calendars {
-            if !calendar.id.ends_with(&oxide.gsuite_domain) {
+            if !calendar.id.ends_with(&company.gsuite_domain) {
                 // We don't care about this calendar.
                 // Continue early.
                 continue;
@@ -443,7 +421,7 @@ pub async fn sync_huddles() {
         println!("found {} events for {}", gcal_events.len(), huddle.calendar_event_fuzzy_search);
 
         // Now let's get the Airtable records.
-        let airtable = Airtable::new(&oxide.airtable_api_key, huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
         let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
 
         // Iterate over the records and try to match to the google calendar ID.
@@ -475,9 +453,9 @@ pub async fn sync_huddles() {
                     // Update the attendees.
                     let mut attendees: Vec<String> = Default::default();
                     for attendee in event.attendees.clone() {
-                        if !attendee.resource && attendee.email.ends_with(&oxide.gsuite_domain) {
+                        if !attendee.resource && attendee.email.ends_with(&company.gsuite_domain) {
                             // Make sure the person is still a user.
-                            if let Some(user) = User::get_from_db(&db, oxide.id, attendee.email.trim_end_matches(&oxide.gsuite_domain).trim_end_matches('@').to_string()) {
+                            if let Some(user) = User::get_from_db(&db, company.id, attendee.email.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
                                 attendees.push(user.email);
                             }
                         }
@@ -539,17 +517,25 @@ pub async fn sync_huddles() {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
+    use crate::db::Database;
     use crate::huddles::{send_huddle_reminders, sync_changes_to_google_events, sync_huddle_meeting_notes, sync_huddles};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_huddles() {
-        sync_changes_to_google_events().await;
+        let db = Database::new();
 
-        sync_huddles().await;
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        send_huddle_reminders().await;
+        sync_changes_to_google_events(&db, &oxide).await;
 
-        sync_huddle_meeting_notes().await;
+        sync_huddles(&db, &company).await;
+
+        send_huddle_reminders(&db, &company).await;
+
+        sync_huddle_meeting_notes(&db, &company).await;
     }
 }

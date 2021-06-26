@@ -3486,7 +3486,11 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
         sync_github_outside_collaborators(github, configs.github_outside_collaborators, &company).await;
     }
 
-    // TODO: do huddles.
+    // Check if the huddles file changed.
+    if commit.file_changed("configs/huddles.toml") {
+        // Sync github outside collaborators.
+        cio_api::huddles::sync_huddles().await;
+    }
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
