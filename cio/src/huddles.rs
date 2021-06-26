@@ -532,10 +532,10 @@ mod tests {
 
         sync_changes_to_google_events(&db, &oxide).await;
 
-        sync_huddles(&db, &company).await;
+        sync_huddles(&db, &oxide).await;
 
-        send_huddle_reminders(&db, &company).await;
+        send_huddle_reminders(&db, &oxide).await;
 
-        sync_huddle_meeting_notes(&company).await;
+        sync_huddle_meeting_notes(&oxide).await;
     }
 }
