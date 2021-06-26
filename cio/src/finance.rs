@@ -458,6 +458,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Fifth Column".to_string()
     } else if s == "Zoom.us" || s == "Zoom Video Communications" {
         "Zoom".to_string()
+    } else if s == "Lenovo Group" {
+        "Lenovo".to_string()
     } else if s == "Hardware Security Training and Research" {
         "Hardware Security Training".to_string()
     } else if s == "Rudys Cant Fail Cafe" {
@@ -470,6 +472,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Owl Labs".to_string()
     } else if s == "PITCH.COM" {
         "Pitch".to_string()
+    } else if s == "Microsoft Store" || s == "Microsoft Office / Azure" {
+        "Microsoft".to_string()
     } else if s == "Intel Corporation" {
         "Intel".to_string()
     } else if s == "Advanced Micro Devices, Inc." {

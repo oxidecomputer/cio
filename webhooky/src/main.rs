@@ -1300,7 +1300,7 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
 
     // Iterate over our files and create them in google drive.
     // Create or update the file in the google_drive.
-    for (name, file) in &form_data.files {
+    for (name, file) in form_data.files.clone() {
         // Read the file.
         let mut f = File::open(&file.path).expect("no file found");
         let metadata = file.path.metadata().expect("unable to read metadata");
@@ -1319,7 +1319,7 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", user_name, vec.get(0).unwrap(), ext);
 
-        /*let drive_file = drive.create_or_update_file_raw(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
+        /*let drive_file = drive.create_or_update_file(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
         let link = format!("https://drive.google.com/open?id={}", shared_drive.id);
         // Add it to our response.
         response.insert(name.to_string(), link.to_string());*/
