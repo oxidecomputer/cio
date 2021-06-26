@@ -1209,11 +1209,16 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     method = POST,
     path = "/application/submit",
 }]
-async fn listen_application_submit_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_application_submit_requests(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<cio_api::application_form::ApplicationForm>) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let api_context = rqctx.context();
     let event = body_param.into_inner();
 
-    sentry::capture_message(&format!("application submit: {}", event.to_string()), sentry::Level::Info);
+    sentry::capture_message(&format!("application submit: {:?}", event), sentry::Level::Info);
+
+    event.do_form(&api_context.db).await;
+
+    println!("application for {} {} created successfully", event.email, event.role);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
