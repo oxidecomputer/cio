@@ -1125,6 +1125,8 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     // Get the headers and parse the form data.
     let headers = rqctx.request.lock().await.headers().clone();
 
+    println!("{:?}", headers);
+
     let content_type = headers.get("content-type").unwrap();
     let content_length = headers.get("content-length").unwrap();
     let mut h = hyper::header::Headers::new();
