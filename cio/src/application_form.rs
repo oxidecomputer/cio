@@ -49,10 +49,10 @@ impl ApplicationForm {
 
         // Add the applicant to the database.
         let mut applicant = new_applicant.upsert(db).await;
-        // TODO: Expand the application.
-        //applicant.expand(db).await;
+        // Expand the application.
+        applicant.expand(db).await;
         // Update airtable and the database again.
-        //applicant.update(db).await;
+        applicant.update(db).await;
     }
 }
 

@@ -1005,6 +1005,121 @@ The Oxide Team",
             }
         }
 
+        self.cleanup_phone();
+
+        // Get the time seven days ago.
+        let duration_from_now = Utc::now().signed_duration_since(self.submitted_time);
+
+        // If the application is as new as the last week then parse all the contents.
+        // This takes a long time so we skip all the others.
+        if (duration_from_now < Duration::days(2) || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
+            && self.status != crate::applicant_status::Status::Declined.to_string()
+        {
+            // Read the file contents.
+            self.resume_contents = get_file_contents(drive_client, &self.resume).await;
+            self.materials_contents = get_file_contents(drive_client, &self.materials).await;
+            self.parse_materials();
+        }
+    }
+
+    /// Parse the questions from the materials.
+    fn parse_materials(&mut self) {
+        // Parse the samples and materials.
+        let materials_contents = self.materials_contents.clone();
+        let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
+        if work_samples.is_empty() {
+            work_samples = parse_question(
+                r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
+                "Writing samples",
+                &materials_contents,
+            );
+            if work_samples.is_empty() {
+                // Try to parse work samples for TPM role.
+                work_samples = parse_question(r"What would you have done differently\?", "Exploratory samples", &materials_contents);
+
+                if work_samples.is_empty() {
+                    work_samples = parse_question(r"Some questions(?s:.*)o have in mind as you describe them:", "Exploratory samples", &materials_contents);
+
+                    if work_samples.is_empty() {
+                        work_samples = parse_question(r"Work samples", "Exploratory samples", &materials_contents);
+
+                        if work_samples.is_empty() {
+                            work_samples = parse_question(r"design sample\(s\)", "Questionnaire", &materials_contents);
+                        }
+                    }
+                }
+            }
+        }
+        self.work_samples = work_samples;
+
+        let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
+        if writing_samples.is_empty() {
+            writing_samples = parse_question(
+                r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
+                "Analysis samples",
+                &materials_contents,
+            );
+            if writing_samples.is_empty() {
+                writing_samples = parse_question(r"Writing samples", "Analysis samples", &materials_contents);
+
+                if writing_samples.is_empty() {
+                    writing_samples = parse_question(r"Writing sample\(s\)", "Code and/or design sample", &materials_contents);
+                }
+            }
+        }
+        self.writing_samples = writing_samples;
+
+        let mut analysis_samples = parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
+        if analysis_samples.is_empty() {
+            analysis_samples = parse_question(
+                r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
+                "Presentation samples",
+                &materials_contents,
+            );
+            if analysis_samples.is_empty() {
+                analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
+            }
+        }
+        self.analysis_samples = analysis_samples;
+
+        let mut presentation_samples = parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
+        if presentation_samples.is_empty() {
+            presentation_samples = parse_question(
+                r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
+                "Questionnaire",
+                &materials_contents,
+            );
+            if presentation_samples.is_empty() {
+                presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
+            }
+        }
+        self.presentation_samples = presentation_samples;
+
+        let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
+        if exploratory_samples.is_empty() {
+            exploratory_samples = parse_question(
+                r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
+                "Questionnaire",
+                &materials_contents,
+            );
+            if exploratory_samples.is_empty() {
+                exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
+            }
+        }
+        self.exploratory_samples = exploratory_samples;
+
+        self.question_technically_challenging = parse_question(QUESTION_TECHNICALLY_CHALLENGING, QUESTION_WORK_PROUD_OF, &materials_contents);
+        self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
+        self.question_happiest = parse_question(QUESTION_HAPPIEST_CAREER, QUESTION_UNHAPPIEST_CAREER, &materials_contents);
+        self.question_unhappiest = parse_question(QUESTION_UNHAPPIEST_CAREER, QUESTION_VALUE_REFLECTED, &materials_contents);
+        self.question_value_reflected = parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
+        self.question_value_violated = parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
+        self.question_values_in_tension = parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
+        self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
+    }
+
+    /// Cleanup the applicants phone.
+    fn cleanup_phone(&mut self) {
         // Cleanup and parse the phone number and country code.
         let mut phone = self.phone.replace(" ", "").replace("-", "").replace("+", "").replace("(", "").replace(")", "");
 
@@ -1084,112 +1199,6 @@ The Oxide Team",
         }
         self.phone = phone;
         self.country_code = country_code;
-
-        // Get the time seven days ago.
-        let duration_from_now = Utc::now().signed_duration_since(self.submitted_time);
-
-        // If the application is as new as the last week then parse all the contents.
-        // This takes a long time so we skip all the others.
-        if (duration_from_now < Duration::days(2) || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
-            && self.status != crate::applicant_status::Status::Declined.to_string()
-        {
-            // Read the file contents.
-            self.resume_contents = get_file_contents(drive_client, &self.resume).await;
-            self.materials_contents = get_file_contents(drive_client, &self.materials).await;
-
-            // Parse the samples and materials.
-            let materials_contents = self.materials_contents.clone();
-            let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
-            if work_samples.is_empty() {
-                work_samples = parse_question(
-                    r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
-                    "Writing samples",
-                    &materials_contents,
-                );
-                if work_samples.is_empty() {
-                    // Try to parse work samples for TPM role.
-                    work_samples = parse_question(r"What would you have done differently\?", "Exploratory samples", &materials_contents);
-
-                    if work_samples.is_empty() {
-                        work_samples = parse_question(r"Some questions(?s:.*)o have in mind as you describe them:", "Exploratory samples", &materials_contents);
-
-                        if work_samples.is_empty() {
-                            work_samples = parse_question(r"Work samples", "Exploratory samples", &materials_contents);
-
-                            if work_samples.is_empty() {
-                                work_samples = parse_question(r"design sample\(s\)", "Questionnaire", &materials_contents);
-                            }
-                        }
-                    }
-                }
-            }
-            self.work_samples = work_samples;
-
-            let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
-            if writing_samples.is_empty() {
-                writing_samples = parse_question(
-                    r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
-                    "Analysis samples",
-                    &materials_contents,
-                );
-                if writing_samples.is_empty() {
-                    writing_samples = parse_question(r"Writing samples", "Analysis samples", &materials_contents);
-
-                    if writing_samples.is_empty() {
-                        writing_samples = parse_question(r"Writing sample\(s\)", "Code and/or design sample", &materials_contents);
-                    }
-                }
-            }
-            self.writing_samples = writing_samples;
-
-            let mut analysis_samples = parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
-            if analysis_samples.is_empty() {
-                analysis_samples = parse_question(
-                    r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
-                    "Presentation samples",
-                    &materials_contents,
-                );
-                if analysis_samples.is_empty() {
-                    analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
-                }
-            }
-            self.analysis_samples = analysis_samples;
-
-            let mut presentation_samples = parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
-            if presentation_samples.is_empty() {
-                presentation_samples = parse_question(
-                    r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
-                    "Questionnaire",
-                    &materials_contents,
-                );
-                if presentation_samples.is_empty() {
-                    presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
-                }
-            }
-            self.presentation_samples = presentation_samples;
-
-            let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
-            if exploratory_samples.is_empty() {
-                exploratory_samples = parse_question(
-                    r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
-                    "Questionnaire",
-                    &materials_contents,
-                );
-                if exploratory_samples.is_empty() {
-                    exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
-                }
-            }
-            self.exploratory_samples = exploratory_samples;
-
-            self.question_technically_challenging = parse_question(QUESTION_TECHNICALLY_CHALLENGING, QUESTION_WORK_PROUD_OF, &materials_contents);
-            self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
-            self.question_happiest = parse_question(QUESTION_HAPPIEST_CAREER, QUESTION_UNHAPPIEST_CAREER, &materials_contents);
-            self.question_unhappiest = parse_question(QUESTION_UNHAPPIEST_CAREER, QUESTION_VALUE_REFLECTED, &materials_contents);
-            self.question_value_reflected = parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
-            self.question_value_violated = parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
-            self.question_values_in_tension = parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
-            self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
-        }
     }
 
     /// Get the human duration of time since the application was submitted.
@@ -2816,6 +2825,290 @@ pub async fn get_docusign_template_id(ds: &DocuSign) -> String {
 }
 
 impl Applicant {
+    /// Expand the applicants materials and do any automation that needs to be done.
+    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) {
+        // Check if we have sent them an email that we received their application.
+        if !self.sent_email_received {
+            // Send them an email.
+            self.send_email_recieved_application_to_applicant(db).await;
+            self.sent_email_received = true;
+            // Update it in the database just in case.
+            self.update(db).await;
+
+            println!("[applicant] sent email to {} that we received their application", self.email);
+        }
+
+        self.cleanup_phone();
+        self.parse_github_gitlab();
+
+        // Get the time seven days ago.
+        let duration_from_now = Utc::now().signed_duration_since(self.submitted_time);
+
+        // If the application is as new as the last week then parse all the contents.
+        // This takes a long time so we skip all the others.
+        if (duration_from_now < Duration::days(2) || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
+            && self.status != crate::applicant_status::Status::Declined.to_string()
+        {
+            // Read the file contents.
+            self.resume_contents = get_file_contents(drive_client, &self.resume).await;
+            self.materials_contents = get_file_contents(drive_client, &self.materials).await;
+            self.parse_materials();
+        }
+    }
+
+    /// Send an email to the applicant that we recieved their application.
+    async fn send_email_recieved_application_to_applicant(&self, db: &Database) {
+        let company = self.company(db);
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("Oxide Computer Company {} Application Received for {}", self.role, self.name),
+                format!(
+                    "Dear {},
+
+Thank you for submitting your application materials! We really appreciate all
+the time and thought everyone puts into their application. We will be in touch
+within the next few weeks with more information. Just a heads up this could take
+up to 4-6 weeks.
+
+Sincerely,
+  The Oxide Team",
+                    self.name
+                ),
+                vec![self.email.to_string()],
+                vec![format!("careers@{}", company.gsuite_domain)],
+                vec![],
+                format!("careers@{}", company.gsuite_domain),
+            )
+            .await;
+    }
+
+    /// Parse the questions from the materials.
+    fn parse_materials(&mut self) {
+        // Parse the samples and materials.
+        let materials_contents = self.materials_contents.clone();
+        let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
+        if work_samples.is_empty() {
+            work_samples = parse_question(
+                r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
+                "Writing samples",
+                &materials_contents,
+            );
+            if work_samples.is_empty() {
+                // Try to parse work samples for TPM role.
+                work_samples = parse_question(r"What would you have done differently\?", "Exploratory samples", &materials_contents);
+
+                if work_samples.is_empty() {
+                    work_samples = parse_question(r"Some questions(?s:.*)o have in mind as you describe them:", "Exploratory samples", &materials_contents);
+
+                    if work_samples.is_empty() {
+                        work_samples = parse_question(r"Work samples", "Exploratory samples", &materials_contents);
+
+                        if work_samples.is_empty() {
+                            work_samples = parse_question(r"design sample\(s\)", "Questionnaire", &materials_contents);
+                        }
+                    }
+                }
+            }
+        }
+        self.work_samples = work_samples;
+
+        let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
+        if writing_samples.is_empty() {
+            writing_samples = parse_question(
+                r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
+                "Analysis samples",
+                &materials_contents,
+            );
+            if writing_samples.is_empty() {
+                writing_samples = parse_question(r"Writing samples", "Analysis samples", &materials_contents);
+
+                if writing_samples.is_empty() {
+                    writing_samples = parse_question(r"Writing sample\(s\)", "Code and/or design sample", &materials_contents);
+                }
+            }
+        }
+        self.writing_samples = writing_samples;
+
+        let mut analysis_samples = parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
+        if analysis_samples.is_empty() {
+            analysis_samples = parse_question(
+                r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
+                "Presentation samples",
+                &materials_contents,
+            );
+            if analysis_samples.is_empty() {
+                analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
+            }
+        }
+        self.analysis_samples = analysis_samples;
+
+        let mut presentation_samples = parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
+        if presentation_samples.is_empty() {
+            presentation_samples = parse_question(
+                r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
+                "Questionnaire",
+                &materials_contents,
+            );
+            if presentation_samples.is_empty() {
+                presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
+            }
+        }
+        self.presentation_samples = presentation_samples;
+
+        let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
+        if exploratory_samples.is_empty() {
+            exploratory_samples = parse_question(
+                r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
+                "Questionnaire",
+                &materials_contents,
+            );
+            if exploratory_samples.is_empty() {
+                exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
+            }
+        }
+        self.exploratory_samples = exploratory_samples;
+
+        self.question_technically_challenging = parse_question(QUESTION_TECHNICALLY_CHALLENGING, QUESTION_WORK_PROUD_OF, &materials_contents);
+        self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
+        self.question_happiest = parse_question(QUESTION_HAPPIEST_CAREER, QUESTION_UNHAPPIEST_CAREER, &materials_contents);
+        self.question_unhappiest = parse_question(QUESTION_UNHAPPIEST_CAREER, QUESTION_VALUE_REFLECTED, &materials_contents);
+        self.question_value_reflected = parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
+        self.question_value_violated = parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
+        self.question_values_in_tension = parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
+        self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
+    }
+
+    fn parse_github_gitlab(&mut self) {
+        let mut github = "".to_string();
+        let mut gitlab = "".to_string();
+        if !self.github.trim().is_empty() {
+            github = format!(
+                "@{}",
+                self.github
+                    .trim()
+                    .to_lowercase()
+                    .trim_start_matches("https://github.com/")
+                    .trim_start_matches("http://github.com/")
+                    .trim_start_matches("https://www.github.com/")
+                    .trim_start_matches("http://www.github.com/")
+                    .trim_start_matches('@')
+                    .trim_end_matches('/')
+            )
+            .trim()
+            .to_string();
+
+            if github == "@" {
+                github = "".to_string();
+            }
+
+            // Some people put a gitlab URL in the github form input,
+            // parse those accordingly.
+            if github.contains("https://gitlab.com") {
+                github = "".to_string();
+
+                gitlab = format!(
+                    "@{}",
+                    self.github
+                        .trim()
+                        .to_lowercase()
+                        .trim_start_matches("https://gitlab.com/")
+                        .trim_start_matches('@')
+                        .trim_end_matches('/')
+                );
+            }
+        }
+
+        self.github = github;
+        self.gitlab = gitlab;
+    }
+
+    /// Cleanup the applicants phone.
+    fn cleanup_phone(&mut self) {
+        // Cleanup and parse the phone number and country code.
+        let mut phone = self.phone.replace(" ", "").replace("-", "").replace("+", "").replace("(", "").replace(")", "");
+
+        let location = self.location.to_string();
+        let mut country = phonenumber::country::US;
+        if (location.to_lowercase().contains("uk")
+            || location.to_lowercase().contains("london")
+            || location.to_lowercase().contains("ipswich")
+            || location.to_lowercase().contains("united kingdom")
+            || location.to_lowercase().contains("england"))
+            && phone.starts_with("44")
+        {
+            country = phonenumber::country::GB;
+        } else if (location.to_lowercase().contains("czech republic") || location.to_lowercase().contains("prague")) && phone.starts_with("420") {
+            country = phonenumber::country::CZ;
+        } else if location.to_lowercase().contains("turkey") && phone.starts_with("90") {
+            country = phonenumber::country::TR;
+        } else if location.to_lowercase().contains("sweden") && phone.starts_with("46") {
+            country = phonenumber::country::SE;
+        } else if (location.to_lowercase().contains("mumbai") || location.to_lowercase().contains("india") || location.to_lowercase().contains("bangalore")) && phone.starts_with("91") {
+            country = phonenumber::country::IN;
+        } else if location.to_lowercase().contains("brazil") {
+            country = phonenumber::country::BR;
+        } else if location.to_lowercase().contains("belgium") {
+            country = phonenumber::country::BE;
+        } else if location.to_lowercase().contains("romania") && phone.starts_with("40") {
+            country = phonenumber::country::RO;
+        } else if location.to_lowercase().contains("nigeria") {
+            country = phonenumber::country::NG;
+        } else if location.to_lowercase().contains("austria") {
+            country = phonenumber::country::AT;
+        } else if location.to_lowercase().contains("australia") && phone.starts_with("61") {
+            country = phonenumber::country::AU;
+        } else if location.to_lowercase().contains("sri lanka") && phone.starts_with("94") {
+            country = phonenumber::country::LK;
+        } else if location.to_lowercase().contains("slovenia") && phone.starts_with("386") {
+            country = phonenumber::country::SI;
+        } else if location.to_lowercase().contains("france") && phone.starts_with("33") {
+            country = phonenumber::country::FR;
+        } else if location.to_lowercase().contains("netherlands") && phone.starts_with("31") {
+            country = phonenumber::country::NL;
+        } else if location.to_lowercase().contains("taiwan") {
+            country = phonenumber::country::TW;
+        } else if location.to_lowercase().contains("new zealand") {
+            country = phonenumber::country::NZ;
+        } else if location.to_lowercase().contains("maragno") || location.to_lowercase().contains("italy") {
+            country = phonenumber::country::IT;
+        } else if location.to_lowercase().contains("nairobi") || location.to_lowercase().contains("kenya") {
+            country = phonenumber::country::KE;
+        } else if location.to_lowercase().contains("dubai") {
+            country = phonenumber::country::AE;
+        } else if location.to_lowercase().contains("poland") {
+            country = phonenumber::country::PL;
+        } else if location.to_lowercase().contains("portugal") {
+            country = phonenumber::country::PT;
+        } else if location.to_lowercase().contains("berlin") || location.to_lowercase().contains("germany") {
+            country = phonenumber::country::DE;
+        } else if location.to_lowercase().contains("benin") && phone.starts_with("229") {
+            country = phonenumber::country::BJ;
+        } else if location.to_lowercase().contains("israel") {
+            country = phonenumber::country::IL;
+        } else if location.to_lowercase().contains("spain") {
+            country = phonenumber::country::ES;
+        }
+
+        let db = &phonenumber::metadata::DATABASE;
+        let metadata = db.by_id(country.as_ref()).unwrap();
+        let country_code = metadata.id().to_string().to_lowercase();
+
+        // Get the last ten character of the string.
+        if let Ok(phone_number) = phonenumber::parse(Some(country), phone.to_string()) {
+            if !phone_number.is_valid() {
+                println!("[applicants] phone number is invalid: {}", phone);
+            }
+
+            phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
+        }
+        self.phone = phone;
+        self.country_code = country_code;
+    }
+
     pub async fn do_docusign(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
