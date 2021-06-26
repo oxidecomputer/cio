@@ -300,7 +300,7 @@ See you soon,
 The Airtable Huddle Bot"#;
 
 /// Sync the huddle meeting notes with the GitHub reports repository.
-pub async fn sync_huddle_meeting_notes(db: &Database, company: &Company) {
+pub async fn sync_huddle_meeting_notes(company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
@@ -536,6 +536,6 @@ mod tests {
 
         send_huddle_reminders(&db, &company).await;
 
-        sync_huddle_meeting_notes(&db, &company).await;
+        sync_huddle_meeting_notes(&company).await;
     }
 }

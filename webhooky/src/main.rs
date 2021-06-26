@@ -1307,7 +1307,6 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
     for (name, file) in form_data.files.clone() {
         // Read the file.
         let mut f = File::open(&file.path).expect("no file found");
-        let metadata = file.path.metadata().expect("unable to read metadata");
         let mut buffer = Vec::new();
         f.read_to_end(&mut buffer).unwrap();
 
