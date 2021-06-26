@@ -33,6 +33,7 @@ use google_drive::GoogleDrive;
 use gusto_api::Gusto;
 use hubcaps::issues::{IssueListOptions, State};
 use hubcaps::Github;
+use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
 use rand::distributions::Alphanumeric;
@@ -52,10 +53,9 @@ use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates,
 use cio_api::db::Database;
 use cio_api::journal_clubs::JournalClubMeeting;
 use cio_api::mailing_list::MailingListSubscriber;
-use cio_api::models::{NewRFD, RFD};
 use cio_api::rack_line::RackLineSubscriber;
 use cio_api::repos::{GitHubUser, NewRepo};
-use cio_api::rfds::is_image;
+use cio_api::rfds::{is_image, NewRFD, RFD};
 use cio_api::schema::{api_tokens, applicants, journal_club_meetings, rfds};
 use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
 use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
@@ -63,7 +63,6 @@ use cio_api::swag_inventory::SwagInventoryItem;
 use cio_api::swag_store::Order;
 use cio_api::templates::generate_terraform_files_for_okta;
 use cio_api::utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, merge_json};
-use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
