@@ -1302,11 +1302,18 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
     // Create the folder for our candidate with the role.
     let role_folder_id = drive.create_folder(&shared_drive.id, &email_folder_id, &role).await.unwrap();
 
+    // Create a hashmap of our files.
+    let mut files: HashMap<String, String> = HashMap::new();
+    for (name, file) in &form_data.files {
+        let path = file.path.to_str().unwrap();
+        files.insert(name.to_string(), path.to_string());
+    }
+
     // Iterate over our files and create them in google drive.
     // Create or update the file in the google_drive.
-    for (name, file) in form_data.files.clone() {
+    for (name, file_path) in files {
         // Read the file.
-        let mut f = File::open(&file.path).expect("no file found");
+        let mut f = File::open(&file_path).expect("no file found");
         let mut buffer = Vec::new();
         f.read_to_end(&mut buffer).unwrap();
 
@@ -1315,17 +1322,18 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
         // We split it to get the parts.
         let split = name.split(':');
         let vec: Vec<&str> = split.collect();
+        let about_file = vec.get(0).unwrap();
 
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&name).unwrap();
         let ct = mime_guess::from_ext(&ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
-        let file_name = format!("{} - {}.{}", user_name, vec.get(0).unwrap(), ext);
+        let file_name = format!("{} - {}.{}", user_name, about_file, ext);
 
-        /*let drive_file = drive.create_or_update_file(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
-        let link = format!("https://drive.google.com/open?id={}", shared_drive.id);
-        // Add it to our response.
-        response.insert(name.to_string(), link.to_string());*/
+        // Upload our file to drive.
+        let drive_file = drive.create_or_update_file(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
+        // Add the file to our links.
+        response.insert(about_file.to_string(), format!("https://drive.google.com/open?id={}", drive_file.id));
     }
 
     sentry::end_session();
