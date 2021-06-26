@@ -13,7 +13,7 @@ extern crate serde_json;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::env;
-use std::fs;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Read;
 use std::str::{from_utf8, FromStr};
@@ -1230,12 +1230,9 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
 
     // Parse the body as bytes.
     let mut b = body_param.as_bytes();
-    println!("{}", body_param.as_str().unwrap());
 
     // Get the headers and parse the form data.
     let headers = rqctx.request.lock().await.headers().clone();
-
-    println!("{:?}", headers);
 
     let content_type = headers.get("content-type").unwrap();
     let content_length = headers.get("content-length").unwrap();
@@ -1304,29 +1301,36 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
     // Iterate over our files and create them in google drive.
     // Create or update the file in the google_drive.
     for (name, file) in &form_data.files {
-        let extension = file.path.extension().unwrap().to_str().unwrap().to_string();
-
         // Read the file.
         let mut f = File::open(&file.path).expect("no file found");
-        let metadata = fs::metadata(&file.path).expect("unable to read metadata");
+        let metadata = file.path.metadata().expect("unable to read metadata");
         let mut buffer = Vec::new();
         f.read_to_end(&mut buffer).unwrap();
 
-        // Get the extension from the content type.
-        let ct = mime_guess::from_ext(&extension).first().unwrap();
-        let content_type = ct.essence_str().to_string();
-        let file_name = format!("{} - {}.{}", user_name, name, extension);
-        println!("file name: {}, content type: {}", file_name, content_type);
+        // The name is of the format "{field name}:{file name}"
+        // So "materials:thing.pdf".
+        // We split it to get the parts.
+        let split = name.split(':');
+        let vec: Vec<&str> = split.collect();
 
-        println!("thing: {:?}", buffer);
-        /*let drive_file = drive.create_or_update_file(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
-        let link = format!("https://drive.google.com/open?id={}", drive_file.id);
+        // Get the extension from the content type.
+        let ext = get_extension_from_filename(&name).unwrap();
+        let ct = mime_guess::from_ext(&ext).first().unwrap();
+        let content_type = ct.essence_str().to_string();
+        let file_name = format!("{} - {}.{}", user_name, vec.get(0).unwrap(), ext);
+
+        /*let drive_file = drive.create_or_update_file_raw(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
+        let link = format!("https://drive.google.com/open?id={}", shared_drive.id);
         // Add it to our response.
         response.insert(name.to_string(), link.to_string());*/
     }
 
     sentry::end_session();
     Ok(HttpResponseOk(response))
+}
+
+fn get_extension_from_filename(filename: &str) -> Option<&str> {
+    std::path::Path::new(filename).extension().and_then(OsStr::to_str)
 }
 
 /**

@@ -34,7 +34,7 @@ dropshot = "^0.5.0"
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
-google-drive = "^0.1.20"
+google-drive = "^0.1.21"
 #google-drive = { path = "../drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
