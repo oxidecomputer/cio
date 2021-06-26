@@ -20,7 +20,6 @@ pub mod huddles;
 pub mod interviews;
 pub mod journal_clubs;
 pub mod mailing_list;
-pub mod models;
 pub mod png;
 pub mod rack_line;
 pub mod recorded_meetings;

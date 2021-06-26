@@ -15,8 +15,8 @@ use crate::airtable::AIRTABLE_RECORDED_MEETINGS_TABLE;
 use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
-use crate::models::truncate;
 use crate::schema::recorded_meetings;
+use crate::utils::truncate;
 
 /// The data type for a recorded meeting.
 #[db {

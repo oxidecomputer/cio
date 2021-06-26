@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::ops::Add;
@@ -244,4 +245,22 @@ pub fn merge_json(a: &mut Value, b: Value) {
         }
         (a, b) => *a = b,
     }
+}
+
+pub fn truncate(s: &str, max_chars: usize) -> String {
+    match s.char_indices().nth(max_chars) {
+        None => s.to_string(),
+        Some((idx, _)) => s[..idx].to_string(),
+    }
+}
+
+pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
+    let empty: Vec<String> = Default::default();
+    let a = map.get(key).unwrap_or(&empty);
+
+    if a.is_empty() {
+        return Default::default();
+    }
+
+    a.get(0).unwrap().to_string()
 }

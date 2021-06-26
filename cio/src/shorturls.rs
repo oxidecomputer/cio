@@ -5,8 +5,8 @@ use tailscale_api::Tailscale;
 use crate::companies::{Company, Companys};
 use crate::configs::Links;
 use crate::db::Database;
-use crate::models::RFDs;
 use crate::repos::GithubRepos;
+use crate::rfds::RFDs;
 use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
 
 /// Generate the files for the GitHub repository short URLs.

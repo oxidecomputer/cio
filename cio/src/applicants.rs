@@ -37,9 +37,8 @@ use crate::configs::{User, Users};
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::interviews::ApplicantInterview;
-use crate::models::{get_value, truncate};
 use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
-use crate::utils::check_if_github_issue_exists;
+use crate::utils::{check_if_github_issue_exists, get_value, truncate};
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
