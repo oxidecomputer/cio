@@ -1235,10 +1235,8 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
     let headers = rqctx.request.lock().await.headers().clone();
 
     let content_type = headers.get("content-type").unwrap();
-    let content_length = headers.get("content-length").unwrap();
     let mut h = hyper::header::Headers::new();
     h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
-    h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
 
     let form_data = formdata::read_formdata(&mut b, &h).unwrap();
 
