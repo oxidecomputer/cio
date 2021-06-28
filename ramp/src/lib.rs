@@ -279,9 +279,8 @@ impl Ramp {
             }
         };
 
-        println!("Response: {}", resp.text().await.unwrap());
         // Try to deserialize the response.
-        /* let mut r: Reimbursements = resp.json().await.unwrap();
+        let mut r: Reimbursements = resp.json().await.unwrap();
 
         let mut reimbursements = r.data;
 
@@ -324,8 +323,7 @@ impl Ramp {
             }
         }
 
-        Ok(reimbursements)*/
-        Ok(vec![])
+        Ok(reimbursements)
     }
 
     /// List all the departments.
