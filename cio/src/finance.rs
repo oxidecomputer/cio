@@ -1222,6 +1222,20 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
+    async fn test_finance_ramp() {
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_ramp_reimbursements(&db, &oxide).await;
+
+        refresh_ramp_transactions(&db, &oxide).await;
+    }
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_finance() {
         let db = Database::new();
 
@@ -1230,10 +1244,6 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_software_vendors(&db, &oxide).await;
-
-        refresh_ramp_reimbursements(&db, &oxide).await;
-
-        refresh_ramp_transactions(&db, &oxide).await;
 
         refresh_accounts_payable(&db, &oxide).await;
     }
