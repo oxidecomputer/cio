@@ -3522,7 +3522,7 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
     // Check if the github-outside-collaborators.toml file changed.
     if commit.file_changed("configs/github-outside-collaborators.toml") {
         // Sync github outside collaborators.
-        sync_github_outside_collaborators(github, configs.github_outside_collaborators, &company).await;
+        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, &company).await;
     }
 
     // Check if the huddles file changed.
