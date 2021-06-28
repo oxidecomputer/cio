@@ -1,7 +1,7 @@
 CREATE TABLE asset_items (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,
-    picure VARCHAR NOT NULL,
+    picture VARCHAR NOT NULL,
     type VARCHAR NOT NULL,
     qualities TEXT [] NOT NULL,
     status VARCHAR NOT NULL,

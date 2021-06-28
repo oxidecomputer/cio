@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use barcoders::generators::image::*;
 use barcoders::generators::svg::*;
 use barcoders::sym::code39::*;
-use chrono::{DateTime, Utc};
 use google_drive::GoogleDrive;
 use image::{DynamicImage, ImageFormat};
 use lopdf::content::{Content, Operation};
@@ -17,14 +16,15 @@ use crate::companies::Company;
 use crate::core::UpdateAirtableRecord;
 use crate::db::Database;
 use crate::schema::asset_items;
+use crate::swag_inventory::image_to_pdf_object;
 
 #[db {
     new_struct_name = "AssetItem",
     airtable_base = "assets",
     airtable_table = "AIRTABLE_ASSET_ITEMS_TABLE",
     match_on = {
-        "name" = "String",
         "cio_company_id" = "i32",
+        "name" = "String",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
@@ -176,8 +176,8 @@ impl NewAssetItem {
                 Operation::new("Td", vec![pdf_margin.into(), (font_size * 0.9 * 3.0).into()]),
                 Operation::new("Tj", vec![Object::string_literal(self.barcode.to_string())]),
                 Operation::new("Tf", vec!["F1".into(), font_size.into()]),
-                Operation::new("'", vec![Object::string_literal(self.item.to_string())]),
-                Operation::new("'", vec![Object::string_literal(format!("Size: {}", self.size))]),
+                Operation::new("'", vec![Object::string_literal(self.name.to_string())]),
+                Operation::new("'", vec![Object::string_literal(format!("Type: {}", self.type_))]),
                 Operation::new("ET", vec![]),
             ],
         };
@@ -266,7 +266,7 @@ impl AssetItem {
             .body(
                 json!(PrintLabelsRequest {
                     url: self.barcode_pdf_label.to_string(),
-                    quantity: self.print_barcode_label_quantity
+                    quantity: 1,
                 })
                 .to_string(),
             )
@@ -300,19 +300,19 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) {
     let parent_id = drive_assets_dir.get(0).unwrap().id.to_string();
 
     // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<AssetInventoryItem>> = company
+    let results: Vec<airtable_api::Record<AssetItem>> = company
         .authenticate_airtable(&company.airtable_base_id_assets)
-        .list_records(&AssetInventoryItem::airtable_table(), "Grid view", vec![])
+        .list_records(&AssetItem::airtable_table(), "Grid view", vec![])
         .await
         .unwrap();
-    for inventory_item_record in results {
-        let mut inventory_item: NewAssetInventoryItem = inventory_item_record.fields.into();
-        inventory_item.expand(&drive_client, &drive_id, &parent_id).await;
-        inventory_item.cio_company_id = company.id;
+    for item_record in results {
+        let mut item: NewAssetItem = item_record.fields.into();
+        item.expand(&drive_client, &drive_id, &parent_id).await;
+        item.cio_company_id = company.id;
 
-        let mut db_inventory_item = inventory_item.upsert_in_db(&db);
-        db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
-        db_inventory_item.update(&db).await;
+        let mut db_item = item.upsert_in_db(&db);
+        db_item.airtable_record_id = item_record.id.to_string();
+        db_item.update(&db).await;
     }
 }
 

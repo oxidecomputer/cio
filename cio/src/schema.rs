@@ -143,12 +143,8 @@ table! {
         docusign_envelope_status -> Varchar,
         offer_created -> Nullable<Timestamptz>,
         offer_completed -> Nullable<Timestamptz>,
-        latitude -> Float4,
-        longitude -> Float4,
-        interviews_started -> Nullable<Timestamptz>,
-        interviews_completed -> Nullable<Timestamptz>,
-        rejection_sent_date_time -> Nullable<Timestamptz>,
         cio_company_id -> Int4,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -156,7 +152,7 @@ table! {
     asset_items (id) {
         id -> Int4,
         name -> Varchar,
-        picure -> Varchar,
+        picture -> Varchar,
         #[sql_name = "type"]
         type_ -> Varchar,
         qualities -> Array<Text>,
@@ -313,6 +309,7 @@ table! {
         airtable_base_id_shipments -> Varchar,
         airtable_base_id_finance -> Varchar,
         airtable_base_id_swag -> Varchar,
+        airtable_base_id_assets -> Varchar,
         airtable_base_id_cio -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,

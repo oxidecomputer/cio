@@ -93,6 +93,8 @@ pub struct NewCompany {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub airtable_base_id_swag: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub airtable_base_id_assets: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub airtable_base_id_cio: String,
     /// The CIO company ID.
     #[serde(default)]
