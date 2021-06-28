@@ -48,6 +48,7 @@ use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
 use cio_api::analytics::NewPageView;
 use cio_api::api_tokens::{APIToken, NewAPIToken};
 use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant};
+use cio_api::asset_inventory::AssetItem;
 use cio_api::companies::Company;
 use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
 use cio_api::db::Database;
@@ -105,6 +106,7 @@ async fn main() -> Result<(), String> {
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
     api.register(listen_airtable_applicants_request_background_check_webhooks).unwrap();
+    api.register(listen_airtable_assets_items_print_barcode_label_webhooks).unwrap();
     api.register(listen_airtable_employees_print_home_address_label_webhooks).unwrap();
     api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
@@ -840,6 +842,37 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(rqctx: Arc<
 
     // Create a new shipment for the employee and print the label.
     user.create_shipment_to_home_address(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for a button pressed to print a barcode label for an asset item.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/assets/items/print_barcode_label",
+}]
+async fn listen_airtable_assets_items_print_barcode_label_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Get the row from airtable.
+    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+
+    // Print the barcode label(s).
+    asset_item.print_label(&api_context.db).await;
+    println!("asset item {} printed label", asset_item.name);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))

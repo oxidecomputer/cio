@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#5b8bf8682e79d82a732b3968bcb2d3711c50a778"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4ca86b5cd41743059a878b5aca96a4a7b685a8cd"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -529,6 +529,7 @@ dependencies = [
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "mailchimp-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "names",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
@@ -2099,7 +2100,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#5b8bf8682e79d82a732b3968bcb2d3711c50a778"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4ca86b5cd41743059a878b5aca96a4a7b685a8cd"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
