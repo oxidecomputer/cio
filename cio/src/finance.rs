@@ -345,7 +345,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
             state: "CLEARED".to_string(),
             receipts: attachments,
             card_id: "".to_string(),
-            time: reimbursement.transaction_date,
+            time: reimbursement.created_at,
             memo: String::new(),
             link_to_vendor,
             cio_company_id: company.id,

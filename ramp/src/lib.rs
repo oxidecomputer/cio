@@ -24,7 +24,7 @@ use std::error;
 use std::fmt;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -279,8 +279,9 @@ impl Ramp {
             }
         };
 
+        println!("Response: {}", resp.text().await.unwrap());
         // Try to deserialize the response.
-        let mut r: Reimbursements = resp.json().await.unwrap();
+        /* let mut r: Reimbursements = resp.json().await.unwrap();
 
         let mut reimbursements = r.data;
 
@@ -323,7 +324,8 @@ impl Ramp {
             }
         }
 
-        Ok(reimbursements)
+        Ok(reimbursements)*/
+        Ok(vec![])
     }
 
     /// List all the departments.
@@ -659,7 +661,7 @@ pub struct Reimbursement {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub user_id: String,
     pub created_at: DateTime<Utc>,
-    pub transaction_date: DateTime<Utc>,
+    pub transaction_date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
