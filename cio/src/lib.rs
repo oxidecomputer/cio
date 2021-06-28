@@ -7,6 +7,7 @@ pub mod api_tokens;
 pub mod applicant_status;
 pub mod applicants;
 pub mod application_form;
+pub mod asset_inventory;
 pub mod auth_logins;
 pub mod certs;
 pub mod companies;

@@ -143,6 +143,36 @@ table! {
         docusign_envelope_status -> Varchar,
         offer_created -> Nullable<Timestamptz>,
         offer_completed -> Nullable<Timestamptz>,
+        latitude -> Float4,
+        longitude -> Float4,
+        interviews_started -> Nullable<Timestamptz>,
+        interviews_completed -> Nullable<Timestamptz>,
+        rejection_sent_date_time -> Nullable<Timestamptz>,
+        cio_company_id -> Int4,
+    }
+}
+
+table! {
+    asset_items (id) {
+        id -> Int4,
+        name -> Varchar,
+        picure -> Varchar,
+        #[sql_name = "type"]
+        type_ -> Varchar,
+        qualities -> Array<Text>,
+        status -> Varchar,
+        manufacturer -> Varchar,
+        model_number -> Varchar,
+        serial_number -> Varchar,
+        current_stock -> Int4,
+        purchase_price -> Float4,
+        current_employee_borrowing -> Varchar,
+        conference_room_using -> Array<Text>,
+        notes -> Varchar,
+        barcode -> Varchar,
+        barcode_png -> Varchar,
+        barcode_svg -> Varchar,
+        barcode_pdf_label -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
@@ -795,6 +825,7 @@ allow_tables_to_appear_in_same_query!(
     applicant_interviews,
     applicant_reviewers,
     applicants,
+    asset_items,
     auth_user_logins,
     auth_users,
     barcode_scans,

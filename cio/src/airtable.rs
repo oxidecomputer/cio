@@ -39,6 +39,8 @@ pub static AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE: &str = "Inventory";
 pub static AIRTABLE_BARCODE_SCANS_TABLE: &str = "Barcode Scans";
 pub static AIRTABLE_SWAG_ITEMS_TABLE: &str = "Items";
 
+pub static AIRTABLE_ASSET_ITEMS_TABLE: &str = "Items";
+
 pub static AIRTABLE_API_TOKENS_TABLE: &str = "API Tokens";
 pub static AIRTABLE_COMPANIES_TABLE: &str = "Companies";
 

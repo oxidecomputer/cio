@@ -1,0 +1,22 @@
+CREATE TABLE asset_items (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    picure VARCHAR NOT NULL,
+    type VARCHAR NOT NULL,
+    qualities TEXT [] NOT NULL,
+    status VARCHAR NOT NULL,
+    manufacturer VARCHAR NOT NULL,
+    model_number VARCHAR NOT NULL,
+    serial_number VARCHAR NOT NULL,
+    current_stock INTEGER NOT NULL,
+    purchase_price REAL NOT NULL DEFAULT 0,
+    current_employee_borrowing VARCHAR NOT NULL,
+    conference_room_using TEXT [] NOT NULL,
+    notes VARCHAR NOT NULL,
+    barcode VARCHAR NOT NULL,
+    barcode_png VARCHAR NOT NULL,
+    barcode_svg VARCHAR NOT NULL,
+    barcode_pdf_label VARCHAR NOT NULL,
+    cio_company_id INTEGER NOT NULL,
+    airtable_record_id VARCHAR NOT NULL DEFAULT ''
+)
