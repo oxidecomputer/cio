@@ -300,6 +300,7 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) {
     let parent_id = drive_assets_dir.get(0).unwrap().id.to_string();
 
     // Get all the records from Airtable.
+    let mut generator = names::Generator::default();
     let results: Vec<airtable_api::Record<AssetItem>> = company
         .authenticate_airtable(&company.airtable_base_id_assets)
         .list_records(&AssetItem::airtable_table(), "Grid view", vec![])
@@ -307,6 +308,9 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) {
         .unwrap();
     for item_record in results {
         let mut item: NewAssetItem = item_record.fields.into();
+        if item.name.is_empty() {
+            item.name = generator.next().unwrap();
+        }
         item.expand(&drive_client, &drive_id, &parent_id).await;
         item.cio_company_id = company.id;
 
