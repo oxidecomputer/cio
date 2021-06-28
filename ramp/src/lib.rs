@@ -204,7 +204,7 @@ impl Ramp {
         let state = uuid::Uuid::new_v4();
         format!(
             "https://app.ramp.com/v1/authorize?client_id={}&response_type=code&redirect_uri={}&state={}&scope={}",
-            self.client_id, self.redirect_uri, state, "transactions:read users:read users:write receipts:read cards:read departments:read"
+            self.client_id, self.redirect_uri, state, "transactions:read users:read users:write receipts:read cards:read departments:read reimbursements:read"
         )
     }
 
@@ -261,6 +261,69 @@ impl Ramp {
         self.refresh_token = t.refresh_token.to_string();
 
         Ok(t)
+    }
+
+    /// List all the reimbursements.
+    pub async fn list_reimbursements(&self) -> Result<Vec<Reimbursement>, APIError> {
+        // Build the request.
+        let mut request = self.request(Method::GET, "reimbursements", (), None);
+
+        let mut resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        let mut r: Reimbursements = resp.json().await.unwrap();
+
+        let mut reimbursements = r.data;
+
+        let mut page = r.page.next;
+
+        // Paginate if we should.
+        // TODO: make this more DRY
+        while !page.is_empty() {
+            let url = Url::parse(&page).unwrap();
+            let pairs: Vec<(Cow<'_, str>, Cow<'_, str>)> = url.query_pairs().collect();
+            let mut new_pairs: Vec<(String, String)> = Vec::new();
+            for (a, b) in pairs {
+                let sa = a.into_owned();
+                let sb = b.into_owned();
+                new_pairs.push((sa, sb));
+            }
+
+            request = self.request(Method::GET, "reimbursements", (), Some(new_pairs));
+
+            resp = self.client.execute(request).await.unwrap();
+            match resp.status() {
+                StatusCode::OK => (),
+                s => {
+                    return Err(APIError {
+                        status_code: s,
+                        body: resp.text().await.unwrap(),
+                    })
+                }
+            };
+
+            // Try to deserialize the response.
+            r = resp.json().await.unwrap();
+
+            reimbursements.append(&mut r.data);
+
+            if !r.page.next.is_empty() && r.page.next != page {
+                page = r.page.next;
+            } else {
+                page = "".to_string();
+            }
+        }
+
+        Ok(reimbursements)
     }
 
     /// List all the departments.
@@ -589,6 +652,22 @@ pub struct Transaction {
     pub user_transaction_time: DateTime<Utc>,
 }
 
+#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Reimbursement {
+    #[serde(default)]
+    pub amount: f64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_id: String,
+    pub created_at: DateTime<Utc>,
+    pub transaction_date: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub currency: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub merchant: String,
+}
+
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct CardHolder {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -623,6 +702,14 @@ pub struct Users {
 pub struct Departments {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub data: Vec<Department>,
+    #[serde(default)]
+    pub page: Page,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct Reimbursements {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<Reimbursement>,
     #[serde(default)]
     pub page: Page,
 }
