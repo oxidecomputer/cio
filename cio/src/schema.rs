@@ -160,7 +160,6 @@ table! {
         manufacturer -> Varchar,
         model_number -> Varchar,
         serial_number -> Varchar,
-        current_stock -> Int4,
         purchase_price -> Float4,
         current_employee_borrowing -> Varchar,
         conference_room_using -> Array<Text>,

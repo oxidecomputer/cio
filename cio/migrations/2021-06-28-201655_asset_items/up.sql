@@ -8,7 +8,6 @@ CREATE TABLE asset_items (
     manufacturer VARCHAR NOT NULL,
     model_number VARCHAR NOT NULL,
     serial_number VARCHAR NOT NULL,
-    current_stock INTEGER NOT NULL,
     purchase_price REAL NOT NULL DEFAULT 0,
     current_employee_borrowing VARCHAR NOT NULL,
     conference_room_using TEXT [] NOT NULL,

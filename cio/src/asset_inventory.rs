@@ -3,9 +3,8 @@ use barcoders::generators::image::*;
 use barcoders::generators::svg::*;
 use barcoders::sym::code39::*;
 use google_drive::GoogleDrive;
-use image::{DynamicImage, ImageFormat};
 use lopdf::content::{Content, Operation};
-use lopdf::{Document, Object, Stream, StringFormat};
+use lopdf::{Document, Object, Stream};
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
@@ -57,6 +56,7 @@ pub struct NewAssetItem {
     pub current_employee_borrowing: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub conference_room_using: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
 
     #[serde(
@@ -124,7 +124,7 @@ impl NewAssetItem {
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
             let png_bytes = png.generate(&encoded[..]).unwrap();
-            let mut file_name = format!("{}.png", self.name.replace('/', ""));
+            let mut file_name = format!("{} {}.png", self.type_, self.name.replace('/', ""));
 
             // Create or update the file in the google drive.
             let png_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "image/png", &png_bytes).await.unwrap();
@@ -135,7 +135,7 @@ impl NewAssetItem {
             let svg_data: String = svg.generate(&encoded).unwrap();
             let svg_bytes = svg_data.as_bytes();
 
-            file_name = format!("{}.svg", self.name.replace('/', ""));
+            file_name = format!("{}, {}.svg", self.type_, self.name.replace('/', ""));
 
             // Create or update the file in the google drive.
             let svg_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "image/svg+xml", &svg_bytes).await.unwrap();
@@ -143,7 +143,7 @@ impl NewAssetItem {
 
             // Generate the barcode label.
             let label_bytes = self.generate_pdf_barcode_label(&png_bytes);
-            file_name = format!("{} - Barcode Label.pdf", self.name.replace('/', ""));
+            file_name = format!("{} {} - Barcode Label.pdf", self.type_, self.name.replace('/', ""));
             // Create or update the file in the google drive.
             let label_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "application/pdf", &label_bytes).await.unwrap();
             self.barcode_pdf_label = format!("https://drive.google.com/uc?export=download&id={}", label_file.id);
