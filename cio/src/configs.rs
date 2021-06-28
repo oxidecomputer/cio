@@ -1131,11 +1131,29 @@ pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config
 }
 
 /// Sync GitHub outside collaborators with our configs.
-pub async fn sync_github_outside_collaborators(github: &Github, outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>, company: &Company) {
+pub async fn sync_github_outside_collaborators(db: &Database, github: &Github, outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>, company: &Company) {
+    // We create a map of the collaborators per repo.
+    // This way we can delete any collaborators that should no longer have access.
+    let mut collaborators_map: BTreeMap<String, Vec<String>> = BTreeMap::new();
+
     // Add the outside contributors to the specified repos.
     for (name, outside_collaborators_config) in outside_collaborators {
         println!("Running configuration for outside collaborators: {}", name);
         for repo in &outside_collaborators_config.repos {
+            // Push the collaborators to our map, so we can use it later.
+            match collaborators_map.get(repo) {
+                Some(val) => {
+                    let mut users = val.clone();
+                    // Update the users to include this user.
+                    let mut collaborators = outside_collaborators_config.users.clone();
+                    users.append(&mut collaborators);
+                    collaborators_map.insert(repo.to_string(), users.to_vec());
+                }
+                None => {
+                    collaborators_map.insert(repo.to_string(), outside_collaborators_config.users.clone());
+                }
+            }
+
             // Get the repository collaborators interface from hubcaps.
             let repo_collaborators = github.repo(&company.github_org, repo.to_string()).collaborators();
 
@@ -1161,7 +1179,44 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
         }
 
         println!("Successfully ran configuration for outside collaborators: {}", name);
-        // TODO: remove collaborators that should not be there.
+    }
+
+    // Get all the internal to the company collaborators.
+    let mut internal_github_users: Vec<String> = Vec::new();
+    let internal_users = Users::get_from_db(db, company.id);
+    for i in internal_users {
+        if !i.github.is_empty() {
+            internal_github_users.push(i.github.to_string());
+        }
+    }
+
+    for (repo, mut collaborators) in collaborators_map {
+        // Remove any duplicates.
+        collaborators.sort_unstable();
+        collaborators.dedup();
+
+        // Get the collaborators on the repo.
+        let github_collaborators = github.repo(&company.github_org, &repo).collaborators().list().await.unwrap();
+
+        // Iterate over the users added to the repo, and make sure they exist in our
+        // vector.
+        for existing_collaborator in github_collaborators {
+            // Check if they are an internal user.
+            if internal_github_users.iter().any(|internal| internal.to_lowercase() == existing_collaborator.login.to_lowercase()) {
+                // They are an internal user so continue;
+                continue;
+            }
+
+            // Check if they should have access.
+            if collaborators.iter().any(|external| external.to_lowercase() == existing_collaborator.login.to_lowercase()) {
+                // They are supposed to be an external collaborator so continue;
+                continue;
+            }
+
+            // Remove the user.
+            println!("REPO: {} USER: {} should not have access! Removing!", repo, existing_collaborator.login);
+            github.repo(&company.github_org, &repo).collaborators().remove(&existing_collaborator.login).await.unwrap();
+        }
     }
 }
 
@@ -1948,34 +2003,34 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    sync_buildings(&db, configs.buildings, &company).await;
+    sync_buildings(db, configs.buildings, &company).await;
 
     // Sync conference rooms.
-    sync_conference_rooms(&db, configs.resources, &company).await;
+    sync_conference_rooms(db, configs.resources, &company).await;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
-    sync_groups(&db, configs.groups, &company).await;
+    sync_groups(db, configs.groups, &company).await;
 
     // Sync users.
-    sync_users(&db, &github, configs.users, &company).await;
+    sync_users(db, &github, configs.users, &company).await;
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
-    generate_terraform_files_for_okta(&github, &db, &company).await;
+    generate_terraform_files_for_okta(&github, db, &company).await;
     // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(&github, &db, &company).await;
+    generate_terraform_files_for_aws_and_github(&github, db, &company).await;
 
     // Sync links.
-    sync_links(&db, configs.links, configs.huddles, &company).await;
+    sync_links(db, configs.links, configs.huddles, &company).await;
 
     // Sync certificates.
-    sync_certificates(&db, &github, configs.certificates, &company).await;
+    sync_certificates(db, &github, configs.certificates, &company).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(&github, configs.github_outside_collaborators, &company).await;
+    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, &company).await;
 
-    refresh_anniversary_events(&db, &company).await;
+    refresh_anniversary_events(db, &company).await;
 }
 
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
