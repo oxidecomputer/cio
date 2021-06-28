@@ -292,6 +292,71 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
     CreditCardTransactions::get_from_db(&db, company.id).update_airtable(&db).await;
 }
 
+pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
+    // Create the Ramp client.
+    let r = company.authenticate_ramp(&db).await;
+    if r.is_none() {
+        // Return early.
+        return;
+    }
+
+    let ramp = r.unwrap();
+
+    // List all our users.
+    let users = ramp.list_users().await.unwrap();
+    let mut ramp_users: HashMap<String, String> = Default::default();
+    for user in users {
+        ramp_users.insert(user.id.to_string(), user.email.to_string());
+    }
+
+    let reimbursements = ramp.list_reimbursements().await.unwrap();
+    for reimbursement in reimbursements {
+        let mut attachments = Vec::new();
+        // Get the reciepts for the reimbursement, if they exist.
+        /*for receipt_id in reimbursement.receipts {
+            let receipt = ramp.get_receipt(&receipt_id).await.unwrap();
+            attachments.push(receipt.receipt_url.to_string());
+        }*/
+
+        // Get the user's email for the reimbursement.
+        let email = ramp_users.get(&reimbursement.user_id).unwrap();
+
+        let mut link_to_vendor: Vec<String> = Default::default();
+        let vendor = clean_vendor_name(&reimbursement.merchant);
+        // Try to find the merchant in our list of vendors.
+        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+            Some(v) => {
+                link_to_vendor = vec![v.airtable_record_id.to_string()];
+            }
+            None => {
+                println!("could not find vendor that matches {}", vendor);
+            }
+        }
+
+        let nt = NewExpensedItem {
+            transaction_id: reimbursement.id,
+            expenses_vendor: "Ramp".to_string(),
+            employee_email: email.to_string(),
+            amount: reimbursement.amount as f32,
+            category_id: 0,
+            category_name: "".to_string(),
+            merchant_id: "".to_string(),
+            merchant_name: reimbursement.merchant.to_string(),
+            state: "CLEARED".to_string(),
+            receipts: attachments,
+            card_id: "".to_string(),
+            time: reimbursement.transaction_date,
+            memo: String::new(),
+            link_to_vendor,
+            cio_company_id: company.id,
+        };
+
+        nt.upsert(&db).await;
+    }
+
+    ExpensedItems::get_from_db(&db, company.id).update_airtable(&db).await;
+}
+
 // Changes the vendor name to one that matches our existing list.
 fn clean_vendor_name(s: &str) -> String {
     if s == "Clara Labs" {
@@ -1165,8 +1230,10 @@ mod tests {
 
         refresh_software_vendors(&db, &oxide).await;
 
-        refresh_accounts_payable(&db, &oxide).await;
+        refresh_ramp_reimbursements(&db, &oxide).await;
 
         refresh_ramp_transactions(&db, &oxide).await;
+
+        refresh_accounts_payable(&db, &oxide).await;
     }
 }
