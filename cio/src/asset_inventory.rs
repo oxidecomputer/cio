@@ -135,7 +135,7 @@ impl NewAssetItem {
             let svg_data: String = svg.generate(&encoded).unwrap();
             let svg_bytes = svg_data.as_bytes();
 
-            file_name = format!("{}, {}.svg", self.type_, self.name.replace('/', ""));
+            file_name = format!("{} {}.svg", self.type_, self.name.replace('/', ""));
 
             // Create or update the file in the google drive.
             let svg_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "image/svg+xml", &svg_bytes).await.unwrap();
