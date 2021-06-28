@@ -1168,7 +1168,8 @@ mod tests {
     use crate::companies::Company;
     use crate::db::Database;
     use crate::finance::{
-        refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_transactions, refresh_software_vendors, sync_quickbooks,
+        refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_reimbursements, refresh_ramp_transactions,
+        refresh_software_vendors, sync_quickbooks,
     };
 
     #[ignore]
