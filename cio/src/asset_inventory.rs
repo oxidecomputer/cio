@@ -177,7 +177,7 @@ impl NewAssetItem {
                 Operation::new("Tj", vec![Object::string_literal(self.barcode.to_string())]),
                 Operation::new("Tf", vec!["F1".into(), font_size.into()]),
                 Operation::new("'", vec![Object::string_literal(self.name.to_string())]),
-                Operation::new("'", vec![Object::string_literal(format!("Type: {}", self.type_))]),
+                Operation::new("'", vec![Object::string_literal(format!("{} {} {}", self.manufacturer, self.type_, self.model_number))]),
                 Operation::new("ET", vec![]),
             ],
         };
