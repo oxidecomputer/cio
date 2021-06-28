@@ -1161,6 +1161,7 @@ pub async fn sync_github_outside_collaborators(github: &Github, outside_collabor
         }
 
         println!("Successfully ran configuration for outside collaborators: {}", name);
+        // TODO: remove collaborators that should not be there.
     }
 }
 
