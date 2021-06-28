@@ -658,6 +658,7 @@ pub struct Reimbursement {
     pub amount: f64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub user_id: String,
+    #[serde(deserialize_with = "ramp_date_format::deserialize")]
     pub created_at: DateTime<Utc>,
     pub transaction_date: NaiveDate,
     #[serde(default, skip_serializing_if = "String::is_empty")]
