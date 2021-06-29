@@ -2179,7 +2179,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
             // Get the existing event.
             let old_event = gsuite.get_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id).await.unwrap();
 
-            if old_event.description != new_event.description || old_event.summary != new_event.summary || old_event.start.date != new_event.start.date || old_event.end.date != new_event.end.date {
+            if old_event.description != new_event.description || old_event.summary != new_event.summary || old_event.start.date != new_event.start.date {
                 // Only update it if it has changed.
 
                 // Set the correct sequence so we don't error out.
