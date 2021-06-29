@@ -345,6 +345,11 @@ impl UserConfig {
     fn update_from_gusto(&mut self, gusto_user: &gusto_api::Employee) {
         self.gusto_id = gusto_user.id.to_string();
 
+        if gusto_user.jobs.is_empty() {
+            // Return early.
+            return;
+        }
+
         // Update the user's start date.
         if let Some(start_date) = gusto_user.jobs[0].hire_date {
             self.start_date = start_date;
