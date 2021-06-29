@@ -325,7 +325,7 @@ impl UserConfig {
 
         // Update the address for the employee in gusto.
         // The state needs to be the abbreviation.
-        let state = crate::states::StatesMap::into_shorthand(&self.home_address_state);
+        let state = crate::states::StatesMap::shorthand(&self.home_address_state);
         gusto
             .update_employee_home_address(
                 &self.gusto_id,
