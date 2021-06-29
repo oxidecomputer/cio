@@ -1442,6 +1442,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
                         user.start_date = airtable_record.fields.start_date;
                     }
+                    user.gusto_id = airtable_record.fields.gusto_id.to_string();
                 }
 
                 if !e.gusto_id.is_empty() {
