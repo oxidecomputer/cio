@@ -344,10 +344,14 @@ impl UserConfig {
         self.gusto_id = gusto_user.id.to_string();
 
         // Update the user's start date.
-        self.start_date = gusto_user.jobs[0].hire_date;
+        if let Some(start_date) = gusto_user.jobs[0].hire_date {
+            self.start_date = start_date;
+        }
 
         // Update the user's birthday.
-        self.birthday = gusto_user.date_of_birth;
+        if let Some(birthday) = gusto_user.date_of_birth {
+            self.birthday = birthday;
+        }
 
         // Update the user's home address.
         // Gusto now becomes the source of truth for people's addresses.
@@ -1451,7 +1455,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     }
                 } else if let Some(ref gusto) = gusto_auth {
                     // Create the user in Gusto if necessary.
-                    user.create_in_gusto_if_needed(&gusto).await;
+                    println!("Creating GUSTO user: {}", user.email);
+                    //user.create_in_gusto_if_needed(&gusto).await;
                 }
             }
         }
