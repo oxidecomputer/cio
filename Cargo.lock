@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4bb34e66efd872c123f26f3ce4401f5d3acec9c9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#31a19e1dd49f69864f2631a146854d838b0bf6a0"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2100,7 +2100,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4bb34e66efd872c123f26f3ce4401f5d3acec9c9"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#31a19e1dd49f69864f2631a146854d838b0bf6a0"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -3670,9 +3670,9 @@ dependencies = [
 
 [[package]]
 name = "serde_qs"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b22063cd705114614293767c69aa992531f72b0cc8a6b9145801920730fe25e4"
+checksum = "d8a72808528a89fa9eca23bbb6a1eb92cb639b881357269b6510f11e50c0f8a9"
 dependencies = [
  "percent-encoding 2.1.0",
  "serde",
@@ -4870,7 +4870,7 @@ dependencies = [
  "sentry",
  "serde",
  "serde_json",
- "serde_qs 0.8.3",
+ "serde_qs 0.8.4",
  "serde_urlencoded 0.7.0",
  "sheets 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
