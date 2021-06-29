@@ -361,6 +361,10 @@ impl UserConfig {
         self.home_address_state = gusto_user.home_address.state.to_string();
         self.home_address_zipcode = gusto_user.home_address.zip.to_string();
         self.home_address_country = gusto_user.home_address.country.to_string();
+
+        if self.home_address_country == "US" || self.home_address_country == "USA" || self.home_address_country.is_empty() {
+            self.home_address_country = "United States".to_string();
+        }
     }
 
     async fn populate_ssh_keys(&mut self) {
@@ -392,7 +396,7 @@ impl UserConfig {
 
         // Populate the country code.
         if self.home_address_country.is_empty() || self.home_address_country == "United States" {
-            self.work_address_country = "United States".to_string();
+            self.home_address_country = "United States".to_string();
             self.home_address_country_code = "US".to_string();
         }
 
