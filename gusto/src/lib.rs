@@ -319,8 +319,8 @@ pub struct NewEmployee {
     pub last_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     // In the format YYYY-MM-DD.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub date_of_birth: Option<NaiveDate>,
 }
 
@@ -349,7 +349,8 @@ pub struct Employee {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub ssn: String,
     // In the format YYYY-MM-DD.
-    pub date_of_birth: NaiveDate,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date_of_birth: Option<NaiveDate>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub jobs: Vec<Job>,
     pub home_address: Address,
@@ -379,7 +380,8 @@ pub struct Job {
     pub location_id: Option<u64>,
     pub location: Location,
     // In the format YYYY-MM-DD.
-    pub hire_date: NaiveDate,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hire_date: Option<NaiveDate>,
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub title: String,
     #[serde(default)]
@@ -439,7 +441,8 @@ pub struct Compensation {
     #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
     pub flsa_status: String,
     // In the format YYYY-MM-DD.
-    pub effective_date: NaiveDate,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effective_date: Option<NaiveDate>,
 }
 
 /// A new address.
@@ -547,7 +550,8 @@ pub struct Termination {
     #[serde(default)]
     pub active: bool,
     // In the format YYYY-MM-DD.
-    pub effective_date: NaiveDate,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effective_date: Option<NaiveDate>,
     #[serde(default)]
     pub run_termination_payroll: bool,
 }
