@@ -1455,8 +1455,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     }
                 } else if let Some(ref gusto) = gusto_auth {
                     // Create the user in Gusto if necessary.
-                    println!("Creating GUSTO user: {}", user.email);
-                    //user.create_in_gusto_if_needed(&gusto).await;
+                    user.create_in_gusto_if_needed(&gusto).await;
                 }
             }
         }
