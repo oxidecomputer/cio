@@ -420,7 +420,7 @@ impl UserConfig {
             self.work_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&building.state);
             self.work_address_zipcode = building.zipcode.to_string();
             self.work_address_country = building.country.to_string();
-            if self.work_address_country == "US" || self.work_address_country.is_empty() {
+            if self.work_address_country == "US" || self.work_address_country == "USA" || self.work_address_country.is_empty() {
                 self.work_address_country = "United States".to_string();
             }
             self.work_address_formatted = building.address_formatted.to_string();
@@ -1454,6 +1454,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                         user.update_from_gusto(&gusto_user);
                     }
                 } else if let Some(ref gusto) = gusto_auth {
+                    user.populate_home_address().await;
                     // Create the user in Gusto if necessary.
                     user.create_in_gusto_if_needed(&gusto).await;
                 }

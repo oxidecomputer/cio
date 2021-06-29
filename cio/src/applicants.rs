@@ -3371,6 +3371,9 @@ Sincerely,
                     if fd.name == "Applicant's Postal Code" {
                         employee.home_address_zipcode = fd.value.trim().to_string();
                     }
+                    if fd.name == "Applicant's Country" {
+                        employee.home_address_country = fd.value.trim().to_string();
+                    }
                     if fd.name == "Start Date" {
                         let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
                         employee.start_date = start_date;
