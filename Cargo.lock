@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#9281903e0c540d6f24a0237aa4d264a2b5d8dafd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#50866be12f908d961f665458023e05fd01eae10d"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -576,9 +576,9 @@ dependencies = [
 
 [[package]]
 name = "cloudflare"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f510cdc989428aff0cf3b44b5b73c26498b1ef09f4dfcf34de5e2c1eab5b76dd"
+checksum = "b50bf4821b917d9594b59d2355ec24096e6880cd2f77e0d862e2b37f5aedb61b"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2100,7 +2100,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#9281903e0c540d6f24a0237aa4d264a2b5d8dafd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#50866be12f908d961f665458023e05fd01eae10d"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
