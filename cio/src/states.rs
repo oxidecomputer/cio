@@ -73,6 +73,17 @@ impl StatesMap {
         sm
     }
 
+    pub fn into_shorthand(long: &str) -> String {
+        let sm = StatesMap::new();
+        for (key, value) in sm.states {
+            if value == long {
+                return key.to_string();
+            }
+        }
+
+        return long.to_string();
+    }
+
     /// This function will try to match the full name for a state from an abreeviation,
     /// if one was given. Otherwise, it will return the existing string.
     /// This function is helpful when populating addresses.

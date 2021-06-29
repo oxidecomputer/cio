@@ -324,6 +324,8 @@ impl UserConfig {
         self.gusto_id = employee.id.to_string();
 
         // Update the address for the employee in gusto.
+        // The state needs to be the abbreviation.
+        let state = crate::states::StatesMap::into_shorthand(&self.home_address_state);
         gusto
             .update_employee_home_address(
                 &self.gusto_id,
@@ -332,7 +334,7 @@ impl UserConfig {
                     street_1: self.home_address_street_1.to_string(),
                     street_2: self.home_address_street_2.to_string(),
                     city: self.home_address_city.to_string(),
-                    state: self.home_address_state.to_string(),
+                    state,
                     zip: self.home_address_zipcode.to_string(),
                 },
             )
