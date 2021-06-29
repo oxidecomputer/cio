@@ -11,6 +11,7 @@ use clap::ArgMatches;
 use futures_util::stream::TryStreamExt;
 use google_geocode::Geocode;
 use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup, User as GSuiteUser};
+use gusto_api::Gusto;
 use hubcaps::collaborators::Permissions;
 use hubcaps::Github;
 use macros::db;
@@ -278,7 +279,7 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
-    pub async fn create_in_gusto_if_needed(&mut self, db: &Database) {
+    pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto) {
         // Only do this if we have a start date.
         if self.start_date == crate::utils::default_date() {
             // Return early.
@@ -307,15 +308,6 @@ impl UserConfig {
             // Return early, they already exist in Gusto.
             return;
         }
-
-        let company = self.company(db);
-        let gusto_auth = company.authenticate_gusto(db).await;
-        if gusto_auth.is_none() {
-            // Return early.
-            return;
-        }
-
-        let gusto = gusto_auth.unwrap();
 
         // Create the applicant in Gusto.
         let employee = gusto
@@ -1303,7 +1295,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
     let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
     let mut gusto_users_by_id: HashMap<String, gusto_api::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
-    if let Some(gusto) = gusto_auth {
+    if let Some(ref gusto) = gusto_auth {
         let gu = gusto.list_employees().await.unwrap();
         for g in gu {
             gusto_users.insert(g.email.to_string(), g.clone());
@@ -1456,9 +1448,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
                         user.update_from_gusto(&gusto_user);
                     }
-                } else {
+                } else if let Some(ref gusto) = gusto_auth {
                     // Create the user in Gusto if necessary.
-                    user.create_in_gusto_if_needed(db).await;
+                    user.create_in_gusto_if_needed(&gusto).await;
                 }
             }
         }
