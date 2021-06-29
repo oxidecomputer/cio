@@ -278,6 +278,76 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
+    pub async fn create_in_gusto_if_needed(&mut self, db: &Database) {
+        // Only do this if we have a start date.
+        if self.start_date == crate::utils::default_date() {
+            // Return early.
+            return;
+        }
+
+        // If we don't know their address yet, return early.
+        if self.home_address_street_1.is_empty() || self.home_address_country.is_empty() {
+            // Return early.
+            return;
+        }
+
+        // If they are not in the US skip them.
+        if self.home_address_country != "US" && self.home_address_country != "United States" && self.home_address_country != "USA" {
+            // Return early.
+            return;
+        }
+
+        // If they are not full-time, return early.
+        if !self.is_full_time() {
+            // Return early.
+            return;
+        }
+
+        if !self.gusto_id.is_empty() {
+            // Return early, they already exist in Gusto.
+            return;
+        }
+
+        let company = self.company(db);
+        let gusto_auth = company.authenticate_gusto(db).await;
+        if gusto_auth.is_none() {
+            // Return early.
+            return;
+        }
+
+        let gusto = gusto_auth.unwrap();
+
+        // Create the applicant in Gusto.
+        let employee = gusto
+            .create_employee(&gusto_api::NewEmployee {
+                first_name: self.first_name.to_string(),
+                middle_initial: "".to_string(),
+                last_name: self.last_name.to_string(),
+                email: self.recovery_email.to_string(),
+                date_of_birth: None,
+            })
+            .await
+            .unwrap();
+        // Set the gusto id.
+        self.gusto_id = employee.id.to_string();
+
+        // Update the address for the employee in gusto.
+        gusto
+            .update_employee_home_address(
+                &self.gusto_id,
+                &gusto_api::NewAddress {
+                    version: "".to_string(),
+                    street_1: self.home_address_street_1.to_string(),
+                    street_2: self.home_address_street_2.to_string(),
+                    city: self.home_address_city.to_string(),
+                    state: self.home_address_state.to_string(),
+                    zip: self.home_address_zipcode.to_string(),
+                },
+            )
+            .await
+            .unwrap();
+    }
+
     fn update_from_gusto(&mut self, gusto_user: &gusto_api::Employee) {
         self.gusto_id = gusto_user.id.to_string();
 
@@ -421,7 +491,9 @@ impl UserConfig {
     }
 
     pub fn is_full_time(&mut self) -> bool {
-        self.populate_type();
+        if self.typev.is_empty() {
+            self.populate_type();
+        }
 
         self.typev == "full-time"
     }
@@ -1384,6 +1456,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
                         user.update_from_gusto(&gusto_user);
                     }
+                } else {
+                    // Create the user in Gusto if necessary.
+                    user.create_in_gusto_if_needed(db).await;
                 }
             }
         }

@@ -3295,6 +3295,8 @@ Sincerely,
             // Since the status of the envelope is completed, let's set their status to "Onboarding".
             // Only do this if they are not already hired.
             self.status = crate::applicant_status::Status::Onboarding.to_string();
+            // Update them in case something fails.
+            self.update(db).await;
 
             // Request their background check, if we have not already.
             if self.criminal_background_check_status.is_empty() {
