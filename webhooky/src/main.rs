@@ -1215,6 +1215,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     }
 
     i.notes = format!("Parsed email from {}:\n{}", from, i.notes);
+    i.cio_company_id = 1;
 
     if i.carrier.is_empty() {
         sentry::capture_message(
