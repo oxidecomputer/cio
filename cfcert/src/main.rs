@@ -60,43 +60,83 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         .result;
 
     // If we have a dns record already, update it. If not, create it.
+    let parsed: std::net::IpAddr = ip.parse().unwrap();
     if dns_records.is_empty() {
         // Create the DNS record.
-        let dns_record = api_client
-            .request(&dns::CreateDnsRecord {
-                zone_identifier: &zone_identifier,
-                params: dns::CreateDnsRecordParams {
-                    name: &domain,
-                    content: dns::DnsContent::A { content: ip.parse().unwrap() },
-                    // This is the min.
-                    ttl: Some(120),
-                    proxied: None,
-                    priority: None,
-                },
-            })
-            .await
-            .unwrap()
-            .result;
-
-        println!("Created DNS record: {:?}", dns_record);
+        if parsed.is_ipv4() {
+            let dns_record = api_client
+                .request(&dns::CreateDnsRecord {
+                    zone_identifier: &zone_identifier,
+                    params: dns::CreateDnsRecordParams {
+                        name: &domain,
+                        content: dns::DnsContent::A { content: ip.parse().unwrap() },
+                        // This is the min.
+                        ttl: Some(120),
+                        proxied: None,
+                        priority: None,
+                    },
+                })
+                .await
+                .unwrap()
+                .result;
+            println!("Created DNS record for ipv4: {:?}", dns_record);
+        } else {
+            let dns_record = api_client
+                .request(&dns::CreateDnsRecord {
+                    zone_identifier: &zone_identifier,
+                    params: dns::CreateDnsRecordParams {
+                        name: &domain,
+                        content: dns::DnsContent::AAAA { content: ip.parse().unwrap() },
+                        // This is the min.
+                        ttl: Some(120),
+                        proxied: None,
+                        priority: None,
+                    },
+                })
+                .await
+                .unwrap()
+                .result;
+            println!("Created DNS record for ipv6: {:?}", dns_record);
+        }
     } else {
-        // Update the DNS record.
-        let dns_record = api_client
-            .request(&dns::UpdateDnsRecord {
-                zone_identifier: &zone_identifier,
-                identifier: &dns_records[0].id,
-                params: dns::UpdateDnsRecordParams {
-                    name: &domain,
-                    content: dns::DnsContent::A { content: ip.parse().unwrap() },
-                    ttl: None,
-                    proxied: None,
-                },
-            })
-            .await
-            .unwrap()
-            .result;
+        // Create the DNS record.
+        if parsed.is_ipv4() {
+            // Update the DNS record.
+            let dns_record = api_client
+                .request(&dns::UpdateDnsRecord {
+                    zone_identifier: &zone_identifier,
+                    identifier: &dns_records[0].id,
+                    params: dns::UpdateDnsRecordParams {
+                        name: &domain,
+                        content: dns::DnsContent::A { content: ip.parse().unwrap() },
+                        ttl: None,
+                        proxied: None,
+                    },
+                })
+                .await
+                .unwrap()
+                .result;
 
-        println!("Updated DNS record: {:?}", dns_record);
+            println!("Updated DNS record ipv4: {:?}", dns_record);
+        } else {
+            // Update the DNS record.
+            let dns_record = api_client
+                .request(&dns::UpdateDnsRecord {
+                    zone_identifier: &zone_identifier,
+                    identifier: &dns_records[0].id,
+                    params: dns::UpdateDnsRecordParams {
+                        name: &domain,
+                        content: dns::DnsContent::AAAA { content: ip.parse().unwrap() },
+                        ttl: None,
+                        proxied: None,
+                    },
+                })
+                .await
+                .unwrap()
+                .result;
+
+            println!("Updated DNS record ipv6: {:?}", dns_record);
+        }
     }
 
     Ok(())
