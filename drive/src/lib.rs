@@ -169,7 +169,7 @@ impl GoogleDrive {
     }
 
     /// Export a file stored on Google Drive by it's ID.
-    pub async fn export_file_by_id(&self, id: &str, mime_type: &str) -> Result<Bytes, APIError> {
+    pub async fn export_file_by_id(&self, id: &str, mime_type: &str) -> Result<File, APIError> {
         // Build the request.
         let request = self.request(Method::GET, format!("files/{}/export", id), (), Some(vec![("mimeType", mime_type.to_string())]), &[], "");
 
@@ -184,7 +184,8 @@ impl GoogleDrive {
             }
         };
 
-        Ok(resp.bytes().await.unwrap())
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
     }
 
     /// Get a file's contents by it's ID. Only works for Google Docs.
