@@ -136,7 +136,12 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                 if !chat_log_link.is_empty() {
                     // Download the file.
                     let contents = drive_client
-                        .download_file_by_id(&chat_log_link.trim_start_matches("https://drive.google.com/open?id="))
+                        .download_file_by_id(
+                            &chat_log_link
+                                .trim_start_matches("https://drive.google.com/open?id=")
+                                .trim_start_matches("https://drive.google.com/file/d/")
+                                .trim_end_matches("/view?usp=drive_web"),
+                        )
                         .await
                         .unwrap_or_default();
                     chat_log = from_utf8(&contents).unwrap_or_default().trim().to_string();
