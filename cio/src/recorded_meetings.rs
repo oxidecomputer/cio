@@ -144,7 +144,12 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
 
                 // Try to download the video.
                 let video_contents = drive_client
-                    .download_file_by_id(&video.trim_start_matches("https://drive.google.com/open?id="))
+                    .download_file_by_id(
+                        &video
+                            .trim_start_matches("https://drive.google.com/open?id=")
+                            .trim_start_matches("https://drive.google.com/file/d/")
+                            .trim_end_matches("/view?usp=drive_web"),
+                    )
                     .await
                     .unwrap_or_default();
 
