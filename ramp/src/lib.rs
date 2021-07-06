@@ -632,21 +632,21 @@ pub struct Transaction {
     pub amount: f64,
     #[serde(default)]
     pub card_holder: CardHolder,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub card_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub merchant_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub merchant_name: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub receipts: Vec<String>,
     #[serde(default)]
     pub sk_category_id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub sk_category_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub state: String,
     #[serde(deserialize_with = "ramp_date_format::deserialize")]
     pub user_transaction_time: DateTime<Utc>,
@@ -656,32 +656,32 @@ pub struct Transaction {
 pub struct Reimbursement {
     #[serde(default)]
     pub amount: f64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub user_id: String,
     #[serde(deserialize_with = "ramp_date_format::deserialize")]
     pub created_at: DateTime<Utc>,
     pub transaction_date: NaiveDate,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub currency: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub merchant: String,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct CardHolder {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub department_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub department_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub first_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub last_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub location_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub location_name: String,
 }
 
@@ -725,25 +725,25 @@ pub struct Cards {
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Department {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub name: String,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Card {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub id: String,
     #[serde(default)]
     pub is_physical: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub display_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub last_four: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub cardholder_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub cardholder_name: String,
     #[serde(default)]
     pub fulfillment: Fulfillment,
@@ -758,7 +758,7 @@ pub struct Fulfillment {}
 pub struct SpendingRestrictions {
     #[serde(default)]
     pub amount: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub interval: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lock_date: Option<DateTime<Utc>>,
@@ -794,13 +794,13 @@ pub struct User {
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Receipt {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub transaction_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub user_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub receipt_url: String,
     #[serde(deserialize_with = "ramp_date_format::deserialize")]
     pub created_at: DateTime<Utc>,
