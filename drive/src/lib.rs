@@ -168,6 +168,25 @@ impl GoogleDrive {
         Ok(resp.bytes().await.unwrap())
     }
 
+    /// Export a file stored on Google Drive by it's ID.
+    pub async fn export_file_by_id(&self, id: &str, mime_type: &str) -> Result<Bytes, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, format!("files/{}/export", id), (), Some(vec![("mimeType", mime_type.to_string())]), &[], "");
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                });
+            }
+        };
+
+        Ok(resp.bytes().await.unwrap())
+    }
+
     /// Get a file's contents by it's ID. Only works for Google Docs.
     pub async fn get_file_contents_by_id(&self, id: &str) -> Result<String, APIError> {
         // Build the request.
