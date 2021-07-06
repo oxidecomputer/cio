@@ -381,6 +381,8 @@ fn clean_vendor_name(s: &str) -> String {
         "GrubHub".to_string()
     } else if s == "Amazon Web Services" {
         "AWS".to_string()
+    } else if s == "American National Stand" {
+        "ANSI".to_string()
     } else if s == "Ubiquiti Labs, Llc" || s == "Ubiquiti Inc." || s == "Ubiquiti Networks" {
         "Ubiquiti".to_string()
     } else if s == "IEEE Standards Association" || s == "IEEE SA - Products & Services" {
