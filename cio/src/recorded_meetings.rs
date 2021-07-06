@@ -151,7 +151,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                 // Make sure the contents aren't empty.
                 if video_contents.is_empty() {
                     // Continue early.
-                    continue;
+                    //continue;
                 }
 
                 let mut meeting = NewRecordedMeeting {
@@ -192,23 +192,27 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
 
                 // Upsert the meeting in the database.
                 let mut db_meeting = meeting.upsert(&db).await;
-                // Check if we have a transcript id.
-                if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
-                    // If we don't have a transcript ID, let's post the video to be
-                    // transcribed.
-                    // Now let's upload it to rev.ai so it can start a job.
-                    let job = revai.create_job(video_contents).await.unwrap();
-                    // Set the transcript id.
-                    db_meeting.transcript_id = job.id.to_string();
-                    db_meeting.update(&db).await;
-                } else {
-                    // We have a transcript id, let's try and get the transcript if we don't have
-                    // it already.
-                    if db_meeting.transcript.is_empty() {
-                        // Now let's try to get the transcript.
-                        let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
-                        db_meeting.transcript = transcript.trim().to_string();
+
+                if !video_contents.is_empty() {
+                    // Only do this if we have the video contents.
+                    // Check if we have a transcript id.
+                    if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
+                        // If we don't have a transcript ID, let's post the video to be
+                        // transcribed.
+                        // Now let's upload it to rev.ai so it can start a job.
+                        let job = revai.create_job(video_contents).await.unwrap();
+                        // Set the transcript id.
+                        db_meeting.transcript_id = job.id.to_string();
                         db_meeting.update(&db).await;
+                    } else {
+                        // We have a transcript id, let's try and get the transcript if we don't have
+                        // it already.
+                        if db_meeting.transcript.is_empty() {
+                            // Now let's try to get the transcript.
+                            let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
+                            db_meeting.transcript = transcript.trim().to_string();
+                            db_meeting.update(&db).await;
+                        }
                     }
                 }
             }
