@@ -482,8 +482,8 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
 
         // Create Airtable records for any future calendar dates.
         for (date, event) in gcal_events {
-            // Four weeks from now.
-            let in_range = Utc::now().checked_add_signed(Duration::weeks(4)).unwrap();
+            // Create events up to one quarter in advance.
+            let in_range = Utc::now().checked_add_signed(Duration::weeks(13)).unwrap();
             if date > Utc::now().date().naive_utc() && date <= in_range.date().naive_utc() {
                 // We are in the future.
                 // Create an Airtable record.

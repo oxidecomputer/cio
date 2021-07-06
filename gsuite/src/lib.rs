@@ -736,8 +736,7 @@ impl GSuite {
                 ("maxResults", "2500"),
                 ("showDeleted", "true"),
                 ("q", query),
-                // This is one week into the future.
-                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(4)).unwrap().to_rfc3339()),
+                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339()),
             ]),
         );
 
@@ -797,7 +796,7 @@ impl GSuite {
             Some(&[
                 ("maxResults", "2500"),
                 ("showDeleted", "true"),
-                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(4)).unwrap().to_rfc3339()),
+                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339()),
             ]),
         );
 
