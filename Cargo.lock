@@ -455,7 +455,7 @@ dependencies = [
  "futures-util",
  "google-drive 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -471,7 +471,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7d72837613ee56162dd56ef0bbde38fbbef8ac69"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#672cec9bfb96bc574278a487d9615109624ba20f"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -520,7 +520,7 @@ dependencies = [
  "futures-util",
  "google-drive 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -536,7 +536,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -988,7 +988,7 @@ dependencies = [
 [[package]]
 name = "dropshot"
 version = "0.5.2-dev"
-source = "git+https://github.com/oxidecomputer/dropshot?branch=main#feea2584eb3ce562a45e6696d51f8d6fa4b40a1e"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#41060ad2dab5d1f9deee920a97b79c6c159b2a54"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
@@ -1012,6 +1012,7 @@ dependencies = [
  "slog-bunyan",
  "slog-json",
  "slog-term",
+ "syn 1.0.73",
  "tokio",
  "toml",
  "uuid",
@@ -1033,7 +1034,7 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.5.2-dev"
-source = "git+https://github.com/oxidecomputer/dropshot?branch=main#feea2584eb3ce562a45e6696d51f8d6fa4b40a1e"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#41060ad2dab5d1f9deee920a97b79c6c159b2a54"
 dependencies = [
  "proc-macro2 1.0.27",
  "quote 1.0.9",
@@ -1466,7 +1467,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.30"
+version = "0.1.31"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -1478,9 +1479,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.30"
+version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f139b4fa78f1221328a3491e524feb03e91889f8ad03bef0d19f2f5ddee2dada"
+checksum = "6b9fa0cc7ae11fc56a8b9c2768bb174049c303ec690b76a0829774dd6b17d686"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2100,7 +2101,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7d72837613ee56162dd56ef0bbde38fbbef8ac69"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#672cec9bfb96bc574278a487d9615109624ba20f"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2945,7 +2946,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.15"
+version = "0.1.16"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2957,9 +2958,9 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.15"
+version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d629b40934784f994b49c794bab190ab906c42ca1939570afbd81e641c10f4c"
+checksum = "1cc6d4c625d16ab276b4b05fa3dbbc0eab1a8b6246c61ec0b52ce52053ead7aa"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4244,18 +4245,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.25"
+version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa6f76457f59514c7eeb4e59d891395fab0b2fd1d40723ae737d64153392e9c6"
+checksum = "93119e4feac1cbe6c798c34d3a53ea0026b0b1de6a120deef895137c0529bfe2"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.25"
+version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a36768c0fbf1bb15eca10defa29526bda730a2376c2ab4393ccfa16fb1a318d"
+checksum = "060d69a0afe7796bf42e9e2ff91f5ee691fb15c53d38b4b62a9a53eb23164745"
 dependencies = [
  "proc-macro2 1.0.27",
  "quote 1.0.9",
@@ -4378,9 +4379,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.7.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fb2ed024293bb19f7a5dc54fe83bf86532a44c12a2bb8ba40d64a4509395ca2"
+checksum = "570c2eb13b3ab38208130eccd41be92520388791207fde783bda7c1e8ace28d4"
 dependencies = [
  "autocfg",
  "bytes",
@@ -4601,9 +4602,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-segmentation"
-version = "1.7.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb0d2e7be6ae3a5fa87eed5fb451aff96f2573d2694942e40543ae0bbe19c796"
+checksum = "8895849a949e7845e06bd6dc1aa51731a103c42707010a5b591c0038fb73385b"
 
 [[package]]
 name = "unicode-width"
@@ -4863,7 +4864,7 @@ dependencies = [
  "mailchimp-api 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "schemars",
