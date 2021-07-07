@@ -604,9 +604,12 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 let dsa = oxide.authenticate_docusign(db).await;
                 if let Some(ds) = dsa {
                     // Get the template we need.
-                    let template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
+                    let offer_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
 
-                    a.do_docusign_offer(db, &ds, &template_id, &oxide).await;
+                    a.do_docusign_offer(db, &ds, &offer_template_id, &oxide).await;
+
+                    let piia_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE).await;
+                    a.do_docusign_piia(db, &ds, &piia_template_id, &oxide).await;
                 }
             }
         }
@@ -2201,6 +2204,7 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
     let event = body_param.into_inner();
 
     // We need to get the applicant for the envelope.
+    // Check their offer first.
     let result = applicants::dsl::applicants
         .filter(applicants::dsl::docusign_envelope_id.eq(event.envelope_id.to_string()))
         .first::<Applicant>(&db.conn());
@@ -2211,14 +2215,31 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
             if let Some(ds) = dsa {
-                applicant.update_applicant_from_docusign_offer_envelope(db, &ds, event).await;
+                applicant.update_applicant_from_docusign_offer_envelope(db, &ds, event.clone()).await;
             }
         }
         Err(e) => {
-            sentry::capture_message(
-                &format!("database could not find applicant with docusign envelope id {}: {}", event.envelope_id, e),
-                sentry::Level::Fatal,
-            );
+            println!("database could not find applicant with docusign offer envelope id {}: {}", event.envelope_id, e);
+        }
+    }
+
+    // We need to get the applicant for the envelope.
+    // Now do PIIA.
+    let result = applicants::dsl::applicants
+        .filter(applicants::dsl::docusign_piia_envelope_id.eq(event.envelope_id.to_string()))
+        .first::<Applicant>(&db.conn());
+    match result {
+        Ok(mut applicant) => {
+            let company = applicant.company(db);
+
+            // Create our docusign client.
+            let dsa = company.authenticate_docusign(db).await;
+            if let Some(ds) = dsa {
+                applicant.update_applicant_from_docusign_piia_envelope(db, &ds, event).await;
+            }
+        }
+        Err(e) => {
+            println!("database could not find applicant with docusign piia envelope id {}: {}", event.envelope_id, e);
         }
     }
 
