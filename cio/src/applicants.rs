@@ -53,6 +53,8 @@ static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
 static DOCUSIGN_OFFER_TEMPLATE: &str = "Employee Offer Letter (US)";
 static DOCUSIGN_OFFER_SUBJECT: &str = "Sign your Oxide Computer Company Offer Letter";
+static DOCUSIGN_PIIA_TEMPLATE: &str = "Employee Agreements (Mediation, PIIA)";
+static DOCUSIGN_PIIA_SUBJECT: &str = "Sign your Oxide Computer Company Employee Agreements";
 
 /// The data type for a NewApplicant.
 #[db {
@@ -2848,7 +2850,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant.do_docusign(db, &ds, &template_id, company).await;
+        applicant.do_docusign_offer(db, &ds, &template_id, company).await;
     }
 }
 
@@ -3225,7 +3227,7 @@ Sincerely,
         self.country_code = country_code;
     }
 
-    pub async fn do_docusign(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
+    pub async fn do_docusign_offer(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
         if self.status != crate::applicant_status::Status::GivingOffer.to_string()
@@ -3277,7 +3279,7 @@ Sincerely,
                     signer_name:self.name.to_string(),
                     routing_order: "2".to_string(),
                     email_notification: docusign::EmailNotification {
-                        email_subject: "Sign your Oxide Computer Company Offer Letter".to_string(),
+                        email_subject: DOCUSIGN_OFFER_SUBJECT.to_string(),
                         email_body: "We are very excited to offer you a position at the Oxide Computer Company!".to_string(),
                         language: Default::default(),
                     },
@@ -3311,11 +3313,11 @@ Sincerely,
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&self.docusign_envelope_id).await.unwrap();
 
-            self.update_applicant_from_docusign_envelope(db, &ds, envelope).await;
+            self.update_applicant_from_docusign_offer_envelope(db, &ds, envelope).await;
         }
     }
 
-    pub async fn update_applicant_from_docusign_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+    pub async fn update_applicant_from_docusign_offer_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
         let company = self.company(db);
 
         // Set the status in the database and airtable.
@@ -3355,6 +3357,7 @@ Sincerely,
         let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
         let drive_id = shared_drive.id.to_string();
 
+        // TODO: only save the documents if we don't already have them.
         for document in &envelope.documents {
             let mut bytes = base64::decode(&document.pdf_bytes).unwrap_or_default();
             // Check if we already have bytes to the data.
@@ -3373,7 +3376,7 @@ Sincerely,
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
                 filename = format!("{} - Offer.pdf", self.name);
-            } else if document.name.contains("Summary") && envelope.email_subject == DOCUSIGN_OFFER_SUBJECT {
+            } else if document.name.contains("Summary") {
                 filename = format!("{} - Offer - DocuSign Summary.pdf", self.name);
             }
 
@@ -3438,6 +3441,161 @@ Sincerely,
         }
 
         self.update(db).await;
+    }
+
+    pub async fn do_docusign_piia(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
+        // We look for "Onboarding" here as well since we want to make sure we can actually update
+        // the data for the user.
+        if self.status != crate::applicant_status::Status::GivingOffer.to_string()
+            && self.status != crate::applicant_status::Status::Onboarding.to_string()
+            && self.status != crate::applicant_status::Status::Hired.to_string()
+        {
+            // We can return early.
+            return;
+        }
+
+        if self.docusign_piia_envelope_id.is_empty() && self.status == crate::applicant_status::Status::GivingOffer.to_string() {
+            println!("[docusign] applicant has status giving offer: {}, generating employee agreements in docusign for them!", self.name);
+            // We haven't sent their employee agreements yet, so let's do that.
+            // Let's create a new envelope for the user.
+            let mut new_envelope: docusign::Envelope = Default::default();
+
+            // Sent the status to `sent` so it sends.
+            // To save it as a draft set the status as `created`.
+            new_envelope.status = "sent".to_string();
+
+            // Set the email subject.
+            new_envelope.email_subject = DOCUSIGN_PIIA_SUBJECT.to_string();
+
+            // Set the template id to that of our template.
+            new_envelope.template_id = template_id.to_string();
+
+            // Set the recipients of the template.
+            // The first recipient needs to be the CEO (or whoever is going to do the mad lib for
+            // the offer.
+            // The second recipient needs to be the Applicant.
+            new_envelope.template_roles = vec![
+                docusign::TemplateRole {
+                    name: "Steve Tuck".to_string(),
+                    role_name: "CEO".to_string(),
+                    email: format!("steve@{}", company.gsuite_domain),
+                    signer_name: "Steve Tuck".to_string(),
+                    routing_order: "1".to_string(),
+                    // Make Steve's email notification different than the actual applicant.
+                    email_notification: docusign::EmailNotification {
+                        email_subject: format!("Complete the employee agreements for {}", self.name),
+                        email_body: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you employee agreements to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the employee agreements to {} at {} to sign and date! Thanks!", self.name, self.name, self.email),
+                        language: Default::default(),
+                    },
+                },
+                docusign::TemplateRole {
+                    name: self.name.to_string(),
+                    role_name: "Applicant".to_string(),
+                    email: self.email.to_string(),
+                    signer_name:self.name.to_string(),
+                    routing_order: "2".to_string(),
+                    email_notification: docusign::EmailNotification {
+                        email_subject: DOCUSIGN_PIIA_SUBJECT.to_string(),
+                        email_body: "Here are the PIIA (Employee Proprietary Information and Invention Agreement) and Mediation documents. These do not need to be returned with the offer letter (sent in a separate DocuSign), but they need to be returned by your start date. Please let Steve know if you have any questions!".to_string(),
+                        language: Default::default(),
+                    },
+                },
+                docusign::TemplateRole {
+                    name: "Ruth Alexander".to_string(),
+                    role_name: "HR".to_string(),
+                    email: "ruth@mindsharegroup.com".to_string(),
+                    signer_name: "Ruth Alexander".to_string(),
+                    routing_order: "3".to_string(),
+                    email_notification: docusign::EmailNotification {
+                        email_subject: "Oxide Computer Company Employee Agreements Signed".to_string(),
+                        email_body: "Attached are newly signed employee agreements. Thank you!".to_string(),
+                        language: Default::default(),
+                    },
+                }
+            ];
+
+            // Let's create the envelope.
+            let envelope = ds.create_envelope(new_envelope.clone()).await.unwrap();
+
+            // Set the id of the envelope.
+            self.docusign_piia_envelope_id = envelope.envelope_id.to_string();
+            // Set the status of the envelope.
+            self.docusign_piia_envelope_status = envelope.status.to_string();
+
+            // Update the applicant in the database.
+            self.update(db).await;
+        } else if !self.docusign_piia_envelope_id.is_empty() {
+            // We have sent their employee agreements.
+            // Let's get the status of the envelope in Docusign.
+            let envelope = ds.get_envelope(&self.docusign_piia_envelope_id).await.unwrap();
+
+            self.update_applicant_from_docusign_piia_envelope(db, &ds, envelope).await;
+        }
+    }
+
+    pub async fn update_applicant_from_docusign_piia_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+        let company = self.company(db);
+
+        // Set the status in the database and airtable.
+        self.docusign_piia_envelope_status = envelope.status.to_string();
+        self.piia_envelope_created = envelope.created_date_time;
+
+        // If the document is completed, let's save it to Google Drive.
+        if envelope.status != "completed" {
+            // We will skip to the end and return early, only updating the status.
+            self.update(db).await;
+            return;
+        }
+
+        // Set the completed time.
+        self.piia_envelope_completed = envelope.completed_date_time;
+        // We do not change the applicant's status or anything since they don't need
+        // to complete these docs until their start date.
+        // However, other than manually, we should have a gate to make sure they _do_
+        // complete these documents before their start date.
+
+        // Let's update the database here since nothing else has to do with that.
+        self.update(db).await;
+
+        // Get gsuite token.
+        let token = company.authenticate_google(&db).await;
+
+        // Initialize the Google Drive client.
+        let drive_client = GoogleDrive::new(token);
+        // Figure out where our directory is.
+        // It should be in the shared drive : "Offer Letters"
+        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
+        let drive_id = shared_drive.id.to_string();
+
+        // TODO: only save the documents if we don't already have them.
+        for document in &envelope.documents {
+            let mut bytes = base64::decode(&document.pdf_bytes).unwrap_or_default();
+            // Check if we already have bytes to the data.
+            if document.pdf_bytes.is_empty() {
+                // Get the document from docusign.
+                // In order to not "over excessively poll the API here, we need to sleep for 15
+                // min before getting each of the documents.
+                // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
+                //thread::sleep(std::time::Duration::from_secs(15));
+                bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
+            }
+
+            // Create the folder for our applicant with their name.
+            let name_folder_id = drive_client.create_folder(&shared_drive.id, "", &self.name).await.unwrap();
+
+            let mut filename = format!("{} - {}.pdf", self.name, document.name);
+            if document.name.contains("Employee_Mediation") {
+                filename = format!("{} - Mediation Agreement.pdf", self.name);
+            } else if document.name.contains("Employee_Proprietary") {
+                filename = format!("{} - PIIA.pdf", self.name);
+            } else if document.name.contains("Summary") {
+                filename = format!("{} - Employee Agreements - DocuSign Summary.pdf", self.name);
+            }
+
+            // Create or update the file in the google_drive.
+            drive_client.create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes).await.unwrap();
+            println!("[docusign] uploaded completed file {} to drive", filename);
+        }
     }
 }
 
