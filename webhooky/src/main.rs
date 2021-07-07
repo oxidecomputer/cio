@@ -604,9 +604,9 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 let dsa = oxide.authenticate_docusign(db).await;
                 if let Some(ds) = dsa {
                     // Get the template we need.
-                    let template_id = get_docusign_template_id(&ds).await;
+                    let template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
 
-                    a.do_offer_docusign(db, &ds, &template_id, &oxide).await;
+                    a.do_docusign_offer(db, &ds, &template_id, &oxide).await;
                 }
             }
         }
