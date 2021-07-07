@@ -51,6 +51,9 @@ static QUESTION_VALUES_IN_TENSION: &str =
     r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
+static DOCUSIGN_OFFER_TEMPLATE: &str = "Employee Offer Letter (US)";
+static DOCUSIGN_OFFER_SUBJECT: &str = "Sign your Oxide Computer Company Offer Letter";
+
 /// The data type for a NewApplicant.
 #[db {
     new_struct_name = "Applicant",
@@ -2801,7 +2804,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
     let ds = dsa.unwrap();
 
     // Get the template we need.
-    let template_id = get_docusign_template_id(&ds).await;
+    let template_id = get_docusign_template_id(&ds, DOCUSIGN_OFFER_TEMPLATE).await;
 
     // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db, company.id);
@@ -2812,10 +2815,10 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
     }
 }
 
-pub async fn get_docusign_template_id(ds: &DocuSign) -> String {
+pub async fn get_docusign_template_id(ds: &DocuSign, name: &str) -> String {
     let templates = ds.list_templates().await.unwrap();
     for template in templates {
-        if template.name == "Employee Offer Letter (US)" {
+        if template.name == name {
             return template.template_id;
         }
     }
@@ -3207,7 +3210,7 @@ Sincerely,
             new_envelope.status = "sent".to_string();
 
             // Set the email subject.
-            new_envelope.email_subject = "Sign your Oxide Computer Company Offer Letter".to_string();
+            new_envelope.email_subject = DOCUSIGN_OFFER_SUBJECT.to_string();
 
             // Set the template id to that of our template.
             new_envelope.template_id = template_id.to_string();
@@ -3315,7 +3318,7 @@ Sincerely,
         let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
         let drive_id = shared_drive.id.to_string();
 
-        for document in envelope.documents {
+        for document in &envelope.documents {
             let mut bytes = base64::decode(&document.pdf_bytes).unwrap_or_default();
             // Check if we already have bytes to the data.
             if document.pdf_bytes.is_empty() {
@@ -3333,7 +3336,7 @@ Sincerely,
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
                 filename = format!("{} - Offer.pdf", self.name);
-            } else if document.name.contains("Summary") {
+            } else if document.name.contains("Summary") && envelope.email_subject == DOCUSIGN_OFFER_SUBJECT {
                 filename = format!("{} - Offer - DocuSign Summary.pdf", self.name);
             }
 
