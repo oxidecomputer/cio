@@ -150,6 +150,10 @@ impl From<ApplicationForm> for NewApplicant {
             docusign_envelope_status: Default::default(),
             offer_created: Default::default(),
             offer_completed: Default::default(),
+            docusign_piia_envelope_id: Default::default(),
+            docusign_piia_envelope_status: Default::default(),
+            piia_envelope_created: Default::default(),
+            piia_envelope_completed: Default::default(),
             cio_company_id: form.cio_company_id,
         }
     }

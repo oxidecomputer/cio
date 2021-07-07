@@ -68,5 +68,9 @@ CREATE TABLE applicants (
     docusign_envelope_status VARCHAR NOT NULL,
     offer_created TIMESTAMPTZ DEFAULT NULL,
     offer_completed TIMESTAMPTZ DEFAULT NULL,
+    docusign_piia_envelope_id VARCHAR NOT NULL,
+    docusign_piia_envelope_status VARCHAR NOT NULL,
+    piia_envelope_created TIMESTAMPTZ DEFAULT NULL,
+    piia_envelope_completed TIMESTAMPTZ DEFAULT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

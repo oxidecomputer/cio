@@ -221,6 +221,16 @@ pub struct NewApplicant {
     pub offer_created: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub offer_completed: Option<DateTime<Utc>>,
+
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub docusign_piia_envelope_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub docusign_piia_envelope_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piia_envelope_created: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piia_envelope_completed: Option<DateTime<Utc>>,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
@@ -329,6 +339,10 @@ impl NewApplicant {
             docusign_envelope_status: Default::default(),
             offer_created: Default::default(),
             offer_completed: Default::default(),
+            docusign_piia_envelope_id: Default::default(),
+            docusign_piia_envelope_status: Default::default(),
+            piia_envelope_created: Default::default(),
+            piia_envelope_completed: Default::default(),
             // TODO: update this, when we support multiple companies.
             cio_company_id: 1,
         }
@@ -645,6 +659,12 @@ The Oxide Team",
         let mut offer_created = None;
         let mut offer_completed = None;
 
+        let mut docusign_piia_envelope_id = "".to_string();
+        let mut docusign_piia_envelope_status = "".to_string();
+
+        let mut piia_envelope_created = None;
+        let mut piia_envelope_completed = None;
+
         let mut airtable_record_id = "".to_string();
 
         // TODO: do not hard code the company id.
@@ -701,6 +721,19 @@ The Oxide Team",
             }
             if a.offer_completed.is_some() {
                 offer_completed = a.offer_completed;
+            }
+
+            if !a.docusign_piia_envelope_id.is_empty() {
+                docusign_piia_envelope_id = a.docusign_piia_envelope_id.to_string();
+            }
+            if !a.docusign_piia_envelope_status.is_empty() {
+                docusign_piia_envelope_status = a.docusign_piia_envelope_status.to_string();
+            }
+            if a.piia_envelope_created.is_some() {
+                piia_envelope_created = a.piia_envelope_created;
+            }
+            if a.piia_envelope_completed.is_some() {
+                piia_envelope_completed = a.piia_envelope_completed;
             }
 
             if !a.country_code.is_empty() {
@@ -901,6 +934,10 @@ The Oxide Team",
             docusign_envelope_status,
             offer_created,
             offer_completed,
+            docusign_piia_envelope_id,
+            docusign_piia_envelope_status,
+            piia_envelope_created,
+            piia_envelope_completed,
             cio_company_id,
         }
     }

@@ -143,6 +143,10 @@ table! {
         docusign_envelope_status -> Varchar,
         offer_created -> Nullable<Timestamptz>,
         offer_completed -> Nullable<Timestamptz>,
+        docusign_piia_envelope_id -> Varchar,
+        docusign_piia_envelope_status -> Varchar,
+        piia_envelope_created -> Nullable<Timestamptz>,
+        piia_envelope_completed -> Nullable<Timestamptz>,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
