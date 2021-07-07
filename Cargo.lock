@@ -453,7 +453,7 @@ dependencies = [
  "dropshot 0.5.1",
  "flate2",
  "futures-util",
- "google-drive 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.24",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -518,7 +518,7 @@ dependencies = [
  "dropshot 0.5.1",
  "flate2",
  "futures-util",
- "google-drive 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.24",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1426,6 +1426,8 @@ dependencies = [
 [[package]]
 name = "google-drive"
 version = "0.1.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4f7d23f8921a0914fe0cb6f0d4150e2b7e155b6cf8ab569b2af5d272a2a6f1e"
 dependencies = [
  "bytes",
  "reqwest",
@@ -1434,13 +1436,12 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4f7d23f8921a0914fe0cb6f0d4150e2b7e155b6cf8ab569b2af5d272a2a6f1e"
+version = "0.1.25"
 dependencies = [
  "bytes",
  "reqwest",
  "serde",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -1472,6 +1473,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -3769,6 +3771,7 @@ version = "0.1.12"
 dependencies = [
  "reqwest",
  "serde",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -4848,7 +4851,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-drive 0.1.24",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
