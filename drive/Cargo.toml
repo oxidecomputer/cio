@@ -1,7 +1,7 @@
 [package]
 name = "google-drive"
 description = "An API client for Google Drive"
-version = "0.1.23"
+version = "0.1.24"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -12,4 +12,3 @@ documentation = "https://docs.rs/google-drive"
 bytes = "1"
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
-yup-oauth2 = "^5"

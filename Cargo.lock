@@ -1430,7 +1430,6 @@ dependencies = [
  "bytes",
  "reqwest",
  "serde",
- "yup-oauth2",
 ]
 
 [[package]]
@@ -1474,7 +1473,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "yup-oauth2",
 ]
 
 [[package]]
@@ -2121,7 +2119,6 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "serde_qs 0.7.2",
  "urlencoding",
 ]
 
@@ -3774,7 +3771,6 @@ version = "0.1.11"
 dependencies = [
  "reqwest",
  "serde",
- "yup-oauth2",
 ]
 
 [[package]]
