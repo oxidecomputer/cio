@@ -2843,14 +2843,17 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
     let ds = dsa.unwrap();
 
     // Get the template we need.
-    let template_id = get_docusign_template_id(&ds, DOCUSIGN_OFFER_TEMPLATE).await;
+    let offer_template_id = get_docusign_template_id(&ds, DOCUSIGN_OFFER_TEMPLATE).await;
+    let piia_template_id = get_docusign_template_id(&ds, DOCUSIGN_PIIA_TEMPLATE).await;
 
     // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db, company.id);
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant.do_docusign_offer(db, &ds, &template_id, company).await;
+        applicant.do_docusign_offer(db, &ds, &offer_template_id, company).await;
+
+        applicant.do_docusign_piia(db, &ds, &piia_template_id, company).await;
     }
 }
 
