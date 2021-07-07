@@ -3327,15 +3327,18 @@ Sincerely,
                 bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
             }
 
+            // Create the folder for our applicant with their name.
+            let name_folder_id = drive_client.create_folder(&shared_drive.id, "", &self.name).await.unwrap();
+
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
                 filename = format!("{} - Offer.pdf", self.name);
             } else if document.name.contains("Summary") {
-                filename = format!("{} - DocuSign Summary.pdf", self.name);
+                filename = format!("{} - Offer - DocuSign Summary.pdf", self.name);
             }
 
             // Create or update the file in the google_drive.
-            drive_client.create_or_update_file(&drive_id, "", &filename, "application/pdf", &bytes).await.unwrap();
+            drive_client.create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes).await.unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);
         }
 
