@@ -453,9 +453,9 @@ dependencies = [
  "dropshot 0.5.1",
  "flate2",
  "futures-util",
- "google-drive 0.1.23",
+ "google-drive 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.31",
+ "gsuite-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -463,7 +463,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0",
- "mailchimp-api 0.1.11",
+ "mailchimp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -480,7 +480,7 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "sheets 0.1.11",
+ "sheets 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e6934a7c50cc3ff681b741e4d409309f455ee2b4"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4c1f08f9b045b2e9d239f6a6eeb144a5b5a32a5b"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -518,9 +518,9 @@ dependencies = [
  "dropshot 0.5.1",
  "flate2",
  "futures-util",
- "google-drive 0.1.23",
+ "google-drive 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.31",
+ "gsuite-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
@@ -528,7 +528,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
- "mailchimp-api 0.1.11",
+ "mailchimp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -545,7 +545,7 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "sheets 0.1.11",
+ "sheets 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1425,19 +1425,18 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.1.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cace8e3248bbfe5714f2b54813e393fa4e540590d558eb5f8c80941ba6c55dfa"
+version = "0.1.24"
 dependencies = [
  "bytes",
  "reqwest",
  "serde",
- "yup-oauth2",
 ]
 
 [[package]]
 name = "google-drive"
 version = "0.1.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4f7d23f8921a0914fe0cb6f0d4150e2b7e155b6cf8ab569b2af5d272a2a6f1e"
 dependencies = [
  "bytes",
  "reqwest",
@@ -1466,21 +1465,20 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.1.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b9fa0cc7ae11fc56a8b9c2768bb174049c303ec690b76a0829774dd6b17d686"
+version = "0.1.32"
 dependencies = [
  "chrono",
  "rand 0.7.3",
  "reqwest",
  "serde",
  "serde_json",
- "yup-oauth2",
 ]
 
 [[package]]
 name = "gsuite-api"
 version = "0.1.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f14e196870b3f3cfaf677538ac2e7c3ccc1a37c27304843adeac0c141c41b6b"
 dependencies = [
  "chrono",
  "rand 0.7.3",
@@ -2099,7 +2097,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#e6934a7c50cc3ff681b741e4d409309f455ee2b4"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4c1f08f9b045b2e9d239f6a6eeb144a5b5a32a5b"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2111,9 +2109,7 @@ dependencies = [
 
 [[package]]
 name = "mailchimp-api"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab08522aaee2a3c7a6e68300bfd1ee025ccc08a95111ec066d5e37a6a888d6d4"
+version = "0.1.12"
 dependencies = [
  "bytes",
  "chrono",
@@ -2121,13 +2117,14 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "serde_qs 0.7.2",
  "urlencoding",
 ]
 
 [[package]]
 name = "mailchimp-api"
 version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01a280afc9a501163f772577ba021a9e0e9db662e965b170b88bb49da6499fa2"
 dependencies = [
  "bytes",
  "chrono",
@@ -3656,18 +3653,6 @@ dependencies = [
 
 [[package]]
 name = "serde_qs"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5af82de3c6549b001bec34961ff2d6a54339a87bab37ce901b693401f27de6cb"
-dependencies = [
- "data-encoding",
- "percent-encoding 2.1.0",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "serde_qs"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8a72808528a89fa9eca23bbb6a1eb92cb639b881357269b6510f11e50c0f8a9"
@@ -3767,18 +3752,17 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 
 [[package]]
 name = "sheets"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d9598f8df064acf63934cb760711e9d276196a61f3cedb7bc367ae8009e3b66"
+version = "0.1.12"
 dependencies = [
  "reqwest",
  "serde",
- "yup-oauth2",
 ]
 
 [[package]]
 name = "sheets"
 version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22c3e1c81d8ff0f037a29ff019018b71a2ed1fdb16c9409a94e281ceb4463bc1"
 dependencies = [
  "reqwest",
  "serde",
@@ -4851,13 +4835,13 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive 0.1.23",
+ "google-drive 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
  "hubcaps",
  "hyper 0.10.16",
  "influxdb",
- "mailchimp-api 0.1.11",
+ "mailchimp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4869,7 +4853,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.8.4",
  "serde_urlencoded 0.7.0",
- "sheets 0.1.11",
+ "sheets 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "shippo 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
