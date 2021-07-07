@@ -51,10 +51,10 @@ static QUESTION_VALUES_IN_TENSION: &str =
     r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
-static DOCUSIGN_OFFER_TEMPLATE: &str = "Employee Offer Letter (US)";
-static DOCUSIGN_OFFER_SUBJECT: &str = "Sign your Oxide Computer Company Offer Letter";
-static DOCUSIGN_PIIA_TEMPLATE: &str = "Employee Agreements (Mediation, PIIA)";
-static DOCUSIGN_PIIA_SUBJECT: &str = "Sign your Oxide Computer Company Employee Agreements";
+pub static DOCUSIGN_OFFER_TEMPLATE: &str = "Employee Offer Letter (US)";
+pub static DOCUSIGN_OFFER_SUBJECT: &str = "Sign your Oxide Computer Company Offer Letter";
+pub static DOCUSIGN_PIIA_TEMPLATE: &str = "Employee Agreements (Mediation, PIIA)";
+pub static DOCUSIGN_PIIA_SUBJECT: &str = "Sign your Oxide Computer Company Employee Agreements";
 
 /// The data type for a NewApplicant.
 #[db {

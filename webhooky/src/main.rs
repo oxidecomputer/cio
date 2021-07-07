@@ -606,7 +606,7 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                     // Get the template we need.
                     let template_id = get_docusign_template_id(&ds).await;
 
-                    a.do_docusign(db, &ds, &template_id, &oxide).await;
+                    a.do_offer_docusign(db, &ds, &template_id, &oxide).await;
                 }
             }
         }
@@ -2211,7 +2211,7 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
             if let Some(ds) = dsa {
-                applicant.update_applicant_from_docusign_envelope(db, &ds, event).await;
+                applicant.update_applicant_from_docusign_offer_envelope(db, &ds, event).await;
             }
         }
         Err(e) => {
