@@ -463,7 +463,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0",
- "mailchimp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.12",
  "names",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -528,7 +528,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
- "mailchimp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.12",
  "names",
  "nom_pem",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2110,6 +2110,8 @@ dependencies = [
 [[package]]
 name = "mailchimp-api"
 version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01a280afc9a501163f772577ba021a9e0e9db662e965b170b88bb49da6499fa2"
 dependencies = [
  "bytes",
  "chrono",
@@ -2122,9 +2124,7 @@ dependencies = [
 
 [[package]]
 name = "mailchimp-api"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01a280afc9a501163f772577ba021a9e0e9db662e965b170b88bb49da6499fa2"
+version = "0.1.13"
 dependencies = [
  "bytes",
  "chrono",
@@ -2132,6 +2132,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_qs 0.7.2",
  "urlencoding",
 ]
 
@@ -3653,6 +3654,18 @@ dependencies = [
 
 [[package]]
 name = "serde_qs"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5af82de3c6549b001bec34961ff2d6a54339a87bab37ce901b693401f27de6cb"
+dependencies = [
+ "data-encoding",
+ "percent-encoding 2.1.0",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "serde_qs"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8a72808528a89fa9eca23bbb6a1eb92cb639b881357269b6510f11e50c0f8a9"
@@ -4841,7 +4854,7 @@ dependencies = [
  "hubcaps",
  "hyper 0.10.16",
  "influxdb",
- "mailchimp-api 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.12",
  "mime_guess",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
