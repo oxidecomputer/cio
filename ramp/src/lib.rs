@@ -474,7 +474,7 @@ impl Ramp {
     }
 
     /// Update a user.
-    pub async fn update_user(&self, id: &str, user: &User) -> Result<User, APIError> {
+    pub async fn update_user(&self, id: &str, user: &UpdateUser) -> Result<User, APIError> {
         // Build the request.
         let request = self.request(Method::PATCH, &format!("users/{}", id), user, None);
 
@@ -766,6 +766,18 @@ pub struct SpendingRestrictions {
     pub categories: Vec<i64>,
     #[serde(default)]
     pub transaction_amount_limit: i64,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct UpdateUser {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub department_id: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub location_id: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub direct_manager_id: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub role: String,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
