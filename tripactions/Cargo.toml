@@ -1,12 +1,12 @@
 [package]
-name = "ramp-api"
-description = "An API client for the credit card service Ramp"
-version = "0.1.19"
+name = "tripactions"
+description = "An API client for the travel booking service TripActions"
+version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
-documentation = "https://docs.rs/ramp-api"
+documentation = "https://docs.rs/tripactions"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
