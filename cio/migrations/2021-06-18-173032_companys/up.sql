@@ -29,6 +29,7 @@ CREATE TABLE companys (
     airtable_base_id_finance VARCHAR NOT NULL,
     airtable_base_id_swag VARCHAR NOT NULL,
     airtable_base_id_assets VARCHAR NOT NULL,
+    airtable_base_id_travel VARCHAR NOT NULL,
     airtable_base_id_cio VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

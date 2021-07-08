@@ -315,6 +315,7 @@ table! {
         airtable_base_id_finance -> Varchar,
         airtable_base_id_swag -> Varchar,
         airtable_base_id_assets -> Varchar,
+        airtable_base_id_travel -> Varchar,
         airtable_base_id_cio -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,

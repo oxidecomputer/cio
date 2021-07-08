@@ -389,8 +389,8 @@ pub struct Booking {
     pub approver_email: String,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub approval_changed_at: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub etickets: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub etickets: Option<Vec<String>>,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub invoice: String,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
@@ -398,11 +398,11 @@ pub struct Booking {
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub inventory: String,
     #[serde(default)]
-    pub flight_miles: i64,
+    pub flight_miles: f64,
     #[serde(default)]
-    pub train_miles: i64,
+    pub train_miles: f64,
     #[serde(default)]
-    pub carbon_emissions: i64,
+    pub carbon_emissions: f64,
     #[serde(default)]
     pub carbon_offset_cost: f64,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
@@ -451,10 +451,10 @@ pub struct Booker {
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Cnr {
-    #[serde(default)]
-    pub published_price: f64,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub cnr_codes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub published_price: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cnr_codes: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
