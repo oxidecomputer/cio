@@ -488,7 +488,7 @@ dependencies = [
  "titlecase",
  "tokio",
  "toml",
- "tripactions",
+ "tripactions 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
  "yup-oauth2",
  "zip",
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ead92fbe0bfd2de07596c2a95929d8c1fd063317"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#25650a320472467b37bf61b0af451553d4fa4bea"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2100,7 +2100,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ead92fbe0bfd2de07596c2a95929d8c1fd063317"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#25650a320472467b37bf61b0af451553d4fa4bea"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -4503,6 +4503,20 @@ checksum = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 [[package]]
 name = "tripactions"
 version = "0.1.1"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "tripactions"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "543e379060a3ace7edb5769999ac58a249a5d9581d3cda59bbfded44ec17858a"
 dependencies = [
  "chrono",
  "reqwest",
