@@ -11,11 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: actions/checkout@v2
-        with:
-          repository: oxidecomputer/rfd
-          token: ${{ secrets.GLOBAL_GITHUB_TOKEN }}
-          path: rfd
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
