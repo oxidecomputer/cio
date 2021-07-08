@@ -21,6 +21,7 @@ use reqwest::{header, Client};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
+use tailscale_api::Tailscale;
 use tripactions::TripActions;
 
 use crate::airtable::AIRTABLE_COMPANIES_TABLE;
@@ -359,6 +360,11 @@ impl Company {
         }
 
         None
+    }
+
+    /// Authenticate with Tailscale.
+    pub fn authenticate_tailscale(&self) -> Tailscale {
+        Tailscale::new(&self.tailscale_api_key, &self.gsuite_domain)
     }
 
     /// Authenticate with TripActions.

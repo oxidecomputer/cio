@@ -1,12 +1,14 @@
 use chrono::{Duration, Utc};
-use tailscale_api::Tailscale;
+
+use crate::companies::Company;
 
 /// When we generate VMs for the console repo on every branch we get lingering
 /// Tailscale devices that need to cleaned up when they are no longer active.
 /// This function does that.
-pub async fn cleanup_old_tailscale_devices() {
+pub async fn cleanup_old_tailscale_devices(company: &Company) {
     // Initialize the Tailscale API.
-    let tailscale = Tailscale::new_from_env();
+    let tailscale = company.authenticate_tailscale();
+
     // Get the devices.
     let devices = tailscale.list_devices().await.unwrap();
 
@@ -29,11 +31,19 @@ pub async fn cleanup_old_tailscale_devices() {
 
 #[cfg(test)]
 mod tests {
+    use crate::companies::Company;
+    use crate::db::Database;
     use crate::tailscale::cleanup_old_tailscale_devices;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_tailscale() {
-        cleanup_old_tailscale_devices().await;
+        let db = Database::new();
+
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        cleanup_old_tailscale_devices(&oxide).await;
     }
 }

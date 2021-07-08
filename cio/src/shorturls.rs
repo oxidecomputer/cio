@@ -1,6 +1,5 @@
 use hubcaps::repositories::Repository;
 use serde::Serialize;
-use tailscale_api::Tailscale;
 
 use crate::companies::{Company, Companys};
 use crate::configs::Links;
@@ -120,7 +119,8 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Com
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Initialize the Tailscale API.
-    let tailscale = Tailscale::new_from_env();
+    let tailscale = company.authenticate_tailscale();
+
     // Get the devices.
     let devices = tailscale.list_devices().await.unwrap();
 
@@ -190,8 +190,9 @@ pub async fn refresh_shorturls() {
         generate_shorturls_for_repos(&db, &repo, company.id).await;
         generate_shorturls_for_rfds(&db, &repo, company.id).await;
         generate_shorturls_for_configs_links(&db, &repo, company.id).await;
-        if company.name == "Oxide" {
-            // TODO: remove this when we have better tailscale auth.
+
+        // Only do this if we can auth with Tailscale.
+        if !company.tailscale_api_key.is_empty() {
             generate_dns_for_tailscale_devices(&repo, &company).await;
         }
     }
