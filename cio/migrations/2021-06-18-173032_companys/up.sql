@@ -15,6 +15,7 @@ CREATE TABLE companys (
     cloudflare_api_key VARCHAR NOT NULL,
     checkr_api_key VARCHAR NOT NULL,
     printer_url VARCHAR NOT NULL,
+    tailscale_api_key VARCHAR NOT NULL,
     tripactions_client_id VARCHAR NOT NULL,
     tripactions_client_secret VARCHAR NOT NULL,
     airtable_api_key VARCHAR NOT NULL,
