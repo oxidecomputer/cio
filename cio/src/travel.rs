@@ -3,7 +3,7 @@ use crate::db::Database;
 
 pub async fn refresh_trip_actions(db: &Database, company: &Company) {
     // Authenticate with TripActions.
-    let ta = company.authenticate_tripactions(db);
+    let ta = company.authenticate_tripactions(db).await;
 
     // Let's get our bookings.
     let bookings = ta.get_bookings().await.unwrap();

@@ -379,7 +379,7 @@ impl Company {
         let mut ta = TripActions::new(self.tripactions_client_id.to_string(), self.tripactions_client_secret.to_string(), "");
         let t = ta.get_access_token().await.unwrap();
 
-        let token = NewAPIToken {
+        let mut token = NewAPIToken {
             product: "tripactions".to_string(),
             token_type: t.token_type.to_string(),
             access_token: t.access_token.to_string(),
@@ -399,6 +399,7 @@ impl Company {
             cio_company_id: 1,
         };
 
+        token.expand();
         token.upsert(db).await;
 
         ta

@@ -369,8 +369,8 @@ pub struct Booking {
     pub out_of_policy_description: String,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub out_of_policy_violations: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub out_of_policy_violation_types: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub out_of_policy_violation_types: Option<Vec<String>>,
     #[serde(default)]
     pub trip_bucks_earned: f64,
     #[serde(default)]

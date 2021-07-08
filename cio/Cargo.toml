@@ -77,7 +77,7 @@ slack-chat-api = "^0.1.16"
 #slack-chat-api = { path = "../slack" }
 tailscale-api = "^0.1.2"
 #tailscale-api = { path = "../tailscale" }
-#tripactions = "^0.1.0"
+#tripactions = "^0.1.1"
 tripactions = { path = "../tripactions" }
 tar = "^0.4"
 titlecase = "1.0"
