@@ -21,6 +21,7 @@ use reqwest::{header, Client};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
+use tripactions::TripActions;
 
 use crate::airtable::AIRTABLE_COMPANIES_TABLE;
 use crate::api_tokens::{APIToken, NewAPIToken};
@@ -354,6 +355,53 @@ impl Company {
         }
 
         None
+    }
+
+    /// Authenticate with TripActions.
+    pub async fn authenticate_tripactions(&self, db: &Database) -> TripActions {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "tripactions".to_string()) {
+            // Initialize the TripActions client.
+            let mut ta = TripActions::new(self.tripactions_client_id.to_string(), self.tripactions_client_secret.to_string(), t.access_token);
+            let nt = ta.get_access_token().await.unwrap();
+            t.access_token = nt.access_token.to_string();
+            t.expires_in = nt.expires_in as i32;
+            t.refresh_token = nt.refresh_token.to_string();
+            t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+            t.last_updated_at = Utc::now();
+            t.expand();
+            // Update the token in the database.
+            t.update(&db).await;
+
+            return ta;
+        }
+
+        let mut ta = TripActions::new(self.tripactions_client_id.to_string(), self.tripactions_client_secret.to_string(), "");
+        let t = ta.get_access_token().await.unwrap();
+
+        let token = NewAPIToken {
+            product: "tripactions".to_string(),
+            token_type: t.token_type.to_string(),
+            access_token: t.access_token.to_string(),
+            expires_in: t.expires_in as i32,
+            refresh_token: t.refresh_token.to_string(),
+            refresh_token_expires_in: t.refresh_token_expires_in as i32,
+            company_id: "".to_string(),
+            item_id: "".to_string(),
+            user_email: "".to_string(),
+            last_updated_at: Utc::now(),
+            expires_date: None,
+            refresh_token_expires_date: None,
+            endpoint: "".to_string(),
+            auth_company_id: self.id,
+            company: Default::default(),
+            // THIS IS ALWAYS OXIDE, THEY OWN ALL THE CREDS.
+            cio_company_id: 1,
+        };
+
+        token.upsert(db).await;
+
+        ta
     }
 
     /// Authenticate with QuickBooks.

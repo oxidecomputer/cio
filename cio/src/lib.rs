@@ -34,6 +34,7 @@ pub mod swag_inventory;
 pub mod swag_store;
 pub mod tailscale;
 pub mod templates;
+pub mod travel;
 pub mod utils;
 
 #[macro_use]

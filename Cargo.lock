@@ -488,6 +488,7 @@ dependencies = [
  "titlecase",
  "tokio",
  "toml",
+ "tripactions",
  "walkdir",
  "yup-oauth2",
  "zip",
