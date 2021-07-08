@@ -301,6 +301,8 @@ table! {
         cloudflare_api_key -> Varchar,
         checkr_api_key -> Varchar,
         printer_url -> Varchar,
+        tripactions_client_id -> Varchar,
+        tripactions_client_secret -> Varchar,
         airtable_api_key -> Varchar,
         airtable_enterprise_account_id -> Varchar,
         airtable_workspace_id -> Varchar,
