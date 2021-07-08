@@ -1518,9 +1518,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                 // Check if we have a Ramp user for the user.
                 match ramp_users.get(&new_user.email) {
                     // We have the user, we don't need to do anything.
-                    Some(ru) => {
-                        let mut ramp_user = ru.clone();
-
+                    Some(ramp_user) => {
                         new_user.ramp_id = ramp_user.id.to_string();
 
                         // Update the user with their department and manager if
@@ -1530,11 +1528,15 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                             department_id = department.id.to_string();
                         }
 
-                        if department_id != ramp_user.department_id || users_manager.ramp_id != ru.manager_id {
-                            ramp_user.department_id = department_id.to_string();
-                            ramp_user.direct_manager_id = users_manager.ramp_id.to_string();
+                        if department_id != ramp_user.department_id || users_manager.ramp_id != ramp_user.manager_id {
+                            let updated_user = ramp_api::UpdateUser {
+                                department_id: department_id.to_string(),
+                                direct_manager_id: users_manager.ramp_id.to_string(),
+                                role: ramp_user.role.to_string(),
+                                location_id: ramp_user.location_id.to_string(),
+                            };
 
-                            ramp.update_user(&ramp_user.id, &ramp_user).await.unwrap();
+                            ramp.update_user(&ramp_user.id, &updated_user).await.unwrap();
                         }
                     }
                     None => {
