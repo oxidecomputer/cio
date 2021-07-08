@@ -1,5 +1,8 @@
-use chrono::{DateTime, Utc};
+use async_trait::async_trait;
+use chrono::{DateTime, NaiveDate, Utc};
 use macros::db;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use crate::airtable::AIRTABLE_BOOKINGS_TABLE;
 use crate::companies::Company;
@@ -23,7 +26,7 @@ pub struct NewBooking {
     pub booking_id: String,
     pub created_at: DateTime<Utc>,
     pub last_modified_at: DateTime<Utc>,
-    #[serde(defaul, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancelled_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
     pub type_: String,
@@ -40,7 +43,7 @@ pub struct NewBooking {
     #[serde(default)]
     pub used_corporate_discount: bool,
     pub start_date: NaiveDate,
-    #[serde(defaul, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub end_date: Option<NaiveDate>,
     #[serde(
         default,
@@ -67,9 +70,9 @@ pub struct NewBooking {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub currency: String,
     #[serde(default)]
-    pub optimal_price: f64,
+    pub optimal_price: f32,
     #[serde(default)]
-    pub grand_total: f64,
+    pub grand_total: f32,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub purpose: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -96,6 +99,35 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) {
     let bookings = ta.get_bookings().await.unwrap();
     for booking in bookings {
         println!("Booking: {:?}", booking);
+        let b = NewBooking {
+            booking_id: booking.uuid.to_string(),
+            created_at: booking.created,
+            last_modified_at: booking.last_modified,
+            cancelled_at: booking.cancelled_at,
+            type_: booking.booking_type.to_string(),
+            status: booking.booking_status.to_string(),
+            vendor: booking.vendor.to_string(),
+            flight: booking.flight.to_string(),
+            cabin: booking.cabin.to_string(),
+            is_preferred_vendor: booking.preferred_vendor == "Y",
+            used_corporate_discount: booking.corporate_discount_used == "Y",
+            start_date: booking.start_date,
+            end_date: booking.end_date,
+            passengers,
+            booker: booking.booker.email.to_string(),
+            origin: booking.origin.airport_code.to_string(),
+            destination: booking.destination.airport_code.to_string(),
+            length: booking.trip_length.to_string(),
+            description: booking.trip_description.to_string(),
+            currency: booking.currency,
+            optimal_price: booking.optimal_price as f32,
+            grand_total: booking.grand_total as f32,
+            purpose: booking.purpose.to_string(),
+            reason: booking.reason.to_string(),
+            confirmation_id: booking.booking_id.to_string(),
+            cio_company_id: company.id,
+        };
+        b.upsert(db).await;
     }
 }
 

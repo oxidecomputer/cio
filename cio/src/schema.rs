@@ -256,6 +256,7 @@ table! {
         created_at -> Timestamptz,
         last_modified_at -> Timestamptz,
         cancelled_at -> Nullable<Timestamptz>,
+        #[sql_name = "type"]
         type_ -> Varchar,
         status -> Varchar,
         vendor -> Varchar,

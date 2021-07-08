@@ -4,7 +4,7 @@ CREATE TABLE bookings (
     created_at TIMESTAMPTZ NOT NULL,
     last_modified_at TIMESTAMPTZ NOT NULL,
     cancelled_at TIMESTAMPTZ DEFAULT NULL,
-    type_ VARCHAR NOT NULL DEFAULT '',
+    type VARCHAR NOT NULL DEFAULT '',
     status VARCHAR NOT NULL DEFAULT '',
     vendor VARCHAR NOT NULL DEFAULT '',
     flight VARCHAR NOT NULL DEFAULT '',
