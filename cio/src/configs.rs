@@ -1536,6 +1536,8 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                                 location_id: ramp_user.location_id.to_string(),
                             };
 
+                            println!("ramp updated user: {}", updated_user);
+
                             ramp.update_user(&ramp_user.id, &updated_user).await.unwrap();
                         }
                     }

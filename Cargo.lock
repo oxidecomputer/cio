@@ -471,7 +471,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#03370c0738474d18260b1b365e67fca5761d280e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#ead92fbe0bfd2de07596c2a95929d8c1fd063317"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -536,7 +536,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -2099,7 +2099,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#03370c0738474d18260b1b365e67fca5761d280e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#ead92fbe0bfd2de07596c2a95929d8c1fd063317"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -2943,7 +2943,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2955,9 +2955,9 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "144a50e956519133eb533a64ac22c1c6b8bcec03eebc28bf41801bccc52bf025"
+checksum = "46600ceda418fd5dfe46ba0b8ff9c233dba278416b5cfbbbeb26e2bc23e03525"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4860,7 +4860,7 @@ dependencies = [
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "regex 1.5.4",
  "schemars",
