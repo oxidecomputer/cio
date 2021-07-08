@@ -244,8 +244,8 @@ table! {
         item -> Varchar,
         barcode -> Varchar,
         link_to_item -> Array<Text>,
-        airtable_record_id -> Varchar,
         cio_company_id -> Int4,
+        airtable_record_id -> Varchar,
     }
 }
 

@@ -97,13 +97,20 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) {
 
     // Let's get our bookings.
     let bookings = ta.get_bookings().await.unwrap();
+
     for booking in bookings {
-        println!("Booking: {:?}", booking);
+        // Create our list of passengers.
+        let mut passengers: Vec<String> = Default::default();
+        for passenger in &booking.passengers {
+            passengers.push(passenger.person.email.to_string());
+        }
+
         let b = NewBooking {
             booking_id: booking.uuid.to_string(),
             created_at: booking.created,
             last_modified_at: booking.last_modified,
             cancelled_at: booking.cancelled_at,
+            // TODO: add the cancellation reason? we have it in tripactions.
             type_: booking.booking_type.to_string(),
             status: booking.booking_status.to_string(),
             vendor: booking.vendor.to_string(),
