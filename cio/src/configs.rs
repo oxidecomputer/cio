@@ -559,6 +559,16 @@ impl UserConfig {
 }
 
 impl User {
+    /// Get the user's manager, if they have one, otherwise return Jess.
+    pub fn manager(&self, db: &Database) -> User {
+        let mut manager = self.manager.to_string();
+        if manager.is_empty() {
+            manager = "jess".to_string();
+        }
+
+        User::get_from_db(db, self.cio_company_id, manager).unwrap()
+    }
+
     /// Generate and return the full name for the user.
     pub fn full_name(&self) -> String {
         format!("{} {}", self.first_name, self.last_name)
@@ -1501,13 +1511,31 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             }
         }
 
+        let users_manager = new_user.manager(db);
+
         if let Some(ref ramp) = ramp_auth {
             if !new_user.is_consultant() && !new_user.is_system_account() {
                 // Check if we have a Ramp user for the user.
                 match ramp_users.get(&new_user.email) {
                     // We have the user, we don't need to do anything.
-                    Some(ramp_user) => {
+                    Some(ru) => {
+                        let mut ramp_user = ru.clone();
+
                         new_user.ramp_id = ramp_user.id.to_string();
+
+                        // Update the user with their department and manager if
+                        // it has changed.
+                        let mut department_id = "".to_string();
+                        if let Some(department) = ramp_departments.get(&new_user.department) {
+                            department_id = department.id.to_string();
+                        }
+
+                        if department_id != ramp_user.department_id || users_manager.ramp_id != ru.manager_id {
+                            ramp_user.department_id = department_id.to_string();
+                            ramp_user.direct_manager_id = users_manager.ramp_id.to_string();
+
+                            ramp.update_user(&ramp_user.id, &ramp_user).await.unwrap();
+                        }
                     }
                     None => {
                         println!("inviting new ramp user {}", new_user.username);
@@ -1518,9 +1546,16 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                         ramp_user.last_name = new_user.last_name.to_string();
                         ramp_user.phone = new_user.recovery_phone.to_string();
                         ramp_user.role = "BUSINESS_USER".to_string();
+
+                        // Add the manager.
+                        ramp_user.direct_manager_id = users_manager.ramp_id.to_string();
+
+                        // Add the department.
                         if let Some(department) = ramp_departments.get(&new_user.department) {
                             ramp_user.department_id = department.id.to_string();
                         }
+
+                        // Add the manager.
                         let r = ramp.invite_new_user(&ramp_user).await.unwrap();
                         new_user.ramp_id = r.id.to_string();
 
