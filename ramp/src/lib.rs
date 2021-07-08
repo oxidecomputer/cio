@@ -474,7 +474,7 @@ impl Ramp {
     }
 
     /// Update a user.
-    pub async fn update_user(&self, id: &str, user: &UpdateUser) -> Result<User, APIError> {
+    pub async fn update_user(&self, id: &str, user: &UpdateUser) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(Method::PATCH, &format!("users/{}", id), user, None);
 
@@ -490,7 +490,7 @@ impl Ramp {
         };
 
         // Try to deserialize the response.
-        Ok(resp.json().await.unwrap())
+        Ok(())
     }
 
     /// Create a physical card.
