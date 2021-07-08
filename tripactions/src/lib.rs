@@ -413,8 +413,8 @@ pub struct Booking {
     pub reason: String,
     #[serde(default)]
     pub cnr: Cnr,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub seats: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seats: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub custom_fields: Vec<CustomField>,
 }
