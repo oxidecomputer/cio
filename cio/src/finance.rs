@@ -313,10 +313,10 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
     for reimbursement in reimbursements {
         let mut attachments = Vec::new();
         // Get the reciepts for the reimbursement, if they exist.
-        /*for receipt_id in reimbursement.receipts {
+        for receipt_id in reimbursement.receipts {
             let receipt = ramp.get_receipt(&receipt_id).await.unwrap();
             attachments.push(receipt.receipt_url.to_string());
-        }*/
+        }
 
         // Get the user's email for the reimbursement.
         let email = ramp_users.get(&reimbursement.user_id).unwrap();
