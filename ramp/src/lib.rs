@@ -536,7 +536,7 @@ impl Ramp {
     }
 
     /// Create a physical card.
-    pub async fn create_physical_card(&self, card: &Card) -> Result<DeferredCard, APIError> {
+    pub async fn create_physical_card(&self, card: &PhysicalCard) -> Result<DeferredCard, APIError> {
         // Build the request.
         let request = self.request(Method::POST, "cards/deferred/physical", card, None);
 
@@ -811,6 +811,18 @@ pub struct VirtualCard {
     pub user_id: String,
     #[serde(default)]
     pub spending_restrictions: SpendingRestrictions,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct PhysicalCard {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub display_name: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub user_id: String,
+    #[serde(default)]
+    pub spending_restrictions: SpendingRestrictions,
+    #[serde(default)]
+    pub fulfillment: Fulfillment,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
