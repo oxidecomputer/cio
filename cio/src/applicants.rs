@@ -3383,6 +3383,12 @@ Sincerely,
                 filename = format!("{} - Offer.pdf", self.name);
             } else if document.name.contains("Summary") {
                 filename = format!("{} - Offer - DocuSign Summary.pdf", self.name);
+            } else if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {
+                filename = format!("{} - Mediation Agreement.pdf", self.name);
+            } else if document.name.contains("Employee Proprietary") || document.name.contains("Employee_Proprietary") {
+                filename = format!("{} - PIIA.pdf", self.name);
+            } else if document.name.contains("Summary") {
+                filename = format!("{} - Employee Agreements - DocuSign Summary.pdf", self.name);
             }
 
             // Create or update the file in the google_drive.
@@ -3595,6 +3601,8 @@ Sincerely,
                 filename = format!("{} - PIIA.pdf", self.name);
             } else if document.name.contains("Summary") {
                 filename = format!("{} - Employee Agreements - DocuSign Summary.pdf", self.name);
+            } else if document.name.contains("Offer Letter") {
+                filename = format!("{} - Offer.pdf", self.name);
             }
 
             // Create or update the file in the google_drive.
