@@ -311,7 +311,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
 
     let reimbursements = ramp.list_reimbursements().await.unwrap();
     for reimbursement in reimbursements {
-        let attachments = Vec::new();
+        let mut attachments = Vec::new();
         // Get the reciepts for the reimbursement, if they exist.
         /*for receipt_id in reimbursement.receipts {
             let receipt = ramp.get_receipt(&receipt_id).await.unwrap();

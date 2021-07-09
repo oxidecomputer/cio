@@ -667,6 +667,8 @@ pub struct Reimbursement {
     pub currency: String,
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub merchant: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub receipts: Vec<String>,
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]

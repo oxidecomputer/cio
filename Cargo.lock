@@ -471,7 +471,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.20",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -537,7 +537,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.19",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -2946,6 +2946,8 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.1.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46600ceda418fd5dfe46ba0b8ff9c233dba278416b5cfbbbeb26e2bc23e03525"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2957,9 +2959,7 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46600ceda418fd5dfe46ba0b8ff9c233dba278416b5cfbbbeb26e2bc23e03525"
+version = "0.1.20"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4888,7 +4888,7 @@ dependencies = [
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.19",
  "rand 0.8.4",
  "regex 1.5.4",
  "schemars",
