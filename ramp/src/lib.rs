@@ -493,8 +493,50 @@ impl Ramp {
         Ok(())
     }
 
+    /// Get the status of a deferred card.
+    pub async fn get_deferred_card_status(&self, card_id: &str) -> Result<CardStatus, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("cards/deferred/status/{}", card_id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
+    /// Create a virtual card.
+    pub async fn create_virtual_card(&self, card: &VirtualCard) -> Result<DeferredCard, APIError> {
+        // Build the request.
+        let request = self.request(Method::POST, "cards/deferred/virtual", card, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            StatusCode::CREATED => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        // Try to deserialize the response.
+        Ok(resp.json().await.unwrap())
+    }
+
     /// Create a physical card.
-    pub async fn create_physical_card(&self, card: &Card) -> Result<Card, APIError> {
+    pub async fn create_physical_card(&self, card: &Card) -> Result<DeferredCard, APIError> {
         // Build the request.
         let request = self.request(Method::POST, "cards/deferred/physical", card, None);
 
@@ -734,6 +776,44 @@ pub struct Department {
 }
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct CardStatus {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default)]
+    pub data: CardStatusData,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct CardStatusData {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub misc: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub card_id: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub error: String,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct DeferredCard {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub id: String,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
+pub struct VirtualCard {
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub display_name: String,
+    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    pub user_id: String,
+    #[serde(default)]
+    pub spending_restrictions: SpendingRestrictions,
+}
+
+#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Card {
     #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
     pub id: String,
@@ -766,6 +846,8 @@ pub struct SpendingRestrictions {
     pub lock_date: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub categories: Vec<i64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blocked_categories: Vec<i64>,
     #[serde(default)]
     pub transaction_amount_limit: i64,
 }
