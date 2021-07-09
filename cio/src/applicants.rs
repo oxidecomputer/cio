@@ -3387,8 +3387,6 @@ Sincerely,
                 filename = format!("{} - Mediation Agreement.pdf", self.name);
             } else if document.name.contains("Employee Proprietary") || document.name.contains("Employee_Proprietary") {
                 filename = format!("{} - PIIA.pdf", self.name);
-            } else if document.name.contains("Summary") {
-                filename = format!("{} - Employee Agreements - DocuSign Summary.pdf", self.name);
             }
 
             // Create or update the file in the google_drive.
