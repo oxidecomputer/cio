@@ -3589,9 +3589,9 @@ Sincerely,
             let name_folder_id = drive_client.create_folder(&shared_drive.id, "", &self.name).await.unwrap();
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
-            if document.name.contains("Employee_Mediation") {
+            if document.name.contains("Employee Mediation") {
                 filename = format!("{} - Mediation Agreement.pdf", self.name);
-            } else if document.name.contains("Employee_Proprietary") {
+            } else if document.name.contains("Employee Proprietary") {
                 filename = format!("{} - PIIA.pdf", self.name);
             } else if document.name.contains("Summary") {
                 filename = format!("{} - Employee Agreements - DocuSign Summary.pdf", self.name);
