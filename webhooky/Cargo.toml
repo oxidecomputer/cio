@@ -30,7 +30,7 @@ influxdb = { git = "https://github.com/jessfraz/influxdb-rust", branch = "cloud"
 mailchimp-api = "^0.1.11"
 mime_guess = "2"
 quickbooks = "^0.1.12"
-ramp-api = "^0.1.19"
+ramp-api = "^0.1.20"
 rand = "^0.8.4"
 regex = "^1.5.4"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
