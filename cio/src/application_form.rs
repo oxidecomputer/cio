@@ -1,6 +1,5 @@
 use chrono::Utc;
 use google_drive::GoogleDrive;
-use hubcaps::issues::{IssueListOptions, State};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +38,13 @@ pub struct ApplicationForm {
 impl ApplicationForm {
     pub async fn do_form(&self, db: &Database) {
         // If their email is empty return early.
-        if self.email.is_empty() || self.name.is_empty() || self.role.is_empty() || self.materials.is_empty() || self.resume.is_empty() || self.phone.is_empty() {
+        if self.email.is_empty()
+            || self.name.is_empty()
+            || self.role.is_empty()
+            || self.materials.is_empty()
+            || self.resume.is_empty()
+            || self.phone.is_empty()
+        {
             // This should not happen since we verify on the client side we have these
             // things.
             return;
@@ -63,14 +68,35 @@ impl ApplicationForm {
 
         // Get all the hiring issues on the configs repository.
         let configs_issues = github
-            .repo(&company.github_org, "configs")
             .issues()
-            .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+            .list_all_for_repo(
+                &company.github_org,
+                "configs",
+                // milestone
+                "",
+                octorust::types::IssuesListState::All,
+                // assignee
+                "",
+                // creator
+                "",
+                // mentioned
+                "",
+                // labels
+                "hiring",
+                // sort
+                Default::default(),
+                // direction
+                Default::default(),
+                // since
+                None,
+            )
             .await
             .unwrap();
 
         // Expand the application.
-        applicant.expand(db, &drive_client, &github, &configs_issues).await;
+        applicant
+            .expand(db, &drive_client, &github, &configs_issues)
+            .await;
 
         // Update airtable and the database again.
         applicant.update(db).await;

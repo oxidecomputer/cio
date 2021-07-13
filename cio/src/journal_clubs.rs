@@ -3,12 +3,13 @@ use std::str::from_utf8;
 
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use hubcaps::Github;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
+use slack_chat_api::{
+    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 
 use crate::{
     airtable::{AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE},
@@ -16,6 +17,7 @@ use crate::{
     core::UpdateAirtableRecord,
     db::Database,
     schema::{journal_club_meetings, journal_club_papers},
+    utils::get_file_content_from_repo,
 };
 
 /// The data type for a NewJournalClubMeeting.
@@ -178,7 +180,8 @@ impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
         let db = Database::new();
-        let journal_club_meetings = JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await;
+        let journal_club_meetings =
+            JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await;
 
         // Iterate over the journal_club_meetings and see if we find a match.
         for (_id, meeting_record) in journal_club_meetings {
@@ -281,19 +284,21 @@ impl Meeting {
 }
 
 /// Get the journal club meetings from the papers GitHub repo.
-pub async fn get_meetings_from_repo(github: &Github, company: &Company) -> Vec<Meeting> {
-    let repo = github.repo(&company.github_org, "papers");
-    let r = repo.get().await.unwrap();
+pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company) -> Vec<Meeting> {
+    let owner = &company.github_org;
+    let repo = "papers";
 
-    // Get the contents of the .helpers/meetings.csv file.
-    let meetings_csv_content = github
-        .repo(&company.github_org, "papers")
-        .content()
-        .file("/.helpers/meetings.json", &r.default_branch)
-        .await
-        .expect("failed to get meetings csv content")
-        .content;
-    let meetings_json_string = from_utf8(&meetings_csv_content).unwrap();
+    // Get the contents of the .helpers/meetings.json file.
+    let (meetings_json_content, _) = get_file_content_from_repo(
+        github,
+        owner,
+        repo,
+        // branch, empty means default
+        "",
+        "/.helpers/meetings.json",
+    )
+    .await;
+    let meetings_json_string = from_utf8(&meetings_json_content).unwrap();
 
     // Parse the meetings from the json string.
     let meetings: Vec<Meeting> = serde_json::from_str(meetings_json_string).unwrap();
@@ -302,7 +307,11 @@ pub async fn get_meetings_from_repo(github: &Github, company: &Company) -> Vec<M
 }
 
 // Sync the journal_club_meetings with our database.
-pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github, company: &Company) {
+pub async fn refresh_db_journal_club_meetings(
+    db: &Database,
+    github: &octorust::Client,
+    company: &Company,
+) {
     let journal_club_meetings = get_meetings_from_repo(github, company).await;
 
     // Sync journal_club_meetings.
@@ -339,7 +348,11 @@ mod tests {
 
         refresh_db_journal_club_meetings(&db, &github, &oxide).await;
 
-        JournalClubPapers::get_from_db(&db, oxide.id).update_airtable(&db).await;
-        JournalClubMeetings::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        JournalClubPapers::get_from_db(&db, oxide.id)
+            .update_airtable(&db)
+            .await;
+        JournalClubMeetings::get_from_db(&db, oxide.id)
+            .update_airtable(&db)
+            .await;
     }
 }
