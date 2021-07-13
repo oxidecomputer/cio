@@ -116,8 +116,8 @@ impl NewRFD {
         {
             let f = file.first().unwrap();
             content = decode_base64_to_string(&f.content);
-            link = f.html_url;
-            sha = f.sha;
+            link = f.html_url.to_string();
+            sha = f.sha.to_string();
         }
 
         // Parse the RFD directory as an int.

@@ -519,7 +519,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
         }
 
         // For each team id, add the team to the permissions.
-        for team_name in &default_teams {
+        for team_name in default_teams.clone() {
             let perms = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
 
             // Check if the team already has the permission.
