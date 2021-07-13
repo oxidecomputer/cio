@@ -44,8 +44,6 @@ gusto-api = "^0.1.17"
 #gusto-api = { path = "../gusto" }
 handlebars = "3.5.3"
 html2text = "0.1"
-#hubcaps = { version = "0.6", features = ["httpcache"] }
-hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
 image = "0.23.14"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 macros = { path = "../macros" }
@@ -53,6 +51,7 @@ mailchimp-api = "^0.1.11"
 #mailchimp-api = { path = "../mailchimp" }
 names = "^0.11.0"
 nom_pem = "4"
+octorust = { version = "^0.1", features = ["httpcache"] }
 okta = "^0.0.6"
 openssl = "0.10"
 pandoc = "0.8"

@@ -2,14 +2,11 @@ use std::{
     collections::HashMap,
     fs,
     io::Write,
-    ops::Add,
     path::{Path, PathBuf},
     str::from_utf8,
-    thread, time,
 };
 
-use futures_util::stream::TryStreamExt;
-use hubcaps::{issues::Issue, repositories::Repository};
+use octorust::Issue;
 use reqwest::get;
 use serde_json::Value;
 
@@ -38,7 +35,12 @@ pub fn check_if_github_issue_exists(issues: &[Issue], search: &str) -> Option<Is
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
 pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
-    let body = get(&format!("https://github.com/{}.keys", handle)).await.unwrap().text().await.unwrap();
+    let body = get(&format!("https://github.com/{}.keys", handle))
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
 
     body.lines()
         .filter_map(|key| {
@@ -54,7 +56,13 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
 
 /// Get a files content from a repo.
 /// It returns a tuple of the bytes of the file content and the sha of the file.
-pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &str) -> (Vec<u8>, String) {
+pub async fn get_file_content_from_repo(
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    branch: &str,
+    path: &str,
+) -> (Vec<u8>, String) {
     // Add the starting "/" so this works.
     // TODO: figure out why it doesn't work without it.
     let mut file_path = path.to_string();
@@ -63,48 +71,54 @@ pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &
     }
 
     // Try to get the content for the file from the repo.
-    match repo.content().file(&file_path, branch).await {
-        Ok(file) => return (file.content.into(), file.sha),
+    match github
+        .repos()
+        .get_content(owner, repo, &file_path, branch)
+        .await
+    {
+        Ok(file) => return (decode_base64(&file.content), file.sha),
         Err(e) => {
-            match e {
-                hubcaps::errors::Error::RateLimit { reset } => {
-                    // We got a rate limit error.
-                    println!("got rate limited, sleeping for {}s", reset.as_secs());
-                    thread::sleep(reset.add(time::Duration::from_secs(5)));
-                }
-                hubcaps::errors::Error::Fault { code: _, ref error } => {
-                    if error.message.contains("too large") {
-                        // The file is too big for us to get it's contents through this API.
-                        // The error suggests we use the Git Data API but we need the file sha for
-                        // that.
-                        // Get all the items in the directory and try to find our file and get the sha
-                        // for it so we can update it.
-                        let mut path = PathBuf::from(&file_path);
-                        path.pop();
+            if e.contains("rate limit") {
+                // We got a rate limit error.
+                println!("got rate limited: {}", e);
+            } else if e.contains("too large") {
+                // The file is too big for us to get it's contents through this API.
+                // The error suggests we use the Git Data API but we need the file sha for
+                // that.
+                // Get all the items in the directory and try to find our file and get the sha
+                // for it so we can update it.
+                let mut p = PathBuf::from(&file_path);
+                p.pop();
 
-                        for item in repo.content().iter(path.to_str().unwrap(), branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
-                            if file_path.trim_start_matches('/') != item.path {
-                                // Continue early.
-                                continue;
-                            }
-
-                            // Otherwise, this is our file.
-                            // We have the sha we can see if the files match using the
-                            // Git Data API.
-                            let blob = repo.git().blob(&item.sha).await.unwrap();
-                            // Base64 decode the contents.
-                            // TODO: move this logic to hubcaps.
-                            let v = blob.content.replace("\n", "");
-                            let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
-                            return (decoded.trim(), item.sha.to_string());
-                        }
+                for item in github
+                    .repos()
+                    .get_all_content(owner, repo, p.to_str().unwrap(), branch)
+                    .await
+                    .unwrap()
+                {
+                    if file_path.trim_start_matches('/') != item.path {
+                        // Continue early.
+                        continue;
                     }
 
-                    println!("[github content] Getting the file at {} on branch {} failed: {:?}", file_path, branch, e);
+                    // Otherwise, this is our file.
+                    // We have the sha we can see if the files match using the
+                    // Git Data API.
+                    let blob = github.git().get_blob(owner, repo, &item.sha).await.unwrap();
+                    // Base64 decode the contents.
+
+                    return (decode_base64(&blob.content), item.sha.to_string());
                 }
-                _ => {
-                    println!("[github content] Getting the file at {} on branch {} failed: {:?}", file_path, branch, e);
-                }
+
+                println!(
+                    "[github content] Getting the file at {} on branch {} failed: {:?}",
+                    file_path, branch, e
+                );
+            } else {
+                println!(
+                    "[github content] Getting the file at {} on branch {} failed: {:?}",
+                    file_path, branch, e
+                );
             }
         }
     }
@@ -116,7 +130,14 @@ pub async fn get_file_content_from_repo(repo: &Repository, branch: &str, path: &
 /// Create or update a file in a GitHub repository.
 /// If the file does not exist, it will be created.
 /// If the file exists, it will be updated _only if_ the content of the file has changed.
-pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &str, path: &str, new_content: Vec<u8>) {
+pub async fn create_or_update_file_in_github_repo(
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    branch: &str,
+    path: &str,
+    new_content: Vec<u8>,
+) {
     let content = new_content.trim();
     // Add the starting "/" so this works.
     // TODO: figure out why it doesn't work without it.
@@ -126,13 +147,17 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
     }
 
     // Try to get the content for the file from the repo.
-    let (existing_content, sha) = get_file_content_from_repo(repo, branch, path).await;
+    let (existing_content, sha) =
+        get_file_content_from_repo(github, owner, repo, branch, path).await;
 
     if !existing_content.is_empty() || !sha.is_empty() {
         if content == existing_content {
             // They are the same so we can return early, we do not need to update the
             // file.
-            println!("[github content] File contents at {} are the same, no update needed", file_path);
+            println!(
+                "[github content] File contents at {} are the same, no update needed",
+                file_path
+            );
             return;
         }
 
@@ -142,61 +167,53 @@ pub async fn create_or_update_file_in_github_repo(repo: &Repository, branch: &st
         let diff = diffy::create_patch_bytes(&existing_content, &content);
         let bdiff = diff.to_bytes();
         let str_diff = from_utf8(&bdiff).unwrap_or("");
-        if str_diff.contains("-/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("+/ModDate") && str_diff.contains("-/CreationDate") && str_diff.contains("@@ -5,8 +5,8 @@") {
+        if str_diff.contains("-/ModDate")
+            && str_diff.contains("-/CreationDate")
+            && str_diff.contains("+/ModDate")
+            && str_diff.contains("-/CreationDate")
+            && str_diff.contains("@@ -5,8 +5,8 @@")
+        {
             // The binary contents are the same so we can return early.
             // The only thing that changed was the modified time and creation date.
-            println!("[github content] File contents at {} are the same, no update needed", file_path);
+            println!(
+                "[github content] File contents at {} are the same, no update needed",
+                file_path
+            );
             return;
         }
-
-        // We need to update the file. Ignore failure.
-        match repo
-            .content()
-            .update(
-                &file_path,
-                &content,
-                &format!(
-                    "Updating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
-                    file_path
-                ),
-                &sha,
-                branch,
-            )
-            .await
-        {
-            Ok(_) => (),
-            Err(e) => {
-                println!("[github content] updating file at {} on branch {} failed: {}", file_path, branch, e);
-                return;
-            }
-        }
-
-        println!("[github content] Updated file at {}", file_path);
-        return;
     }
 
-    // Create the file in the repo. Ignore failure.
-    match repo
-        .content()
-        .create(
+    // We need to create or update the file.
+    match github
+        .repos()
+        .create_or_update_file_contents(
+            owner,
+            repo,
             &file_path,
-            &content,
-            &format!(
-                "Creating file content {} programatically\n\nThis is done from the cio repo utils::create_or_update_file function.",
-                file_path
-            ),
-            branch,
+            &octorust::types::ReposCreateUpdateFileContentsRequest {
+                message: format!(
+                    "Updating file content {} programatically\n\nThis is done from the cio repo \
+                     utils::create_or_update_file function.",
+                    file_path
+                ),
+                sha,
+                branch: branch.to_string(),
+                content: base64::encode(content),
+                committer: Default::default(),
+                author: Default::default(),
+            },
         )
         .await
     {
         Ok(_) => (),
         Err(e) => {
-            println!("[github content] creating file at {} on branch {} failed: {}", file_path, branch, e);
+            println!(
+                "[github content] updating file at {} on branch {} failed: {}",
+                file_path, branch, e
+            );
             return;
         }
     }
-
-    println!("[github content] Created file at {}", file_path);
 }
 
 trait SliceExt {
@@ -263,4 +280,10 @@ pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
     }
 
     a.get(0).unwrap().to_string()
+}
+
+pub fn decode_base64(c: &str) -> Vec<u8> {
+    let v = c.replace("\n", "");
+    let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
+    decoded.trim().to_vec()
 }

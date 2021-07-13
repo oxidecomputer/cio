@@ -4,12 +4,18 @@ use airtable_api::Airtable;
 use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::Utc;
-use cloudflare::framework::{async_api::Client as CloudflareClient, auth::Credentials as CloudflareCredentials, Environment, HttpApiClientConfig};
+use cloudflare::framework::{
+    async_api::Client as CloudflareClient, auth::Credentials as CloudflareCredentials, Environment,
+    HttpApiClientConfig,
+};
 use docusign::DocuSign;
 use gusto_api::Gusto;
-use hubcaps::{http_cache::FileBasedCache, Credentials, Github, InstallationTokenGenerator, JWTCredentials};
 use macros::db;
 use mailchimp_api::MailChimp;
+use octorust::{
+    auth::{Credentials, InstallationTokenGenerator, JWTCredentials},
+    http_cache::FileBasedCache,
+};
 use okta::Okta;
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
@@ -147,7 +153,11 @@ impl Company {
         // We need to get the url from the api tokens.
         // Only do this if we have a token and the token is not empty.
         if let Ok(token) = api_tokens::dsl::api_tokens
-            .filter(api_tokens::dsl::auth_company_id.eq(self.id).and(api_tokens::dsl::product.eq("slack".to_lowercase())))
+            .filter(
+                api_tokens::dsl::auth_company_id
+                    .eq(self.id)
+                    .and(api_tokens::dsl::product.eq("slack".to_lowercase())),
+            )
             .first::<APIToken>(&db.conn())
         {
             if !token.endpoint.is_empty() {
@@ -159,9 +169,18 @@ impl Company {
     pub fn get_from_slack_team_id(db: &Database, team_id: &str) -> Self {
         // We need to get the token first with the matching team id.
         let token = api_tokens::dsl::api_tokens
-            .filter(api_tokens::dsl::company_id.eq(team_id.to_string()).and(api_tokens::dsl::product.eq("slack".to_lowercase())))
+            .filter(
+                api_tokens::dsl::company_id
+                    .eq(team_id.to_string())
+                    .and(api_tokens::dsl::product.eq("slack".to_lowercase())),
+            )
             .first::<APIToken>(&db.conn())
-            .unwrap_or_else(|e| panic!("could not find slack api token matching team id {}: {}", team_id, e));
+            .unwrap_or_else(|e| {
+                panic!(
+                    "could not find slack api token matching team id {}: {}",
+                    team_id, e
+                )
+            });
 
         // Now we can get the company.
         Company::get_by_id(db, token.auth_company_id)
@@ -169,7 +188,11 @@ impl Company {
 
     pub fn get_from_github_org(db: &Database, org: &str) -> Self {
         companys::dsl::companys
-            .filter(companys::dsl::github_org.eq(org.to_string()).or(companys::dsl::github_org.eq(org.to_lowercase())))
+            .filter(
+                companys::dsl::github_org
+                    .eq(org.to_string())
+                    .or(companys::dsl::github_org.eq(org.to_lowercase())),
+            )
             .first::<Company>(&db.conn())
             .unwrap_or_else(|e| panic!("could not find company matching github org {}: {}", org, e))
     }
@@ -183,7 +206,11 @@ impl Company {
 
     pub fn get_from_domain(db: &Database, domain: &str) -> Self {
         companys::dsl::companys
-            .filter(companys::dsl::domain.eq(domain.to_string()).or(companys::dsl::gsuite_domain.eq(domain.to_string())))
+            .filter(
+                companys::dsl::domain
+                    .eq(domain.to_string())
+                    .or(companys::dsl::gsuite_domain.eq(domain.to_string())),
+            )
             .first::<Company>(&db.conn())
             .unwrap()
     }
@@ -200,7 +227,12 @@ impl Company {
             email: self.gsuite_subject.to_string(),
             key: self.cloudflare_api_key.to_string(),
         };
-        let api_client = CloudflareClient::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
+        let api_client = CloudflareClient::new(
+            cf_creds,
+            HttpApiClientConfig::default(),
+            Environment::Production,
+        )
+        .unwrap();
         Some(api_client)
     }
 
@@ -224,7 +256,11 @@ impl Company {
 
     /// Authenticate with Airtable.
     pub fn authenticate_airtable(&self, base_id: &str) -> Airtable {
-        Airtable::new(&self.airtable_api_key, base_id, &self.airtable_enterprise_account_id)
+        Airtable::new(
+            &self.airtable_api_key,
+            base_id,
+            &self.airtable_enterprise_account_id,
+        )
     }
 
     /// Authenticate with MailChimp.
@@ -232,7 +268,11 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()) {
             // Initialize the MailChimp client.
-            let mut mailchimp = MailChimp::new_from_env(t.access_token, t.refresh_token.to_string(), t.endpoint.to_string());
+            let mut mailchimp = MailChimp::new_from_env(
+                t.access_token,
+                t.refresh_token.to_string(),
+                t.endpoint.to_string(),
+            );
             // MailChimp does not give you a refresh token so we should never refresh.
             // https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/
             if !t.refresh_token.is_empty() {
@@ -279,7 +319,11 @@ impl Company {
                 .first::<APIToken>(&db.conn())
             {
                 // Initialize the Slack client.
-                let slack = Slack::new_from_env(bot_token.company_id.to_string(), bot_token.access_token, user_token.access_token);
+                let slack = Slack::new_from_env(
+                    bot_token.company_id.to_string(),
+                    bot_token.access_token,
+                    user_token.access_token,
+                );
                 // Slack does not give you refresh tokens.
                 // So we don't need to do any song and dance to refresh.
 
@@ -321,7 +365,12 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "docusign".to_string()) {
             // Initialize the DocuSign client.
-            let mut ds = DocuSign::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string(), t.endpoint.to_string());
+            let mut ds = DocuSign::new_from_env(
+                t.access_token,
+                t.refresh_token,
+                t.company_id.to_string(),
+                t.endpoint.to_string(),
+            );
             let nt = ds.refresh_access_token().await.unwrap();
             t.access_token = nt.access_token.to_string();
             t.expires_in = nt.expires_in as i32;
@@ -343,7 +392,8 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()) {
             // Initialize the Gusto client.
-            let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string());
+            let mut gusto =
+                Gusto::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string());
             let nt = gusto.refresh_access_token().await.unwrap();
             t.access_token = nt.access_token.to_string();
             t.expires_in = nt.expires_in as i32;
@@ -370,7 +420,11 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "tripactions".to_string()) {
             // Initialize the TripActions client.
-            let mut ta = TripActions::new(self.tripactions_client_id.to_string(), self.tripactions_client_secret.to_string(), t.access_token);
+            let mut ta = TripActions::new(
+                self.tripactions_client_id.to_string(),
+                self.tripactions_client_secret.to_string(),
+                t.access_token,
+            );
             let nt = ta.get_access_token().await.unwrap();
             t.access_token = nt.access_token.to_string();
             t.expires_in = nt.expires_in as i32;
@@ -384,7 +438,11 @@ impl Company {
             return ta;
         }
 
-        let mut ta = TripActions::new(self.tripactions_client_id.to_string(), self.tripactions_client_secret.to_string(), "");
+        let mut ta = TripActions::new(
+            self.tripactions_client_id.to_string(),
+            self.tripactions_client_secret.to_string(),
+            "",
+        );
         let t = ta.get_access_token().await.unwrap();
 
         let mut token = NewAPIToken {
@@ -418,7 +476,8 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "quickbooks".to_string()) {
             // Initialize the QuickBooks client.
-            let mut qb = QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
+            let mut qb =
+                QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
             let nt = qb.refresh_access_token().await.unwrap();
             t.access_token = nt.access_token.to_string();
             t.expires_in = nt.expires_in as i32;
@@ -447,7 +506,7 @@ impl Company {
     }
 
     /// Authenticate GitHub with JSON web token credentials, for an application installation.
-    pub fn authenticate_github(&self) -> Github {
+    pub fn authenticate_github(&self) -> octorust::Client {
         // Parse our env variables.
         let app_id_str = env::var("GH_APP_ID").unwrap();
         let app_id = app_id_str.parse::<u64>().unwrap();
@@ -462,11 +521,17 @@ impl Company {
         let jwt = JWTCredentials::new(app_id, key.data).unwrap();
 
         // Create the HTTP cache.
-        let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME").unwrap())));
+        let http_cache = Box::new(FileBasedCache::new(format!(
+            "{}/.cache/github",
+            env::var("HOME").unwrap()
+        )));
 
-        let token_generator = InstallationTokenGenerator::new(self.github_app_installation_id.try_into().unwrap(), jwt);
+        let token_generator = InstallationTokenGenerator::new(
+            self.github_app_installation_id.try_into().unwrap(),
+            jwt,
+        );
 
-        Github::custom(
+        octorust::Client::custom(
             "https://api.github.com",
             concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
             Credentials::InstallationToken(token_generator),
@@ -529,7 +594,9 @@ pub async fn get_google_credentials() -> yup_oauth2::ApplicationSecret {
     // Set the Google credential file to the temp path.
     let google_credential_file = file_path.to_str().unwrap().to_string();
 
-    yup_oauth2::read_application_secret(google_credential_file).await.expect("failed to read google credential file")
+    yup_oauth2::read_application_secret(google_credential_file)
+        .await
+        .expect("failed to read google credential file")
 }
 
 pub fn get_google_scopes() -> Vec<String> {
@@ -573,7 +640,10 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
     let secret = get_google_credentials().await;
 
     let mut headers = header::HeaderMap::new();
-    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+    headers.append(
+        header::ACCEPT,
+        header::HeaderValue::from_static("application/json"),
+    );
 
     let params = [
         ("grant_type", "authorization_code"),
@@ -583,18 +653,36 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
         ("client_secret", &secret.client_secret),
     ];
     let client = Client::new();
-    let resp = client.post("https://oauth2.googleapis.com/token").headers(headers).form(&params).send().await.unwrap();
+    let resp = client
+        .post("https://oauth2.googleapis.com/token")
+        .headers(headers)
+        .form(&params)
+        .send()
+        .await
+        .unwrap();
 
     // Unwrap the response.
     let t: ramp_api::AccessToken = resp.json().await.unwrap();
 
     // Let's get the company from information about the user.
     let mut headers = header::HeaderMap::new();
-    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
-    headers.append(header::AUTHORIZATION, header::HeaderValue::from_str(&format!("Bearer {}", t.access_token)).unwrap());
+    headers.append(
+        header::ACCEPT,
+        header::HeaderValue::from_static("application/json"),
+    );
+    headers.append(
+        header::AUTHORIZATION,
+        header::HeaderValue::from_str(&format!("Bearer {}", t.access_token)).unwrap(),
+    );
 
     let params = [("alt", "json")];
-    let resp = client.get("https://www.googleapis.com/oauth2/v1/userinfo").headers(headers).query(&params).send().await.unwrap();
+    let resp = client
+        .get("https://www.googleapis.com/oauth2/v1/userinfo")
+        .headers(headers)
+        .query(&params)
+        .send()
+        .await
+        .unwrap();
 
     // Unwrap the response.
     let metadata: UserInfo = resp.json().await.unwrap();
@@ -631,7 +719,10 @@ pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) -> APIT
     let secret = get_google_credentials().await;
 
     let mut headers = header::HeaderMap::new();
-    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+    headers.append(
+        header::ACCEPT,
+        header::HeaderValue::from_static("application/json"),
+    );
 
     let params = [
         ("grant_type", "refresh_token"),
@@ -640,7 +731,13 @@ pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) -> APIT
         ("client_secret", &secret.client_secret),
     ];
     let client = Client::new();
-    let resp = client.post("https://oauth2.googleapis.com/token").headers(headers).form(&params).send().await.unwrap();
+    let resp = client
+        .post("https://oauth2.googleapis.com/token")
+        .headers(headers)
+        .form(&params)
+        .send()
+        .await
+        .unwrap();
 
     // Unwrap the response.
     let nt: ramp_api::AccessToken = resp.json().await.unwrap();

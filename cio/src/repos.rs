@@ -8,21 +8,19 @@ use diesel::{
     serialize::{self, Output, ToSql},
     sql_types::Jsonb,
 };
-use futures_util::TryStreamExt;
-use hubcaps::{
-    branches::Protection,
-    repositories::{OrgRepoType, OrganizationRepoListOptions, Repo},
-    teams::{Permission, Team},
-    Github,
-};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{airtable::AIRTABLE_GITHUB_REPOS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::github_repos};
+use crate::{
+    airtable::AIRTABLE_GITHUB_REPOS_TABLE, companies::Company, core::UpdateAirtableRecord,
+    db::Database, schema::github_repos,
+};
 
 /// The data type for a GitHub user.
-#[derive(Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize,
+)]
 #[sql_type = "Jsonb"]
 pub struct GitHubUser {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -33,7 +31,11 @@ pub struct GitHubUser {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub username: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub avatar_url: String,
@@ -162,7 +164,11 @@ pub struct NewRepo {
     pub merges_url: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub milestones_url: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub mirror_url: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notifications_url: String,
@@ -231,9 +237,6 @@ impl UpdateAirtableRecord<GithubRepo> for GithubRepo {
 
 impl NewRepo {
     pub fn new(r: Repo, cio_company_id: i32) -> Self {
-        // TODO: get the languages as well
-        // https://docs.rs/hubcaps/0.6.1/hubcaps/repositories/struct.Repo.html
-
         let mut homepage = String::new();
         if r.homepage.is_some() {
             homepage = r.homepage.unwrap();
@@ -318,9 +321,15 @@ impl NewRepo {
             has_pages: r.has_pages,
             has_downloads: r.has_downloads,
             archived: r.archived,
-            pushed_at: DateTime::parse_from_rfc3339(&r.pushed_at).unwrap().with_timezone(&Utc),
-            created_at: DateTime::parse_from_rfc3339(&r.created_at).unwrap().with_timezone(&Utc),
-            updated_at: DateTime::parse_from_rfc3339(&r.updated_at).unwrap().with_timezone(&Utc),
+            pushed_at: DateTime::parse_from_rfc3339(&r.pushed_at)
+                .unwrap()
+                .with_timezone(&Utc),
+            created_at: DateTime::parse_from_rfc3339(&r.created_at)
+                .unwrap()
+                .with_timezone(&Utc),
+            updated_at: DateTime::parse_from_rfc3339(&r.updated_at)
+                .unwrap()
+                .with_timezone(&Utc),
             cio_company_id,
         }
     }
@@ -329,9 +338,13 @@ impl NewRepo {
 /// List all the GitHub repositories for our org.
 pub async fn list_all_github_repos(github: &Github, company: &Company) -> Vec<NewRepo> {
     let github_repos = github
-        .org_repos(&company.github_org)
-        .iter(&OrganizationRepoListOptions::builder().per_page(100).repo_type(OrgRepoType::All).build())
-        .try_collect::<Vec<hubcaps::repositories::Repo>>()
+        .repos()
+        .list_all_for_org(
+            &company.github_org,
+            octorust::types::ReposListOrgType::All,
+            octorust::types::ReposListOrgSort::Created,
+            octorust::types::Direction::Desc,
+        )
         .await
         .unwrap();
 
@@ -402,22 +415,12 @@ pub mod deserialize_null_string {
  * - Adds protection to the default branch to disallow force pushes.
  * - Adds outside collaborators to their specified repositories.
  */
-pub async fn sync_repo_settings(db: &Database, github: &Github, company: &Company) {
+pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, company: &Company) {
     let repos = GithubRepos::get_from_db(db, company.id);
 
     // Set the array of default teams to add to the repo.
     // TODO: do not hard code these.
     let default_teams = vec!["all", "eng"];
-    let mut default_team_ids: BTreeMap<u64, String> = Default::default();
-
-    // Get the ids for the teams.
-    let teams = github.org(&company.github_org).teams().list().await.unwrap();
-    // Add the team to the ids if it is a match.
-    for team in teams {
-        if default_teams.contains(&team.name.as_str()) {
-            default_team_ids.insert(team.id, team.name);
-        }
-    }
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {
@@ -431,16 +434,42 @@ pub async fn sync_repo_settings(db: &Database, github: &Github, company: &Compan
             continue;
         }
 
-        // Get the repository object.
-        let repo = github.repo(&company.github_org, r.name.to_string());
-
         // Get the branch protection for the repo.
-        let mut default_branch = hubcaps::branches::Branch {
-            name: "".to_string(),
-            protected: None,
-            protection_url: None,
+        let mut default_branch = octorust::types::BranchWithProtection {
+            name: Default::default(),
+            pattern: Default::default(),
+            protected: Default::default(),
+            protection_url: Default::default(),
+            required_approving_review_count: Default::default(),
+            links: octorust::types::BranchWithProtectionLinks {
+                html: Default::default(),
+                self_: Default::default(),
+            },
+            tree: octorust::types::Tree {
+                sha: Default::default(),
+                url: Default::default(),
+            },
+            protection: octorust::types::BranchProtection {
+                allow_deletions: Default::default(),
+                allow_force_pushes: Default::default(),
+                enabled: Default::default(),
+                enforce_admins: Default::default(),
+                name: Default::default(),
+                protection_url: Default::default(),
+                required_conversation_resolution: Default::default(),
+                required_linear_history: Default::default(),
+                required_pull_request_reviews: Default::default(),
+                required_signatures: Default::default(),
+                required_status_checks: Default::default(),
+                restrictions: Default::default(),
+                url: Default::default(),
+            },
         };
-        match repo.branches().get(r.default_branch.to_string()).await {
+        match github
+            .repos()
+            .get_branch(&company.github_org, &r.name, &r.default_branch)
+            .await
+        {
             Ok(d) => default_branch = d,
             Err(e) => {
                 if !e.to_string().contains("empty repository") {
@@ -453,15 +482,34 @@ pub async fn sync_repo_settings(db: &Database, github: &Github, company: &Compan
         // Only do this if it is not already protected.
         let is_protected = default_branch.protected.unwrap_or(false);
         if !is_protected {
-            match repo
-                .branches()
-                .protection(
-                    r.default_branch.to_string(),
-                    &Protection {
-                        required_status_checks: None,
+            match github
+                .repos()
+                .get_branch(
+                    &company.github_org,
+                    &r.name,
+                    &r.default_branch,
+                    &octorust::types::ReposUpdateBranchProtectionRequest {
+                        allow_deletions: None,
+                        allow_force_pushes: None,
                         enforce_admins: true,
-                        required_pull_request_reviews: None,
-                        restrictions: None,
+                        required_conversation_resolution: None,
+                        required_pull_request_reviews:
+                            octorust::types::ReposUpdateBranchProtectionRequestRequiredPullReviews {
+                                dismiss_stale_reviews: None,
+                                dismissal_restrictions: None,
+                                require_code_owner_reviews: None,
+                                required_approving_review_count: None,
+                            },
+                        required_status_checks:
+                            octorust::ReposUpdateBranchProtectionRequestRequiredStatusChecks {
+                                contexts: Default::default(),
+                                strict: Default::default(),
+                            },
+                        restrictions: octorust::types::Restrictions {
+                            apps: Default::default(),
+                            teams: Default::default(),
+                            users: Default::default(),
+                        },
                     },
                 )
                 .await
@@ -486,31 +534,53 @@ pub async fn sync_repo_settings(db: &Database, github: &Github, company: &Compan
             }
         }
         // Create the BTreeMap of teams.
-        let mut teams: BTreeMap<u64, Team> = Default::default();
+        let mut teams: BTreeMap<String, Team> = Default::default();
         for t in ts {
-            teams.insert(t.id, t);
+            teams.insert(t.name, t);
         }
 
         // For each team id, add the team to the permissions.
-        for (team_id, team_name) in &default_team_ids {
-            let perms = Permission::Push;
+        for team_name in &default_team {
+            let perms = octorust::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
 
             // Check if the team already has the permission.
             if let Some(val) = teams.get(team_id) {
-                if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin" {
+                if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin"
+                {
                     // Continue since they already have permission.
-                    println!("team {} already has push access to {}/{}", team_name, company.github_org, r.name);
+                    println!(
+                        "team {} already has push access to {}/{}",
+                        team_name, company.github_org, r.name
+                    );
 
                     continue;
                 }
             }
 
-            match github.org(&company.github_org).teams().add_repo_permission(*team_id, r.name.to_string(), perms).await {
+            match github
+                .teams()
+                .add_or_update_repo_permissions_in_org(
+                    &company.github_org,
+                    &team_name,
+                    &company.github_org,
+                    &r.name,
+                    &octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequest {
+                        permission: Some(perms),
+                    },
+                )
+                .await
+            {
                 Ok(_) => (),
-                Err(e) => println!("adding repo permission for team {} in repo {} failed: {}", team_name, r.name, e),
+                Err(e) => println!(
+                    "adding repo permission for team {} in repo {} failed: {}",
+                    team_name, r.name, e
+                ),
             }
 
-            println!("gave team {} push access to {}/{}", team_name, company.github_org, r.name);
+            println!(
+                "gave team {} push access to {}/{}",
+                team_name, company.github_org, r.name
+            );
         }
     }
 }
@@ -536,7 +606,9 @@ mod tests {
             sync_repo_settings(&db, &github, &company).await;
             refresh_db_github_repos(&db, &github, &company).await;
 
-            GithubRepos::get_from_db(&db, company.id).update_airtable(&db).await;
+            GithubRepos::get_from_db(&db, company.id)
+                .update_airtable(&db)
+                .await;
         }
     }
 }
