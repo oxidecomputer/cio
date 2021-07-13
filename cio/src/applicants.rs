@@ -1900,55 +1900,12 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         &self,
         db: &Database,
         github: &octorust::Client,
-        configs_issues: &[octorust::types::Issue],
+        configs_issues: &Vec<octorust::types::IssueSimple>,
     ) {
         let company = self.company(db);
 
         let owner = &company.github_org;
         let repo = "configs";
-
-        // Check if we already have an issue for this user.
-        let issue = check_if_github_issue_exists(configs_issues, &self.name);
-
-        // Check if their status is not onboarding, we only care about onboarding applicants.
-        if self.status != crate::applicant_status::Status::Onboarding.to_string() {
-            // If the issue exists and is opened, we need to close it.
-            if let Some(i) = issue {
-                if i.state != "open" {
-                    // We only care if the issue is still opened.
-                    return;
-                }
-
-                // Comment on the issue that this person is now set to a different status and we no
-                // longer need the issue.
-                repo.issue(i.number)
-                    .comments()
-                    .create(&CommentOptions {
-                        body: format!(
-                            "Closing issue automatically since the applicant is now status: `{}`
-Notes:
-> {}",
-                            self.status, self.raw_status
-                        ),
-                    })
-                    .await
-                    .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
-
-                // Close the issue.
-                repo.issue(i.number)
-                    .close()
-                    .await
-                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
-            }
-
-            // Return early.
-            return;
-        }
-
-        // If we don't have a start date, return early.
-        if self.start_date.is_none() {
-            return;
-        }
 
         let split = self.name.splitn(2, ' ');
         let parts: Vec<&str> = split.collect();
@@ -1969,9 +1926,8 @@ Notes:
         // Make sure it's lowercase.
         username = username.to_lowercase();
 
-        // Create an issue for the applicant.
-        let title = format!("Onboarding: {}", self.name);
         let labels = vec!["hiring".to_string()];
+        let title = format!("Onboarding: {}", self.name);
         let body = format!(
             r#"- [ ] Add to users.toml
 - [ ] Add to matrix chat
@@ -2023,20 +1979,73 @@ manager = ''
             self.github.replace('@', ""),
         );
 
+        // Check if we already have an issue for this user.
+        let issue = check_if_github_issue_exists(configs_issues, &self.name);
+
+        // Check if their status is not onboarding, we only care about onboarding applicants.
+        if self.status != crate::applicant_status::Status::Onboarding.to_string() {
+            // If the issue exists and is opened, we need to close it.
+            if let Some(i) = issue {
+                if i.state != "open" {
+                    // We only care if the issue is still opened.
+                    return;
+                }
+
+                // Comment on the issue that this person is now set to a different status and we no
+                // longer need the issue.
+                github
+                    .issues()
+                    .create_comment(
+                        owner,
+                        repo,
+                        i.number,
+                        &octorust::types::IssuesUpdateCommentRequest {
+                            body: format!(
+                                "Closing issue automatically since the applicant is now status: \
+                                 `{}`
+Notes:
+> {}",
+                                self.status, self.raw_status
+                            ),
+                        },
+                    )
+                    .await
+                    .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
+
+                // Close the issue.
+                github
+                    .issues()
+                    .update(
+                        owner,
+                        repo,
+                        i.number,
+                        &octorust::types::IssuesUpdateRequest {
+                            title,
+                            body: Default::default(),
+                            assignee: "jessfraz".to_string(),
+                            assignees: Default::default(),
+                            labels: labels,
+                            milestone: Default::default(),
+                            state: Some(octorust::types::IssuesUpdateRequestState::Closed),
+                        },
+                    )
+                    .await
+                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
+            }
+
+            // Return early.
+            return;
+        }
+
+        // If we don't have a start date, return early.
+        if self.start_date.is_none() {
+            return;
+        }
+
+        // Create an issue for the applicant.
         if let Some(i) = issue {
             if i.state != "open" {
                 // Make sure the issue is in the state of "open".
-                repo.issue(i.number)
-                    .open()
-                    .await
-                    .unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
-            }
-
-            // If the issue does not have any check marks.
-            // Update it.
-            let checkmark = "[x]".to_string();
-            let old_body = i.clone().body.unwrap_or_default();
-            if !old_body.contains(&checkmark) {
                 github
                     .issues()
                     .update(
@@ -2047,13 +2056,38 @@ manager = ''
                             title,
                             body: body.to_string(),
                             assignee: "jessfraz".to_string(),
-                            labels,
+                            assignees: Default::default(),
+                            labels: labels,
                             milestone: Default::default(),
-                            state: Default::default(),
+                            state: Some(octorust::types::IssuesUpdateRequestState::Open),
                         },
                     )
                     .await
-                    .unwrap_or_else(|e| panic!("could not edit issue {}: {}", i.number, e));
+                    .unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
+            } else {
+                // If the issue does not have any check marks.
+                // Update it.
+                let checkmark = "[x]".to_string();
+                if !i.body.contains(&checkmark) {
+                    github
+                        .issues()
+                        .update(
+                            owner,
+                            repo,
+                            i.number,
+                            &octorust::types::IssuesUpdateRequest {
+                                title,
+                                body: body.to_string(),
+                                assignee: "jessfraz".to_string(),
+                                assignees: Default::default(),
+                                labels: labels,
+                                milestone: Default::default(),
+                                state: Some(octorust::types::IssuesUpdateRequestState::Open),
+                            },
+                        )
+                        .await
+                        .unwrap_or_else(|e| panic!("could not edit issue {}: {}", i.number, e));
+                }
             }
 
             // Return early we don't want to update the issue because it will overwrite
@@ -2064,14 +2098,18 @@ manager = ''
         // Create the issue.
         github
             .issues()
-            .create(&octorust::types::IssuesCreateRequest {
-                title,
-                body,
-                assignee: "jessfraz".to_string(),
-                labels,
-                milestone: Default::default(),
-                state: Default::default(),
-            })
+            .create(
+                owner,
+                repo,
+                &octorust::types::IssuesCreateRequest {
+                    title,
+                    body,
+                    assignee: "jessfraz".to_string(),
+                    assignees: Default::default(),
+                    labels: labels,
+                    milestone: Default::default(),
+                },
+            )
             .await
             .unwrap();
 
@@ -2643,7 +2681,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
             "configs",
             // milestone
             "",
-            octorust::IssuesListState::All,
+            octorust::types::IssuesListState::All,
             // assignee
             "",
             // creator
@@ -2653,6 +2691,8 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
             // labels
             "hiring",
             // sort
+            Default::default(),
+            // direction
             Default::default(),
             // since
             None,
@@ -3307,7 +3347,7 @@ impl Applicant {
         db: &Database,
         drive_client: &GoogleDrive,
         github: &octorust::Client,
-        configs_issues: &[octorust::types::Issue],
+        configs_issues: &Vec<octorust::types::IssueSimple>,
     ) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {

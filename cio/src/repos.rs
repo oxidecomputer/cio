@@ -410,53 +410,15 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
         }
 
         // Get the branch protection for the repo.
-        let mut default_branch = octorust::types::BranchWithProtection {
-            name: Default::default(),
-            pattern: Default::default(),
-            protected: Default::default(),
-            protection_url: Default::default(),
-            required_approving_review_count: Default::default(),
-            links: octorust::types::BranchWithProtectionLinks {
-                html: Default::default(),
-                self_: Default::default(),
-            },
-            commit: octorust::types::CommitDataType {
-                sha: Default::default(),
-                url: Default::default(),
-            },
-            protection: octorust::types::BranchProtection {
-                allow_deletions: Default::default(),
-                allow_force_pushes: Default::default(),
-                enabled: Default::default(),
-                enforce_admins: Default::default(),
-                name: Default::default(),
-                protection_url: Default::default(),
-                required_conversation_resolution: Default::default(),
-                required_linear_history: Default::default(),
-                required_pull_request_reviews: Default::default(),
-                required_signatures: Default::default(),
-                required_status_checks: Default::default(),
-                restrictions: Default::default(),
-                url: Default::default(),
-            },
-        };
-        match github
+        if let Ok(default_branch) = github
             .repos()
             .get_branch(&company.github_org, &r.name, &r.default_branch)
             .await
         {
-            Ok(d) => default_branch = d,
-            Err(e) => {
-                if !e.to_string().contains("empty repository") {
-                    println!("could not default branch for repo {}: {}", r.name, e);
-                }
-            }
-        }
-
-        // Add branch protection to disallow force pushing to the default branch.
-        // Only do this if it is not already protected.
-        if !default_branch.protected {
-            match github
+            // Add branch protection to disallow force pushing to the default branch.
+            // Only do this if it is not already protected.
+            if !default_branch.protected {
+                match github
                 .repos()
                 .update_branch_protection(
                     &company.github_org,
@@ -496,6 +458,9 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
                     }
                 }
             }
+            }
+        } else {
+            println!("could not get default branch for repo {}", r.name);
         }
 
         // Get this repository's teams.
