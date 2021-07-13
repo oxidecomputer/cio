@@ -1210,7 +1210,7 @@ pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config
         let decoded = from_utf8(&contents.content).unwrap().trim().to_string();
 
         // Append the body of the file to the rest of the contents.
-        file_contents.push_str("\n");
+        file_contents.push('\n');
         file_contents.push_str(&decoded);
     }
 

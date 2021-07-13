@@ -812,7 +812,7 @@ mod tests {
         <object type="image/svg+xml" data="thing.svg">
         <a href="\#things" \>"#;
 
-        let cleaned = clean_rfd_html_links(&content, "0032");
+        let cleaned = clean_rfd_html_links(content, "0032");
 
         let expected = r#"https://rfd.shared.oxide.computer/rfd/0003
         https://rfd.shared.oxide.computer/rfd/0041
@@ -836,7 +836,7 @@ authors: things, joe
 dsfsdf
 sdf
 authors: nope"#;
-        let mut authors = NewRFD::get_authors(&content, true);
+        let mut authors = NewRFD::get_authors(content, true);
         let mut expected = "things, joe".to_string();
         assert_eq!(expected, authors);
 
@@ -846,7 +846,7 @@ things, joe
 dsfsdf
 sdf
 :authors: nope"#;
-        authors = NewRFD::get_authors(&content, true);
+        authors = NewRFD::get_authors(content, true);
         assert_eq!(expected, authors);
 
         content = r#"sdfsdf
@@ -855,7 +855,7 @@ things <things@email.com>, joe <joe@email.com>
 dsfsdf
 sdf
 authors: nope"#;
-        authors = NewRFD::get_authors(&content, false);
+        authors = NewRFD::get_authors(content, false);
         expected = r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
 
@@ -865,7 +865,7 @@ authors: nope"#;
 {authors}
 dsfsdf
 sdf"#;
-        authors = NewRFD::get_authors(&content, false);
+        authors = NewRFD::get_authors(content, false);
         expected = r#"Jess <jess@thing.com>"#.to_string();
         assert_eq!(expected, authors);
     }
@@ -878,7 +878,7 @@ state: discussion
 dsfsdf
 sdf
 authors: nope"#;
-        let mut state = NewRFD::get_state(&content);
+        let mut state = NewRFD::get_state(content);
         let mut expected = "discussion".to_string();
         assert_eq!(expected, state);
 
@@ -888,7 +888,7 @@ authors: nope"#;
 dsfsdf
 sdf
 :state: nope"#;
-        state = NewRFD::get_state(&content);
+        state = NewRFD::get_state(content);
         expected = "prediscussion".to_string();
         assert_eq!(expected, state);
     }
@@ -901,7 +901,7 @@ discussion: https://github.com/oxidecomputer/rfd/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
-        let mut discussion = NewRFD::get_discussion(&content);
+        let mut discussion = NewRFD::get_discussion(content);
         let expected = "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
         assert_eq!(expected, discussion);
 
@@ -911,7 +911,7 @@ authors: nope"#;
 dsfsdf
 sdf
 :discussion: nope"#;
-        discussion = NewRFD::get_discussion(&content);
+        discussion = NewRFD::get_discussion(content);
         assert_eq!(expected, discussion);
     }
 
@@ -924,7 +924,7 @@ discussion:   https://github.com/oxidecomputer/rfd/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
-        let mut result = update_discussion_link(&content, &link, true);
+        let mut result = update_discussion_link(content, link, true);
         let mut expected = r#"sdfsdf
 sdfsdf
 discussion: https://github.com/oxidecomputer/rfd/pulls/2019
@@ -940,7 +940,7 @@ discussion: fgsdfg
 dsfsdf
 sdf
 :discussion: nope"#;
-        result = update_discussion_link(&content, &link, false);
+        result = update_discussion_link(content, link, false);
         expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
@@ -957,7 +957,7 @@ discussion: fgsdfg
 dsfsdf
 sdf
 :discussion: nope"#;
-        result = update_discussion_link(&content, &link, false);
+        result = update_discussion_link(content, link, false);
         expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
@@ -977,7 +977,7 @@ state:   sdfsdfsdf
 dsfsdf
 sdf
 authors: nope"#;
-        let mut result = update_state(&content, &state, true);
+        let mut result = update_state(content, state, true);
         let mut expected = r#"sdfsdf
 sdfsdf
 state: discussion
@@ -993,7 +993,7 @@ state: fgsdfg
 dsfsdf
 sdf
 :state: nope"#;
-        result = update_state(&content, &state, false);
+        result = update_state(content, state, false);
         expected = r#"sdfsdf
 = sdfgsd
 state: fgsdfg
@@ -1010,7 +1010,7 @@ state: fgsdfg
 dsfsdf
 sdf
 :state: nope"#;
-        result = update_state(&content, &state, false);
+        result = update_state(content, state, false);
         expected = r#"sdfsdf
 = sdfgsd
 state: fgsdfg
@@ -1030,7 +1030,7 @@ title: https://github.com/oxidecomputer/rfd/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
-        let mut title = NewRFD::get_title(&content);
+        let mut title = NewRFD::get_title(content);
         let expected = "Identity and Access Management (IAM)".to_string();
         assert_eq!(expected, title);
 
@@ -1041,7 +1041,7 @@ dsfsdf
 = RFD 53 Bye
 sdf
 :title: nope"#;
-        title = NewRFD::get_title(&content);
+        title = NewRFD::get_title(content);
         assert_eq!(expected, title);
 
         // Add a test to show what happens for rfd 31 where there is no "RFD" in
@@ -1052,7 +1052,7 @@ sdf
 dsfsdf
 sdf
 :title: nope"#;
-        title = NewRFD::get_title(&content);
+        title = NewRFD::get_title(content);
         assert_eq!(expected, title);
     }
 }
