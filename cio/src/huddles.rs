@@ -21,7 +21,11 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
     let configs = get_configs_from_repo(&github, company).await;
 
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(
+        &company.gsuite_account_id,
+        &company.gsuite_domain,
+        token.clone(),
+    );
 
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
@@ -29,7 +33,10 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
         let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
-        let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
+        let records: Vec<Record<Meeting>> = airtable
+            .list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![])
+            .await
+            .unwrap();
 
         // Iterate over the airtable records and update the meeting notes where we have notes.
         for mut record in records {
@@ -39,7 +46,10 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
             }
 
             // Get the event from Google Calendar.
-            if let Ok(event) = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await {
+            if let Ok(event) = gsuite
+                .get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id)
+                .await
+            {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
                     // Set the airtable record to cancelled.
@@ -56,15 +66,24 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
                 record.fields.week = "".to_string();
 
                 // Update the Airtable
-                airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await.unwrap();
+                airtable
+                    .update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()])
+                    .await
+                    .unwrap();
 
                 // Get the discussion topics for the meeting.
                 let mut discussion_topics = String::new();
                 for id in &record.fields.proposed_discussion {
                     // Get the topic from Airtable.
-                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id).await.unwrap();
+                    let topic: Record<DiscussionTopic> = airtable
+                        .get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id)
+                        .await
+                        .unwrap();
 
-                    discussion_topics = format!("{}\n- {} from {}", discussion_topics, topic.fields.topic, topic.fields.submitter.name);
+                    discussion_topics = format!(
+                        "{}\n- {} from {}",
+                        discussion_topics, topic.fields.topic, topic.fields.submitter.name
+                    );
                 }
                 discussion_topics = discussion_topics.trim().to_string();
                 if !discussion_topics.is_empty() {
@@ -75,9 +94,8 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
                 let description = format!(
                     "This is the event for {} huddles.
 
-You can submit topics at: https://{}-huddle-form.corp.{}
-
-The Airtable workspace lives at: https://{}-huddle.corp.{}
+You can submit topics at: https://{}-huddle-form.corp.{}The \
+                     Airtable workspace lives at: https://{}-huddle.corp.{}
 
 {}",
                     slug.replace('-', " "),
@@ -90,9 +108,16 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
 
                 if event.recurring_event_id != event.id {
                     // Update the calendar event with the new description.
-                    let g_owner = GSuite::new(&event.organizer.email, &company.gsuite_domain, token.clone());
+                    let g_owner = GSuite::new(
+                        &event.organizer.email,
+                        &company.gsuite_domain,
+                        token.clone(),
+                    );
                     // Get the event under the right user.
-                    if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
+                    if let Ok(mut event) = g_owner
+                        .get_calendar_event(&event.organizer.email, &event.id)
+                        .await
+                    {
                         // Modify the properties of the event so we can update it.
                         event.description = description.trim().to_string();
                         if !event.recurring_event_id.is_empty() {
@@ -101,14 +126,26 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                             event.recurrence = vec![];
                         }
 
-                        match g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await {
+                        match g_owner
+                            .update_calendar_event(&event.organizer.email, &event.id, &event)
+                            .await
+                        {
                             Ok(_) => (),
-                            Err(err) => println!("could not update event description {}: {}", serde_json::to_string_pretty(&json!(event)).unwrap().to_string(), err),
+                            Err(err) => println!(
+                                "could not update event description {}: {}",
+                                serde_json::to_string_pretty(&json!(event))
+                                    .unwrap()
+                                    .to_string(),
+                                err
+                            ),
                         }
                     }
                 }
 
-                println!("updated {} huddle meeting {} in Airtable", slug, pacific_time);
+                println!(
+                    "updated {} huddle meeting {} in Airtable",
+                    slug, pacific_time
+                );
             }
         }
     }
@@ -119,7 +156,11 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
     let configs = get_configs_from_repo(&github, company).await;
 
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(
+        &company.gsuite_account_id,
+        &company.gsuite_domain,
+        token.clone(),
+    );
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -133,7 +174,10 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
         let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
-        let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
+        let records: Vec<Record<Meeting>> = airtable
+            .list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![])
+            .await
+            .unwrap();
 
         // Iterate over the airtable records and update the meeting notes where we have notes.
         for record in records {
@@ -143,7 +187,10 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
             }
 
             // Get the event from Google Calendar.
-            if let Ok(event) = gsuite.get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id).await {
+            if let Ok(event) = gsuite
+                .get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id)
+                .await
+            {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
                     // The event was cancelled we want to just continue on our way.
@@ -178,9 +225,16 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
 
                         if event.recurring_event_id != event.id {
                             // We need to impersonate the event owner.
-                            let g_owner = GSuite::new(&event.organizer.email, &company.gsuite_domain, token.clone());
+                            let g_owner = GSuite::new(
+                                &event.organizer.email,
+                                &company.gsuite_domain,
+                                token.clone(),
+                            );
                             // Get the event under the right user.
-                            let mut event = g_owner.get_calendar_event(&event.organizer.email, &event.id).await.unwrap();
+                            let mut event = g_owner
+                                .get_calendar_event(&event.organizer.email, &event.id)
+                                .await
+                                .unwrap();
                             // We need to update the event instance, not delete it, and set the status to
                             // cancelled.
                             // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
@@ -191,9 +245,13 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                                 event.recurrence = vec![];
                             }
 
-                            g_owner.update_calendar_event(&event.organizer.email, &event.id, &event).await.unwrap();
+                            g_owner
+                                .update_calendar_event(&event.organizer.email, &event.id, &event)
+                                .await
+                                .unwrap();
                             println!(
-                                "Cancelled calendar event for {} {} since within {} hours, owner {}",
+                                "Cancelled calendar event for {} {} since within {} hours, owner \
+                                 {}",
                                 slug, date, huddle.time_to_cancel, event.organizer.email
                             );
                         }
@@ -204,7 +262,10 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                         r.fields.name = "".to_string();
                         r.fields.week = "".to_string();
                         r.fields.cancelled = true;
-                        airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
+                        airtable
+                            .update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()])
+                            .await
+                            .unwrap();
 
                         // Continue through our loop.
                         continue;
@@ -226,7 +287,10 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                 // Get the discussion topics for the meeting.
                 for id in &record.fields.proposed_discussion {
                     // Get the topic from Airtable.
-                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id).await.unwrap();
+                    let topic: Record<DiscussionTopic> = airtable
+                        .get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id)
+                        .await
+                        .unwrap();
                     // Add it to our list for the email.
                     email_data.topics.push(topic.fields);
                 }
@@ -237,7 +301,9 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                 // Initialize handlebars.
                 let handlebars = Handlebars::new();
                 // Render the email template.
-                let template = &handlebars.render_template(EMAIL_TEMPLATE, &email_data).unwrap();
+                let template = &handlebars
+                    .render_template(EMAIL_TEMPLATE, &email_data)
+                    .unwrap();
 
                 // Send the email.
                 // Initialize the SendGrid client.
@@ -254,7 +320,10 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                     )
                     .await;
 
-                println!("successfully sent {} huddle reminder email to {}@{}", slug, huddle.email, company.gsuite_domain);
+                println!(
+                    "successfully sent {} huddle reminder email to {}@{}",
+                    slug, huddle.email, company.gsuite_domain
+                );
 
                 // Update the airtable record to show the email was sent.
                 // Send the updated record to the airtable client.
@@ -263,9 +332,15 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                 // Clear out the fields that are functions since the API cannot take values for those.
                 r.fields.name = "".to_string();
                 r.fields.week = "".to_string();
-                airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()]).await.unwrap();
+                airtable
+                    .update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![r.clone()])
+                    .await
+                    .unwrap();
 
-                println!("updated {} huddle meeting record to show the reminder email was sent", slug);
+                println!(
+                    "updated {} huddle meeting record to show the reminder email was sent",
+                    slug
+                );
             }
         }
     }
@@ -309,16 +384,16 @@ pub async fn sync_huddle_meeting_notes(company: &Company) {
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
 
-    // Get the reports repo client.
-    let reports_repo = github.repo(&company.github_org, "reports");
-
     // Iterate over the huddle meetings.
     for (name, huddle) in configs.huddles {
         // Initialize the Airtable client.
         let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
 
         // Get the meeting schedule table from airtable.
-        let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
+        let records: Vec<Record<Meeting>> = airtable
+            .list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![])
+            .await
+            .unwrap();
 
         // Iterate over the airtable records and update the meeting notes where we have notes.
         for mut record in records {
@@ -327,14 +402,20 @@ pub async fn sync_huddle_meeting_notes(company: &Company) {
                 continue;
             }
 
-            let notes_path = format!("/{}/meetings/{}.txt", name, record.fields.date.format("%Y%m%d"));
+            let notes_path = format!(
+                "/{}/meetings/{}.txt",
+                name,
+                record.fields.date.format("%Y%m%d")
+            );
 
             if record.fields.action_items.is_empty() {
-                record.fields.action_items = "There were no action items as a result of this meeting".to_string();
+                record.fields.action_items =
+                    "There were no action items as a result of this meeting".to_string();
             }
 
             let notes = format!(
-                "# {} Huddle on {}\n\n**Meeting Recording:** {}\n\n## Notes\n\n{}\n\n## Action Items\n\n{}",
+                "# {} Huddle on {}\n\n**Meeting Recording:** {}\n\n## Notes\n\n{}\n\n## Action \
+                 Items\n\n{}",
                 name.replace("-", " ").to_uppercase(),
                 record.fields.date.format(date_format),
                 record.fields.recording,
@@ -343,7 +424,15 @@ pub async fn sync_huddle_meeting_notes(company: &Company) {
             );
 
             // Create or update the file in the repo.
-            create_or_update_file_in_github_repo(&reports_repo, "master", &notes_path, notes.as_bytes().to_vec()).await;
+            create_or_update_file_in_github_repo(
+                &github,
+                &company.github_org,
+                "reports",
+                "",
+                &notes_path,
+                notes.as_bytes().to_vec(),
+            )
+            .await;
         }
     }
 }
@@ -353,7 +442,11 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
     let configs = get_configs_from_repo(&github, company).await;
 
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(
+        &company.gsuite_account_id,
+        &company.gsuite_domain,
+        token.clone(),
+    );
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
@@ -376,12 +469,19 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
             println!("Getting events for calendar: {}", calendar.id);
-            let events = gsuite.list_calendar_events_query(&calendar.id, &huddle.calendar_event_fuzzy_search).await.unwrap();
+            let events = gsuite
+                .list_calendar_events_query(&calendar.id, &huddle.calendar_event_fuzzy_search)
+                .await
+                .unwrap();
 
             // Iterate over all the events, searching for our search string.
             let mut recurring_events: Vec<String> = Vec::new();
             for mut event in events {
-                if !event.summary.to_lowercase().contains(&huddle.calendar_event_fuzzy_search.to_lowercase()) {
+                if !event
+                    .summary
+                    .to_lowercase()
+                    .contains(&huddle.calendar_event_fuzzy_search.to_lowercase())
+                {
                     // This isn't one of the events we are looking for.
                     // Continue early.
                     continue;
@@ -403,7 +503,10 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                 }
 
                 // Get all the recurring events.
-                let instances = gsuite.list_recurring_event_instances(&calendar.id, &event.recurring_event_id).await.unwrap();
+                let instances = gsuite
+                    .list_recurring_event_instances(&calendar.id, &event.recurring_event_id)
+                    .await
+                    .unwrap();
                 for mut instance in instances {
                     // Let's add the event to our HashMap.
                     if instance.start.date_time.is_some() {
@@ -420,11 +523,18 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             }
         }
 
-        println!("found {} events for {}", gcal_events.len(), huddle.calendar_event_fuzzy_search);
+        println!(
+            "found {} events for {}",
+            gcal_events.len(),
+            huddle.calendar_event_fuzzy_search
+        );
 
         // Now let's get the Airtable records.
         let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
-        let records: Vec<Record<Meeting>> = airtable.list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![]).await.unwrap();
+        let records: Vec<Record<Meeting>> = airtable
+            .list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![])
+            .await
+            .unwrap();
 
         // Iterate over the records and try to match to the google calendar ID.
         for mut record in records {
@@ -447,7 +557,9 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
 
                     // Set the link for the recording.
                     for attachment in event.attachments.clone() {
-                        if attachment.mime_type == "video/mp4" && attachment.title.starts_with(&event.summary) {
+                        if attachment.mime_type == "video/mp4"
+                            && attachment.title.starts_with(&event.summary)
+                        {
                             record.fields.recording = attachment.file_url.to_string();
                         }
                     }
@@ -457,7 +569,15 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                     for attendee in event.attendees.clone() {
                         if !attendee.resource && attendee.email.ends_with(&company.gsuite_domain) {
                             // Make sure the person is still a user.
-                            if let Some(user) = User::get_from_db(db, company.id, attendee.email.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
+                            if let Some(user) = User::get_from_db(
+                                db,
+                                company.id,
+                                attendee
+                                    .email
+                                    .trim_end_matches(&company.gsuite_domain)
+                                    .trim_end_matches('@')
+                                    .to_string(),
+                            ) {
                                 attendees.push(user.email);
                             }
                         }
@@ -465,16 +585,26 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                     record.fields.attendees = attendees;
 
                     // Send the updated record to Airtable.
-                    match airtable.update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()]).await {
+                    match airtable
+                        .update_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record.clone()])
+                        .await
+                    {
                         Ok(_) => (),
-                        Err(err) => println!("Error updating record `{}`: {}", json!(record.fields).to_string(), err),
+                        Err(err) => println!(
+                            "Error updating record `{}`: {}",
+                            json!(record.fields).to_string(),
+                            err
+                        ),
                     }
 
                     // Delete it from our hashmap.
                     // We do this so that we only have future dates left over.
                     gcal_events.remove(&record.fields.date);
 
-                    println!("[airtable] huddle {} date={} updated", slug, record.fields.date);
+                    println!(
+                        "[airtable] huddle {} date={} updated",
+                        slug, record.fields.date
+                    );
                 }
                 None => {
                     println!("WARN: no event matches: {}", record.fields.date);
@@ -511,7 +641,10 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                     fields: meeting,
                     created_time: None,
                 };
-                airtable.create_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record]).await.unwrap();
+                airtable
+                    .create_records(AIRTABLE_MEETING_SCHEDULE_TABLE, vec![record])
+                    .await
+                    .unwrap();
             }
         }
     }
@@ -522,7 +655,10 @@ mod tests {
     use crate::{
         companies::Company,
         db::Database,
-        huddles::{send_huddle_reminders, sync_changes_to_google_events, sync_huddle_meeting_notes, sync_huddles},
+        huddles::{
+            send_huddle_reminders, sync_changes_to_google_events, sync_huddle_meeting_notes,
+            sync_huddles,
+        },
     };
 
     #[ignore]

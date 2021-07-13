@@ -243,8 +243,7 @@ impl NewCertificate {
             &r.default_branch,
             &self.get_github_path("fullchain.pem"),
         )
-        .await
-        .unwrap();
+        .await;
         if !cert.is_empty() {
             self.certificate = from_utf8(&cert).unwrap().to_string();
         }
@@ -256,8 +255,7 @@ impl NewCertificate {
             &r.default_branch,
             &self.get_github_path("privkey.pem"),
         )
-        .await
-        .unwrap();
+        .await;
         if !p.is_empty() {
             self.private_key = from_utf8(&p).unwrap().to_string();
         }

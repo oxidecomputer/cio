@@ -15,11 +15,6 @@ use flate2::read::GzDecoder;
 use google_drive::GoogleDrive;
 use google_geocode::Geocode;
 use html2text::from_read;
-use hubcaps::{
-    comments::CommentOptions,
-    issues::{Issue, IssueListOptions, IssueOptions, State},
-    Github,
-};
 use macros::db;
 use pandoc::OutputKind;
 use regex::Regex;
@@ -28,7 +23,9 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
-use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
+use slack_chat_api::{
+    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 use tar::Archive;
 use walkdir::WalkDir;
 
@@ -44,14 +41,17 @@ use crate::{
 };
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
-static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
-static QUESTION_WORK_PROUD_OF: &str = r"W(?s:.*)at work(?s:.*)ave you done that you(?s:.*)particularl(?s:.*)proud o(?s:.*)and why\?";
-static QUESTION_HAPPIEST_CAREER: &str = r"W(?s:.*)en have you been happiest in your professiona(?s:.*)caree(?s:.*)and why\?";
-static QUESTION_UNHAPPIEST_CAREER: &str = r"W(?s:.*)en have you been unhappiest in your professiona(?s:.*)caree(?s:.*)and why\?";
+static QUESTION_TECHNICALLY_CHALLENGING: &str =
+    r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
+static QUESTION_WORK_PROUD_OF: &str =
+    r"W(?s:.*)at work(?s:.*)ave you done that you(?s:.*)particularl(?s:.*)proud o(?s:.*)and why\?";
+static QUESTION_HAPPIEST_CAREER: &str =
+    r"W(?s:.*)en have you been happiest in your professiona(?s:.*)caree(?s:.*)and why\?";
+static QUESTION_UNHAPPIEST_CAREER: &str =
+    r"W(?s:.*)en have you been unhappiest in your professiona(?s:.*)caree(?s:.*)and why\?";
 static QUESTION_VALUE_REFLECTED: &str = r"F(?s:.*)r one of Oxide(?s:.*)s values(?s:.*)describe an example of ho(?s:.*)it wa(?s:.*)reflected(?s:.*)particula(?s:.*)body(?s:.*)you(?s:.*)work\.";
 static QUESTION_VALUE_VIOLATED: &str = r"F(?s:.*)r one of Oxide(?s:.*)s values(?s:.*)describe an example of ho(?s:.*)it wa(?s:.*)violated(?s:.*)you(?s:.*)organization o(?s:.*)work\.";
-static QUESTION_VALUES_IN_TENSION: &str =
-    r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
+static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
 static QUESTION_WHY_OXIDE: &str = r"W(?s:.*)y do you want to work for Oxide\?";
 
 pub static DOCUSIGN_OFFER_TEMPLATE: &str = "Employee Offer Letter (US)";
@@ -246,9 +246,11 @@ impl NewApplicant {
     /// This is what we get back from the webhook.
     pub async fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
         // Fill in the data we know from what we got from the row.
-        let (github, gitlab) = NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
+        let (github, gitlab) =
+            NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
 
-        let interested_in_string = get_value(values, "Which job descriptions are you interested in?");
+        let interested_in_string =
+            get_value(values, "Which job descriptions are you interested in?");
         let split = interested_in_string.trim().split(',');
         let interested_in_str: Vec<&str> = split.collect();
         let mut interested_in: Vec<String> = Default::default();
@@ -271,7 +273,10 @@ impl NewApplicant {
                 longitude = location.lng as f32;
             }
             Err(e) => {
-                println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
+                println!(
+                    "[applicants] could not get lat lng for location `{}`: {}",
+                    location, e
+                );
             }
         }
 
@@ -291,7 +296,10 @@ impl NewApplicant {
             linkedin: get_value(values, "LinkedIn profile URL"),
             portfolio: get_value(values, "Portfolio"),
             website: get_value(values, "Website"),
-            resume: get_value(values, "Submit your resume (or PDF export of LinkedIn profile)"),
+            resume: get_value(
+                values,
+                "Submit your resume (or PDF export of LinkedIn profile)",
+            ),
             materials: get_value(values, "Submit your Oxide candidate materials"),
             status: crate::applicant_status::Status::NeedsToBeTriaged.to_string(),
             raw_status: get_value(values, "Status"),
@@ -362,7 +370,10 @@ impl NewApplicant {
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!("Oxide Computer Company {} Application Received for {}", self.role, self.name),
+                format!(
+                    "Oxide Computer Company {} Application Received for {}",
+                    self.role, self.name
+                ),
                 format!(
                     "Dear {},
 
@@ -503,10 +514,19 @@ The Oxide Team",
 
     /// Parse the applicant from a Google Sheets row, where we also happen to know the columns.
     /// This is how we get the spreadsheet back from the API.
-    pub async fn parse_from_row_with_columns(sheet_name: &str, sheet_id: &str, columns: &ApplicantSheetColumns, row: &[String]) -> Self {
+    pub async fn parse_from_row_with_columns(
+        sheet_name: &str,
+        sheet_id: &str,
+        columns: &ApplicantSheetColumns,
+        row: &[String],
+    ) -> Self {
         // If the length of the row is greater than the status column
         // then we have a status.
-        let raw_status = if row.len() > columns.status { row[columns.status].to_string() } else { "".to_string() };
+        let raw_status = if row.len() > columns.status {
+            row[columns.status].to_string()
+        } else {
+            "".to_string()
+        };
         let mut status = crate::applicant_status::Status::from_str(&raw_status).unwrap_or_default();
 
         let (github, gitlab) = NewApplicant::parse_github_gitlab(&row[columns.github]);
@@ -533,16 +553,17 @@ The Oxide Team",
 
         // If the length of the row is greater than the interested in column
         // then we have an interest.
-        let interested_in_str: Vec<&str> = if row.len() > columns.interested_in && columns.interested_in != 0 {
-            if row[columns.interested_in].trim().is_empty() {
-                vec![]
+        let interested_in_str: Vec<&str> =
+            if row.len() > columns.interested_in && columns.interested_in != 0 {
+                if row[columns.interested_in].trim().is_empty() {
+                    vec![]
+                } else {
+                    let split = row[columns.interested_in].trim().split(',');
+                    split.collect()
+                }
             } else {
-                let split = row[columns.interested_in].trim().split(',');
-                split.collect()
-            }
-        } else {
-            vec![]
-        };
+                vec![]
+            };
         let mut interested_in: Vec<String> = Default::default();
         for s in interested_in_str {
             interested_in.push(s.trim().to_string());
@@ -566,19 +587,21 @@ The Oxide Team",
 
         // If the length of the row is greater than the value_reflected column
         // then we have a value_reflected.
-        let mut value_reflected = if row.len() > columns.value_reflected && columns.value_reflected != 0 {
-            row[columns.value_reflected].trim().to_lowercase()
-        } else {
-            "".to_lowercase()
-        };
+        let mut value_reflected =
+            if row.len() > columns.value_reflected && columns.value_reflected != 0 {
+                row[columns.value_reflected].trim().to_lowercase()
+            } else {
+                "".to_lowercase()
+            };
 
         // If the length of the row is greater than the value_violated column
         // then we have a value_violated.
-        let mut value_violated = if row.len() > columns.value_violated && columns.value_violated != 0 {
-            row[columns.value_violated].trim().to_lowercase()
-        } else {
-            "".to_lowercase()
-        };
+        let mut value_violated =
+            if row.len() > columns.value_violated && columns.value_violated != 0 {
+                row[columns.value_violated].trim().to_lowercase()
+            } else {
+                "".to_lowercase()
+            };
 
         let mut values_in_tension: Vec<String> = Default::default();
         // If the length of the row is greater than the value_in_tension1 column
@@ -595,13 +618,19 @@ The Oxide Team",
 
         // Check if we sent them an email that we received their application.
         let mut sent_email_received = true;
-        if row[columns.sent_email_received].to_lowercase().contains("false") {
+        if row[columns.sent_email_received]
+            .to_lowercase()
+            .contains("false")
+        {
             sent_email_received = false;
         }
 
         // Check if we sent them an email to either reject or follow up.
         let mut sent_email_follow_up = true;
-        if row[columns.sent_email_follow_up].to_lowercase().contains("false") {
+        if row[columns.sent_email_follow_up]
+            .to_lowercase()
+            .contains("false")
+        {
             sent_email_follow_up = false;
         }
 
@@ -711,7 +740,9 @@ The Oxide Team",
             // This status change happens when the docusign offer is signed (so it is not
             // propogated back to the spreadsheet).
             // Therefore, the spreadsheet cannot be used as the source of truth.
-            if a.status == crate::applicant_status::Status::Onboarding.to_string() && status == crate::applicant_status::Status::GivingOffer {
+            if a.status == crate::applicant_status::Status::Onboarding.to_string()
+                && status == crate::applicant_status::Status::GivingOffer
+            {
                 status = crate::applicant_status::Status::Onboarding;
             }
 
@@ -798,7 +829,8 @@ The Oxide Team",
                 criminal_background_check_status = a.criminal_background_check_status.to_string();
             }
             if !a.motor_vehicle_background_check_status.is_empty() {
-                motor_vehicle_background_check_status = a.criminal_background_check_status.to_string();
+                motor_vehicle_background_check_status =
+                    a.criminal_background_check_status.to_string();
             }
 
             // The start date might be set by docusign, in that case we want it to propgate.
@@ -811,12 +843,16 @@ The Oxide Team",
 
         // If we know they have more than 1 interview AND their current status is "next steps",
         // THEN we can mark the applicant as in the "interviewing" state.
-        if interviews.len() > 1 && (status == crate::applicant_status::Status::NextSteps || status == crate::applicant_status::Status::NeedsToBeTriaged) {
+        if interviews.len() > 1
+            && (status == crate::applicant_status::Status::NextSteps
+                || status == crate::applicant_status::Status::NeedsToBeTriaged)
+        {
             status = crate::applicant_status::Status::Interviewing;
         }
         // If their status is "Onboarding" and it is after their start date.
         // Set their status to "Hired".
-        if (status == crate::applicant_status::Status::Onboarding || status == crate::applicant_status::Status::GivingOffer)
+        if (status == crate::applicant_status::Status::Onboarding
+            || status == crate::applicant_status::Status::GivingOffer)
             && start_date.is_some()
             && start_date.unwrap() <= Utc::now().date().naive_utc()
         {
@@ -837,7 +873,10 @@ The Oxide Team",
                     longitude = location.lng as f32;
                 }
                 Err(e) => {
-                    println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
+                    println!(
+                        "[applicants] could not get lat lng for location `{}`: {}",
+                        location, e
+                    );
                 }
             }
         }
@@ -848,7 +887,10 @@ The Oxide Team",
             // Since our length is at least one, we must have at least one interview.
             // Let's query the interviews for this candidate.
             let data = applicant_interviews::dsl::applicant_interviews
-                .filter(applicant_interviews::dsl::applicant.contains(vec![airtable_record_id.to_string()]))
+                .filter(
+                    applicant_interviews::dsl::applicant
+                        .contains(vec![airtable_record_id.to_string()]),
+                )
                 .order_by(applicant_interviews::dsl::start_time.asc())
                 .load::<ApplicantInterview>(&db.conn())
                 .unwrap();
@@ -950,7 +992,9 @@ The Oxide Team",
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
         // Parse the time.
         let time_str = timestamp.to_owned() + " -08:00";
-        DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z").unwrap().with_timezone(&Utc)
+        DateTime::parse_from_str(&time_str, "%m/%d/%Y %H:%M:%S  %:z")
+            .unwrap()
+            .with_timezone(&Utc)
     }
 
     fn parse_github_gitlab(s: &str) -> (String, String) {
@@ -981,7 +1025,14 @@ The Oxide Team",
             if github.contains("https://gitlab.com") {
                 github = "".to_string();
 
-                gitlab = format!("@{}", s.trim().to_lowercase().trim_start_matches("https://gitlab.com/").trim_start_matches('@').trim_end_matches('/'));
+                gitlab = format!(
+                    "@{}",
+                    s.trim()
+                        .to_lowercase()
+                        .trim_start_matches("https://gitlab.com/")
+                        .trim_start_matches('@')
+                        .trim_end_matches('/')
+                );
             }
         }
 
@@ -989,7 +1040,15 @@ The Oxide Team",
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive, sheets_client: &Sheets, sent_email_received_column_index: usize, sent_email_follow_up_index: usize, row_index: usize) {
+    pub async fn expand(
+        &mut self,
+        db: &Database,
+        drive_client: &GoogleDrive,
+        sheets_client: &Sheets,
+        sent_email_received_column_index: usize,
+        sent_email_follow_up_index: usize,
+        row_index: usize,
+    ) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
@@ -997,42 +1056,75 @@ The Oxide Team",
 
             // Mark the column as true not false.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-            let rng = format!("{}{}", colmn.nth(sent_email_received_column_index).unwrap().to_string(), row_index);
+            let rng = format!(
+                "{}{}",
+                colmn
+                    .nth(sent_email_received_column_index)
+                    .unwrap()
+                    .to_string(),
+                row_index
+            );
 
-            sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
+            sheets_client
+                .update_values(&self.sheet_id, &rng, "TRUE".to_string())
+                .await
+                .unwrap();
 
-            println!("[applicant] sent email to {} that we received their application", self.email);
+            println!(
+                "[applicant] sent email to {} that we received their application",
+                self.email
+            );
         }
 
         // Send an email follow up if we should.
         if !self.sent_email_follow_up {
             // Get the right cell to eventually change in the google sheet.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-            let rng = format!("{}{}", colmn.nth(sent_email_follow_up_index).unwrap().to_string(), row_index);
+            let rng = format!(
+                "{}{}",
+                colmn.nth(sent_email_follow_up_index).unwrap().to_string(),
+                row_index
+            );
 
-            let status = crate::applicant_status::Status::from_str(&self.status).unwrap_or_default();
-            if status == crate::applicant_status::Status::Declined || status == crate::applicant_status::Status::Deferred {
+            let status =
+                crate::applicant_status::Status::from_str(&self.status).unwrap_or_default();
+            if status == crate::applicant_status::Status::Declined
+                || status == crate::applicant_status::Status::Deferred
+            {
                 // Check if we have sent the follow up email to them.unwrap_or_default().
                 if self.raw_status.contains("did not do materials") {
                     // Send the email.
-                    self.send_email_rejection_did_not_provide_materials(db).await;
+                    self.send_email_rejection_did_not_provide_materials(db)
+                        .await;
 
-                    println!("[applicant] sent email to {} tell them they did not do the materials", self.email);
+                    println!(
+                        "[applicant] sent email to {} tell them they did not do the materials",
+                        self.email
+                    );
                 } else if self.raw_status.contains("junior") {
                     // Send the email.
                     self.send_email_rejection_junior_but_we_love_you(db).await;
 
-                    println!("[applicant] sent email to {} tell them we can't hire them at this stage", self.email);
+                    println!(
+                        "[applicant] sent email to {} tell them we can't hire them at this stage",
+                        self.email
+                    );
                 } else {
                     // Send the email.
                     self.send_email_rejection_timing(db).await;
 
-                    println!("[applicant] sent email to {} tell them about timing", self.email);
+                    println!(
+                        "[applicant] sent email to {} tell them about timing",
+                        self.email
+                    );
                 }
 
                 // Update the cell in the google sheet so we know we sent the email.
                 // Mark the column as true not false.
-                sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
+                sheets_client
+                    .update_values(&self.sheet_id, &rng, "TRUE".to_string())
+                    .await
+                    .unwrap();
 
                 // Mark the time we sent the email.
                 self.rejection_sent_date_time = Some(Utc::now());
@@ -1044,7 +1136,10 @@ The Oxide Team",
                 // Only when it's not in "NeedsToBeTriaged".
                 // Update the cell in the google sheet so we know we sent the email.
                 // Mark the column as true not false.
-                sheets_client.update_values(&self.sheet_id, &rng, "TRUE".to_string()).await.unwrap();
+                sheets_client
+                    .update_values(&self.sheet_id, &rng, "TRUE".to_string())
+                    .await
+                    .unwrap();
 
                 self.sent_email_follow_up = true;
             }
@@ -1057,7 +1152,8 @@ The Oxide Team",
 
         // If the application is as new as the last week then parse all the contents.
         // This takes a long time so we skip all the others.
-        if (duration_from_now < Duration::days(2) || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
+        if (duration_from_now < Duration::days(2)
+            || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
             && self.status != crate::applicant_status::Status::Declined.to_string()
         {
             // Read the file contents.
@@ -1071,7 +1167,8 @@ The Oxide Team",
     fn parse_materials(&mut self) {
         // Parse the samples and materials.
         let materials_contents = self.materials_contents.clone();
-        let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
+        let mut work_samples =
+            parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
         if work_samples.is_empty() {
             work_samples = parse_question(
                 r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
@@ -1080,16 +1177,32 @@ The Oxide Team",
             );
             if work_samples.is_empty() {
                 // Try to parse work samples for TPM role.
-                work_samples = parse_question(r"What would you have done differently\?", "Exploratory samples", &materials_contents);
+                work_samples = parse_question(
+                    r"What would you have done differently\?",
+                    "Exploratory samples",
+                    &materials_contents,
+                );
 
                 if work_samples.is_empty() {
-                    work_samples = parse_question(r"Some questions(?s:.*)o have in mind as you describe them:", "Exploratory samples", &materials_contents);
+                    work_samples = parse_question(
+                        r"Some questions(?s:.*)o have in mind as you describe them:",
+                        "Exploratory samples",
+                        &materials_contents,
+                    );
 
                     if work_samples.is_empty() {
-                        work_samples = parse_question(r"Work samples", "Exploratory samples", &materials_contents);
+                        work_samples = parse_question(
+                            r"Work samples",
+                            "Exploratory samples",
+                            &materials_contents,
+                        );
 
                         if work_samples.is_empty() {
-                            work_samples = parse_question(r"design sample\(s\)", "Questionnaire", &materials_contents);
+                            work_samples = parse_question(
+                                r"design sample\(s\)",
+                                "Questionnaire",
+                                &materials_contents,
+                            );
                         }
                     }
                 }
@@ -1097,7 +1210,11 @@ The Oxide Team",
         }
         self.work_samples = work_samples;
 
-        let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
+        let mut writing_samples = parse_question(
+            r"Writing sample\(s\)",
+            "Analysis samples",
+            &materials_contents,
+        );
         if writing_samples.is_empty() {
             writing_samples = parse_question(
                 r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
@@ -1105,16 +1222,25 @@ The Oxide Team",
                 &materials_contents,
             );
             if writing_samples.is_empty() {
-                writing_samples = parse_question(r"Writing samples", "Analysis samples", &materials_contents);
+                writing_samples =
+                    parse_question(r"Writing samples", "Analysis samples", &materials_contents);
 
                 if writing_samples.is_empty() {
-                    writing_samples = parse_question(r"Writing sample\(s\)", "Code and/or design sample", &materials_contents);
+                    writing_samples = parse_question(
+                        r"Writing sample\(s\)",
+                        "Code and/or design sample",
+                        &materials_contents,
+                    );
                 }
             }
         }
         self.writing_samples = writing_samples;
 
-        let mut analysis_samples = parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
+        let mut analysis_samples = parse_question(
+            r"Analysis sample\(s\)$",
+            "Presentation samples",
+            &materials_contents,
+        );
         if analysis_samples.is_empty() {
             analysis_samples = parse_question(
                 r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
@@ -1122,12 +1248,20 @@ The Oxide Team",
                 &materials_contents,
             );
             if analysis_samples.is_empty() {
-                analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
+                analysis_samples = parse_question(
+                    r"Analysis samples",
+                    "Presentation samples",
+                    &materials_contents,
+                );
             }
         }
         self.analysis_samples = analysis_samples;
 
-        let mut presentation_samples = parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
+        let mut presentation_samples = parse_question(
+            r"Presentation sample\(s\)",
+            "Questionnaire",
+            &materials_contents,
+        );
         if presentation_samples.is_empty() {
             presentation_samples = parse_question(
                 r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
@@ -1135,12 +1269,20 @@ The Oxide Team",
                 &materials_contents,
             );
             if presentation_samples.is_empty() {
-                presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
+                presentation_samples = parse_question(
+                    r"Presentation samples",
+                    "Questionnaire",
+                    &materials_contents,
+                );
             }
         }
         self.presentation_samples = presentation_samples;
 
-        let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
+        let mut exploratory_samples = parse_question(
+            r"Exploratory sample\(s\)",
+            "Questionnaire",
+            &materials_contents,
+        );
         if exploratory_samples.is_empty() {
             exploratory_samples = parse_question(
                 r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
@@ -1148,25 +1290,60 @@ The Oxide Team",
                 &materials_contents,
             );
             if exploratory_samples.is_empty() {
-                exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
+                exploratory_samples =
+                    parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
             }
         }
         self.exploratory_samples = exploratory_samples;
 
-        self.question_technically_challenging = parse_question(QUESTION_TECHNICALLY_CHALLENGING, QUESTION_WORK_PROUD_OF, &materials_contents);
-        self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
-        self.question_happiest = parse_question(QUESTION_HAPPIEST_CAREER, QUESTION_UNHAPPIEST_CAREER, &materials_contents);
-        self.question_unhappiest = parse_question(QUESTION_UNHAPPIEST_CAREER, QUESTION_VALUE_REFLECTED, &materials_contents);
-        self.question_value_reflected = parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
-        self.question_value_violated = parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
-        self.question_values_in_tension = parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
+        self.question_technically_challenging = parse_question(
+            QUESTION_TECHNICALLY_CHALLENGING,
+            QUESTION_WORK_PROUD_OF,
+            &materials_contents,
+        );
+        self.question_proud_of = parse_question(
+            QUESTION_WORK_PROUD_OF,
+            QUESTION_HAPPIEST_CAREER,
+            &materials_contents,
+        );
+        self.question_happiest = parse_question(
+            QUESTION_HAPPIEST_CAREER,
+            QUESTION_UNHAPPIEST_CAREER,
+            &materials_contents,
+        );
+        self.question_unhappiest = parse_question(
+            QUESTION_UNHAPPIEST_CAREER,
+            QUESTION_VALUE_REFLECTED,
+            &materials_contents,
+        );
+        self.question_value_reflected = parse_question(
+            QUESTION_VALUE_REFLECTED,
+            QUESTION_VALUE_VIOLATED,
+            &materials_contents,
+        );
+        self.question_value_violated = parse_question(
+            QUESTION_VALUE_VIOLATED,
+            QUESTION_VALUES_IN_TENSION,
+            &materials_contents,
+        );
+        self.question_values_in_tension = parse_question(
+            QUESTION_VALUES_IN_TENSION,
+            QUESTION_WHY_OXIDE,
+            &materials_contents,
+        );
         self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
     /// Cleanup the applicants phone.
     fn cleanup_phone(&mut self) {
         // Cleanup and parse the phone number and country code.
-        let mut phone = self.phone.replace(" ", "").replace("-", "").replace("+", "").replace("(", "").replace(")", "");
+        let mut phone = self
+            .phone
+            .replace(" ", "")
+            .replace("-", "")
+            .replace("+", "")
+            .replace("(", "")
+            .replace(")", "");
 
         let location = self.location.to_string();
         let mut country = phonenumber::country::US;
@@ -1178,13 +1355,20 @@ The Oxide Team",
             && phone.starts_with("44")
         {
             country = phonenumber::country::GB;
-        } else if (location.to_lowercase().contains("czech republic") || location.to_lowercase().contains("prague")) && phone.starts_with("420") {
+        } else if (location.to_lowercase().contains("czech republic")
+            || location.to_lowercase().contains("prague"))
+            && phone.starts_with("420")
+        {
             country = phonenumber::country::CZ;
         } else if location.to_lowercase().contains("turkey") && phone.starts_with("90") {
             country = phonenumber::country::TR;
         } else if location.to_lowercase().contains("sweden") && phone.starts_with("46") {
             country = phonenumber::country::SE;
-        } else if (location.to_lowercase().contains("mumbai") || location.to_lowercase().contains("india") || location.to_lowercase().contains("bangalore")) && phone.starts_with("91") {
+        } else if (location.to_lowercase().contains("mumbai")
+            || location.to_lowercase().contains("india")
+            || location.to_lowercase().contains("bangalore"))
+            && phone.starts_with("91")
+        {
             country = phonenumber::country::IN;
         } else if location.to_lowercase().contains("brazil") {
             country = phonenumber::country::BR;
@@ -1210,9 +1394,13 @@ The Oxide Team",
             country = phonenumber::country::TW;
         } else if location.to_lowercase().contains("new zealand") {
             country = phonenumber::country::NZ;
-        } else if location.to_lowercase().contains("maragno") || location.to_lowercase().contains("italy") {
+        } else if location.to_lowercase().contains("maragno")
+            || location.to_lowercase().contains("italy")
+        {
             country = phonenumber::country::IT;
-        } else if location.to_lowercase().contains("nairobi") || location.to_lowercase().contains("kenya") {
+        } else if location.to_lowercase().contains("nairobi")
+            || location.to_lowercase().contains("kenya")
+        {
             country = phonenumber::country::KE;
         } else if location.to_lowercase().contains("dubai") {
             country = phonenumber::country::AE;
@@ -1220,7 +1408,9 @@ The Oxide Team",
             country = phonenumber::country::PL;
         } else if location.to_lowercase().contains("portugal") {
             country = phonenumber::country::PT;
-        } else if location.to_lowercase().contains("berlin") || location.to_lowercase().contains("germany") {
+        } else if location.to_lowercase().contains("berlin")
+            || location.to_lowercase().contains("germany")
+        {
             country = phonenumber::country::DE;
         } else if location.to_lowercase().contains("benin") && phone.starts_with("229") {
             country = phonenumber::country::BJ;
@@ -1240,7 +1430,10 @@ The Oxide Team",
                 println!("[applicants] phone number is invalid: {}", phone);
             }
 
-            phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
+            phone = format!(
+                "{}",
+                phone_number.format().mode(phonenumber::Mode::International)
+            );
         }
         self.phone = phone;
         self.country_code = country_code;
@@ -1299,10 +1492,18 @@ The Oxide Team",
             info_msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
         }
         if !self.github.is_empty() {
-            info_msg += &format!(" | <https://github.com/{}|github:{}>", self.github.trim_start_matches('@'), self.github,);
+            info_msg += &format!(
+                " | <https://github.com/{}|github:{}>",
+                self.github.trim_start_matches('@'),
+                self.github,
+            );
         }
         if !self.gitlab.is_empty() {
-            info_msg += &format!(" | <https://gitlab.com/{}|gitlab:{}>", self.gitlab.trim_start_matches('@'), self.gitlab,);
+            info_msg += &format!(
+                " | <https://gitlab.com/{}|gitlab:{}>",
+                self.gitlab.trim_start_matches('@'),
+                self.gitlab,
+            );
         }
         if !self.linkedin.is_empty() {
             info_msg += &format!(" | <{}|linkedin>", self.linkedin,);
@@ -1388,10 +1589,18 @@ Email: {}",
         }
 
         if !self.github.is_empty() {
-            msg += &format!("\nGitHub: {} (https://github.com/{})", self.github, self.github.trim_start_matches('@'));
+            msg += &format!(
+                "\nGitHub: {} (https://github.com/{})",
+                self.github,
+                self.github.trim_start_matches('@')
+            );
         }
         if !self.gitlab.is_empty() {
-            msg += &format!("\nGitLab: {} (https://gitlab.com/{})", self.gitlab, self.gitlab.trim_start_matches('@'));
+            msg += &format!(
+                "\nGitLab: {} (https://gitlab.com/{})",
+                self.gitlab,
+                self.gitlab.trim_start_matches('@')
+            );
         }
         if !self.linkedin.is_empty() {
             msg += &format!("\nLinkedIn: {}", self.linkedin);
@@ -1410,7 +1619,8 @@ Interested in: {}
 
 ## Reminder
 
-The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
+The applicants Airtable \
+             is at: https://airtable-applicants.corp.oxide.computer
 ",
             self.resume,
             self.materials,
@@ -1450,14 +1660,20 @@ impl Applicant {
                 // Check if we already have sent their invitation.
                 if self.criminal_background_check_status.is_empty() {
                     // Create an invitation for the candidate.
-                    checkr.create_invitation(&candidate.id, "premium_criminal").await.unwrap();
+                    checkr
+                        .create_invitation(&candidate.id, "premium_criminal")
+                        .await
+                        .unwrap();
 
                     // Update the database.
                     self.criminal_background_check_status = "requested".to_string();
 
                     self.update(db).await;
 
-                    println!("[applicant] sent background check invitation to: {}", self.email);
+                    println!(
+                        "[applicant] sent background check invitation to: {}",
+                        self.email
+                    );
                 }
                 // We can return early they already exist as a candidate.
                 return;
@@ -1468,21 +1684,30 @@ impl Applicant {
         let candidate = checkr.create_candidate(&self.email).await.unwrap();
 
         // Create an invitation for the candidate.
-        checkr.create_invitation(&candidate.id, "premium_criminal").await.unwrap();
+        checkr
+            .create_invitation(&candidate.id, "premium_criminal")
+            .await
+            .unwrap();
 
         // Update the database.
         self.criminal_background_check_status = "requested".to_string();
 
         self.update(db).await;
 
-        println!("[applicant] sent background check invitation to: {}", self.email);
+        println!(
+            "[applicant] sent background check invitation to: {}",
+            self.email
+        );
     }
 
     /// Convert the applicant into JSON for a Slack message.
     pub fn as_slack_msg(&self) -> Value {
         let time = self.human_duration();
 
-        let mut status_msg = format!("<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}", self.sheet_id, self.role, time);
+        let mut status_msg = format!(
+            "<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}",
+            self.sheet_id, self.role, time
+        );
         if !self.status.is_empty() {
             status_msg += &format!(" | status: *{}*", self.status);
         }
@@ -1515,10 +1740,18 @@ impl Applicant {
             info_msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
         }
         if !self.github.is_empty() {
-            info_msg += &format!(" | <https://github.com/{}|github:{}>", self.github.trim_start_matches('@'), self.github,);
+            info_msg += &format!(
+                " | <https://github.com/{}|github:{}>",
+                self.github.trim_start_matches('@'),
+                self.github,
+            );
         }
         if !self.gitlab.is_empty() {
-            info_msg += &format!(" | <https://gitlab.com/{}|gitlab:{}>", self.gitlab.trim_start_matches('@'), self.gitlab,);
+            info_msg += &format!(
+                " | <https://gitlab.com/{}|gitlab:{}>",
+                self.gitlab.trim_start_matches('@'),
+                self.gitlab,
+            );
         }
         if !self.linkedin.is_empty() {
             info_msg += &format!(" | <{}|linkedin>", self.linkedin,);
@@ -1623,10 +1856,18 @@ Email: {}",
         }
 
         if !self.github.is_empty() {
-            msg += &format!("\nGitHub: {} (https://github.com/{})", self.github, self.github.trim_start_matches('@'));
+            msg += &format!(
+                "\nGitHub: {} (https://github.com/{})",
+                self.github,
+                self.github.trim_start_matches('@')
+            );
         }
         if !self.gitlab.is_empty() {
-            msg += &format!("\nGitLab: {} (https://gitlab.com/{})", self.gitlab, self.gitlab.trim_start_matches('@'));
+            msg += &format!(
+                "\nGitLab: {} (https://gitlab.com/{})",
+                self.gitlab,
+                self.gitlab.trim_start_matches('@')
+            );
         }
         if !self.linkedin.is_empty() {
             msg += &format!("\nLinkedIn: {}", self.linkedin);
@@ -1644,21 +1885,27 @@ Oxide Candidate Materials: {}
 Scoring form: {}
 Scoring form responses: {}
 
-## Reminder
+## \
+             Reminder
 
-The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
-
-",
+The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
+             ",
             self.resume, self.materials, self.scoring_form_url, self.scoring_form_responses_url,
         );
 
         msg
     }
 
-    pub async fn create_github_onboarding_issue(&self, db: &Database, github: &Github, configs_issues: &[Issue]) {
+    pub async fn create_github_onboarding_issue(
+        &self,
+        db: &Database,
+        github: &octorust::Client,
+        configs_issues: &[octorust::types::Issue],
+    ) {
         let company = self.company(db);
 
-        let repo = github.repo(&company.github_org, "configs");
+        let owner = &company.github_org;
+        let repo = "configs";
 
         // Check if we already have an issue for this user.
         let issue = check_if_github_issue_exists(configs_issues, &self.name);
@@ -1688,7 +1935,10 @@ Notes:
                     .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
 
                 // Close the issue.
-                repo.issue(i.number).close().await.unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
+                repo.issue(i.number)
+                    .close()
+                    .await
+                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
             }
 
             // Return early.
@@ -1710,7 +1960,11 @@ Notes:
         let mut username = first_name.to_lowercase().to_string();
         let existing_user = User::get_from_db(db, company.id, username.to_string());
         if existing_user.is_some() {
-            username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
+            username = format!(
+                "{}.{}",
+                first_name.replace(' ', "-"),
+                last_name.replace(' ', "-")
+            );
         }
         // Make sure it's lowercase.
         username = username.to_lowercase();
@@ -1752,7 +2006,10 @@ aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:s
 department = ''
 manager = ''
 ```"#,
-            self.start_date.unwrap().format("%A, %B %-d, %C%y").to_string(),
+            self.start_date
+                .unwrap()
+                .format("%A, %B %-d, %C%y")
+                .to_string(),
             self.email,
             self.github,
             self.phone,
@@ -1769,7 +2026,10 @@ manager = ''
         if let Some(i) = issue {
             if i.state != "open" {
                 // Make sure the issue is in the state of "open".
-                repo.issue(i.number).open().await.unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
+                repo.issue(i.number)
+                    .open()
+                    .await
+                    .unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
             }
 
             // If the issue does not have any check marks.
@@ -1777,15 +2037,21 @@ manager = ''
             let checkmark = "[x]".to_string();
             let old_body = i.clone().body.unwrap_or_default();
             if !old_body.contains(&checkmark) {
-                repo.issue(i.number)
-                    .edit(&IssueOptions {
-                        title,
-                        body: Some(body),
-                        assignee: Some("jessfraz".to_string()),
-                        labels,
-                        milestone: Default::default(),
-                        state: Default::default(),
-                    })
+                github
+                    .issues()
+                    .update(
+                        owner,
+                        repo,
+                        i.number,
+                        &octorust::types::IssuesUpdateRequest {
+                            title,
+                            body: body.to_string(),
+                            assignee: "jessfraz".to_string(),
+                            labels,
+                            milestone: Default::default(),
+                            state: Default::default(),
+                        },
+                    )
                     .await
                     .unwrap_or_else(|e| panic!("could not edit issue {}: {}", i.number, e));
             }
@@ -1796,11 +2062,12 @@ manager = ''
         }
 
         // Create the issue.
-        repo.issues()
-            .create(&IssueOptions {
+        github
+            .issues()
+            .create(&octorust::types::IssuesCreateRequest {
                 title,
-                body: Some(body),
-                assignee: Some("jessfraz".to_string()),
+                body,
+                assignee: "jessfraz".to_string(),
                 labels,
                 milestone: Default::default(),
                 state: Default::default(),
@@ -2005,8 +2272,18 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         fs::create_dir_all(&output).unwrap();
 
         // Extract the text from the archive.
-        let cmd_out = Command::new("7z").args(&["x", &format!("-o{}", output.to_str().unwrap()), path.to_str().unwrap()]).output().unwrap();
-        println!("pz7ip output: {}", String::from_utf8(cmd_out.stdout).unwrap());
+        let cmd_out = Command::new("7z")
+            .args(&[
+                "x",
+                &format!("-o{}", output.to_str().unwrap()),
+                path.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        println!(
+            "pz7ip output: {}",
+            String::from_utf8(cmd_out.stdout).unwrap()
+        );
 
         // Walk the output directory trying to find our file.
         for entry in WalkDir::new(&output).min_depth(1) {
@@ -2016,7 +2293,9 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                 // Concatenate all the tar files into our result.
                 result += &format!(
                     "====================== 7z file: {} ======================\n\n",
-                    path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                    path.to_str()
+                        .unwrap()
+                        .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
                     result += &read_pdf(&name, path.to_path_buf());
@@ -2050,7 +2329,9 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                 // Concatenate all the tar files into our result.
                 result += &format!(
                     "====================== tarball file: {} ======================\n\n",
-                    path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                    path.to_str()
+                        .unwrap()
+                        .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
                     result += &read_pdf(&name, path.to_path_buf());
@@ -2083,7 +2364,9 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                 // Concatenate all the tar files into our result.
                 result += &format!(
                     "====================== tarball file: {} ======================\n\n",
-                    path.to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                    path.to_str()
+                        .unwrap()
+                        .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
                     result += &read_pdf(&name, path.to_path_buf());
@@ -2119,10 +2402,19 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                     }
 
                     if (&*file.name()).ends_with('/') {
-                        println!("[applicants] zip file {} extracted to \"{}\"", i, output.as_path().display());
+                        println!(
+                            "[applicants] zip file {} extracted to \"{}\"",
+                            i,
+                            output.as_path().display()
+                        );
                         fs::create_dir_all(&output).unwrap();
                     } else {
-                        println!("[applicants] zip file {} extracted to \"{}\" ({} bytes)", i, output.as_path().display(), file.size());
+                        println!(
+                            "[applicants] zip file {} extracted to \"{}\" ({} bytes)",
+                            i,
+                            output.as_path().display(),
+                            file.size()
+                        );
 
                         if let Some(p) = output.parent() {
                             if !p.exists() {
@@ -2137,7 +2429,11 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                             // Concatenate all the zip files into our result.
                             result += &format!(
                                 "====================== zip file: {} ======================\n\n",
-                                output.as_path().to_str().unwrap().replace(env::temp_dir().as_path().to_str().unwrap(), "")
+                                output
+                                    .as_path()
+                                    .to_str()
+                                    .unwrap()
+                                    .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                             );
                             if output.as_path().extension().unwrap() == "pdf" {
                                 result += &read_pdf(&name, output.clone());
@@ -2149,14 +2445,22 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                     }
                 }
                 Err(e) => {
-                    println!("[applicants] error unwrapping materials name {}: {}", name, e);
+                    println!(
+                        "[applicants] error unwrapping materials name {}: {}",
+                        name, e
+                    );
                 }
             }
         }
     } else if name.ends_with(".pptx") || name.ends_with(".jpg")
     // TODO: handle these formats
     {
-        println!("[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}", mime_type, name, path.to_str().unwrap());
+        println!(
+            "[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}",
+            mime_type,
+            name,
+            path.to_str().unwrap()
+        );
     } else if name.ends_with(".rtf") {
         // Get the RTF contents from Drive.
         let contents = drive_client.download_file_by_id(&id).await.unwrap();
@@ -2211,7 +2515,10 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
 fn read_doc(path: std::path::PathBuf) -> String {
     // Extract the text from the DOC
-    let cmd_output = Command::new("catdoc").args(&[path.to_str().unwrap()]).output().unwrap();
+    let cmd_output = Command::new("catdoc")
+        .args(&[path.to_str().unwrap()])
+        .output()
+        .unwrap();
 
     let result = String::from_utf8(cmd_output.stdout).unwrap();
 
@@ -2227,7 +2534,10 @@ fn read_doc(path: std::path::PathBuf) -> String {
 
 fn read_rtf(path: std::path::PathBuf) -> String {
     // Extract the text from the RTF
-    let cmd_output = Command::new("unrtf").args(&["--text", path.to_str().unwrap()]).output().unwrap();
+    let cmd_output = Command::new("unrtf")
+        .args(&["--text", path.to_str().unwrap()])
+        .output()
+        .unwrap();
 
     let result = String::from_utf8(cmd_output.stdout).unwrap();
 
@@ -2246,12 +2556,25 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
     output.push("tempfile.txt");
 
     // Extract the text from the PDF
-    let cmd_output = Command::new("pdftotext").args(&["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()]).output().unwrap();
+    let cmd_output = Command::new("pdftotext")
+        .args(&[
+            "-enc",
+            "UTF-8",
+            path.to_str().unwrap(),
+            output.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
 
     let result = match fs::read_to_string(output.clone()) {
         Ok(r) => r,
         Err(e) => {
-            println!("[applicants] running pdf2text failed: {} | name: {}, path: {}", e, name, path.as_path().display());
+            println!(
+                "[applicants] running pdf2text failed: {} | name: {}, path: {}",
+                e,
+                name,
+                path.as_path().display()
+            );
             stdout().write_all(&cmd_output.stdout).unwrap();
             stderr().write_all(&cmd_output.stderr).unwrap();
 
@@ -2270,15 +2593,30 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
 }
 
 pub fn get_tracking_sheets() -> Vec<&'static str> {
-    vec!["18ZyWSX4jHY2FOlOhGwDuX3wXV48JnCdxtCq9aXC8cjk", "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM"]
+    vec![
+        "18ZyWSX4jHY2FOlOhGwDuX3wXV48JnCdxtCq9aXC8cjk",
+        "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM",
+    ]
 }
 
 pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
-    sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
-    sheets.insert("Product Engineering and Design", "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI");
-    sheets.insert("Technical Program Management", "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU");
-    sheets.insert("Operations Manager", "1S21W7ouI4qLeic4T71MGRL1Vk-ToqSQ6Z95GN-PT6Zc");
+    sheets.insert(
+        "Engineering",
+        "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA",
+    );
+    sheets.insert(
+        "Product Engineering and Design",
+        "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI",
+    );
+    sheets.insert(
+        "Technical Program Management",
+        "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU",
+    );
+    sheets.insert(
+        "Operations Manager",
+        "1S21W7ouI4qLeic4T71MGRL1Vk-ToqSQ6Z95GN-PT6Zc",
+    );
 
     sheets
 }
@@ -2299,9 +2637,26 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
-        .repo(&company.github_org, "configs")
         .issues()
-        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+        .list_all_for_repo(
+            &company.github_org,
+            "configs",
+            // milestone
+            "",
+            octorust::IssuesListState::All,
+            // assignee
+            "",
+            // creator
+            "",
+            // mentioned
+            "",
+            // labels
+            "hiring",
+            // sort
+            Default::default(),
+            // since
+            None,
+        )
         .await
         .unwrap();
 
@@ -2318,11 +2673,17 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
     // depending on the application status.
     for (sheet_name, sheet_id) in get_sheets_map() {
         // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(sheet_id, "Form Responses 1!A1:Z1000".to_string()).await.unwrap();
+        let sheet_values = sheets_client
+            .get_values(sheet_id, "Form Responses 1!A1:Z1000".to_string())
+            .await
+            .unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
-            panic!("unable to retrieve any data values from Google sheet {} {}", sheet_id, sheet_name);
+            panic!(
+                "unable to retrieve any data values from Google sheet {} {}",
+                sheet_id, sheet_name
+            );
         }
 
         // Parse the sheet columns.
@@ -2341,9 +2702,18 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
             }
 
             // Parse the applicant out of the row information.
-            let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, row).await;
+            let mut applicant =
+                NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, row)
+                    .await;
             applicant
-                .expand(db, &drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
+                .expand(
+                    db,
+                    &drive_client,
+                    &sheets_client,
+                    columns.sent_email_received,
+                    columns.sent_email_follow_up,
+                    row_index + 1,
+                )
                 .await;
 
             if !applicant.sent_email_received {
@@ -2353,7 +2723,9 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
 
             let new_applicant = applicant.upsert(db).await;
 
-            new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
+            new_applicant
+                .create_github_onboarding_issue(db, &github, &configs_issues)
+                .await;
         }
     }
 }
@@ -2388,7 +2760,13 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
 
     let mut reviewers: Vec<String> = Default::default();
     for user in users {
-        if user.typev == "full-time" && user.username != "robert.keith" && user.username != "robert" && user.username != "keith" && user.username != "thomas" && user.username != "arjen" {
+        if user.typev == "full-time"
+            && user.username != "robert.keith"
+            && user.username != "robert"
+            && user.username != "keith"
+            && user.username != "thomas"
+            && user.username != "arjen"
+        {
             reviewers.push(user.email);
         }
     }
@@ -2403,11 +2781,17 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
     let sheets_client = Sheets::new(token.clone());
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(sheet_id, "Applicants to review!A1:G1000".to_string()).await.unwrap();
+        let sheet_values = sheets_client
+            .get_values(sheet_id, "Applicants to review!A1:G1000".to_string())
+            .await
+            .unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
-            panic!("unable to retrieve any data values from Google sheet for applicant forms {}", sheet_id);
+            panic!(
+                "unable to retrieve any data values from Google sheet for applicant forms {}",
+                sheet_id
+            );
         }
 
         // Parse the sheet columns.
@@ -2438,9 +2822,16 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
             let mut scorers_completed: Vec<String> = vec![];
             if row.len() > columns.scorers_completed {
                 let scorers_completed_string = row[columns.scorers_completed].to_string();
-                let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
+                let scorers_completed_str: Vec<&str> =
+                    scorers_completed_string.split(',').collect();
                 for s in scorers_completed_str {
-                    match User::get_from_db(db, company.id, s.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
+                    match User::get_from_db(
+                        db,
+                        company.id,
+                        s.trim_end_matches(&company.gsuite_domain)
+                            .trim_end_matches('@')
+                            .to_string(),
+                    ) {
                         Some(user) => {
                             scorers_completed.push(user.email);
                         }
@@ -2535,11 +2926,18 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
     let sheets_client = Sheets::new(token.clone());
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(sheet_id, "Responses!A1:R1000".to_string()).await.unwrap();
+        let sheet_values = sheets_client
+            .get_values(sheet_id, "Responses!A1:R1000".to_string())
+            .await
+            .unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
-            panic!("unable to retrieve any data values from Google sheet for applicant form responses {}", sheet_id);
+            panic!(
+                "unable to retrieve any data values from Google sheet for applicant form \
+                 responses {}",
+                sheet_id
+            );
         }
 
         // Iterate over the rows.
@@ -2603,7 +3001,9 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
                     .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
                     .first::<Applicant>(&db.conn())
                 {
-                    if applicant.status == crate::applicant_status::Status::Onboarding.to_string() || applicant.status == crate::applicant_status::Status::Hired.to_string() {
+                    if applicant.status == crate::applicant_status::Status::Onboarding.to_string()
+                        || applicant.status == crate::applicant_status::Status::Hired.to_string()
+                    {
                         // Zero out the values for the scores.
                         applicant.scoring_evaluations_count = 0;
                         applicant.scoring_enthusiastic_yes_count = 0;
@@ -2622,10 +3022,14 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
                         applicant.scoring_pass_count = scoring_pass_count;
                         applicant.scoring_no_count = scoring_no_count;
                         applicant.scoring_not_applicable_count = scoring_not_applicable_count;
-                        applicant.scoring_insufficient_experience_count = scoring_insufficient_experience_count;
-                        applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
-                        applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
-                        applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
+                        applicant.scoring_insufficient_experience_count =
+                            scoring_insufficient_experience_count;
+                        applicant.scoring_inapplicable_experience_count =
+                            scoring_inapplicable_experience_count;
+                        applicant.scoring_job_function_yet_needed_count =
+                            scoring_job_function_yet_needed_count;
+                        applicant.scoring_underwhelming_materials_count =
+                            scoring_underwhelming_materials_count;
                     }
 
                     applicant.value_reflected = value_reflected.to_string();
@@ -2704,10 +3108,14 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) {
                 .filter(
                     applicants::dsl::email
                         .eq(candidate.email.to_string())
-                        .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
+                        .or(applicants::dsl::name
+                            .eq(format!("{} {}", candidate.first_name, candidate.last_name))),
                 )
                 .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
-                .filter(applicants::dsl::status.eq(crate::applicant_status::Status::Onboarding.to_string()))
+                .filter(
+                    applicants::dsl::status
+                        .eq(crate::applicant_status::Status::Onboarding.to_string()),
+                )
                 .first::<Applicant>(&db.conn())
             {
                 for report_id in &candidate.report_ids {
@@ -2726,7 +3134,10 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) {
                     applicant.update(db).await;
                 }
             } else {
-                println!("[checkr] could not find applicant with email {} in sheet_id {}", candidate.email, sheet_id);
+                println!(
+                    "[checkr] could not find applicant with email {} in sheet_id {}",
+                    candidate.email, sheet_id
+                );
             }
         }
     }
@@ -2785,11 +3196,17 @@ pub async fn update_applicant_reviewers(db: &Database, company: &Company) {
     let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
 
     // Get the values in the sheet.
-    let sheet_values = sheets_client.get_values(sheet_id, "Leaderboard!A1:R1000".to_string()).await.unwrap();
+    let sheet_values = sheets_client
+        .get_values(sheet_id, "Leaderboard!A1:R1000".to_string())
+        .await
+        .unwrap();
     let values = sheet_values.values.unwrap();
 
     if values.is_empty() {
-        panic!("unable to retrieve any data values from Google sheet for reviewer leaderboard {}", sheet_id);
+        panic!(
+            "unable to retrieve any data values from Google sheet for reviewer leaderboard {}",
+            sheet_id
+        );
     }
 
     // Iterate over the rows.
@@ -2813,7 +3230,14 @@ pub async fn update_applicant_reviewers(db: &Database, company: &Company) {
         let no = row[5].parse::<i32>().unwrap_or(0);
         let not_applicable = row[6].parse::<i32>().unwrap_or(0);
 
-        match User::get_from_db(db, company.id, email.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
+        match User::get_from_db(
+            db,
+            company.id,
+            email
+                .trim_end_matches(&company.gsuite_domain)
+                .trim_end_matches('@')
+                .to_string(),
+        ) {
             Some(user) => {
                 let reviewer = NewApplicantReviewer {
                     name: user.full_name(),
@@ -2855,9 +3279,13 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant.do_docusign_offer(db, &ds, &offer_template_id, company).await;
+        applicant
+            .do_docusign_offer(db, &ds, &offer_template_id, company)
+            .await;
 
-        applicant.do_docusign_piia(db, &ds, &piia_template_id, company).await;
+        applicant
+            .do_docusign_piia(db, &ds, &piia_template_id, company)
+            .await;
     }
 }
 
@@ -2874,7 +3302,13 @@ pub async fn get_docusign_template_id(ds: &DocuSign, name: &str) -> String {
 
 impl Applicant {
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive, github: &Github, configs_issues: &[Issue]) {
+    pub async fn expand(
+        &mut self,
+        db: &Database,
+        drive_client: &GoogleDrive,
+        github: &octorust::Client,
+        configs_issues: &[octorust::types::Issue],
+    ) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
@@ -2883,7 +3317,10 @@ impl Applicant {
             // Update it in the database just in case.
             self.update(db).await;
 
-            println!("[applicant] sent email to {} that we received their application", self.email);
+            println!(
+                "[applicant] sent email to {} that we received their application",
+                self.email
+            );
             // Send the email internally.
             self.send_email_internally(db).await;
         }
@@ -2896,7 +3333,8 @@ impl Applicant {
 
         // If the application is as new as the last week then parse all the contents.
         // This takes a long time so we skip all the others.
-        if (duration_from_now < Duration::days(2) || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
+        if (duration_from_now < Duration::days(2)
+            || (duration_from_now < Duration::days(20) && self.question_why_oxide.is_empty()))
             && self.status != crate::applicant_status::Status::Declined.to_string()
         {
             // Read the file contents.
@@ -2905,7 +3343,8 @@ impl Applicant {
             self.parse_materials();
         }
 
-        self.create_github_onboarding_issue(db, github, configs_issues).await;
+        self.create_github_onboarding_issue(db, github, configs_issues)
+            .await;
     }
 
     /// Get the applicant's information in the form of the body of an email for a
@@ -2930,10 +3369,18 @@ Email: {}",
         }
 
         if !self.github.is_empty() {
-            msg += &format!("\nGitHub: {} (https://github.com/{})", self.github, self.github.trim_start_matches('@'));
+            msg += &format!(
+                "\nGitHub: {} (https://github.com/{})",
+                self.github,
+                self.github.trim_start_matches('@')
+            );
         }
         if !self.gitlab.is_empty() {
-            msg += &format!("\nGitLab: {} (https://gitlab.com/{})", self.gitlab, self.gitlab.trim_start_matches('@'));
+            msg += &format!(
+                "\nGitLab: {} (https://gitlab.com/{})",
+                self.gitlab,
+                self.gitlab.trim_start_matches('@')
+            );
         }
         if !self.linkedin.is_empty() {
             msg += &format!("\nLinkedIn: {}", self.linkedin);
@@ -2952,7 +3399,8 @@ Interested in: {}
 
 ## Reminder
 
-The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
+The applicants Airtable \
+             is at: https://airtable-applicants.corp.oxide.computer
 ",
             self.resume,
             self.materials,
@@ -2990,7 +3438,10 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!("Oxide Computer Company {} Application Received for {}", self.role, self.name),
+                format!(
+                    "Oxide Computer Company {} Application Received for {}",
+                    self.role, self.name
+                ),
                 format!(
                     "Dear {},
 
@@ -3015,7 +3466,8 @@ Sincerely,
     fn parse_materials(&mut self) {
         // Parse the samples and materials.
         let materials_contents = self.materials_contents.clone();
-        let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
+        let mut work_samples =
+            parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
         if work_samples.is_empty() {
             work_samples = parse_question(
                 r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
@@ -3024,16 +3476,32 @@ Sincerely,
             );
             if work_samples.is_empty() {
                 // Try to parse work samples for TPM role.
-                work_samples = parse_question(r"What would you have done differently\?", "Exploratory samples", &materials_contents);
+                work_samples = parse_question(
+                    r"What would you have done differently\?",
+                    "Exploratory samples",
+                    &materials_contents,
+                );
 
                 if work_samples.is_empty() {
-                    work_samples = parse_question(r"Some questions(?s:.*)o have in mind as you describe them:", "Exploratory samples", &materials_contents);
+                    work_samples = parse_question(
+                        r"Some questions(?s:.*)o have in mind as you describe them:",
+                        "Exploratory samples",
+                        &materials_contents,
+                    );
 
                     if work_samples.is_empty() {
-                        work_samples = parse_question(r"Work samples", "Exploratory samples", &materials_contents);
+                        work_samples = parse_question(
+                            r"Work samples",
+                            "Exploratory samples",
+                            &materials_contents,
+                        );
 
                         if work_samples.is_empty() {
-                            work_samples = parse_question(r"design sample\(s\)", "Questionnaire", &materials_contents);
+                            work_samples = parse_question(
+                                r"design sample\(s\)",
+                                "Questionnaire",
+                                &materials_contents,
+                            );
                         }
                     }
                 }
@@ -3041,7 +3509,11 @@ Sincerely,
         }
         self.work_samples = work_samples;
 
-        let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
+        let mut writing_samples = parse_question(
+            r"Writing sample\(s\)",
+            "Analysis samples",
+            &materials_contents,
+        );
         if writing_samples.is_empty() {
             writing_samples = parse_question(
                 r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
@@ -3049,16 +3521,25 @@ Sincerely,
                 &materials_contents,
             );
             if writing_samples.is_empty() {
-                writing_samples = parse_question(r"Writing samples", "Analysis samples", &materials_contents);
+                writing_samples =
+                    parse_question(r"Writing samples", "Analysis samples", &materials_contents);
 
                 if writing_samples.is_empty() {
-                    writing_samples = parse_question(r"Writing sample\(s\)", "Code and/or design sample", &materials_contents);
+                    writing_samples = parse_question(
+                        r"Writing sample\(s\)",
+                        "Code and/or design sample",
+                        &materials_contents,
+                    );
                 }
             }
         }
         self.writing_samples = writing_samples;
 
-        let mut analysis_samples = parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
+        let mut analysis_samples = parse_question(
+            r"Analysis sample\(s\)$",
+            "Presentation samples",
+            &materials_contents,
+        );
         if analysis_samples.is_empty() {
             analysis_samples = parse_question(
                 r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
@@ -3066,12 +3547,20 @@ Sincerely,
                 &materials_contents,
             );
             if analysis_samples.is_empty() {
-                analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
+                analysis_samples = parse_question(
+                    r"Analysis samples",
+                    "Presentation samples",
+                    &materials_contents,
+                );
             }
         }
         self.analysis_samples = analysis_samples;
 
-        let mut presentation_samples = parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
+        let mut presentation_samples = parse_question(
+            r"Presentation sample\(s\)",
+            "Questionnaire",
+            &materials_contents,
+        );
         if presentation_samples.is_empty() {
             presentation_samples = parse_question(
                 r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
@@ -3079,12 +3568,20 @@ Sincerely,
                 &materials_contents,
             );
             if presentation_samples.is_empty() {
-                presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
+                presentation_samples = parse_question(
+                    r"Presentation samples",
+                    "Questionnaire",
+                    &materials_contents,
+                );
             }
         }
         self.presentation_samples = presentation_samples;
 
-        let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
+        let mut exploratory_samples = parse_question(
+            r"Exploratory sample\(s\)",
+            "Questionnaire",
+            &materials_contents,
+        );
         if exploratory_samples.is_empty() {
             exploratory_samples = parse_question(
                 r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
@@ -3092,18 +3589,47 @@ Sincerely,
                 &materials_contents,
             );
             if exploratory_samples.is_empty() {
-                exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
+                exploratory_samples =
+                    parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
             }
         }
         self.exploratory_samples = exploratory_samples;
 
-        self.question_technically_challenging = parse_question(QUESTION_TECHNICALLY_CHALLENGING, QUESTION_WORK_PROUD_OF, &materials_contents);
-        self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
-        self.question_happiest = parse_question(QUESTION_HAPPIEST_CAREER, QUESTION_UNHAPPIEST_CAREER, &materials_contents);
-        self.question_unhappiest = parse_question(QUESTION_UNHAPPIEST_CAREER, QUESTION_VALUE_REFLECTED, &materials_contents);
-        self.question_value_reflected = parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
-        self.question_value_violated = parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
-        self.question_values_in_tension = parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
+        self.question_technically_challenging = parse_question(
+            QUESTION_TECHNICALLY_CHALLENGING,
+            QUESTION_WORK_PROUD_OF,
+            &materials_contents,
+        );
+        self.question_proud_of = parse_question(
+            QUESTION_WORK_PROUD_OF,
+            QUESTION_HAPPIEST_CAREER,
+            &materials_contents,
+        );
+        self.question_happiest = parse_question(
+            QUESTION_HAPPIEST_CAREER,
+            QUESTION_UNHAPPIEST_CAREER,
+            &materials_contents,
+        );
+        self.question_unhappiest = parse_question(
+            QUESTION_UNHAPPIEST_CAREER,
+            QUESTION_VALUE_REFLECTED,
+            &materials_contents,
+        );
+        self.question_value_reflected = parse_question(
+            QUESTION_VALUE_REFLECTED,
+            QUESTION_VALUE_VIOLATED,
+            &materials_contents,
+        );
+        self.question_value_violated = parse_question(
+            QUESTION_VALUE_VIOLATED,
+            QUESTION_VALUES_IN_TENSION,
+            &materials_contents,
+        );
+        self.question_values_in_tension = parse_question(
+            QUESTION_VALUES_IN_TENSION,
+            QUESTION_WHY_OXIDE,
+            &materials_contents,
+        );
         self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
@@ -3155,7 +3681,13 @@ Sincerely,
     /// Cleanup the applicants phone.
     fn cleanup_phone(&mut self) {
         // Cleanup and parse the phone number and country code.
-        let mut phone = self.phone.replace(" ", "").replace("-", "").replace("+", "").replace("(", "").replace(")", "");
+        let mut phone = self
+            .phone
+            .replace(" ", "")
+            .replace("-", "")
+            .replace("+", "")
+            .replace("(", "")
+            .replace(")", "");
 
         let location = self.location.to_string();
         let mut country = phonenumber::country::US;
@@ -3167,13 +3699,20 @@ Sincerely,
             && phone.starts_with("44")
         {
             country = phonenumber::country::GB;
-        } else if (location.to_lowercase().contains("czech republic") || location.to_lowercase().contains("prague")) && phone.starts_with("420") {
+        } else if (location.to_lowercase().contains("czech republic")
+            || location.to_lowercase().contains("prague"))
+            && phone.starts_with("420")
+        {
             country = phonenumber::country::CZ;
         } else if location.to_lowercase().contains("turkey") && phone.starts_with("90") {
             country = phonenumber::country::TR;
         } else if location.to_lowercase().contains("sweden") && phone.starts_with("46") {
             country = phonenumber::country::SE;
-        } else if (location.to_lowercase().contains("mumbai") || location.to_lowercase().contains("india") || location.to_lowercase().contains("bangalore")) && phone.starts_with("91") {
+        } else if (location.to_lowercase().contains("mumbai")
+            || location.to_lowercase().contains("india")
+            || location.to_lowercase().contains("bangalore"))
+            && phone.starts_with("91")
+        {
             country = phonenumber::country::IN;
         } else if location.to_lowercase().contains("brazil") {
             country = phonenumber::country::BR;
@@ -3199,9 +3738,13 @@ Sincerely,
             country = phonenumber::country::TW;
         } else if location.to_lowercase().contains("new zealand") {
             country = phonenumber::country::NZ;
-        } else if location.to_lowercase().contains("maragno") || location.to_lowercase().contains("italy") {
+        } else if location.to_lowercase().contains("maragno")
+            || location.to_lowercase().contains("italy")
+        {
             country = phonenumber::country::IT;
-        } else if location.to_lowercase().contains("nairobi") || location.to_lowercase().contains("kenya") {
+        } else if location.to_lowercase().contains("nairobi")
+            || location.to_lowercase().contains("kenya")
+        {
             country = phonenumber::country::KE;
         } else if location.to_lowercase().contains("dubai") {
             country = phonenumber::country::AE;
@@ -3209,7 +3752,9 @@ Sincerely,
             country = phonenumber::country::PL;
         } else if location.to_lowercase().contains("portugal") {
             country = phonenumber::country::PT;
-        } else if location.to_lowercase().contains("berlin") || location.to_lowercase().contains("germany") {
+        } else if location.to_lowercase().contains("berlin")
+            || location.to_lowercase().contains("germany")
+        {
             country = phonenumber::country::DE;
         } else if location.to_lowercase().contains("benin") && phone.starts_with("229") {
             country = phonenumber::country::BJ;
@@ -3229,13 +3774,22 @@ Sincerely,
                 println!("[applicants] phone number is invalid: {}", phone);
             }
 
-            phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
+            phone = format!(
+                "{}",
+                phone_number.format().mode(phonenumber::Mode::International)
+            );
         }
         self.phone = phone;
         self.country_code = country_code;
     }
 
-    pub async fn do_docusign_offer(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
+    pub async fn do_docusign_offer(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        template_id: &str,
+        company: &Company,
+    ) {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
         if self.status != crate::applicant_status::Status::GivingOffer.to_string()
@@ -3246,8 +3800,14 @@ Sincerely,
             return;
         }
 
-        if self.docusign_envelope_id.is_empty() && self.status == crate::applicant_status::Status::GivingOffer.to_string() {
-            println!("[docusign] applicant has status giving offer: {}, generating offer in docusign for them!", self.name);
+        if self.docusign_envelope_id.is_empty()
+            && self.status == crate::applicant_status::Status::GivingOffer.to_string()
+        {
+            println!(
+                "[docusign] applicant has status giving offer: {}, generating offer in docusign \
+                 for them!",
+                self.name
+            );
             // We haven't sent their offer yet, so let's do that.
             // Let's create a new envelope for the user.
             let mut new_envelope: docusign::Envelope = Default::default();
@@ -3277,8 +3837,11 @@ Sincerely,
                     email_notification: docusign::EmailNotification {
                         email_subject: format!("Complete the offer letter for {}", self.name),
                         email_body: format!(
-                            "The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO \
-                             COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!",
+                            "The status for the applicant, {}, has been changed to `Giving \
+                             offer`. Therefore, we are sending you an offer letter to complete, \
+                             as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you \
+                             finish, we will send the offer letter to {} at {} to sign and date! \
+                             Thanks!",
                             self.name, self.name, self.email
                         ),
                         language: Default::default(),
@@ -3292,7 +3855,9 @@ Sincerely,
                     routing_order: "2".to_string(),
                     email_notification: docusign::EmailNotification {
                         email_subject: DOCUSIGN_OFFER_SUBJECT.to_string(),
-                        email_body: "We are very excited to offer you a position at the Oxide Computer Company!".to_string(),
+                        email_body: "We are very excited to offer you a position at the Oxide \
+                                     Computer Company!"
+                            .to_string(),
                         language: Default::default(),
                     },
                 },
@@ -3304,7 +3869,9 @@ Sincerely,
                     routing_order: "3".to_string(),
                     email_notification: docusign::EmailNotification {
                         email_subject: "Oxide Computer Company Offer Letter Signed".to_string(),
-                        email_body: "Attached is a newly signed offer letter, please set up benefits. Thank you!".to_string(),
+                        email_body: "Attached is a newly signed offer letter, please set up \
+                                     benefits. Thank you!"
+                            .to_string(),
                         language: Default::default(),
                     },
                 },
@@ -3325,11 +3892,17 @@ Sincerely,
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&self.docusign_envelope_id).await.unwrap();
 
-            self.update_applicant_from_docusign_offer_envelope(db, ds, envelope).await;
+            self.update_applicant_from_docusign_offer_envelope(db, ds, envelope)
+                .await;
         }
     }
 
-    pub async fn update_applicant_from_docusign_offer_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+    pub async fn update_applicant_from_docusign_offer_envelope(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        envelope: docusign::Envelope,
+    ) {
         let company = self.company(db);
 
         // Set the status in the database and airtable.
@@ -3366,7 +3939,10 @@ Sincerely,
         let drive_client = GoogleDrive::new(token);
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
+        let shared_drive = drive_client
+            .get_drive_by_name("Offer Letters")
+            .await
+            .unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -3379,25 +3955,45 @@ Sincerely,
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
                 //thread::sleep(std::time::Duration::from_secs(15));
-                bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
+                bytes = ds
+                    .get_document(&envelope.envelope_id, &document.id)
+                    .await
+                    .unwrap()
+                    .to_vec();
             }
 
             // Create the folder for our applicant with their name.
-            let name_folder_id = drive_client.create_folder(&shared_drive.id, "", &self.name).await.unwrap();
+            let name_folder_id = drive_client
+                .create_folder(&shared_drive.id, "", &self.name)
+                .await
+                .unwrap();
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
                 filename = format!("{} - Offer.pdf", self.name);
             } else if document.name.contains("Summary") {
                 filename = format!("{} - Offer - DocuSign Summary.pdf", self.name);
-            } else if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {
+            } else if document.name.contains("Employee Mediation")
+                || document.name.contains("Employee_Mediation")
+            {
                 filename = format!("{} - Mediation Agreement.pdf", self.name);
-            } else if document.name.contains("Employee Proprietary") || document.name.contains("Employee_Proprietary") {
+            } else if document.name.contains("Employee Proprietary")
+                || document.name.contains("Employee_Proprietary")
+            {
                 filename = format!("{} - PIIA.pdf", self.name);
             }
 
             // Create or update the file in the google_drive.
-            drive_client.create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes).await.unwrap();
+            drive_client
+                .create_or_update_file(
+                    &drive_id,
+                    &name_folder_id,
+                    &filename,
+                    "application/pdf",
+                    &bytes,
+                )
+                .await
+                .unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);
         }
 
@@ -3405,18 +4001,27 @@ Sincerely,
         // min before getting each of the documents.
         // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
         //thread::sleep(std::time::Duration::from_secs(900));
-        let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
+        let form_data = ds
+            .get_envelope_form_data(&self.docusign_envelope_id)
+            .await
+            .unwrap();
 
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
         let result = users::dsl::users
-            .filter(users::dsl::recovery_email.eq(self.email.to_string()).and(users::dsl::cio_company_id.eq(company.id)))
+            .filter(
+                users::dsl::recovery_email
+                    .eq(self.email.to_string())
+                    .and(users::dsl::cio_company_id.eq(company.id)),
+            )
             .first::<User>(&db.conn());
         if result.is_ok() {
             let mut employee = result.unwrap();
             // Only do this if we don't have the employee's home address or start date.
             // This will help us to not override any changes then that are later made in gusto.
-            if employee.home_address_street_1.is_empty() || employee.start_date == crate::utils::default_date() {
+            if employee.home_address_street_1.is_empty()
+                || employee.start_date == crate::utils::default_date()
+            {
                 // We have an employee, so we can update their data from the data in Docusign.
 
                 for fd in form_data.clone() {
@@ -3428,7 +4033,8 @@ Sincerely,
                         employee.home_address_city = fd.value.trim().to_string();
                     }
                     if fd.name == "Applicant's State" {
-                        employee.home_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&fd.value);
+                        employee.home_address_state =
+                            crate::states::StatesMap::match_abreev_or_return_existing(&fd.value);
                     }
                     if fd.name == "Applicant's Postal Code" {
                         employee.home_address_zipcode = fd.value.trim().to_string();
@@ -3437,7 +4043,8 @@ Sincerely,
                         employee.home_address_country = fd.value.trim().to_string();
                     }
                     if fd.name == "Start Date" {
-                        let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                        let start_date =
+                            NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
                         employee.start_date = start_date;
                     }
                 }
@@ -3459,7 +4066,13 @@ Sincerely,
         self.update(db).await;
     }
 
-    pub async fn do_docusign_piia(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
+    pub async fn do_docusign_piia(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        template_id: &str,
+        company: &Company,
+    ) {
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
         if self.status != crate::applicant_status::Status::GivingOffer.to_string()
@@ -3470,8 +4083,14 @@ Sincerely,
             return;
         }
 
-        if self.docusign_piia_envelope_id.is_empty() && self.status == crate::applicant_status::Status::GivingOffer.to_string() {
-            println!("[docusign] applicant has status giving offer: {}, generating employee agreements in docusign for them!", self.name);
+        if self.docusign_piia_envelope_id.is_empty()
+            && self.status == crate::applicant_status::Status::GivingOffer.to_string()
+        {
+            println!(
+                "[docusign] applicant has status giving offer: {}, generating employee agreements \
+                 in docusign for them!",
+                self.name
+            );
             // We haven't sent their employee agreements yet, so let's do that.
             // Let's create a new envelope for the user.
             let mut new_envelope: docusign::Envelope = Default::default();
@@ -3499,10 +4118,16 @@ Sincerely,
                     routing_order: "1".to_string(),
                     // Make Steve's email notification different than the actual applicant.
                     email_notification: docusign::EmailNotification {
-                        email_subject: format!("Complete the employee agreements for {}", self.name),
+                        email_subject: format!(
+                            "Complete the employee agreements for {}",
+                            self.name
+                        ),
                         email_body: format!(
-                            "The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you employee agreements to complete, as Jess calls, the 'Mad Libs'. GO \
-                             COMPLETE THE MAD LIBS! After you finish, we will send the employee agreements to {} at {} to sign and date! Thanks!",
+                            "The status for the applicant, {}, has been changed to `Giving \
+                             offer`. Therefore, we are sending you employee agreements to \
+                             complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! \
+                             After you finish, we will send the employee agreements to {} at {} \
+                             to sign and date! Thanks!",
                             self.name, self.name, self.email
                         ),
                         language: Default::default(),
@@ -3516,8 +4141,11 @@ Sincerely,
                     routing_order: "2".to_string(),
                     email_notification: docusign::EmailNotification {
                         email_subject: DOCUSIGN_PIIA_SUBJECT.to_string(),
-                        email_body: "Here are the PIIA (Employee Proprietary Information and Invention Agreement) and Mediation documents. These do not need to be returned with the offer letter \
-                                     (sent in a separate DocuSign), but they need to be returned by your start date. Please let Steve know if you have any questions!"
+                        email_body: "Here are the PIIA (Employee Proprietary Information and \
+                                     Invention Agreement) and Mediation documents. These do not \
+                                     need to be returned with the offer letter (sent in a \
+                                     separate DocuSign), but they need to be returned by your \
+                                     start date. Please let Steve know if you have any questions!"
                             .to_string(),
                         language: Default::default(),
                     },
@@ -3529,8 +4157,10 @@ Sincerely,
                     signer_name: "Ruth Alexander".to_string(),
                     routing_order: "3".to_string(),
                     email_notification: docusign::EmailNotification {
-                        email_subject: "Oxide Computer Company Employee Agreements Signed".to_string(),
-                        email_body: "Attached are newly signed employee agreements. Thank you!".to_string(),
+                        email_subject: "Oxide Computer Company Employee Agreements Signed"
+                            .to_string(),
+                        email_body: "Attached are newly signed employee agreements. Thank you!"
+                            .to_string(),
                         language: Default::default(),
                     },
                 },
@@ -3549,13 +4179,22 @@ Sincerely,
         } else if !self.docusign_piia_envelope_id.is_empty() {
             // We have sent their employee agreements.
             // Let's get the status of the envelope in Docusign.
-            let envelope = ds.get_envelope(&self.docusign_piia_envelope_id).await.unwrap();
+            let envelope = ds
+                .get_envelope(&self.docusign_piia_envelope_id)
+                .await
+                .unwrap();
 
-            self.update_applicant_from_docusign_piia_envelope(db, ds, envelope).await;
+            self.update_applicant_from_docusign_piia_envelope(db, ds, envelope)
+                .await;
         }
     }
 
-    pub async fn update_applicant_from_docusign_piia_envelope(&mut self, db: &Database, ds: &DocuSign, envelope: docusign::Envelope) {
+    pub async fn update_applicant_from_docusign_piia_envelope(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        envelope: docusign::Envelope,
+    ) {
         let company = self.company(db);
 
         // Set the status in the database and airtable.
@@ -3586,7 +4225,10 @@ Sincerely,
         let drive_client = GoogleDrive::new(token);
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
+        let shared_drive = drive_client
+            .get_drive_by_name("Offer Letters")
+            .await
+            .unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -3599,16 +4241,27 @@ Sincerely,
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
                 //thread::sleep(std::time::Duration::from_secs(15));
-                bytes = ds.get_document(&envelope.envelope_id, &document.id).await.unwrap().to_vec();
+                bytes = ds
+                    .get_document(&envelope.envelope_id, &document.id)
+                    .await
+                    .unwrap()
+                    .to_vec();
             }
 
             // Create the folder for our applicant with their name.
-            let name_folder_id = drive_client.create_folder(&shared_drive.id, "", &self.name).await.unwrap();
+            let name_folder_id = drive_client
+                .create_folder(&shared_drive.id, "", &self.name)
+                .await
+                .unwrap();
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
-            if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {
+            if document.name.contains("Employee Mediation")
+                || document.name.contains("Employee_Mediation")
+            {
                 filename = format!("{} - Mediation Agreement.pdf", self.name);
-            } else if document.name.contains("Employee Proprietary") || document.name.contains("Employee_Proprietary") {
+            } else if document.name.contains("Employee Proprietary")
+                || document.name.contains("Employee_Proprietary")
+            {
                 filename = format!("{} - PIIA.pdf", self.name);
             } else if document.name.contains("Summary") {
                 filename = format!("{} - Employee Agreements - DocuSign Summary.pdf", self.name);
@@ -3617,7 +4270,16 @@ Sincerely,
             }
 
             // Create or update the file in the google_drive.
-            drive_client.create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes).await.unwrap();
+            drive_client
+                .create_or_update_file(
+                    &drive_id,
+                    &name_folder_id,
+                    &filename,
+                    "application/pdf",
+                    &bytes,
+                )
+                .await
+                .unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);
         }
     }
@@ -3630,7 +4292,8 @@ mod tests {
 
     use crate::{
         applicants::{
-            refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants, update_applicant_reviewers, update_applications_with_scoring_forms,
+            refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants,
+            update_applicant_reviewers, update_applications_with_scoring_forms,
             update_applications_with_scoring_results, Applicant, Applicants,
         },
         companies::Company,
@@ -3641,7 +4304,10 @@ mod tests {
     #[test]
     fn test_serialize_deserialize_applicants() {
         let db = Database::new();
-        let applicant = applicants::dsl::applicants.filter(applicants::dsl::id.eq(318)).first::<Applicant>(&db.conn()).unwrap();
+        let applicant = applicants::dsl::applicants
+            .filter(applicants::dsl::id.eq(318))
+            .first::<Applicant>(&db.conn())
+            .unwrap();
 
         // Let's test that serializing this is going to give us an array of Airtable users.
         let scorers = json!(applicant).to_string();
@@ -3684,7 +4350,9 @@ mod tests {
         refresh_db_applicants(&db, &oxide).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        Applicants::get_from_db(&db, oxide.id)
+            .update_airtable(&db)
+            .await;
 
         // Refresh DocuSign for the applicants.
         refresh_docusign_for_applicants(&db, &oxide).await;

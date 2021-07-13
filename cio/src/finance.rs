@@ -8,12 +8,17 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE},
+    airtable::{
+        AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE,
+        AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE,
+    },
     companies::Company,
     configs::{Group, User},
     core::UpdateAirtableRecord,
     db::Database,
-    schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users},
+    schema::{
+        accounts_payables, credit_card_transactions, expensed_items, software_vendors, users,
+    },
 };
 
 #[db {
@@ -92,7 +97,11 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 /// Sync software vendors from Airtable.
 pub async fn refresh_software_vendors(db: &Database, company: &Company) {
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(
+        &company.gsuite_account_id,
+        &company.gsuite_domain,
+        token.clone(),
+    );
 
     let github = company.authenticate_github();
 
@@ -114,7 +123,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
         if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
-            let org = github.org(&company.github_org).get().await.unwrap();
+            let org = github.orgs().get(&company.github_org).await.unwrap();
             vendor.users = org.plan.filled_seats;
         }
 
@@ -144,7 +153,12 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
         // Airtable, Brex, Gusto, Expensify are all the same number of users as
         // in all@.
-        if vendor.name == "Airtable" || vendor.name == "Ramp" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
+        if vendor.name == "Airtable"
+            || vendor.name == "Ramp"
+            || vendor.name == "Brex"
+            || vendor.name == "Gusto"
+            || vendor.name == "Expensify"
+        {
             let group = Group::get_from_db(db, company.id, "all".to_string()).unwrap();
             let airtable_group = group.get_existing_airtable_record(db).await.unwrap();
             vendor.users = airtable_group.fields.members.len() as i32;
@@ -158,12 +172,16 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         }
 
         // Update the cost per month.
-        db_vendor.total_cost_per_month = (db_vendor.cost_per_user_per_month * db_vendor.users as f32) + db_vendor.flat_cost_per_month;
+        db_vendor.total_cost_per_month = (db_vendor.cost_per_user_per_month
+            * db_vendor.users as f32)
+            + db_vendor.flat_cost_per_month;
 
         db_vendor.update(db).await;
     }
 
-    SoftwareVendors::get_from_db(db, company.id).update_airtable(db).await
+    SoftwareVendors::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await
 }
 
 #[db {
@@ -194,11 +212,19 @@ pub struct NewCreditCardTransaction {
     pub card_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "User")]
     pub merchant_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Merchant Name")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "Merchant Name"
+    )]
     pub merchant_name: String,
     #[serde(default)]
     pub category_id: i32,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Brex Category")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "Brex Category"
+    )]
     pub category_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
@@ -241,7 +267,10 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
     let users = ramp.list_users().await.unwrap();
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
-        ramp_users.insert(format!("{}{}", user.first_name, user.last_name), user.email.to_string());
+        ramp_users.insert(
+            format!("{}{}", user.first_name, user.last_name),
+            user.email.to_string(),
+        );
     }
 
     let transactions = ramp.get_transactions().await.unwrap();
@@ -254,7 +283,12 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
         }
 
         // Get the user's email for the transaction.
-        let email = ramp_users.get(&format!("{}{}", transaction.card_holder.first_name, transaction.card_holder.last_name)).unwrap();
+        let email = ramp_users
+            .get(&format!(
+                "{}{}",
+                transaction.card_holder.first_name, transaction.card_holder.last_name
+            ))
+            .unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&transaction.merchant_name);
@@ -289,7 +323,9 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
         nt.upsert(db).await;
     }
 
-    CreditCardTransactions::get_from_db(db, company.id).update_airtable(db).await;
+    CreditCardTransactions::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
@@ -354,7 +390,9 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
         nt.upsert(db).await;
     }
 
-    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
+    ExpensedItems::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 // Changes the vendor name to one that matches our existing list.
@@ -363,7 +401,8 @@ fn clean_vendor_name(s: &str) -> String {
         "Claralabs".to_string()
     } else if s == "StickyLife" {
         "Sticky Life".to_string()
-    } else if ((s.contains("Paypal") || s.contains("PayPal")) && (s.ends_with("Eb") || s.contains("Ebay") || s.ends_with("Eba")))
+    } else if ((s.contains("Paypal") || s.contains("PayPal"))
+        && (s.ends_with("Eb") || s.contains("Ebay") || s.ends_with("Eba")))
         || s == "Ebay"
         || s == "Paypal Transaction Allknagoods"
         || s == "Paypal Transaction Intuitimage"
@@ -427,7 +466,8 @@ fn clean_vendor_name(s: &str) -> String {
         "ULINE".to_string()
     } else if s == "Openphone" {
         "OpenPhone".to_string()
-    } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo" {
+    } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo"
+    {
         "TaskRabbit".to_string()
     } else if s == "Dell Inc" {
         "Dell".to_string()
@@ -443,7 +483,12 @@ fn clean_vendor_name(s: &str) -> String {
         "Finisar".to_string()
     } else if s == "AISense, Inc." {
         "Otter.ai".to_string()
-    } else if s == "Amazon Business Prime" || s == "Amzn Mktp Uk" || s == "Amazon Digital Services" || s == "Amazon.com" || s == "Amazon.co.uk" {
+    } else if s == "Amazon Business Prime"
+        || s == "Amzn Mktp Uk"
+        || s == "Amazon Digital Services"
+        || s == "Amazon.com"
+        || s == "Amazon.co.uk"
+    {
         "Amazon".to_string()
     } else if s == "GoEngineer" {
         "SolidWorks".to_string()
@@ -573,7 +618,9 @@ fn clean_vendor_name(s: &str) -> String {
         "TYAN".to_string()
     } else if s == "510 Investments LLC" {
         "510 Investments".to_string()
-    } else if s == "The Association for Computing Machinery" || s == "Association for Computing Machinery" {
+    } else if s == "The Association for Computing Machinery"
+        || s == "Association for Computing Machinery"
+    {
         "ACM".to_string()
     } else if s == "LATHAM&WATKINS" {
         "Latham & Watkins".to_string()
@@ -593,7 +640,9 @@ fn clean_vendor_name(s: &str) -> String {
         "Bed Bath and Beyond".to_string()
     } else if s == "Delta Air Lines" || s == "Delta" {
         "Delta Airlines".to_string()
-    } else if s == "National Passenger Rail Corporation" || s == "National Passenger Railroad Corporation" {
+    } else if s == "National Passenger Rail Corporation"
+        || s == "National Passenger Railroad Corporation"
+    {
         "Amtrak".to_string()
     } else if s == "TRINET" || s == "Trinet Cobra" {
         "TriNet".to_string()
@@ -624,7 +673,10 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
 
     if !path.exists() {
         // Return early the path does not exist.
-        println!("Brex csv at {} does not exist, returning early", path.to_str().unwrap());
+        println!(
+            "Brex csv at {} does not exist, returning early",
+            path.to_str().unwrap()
+        );
         return;
     }
 
@@ -649,7 +701,11 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
 
         // Try to get the user by their last name.
         match users::dsl::users
-            .filter(users::dsl::last_name.eq(last_name.to_string()).and(users::dsl::cio_company_id.eq(company.id)))
+            .filter(
+                users::dsl::last_name
+                    .eq(last_name.to_string())
+                    .and(users::dsl::cio_company_id.eq(company.id)),
+            )
             .first::<User>(&db.conn())
         {
             Ok(user) => {
@@ -662,7 +718,10 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
                 } else if last_name == "Randal" {
                     record.employee_email = "allison@oxidecomputer.com".to_string();
                 } else {
-                    println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
+                    println!(
+                        "could not find user with name `{}` last name `{}`: {}",
+                        name, last_name, e
+                    );
                 }
             }
         }
@@ -704,7 +763,11 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "accounts_payables"]
 pub struct NewAccountsPayable {
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "CONFIRMATION #")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "CONFIRMATION #"
+    )]
     pub confirmation_number: String,
     #[serde(default)]
     pub amount: f32,
@@ -714,13 +777,28 @@ pub struct NewAccountsPayable {
     pub vendor: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "CURRENCY")]
     pub currency: String,
-    #[serde(alias = "PROCESS DATE", deserialize_with = "bill_com_date_format::deserialize")]
+    #[serde(
+        alias = "PROCESS DATE",
+        deserialize_with = "bill_com_date_format::deserialize"
+    )]
     pub date: NaiveDate,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT TYPE")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "PAYMENT TYPE"
+    )]
     pub payment_type: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT STATUS")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "PAYMENT STATUS"
+    )]
     pub status: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT AMOUNT")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "PAYMENT AMOUNT"
+    )]
     pub notes: String,
     #[serde(
         default,
@@ -799,7 +877,9 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
         db_bill.update(db).await;
     }
 
-    AccountsPayables::get_from_db(db, company.id).update_airtable(db).await;
+    AccountsPayables::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 #[db {
@@ -838,7 +918,11 @@ pub struct NewExpensedItem {
     pub category_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Description")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "Description"
+    )]
     pub memo: String,
     #[serde(alias = "Timestamp")]
     pub time: DateTime<Utc>,
@@ -866,14 +950,19 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
 pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
-    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
+    ExpensedItems::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 
     let mut path = env::current_dir().unwrap();
     path.push("expensify.csv");
 
     if !path.exists() {
         // Return early the path does not exist.
-        println!("Expensify csv at {} does not exist, returning early", path.to_str().unwrap());
+        println!(
+            "Expensify csv at {} does not exist, returning early",
+            path.to_str().unwrap()
+        );
         return;
     }
 
@@ -892,14 +981,22 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         let split = name.split(' ');
         let vec: Vec<&str> = split.collect();
         // Get the last item in the vector.
-        let last_name = vec.last().unwrap().trim_end_matches("@oxidecomputer.com").to_string();
+        let last_name = vec
+            .last()
+            .unwrap()
+            .trim_end_matches("@oxidecomputer.com")
+            .to_string();
 
         // Reset the merchand id so it is clean.
         record.merchant_id = "".to_string();
 
         // Try to get the user by their last name.
         match users::dsl::users
-            .filter(users::dsl::last_name.eq(last_name.to_string()).or(users::dsl::username.eq(last_name.to_string())))
+            .filter(
+                users::dsl::last_name
+                    .eq(last_name.to_string())
+                    .or(users::dsl::username.eq(last_name.to_string())),
+            )
             .filter(users::dsl::cio_company_id.eq(company.id))
             .first::<User>(&db.conn())
         {
@@ -913,7 +1010,10 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
                 } else if last_name == "Randal" || last_name == "allison" {
                     record.employee_email = "allison@oxidecomputer.com".to_string();
                 } else {
-                    println!("could not find user with name `{}` last name `{}`: {}", name, last_name, e);
+                    println!(
+                        "could not find user with name `{}` last name `{}`: {}",
+                        name, last_name, e
+                    );
                 }
             }
         }
@@ -921,13 +1021,23 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         // Grab the card_id and set it as part of receipts.
         if !record.card_id.is_empty() && record.employee_email != "allison@oxidecomputer.com" {
             // Get the URL.
-            let body = reqwest::get(&record.card_id).await.unwrap().text().await.unwrap();
+            let body = reqwest::get(&record.card_id)
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
             let split = body.split(' ');
             let vec: Vec<&str> = split.collect();
 
             for word in vec {
-                if word.contains("https://www.expensify.com/receipts/") || word.contains("https://s3.amazonaws.com/receipts.expensify.com/") {
-                    let receipt = word.trim_start_matches("href=\"").trim_end_matches("\">Download").to_string();
+                if word.contains("https://www.expensify.com/receipts/")
+                    || word.contains("https://s3.amazonaws.com/receipts.expensify.com/")
+                {
+                    let receipt = word
+                        .trim_start_matches("href=\"")
+                        .trim_end_matches("\">Download")
+                        .to_string();
                     println!("{}", receipt);
                     record.receipts = vec![receipt.to_string()];
 
@@ -972,7 +1082,10 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
 
     if !path.exists() {
         // Return early the path does not exist.
-        println!("Bill.com csv at {} does not exist, returning early", path.to_str().unwrap());
+        println!(
+            "Bill.com csv at {} does not exist, returning early",
+            path.to_str().unwrap()
+        );
         return;
     }
 
@@ -1025,9 +1138,13 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {
         // Let's check if there are any attachments.
-        let attachments = qb.list_attachments_for_bill_payment(&bill_payment.id).await.unwrap();
+        let attachments = qb
+            .list_attachments_for_bill_payment(&bill_payment.id)
+            .await
+            .unwrap();
 
-        if (attachments.is_empty() && bill_payment.line.is_empty()) || bill_payment.total_amt == 0.0 {
+        if (attachments.is_empty() && bill_payment.line.is_empty()) || bill_payment.total_amt == 0.0
+        {
             // Continue early if we have no lines on the bill.
             continue;
         }
@@ -1055,7 +1172,9 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                             // Get the attachments for the bill.
                             let attachments = qb.list_attachments_for_bill(&bill.id).await.unwrap();
                             for attachment in attachments {
-                                transaction.invoices.push(attachment.temp_download_uri.to_string());
+                                transaction
+                                    .invoices
+                                    .push(attachment.temp_download_uri.to_string());
                             }
                         }
                     }
@@ -1067,8 +1186,13 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
             }
             Err(e) => {
                 println!(
-                    "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` date `{}`: {}",
-                    bill_payment.vendor_ref.name, merchant_name, bill_payment.total_amt, bill_payment.txn_date, e
+                    "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` \
+                     date `{}`: {}",
+                    bill_payment.vendor_ref.name,
+                    merchant_name,
+                    bill_payment.total_amt,
+                    bill_payment.txn_date,
+                    e
                 );
             }
         }
@@ -1079,7 +1203,10 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
         // Let's try to match the Brex reciepts to the transactions.
         if purchase.account_ref.name == "Credit Cards:Brex" {
             // See if we even have attachments.
-            let attachments = qb.list_attachments_for_purchase(&purchase.id).await.unwrap();
+            let attachments = qb
+                .list_attachments_for_purchase(&purchase.id)
+                .await
+                .unwrap();
             if attachments.is_empty() {
                 // We can continue early since we don't have attachments.
                 continue;
@@ -1088,7 +1215,11 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
             // This is a brex transaction, let's try to find it in our database to update it.
             // We know we have attachments as well.
             let time_start = NaiveTime::from_hms_milli(0, 0, 0, 0);
-            let sdt = purchase.txn_date.checked_sub_signed(Duration::days(10)).unwrap().and_time(time_start);
+            let sdt = purchase
+                .txn_date
+                .checked_sub_signed(Duration::days(10))
+                .unwrap()
+                .and_time(time_start);
             let time_end = NaiveTime::from_hms_milli(23, 59, 59, 59);
             let edt = purchase.txn_date.and_time(time_end);
             let merchant_name = clean_merchant_name(&purchase.entity_ref.name);
@@ -1098,8 +1229,14 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                         .eq(merchant_name.to_string())
                         .and(credit_card_transactions::dsl::card_vendor.eq("Brex".to_string()))
                         .and(credit_card_transactions::dsl::amount.eq(purchase.total_amt))
-                        .and(credit_card_transactions::dsl::time.ge(DateTime::<Utc>::from_utc(sdt, Utc)))
-                        .and(credit_card_transactions::dsl::time.le(DateTime::<Utc>::from_utc(edt, Utc))),
+                        .and(
+                            credit_card_transactions::dsl::time
+                                .ge(DateTime::<Utc>::from_utc(sdt, Utc)),
+                        )
+                        .and(
+                            credit_card_transactions::dsl::time
+                                .le(DateTime::<Utc>::from_utc(edt, Utc)),
+                        ),
                 )
                 .first::<CreditCardTransaction>(&db.conn())
             {
@@ -1108,15 +1245,24 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                     // Clear out existing receipts.
                     transaction.receipts = vec![];
                     for attachment in attachments {
-                        transaction.receipts.push(attachment.temp_download_uri.to_string());
+                        transaction
+                            .receipts
+                            .push(attachment.temp_download_uri.to_string());
                     }
                     transaction.update(db).await;
                     continue;
                 }
                 Err(e) => {
                     println!(
-                        "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` date `{}` --> less than `{}` greater than `{}`: {}",
-                        purchase.entity_ref.name, merchant_name, purchase.total_amt, purchase.txn_date, sdt, edt, e
+                        "WARN: could not find transaction with merchant_name `{}` -> `{}` amount \
+                         `{}` date `{}` --> less than `{}` greater than `{}`: {}",
+                        purchase.entity_ref.name,
+                        merchant_name,
+                        purchase.total_amt,
+                        purchase.txn_date,
+                        sdt,
+                        edt,
+                        e
                     );
                 }
             }
@@ -1173,7 +1319,8 @@ mod tests {
         companies::Company,
         db::Database,
         finance::{
-            refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_reimbursements, refresh_ramp_transactions,
+            refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions,
+            refresh_expensify_transactions, refresh_ramp_reimbursements, refresh_ramp_transactions,
             refresh_software_vendors, sync_quickbooks,
         },
     };

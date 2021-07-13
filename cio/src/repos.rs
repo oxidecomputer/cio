@@ -395,7 +395,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
 
     // Set the array of default teams to add to the repo.
     // TODO: do not hard code these.
-    let default_teams = vec!["all", "eng"];
+    let default_teams = vec!["all".to_string(), "eng".to_string()];
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {
@@ -420,7 +420,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
                 html: Default::default(),
                 self_: Default::default(),
             },
-            commit: octorust::types::Tree {
+            commit: octorust::types::CommitDataType {
                 sha: Default::default(),
                 url: Default::default(),
             },
@@ -519,11 +519,11 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
         }
 
         // For each team id, add the team to the permissions.
-        for team_name in default_teams.clone() {
+        for team_name in &default_teams {
             let perms = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
 
             // Check if the team already has the permission.
-            if let Some(val) = teams.get(&team_name) {
+            if let Some(val) = teams.get(team_name) {
                 if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin"
                 {
                     // Continue since they already have permission.

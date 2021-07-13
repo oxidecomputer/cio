@@ -2,7 +2,7 @@ use std::str::from_utf8;
 
 use airtable_api::Record;
 
-use crate::{companies::Company, core::CustomerInteraction};
+use crate::{companies::Company, core::CustomerInteraction, utils::get_file_content_from_repo};
 
 /// Sync meeting notes with the content from the notes.
 pub async fn sync_customer_meeting_notes(company: &Company) {
@@ -11,12 +11,13 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
 
     let github = company.authenticate_github();
 
-    // Get the reports repo client.
-    let reports_repo = github.repo(&company.github_org, "reports");
-
     // Get the current customer interactions list from airtable.
     let records: Vec<Record<CustomerInteraction>> = airtable
-        .list_records(crate::airtable::AIRTABLE_CUSTOMER_INTERACTIONS_TABLE, crate::airtable::AIRTABLE_GRID_VIEW, vec![])
+        .list_records(
+            crate::airtable::AIRTABLE_CUSTOMER_INTERACTIONS_TABLE,
+            crate::airtable::AIRTABLE_GRID_VIEW,
+            vec![],
+        )
         .await
         .unwrap();
 
@@ -28,10 +29,19 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
             continue;
         }
 
-        let notes_path = record.fields.notes_link.replace(&format!("https://github.com/{}/reports/blob/master", company.github_org), "");
+        let notes_path = record.fields.notes_link.replace(
+            &format!(
+                "https://github.com/{}/reports/blob/master",
+                company.github_org
+            ),
+            "",
+        );
 
-        let file = reports_repo.content().file(&notes_path, "master").await.unwrap();
-        let decoded = from_utf8(&file.content).unwrap().trim().to_string();
+        // Get the reports repo client.
+        let (content, _) =
+            get_file_content_from_repo(&github, &company.github_org, "reports", "", &notes_path)
+                .await;
+        let decoded = from_utf8(&content).unwrap().trim().to_string();
         // Compare the notes and see if we need to update them.
         if record.fields.notes == decoded {
             // They are the same so we can continue through the loop.
@@ -43,7 +53,13 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
 
         // Send the updated record to the airtable client.
         // Batch can only handle 10 at a time.
-        airtable.update_records(crate::airtable::AIRTABLE_CUSTOMER_INTERACTIONS_TABLE, vec![record.clone()]).await.unwrap();
+        airtable
+            .update_records(
+                crate::airtable::AIRTABLE_CUSTOMER_INTERACTIONS_TABLE,
+                vec![record.clone()],
+            )
+            .await
+            .unwrap();
 
         println!(
             "updated customer interaction record with notes for {} {} {}",
