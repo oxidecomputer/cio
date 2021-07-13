@@ -1,4 +1,3 @@
-use hubcaps::repositories::Repository;
 use serde::Serialize;
 
 use crate::{
@@ -7,11 +6,19 @@ use crate::{
     db::Database,
     repos::GithubRepos,
     rfds::RFDs,
-    templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls},
+    templates::{
+        generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls,
+    },
 };
 
 /// Generate the files for the GitHub repository short URLs.
-pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_company_id: i32) {
+pub async fn generate_shorturls_for_repos(
+    db: &Database,
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    cio_company_id: i32,
+) {
     let company = Company::get_by_id(db, cio_company_id);
     let subdomain = "git";
     // Initialize the array of links.
@@ -24,7 +31,11 @@ pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_
     for repo in repos {
         let link = ShortUrl {
             name: repo.name.to_string(),
-            description: format!("The GitHub repository at {}/{}", repo.owner.to_string(), repo.name.to_string()),
+            description: format!(
+                "The GitHub repository at {}/{}",
+                repo.owner.to_string(),
+                repo.name.to_string()
+            ),
             link: repo.html_url.to_string(),
             ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
@@ -38,11 +49,17 @@ pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_
     }
 
     // Generate the files for the links.
-    generate_nginx_and_terraform_files_for_shorturls(repo, links.clone()).await;
+    generate_nginx_and_terraform_files_for_shorturls(github, owner, repo, links.clone()).await;
 }
 
 /// Generate the files for the RFD short URLs.
-pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository, cio_company_id: i32) {
+pub async fn generate_shorturls_for_rfds(
+    db: &Database,
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    cio_company_id: i32,
+) {
     let company = Company::get_by_id(db, cio_company_id);
     let subdomain = "rfd";
     // Initialize the array of links.
@@ -71,11 +88,17 @@ pub async fn generate_shorturls_for_rfds(db: &Database, repo: &Repository, cio_c
     }
 
     // Generate the files for the links.
-    generate_nginx_and_terraform_files_for_shorturls(repo, links.clone()).await;
+    generate_nginx_and_terraform_files_for_shorturls(github, owner, repo, links.clone()).await;
 }
 
 /// Generate the files for the configs links.
-pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Repository, cio_company_id: i32) {
+pub async fn generate_shorturls_for_configs_links(
+    db: &Database,
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    cio_company_id: i32,
+) {
     let company = Company::get_by_id(db, cio_company_id);
     let subdomain = "corp";
     // Initialize the array of links.
@@ -111,11 +134,16 @@ pub async fn generate_shorturls_for_configs_links(db: &Database, repo: &Reposito
     }
 
     // Generate the files for the links.
-    generate_nginx_and_terraform_files_for_shorturls(repo, links).await;
+    generate_nginx_and_terraform_files_for_shorturls(github, owner, repo, links).await;
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
-pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Company) {
+pub async fn generate_dns_for_tailscale_devices(
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    company: &Company,
+) {
     let subdomain = "internal";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -128,7 +156,10 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Com
 
     // Create the array of links.
     for device in devices {
-        if device.addresses.is_empty() || device.hostname.is_empty() || device.hostname.starts_with("console-git-") {
+        if device.addresses.is_empty()
+            || device.hostname.is_empty()
+            || device.hostname.starts_with("console-git-")
+        {
             // Skip over the domains we generate for the console.
             // Continue early.
             continue;
@@ -176,7 +207,7 @@ pub async fn generate_dns_for_tailscale_devices(repo: &Repository, company: &Com
     }
 
     // Generate the files for the links.
-    generate_terraform_files_for_shorturls(repo, links).await;
+    generate_terraform_files_for_shorturls(github, owner, repo, links).await;
 }
 
 /// Update all the short URLs and DNS.
@@ -188,14 +219,22 @@ pub async fn refresh_shorturls() {
     // Iterate over the companies and update.
     for company in companies {
         let github = company.authenticate_github();
-        let repo = github.repo(&company.github_org, "configs");
-        generate_shorturls_for_repos(&db, &repo, company.id).await;
-        generate_shorturls_for_rfds(&db, &repo, company.id).await;
-        generate_shorturls_for_configs_links(&db, &repo, company.id).await;
+        generate_shorturls_for_repos(&db, &github, &company.github_org, "configs", company.id)
+            .await;
+        generate_shorturls_for_rfds(&db, &github, &company.github_org, "configs", company.id).await;
+        generate_shorturls_for_configs_links(
+            &db,
+            &github,
+            &company.github_org,
+            "configs",
+            company.id,
+        )
+        .await;
 
         // Only do this if we can auth with Tailscale.
         if !company.tailscale_api_key.is_empty() {
-            generate_dns_for_tailscale_devices(&repo, &company).await;
+            generate_dns_for_tailscale_devices(&github, &company.github_org, "configs", &company)
+                .await;
         }
     }
 }

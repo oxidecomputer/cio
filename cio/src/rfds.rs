@@ -12,9 +12,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
-use futures_util::TryStreamExt;
 use google_drive::GoogleDrive;
-use hubcaps::{repositories::Repository, Github};
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -27,7 +25,10 @@ use crate::{
     core::UpdateAirtableRecord,
     db::Database,
     schema::{rfds as r_f_ds, rfds},
-    utils::{create_or_update_file_in_github_repo, truncate, write_file},
+    utils::{
+        create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string,
+        get_file_content_from_repo, truncate, write_file,
+    },
 };
 
 /// The data type for an RFD.
@@ -95,19 +96,35 @@ pub struct NewRFD {
 
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
-    pub async fn new_from_github(company: &Company, repo: &Repository, branch: &str, file_path: &str, commit_date: DateTime<Utc>) -> Self {
+    pub async fn new_from_github(
+        company: &Company,
+        github: &octorust::Client,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+        file_path: &str,
+        commit_date: DateTime<Utc>,
+    ) -> Self {
         // Get the file from GitHub.
         let mut content = String::new();
         let mut link = String::new();
         let mut sha = String::new();
-        if let Ok(file) = repo.content().file(file_path, branch).await {
-            content = from_utf8(&file.content).unwrap().trim().to_string();
-            link = file.html_url;
-            sha = file.sha;
+        if let Ok(file) = github
+            .repos()
+            .get_content(owner, repo, file_path, branch)
+            .await
+        {
+            let f = file.first().unwrap();
+            content = decode_base64_to_string(&f.content);
+            link = f.html_url;
+            sha = f.sha;
         }
 
         // Parse the RFD directory as an int.
-        let (dir, _) = file_path.trim_start_matches("rfd/").split_once('/').unwrap();
+        let (dir, _) = file_path
+            .trim_start_matches("rfd/")
+            .split_once('/')
+            .unwrap();
         let number = dir.trim_start_matches('0').parse::<i32>().unwrap();
 
         let number_string = NewRFD::generate_number_string(number);
@@ -153,7 +170,13 @@ impl NewRFD {
         match re.find(content) {
             Some(v) => {
                 // TODO: find less horrible way to do this.
-                let trimmed = v.as_str().replace("RFD", "").replace("# ", "").replace("= ", " ").trim().to_string();
+                let trimmed = v
+                    .as_str()
+                    .replace("RFD", "")
+                    .replace("# ", "")
+                    .replace("= ", " ")
+                    .trim()
+                    .to_string();
 
                 let (_, s) = trimmed.split_once(' ').unwrap();
 
@@ -167,7 +190,13 @@ impl NewRFD {
                 // There is no "RFD" in our title. This is the case for RFD 31.
                 re = Regex::new(r"(?m)(^= .*$)").unwrap();
                 let results = re.find(content).unwrap();
-                results.as_str().replace("RFD", "").replace("# ", "").replace("= ", " ").trim().to_string()
+                results
+                    .as_str()
+                    .replace("RFD", "")
+                    .replace("# ", "")
+                    .replace("= ", " ")
+                    .trim()
+                    .to_string()
             }
         }
     }
@@ -248,20 +277,33 @@ impl NewRFD {
 }
 
 impl RFD {
-    pub async fn get_html(&self, repo: &Repository, branch: &str, is_markdown: bool) -> String {
+    pub async fn get_html(
+        &self,
+        github: &octorust::Client,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+        is_markdown: bool,
+    ) -> String {
         let html: String;
         if is_markdown {
             // Parse the markdown.
             html = parse_markdown(&self.content);
         } else {
             // Parse the acsiidoc.
-            html = self.parse_asciidoc(repo, branch).await;
+            html = self.parse_asciidoc(github, owner, repo, branch).await;
         }
 
         clean_rfd_html_links(&html, &self.number_string)
     }
 
-    pub async fn parse_asciidoc(&self, repo: &Repository, branch: &str) -> String {
+    pub async fn parse_asciidoc(
+        &self,
+        github: &octorust::Client,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+    ) -> String {
         let dir = format!("rfd/{}", self.number_string);
 
         // Create the temporary directory.
@@ -278,12 +320,19 @@ impl RFD {
         // TODO: we don't need to save all the images, only the inline ones, clean this up
         // eventually.
         if self.content.contains("[opts=inline]") {
-            let images = get_images_in_branch(repo, &dir, branch).await;
+            let images = get_images_in_branch(github, owner, repo, &dir, branch).await;
             for image in images {
                 // Save the image to our temporary directory.
-                let image_path = format!("{}/{}", parent, image.path.replace(&dir, "").trim_start_matches('/'));
+                let image_path = format!(
+                    "{}/{}",
+                    parent,
+                    image.path.replace(&dir, "").trim_start_matches('/')
+                );
 
-                write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap_or_default());
+                write_file(
+                    &PathBuf::from(image_path),
+                    &decode_base64_to_string(&image.content),
+                );
             }
         }
 
@@ -315,7 +364,10 @@ impl RFD {
     /// Convert an RFD into JSON as Slack message.
     // TODO: make this include more fields
     pub fn as_slack_msg(&self) -> String {
-        let mut msg = format!("{} (_*{}*_) <{}|github> <{}|rendered>", self.name, self.state, self.short_link, self.rendered_link);
+        let mut msg = format!(
+            "{} (_*{}*_) <{}|github> <{}|rendered>",
+            self.name, self.state, self.short_link, self.rendered_link
+        );
 
         if !self.discussion.is_empty() {
             msg += &format!(" <{}|discussion>", self.discussion);
@@ -325,9 +377,15 @@ impl RFD {
     }
 
     /// Get a changelog for the RFD.
-    pub async fn get_weekly_changelog(&self, github: &Github, since: DateTime<Utc>, company: &Company) -> String {
-        let repo = github.repo(&company.github_org, "rfd");
-        let r = repo.get().await.unwrap();
+    pub async fn get_weekly_changelog(
+        &self,
+        github: &octorust::Client,
+        since: DateTime<Utc>,
+        company: &Company,
+    ) -> String {
+        let owner = &company.github_org;
+        let repo = "rfd";
+        let r = github.repos().get(owner, repo).await.unwrap();
         let mut changelog = String::new();
 
         let mut branch = self.number_string.to_string();
@@ -336,12 +394,27 @@ impl RFD {
         }
 
         // Get the commits from the last seven days to the file.
-        let commits = repo.commits().list(&format!("/rfd/{}/", self.number_string), &branch, Some(since)).await.unwrap();
+        let commits = github
+            .repos()
+            .list_all_commits(
+                owner,
+                repo,
+                &branch,
+                &format!("/rfd/{}/", self.number_string),
+                "",
+                Some(since),
+                None,
+            )
+            .await
+            .unwrap();
 
         for commit in commits {
             let message: Vec<&str> = commit.commit.message.lines().collect();
             if !message.is_empty() {
-                changelog += &format!("\t- \"{}\" by @{}\n\t\thttps://github.com/oxidecomputer/rfd/commit/{}\n", message[0], commit.author.login, commit.sha);
+                changelog += &format!(
+                    "\t- \"{}\" by @{}\n\t\thttps://github.com/oxidecomputer/rfd/commit/{}\n",
+                    message[0], commit.author.login, commit.sha
+                );
             }
         }
 
@@ -350,7 +423,15 @@ impl RFD {
 
     /// Get the filename for the PDF of the RFD.
     pub fn get_pdf_filename(&self) -> String {
-        format!("RFD {} {}.pdf", self.number_string, self.title.replace("/", "-").replace("'", "").replace(":", "").trim())
+        format!(
+            "RFD {} {}.pdf",
+            self.number_string,
+            self.title
+                .replace("/", "-")
+                .replace("'", "")
+                .replace(":", "")
+                .trim()
+        )
     }
 
     /// Update an RFDs state.
@@ -367,10 +448,16 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    pub async fn convert_and_upload_pdf(&mut self, github: &Github, drive_client: &GoogleDrive, company: &Company) {
+    pub async fn convert_and_upload_pdf(
+        &mut self,
+        github: &octorust::Client,
+        drive_client: &GoogleDrive,
+        company: &Company,
+    ) {
         // Get the rfd repo client.
-        let rfd_repo = github.repo(&company.github_org, "rfd");
-        let repo = rfd_repo.get().await.unwrap();
+        let owner = &company.github_org;
+        let rfd_repo = "rfd";
+        let repo = github.repos().get(owner, rfd_repo).await.unwrap();
 
         let mut path = env::temp_dir();
         path.push(format!("pdfcontents{}.adoc", self.number_string));
@@ -396,17 +483,30 @@ impl RFD {
         // We need to save the images locally as well.
         // This ensures that
         let old_dir = format!("rfd/{}", self.number_string);
-        let images = get_images_in_branch(&rfd_repo, &old_dir, &branch).await;
+        let images = get_images_in_branch(github, owner, rfd_repo, &old_dir, &branch).await;
         for image in images {
             // Save the image to our temporary directory.
-            let image_path = format!("{}/{}", temp_dir_str.trim_end_matches('/'), image.path.replace(&old_dir, "").trim_start_matches('/'));
+            let image_path = format!(
+                "{}/{}",
+                temp_dir_str.trim_end_matches('/'),
+                image.path.replace(&old_dir, "").trim_start_matches('/')
+            );
 
-            write_file(&PathBuf::from(image_path), from_utf8(&image.content).unwrap_or_default());
+            write_file(
+                &PathBuf::from(image_path),
+                &decode_base64_to_string(&image.content),
+            );
         }
 
         let cmd_output = Command::new("asciidoctor-pdf")
             .current_dir(env::temp_dir())
-            .args(&["-o", "-", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
+            .args(&[
+                "-o",
+                "-",
+                "-a",
+                "source-highlighter=rouge",
+                path.to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -418,20 +518,40 @@ impl RFD {
         }
 
         // Create or update the file in the github repository.
-        create_or_update_file_in_github_repo(&rfd_repo, &repo.default_branch, &rfd_path, cmd_output.stdout.clone()).await;
+        create_or_update_file_in_github_repo(
+            github,
+            owner,
+            rfd_repo,
+            &repo.default_branch,
+            &rfd_path,
+            cmd_output.stdout.clone(),
+        )
+        .await;
 
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
+        let shared_drive = drive_client
+            .get_drive_by_name("Automated Documents")
+            .await
+            .unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let drive_rfd_dir = drive_client.get_file_by_name(&drive_id, "rfds").await.unwrap();
+        let drive_rfd_dir = drive_client
+            .get_file_by_name(&drive_id, "rfds")
+            .await
+            .unwrap();
         let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
 
         // Create or update the file in the google_drive.
         let drive_file = drive_client
-            .create_or_update_file(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
+            .create_or_update_file(
+                &drive_id,
+                &parent_id,
+                &file_name,
+                "application/pdf",
+                &cmd_output.stdout,
+            )
             .await
             .unwrap();
         self.pdf_link_google_drive = format!("https://drive.google.com/open?id={}", drive_file.id);
@@ -444,9 +564,10 @@ impl RFD {
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    pub async fn expand(&mut self, github: &Github, company: &Company) {
-        let repo = github.repo(&company.github_org, "rfd");
-        let r = repo.get().await.unwrap();
+    pub async fn expand(&mut self, github: &octorust::Client, company: &Company) {
+        let owner = &company.github_org;
+        let repo = "rfd";
+        let r = github.repos().get(owner, repo).await.unwrap();
 
         // Trim the title.
         self.title = self.title.trim().to_string();
@@ -469,34 +590,35 @@ impl RFD {
 
         // Get the RFD contents from the branch.
         let rfd_dir = format!("/rfd/{}", self.number_string);
-        let (rfd_content, is_markdown, sha) = get_rfd_contents_from_repo(github, &branch, &rfd_dir, company).await;
+        let (rfd_content, is_markdown, sha) =
+            get_rfd_contents_from_repo(github, owner, repo, &branch, &rfd_dir, company).await;
         self.content = rfd_content;
         self.sha = sha;
 
-        if branch == r.default_branch {
-            // Get the commit date.
-            if let Ok(commits) = repo.commits().list(&rfd_dir, "", None).await {
-                let commit = commits.get(0).unwrap();
-                self.commit_date = commit.commit.author.date;
-            }
-        } else {
-            // Get the branch.
-            if let Ok(commit) = repo.commits().get(&branch).await {
-                // TODO: we should not have to duplicate this code below
-                // but the references were mad...
-                self.commit_date = commit.commit.author.date;
-            }
+        // Get the commit date.
+        if let Ok(commits) = github
+            .repos()
+            .list_commits(owner, repo, &branch, &rfd_dir, "", None, None, 0, 0)
+            .await
+        {
+            let commit = commits.get(0).unwrap();
+            self.commit_date = commit.commit.author.date;
         }
 
         // Parse the HTML.
-        self.html = self.get_html(&repo, &branch, is_markdown).await;
+        self.html = self
+            .get_html(github, owner, repo, &branch, is_markdown)
+            .await;
 
         self.authors = NewRFD::get_authors(&self.content, is_markdown);
 
         // Set the pdf link
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
-        self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", company.github_org, rfd_path);
+        self.pdf_link_github = format!(
+            "https://github.com/{}/rfd/blob/master{}",
+            company.github_org, rfd_path
+        );
 
         self.cio_company_id = company.id;
     }
@@ -517,16 +639,25 @@ impl UpdateAirtableRecord<RFD> for RFD {
 }
 
 /// Get the RFDs from the rfd GitHub repo.
-pub async fn get_rfds_from_repo(github: &Github, company: &Company) -> BTreeMap<i32, NewRFD> {
-    let repo = github.repo(&company.github_org, "rfd");
-    let r = repo.get().await.unwrap();
+pub async fn get_rfds_from_repo(
+    github: &octorust::Client,
+    company: &Company,
+) -> BTreeMap<i32, NewRFD> {
+    let owner = &company.github_org;
+    let repo = "rfd";
+    let r = github.repos().get(owner, repo).await.unwrap();
 
     // Get the contents of the .helpers/rfd.csv file.
-    let rfd_csv_content = repo.content().file("/.helpers/rfd.csv", &r.default_branch).await.expect("failed to get rfd csv content").content;
+    let (rfd_csv_content, _) =
+        get_file_content_from_repo(github, owner, repo, &r.default_branch, "/.helpers/rfd.csv")
+            .await;
     let rfd_csv_string = from_utf8(&rfd_csv_content).unwrap();
 
     // Create the csv reader.
-    let mut csv_reader = ReaderBuilder::new().delimiter(b',').has_headers(true).from_reader(rfd_csv_string.as_bytes());
+    let mut csv_reader = ReaderBuilder::new()
+        .delimiter(b',')
+        .has_headers(true)
+        .from_reader(rfd_csv_string.as_bytes());
 
     // Create the BTreeMap of RFDs.
     let mut rfds: BTreeMap<i32, NewRFD> = Default::default();
@@ -546,92 +677,129 @@ pub async fn get_rfds_from_repo(github: &Github, company: &Company) -> BTreeMap<
 }
 
 /// Try to get the markdown or asciidoc contents from the repo.
-pub async fn get_rfd_contents_from_repo(github: &Github, branch: &str, dir: &str, company: &Company) -> (String, bool, String) {
-    let repo = github.repo(&company.github_org, "rfd");
-    let r = repo.get().await.unwrap();
-    let repo_contents = repo.content();
+pub async fn get_rfd_contents_from_repo(
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    branch: &str,
+    dir: &str,
+    company: &Company,
+) -> (String, bool, String) {
+    let owner = &company.github_org;
+    let repo = "rfd";
+    let r = github.repos().get(owner, repo).await.unwrap();
     let mut is_markdown = false;
     let decoded: String;
     let sha: String;
 
     // Get the contents of the file.
     let path = format!("{}/README.adoc", dir);
-    match repo_contents.file(&path, branch).await {
+    match github.repos().get_content(owner, repo, &path, branch).await {
         Ok(contents) => {
-            decoded = from_utf8(&contents.content).unwrap().trim().to_string();
-            sha = contents.sha;
+            let f = contents.first().unwrap();
+            decoded = decode_base64_to_string(&f.content);
+            sha = f.sha.to_string();
         }
         Err(e) => {
-            println!("[rfd] getting file contents for {} failed: {}, trying markdown instead...", path, e);
+            println!(
+                "[rfd] getting file contents for {} failed: {}, trying markdown instead...",
+                path, e
+            );
 
             // Try to get the markdown instead.
             is_markdown = true;
-            let contents = repo_contents.file(&format!("{}/README.md", dir), branch).await.unwrap();
+            let contents = github
+                .repos()
+                .get_content(owner, repo, &format!("{}/README.md", dir), branch)
+                .await
+                .unwrap();
 
-            decoded = from_utf8(&contents.content).unwrap().trim().to_string();
-            sha = contents.sha;
+            let f = contents.first().unwrap();
+            decoded = decode_base64_to_string(&f.content);
+            sha = f.sha.to_string();
         }
     }
 
     // Get all the images in the branch and make sure they are in the images directory on master.
-    let images = get_images_in_branch(&repo, dir, branch).await;
+    let images = get_images_in_branch(github, owner, repo, dir, branch).await;
     for image in images {
         let new_path = image.path.replace("rfd/", "src/public/static/images/");
         // Make sure we have this file in the static images dir on the master branch.
-        create_or_update_file_in_github_repo(&repo, &r.default_branch, &new_path, image.content.to_vec()).await;
+        create_or_update_file_in_github_repo(
+            github,
+            owner,
+            repo,
+            &r.default_branch,
+            &new_path,
+            decode_base64(&image.content),
+        )
+        .await;
     }
 
     (deunicode::deunicode(&decoded), is_markdown, sha)
 }
 
 // Get all the images in a specific directory of a GitHub branch.
-pub async fn get_images_in_branch(repo: &Repository, dir: &str, branch: &str) -> Vec<hubcaps::content::File> {
-    let mut files: Vec<hubcaps::content::File> = Default::default();
+pub async fn get_images_in_branch(
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    dir: &str,
+    branch: &str,
+) -> Vec<octorust::types::Entries> {
+    let mut files: Vec<octorust::types::Entries> = Default::default();
 
     // Get all the images in the branch and make sure they are in the images directory on master.
-    for file in repo.content().iter(dir, branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap() {
+    for file in github
+        .repos()
+        .get_content(owner, repo, dir, branch)
+        .await
+        .unwrap()
+    {
         if is_image(&file.name) {
             // Get the contents of the image.
-            match repo.content().file(&file.path, branch).await {
-                Ok(f) => {
+            match github
+                .repos()
+                .get_content(owner, repo, &file.path, branch)
+                .await
+            {
+                Ok(mut f) => {
                     // Push the file to our vector.
-                    files.push(f);
+                    files.append(&mut f);
                 }
-                Err(e) => match e {
-                    hubcaps::errors::Error::Fault { code: _, ref error } => {
-                        if error.message.contains("too large") {
-                            // The file is too big for us to get it's contents through this API.
-                            // The error suggests we use the Git Data API but we need the file sha for
-                            // that.
-                            // We have the sha we can see if the files match using the
-                            // Git Data API.
-                            let blob = repo.git().blob(&file.sha).await.unwrap();
-                            // Base64 decode the contents.
-                            // TODO: move this logic to hubcaps.
-                            let v = blob.content.replace("\n", "");
-                            let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
+                Err(e) => {
+                    // TODO: better match on errors
+                    if e.to_string().contains("too large") {
+                        // The file is too big for us to get it's contents through this API.
+                        // The error suggests we use the Git Data API but we need the file sha for
+                        // that.
+                        // We have the sha we can see if the files match using the
+                        // Git Data API.
+                        let blob = github.git().get_blob(owner, repo, &file.sha).await.unwrap();
 
-                            // Push the new file.
-                            files.push(hubcaps::content::File {
-                                encoding: hubcaps::content::Encoding::Base64,
-                                size: file.size,
-                                name: file.name,
-                                path: file.path,
-                                content: hubcaps::content::DecodedContents(decoded.to_vec()),
-                                sha: file.sha,
-                                url: file.url,
-                                git_url: file.git_url,
-                                html_url: file.html_url,
-                                download_url: file.download_url.unwrap_or_default(),
-                                _links: file._links,
-                            });
+                        // Push the new file.
+                        files.push(octorust::types::Entries {
+                            type_: "file".to_string(),
+                            size: file.size,
+                            name: file.name,
+                            path: file.path,
+                            content: file.content,
+                            sha: file.sha,
+                            url: file.url,
+                            git_url: file.git_url,
+                            html_url: file.html_url,
+                            download_url: file.download_url,
+                            links: file.links,
+                        });
 
-                            continue;
-                        }
-                        println!("[rfd] getting file contents for {} failed: {}", file.path, e);
+                        continue;
                     }
-                    _ => println!("[rfd] getting file contents for {} failed: {}", file.path, e),
-                },
+
+                    println!(
+                        "[rfd] getting file contents for {} failed: {}",
+                        file.path, e
+                    );
+                }
             }
         }
     }
@@ -645,25 +813,48 @@ pub fn parse_markdown(content: &str) -> String {
 
 /// Return if the file is an image.
 pub fn is_image(file: &str) -> bool {
-    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
+    file.ends_with(".svg")
+        || file.ends_with(".png")
+        || file.ends_with(".jpg")
+        || file.ends_with(".jpeg")
 }
 
 pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
     let mut cleaned = content
         .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
         .replace("href=\"#", &format!("href=\"/rfd/{}#", num))
-        .replace(r#"img src=""#, &format!(r#"img src="/static/images/{}/"#, num))
-        .replace(r#"object data=""#, &format!(r#"object data="/static/images/{}/"#, num))
-        .replace(r#"object type="image/svg+xml" data=""#, &format!(r#"object type="image/svg+xml" data="/static/images/{}/"#, num));
+        .replace(
+            r#"img src=""#,
+            &format!(r#"img src="/static/images/{}/"#, num),
+        )
+        .replace(
+            r#"object data=""#,
+            &format!(r#"object data="/static/images/{}/"#, num),
+        )
+        .replace(
+            r#"object type="image/svg+xml" data=""#,
+            &format!(
+                r#"object type="image/svg+xml" data="/static/images/{}/"#,
+                num
+            ),
+        );
 
     let mut re = Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer").unwrap();
-    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/000$num").to_string();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/000$num")
+        .to_string();
     re = Regex::new(r"https://(?P<num>[0-9][0-9]).rfd.oxide.computer").unwrap();
-    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/00$num").to_string();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/00$num")
+        .to_string();
     re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
-    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/0$num").to_string();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/0$num")
+        .to_string();
     re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
-    cleaned = re.replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/$num").to_string();
+    cleaned = re
+        .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/$num")
+        .to_string();
 
     cleaned
 }
@@ -679,9 +870,17 @@ pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> S
         re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
     }
 
-    let replacement = if let Some(v) = re.find(content) { v.as_str().to_string() } else { String::new() };
+    let replacement = if let Some(v) = re.find(content) {
+        v.as_str().to_string()
+    } else {
+        String::new()
+    };
 
-    content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1)
+    content.replacen(
+        &replacement,
+        &format!("{}discussion: {}", pre, link.trim()),
+        1,
+    )
 }
 
 pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
@@ -695,7 +894,11 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
         re = Regex::new(r"(?m)(state:.*$)").unwrap();
     }
 
-    let replacement = if let Some(v) = re.find(content) { v.as_str().to_string() } else { String::new() };
+    let replacement = if let Some(v) = re.find(content) {
+        v.as_str().to_string()
+    } else {
+        String::new()
+    };
 
     content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1)
 }
@@ -721,7 +924,9 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) {
         new_rfd.expand(&github, company).await;
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(&github, &drive_client, company).await;
+        new_rfd
+            .convert_and_upload_pdf(&github, &drive_client, company)
+            .await;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
@@ -736,14 +941,20 @@ pub async fn send_rfd_changelog(company: &Company) {
 
     let github = company.authenticate_github();
     let seven_days_ago = Utc::now() - Duration::days(7);
-    let week_format = format!("from {} to {}", seven_days_ago.format("%m-%d-%Y"), Utc::now().format("%m-%d-%Y"));
+    let week_format = format!(
+        "from {} to {}",
+        seven_days_ago.format("%m-%d-%Y"),
+        Utc::now().format("%m-%d-%Y")
+    );
 
     let mut changelog = format!("Changes to RFDs for the week {}:\n", week_format);
 
     // Iterate over the RFDs.
     let rfds = RFDs::get_from_db(&db, company.id);
     for rfd in rfds {
-        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, company).await;
+        let changes = rfd
+            .get_weekly_changelog(&github, seven_days_ago, company)
+            .await;
         if !changes.is_empty() {
             changelog += &format!("\n{} {}\n{}", rfd.name, rfd.short_link, changes);
         }
@@ -770,7 +981,10 @@ mod tests {
     use crate::{
         companies::Company,
         db::Database,
-        rfds::{clean_rfd_html_links, refresh_db_rfds, send_rfd_changelog, update_discussion_link, update_state, NewRFD, RFDs},
+        rfds::{
+            clean_rfd_html_links, refresh_db_rfds, send_rfd_changelog, update_discussion_link,
+            update_state, NewRFD, RFDs,
+        },
     };
 
     #[ignore]

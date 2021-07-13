@@ -9,9 +9,12 @@ use std::{
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
-use futures_util::stream::TryStreamExt;
 use google_geocode::Geocode;
-use gsuite_api::{Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup, User as GSuiteUser};
+use gsuite_api::{
+    Attendee, Building as GSuiteBuilding, CalendarEvent,
+    CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup,
+    User as GSuiteUser,
+};
 use gusto_api::Gusto;
 use hubcaps::{collaborators::Permissions, Github};
 use macros::db;
@@ -20,13 +23,20 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::{AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE},
+    airtable::{
+        AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE,
+        AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE,
+    },
     applicants::Applicant,
     certs::{Certificate, Certificates, NewCertificate},
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
-    gsuite::{update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases, update_user_google_groups},
+    gsuite::{
+        update_google_group_settings, update_group_aliases, update_gsuite_building,
+        update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases,
+        update_user_google_groups,
+    },
     schema::{applicants, buildings, conference_rooms, groups, links, users},
     shipments::NewOutboundShipment,
     templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta},
@@ -109,9 +119,17 @@ pub struct UserConfig {
     pub username: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
-    #[serde(default, alias = "recovery_email", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        alias = "recovery_email",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub recovery_email: String,
-    #[serde(default, alias = "recovery_phone", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        alias = "recovery_phone",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub recovery_phone: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gender: String,
@@ -188,10 +206,17 @@ pub struct UserConfig {
     pub work_address_formatted: String,
 
     /// Start date (automatically populated by Gusto)
-    #[serde(default = "crate::utils::default_date", alias = "start_date", serialize_with = "null_date_format::serialize")]
+    #[serde(
+        default = "crate::utils::default_date",
+        alias = "start_date",
+        serialize_with = "null_date_format::serialize"
+    )]
     pub start_date: NaiveDate,
     /// Birthday (automatically populated by Gusto)
-    #[serde(default = "crate::utils::default_date", serialize_with = "null_date_format::serialize")]
+    #[serde(
+        default = "crate::utils::default_date",
+        serialize_with = "null_date_format::serialize"
+    )]
     pub birthday: NaiveDate,
 
     /// The following field does not exist in the config files but is populated by
@@ -263,7 +288,8 @@ pub mod null_date_format {
         D: Deserializer<'de>,
     {
         // TODO: actually get the Unix timestamp.
-        let s = String::deserialize(deserializer).unwrap_or_else(|_| "2020-12-03T15:49:27Z".to_string());
+        let s = String::deserialize(deserializer)
+            .unwrap_or_else(|_| "2020-12-03T15:49:27Z".to_string());
 
         // Try to convert from the string to an int, in case we have a numerical
         // time stamp.
@@ -294,7 +320,10 @@ impl UserConfig {
         }
 
         // If they are not in the US skip them.
-        if self.home_address_country != "US" && self.home_address_country != "United States" && self.home_address_country != "USA" {
+        if self.home_address_country != "US"
+            && self.home_address_country != "United States"
+            && self.home_address_country != "USA"
+        {
             // Return early.
             return;
         }
@@ -370,7 +399,10 @@ impl UserConfig {
         self.home_address_zipcode = gusto_user.home_address.zip.to_string();
         self.home_address_country = gusto_user.home_address.country.to_string();
 
-        if self.home_address_country == "US" || self.home_address_country == "USA" || self.home_address_country.is_empty() {
+        if self.home_address_country == "US"
+            || self.home_address_country == "USA"
+            || self.home_address_country.is_empty()
+        {
             self.home_address_country = "United States".to_string();
         }
     }
@@ -387,15 +419,23 @@ impl UserConfig {
     async fn populate_home_address(&mut self) {
         let mut street_address = self.home_address_street_1.to_string();
         if !self.home_address_street_2.is_empty() {
-            street_address = format!("{}\n{}", self.home_address_street_1, self.home_address_street_2,);
+            street_address = format!(
+                "{}\n{}",
+                self.home_address_street_1, self.home_address_street_2,
+            );
         }
         // Make sure the state is not an abreev.
-        self.home_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
+        self.home_address_state =
+            crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
 
         // Set the formatted address.
         self.home_address_formatted = format!(
             "{}\n{}, {} {} {}",
-            street_address, self.home_address_city, self.home_address_state, self.home_address_zipcode, self.home_address_country
+            street_address,
+            self.home_address_city,
+            self.home_address_state,
+            self.home_address_zipcode,
+            self.home_address_country
         )
         .trim()
         .trim_matches(',')
@@ -424,15 +464,20 @@ impl UserConfig {
         if !self.building.is_empty() {
             // The user has an actual building for their work address.
             // Let's get it.
-            let building = Building::get_from_db(db, self.cio_company_id, self.building.to_string()).unwrap();
+            let building =
+                Building::get_from_db(db, self.cio_company_id, self.building.to_string()).unwrap();
             // Now let's set their address to the building's address.
             self.work_address_street_1 = building.street_address.to_string();
             self.work_address_street_2 = "".to_string();
             self.work_address_city = building.city.to_string();
-            self.work_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&building.state);
+            self.work_address_state =
+                crate::states::StatesMap::match_abreev_or_return_existing(&building.state);
             self.work_address_zipcode = building.zipcode.to_string();
             self.work_address_country = building.country.to_string();
-            if self.work_address_country == "US" || self.work_address_country == "USA" || self.work_address_country.is_empty() {
+            if self.work_address_country == "US"
+                || self.work_address_country == "USA"
+                || self.work_address_country.is_empty()
+            {
                 self.work_address_country = "United States".to_string();
             }
             self.work_address_formatted = building.address_formatted.to_string();
@@ -448,7 +493,8 @@ impl UserConfig {
             self.work_address_street_1 = self.home_address_street_1.to_string();
             self.work_address_street_2 = self.home_address_street_2.to_string();
             self.work_address_city = self.home_address_city.to_string();
-            self.work_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
+            self.work_address_state =
+                crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
             self.work_address_zipcode = self.home_address_zipcode.to_string();
             self.work_address_country = self.home_address_country.to_string();
             self.work_address_country_code = self.home_address_country_code.to_string();
@@ -515,7 +561,11 @@ impl UserConfig {
             self.aliases.push(self.twitter.to_string());
         }
 
-        let name_alias = format!("{}.{}", self.first_name.to_lowercase().replace(' ', "-"), self.last_name.to_lowercase().replace(' ', "-"));
+        let name_alias = format!(
+            "{}.{}",
+            self.first_name.to_lowercase().replace(' ', "-"),
+            self.last_name.to_lowercase().replace(' ', "-")
+        );
         if !self.aliases.contains(&name_alias) && self.username != name_alias {
             self.aliases.push(name_alias);
         }
@@ -597,7 +647,10 @@ impl User {
         // First let's check if the user even has an address.
         // If not we can return early.
         if self.home_address_formatted.is_empty() {
-            println!("cannot create shipping label for user {} since we don't know their home address", self.username);
+            println!(
+                "cannot create shipping label for user {} since we don't know their home address",
+                self.username
+            );
             return;
         }
 
@@ -628,18 +681,22 @@ impl User {
                 format!(
                     "Yoyoyo {},
 
-You should have an email from Okta about setting up your account with them.
+You should have an email from Okta about setting up your account with \
+                     them.
 We use Okta to authenticate to a number of different apps -- including
-Google Workspace. This \
-                     includes email, calendar, drive, etc.
+Google \
+                     Workspace. This includes email, calendar, drive, etc.
 
-After setting up your Okta account your email account with Google will be
-provisioned. You can then login to your email from: mail.corp.{}.
-Details \
-                     for accessing are below.
+After setting up your Okta \
+                     account your email account with Google will be
+provisioned. You can then login \
+                     to your email from: mail.corp.{}.
+Details for accessing are below.
 
-Website for Okta login: https://oxidecomputerlogin.okta.com
-Website for email login: https://mail.corp.{}
+Website for Okta \
+                     login: https://oxidecomputerlogin.okta.com
+Website for email login: https://mail.corp.{}\
+                     
 Email: {}
 Aliases: {}
 
@@ -652,10 +709,18 @@ jess@{}.
 
 xoxo,
   The Onboarding Bot",
-                    self.first_name, company.domain, company.domain, self.email, aliases, company.gsuite_domain,
+                    self.first_name,
+                    company.domain,
+                    company.domain,
+                    self.email,
+                    aliases,
+                    company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
+                vec![
+                    self.email.to_string(),
+                    format!("jess@{}", company.gsuite_domain),
+                ],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -680,24 +745,28 @@ xoxo,
                     "Yoyoyo {},
 
 We have set up your account on mail.corp.{}. Details for accessing
-are below. You will be required to reset your password the next time you login.
+are \
+                     below. You will be required to reset your password the next time you login.
 
-Website for Login: https://mail.corp.{}\
-                     
-Email: {}
+Website \
+                     for Login: https://mail.corp.{}Email: {}
 Password: {}
 Aliases: {}
 
-Make sure you set up two-factor authentication for your account, or in one week
-you will be locked out.
+Make sure you set \
+                     up two-factor authentication for your account, or in one week
+you will be locked \
+                     out.
 
-Your GitHub @{} has been added to our organization \
-                     (https://github.com/{})
-and various teams within it. GitHub should have sent an email with instructions on
+Your GitHub @{} has been added to our organization (https://github.com/{})\
+                     
+and various teams within it. GitHub should have sent an email with instructions \
+                     on
 accepting the invitation to our organization to the email you used
-when you \
-                     signed up for GitHub. Or you can alternatively accept our invitation
-by going to https://github.com/{}.
+when you signed \
+                     up for GitHub. Or you can alternatively accept our invitation
+by going to https://github.com/{}.\
+                     
 
 If you have any questions or your email does not work please email your
 administrator, who is cc-ed on this email. Spoiler alert it's Jess...
@@ -705,10 +774,22 @@ jess@{}. If you want other email aliases, let Jess know as well.
 
 xoxo,
   The Onboarding Bot",
-                    self.first_name, company.domain, company.domain, self.email, password, aliases, self.github, company.github_org, company.github_org, company.gsuite_domain,
+                    self.first_name,
+                    company.domain,
+                    company.domain,
+                    self.email,
+                    password,
+                    aliases,
+                    self.github,
+                    company.github_org,
+                    company.github_org,
+                    company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
+                vec![
+                    self.email.to_string(),
+                    format!("jess@{}", company.gsuite_domain),
+                ],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -726,10 +807,12 @@ xoxo,
 
         let mut github_copy = format!(
             "Your GitHub @{} has been added to our organization (https://github.com/{})
-and various teams within it. GitHub should have sent an email with instructions on
-accepting the invitation to our \
-             organization to the email you used
-when you signed up for GitHub. Or you can alternatively accept our invitation
+and various \
+             teams within it. GitHub should have sent an email with instructions on
+accepting the invitation \
+             to our organization to the email you used
+when you signed up for GitHub. Or you can alternatively \
+             accept our invitation
 by going to https://github.com/{}.",
             self.github, company.github_org, company.github_org
         );
@@ -757,7 +840,7 @@ Google Workspace and GitHub. \
 
 After setting up your Okta account your email account with Google will be
 provisioned. You can then login to your email from: mail.corp.{}.\
-                     
+
 Details for accessing are below.
 
 Website for Okta login: https://oxidecomputerlogin.okta.com
@@ -778,28 +861,28 @@ jess@{}. If you want other email aliases, let Jess know as well.
 
 You can find more onboarding information in GitHub:
 https://github.com/{}/meta/blob/master/general/onboarding.md\
-                     
+
 You can find information about internal processes and applications at:
 https://github.com/{}/meta/blob/master/general/README.md
 
 As a first contribution to one of our repos, add a book\
-                     
+
 to our internal library: https://github.com/{}/library
 
 We use Airtable for storing just about everything. You can login with single
 sign-on (SSO) after setting up your email at:
 https://airtable.com/sso/login.\
-                     
+
 You will automatically be added to the workspace after you are finished setting up
 your email.
 
 We have both a Riot server and a Slack for chat. Josh (josh@oxidecomputer.com) can get\
-                     
+
 you set up with an account on the Riot server. You can use SSO to login to the Slack
 at https://oxidecomputer.slack.com.
 
 Lastly, be sure to order yourself some swag: https://swag.oxide.computer\
-                     
+
 
 xoxo,
   The Onboarding Bot",
@@ -842,7 +925,9 @@ impl UpdateAirtableRecord<User> for User {
 
         self.geocode_cache = record.geocode_cache.to_string();
 
-        if self.start_date == crate::utils::default_date() && record.start_date != crate::utils::default_date() {
+        if self.start_date == crate::utils::default_date()
+            && record.start_date != crate::utils::default_date()
+        {
             self.start_date = record.start_date;
         }
 
@@ -878,7 +963,9 @@ impl UpdateAirtableRecord<User> for User {
         "name" = "String",
     },
 }]
-#[derive(Debug, Default, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(
+    Debug, Default, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 #[table_name = "groups"]
 pub struct GroupConfig {
     pub name: String,
@@ -921,7 +1008,11 @@ pub struct GroupConfig {
     /// - ANYONE_CAN_DISCOVER
     /// - ALL_IN_DOMAIN_CAN_DISCOVER
     /// - ALL_MEMBERS_CAN_DISCOVER
-    #[serde(alias = "who_can_discover_group", skip_serializing_if = "String::is_empty", default)]
+    #[serde(
+        alias = "who_can_discover_group",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_discover_group: String,
 
     /// who_can_join: Permission to join group. Possible values are:
@@ -937,7 +1028,11 @@ pub struct GroupConfig {
     /// - INVITED_CAN_JOIN: Candidates for membership can be invited to join.
     ///
     /// - CAN_REQUEST_TO_JOIN: Non members can request an invitation to join.
-    #[serde(alias = "who_can_join", skip_serializing_if = "String::is_empty", default)]
+    #[serde(
+        alias = "who_can_join",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_join: String,
 
     /// who_can_moderate_members: Specifies who can manage members. Possible
@@ -946,7 +1041,11 @@ pub struct GroupConfig {
     /// - OWNERS_AND_MANAGERS
     /// - OWNERS_ONLY
     /// - NONE
-    #[serde(alias = "who_can_moderate_members", skip_serializing_if = "String::is_empty", default)]
+    #[serde(
+        alias = "who_can_moderate_members",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_moderate_members: String,
 
     /// who_can_post_message: Permissions to post messages. Possible values are:
@@ -968,7 +1067,11 @@ pub struct GroupConfig {
     /// who_can_post_message is set to ANYONE_CAN_POST, we recommend the
     /// messageModerationLevel be set to MODERATE_NON_MEMBERS to protect the
     /// group from possible spam.
-    #[serde(alias = "who_can_post_message", skip_serializing_if = "String::is_empty", default)]
+    #[serde(
+        alias = "who_can_post_message",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_post_message: String,
 
     /// who_can_view_group: Permissions to view group messages. Possible values
@@ -981,7 +1084,11 @@ pub struct GroupConfig {
     /// messages.
     /// - ALL_MANAGERS_CAN_VIEW: Any group manager can view this group's
     /// messages.
-    #[serde(alias = "who_can_view_group", skip_serializing_if = "String::is_empty", default)]
+    #[serde(
+        alias = "who_can_view_group",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_view_group: String,
 
     /// who_can_view_membership: Permissions to view membership. Possible values
@@ -995,7 +1102,11 @@ pub struct GroupConfig {
     /// list.
     /// - ALL_MANAGERS_CAN_VIEW: The group managers can view group members
     /// list.
-    #[serde(alias = "who_can_view_membership", skip_serializing_if = "String::is_empty", default)]
+    #[serde(
+        alias = "who_can_view_membership",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub who_can_view_membership: String,
 
     /// Specifies whether a collaborative inbox will remain turned on for the group.
@@ -1008,7 +1119,10 @@ pub struct GroupConfig {
 
 impl GroupConfig {
     pub fn get_link(&self, company: &Company) -> String {
-        format!("https://groups.google.com/a/{}/forum/#!forum/{}", company.gsuite_domain, self.name)
+        format!(
+            "https://groups.google.com/a/{}/forum/#!forum/{}",
+            company.gsuite_domain, self.name
+        )
     }
 
     pub fn expand(&mut self, company: &Company) {
@@ -1037,7 +1151,9 @@ impl UpdateAirtableRecord<Group> for Group {
         "name" = "String",
     },
 }]
-#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(
+    Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 #[table_name = "buildings"]
 pub struct BuildingConfig {
     pub name: String,
@@ -1075,7 +1191,10 @@ pub struct BuildingConfig {
 
 impl BuildingConfig {
     pub fn expand(&mut self, company: &Company) {
-        self.address_formatted = format!("{}\n{}, {} {}, {}", self.street_address, self.city, self.state, self.zipcode, self.country);
+        self.address_formatted = format!(
+            "{}\n{}, {} {}, {}",
+            self.street_address, self.city, self.state, self.zipcode, self.country
+        );
 
         self.cio_company_id = company.id;
     }
@@ -1105,7 +1224,9 @@ impl UpdateAirtableRecord<Building> for Building {
         "name" = "String",
     },
 }]
-#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(
+    Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 #[table_name = "conference_rooms"]
 pub struct ResourceConfig {
     pub name: String,
@@ -1159,7 +1280,9 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
         "name" = "String",
     },
 }]
-#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(
+    Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
+)]
 #[table_name = "links"]
 pub struct LinkConfig {
     /// name will not be used in config files.
@@ -1215,13 +1338,20 @@ pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config
     let r = repo.get().await.unwrap();
     let repo_contents = repo.content();
 
-    let files = repo_contents.iter("/configs/", &r.default_branch).try_collect::<Vec<hubcaps::content::DirectoryItem>>().await.unwrap();
+    let files = repo_contents
+        .iter("/configs/", &r.default_branch)
+        .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
+        .await
+        .unwrap();
 
     let mut file_contents = String::new();
     for file in files {
         println!("decoding {}", file.name);
         // Get the contents of the file.
-        let contents = repo_contents.file(&format!("/{}", file.path), &r.default_branch).await.unwrap();
+        let contents = repo_contents
+            .file(&format!("/{}", file.path), &r.default_branch)
+            .await
+            .unwrap();
 
         let decoded = from_utf8(&contents.content).unwrap().trim().to_string();
 
@@ -1236,7 +1366,12 @@ pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config
 }
 
 /// Sync GitHub outside collaborators with our configs.
-pub async fn sync_github_outside_collaborators(db: &Database, github: &Github, outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>, company: &Company) {
+pub async fn sync_github_outside_collaborators(
+    db: &Database,
+    github: &Github,
+    outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
+    company: &Company,
+) {
     // We create a map of the collaborators per repo.
     // This way we can delete any collaborators that should no longer have access.
     let mut collaborators_map: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -1255,12 +1390,15 @@ pub async fn sync_github_outside_collaborators(db: &Database, github: &Github, o
                     collaborators_map.insert(repo.to_string(), users.to_vec());
                 }
                 None => {
-                    collaborators_map.insert(repo.to_string(), outside_collaborators_config.users.clone());
+                    collaborators_map
+                        .insert(repo.to_string(), outside_collaborators_config.users.clone());
                 }
             }
 
             // Get the repository collaborators interface from hubcaps.
-            let repo_collaborators = github.repo(&company.github_org, repo.to_string()).collaborators();
+            let repo_collaborators = github
+                .repo(&company.github_org, repo.to_string())
+                .collaborators();
 
             let mut perm = Permissions::Pull;
             if outside_collaborators_config.perm == "push" {
@@ -1269,21 +1407,37 @@ pub async fn sync_github_outside_collaborators(db: &Database, github: &Github, o
 
             // Iterate over the users.
             for user in &outside_collaborators_config.users {
-                if !repo_collaborators.is_collaborator(user).await.unwrap_or(false) {
+                if !repo_collaborators
+                    .is_collaborator(user)
+                    .await
+                    .unwrap_or(false)
+                {
                     // Add the collaborator.
                     match repo_collaborators.add(user, &perm).await {
                         Ok(_) => {
-                            println!("[{}] added user {} as a collaborator ({}) on repo {}", name, user, perm, repo);
+                            println!(
+                                "[{}] added user {} as a collaborator ({}) on repo {}",
+                                name, user, perm, repo
+                            );
                         }
-                        Err(e) => println!("[{}] adding user {} as a collaborator ({}) on repo {} FAILED: {}", name, user, perm, repo, e),
+                        Err(e) => println!(
+                            "[{}] adding user {} as a collaborator ({}) on repo {} FAILED: {}",
+                            name, user, perm, repo, e
+                        ),
                     }
                 } else {
-                    println!("[{}] user {} is already a collaborator ({}) on repo {}", name, user, perm, repo);
+                    println!(
+                        "[{}] user {} is already a collaborator ({}) on repo {}",
+                        name, user, perm, repo
+                    );
                 }
             }
         }
 
-        println!("Successfully ran configuration for outside collaborators: {}", name);
+        println!(
+            "Successfully ran configuration for outside collaborators: {}",
+            name
+        );
     }
 
     // Get all the internal to the company collaborators.
@@ -1301,32 +1455,54 @@ pub async fn sync_github_outside_collaborators(db: &Database, github: &Github, o
         collaborators.dedup();
 
         // Get the collaborators on the repo.
-        let github_collaborators = github.repo(&company.github_org, &repo).collaborators().list().await.unwrap();
+        let github_collaborators = github
+            .repo(&company.github_org, &repo)
+            .collaborators()
+            .list()
+            .await
+            .unwrap();
 
         // Iterate over the users added to the repo, and make sure they exist in our
         // vector.
         for existing_collaborator in github_collaborators {
             // Check if they are an internal user.
-            if internal_github_users.iter().any(|internal| internal.to_lowercase() == existing_collaborator.login.to_lowercase()) {
+            if internal_github_users.iter().any(|internal| {
+                internal.to_lowercase() == existing_collaborator.login.to_lowercase()
+            }) {
                 // They are an internal user so continue;
                 continue;
             }
 
             // Check if they should have access.
-            if collaborators.iter().any(|external| external.to_lowercase() == existing_collaborator.login.to_lowercase()) {
+            if collaborators.iter().any(|external| {
+                external.to_lowercase() == existing_collaborator.login.to_lowercase()
+            }) {
                 // They are supposed to be an external collaborator so continue;
                 continue;
             }
 
             // Remove the user.
-            println!("REPO: {} USER: {} should not have access! Removing!", repo, existing_collaborator.login);
-            github.repo(&company.github_org, &repo).collaborators().remove(&existing_collaborator.login).await.unwrap();
+            println!(
+                "REPO: {} USER: {} should not have access! Removing!",
+                repo, existing_collaborator.login
+            );
+            github
+                .repo(&company.github_org, &repo)
+                .collaborators()
+                .remove(&existing_collaborator.login)
+                .await
+                .unwrap();
         }
     }
 }
 
 /// Sync our users with our database and then update Airtable from the database.
-pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>, company: &Company) {
+pub async fn sync_users(
+    db: &Database,
+    github: &Github,
+    users: BTreeMap<String, UserConfig>,
+    company: &Company,
+) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let token = company.authenticate_google(db).await;
@@ -1442,12 +1618,25 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     // Add the user, if we found out they did not already have permissions
                     // to the workspace.
                     if !has_access_to_workspace && user.is_full_time() {
-                        println!("giving {} access to airtable workspace {}", user.email, company.airtable_workspace_id);
-                        airtable_auth.add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create").await.unwrap();
+                        println!(
+                            "giving {} access to airtable workspace {}",
+                            user.email, company.airtable_workspace_id
+                        );
+                        airtable_auth
+                            .add_collaborator_to_workspace(
+                                &company.airtable_workspace_id,
+                                &user.airtable_id,
+                                "create",
+                            )
+                            .await
+                            .unwrap();
                     }
                 }
                 Err(e) => {
-                    println!("getting airtable enterprise user for {} failed: {}", user.email, e);
+                    println!(
+                        "getting airtable enterprise user for {} failed: {}",
+                        user.email, e
+                    );
                 }
             }
         }
@@ -1472,15 +1661,21 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // Grab their date of birth, start date, and address from Airtable.
             if let Some(e) = existing.clone() {
                 if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
-                    user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
-                    user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
+                    user.home_address_street_1 =
+                        airtable_record.fields.home_address_street_1.to_string();
+                    user.home_address_street_2 =
+                        airtable_record.fields.home_address_street_2.to_string();
                     user.home_address_city = airtable_record.fields.home_address_city.to_string();
                     user.home_address_state = airtable_record.fields.home_address_state.to_string();
-                    user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
-                    user.home_address_country = airtable_record.fields.home_address_country.to_string();
+                    user.home_address_zipcode =
+                        airtable_record.fields.home_address_zipcode.to_string();
+                    user.home_address_country =
+                        airtable_record.fields.home_address_country.to_string();
                     user.birthday = airtable_record.fields.birthday;
                     // Keep the start date in airtable if we already have one.
-                    if user.start_date == crate::utils::default_date() && airtable_record.fields.start_date != crate::utils::default_date() {
+                    if user.start_date == crate::utils::default_date()
+                        && airtable_record.fields.start_date != crate::utils::default_date()
+                    {
                         user.start_date = airtable_record.fields.start_date;
                     }
                     user.gusto_id = airtable_record.fields.gusto_id.to_string();
@@ -1544,7 +1739,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                             department_id = department.id.to_string();
                         }
 
-                        if department_id != ramp_user.department_id || users_manager.ramp_id != ramp_user.manager_id {
+                        if department_id != ramp_user.department_id
+                            || users_manager.ramp_id != ramp_user.manager_id
+                        {
                             let updated_user = ramp_api::UpdateUser {
                                 department_id: department_id.to_string(),
                                 direct_manager_id: users_manager.ramp_id.to_string(),
@@ -1552,7 +1749,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                                 location_id: ramp_user.location_id.to_string(),
                             };
 
-                            ramp.update_user(&ramp_user.id, &updated_user).await.unwrap();
+                            ramp.update_user(&ramp_user.id, &updated_user)
+                                .await
+                                .unwrap();
                         }
                     }
                     None => {
@@ -1597,14 +1796,23 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
         if !user.google_anniversary_event_id.is_empty() {
             // First delete the recurring event for their anniversary.
-            gsuite.delete_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id).await.unwrap();
-            println!("deleted user {} event {} from google", username, user.google_anniversary_event_id);
+            gsuite
+                .delete_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id)
+                .await
+                .unwrap();
+            println!(
+                "deleted user {} event {} from google",
+                username, user.google_anniversary_event_id
+            );
         }
 
         if company.okta_domain.is_empty() {
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-            gsuite.delete_user(&user.email).await.unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
+            gsuite
+                .delete_user(&user.email)
+                .await
+                .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
             println!("deleted user from gsuite: {}", username);
 
             // If we have an enterprise airtable account, let's delete the user from
@@ -1612,7 +1820,10 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             if !company.airtable_enterprise_account_id.is_empty() {
                 // We don't need a base id here since we are only using the enterprise api features.
                 let airtable_auth = company.authenticate_airtable("");
-                airtable_auth.delete_internal_user_by_email(&user.email).await.unwrap();
+                airtable_auth
+                    .delete_internal_user_by_email(&user.email)
+                    .await
+                    .unwrap();
                 println!("deleted user from airtable: {}", username);
             }
         }
@@ -1635,7 +1846,10 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // Iterate over the users already in GSuite.
         for u in gsuite_users {
             // Get the shorthand username and match it against our existing users.
-            let username = u.primary_email.trim_end_matches(&format!("@{}", company.gsuite_domain)).to_string();
+            let username = u
+                .primary_email
+                .trim_end_matches(&format!("@{}", company.gsuite_domain))
+                .to_string();
 
             // Check if we have that user already in our settings.
             let user: User;
@@ -1648,7 +1862,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
                     gsuite
                         .delete_user(&format!("{}@{}", username, company.gsuite_domain))
                         .await
-                        .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
+                        .unwrap_or_else(|e| {
+                            panic!("deleting user {} from gsuite failed: {}", username, e)
+                        });
 
                     println!("deleted user from gsuite: {}", username);
                     continue;
@@ -1658,7 +1874,10 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // Update the user with the settings from the config for the user.
             let gsuite_user = update_gsuite_user(&u, &user, false, company).await;
 
-            gsuite.update_user(&gsuite_user).await.unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
+            gsuite
+                .update_user(&gsuite_user)
+                .await
+                .unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
 
@@ -1681,14 +1900,18 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
             // Make sure it is set to true.
             let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
 
-            let new_gsuite_user = gsuite.create_user(&gsuite_user).await.unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
+            let new_gsuite_user = gsuite
+                .create_user(&gsuite_user)
+                .await
+                .unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
             user.google_id = new_gsuite_user.id.to_string();
             // Update with any other changes we made to the user.
             user.update(db).await;
 
             // Send an email to the new user.
             // Do this here in case another step fails.
-            user.send_email_new_gsuite_user(db, &gsuite_user.password).await;
+            user.send_email_new_gsuite_user(db, &gsuite_user.password)
+                .await;
             println!("created new user in gsuite: {}", username);
 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
@@ -1703,7 +1926,11 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
-pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
+pub async fn sync_buildings(
+    db: &Database,
+    buildings: BTreeMap<String, BuildingConfig>,
+    company: &Company,
+) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let token = company.authenticate_google(db).await;
@@ -1737,7 +1964,10 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
         building.delete(db).await;
 
         // Delete the building from GSuite.
-        gsuite.delete_building(&name).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
+        gsuite
+            .delete_building(&name)
+            .await
+            .unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
         println!("deleted building from gsuite: {}", name);
     }
     println!("updated configs buildings in the database");
@@ -1761,7 +1991,9 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
                 // If the building does not exist in our map we need to delete
                 // them from GSuite.
                 println!("deleting building {} from gsuite", id);
-                gsuite.delete_building(&id).await.unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
+                gsuite.delete_building(&id).await.unwrap_or_else(|e| {
+                    panic!("deleting building {} from gsuite failed: {}", id, e)
+                });
 
                 println!("deleted building from gsuite: {}", id);
                 continue;
@@ -1772,7 +2004,10 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
         let new_b = update_gsuite_building(&b, &building, &id);
 
         // Update the building with the given settings.
-        gsuite.update_building(&new_b).await.unwrap_or_else(|e| panic!("updating building {} in gsuite failed: {}", id, e));
+        gsuite
+            .update_building(&new_b)
+            .await
+            .unwrap_or_else(|e| panic!("updating building {} in gsuite failed: {}", id, e));
 
         // Remove the building from the database map and continue.
         // This allows us to add all the remaining new building after.
@@ -1788,17 +2023,26 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 
         let new_b = update_gsuite_building(&b, &building, &id);
 
-        gsuite.create_building(&new_b).await.unwrap_or_else(|e| panic!("creating building {} in gsuite failed: {}", id, e));
+        gsuite
+            .create_building(&new_b)
+            .await
+            .unwrap_or_else(|e| panic!("creating building {} in gsuite failed: {}", id, e));
 
         println!("created building from gsuite: {}", id);
     }
 
     // Update buildings in airtable.
-    Buildings::get_from_db(db, company.id).update_airtable(db).await;
+    Buildings::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
-pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>, company: &Company) {
+pub async fn sync_conference_rooms(
+    db: &Database,
+    conference_rooms: BTreeMap<String, ResourceConfig>,
+    company: &Company,
+) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let token = company.authenticate_google(db).await;
@@ -1853,7 +2097,12 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
                 gsuite
                     .delete_calendar_resource(&r.id)
                     .await
-                    .unwrap_or_else(|e| panic!("deleting conference room {} with id {} from gsuite failed: {}", id, r.id, e));
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "deleting conference room {} with id {} from gsuite failed: {}",
+                            id, r.id, e
+                        )
+                    });
 
                 println!("deleted conference room from gsuite: {}", id);
                 continue;
@@ -1892,7 +2141,9 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
     }
 
     // Update conference_rooms in airtable.
-    ConferenceRooms::get_from_db(db, company.id).update_airtable(db).await;
+    ConferenceRooms::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
@@ -1977,7 +2228,10 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         }
         updated_group.aliases = aliases;
 
-        gsuite.update_group(&updated_group).await.unwrap_or_else(|e| panic!("updating group {} in gsuite failed: {}", name, e));
+        gsuite
+            .update_group(&updated_group)
+            .await
+            .unwrap_or_else(|e| panic!("updating group {} in gsuite failed: {}", name, e));
 
         update_group_aliases(&gsuite, &updated_group).await;
 
@@ -2008,7 +2262,10 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         }
         g.aliases = aliases;
 
-        let new_group: GSuiteGroup = gsuite.create_group(&g).await.unwrap_or_else(|e| panic!("creating group {} in gsuite failed: {}", name, e));
+        let new_group: GSuiteGroup = gsuite
+            .create_group(&g)
+            .await
+            .unwrap_or_else(|e| panic!("creating group {} in gsuite failed: {}", name, e));
 
         update_group_aliases(&gsuite, &new_group).await;
 
@@ -2019,11 +2276,18 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     }
 
     // Update groups in airtable.
-    Groups::get_from_db(db, company.id).update_airtable(db).await;
+    Groups::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 /// Sync our links with our database and then update Airtable from the database.
-pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, huddles: BTreeMap<String, HuddleConfig>, company: &Company) {
+pub async fn sync_links(
+    db: &Database,
+    links: BTreeMap<String, LinkConfig>,
+    huddles: BTreeMap<String, HuddleConfig>,
+    company: &Company,
+) {
     // Get all the links.
     let db_links = Links::get_from_db(db, company.id);
     // Create a BTreeMap
@@ -2063,7 +2327,10 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
         link.link = huddle.link_to_airtable_form.to_string();
         link.aliases = vec![format!("airtable-{}-huddle-form", slug)];
         link.short_link = format!("https://{}-huddle-form.corp.{}", slug, company.domain);
-        link.description = format!("Form for submitting topics to the {}", huddle.description.to_lowercase());
+        link.description = format!(
+            "Form for submitting topics to the {}",
+            huddle.description.to_lowercase()
+        );
 
         link.upsert(db).await;
 
@@ -2083,7 +2350,12 @@ pub async fn sync_links(db: &Database, links: BTreeMap<String, LinkConfig>, hudd
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
-pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTreeMap<String, NewCertificate>, company: &Company) {
+pub async fn sync_certificates(
+    db: &Database,
+    github: &Github,
+    certificates: BTreeMap<String, NewCertificate>,
+    company: &Company,
+) {
     // Get all the certificates.
     let db_certificates = Certificates::get_from_db(db, company.id);
     // Create a BTreeMap
@@ -2100,7 +2372,10 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
         // If the cert is going to expire in less than 7 days, renew it.
         // Otherwise, return early.
         if certificate.valid_days_left > 7 {
-            println!("cert {} is valid for {} more days, skipping", certificate.domain, certificate.valid_days_left);
+            println!(
+                "cert {} is valid for {} more days, skipping",
+                certificate.domain, certificate.valid_days_left
+            );
         } else {
             // Populate the certificate.
             certificate.populate(company).await;
@@ -2130,7 +2405,9 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     println!("updated configs certificates in the database");
 
     // Update certificates in airtable.
-    Certificates::get_from_db(db, company.id).update_airtable(db).await;
+    Certificates::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
@@ -2165,7 +2442,8 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
     sync_certificates(db, &github, configs.certificates, company).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company).await;
+    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company)
+        .await;
 
     refresh_anniversary_events(db, company).await;
 }
@@ -2241,22 +2519,44 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
 
         if user.google_anniversary_event_id.is_empty() {
             // Create the event.
-            let event = gsuite.create_calendar_event(&anniversary_cal_id, &new_event).await.unwrap();
-            println!("created event for user {} anniversary: {:?}", user.username, event);
+            let event = gsuite
+                .create_calendar_event(&anniversary_cal_id, &new_event)
+                .await
+                .unwrap();
+            println!(
+                "created event for user {} anniversary: {:?}",
+                user.username, event
+            );
 
             user.google_anniversary_event_id = event.id.to_string();
         } else {
             // Get the existing event.
-            let old_event = gsuite.get_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id).await.unwrap();
+            let old_event = gsuite
+                .get_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id)
+                .await
+                .unwrap();
 
-            if old_event.description != new_event.description || old_event.summary != new_event.summary || old_event.start.date != new_event.start.date {
+            if old_event.description != new_event.description
+                || old_event.summary != new_event.summary
+                || old_event.start.date != new_event.start.date
+            {
                 // Only update it if it has changed.
 
                 // Set the correct sequence so we don't error out.
                 new_event.sequence = old_event.sequence;
                 // Update the event.
-                let event = gsuite.update_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id, &new_event).await.unwrap();
-                println!("updated event for user {} anniversary: {:?}", user.username, event);
+                let event = gsuite
+                    .update_calendar_event(
+                        &anniversary_cal_id,
+                        &user.google_anniversary_event_id,
+                        &new_event,
+                    )
+                    .await
+                    .unwrap();
+                println!(
+                    "updated event for user {} anniversary: {:?}",
+                    user.username, event
+                );
             }
         }
 

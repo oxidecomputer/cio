@@ -76,12 +76,16 @@ pub async fn get_file_content_from_repo(
         .get_content(owner, repo, &file_path, branch)
         .await
     {
-        Ok(file) => return (decode_base64(&file.content), file.sha),
+        Ok(files) => {
+            let file = files.first().unwrap();
+            return (decode_base64(&file.content), file.sha.to_string());
+        }
         Err(e) => {
-            if e.contains("rate limit") {
+            // TODO: better match on errors
+            if e.to_string().contains("rate limit") {
                 // We got a rate limit error.
                 println!("got rate limited: {}", e);
-            } else if e.contains("too large") {
+            } else if e.to_string().contains("too large") {
                 // The file is too big for us to get it's contents through this API.
                 // The error suggests we use the Git Data API but we need the file sha for
                 // that.
@@ -286,4 +290,9 @@ pub fn decode_base64(c: &str) -> Vec<u8> {
     let v = c.replace("\n", "");
     let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
     decoded.trim().to_vec()
+}
+
+pub fn decode_base64_to_string(c: &str) -> String {
+    let decoded = decode_base64(c);
+    from_utf8(&decoded).unwrap().trim().to_string()
 }

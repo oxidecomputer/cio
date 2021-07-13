@@ -13,13 +13,18 @@ use cloudflare::{
     endpoints::{dns, zone},
     framework::async_api::ApiClient,
 };
-use hubcaps::Github;
 use macros::db;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{airtable::AIRTABLE_CERTIFICATES_TABLE, companies::Company, core::UpdateAirtableRecord, schema::certificates, utils::create_or_update_file_in_github_repo};
+use crate::{
+    airtable::AIRTABLE_CERTIFICATES_TABLE,
+    companies::Company,
+    core::UpdateAirtableRecord,
+    schema::certificates,
+    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
+};
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
@@ -64,7 +69,11 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
 
         // We need the root of the domain not a subdomain.
         let domain_parts: Vec<&str> = domain.split('.').collect();
-        let root_domain = format!("{}.{}", domain_parts[domain_parts.len() - 2], domain_parts[domain_parts.len() - 1]);
+        let root_domain = format!(
+            "{}.{}",
+            domain_parts[domain_parts.len() - 2],
+            domain_parts[domain_parts.len() - 1]
+        );
 
         // Get the zone ID for the domain.
         let zones = api_client
@@ -103,7 +112,9 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                     zone_identifier,
                     params: dns::CreateDnsRecordParams {
                         name: &record_name,
-                        content: dns::DnsContent::TXT { content: challenge.dns_proof() },
+                        content: dns::DnsContent::TXT {
+                            content: challenge.dns_proof(),
+                        },
                         ttl: None,
                         proxied: None,
                         priority: None,
@@ -122,7 +133,9 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                     identifier: &dns_records[0].id,
                     params: dns::UpdateDnsRecordParams {
                         name: &record_name,
-                        content: dns::DnsContent::TXT { content: challenge.dns_proof() },
+                        content: dns::DnsContent::TXT {
+                            content: challenge.dns_proof(),
+                        },
                         ttl: None,
                         proxied: None,
                     },
@@ -198,7 +211,10 @@ pub struct NewCertificate {
     pub private_key: String,
     #[serde(default)]
     pub valid_days_left: i32,
-    #[serde(default = "crate::utils::default_date", serialize_with = "crate::configs::null_date_format::serialize")]
+    #[serde(
+        default = "crate::utils::default_date",
+        serialize_with = "crate::configs::null_date_format::serialize"
+    )]
     pub expiration_date: NaiveDate,
     /// The CIO company ID.
     #[serde(default)]
@@ -215,15 +231,35 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// GitHub, then fill in the rest.
-    pub async fn populate_from_github(&mut self, github: &Github, company: &Company) {
-        let repo = github.repo(&company.github_org, "configs");
-        let r = repo.get().await.unwrap();
+    pub async fn populate_from_github(&mut self, github: &octorust::Client, company: &Company) {
+        let owner = &company.github_org;
+        let repo = "configs";
+        let r = github.repos().get(owner, repo).await.unwrap();
 
-        if let Ok(cert) = repo.content().file(&self.get_github_path("fullchain.pem"), &r.default_branch).await {
-            self.certificate = from_utf8(&cert.content).unwrap().to_string();
+        let (cert, _) = get_file_content_from_repo(
+            github,
+            owner,
+            repo,
+            &r.default_branch,
+            &self.get_github_path("fullchain.pem"),
+        )
+        .await
+        .unwrap();
+        if !cert.is_empty() {
+            self.certificate = from_utf8(&cert).unwrap().to_string();
         }
-        if let Ok(p) = repo.content().file(&self.get_github_path("privkey.pem"), &r.default_branch).await {
-            self.private_key = from_utf8(&p.content).unwrap().to_string();
+
+        let (p, _) = get_file_content_from_repo(
+            github,
+            owner,
+            repo,
+            &r.default_branch,
+            &self.get_github_path("privkey.pem"),
+        )
+        .await
+        .unwrap();
+        if !p.is_empty() {
+            self.private_key = from_utf8(&p).unwrap().to_string();
         }
 
         let exp_date = self.expiration_date();
@@ -251,7 +287,11 @@ impl NewCertificate {
     }
 
     fn get_github_path(&self, file: &str) -> String {
-        format!("/nginx/ssl/{}/{}", self.domain.replace("*.", "wildcard."), file)
+        format!(
+            "/nginx/ssl/{}/{}",
+            self.domain.replace("*.", "wildcard."),
+            file
+        )
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
@@ -272,18 +312,35 @@ impl NewCertificate {
     }
 
     /// Saves the fullchain certificate and privkey to the configs github repo.
-    pub async fn save_to_github_repo(&self, github: &Github, company: &Company) {
+    pub async fn save_to_github_repo(&self, github: &octorust::Client, company: &Company) {
         if self.certificate.is_empty() {
             // Return early.
             return;
         }
 
-        let repo = github.repo(&company.github_org, "configs");
-        let r = repo.get().await.unwrap();
+        let owner = &company.github_org;
+        let repo = "configs";
+        let r = github.repos().get(owner, repo).await.unwrap();
 
         // Write the files.
-        create_or_update_file_in_github_repo(&repo, &r.default_branch, &self.get_github_path("fullchain.pem"), self.certificate.as_bytes().to_vec()).await;
-        create_or_update_file_in_github_repo(&repo, &r.default_branch, &self.get_github_path("privkey.pem"), self.private_key.as_bytes().to_vec()).await;
+        create_or_update_file_in_github_repo(
+            github,
+            owner,
+            repo,
+            &r.default_branch,
+            &self.get_github_path("fullchain.pem"),
+            self.certificate.as_bytes().to_vec(),
+        )
+        .await;
+        create_or_update_file_in_github_repo(
+            github,
+            owner,
+            repo,
+            &r.default_branch,
+            &self.get_github_path("privkey.pem"),
+            self.private_key.as_bytes().to_vec(),
+        )
+        .await;
     }
 
     /// Inspect the certificate to count the number of (whole) valid days left.
@@ -313,7 +370,8 @@ impl NewCertificate {
         let not_after = format!("{}", x509.not_after());
         // Display trait produces this format, which is kinda dumb.
         // Apr 19 08:48:46 2019 GMT
-        Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z").expect("strptime")
+        Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z")
+            .expect("strptime")
     }
 }
 
