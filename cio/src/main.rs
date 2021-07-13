@@ -1,16 +1,16 @@
-use std::fs::File;
-use std::sync::Arc;
+use std::{fs::File, sync::Arc};
 
+use cio_api::{
+    applicants::{Applicant, Applicants},
+    auth_logins::{AuthUser, AuthUsers},
+    configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, Group, Groups, Link, Links, User, Users},
+    db::Database,
+    journal_clubs::{JournalClubMeeting, JournalClubMeetings},
+    mailing_list::{MailingListSubscriber, MailingListSubscribers},
+    repos::{GithubRepo, GithubRepos},
+    rfds::{RFDs, RFD},
+};
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk, HttpServerStarter, RequestContext};
-
-use cio_api::applicants::{Applicant, Applicants};
-use cio_api::auth_logins::{AuthUser, AuthUsers};
-use cio_api::configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, Group, Groups, Link, Links, User, Users};
-use cio_api::db::Database;
-use cio_api::journal_clubs::{JournalClubMeeting, JournalClubMeetings};
-use cio_api::mailing_list::{MailingListSubscriber, MailingListSubscribers};
-use cio_api::repos::{GithubRepo, GithubRepos};
-use cio_api::rfds::{RFDs, RFD};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {

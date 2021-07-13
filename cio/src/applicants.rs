@@ -1,24 +1,25 @@
 #![allow(clippy::from_over_into)]
-use std::collections::{BTreeMap, HashMap};
-use std::env;
-use std::fs;
-use std::io::{copy, stderr, stdout, Write};
-use std::process::Command;
-use std::str::FromStr;
+use std::{
+    collections::{BTreeMap, HashMap},
+    env, fs,
+    io::{copy, stderr, stdout, Write},
+    process::Command,
+    str::FromStr,
+};
 
 use async_trait::async_trait;
-use chrono::offset::Utc;
-use chrono::NaiveDate;
-use chrono::{DateTime, Duration};
+use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
 use docusign::DocuSign;
 use flate2::read::GzDecoder;
 use google_drive::GoogleDrive;
 use google_geocode::Geocode;
 use html2text::from_read;
-use hubcaps::comments::CommentOptions;
-use hubcaps::issues::{Issue, IssueListOptions, IssueOptions, State};
-use hubcaps::Github;
+use hubcaps::{
+    comments::CommentOptions,
+    issues::{Issue, IssueListOptions, IssueOptions, State},
+    Github,
+};
 use macros::db;
 use pandoc::OutputKind;
 use regex::Regex;
@@ -31,14 +32,16 @@ use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBl
 use tar::Archive;
 use walkdir::WalkDir;
 
-use crate::airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE};
-use crate::companies::Company;
-use crate::configs::{User, Users};
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::interviews::ApplicantInterview;
-use crate::schema::{applicant_interviews, applicant_reviewers, applicants, users};
-use crate::utils::{check_if_github_issue_exists, get_value, truncate};
+use crate::{
+    airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE},
+    companies::Company,
+    configs::{User, Users},
+    core::UpdateAirtableRecord,
+    db::Database,
+    interviews::ApplicantInterview,
+    schema::{applicant_interviews, applicant_reviewers, applicants, users},
+    utils::{check_if_github_issue_exists, get_value, truncate},
+};
 
 // The line breaks that get parsed are weird thats why we have the random asterisks here.
 static QUESTION_TECHNICALLY_CHALLENGING: &str = r"W(?s:.*)at work(?s:.*)ave you found mos(?s:.*)challenging(?s:.*)caree(?s:.*)wh(?s:.*)\?";
@@ -3273,7 +3276,11 @@ Sincerely,
                     // Make Steve's email notification different than the actual applicant.
                     email_notification: docusign::EmailNotification {
                         email_subject: format!("Complete the offer letter for {}", self.name),
-                        email_body: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!", self.name, self.name, self.email),
+                        email_body: format!(
+                            "The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you an offer letter to complete, as Jess calls, the 'Mad Libs'. GO \
+                             COMPLETE THE MAD LIBS! After you finish, we will send the offer letter to {} at {} to sign and date! Thanks!",
+                            self.name, self.name, self.email
+                        ),
                         language: Default::default(),
                     },
                 },
@@ -3281,7 +3288,7 @@ Sincerely,
                     name: self.name.to_string(),
                     role_name: "Applicant".to_string(),
                     email: self.email.to_string(),
-                    signer_name:self.name.to_string(),
+                    signer_name: self.name.to_string(),
                     routing_order: "2".to_string(),
                     email_notification: docusign::EmailNotification {
                         email_subject: DOCUSIGN_OFFER_SUBJECT.to_string(),
@@ -3300,7 +3307,7 @@ Sincerely,
                         email_body: "Attached is a newly signed offer letter, please set up benefits. Thank you!".to_string(),
                         language: Default::default(),
                     },
-                }
+                },
             ];
 
             // Let's create the envelope.
@@ -3493,7 +3500,11 @@ Sincerely,
                     // Make Steve's email notification different than the actual applicant.
                     email_notification: docusign::EmailNotification {
                         email_subject: format!("Complete the employee agreements for {}", self.name),
-                        email_body: format!("The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you employee agreements to complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you finish, we will send the employee agreements to {} at {} to sign and date! Thanks!", self.name, self.name, self.email),
+                        email_body: format!(
+                            "The status for the applicant, {}, has been changed to `Giving offer`. Therefore, we are sending you employee agreements to complete, as Jess calls, the 'Mad Libs'. GO \
+                             COMPLETE THE MAD LIBS! After you finish, we will send the employee agreements to {} at {} to sign and date! Thanks!",
+                            self.name, self.name, self.email
+                        ),
                         language: Default::default(),
                     },
                 },
@@ -3501,11 +3512,13 @@ Sincerely,
                     name: self.name.to_string(),
                     role_name: "Applicant".to_string(),
                     email: self.email.to_string(),
-                    signer_name:self.name.to_string(),
+                    signer_name: self.name.to_string(),
                     routing_order: "2".to_string(),
                     email_notification: docusign::EmailNotification {
                         email_subject: DOCUSIGN_PIIA_SUBJECT.to_string(),
-                        email_body: "Here are the PIIA (Employee Proprietary Information and Invention Agreement) and Mediation documents. These do not need to be returned with the offer letter (sent in a separate DocuSign), but they need to be returned by your start date. Please let Steve know if you have any questions!".to_string(),
+                        email_body: "Here are the PIIA (Employee Proprietary Information and Invention Agreement) and Mediation documents. These do not need to be returned with the offer letter \
+                                     (sent in a separate DocuSign), but they need to be returned by your start date. Please let Steve know if you have any questions!"
+                            .to_string(),
                         language: Default::default(),
                     },
                 },
@@ -3520,7 +3533,7 @@ Sincerely,
                         email_body: "Attached are newly signed employee agreements. Thank you!".to_string(),
                         language: Default::default(),
                     },
-                }
+                },
             ];
 
             // Let's create the envelope.
@@ -3612,16 +3625,18 @@ Sincerely,
 
 #[cfg(test)]
 mod tests {
-    use crate::applicants::{
-        refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants, update_applicant_reviewers, update_applications_with_scoring_forms,
-        update_applications_with_scoring_results, Applicant, Applicants,
-    };
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::schema::applicants;
-
     use diesel::prelude::*;
     use serde_json::json;
+
+    use crate::{
+        applicants::{
+            refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants, update_applicant_reviewers, update_applications_with_scoring_forms,
+            update_applications_with_scoring_results, Applicant, Applicants,
+        },
+        companies::Company,
+        db::Database,
+        schema::applicants,
+    };
 
     #[test]
     fn test_serialize_deserialize_applicants() {

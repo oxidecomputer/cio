@@ -2,10 +2,7 @@ use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::companies::Company;
-use crate::db::Database;
-use crate::shipments::NewOutboundShipment;
-use crate::swag_inventory::SwagInventoryItem;
+use crate::{companies::Company, db::Database, shipments::NewOutboundShipment, swag_inventory::SwagInventoryItem};
 
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Order {

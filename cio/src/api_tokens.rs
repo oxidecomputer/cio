@@ -4,11 +4,13 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_API_TOKENS_TABLE;
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{api_tokens, api_tokens as a_p_i_tokens};
+use crate::{
+    airtable::AIRTABLE_API_TOKENS_TABLE,
+    companies::Company,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{api_tokens, api_tokens as a_p_i_tokens},
+};
 
 #[db {
     new_struct_name = "APIToken",
@@ -104,9 +106,7 @@ impl APIToken {
 
 #[cfg(test)]
 mod tests {
-    use crate::api_tokens::APITokens;
-    use crate::companies::Company;
-    use crate::db::Database;
+    use crate::{api_tokens::APITokens, companies::Company, db::Database};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

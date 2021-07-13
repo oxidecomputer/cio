@@ -1,11 +1,12 @@
-use std::env;
-use std::error::Error;
+use std::{env, error::Error};
 
-use cloudflare::endpoints::{dns, zone};
-use cloudflare::framework::{
-    async_api::{ApiClient, Client},
-    auth::Credentials,
-    Environment, HttpApiClientConfig,
+use cloudflare::{
+    endpoints::{dns, zone},
+    framework::{
+        async_api::{ApiClient, Client},
+        auth::Credentials,
+        Environment, HttpApiClientConfig,
+    },
 };
 
 #[tokio::main]

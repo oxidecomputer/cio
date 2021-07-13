@@ -1,7 +1,4 @@
-use std::convert::TryInto;
-use std::env;
-use std::fs;
-use std::io::Write;
+use std::{convert::TryInto, env, fs, io::Write};
 
 use airtable_api::Airtable;
 use async_trait::async_trait;
@@ -10,8 +7,7 @@ use chrono::Utc;
 use cloudflare::framework::{async_api::Client as CloudflareClient, auth::Credentials as CloudflareCredentials, Environment, HttpApiClientConfig};
 use docusign::DocuSign;
 use gusto_api::Gusto;
-use hubcaps::http_cache::FileBasedCache;
-use hubcaps::{Credentials, Github, InstallationTokenGenerator, JWTCredentials};
+use hubcaps::{http_cache::FileBasedCache, Credentials, Github, InstallationTokenGenerator, JWTCredentials};
 use macros::db;
 use mailchimp_api::MailChimp;
 use okta::Okta;
@@ -24,12 +20,14 @@ use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
 use tripactions::TripActions;
 
-use crate::airtable::AIRTABLE_COMPANIES_TABLE;
-use crate::api_tokens::{APIToken, NewAPIToken};
-use crate::configs::{Building, Buildings};
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{api_tokens, companys};
+use crate::{
+    airtable::AIRTABLE_COMPANIES_TABLE,
+    api_tokens::{APIToken, NewAPIToken},
+    configs::{Building, Buildings},
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{api_tokens, companys},
+};
 
 #[db {
     new_struct_name = "Company",

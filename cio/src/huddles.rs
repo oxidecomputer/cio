@@ -6,12 +6,14 @@ use gsuite_api::{CalendarEvent, GSuite};
 use handlebars::Handlebars;
 use sendgrid_api::SendGrid;
 
-use crate::airtable::{AIRTABLE_DISCUSSION_TOPICS_TABLE, AIRTABLE_MEETING_SCHEDULE_TABLE};
-use crate::companies::Company;
-use crate::configs::{get_configs_from_repo, User};
-use crate::core::{DiscussionTopic, Meeting, MeetingReminderEmailData};
-use crate::db::Database;
-use crate::utils::create_or_update_file_in_github_repo;
+use crate::{
+    airtable::{AIRTABLE_DISCUSSION_TOPICS_TABLE, AIRTABLE_MEETING_SCHEDULE_TABLE},
+    companies::Company,
+    configs::{get_configs_from_repo, User},
+    core::{DiscussionTopic, Meeting, MeetingReminderEmailData},
+    db::Database,
+    utils::create_or_update_file_in_github_repo,
+};
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
 pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
@@ -517,9 +519,11 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::huddles::{send_huddle_reminders, sync_changes_to_google_events, sync_huddle_meeting_notes, sync_huddles};
+    use crate::{
+        companies::Company,
+        db::Database,
+        huddles::{send_huddle_reminders, sync_changes_to_google_events, sync_huddle_meeting_notes, sync_huddles},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

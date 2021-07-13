@@ -22,11 +22,12 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::env;
-use std::error;
-use std::fmt::{self, Debug, Display, Formatter};
-use std::hash::Hash;
-use std::sync::Arc;
+use std::{
+    env, error,
+    fmt::{self, Debug, Display, Formatter},
+    hash::Hash,
+    sync::Arc,
+};
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};

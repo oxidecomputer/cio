@@ -1,8 +1,9 @@
 #![allow(clippy::from_over_into)]
-use std::collections::{BTreeMap, HashMap};
-use std::env;
-use std::fs;
-use std::io::{copy, Write};
+use std::{
+    collections::{BTreeMap, HashMap},
+    env, fs,
+    io::{copy, Write},
+};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -15,13 +16,15 @@ use pandoc::OutputKind;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_INTERVIEWS_TABLE;
-use crate::applicants::Applicant;
-use crate::companies::Company;
-use crate::configs::{User, Users};
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{applicant_interviews, applicants, users};
+use crate::{
+    airtable::AIRTABLE_INTERVIEWS_TABLE,
+    applicants::Applicant,
+    companies::Company,
+    configs::{User, Users},
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{applicant_interviews, applicants, users},
+};
 
 #[db {
     new_struct_name = "ApplicantInterview",
@@ -663,9 +666,11 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::interviews::{compile_packets, refresh_interviews};
+    use crate::{
+        companies::Company,
+        db::Database,
+        interviews::{compile_packets, refresh_interviews},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

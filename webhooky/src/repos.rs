@@ -1,6 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 /// GitHub repos.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

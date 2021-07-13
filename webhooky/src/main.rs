@@ -10,19 +10,40 @@ pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::env;
-use std::ffi::OsStr;
-use std::fs::File;
-use std::io::Read;
-use std::str::{from_utf8, FromStr};
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    convert::TryInto,
+    env,
+    ffi::OsStr,
+    fs::File,
+    io::Read,
+    str::{from_utf8, FromStr},
+    sync::Arc,
+};
 
-use chrono::offset::Utc;
-use chrono::NaiveDate;
-use chrono::{DateTime, TimeZone};
+use chrono::{offset::Utc, DateTime, NaiveDate, TimeZone};
 use chrono_humanize::HumanTime;
+use cio_api::{
+    analytics::NewPageView,
+    api_tokens::{APIToken, NewAPIToken},
+    applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
+    asset_inventory::AssetItem,
+    companies::Company,
+    configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User},
+    db::Database,
+    journal_clubs::JournalClubMeeting,
+    mailing_list::MailingListSubscriber,
+    rack_line::RackLineSubscriber,
+    repos::{GitHubUser, NewRepo},
+    rfds::{is_image, NewRFD, RFD},
+    schema::{api_tokens, applicants, journal_club_meetings, rfds},
+    shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
+    shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
+    swag_inventory::SwagInventoryItem,
+    swag_store::Order,
+    templates::generate_terraform_files_for_okta,
+    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, merge_json},
+};
 use diesel::prelude::*;
 use docusign::DocuSign;
 use dropshot::{
@@ -31,39 +52,20 @@ use dropshot::{
 };
 use google_drive::GoogleDrive;
 use gusto_api::Gusto;
-use hubcaps::issues::{IssueListOptions, State};
-use hubcaps::Github;
+use hubcaps::{
+    issues::{IssueListOptions, State},
+    Github,
+};
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::Sheets;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
-
-use cio_api::analytics::NewPageView;
-use cio_api::api_tokens::{APIToken, NewAPIToken};
-use cio_api::applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant};
-use cio_api::asset_inventory::AssetItem;
-use cio_api::companies::Company;
-use cio_api::configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User};
-use cio_api::db::Database;
-use cio_api::journal_clubs::JournalClubMeeting;
-use cio_api::mailing_list::MailingListSubscriber;
-use cio_api::rack_line::RackLineSubscriber;
-use cio_api::repos::{GitHubUser, NewRepo};
-use cio_api::rfds::{is_image, NewRFD, RFD};
-use cio_api::schema::{api_tokens, applicants, journal_club_meetings, rfds};
-use cio_api::shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments};
-use cio_api::shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds};
-use cio_api::swag_inventory::SwagInventoryItem;
-use cio_api::swag_store::Order;
-use cio_api::templates::generate_terraform_files_for_okta;
-use cio_api::utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, merge_json};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -3397,15 +3399,18 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
                     github_repo
-                                    .pulls()
-                                    .create(&hubcaps::pulls::PullOptions::new(
-                rfd.name.to_string(),
-                format!("{}:{}", company.github_org, branch),
-                event.repository.default_branch.to_string(),
-                Some("Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your document and close this pull request."),
-                                            ))
-                                    .await
-                                    .unwrap();
+                        .pulls()
+                        .create(&hubcaps::pulls::PullOptions::new(
+                            rfd.name.to_string(),
+                            format!("{}:{}", company.github_org, branch),
+                            event.repository.default_branch.to_string(),
+                            Some(
+                                "Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your \
+                                 document and close this pull request.",
+                            ),
+                        ))
+                        .await
+                        .unwrap();
                     println!("opened pull request for RFD {}", new_rfd.number_string);
 
                     // We could update the discussion link here, but we will already

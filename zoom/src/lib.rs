@@ -23,13 +23,7 @@
  * ```
  */
 #![allow(clippy::upper_case_acronyms, clippy::field_reassign_with_default)]
-use std::env;
-use std::error;
-use std::fmt;
-use std::fs;
-use std::io::Write;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{env, error, fmt, fs, io::Write, path::PathBuf, sync::Arc};
 
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};

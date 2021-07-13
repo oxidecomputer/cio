@@ -1,12 +1,14 @@
 use hubcaps::repositories::Repository;
 use serde::Serialize;
 
-use crate::companies::{Company, Companys};
-use crate::configs::Links;
-use crate::db::Database;
-use crate::repos::GithubRepos;
-use crate::rfds::RFDs;
-use crate::templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls};
+use crate::{
+    companies::{Company, Companys},
+    configs::Links,
+    db::Database,
+    repos::GithubRepos,
+    rfds::RFDs,
+    templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls},
+};
 
 /// Generate the files for the GitHub repository short URLs.
 pub async fn generate_shorturls_for_repos(db: &Database, repo: &Repository, cio_company_id: i32) {

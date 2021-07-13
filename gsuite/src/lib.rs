@@ -53,19 +53,12 @@
  * }
  * ```
  */
-use std::collections::HashMap;
-use std::error;
-use std::fmt;
-use std::sync::Arc;
+use std::{collections::HashMap, error, fmt, sync::Arc};
 
-use chrono::naive::NaiveDate;
-use chrono::offset::Utc;
-use chrono::{DateTime, Duration};
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
-use serde::ser::SerializeMap;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 use serde_json::value::Value;
 
 /// The endpoint for the GSuite Directory API.

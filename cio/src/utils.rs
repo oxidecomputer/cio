@@ -1,15 +1,15 @@
-use std::collections::HashMap;
-use std::fs;
-use std::io::Write;
-use std::ops::Add;
-use std::path::{Path, PathBuf};
-use std::str::from_utf8;
-use std::thread;
-use std::time;
+use std::{
+    collections::HashMap,
+    fs,
+    io::Write,
+    ops::Add,
+    path::{Path, PathBuf},
+    str::from_utf8,
+    thread, time,
+};
 
 use futures_util::stream::TryStreamExt;
-use hubcaps::issues::Issue;
-use hubcaps::repositories::Repository;
+use hubcaps::{issues::Issue, repositories::Repository};
 use reqwest::get;
 use serde_json::Value;
 

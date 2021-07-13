@@ -1,30 +1,25 @@
 #![allow(clippy::from_over_into)]
-use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::str::from_utf8;
-use std::thread;
-use std::time;
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    str::from_utf8,
+    thread, time,
+};
 
-use acme_lib::create_p384_key;
-use acme_lib::persist::FilePersist;
-use acme_lib::{Directory, DirectoryUrl};
+use acme_lib::{create_p384_key, persist::FilePersist, Directory, DirectoryUrl};
 use async_trait::async_trait;
-use chrono::NaiveDate;
-use chrono::{DateTime, TimeZone, Utc};
-use cloudflare::endpoints::{dns, zone};
-use cloudflare::framework::async_api::ApiClient;
+use chrono::{DateTime, NaiveDate, TimeZone, Utc};
+use cloudflare::{
+    endpoints::{dns, zone},
+    framework::async_api::ApiClient,
+};
 use hubcaps::Github;
 use macros::db;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_CERTIFICATES_TABLE;
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::schema::certificates;
-use crate::utils::create_or_update_file_in_github_repo;
+use crate::{airtable::AIRTABLE_CERTIFICATES_TABLE, companies::Company, core::UpdateAirtableRecord, schema::certificates, utils::create_or_update_file_in_github_repo};
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.

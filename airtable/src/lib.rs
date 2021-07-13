@@ -29,19 +29,15 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::env;
-use std::error;
-use std::fmt;
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::{env, error, fmt, fmt::Debug, sync::Arc};
 
-use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{offset::Utc, DateTime};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
-use serde::de::{MapAccess, SeqAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{
+    de::{DeserializeOwned, MapAccess, SeqAccess, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 
 /// Endpoint for the Airtable API.
 const ENDPOINT: &str = "https://api.airtable.com/v0/";
@@ -816,9 +812,9 @@ impl<'de> Visitor<'de> for AttachmentsVisitor {
 }
 
 pub mod user_format_as_array_of_strings {
+    use serde::{self, ser::SerializeSeq, Deserializer, Serializer};
+
     use super::{User, UsersVisitor};
-    use serde::ser::SerializeSeq;
-    use serde::{self, Deserializer, Serializer};
 
     // The signature of a serialize_with function must follow the pattern:
     //
@@ -867,9 +863,9 @@ pub mod user_format_as_array_of_strings {
 }
 
 pub mod user_format_as_string {
+    use serde::{self, ser::SerializeStruct, Deserializer, Serializer};
+
     use super::{UserVisitor, USERFIELDS};
-    use serde::ser::SerializeStruct;
-    use serde::{self, Deserializer, Serializer};
 
     // The signature of a serialize_with function must follow the pattern:
     //
@@ -904,9 +900,9 @@ pub mod user_format_as_string {
 }
 
 pub mod attachment_format_as_array_of_strings {
+    use serde::{self, ser::SerializeSeq, Deserializer, Serializer};
+
     use super::{AttachmentShort, AttachmentsVisitor};
-    use serde::ser::SerializeSeq;
-    use serde::{self, Deserializer, Serializer};
 
     // The signature of a serialize_with function must follow the pattern:
     //
@@ -952,9 +948,9 @@ pub mod attachment_format_as_array_of_strings {
 }
 
 pub mod attachment_format_as_string {
+    use serde::{self, ser::SerializeSeq, Deserializer, Serializer};
+
     use super::{Attachment, AttachmentsVisitor};
-    use serde::ser::SerializeSeq;
-    use serde::{self, Deserializer, Serializer};
 
     // The signature of a serialize_with function must follow the pattern:
     //
@@ -1088,9 +1084,9 @@ impl<'de> Deserialize<'de> for BarcodeField {
 }
 
 pub mod barcode_format_as_string {
+    use serde::{self, ser::SerializeStruct, Deserializer, Serializer};
+
     use super::{BarcodeVisitor, BARCODEFIELDS};
-    use serde::ser::SerializeStruct;
-    use serde::{self, Deserializer, Serializer};
 
     // The signature of a serialize_with function must follow the pattern:
     //

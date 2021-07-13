@@ -4,11 +4,7 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_BOOKINGS_TABLE;
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::bookings;
+use crate::{airtable::AIRTABLE_BOOKINGS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::bookings};
 
 #[db {
     new_struct_name = "Booking",
@@ -140,9 +136,7 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::travel::refresh_trip_actions;
+    use crate::{companies::Company, db::Database, travel::refresh_trip_actions};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

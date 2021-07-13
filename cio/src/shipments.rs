@@ -2,9 +2,7 @@
 use std::convert::From;
 
 use async_trait::async_trait;
-use chrono::naive::NaiveDate;
-use chrono::offset::Utc;
-use chrono::{DateTime, Duration, NaiveTime};
+use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
 use google_geocode::Geocode;
 use macros::db;
 use reqwest::StatusCode;
@@ -13,12 +11,14 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
-use crate::airtable::{AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE};
-use crate::companies::Company;
-use crate::configs::User;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{inbound_shipments, outbound_shipments, package_pickups};
+use crate::{
+    airtable::{AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE},
+    companies::Company,
+    configs::User,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{inbound_shipments, outbound_shipments, package_pickups},
+};
 
 /// The data type for an inbound shipment.
 #[db {
@@ -697,15 +697,18 @@ xoxo,
 {}
 
 The label should already be printed on the cart with the label printers. Please
-take the label and affix it to the package with the specified contents. It can
+take the \
+                     label and affix it to the package with the specified contents. It can
 then be dropped off for {}.
 
 You DO NOT need to scan the barcodes of the items since they have already been
-deducted from inventory. DO NOT SCAN THE BARCODES for the items since
+deducted \
+                     from inventory. DO NOT SCAN THE BARCODES for the items since
 they have already been deducted from inventory.
 
 As always, the Airtable with all the shipments lives at:
-https://airtable-shipments.corp.oxide.computer.
+https://airtable-shipments.corp.oxide.computer.\
+                     
 
 xoxo,
   The Shipping Bot",
@@ -1132,9 +1135,11 @@ pub fn clean_address_string(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::shipments::{refresh_inbound_shipments, refresh_outbound_shipments};
+    use crate::{
+        companies::Company,
+        db::Database,
+        shipments::{refresh_inbound_shipments, refresh_outbound_shipments},
+    };
 
     /*#[ignore]
     #[tokio::test(flavor = "multi_thread")]

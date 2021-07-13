@@ -1,8 +1,8 @@
-use airtable_api::Record;
 use std::str::from_utf8;
 
-use crate::companies::Company;
-use crate::core::CustomerInteraction;
+use airtable_api::Record;
+
+use crate::{companies::Company, core::CustomerInteraction};
 
 /// Sync meeting notes with the content from the notes.
 pub async fn sync_customer_meeting_notes(company: &Company) {
@@ -54,9 +54,7 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::customers::sync_customer_meeting_notes;
-    use crate::db::Database;
+    use crate::{companies::Company, customers::sync_customer_meeting_notes, db::Database};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

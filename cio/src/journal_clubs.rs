@@ -10,11 +10,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
-use crate::airtable::{AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE};
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{journal_club_meetings, journal_club_papers};
+use crate::{
+    airtable::{AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE},
+    companies::Company,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{journal_club_meetings, journal_club_papers},
+};
 
 /// The data type for a NewJournalClubMeeting.
 #[db {
@@ -318,9 +320,11 @@ pub async fn refresh_db_journal_club_meetings(db: &Database, github: &Github, co
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::journal_clubs::{refresh_db_journal_club_meetings, JournalClubMeetings, JournalClubPapers};
+    use crate::{
+        companies::Company,
+        db::Database,
+        journal_clubs::{refresh_db_journal_club_meetings, JournalClubMeetings, JournalClubPapers},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

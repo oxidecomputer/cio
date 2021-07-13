@@ -1,6 +1,7 @@
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::{thread, time};
+use std::{
+    collections::{BTreeMap, HashMap},
+    thread, time,
+};
 
 use gsuite_api::{
     generate_password, Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties,
@@ -8,8 +9,10 @@ use gsuite_api::{
 };
 use serde_json::Value;
 
-use crate::companies::Company;
-use crate::configs::{Building, ConferenceRoom, Group, User};
+use crate::{
+    companies::Company,
+    configs::{Building, ConferenceRoom, Group, User},
+};
 
 /// Update a GSuite user.
 pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool, company: &Company) -> GSuiteUser {

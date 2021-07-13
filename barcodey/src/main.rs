@@ -1,5 +1,4 @@
-use std::env;
-use std::process::Command;
+use std::{env, process::Command};
 
 use cio_api::swag_inventory::BarcodeScan;
 use hidapi::HidApi;

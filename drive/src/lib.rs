@@ -43,11 +43,7 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::collections::HashMap;
-use std::error;
-use std::fmt;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{collections::HashMap, error, fmt, sync::Arc, time::Duration};
 
 use bytes::Bytes;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};

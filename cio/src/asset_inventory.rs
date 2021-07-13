@@ -1,21 +1,19 @@
 use async_trait::async_trait;
-use barcoders::generators::image::*;
-use barcoders::generators::svg::*;
-use barcoders::sym::code39::*;
+use barcoders::{
+    generators::{image::*, svg::*},
+    sym::code39::*,
+};
 use google_drive::GoogleDrive;
-use lopdf::content::{Content, Operation};
-use lopdf::{Document, Object, Stream};
+use lopdf::{
+    content::{Content, Operation},
+    Document, Object, Stream,
+};
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_ASSET_ITEMS_TABLE;
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::asset_items;
-use crate::swag_inventory::image_to_pdf_object;
+use crate::{airtable::AIRTABLE_ASSET_ITEMS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::asset_items, swag_inventory::image_to_pdf_object};
 
 #[db {
     new_struct_name = "AssetItem",
@@ -322,9 +320,11 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::asset_inventory::{refresh_asset_items, AssetItems};
-    use crate::companies::Company;
-    use crate::db::Database;
+    use crate::{
+        asset_inventory::{refresh_asset_items, AssetItems},
+        companies::Company,
+        db::Database,
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

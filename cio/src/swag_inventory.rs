@@ -1,22 +1,27 @@
 use async_trait::async_trait;
-use barcoders::generators::image::*;
-use barcoders::generators::svg::*;
-use barcoders::sym::code39::*;
+use barcoders::{
+    generators::{image::*, svg::*},
+    sym::code39::*,
+};
 use chrono::{DateTime, Utc};
 use google_drive::GoogleDrive;
 use image::{DynamicImage, ImageFormat};
-use lopdf::content::{Content, Operation};
-use lopdf::{Document, Object, Stream, StringFormat};
+use lopdf::{
+    content::{Content, Operation},
+    Document, Object, Stream, StringFormat,
+};
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE};
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{barcode_scans, swag_inventory_items, swag_items};
+use crate::{
+    airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE},
+    companies::Company,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{barcode_scans, swag_inventory_items, swag_items},
+};
 
 #[db {
     new_struct_name = "SwagItem",
@@ -569,9 +574,11 @@ impl BarcodeScan {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::swag_inventory::{refresh_swag_inventory_items, refresh_swag_items, BarcodeScans, SwagInventoryItems, SwagItems};
+    use crate::{
+        companies::Company,
+        db::Database,
+        swag_inventory::{refresh_swag_inventory_items, refresh_swag_items, BarcodeScans, SwagInventoryItems, SwagItems},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

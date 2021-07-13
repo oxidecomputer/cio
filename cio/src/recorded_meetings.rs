@@ -2,8 +2,7 @@
 use std::str::from_utf8;
 
 use async_trait::async_trait;
-use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{offset::Utc, DateTime};
 use google_drive::GoogleDrive;
 use gsuite_api::GSuite;
 use macros::db;
@@ -11,12 +10,7 @@ use revai::RevAI;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_RECORDED_MEETINGS_TABLE;
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::recorded_meetings;
-use crate::utils::truncate;
+use crate::{airtable::AIRTABLE_RECORDED_MEETINGS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::recorded_meetings, utils::truncate};
 
 /// The data type for a recorded meeting.
 #[db {
@@ -232,9 +226,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Companys;
-    use crate::db::Database;
-    use crate::recorded_meetings::refresh_recorded_meetings;
+    use crate::{companies::Companys, db::Database, recorded_meetings::refresh_recorded_meetings};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

@@ -5,12 +5,7 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_PAGE_VIEWS_TABLE;
-use crate::auth_logins::AuthUsers;
-use crate::companies::Companys;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::page_views;
+use crate::{airtable::AIRTABLE_PAGE_VIEWS_TABLE, auth_logins::AuthUsers, companies::Companys, core::UpdateAirtableRecord, db::Database, schema::page_views};
 
 #[db {
     new_struct_name = "PageView",
@@ -79,9 +74,7 @@ impl NewPageView {
 
 #[cfg(test)]
 mod tests {
-    use crate::analytics::PageViews;
-    use crate::companies::Company;
-    use crate::db::Database;
+    use crate::{analytics::PageViews, companies::Company, db::Database};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

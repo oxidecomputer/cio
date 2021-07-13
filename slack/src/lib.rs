@@ -24,16 +24,9 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::collections::HashMap;
-use std::env;
-use std::error;
-use std::fmt;
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::{collections::HashMap, env, error, fmt, fmt::Debug, sync::Arc};
 
-use chrono::offset::Utc;
-use chrono::serde::ts_seconds;
-use chrono::DateTime;
+use chrono::{offset::Utc, serde::ts_seconds, DateTime};
 use reqwest::{header, Body, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

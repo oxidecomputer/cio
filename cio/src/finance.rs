@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-use std::env;
-use std::fs::File;
+use std::{collections::HashMap, env, fs::File};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
@@ -9,12 +7,14 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE};
-use crate::companies::Company;
-use crate::configs::{Group, User};
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users};
+use crate::{
+    airtable::{AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE},
+    companies::Company,
+    configs::{Group, User},
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users},
+};
 
 #[db {
     new_struct_name = "SoftwareVendor",
@@ -1169,11 +1169,13 @@ fn clean_merchant_name(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::finance::{
-        refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_reimbursements, refresh_ramp_transactions,
-        refresh_software_vendors, sync_quickbooks,
+    use crate::{
+        companies::Company,
+        db::Database,
+        finance::{
+            refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions, refresh_ramp_reimbursements, refresh_ramp_transactions,
+            refresh_software_vendors, sync_quickbooks,
+        },
     };
 
     #[ignore]

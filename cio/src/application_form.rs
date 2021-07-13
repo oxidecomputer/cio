@@ -1,12 +1,10 @@
 use chrono::Utc;
 use google_drive::GoogleDrive;
+use hubcaps::issues::{IssueListOptions, State};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::applicants::NewApplicant;
-use crate::companies::Company;
-use crate::db::Database;
-use hubcaps::issues::{IssueListOptions, State};
+use crate::{applicants::NewApplicant, companies::Company, db::Database};
 
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct ApplicationForm {

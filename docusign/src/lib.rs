@@ -21,14 +21,10 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::env;
-use std::error;
-use std::fmt;
-use std::sync::Arc;
+use std::{env, error, fmt, sync::Arc};
 
 use bytes::Bytes;
-use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{offset::Utc, DateTime};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

@@ -1,15 +1,9 @@
-use std::env;
-use std::fmt::Debug;
-use std::ops::Add;
-use std::{thread, time};
+use std::{env, fmt::Debug, ops::Add, thread, time};
 
-use chrono::offset::Utc;
-use chrono::{DateTime, Duration};
-use cio_api::companies::Company;
-use cio_api::repos::list_all_github_repos;
+use chrono::{offset::Utc, DateTime, Duration};
+use cio_api::{companies::Company, repos::list_all_github_repos};
 use futures_util::stream::TryStreamExt;
-use influxdb::InfluxDbWriteable;
-use influxdb::{Client as InfluxClient, Query as InfluxQuery};
+use influxdb::{Client as InfluxClient, InfluxDbWriteable, Query as InfluxQuery};
 
 use crate::event_types::EventType;
 
@@ -794,9 +788,9 @@ pub struct Repository {
 
 #[cfg(test)]
 mod tests {
+    use cio_api::{companies::Company, db::Database};
+
     use crate::influx::Client;
-    use cio_api::companies::Company;
-    use cio_api::db::Database;
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

@@ -20,12 +20,7 @@
  * }
  * ```
  */
-use std::collections::HashMap;
-use std::env;
-use std::error;
-use std::fmt;
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::{collections::HashMap, env, error, fmt, fmt::Debug, sync::Arc};
 
 use chrono::naive::NaiveDate;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};

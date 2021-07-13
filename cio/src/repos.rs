@@ -1,27 +1,25 @@
-use std::collections::BTreeMap;
-use std::io::Write;
+use std::{collections::BTreeMap, io::Write};
 
 use async_trait::async_trait;
-use chrono::offset::Utc;
-use chrono::DateTime;
-use diesel::deserialize::{self, FromSql};
-use diesel::pg::Pg;
-use diesel::serialize::{self, Output, ToSql};
-use diesel::sql_types::Jsonb;
+use chrono::{offset::Utc, DateTime};
+use diesel::{
+    deserialize::{self, FromSql},
+    pg::Pg,
+    serialize::{self, Output, ToSql},
+    sql_types::Jsonb,
+};
 use futures_util::TryStreamExt;
-use hubcaps::branches::Protection;
-use hubcaps::repositories::{OrgRepoType, OrganizationRepoListOptions, Repo};
-use hubcaps::teams::{Permission, Team};
-use hubcaps::Github;
+use hubcaps::{
+    branches::Protection,
+    repositories::{OrgRepoType, OrganizationRepoListOptions, Repo},
+    teams::{Permission, Team},
+    Github,
+};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_GITHUB_REPOS_TABLE;
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::github_repos;
+use crate::{airtable::AIRTABLE_GITHUB_REPOS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::github_repos};
 
 /// The data type for a GitHub user.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize)]
@@ -519,9 +517,11 @@ pub async fn sync_repo_settings(db: &Database, github: &Github, company: &Compan
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Companys;
-    use crate::db::Database;
-    use crate::repos::{refresh_db_github_repos, sync_repo_settings, GithubRepos};
+    use crate::{
+        companies::Companys,
+        db::Database,
+        repos::{refresh_db_github_repos, sync_repo_settings, GithubRepos},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

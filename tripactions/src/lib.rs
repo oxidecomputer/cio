@@ -19,10 +19,7 @@
  * }
  * ```
  */
-use std::env;
-use std::error;
-use std::fmt;
-use std::sync::Arc;
+use std::{env, error, fmt, sync::Arc};
 
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};

@@ -1,13 +1,14 @@
 use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
-use hubcaps::repositories::Repository;
-use hubcaps::Github;
+use hubcaps::{repositories::Repository, Github};
 use serde::{Deserialize, Serialize};
 
-use crate::companies::Company;
-use crate::configs::{Groups, User, Users};
-use crate::db::Database;
-use crate::shorturls::ShortUrl;
-use crate::utils::create_or_update_file_in_github_repo;
+use crate::{
+    companies::Company,
+    configs::{Groups, User, Users},
+    db::Database,
+    shorturls::ShortUrl,
+    utils::create_or_update_file_in_github_repo,
+};
 
 /// Helper function so the terraform names do not start with a number.
 /// Otherwise terraform will fail.

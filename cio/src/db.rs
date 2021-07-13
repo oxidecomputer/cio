@@ -1,8 +1,6 @@
-use std::env;
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
-use diesel::pg::PgConnection;
-use diesel::r2d2;
+use diesel::{pg::PgConnection, r2d2};
 
 pub struct Database {
     pool: Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>,

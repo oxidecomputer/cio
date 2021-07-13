@@ -1,11 +1,12 @@
 #![allow(clippy::from_over_into)]
-use std::collections::BTreeMap;
-use std::env;
-use std::fs;
-use std::io::{stderr, stdout, Write};
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::str::from_utf8;
+use std::{
+    collections::BTreeMap,
+    env, fs,
+    io::{stderr, stdout, Write},
+    path::{Path, PathBuf},
+    process::Command,
+    str::from_utf8,
+};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -13,20 +14,21 @@ use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
 use futures_util::TryStreamExt;
 use google_drive::GoogleDrive;
-use hubcaps::repositories::Repository;
-use hubcaps::Github;
+use hubcaps::{repositories::Repository, Github};
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::AIRTABLE_RFD_TABLE;
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{rfds as r_f_ds, rfds};
-use crate::utils::{create_or_update_file_in_github_repo, truncate, write_file};
+use crate::{
+    airtable::AIRTABLE_RFD_TABLE,
+    companies::Company,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{rfds as r_f_ds, rfds},
+    utils::{create_or_update_file_in_github_repo, truncate, write_file},
+};
 
 /// The data type for an RFD.
 #[db {
@@ -765,10 +767,11 @@ pub async fn send_rfd_changelog(company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::rfds::{clean_rfd_html_links, refresh_db_rfds, send_rfd_changelog, update_discussion_link, update_state};
-    use crate::rfds::{NewRFD, RFDs};
+    use crate::{
+        companies::Company,
+        db::Database,
+        rfds::{clean_rfd_html_links, refresh_db_rfds, send_rfd_changelog, update_discussion_link, update_state, NewRFD, RFDs},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

@@ -1,9 +1,4 @@
-use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::process::Command;
-use std::str::from_utf8;
-use std::sync::Arc;
+use std::{env, fs::File, io::Write, process::Command, str::from_utf8, sync::Arc};
 
 use cio_api::swag_inventory::PrintLabelsRequest;
 use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody};

@@ -21,11 +21,7 @@
  * }
  * ```
  */
-use std::env;
-use std::error;
-use std::fmt;
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::{env, error, fmt, fmt::Debug, sync::Arc};
 
 use chrono::{DateTime, Utc};
 use reqwest::{header, Client, Method, RequestBuilder, StatusCode, Url};

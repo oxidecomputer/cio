@@ -20,12 +20,7 @@
  * }
  * ```
  */
-use std::collections::HashMap;
-use std::env;
-use std::error;
-use std::fmt;
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::{collections::HashMap, env, error, fmt, fmt::Debug, sync::Arc};
 
 use chrono::{DateTime, Utc};
 use reqwest::{header, Client, Method, RequestBuilder, StatusCode, Url};
@@ -628,9 +623,9 @@ pub struct Member {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use serde_qs::Config as QSConfig;
+
+    use super::*;
 
     #[test]
     fn test_mailchimp_webhook_parsing() {

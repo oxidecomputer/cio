@@ -31,9 +31,7 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::tailscale::cleanup_old_tailscale_devices;
+    use crate::{companies::Company, db::Database, tailscale::cleanup_old_tailscale_devices};
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

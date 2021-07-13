@@ -47,9 +47,7 @@
  * }
  * ```
  */
-use std::error;
-use std::fmt;
-use std::sync::Arc;
+use std::{error, fmt, sync::Arc};
 
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};

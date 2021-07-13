@@ -1,23 +1,21 @@
 #![allow(clippy::from_over_into)]
-use std::collections::HashMap;
-use std::env;
-use std::{thread, time};
+use std::{collections::HashMap, env, thread, time};
 
 use async_trait::async_trait;
-use chrono::naive::NaiveDateTime;
-use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{naive::NaiveDateTime, offset::Utc, DateTime};
 use chrono_humanize::HumanTime;
 use macros::db;
 use reqwest::{Client, StatusCode};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE};
-use crate::companies::Company;
-use crate::core::UpdateAirtableRecord;
-use crate::db::Database;
-use crate::schema::{auth_user_logins, auth_users};
+use crate::{
+    airtable::{AIRTABLE_AUTH_USERS_TABLE, AIRTABLE_AUTH_USER_LOGINS_TABLE},
+    companies::Company,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{auth_user_logins, auth_users},
+};
 
 /// The data type for an NewAuthUser.
 #[db {
@@ -425,9 +423,11 @@ pub async fn refresh_auth_users_and_logins(db: &Database, company: &Company) {
 
 #[cfg(test)]
 mod tests {
-    use crate::auth_logins::{refresh_auth_users_and_logins, AuthUserLogins, AuthUsers};
-    use crate::companies::Company;
-    use crate::db::Database;
+    use crate::{
+        auth_logins::{refresh_auth_users_and_logins, AuthUserLogins, AuthUsers},
+        companies::Company,
+        db::Database,
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

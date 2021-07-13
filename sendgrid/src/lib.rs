@@ -28,9 +28,7 @@
  * }
  * ```
  */
-use std::collections::HashMap;
-use std::env;
-use std::sync::Arc;
+use std::{collections::HashMap, env, sync::Arc};
 
 use data_encoding::BASE64;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};

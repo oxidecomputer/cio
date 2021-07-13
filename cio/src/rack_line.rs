@@ -1,10 +1,8 @@
 #![allow(clippy::from_over_into)]
 use std::env;
 
-use crate::core::UpdateAirtableRecord;
 use async_trait::async_trait;
-use chrono::offset::Utc;
-use chrono::DateTime;
+use chrono::{offset::Utc, DateTime};
 use chrono_humanize::HumanTime;
 use macros::db;
 use schemars::JsonSchema;
@@ -12,10 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
-use crate::airtable::AIRTABLE_RACK_LINE_SIGNUPS_TABLE;
-use crate::companies::Company;
-use crate::db::Database;
-use crate::schema::rack_line_subscribers;
+use crate::{airtable::AIRTABLE_RACK_LINE_SIGNUPS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::rack_line_subscribers};
 
 /// The data type for a RackLineSubscriber.
 #[db {
@@ -240,9 +235,11 @@ impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
 
 #[cfg(test)]
 mod tests {
-    use crate::companies::Company;
-    use crate::db::Database;
-    use crate::rack_line::{refresh_db_rack_line_subscribers, RackLineSubscribers};
+    use crate::{
+        companies::Company,
+        db::Database,
+        rack_line::{refresh_db_rack_line_subscribers, RackLineSubscribers},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
