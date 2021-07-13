@@ -505,7 +505,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
                 .teams()
                 .add_or_update_repo_permissions_in_org(
                     &company.github_org,
-                    &team_name,
+                    team_name,
                     &company.github_org,
                     &r.name,
                     &octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequest {

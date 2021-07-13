@@ -217,7 +217,7 @@ pub async fn create_or_update_file_in_github_repo(
                 "[github content] updating file at {} on branch {} failed: {}",
                 file_path, branch, e
             );
-            return;
+            
         }
     }
 }

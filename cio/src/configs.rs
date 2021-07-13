@@ -1397,7 +1397,7 @@ pub async fn sync_github_outside_collaborators(
             for user in &outside_collaborators_config.users {
                 if let Ok(_) = github
                     .repos()
-                    .check_collaborator(&company.github_org, &repo, &user)
+                    .check_collaborator(&company.github_org, repo, user)
                     .await
                 {
                     // Add the collaborator.
@@ -1405,8 +1405,8 @@ pub async fn sync_github_outside_collaborators(
                         .repos()
                         .add_collaborator(
                             &company.github_org,
-                            &repo,
-                            &user,
+                            repo,
+                            user,
                             &octorust::types::ReposAddCollaboratorRequest {
                                 permission: Some(perm.clone()),
                                 permissions: Default::default(),

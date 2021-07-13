@@ -97,7 +97,7 @@ pub async fn generate_terraform_files_for_okta(
     create_or_update_file_in_github_repo(
         github,
         owner,
-        &repo,
+        repo,
         &r.default_branch,
         &users_file,
         users_rendered.as_bytes().to_vec(),
@@ -115,7 +115,7 @@ pub async fn generate_terraform_files_for_okta(
     create_or_update_file_in_github_repo(
         github,
         owner,
-        &repo,
+        repo,
         &r.default_branch,
         &groups_file,
         groups_rendered.as_bytes().to_vec(),
@@ -161,7 +161,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
     create_or_update_file_in_github_repo(
         github,
         owner,
-        &repo,
+        repo,
         &r.default_branch,
         &github_file,
         github_rendered.as_bytes().to_vec(),
@@ -179,7 +179,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
     create_or_update_file_in_github_repo(
         github,
         owner,
-        &repo,
+        repo,
         &r.default_branch,
         &aws_file,
         aws_rendered.as_bytes().to_vec(),
@@ -219,7 +219,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
         create_or_update_file_in_github_repo(
             github,
             owner,
-            &repo,
+            repo,
             &r.default_branch,
             &file,
             rendered.as_bytes().to_vec(),
