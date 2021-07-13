@@ -16,7 +16,6 @@ use gsuite_api::{
     User as GSuiteUser,
 };
 use gusto_api::Gusto;
-use hubcaps::{collaborators::Permissions, Github};
 use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
@@ -40,7 +39,7 @@ use crate::{
     schema::{applicants, buildings, conference_rooms, groups, links, users},
     shipments::NewOutboundShipment,
     templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta},
-    utils::get_github_user_public_ssh_keys,
+    utils::{get_file_content_from_repo, get_github_user_public_ssh_keys},
 };
 
 /// The data type for our configuration files.
@@ -695,9 +694,8 @@ Details for accessing are below.
 
 Website for Okta \
                      login: https://oxidecomputerlogin.okta.com
-Website for email login: https://mail.corp.{}\
-                     
-Email: {}
+Website for email login: https://mail.corp.{}Email: \
+                     {}
 Aliases: {}
 
 Make sure you set up two-factor authentication for your account, or in one week
@@ -758,17 +756,14 @@ Make sure you set \
 you will be locked \
                      out.
 
-Your GitHub @{} has been added to our organization (https://github.com/{})\
-                     
-and various teams within it. GitHub should have sent an email with instructions \
-                     on
+Your GitHub @{} has been added to our organization (https://github.com/{})and \
+                     various teams within it. GitHub should have sent an email with instructions on\
+
 accepting the invitation to our organization to the email you used
 when you signed \
                      up for GitHub. Or you can alternatively accept our invitation
-by going to https://github.com/{}.\
-                     
-
-If you have any questions or your email does not work please email your
+by going to https://github.com/{}.If \
+                     you have any questions or your email does not work please email your
 administrator, who is cc-ed on this email. Spoiler alert it's Jess...
 jess@{}. If you want other email aliases, let Jess know as well.
 
@@ -1333,14 +1328,14 @@ pub struct HuddleConfig {
 }
 
 /// Get the configs from the GitHub repository and parse them.
-pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config {
-    let repo = github.repo(&company.github_org, "configs");
-    let r = repo.get().await.unwrap();
-    let repo_contents = repo.content();
+pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company) -> Config {
+    let owner = &company.github_org;
+    let repo = "configs";
+    let r = github.repos().get(owner, repo).await.unwrap();
 
-    let files = repo_contents
-        .iter("/configs/", &r.default_branch)
-        .try_collect::<Vec<hubcaps::content::DirectoryItem>>()
+    let files = github
+        .repos()
+        .get_content(owner, repo, "/configs/", &r.default_branch)
         .await
         .unwrap();
 
@@ -1348,12 +1343,10 @@ pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config
     for file in files {
         println!("decoding {}", file.name);
         // Get the contents of the file.
-        let contents = repo_contents
-            .file(&format!("/{}", file.path), &r.default_branch)
-            .await
-            .unwrap();
+        let (contents, _) =
+            get_file_content_from_repo(github, owner, repo, &r.default_branch, &file.path).await;
 
-        let decoded = from_utf8(&contents.content).unwrap().trim().to_string();
+        let decoded = from_utf8(&contents).unwrap().trim().to_string();
 
         // Append the body of the file to the rest of the contents.
         file_contents.push('\n');
@@ -1368,7 +1361,7 @@ pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config
 /// Sync GitHub outside collaborators with our configs.
 pub async fn sync_github_outside_collaborators(
     db: &Database,
-    github: &Github,
+    github: &octorust::Client,
     outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
     company: &Company,
 ) {
@@ -1395,25 +1388,32 @@ pub async fn sync_github_outside_collaborators(
                 }
             }
 
-            // Get the repository collaborators interface from hubcaps.
-            let repo_collaborators = github
-                .repo(&company.github_org, repo.to_string())
-                .collaborators();
-
-            let mut perm = Permissions::Pull;
+            let mut perm = octorust::types::ReposAddCollaboratorRequestPermission::Pull;
             if outside_collaborators_config.perm == "push" {
-                perm = Permissions::Push;
+                perm = octorust::types::ReposAddCollaboratorRequestPermission::Push;
             }
 
             // Iterate over the users.
             for user in &outside_collaborators_config.users {
-                if !repo_collaborators
-                    .is_collaborator(user)
+                if let Ok(_) = github
+                    .repos()
+                    .check_collaborator(&company.github_org, &repo, &user)
                     .await
-                    .unwrap_or(false)
                 {
                     // Add the collaborator.
-                    match repo_collaborators.add(user, &perm).await {
+                    match github
+                        .repos()
+                        .add_collaborator(
+                            &company.github_org,
+                            &repo,
+                            &user,
+                            &octorust::types::ReposAddCollaboratorRequest {
+                                permission: Some(perm.clone()),
+                                permissions: Default::default(),
+                            },
+                        )
+                        .await
+                    {
                         Ok(_) => {
                             println!(
                                 "[{}] added user {} as a collaborator ({}) on repo {}",
@@ -1456,9 +1456,12 @@ pub async fn sync_github_outside_collaborators(
 
         // Get the collaborators on the repo.
         let github_collaborators = github
-            .repo(&company.github_org, &repo)
-            .collaborators()
-            .list()
+            .repos()
+            .list_all_collaborators(
+                &company.github_org,
+                &repo,
+                octorust::types::Affiliation::All,
+            )
             .await
             .unwrap();
 
@@ -1487,9 +1490,8 @@ pub async fn sync_github_outside_collaborators(
                 repo, existing_collaborator.login
             );
             github
-                .repo(&company.github_org, &repo)
-                .collaborators()
-                .remove(&existing_collaborator.login)
+                .repos()
+                .remove_collaborator(&company.github_org, &repo, &existing_collaborator.login)
                 .await
                 .unwrap();
         }
@@ -1499,7 +1501,7 @@ pub async fn sync_github_outside_collaborators(
 /// Sync our users with our database and then update Airtable from the database.
 pub async fn sync_users(
     db: &Database,
-    github: &Github,
+    github: &octorust::Client,
     users: BTreeMap<String, UserConfig>,
     company: &Company,
 ) {
@@ -2352,7 +2354,7 @@ pub async fn sync_links(
 /// Sync our certificates with our database and then update Airtable from the database.
 pub async fn sync_certificates(
     db: &Database,
-    github: &Github,
+    github: &octorust::Client,
     certificates: BTreeMap<String, NewCertificate>,
     company: &Company,
 ) {
