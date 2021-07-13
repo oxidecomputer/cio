@@ -460,12 +460,12 @@ impl OutboundShipments {
         };
 
         // Insert the new pickup into the database.
-        np.upsert(&db).await;
+        np.upsert(db).await;
 
         // For each of the shipments, let's set the pickup date.
         for mut shipment in shipments {
             shipment.pickup_date = Some(pickup_date);
-            shipment.update(&db).await;
+            shipment.update(db).await;
         }
     }
 }
@@ -1077,9 +1077,9 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
     // we do not.
-    let shipments = OutboundShipments::get_from_db(&db, company.id);
+    let shipments = OutboundShipments::get_from_db(db, company.id);
     for mut s in shipments {
-        if let Some(existing) = s.get_existing_airtable_record(&db).await {
+        if let Some(existing) = s.get_existing_airtable_record(db).await {
             // Take the field from Airtable.
             s.local_pickup = existing.fields.local_pickup;
         }
@@ -1090,7 +1090,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         s.update(db).await;
     }
 
-    OutboundShipments::get_from_db(&db, company.id).update_airtable(&db).await;
+    OutboundShipments::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 // Sync the inbound shipments.
@@ -1110,14 +1110,14 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) {
         let mut new_shipment: NewInboundShipment = record.fields.into();
         new_shipment.expand().await;
         new_shipment.cio_company_id = company.id;
-        let mut shipment = new_shipment.upsert_in_db(&db);
+        let mut shipment = new_shipment.upsert_in_db(db);
         if shipment.airtable_record_id.is_empty() {
             shipment.airtable_record_id = record.id;
         }
-        shipment.update(&db).await;
+        shipment.update(db).await;
     }
 
-    InboundShipments::get_from_db(&db, company.id).update_airtable(&db).await;
+    InboundShipments::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 pub fn clean_address_string(s: &str) -> String {

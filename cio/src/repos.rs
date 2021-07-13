@@ -405,7 +405,7 @@ pub mod deserialize_null_string {
  * - Adds outside collaborators to their specified repositories.
  */
 pub async fn sync_repo_settings(db: &Database, github: &Github, company: &Company) {
-    let repos = GithubRepos::get_from_db(&db, company.id);
+    let repos = GithubRepos::get_from_db(db, company.id);
 
     // Set the array of default teams to add to the repo.
     // TODO: do not hard code these.

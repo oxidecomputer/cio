@@ -91,7 +91,7 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 
 /// Sync software vendors from Airtable.
 pub async fn refresh_software_vendors(db: &Database, company: &Company) {
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     let github = company.authenticate_github();
@@ -145,13 +145,13 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         // Airtable, Brex, Gusto, Expensify are all the same number of users as
         // in all@.
         if vendor.name == "Airtable" || vendor.name == "Ramp" || vendor.name == "Brex" || vendor.name == "Gusto" || vendor.name == "Expensify" {
-            let group = Group::get_from_db(&db, company.id, "all".to_string()).unwrap();
-            let airtable_group = group.get_existing_airtable_record(&db).await.unwrap();
+            let group = Group::get_from_db(db, company.id, "all".to_string()).unwrap();
+            let airtable_group = group.get_existing_airtable_record(db).await.unwrap();
             vendor.users = airtable_group.fields.members.len() as i32;
         }
 
         // Upsert the record in our database.
-        let mut db_vendor = vendor.upsert_in_db(&db);
+        let mut db_vendor = vendor.upsert_in_db(db);
 
         if db_vendor.airtable_record_id.is_empty() {
             db_vendor.airtable_record_id = vendor_record.id;
@@ -160,10 +160,10 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         // Update the cost per month.
         db_vendor.total_cost_per_month = (db_vendor.cost_per_user_per_month * db_vendor.users as f32) + db_vendor.flat_cost_per_month;
 
-        db_vendor.update(&db).await;
+        db_vendor.update(db).await;
     }
 
-    SoftwareVendors::get_from_db(&db, company.id).update_airtable(&db).await
+    SoftwareVendors::get_from_db(db, company.id).update_airtable(db).await
 }
 
 #[db {
@@ -229,7 +229,7 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
 
 pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
     // Create the Ramp client.
-    let r = company.authenticate_ramp(&db).await;
+    let r = company.authenticate_ramp(db).await;
     if r.is_none() {
         // Return early.
         return;
@@ -259,7 +259,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&transaction.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
             Some(v) => {
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -286,15 +286,15 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
             cio_company_id: company.id,
         };
 
-        nt.upsert(&db).await;
+        nt.upsert(db).await;
     }
 
-    CreditCardTransactions::get_from_db(&db, company.id).update_airtable(&db).await;
+    CreditCardTransactions::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
     // Create the Ramp client.
-    let r = company.authenticate_ramp(&db).await;
+    let r = company.authenticate_ramp(db).await;
     if r.is_none() {
         // Return early.
         return;
@@ -324,7 +324,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&reimbursement.merchant);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
             Some(v) => {
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -351,10 +351,10 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
             cio_company_id: company.id,
         };
 
-        nt.upsert(&db).await;
+        nt.upsert(db).await;
     }
 
-    ExpensedItems::get_from_db(&db, company.id).update_airtable(&db).await;
+    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 // Changes the vendor name to one that matches our existing list.
@@ -677,7 +677,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -689,7 +689,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
         record.cio_company_id = company.id;
 
         // Let's add the record to our database.
-        record.upsert(&db).await;
+        record.upsert(db).await;
     }
 }
 
@@ -778,7 +778,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
 
         let vendor = clean_vendor_name(&bill.vendor);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
             Some(v) => {
                 bill.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -788,7 +788,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
         }
 
         // Upsert the record in our database.
-        let mut db_bill = bill.upsert_in_db(&db);
+        let mut db_bill = bill.upsert_in_db(db);
 
         db_bill.cio_company_id = company.id;
 
@@ -796,10 +796,10 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
             db_bill.airtable_record_id = bill_record.id;
         }
 
-        db_bill.update(&db).await;
+        db_bill.update(db).await;
     }
 
-    AccountsPayables::get_from_db(&db, company.id).update_airtable(&db).await;
+    AccountsPayables::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 #[db {
@@ -866,7 +866,7 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
 pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
-    ExpensedItems::get_from_db(&db, company.id).update_airtable(&db).await;
+    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
 
     let mut path = env::current_dir().unwrap();
     path.push("expensify.csv");
@@ -950,7 +950,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -960,7 +960,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         }
 
         // Let's add the record to our database.
-        record.upsert(&db).await;
+        record.upsert(db).await;
     }
 }
 
@@ -997,7 +997,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.vendor);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(&db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -1009,13 +1009,13 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
         record.cio_company_id = company.id;
 
         // Let's add the record to our database.
-        record.upsert(&db).await;
+        record.upsert(db).await;
     }
 }
 
 pub async fn sync_quickbooks(db: &Database, company: &Company) {
     // Authenticate QuickBooks.
-    let qba = company.authenticate_quickbooks(&db).await;
+    let qba = company.authenticate_quickbooks(db).await;
     if qba.is_none() {
         // Return early.
         return;
@@ -1062,7 +1062,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                 }
                 transaction.cio_company_id = company.id;
 
-                transaction.update(&db).await;
+                transaction.update(db).await;
                 continue;
             }
             Err(e) => {
@@ -1110,7 +1110,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                     for attachment in attachments {
                         transaction.receipts.push(attachment.temp_download_uri.to_string());
                     }
-                    transaction.update(&db).await;
+                    transaction.update(db).await;
                     continue;
                 }
                 Err(e) => {

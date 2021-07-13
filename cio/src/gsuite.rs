@@ -230,14 +230,14 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         let is_member = gsuite.group_has_member(&group.id, &user.email).await.unwrap();
         if is_member {
             // They are a member so we can just update their member status.
-            gsuite.group_update_member(&group.id, &user.email, &role).await.unwrap();
+            gsuite.group_update_member(&group.id, &user.email, role).await.unwrap();
 
             // Continue through the other groups.
             continue;
         }
 
         // Add the user to the group.
-        gsuite.group_insert_member(&group.id, &user.email, &role).await.unwrap();
+        gsuite.group_insert_member(&group.id, &user.email, role).await.unwrap();
 
         println!("added {} to gsuite group {} as {}", user.email, group.name, role);
     }
@@ -245,7 +245,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
     // Iterate over all the groups and if the user is a member and should not
     // be, remove them from the group.
     for (slug, group) in &google_groups {
-        if user.groups.contains(&slug) {
+        if user.groups.contains(slug) {
             continue;
         }
 

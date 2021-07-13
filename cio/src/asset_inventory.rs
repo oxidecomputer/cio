@@ -138,7 +138,7 @@ impl NewAssetItem {
             file_name = format!("{} {}.svg", self.type_, self.name.replace('/', ""));
 
             // Create or update the file in the google drive.
-            let svg_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "image/svg+xml", &svg_bytes).await.unwrap();
+            let svg_file = drive_client.create_or_update_file(drive_id, parent_id, &file_name, "image/svg+xml", svg_bytes).await.unwrap();
             self.barcode_svg = format!("https://drive.google.com/uc?export=download&id={}", svg_file.id);
 
             // Generate the barcode label.
@@ -285,7 +285,7 @@ impl AssetItem {
 /// Sync asset items from Airtable.
 pub async fn refresh_asset_items(db: &Database, company: &Company) {
     // Get gsuite token.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
 
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
@@ -314,9 +314,9 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) {
         item.expand(&drive_client, &drive_id, &parent_id).await;
         item.cio_company_id = company.id;
 
-        let mut db_item = item.upsert_in_db(&db);
+        let mut db_item = item.upsert_in_db(db);
         db_item.airtable_record_id = item_record.id.to_string();
-        db_item.update(&db).await;
+        db_item.update(db).await;
     }
 }
 

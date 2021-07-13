@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     // Check if we already have a TXT record and we need to update it.
     let dns_records = api_client
         .request(&dns::ListDnsRecords {
-            zone_identifier: &zone_identifier,
+            zone_identifier,
             params: dns::ListDnsRecordsParams {
                 name: Some(domain.to_string()),
                 ..Default::default()
@@ -66,9 +66,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         if parsed.is_ipv4() {
             let dns_record = api_client
                 .request(&dns::CreateDnsRecord {
-                    zone_identifier: &zone_identifier,
+                    zone_identifier,
                     params: dns::CreateDnsRecordParams {
-                        name: &domain,
+                        name: domain,
                         content: dns::DnsContent::A { content: ip.parse().unwrap() },
                         // This is the min.
                         ttl: Some(120),
@@ -83,9 +83,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         } else {
             let dns_record = api_client
                 .request(&dns::CreateDnsRecord {
-                    zone_identifier: &zone_identifier,
+                    zone_identifier,
                     params: dns::CreateDnsRecordParams {
-                        name: &domain,
+                        name: domain,
                         content: dns::DnsContent::AAAA { content: ip.parse().unwrap() },
                         // This is the min.
                         ttl: Some(120),
@@ -104,10 +104,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
             // Update the DNS record.
             let dns_record = api_client
                 .request(&dns::UpdateDnsRecord {
-                    zone_identifier: &zone_identifier,
+                    zone_identifier,
                     identifier: &dns_records[0].id,
                     params: dns::UpdateDnsRecordParams {
-                        name: &domain,
+                        name: domain,
                         content: dns::DnsContent::A { content: ip.parse().unwrap() },
                         ttl: None,
                         proxied: None,
@@ -122,10 +122,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
             // Update the DNS record.
             let dns_record = api_client
                 .request(&dns::UpdateDnsRecord {
-                    zone_identifier: &zone_identifier,
+                    zone_identifier,
                     identifier: &dns_records[0].id,
                     params: dns::UpdateDnsRecordParams {
-                        name: &domain,
+                        name: domain,
                         content: dns::DnsContent::AAAA { content: ip.parse().unwrap() },
                         ttl: None,
                         proxied: None,

@@ -122,7 +122,7 @@ impl Company {
     /// for the company.
     pub fn hq_shipping_address(&self, db: &Database) -> shippo::Address {
         // Get the buildings from the company.
-        let buildings: Vec<Building> = Buildings::get_from_db(&db, self.cio_company_id).into();
+        let buildings: Vec<Building> = Buildings::get_from_db(db, self.cio_company_id).into();
         // Get the first one.
         // TODO: when there is more than one building, figure this out.
         let building = buildings.get(0).unwrap();
@@ -250,7 +250,7 @@ impl Company {
                 }
                 t.expand();
                 // Update the token in the database.
-                t.update(&db).await;
+                t.update(db).await;
             }
 
             return Some(mailchimp);
@@ -310,7 +310,7 @@ impl Company {
             }
             t.expand();
             // Update the token in the database.
-            t.update(&db).await;
+            t.update(db).await;
 
             return Some(ramp);
         }
@@ -332,7 +332,7 @@ impl Company {
             t.last_updated_at = Utc::now();
             t.expand();
             // Update the token in the database.
-            t.update(&db).await;
+            t.update(db).await;
 
             return Some(ds);
         }
@@ -354,7 +354,7 @@ impl Company {
             t.last_updated_at = Utc::now();
             t.expand();
             // Update the token in the database.
-            t.update(&db).await;
+            t.update(db).await;
 
             return Some(gusto);
         }
@@ -381,7 +381,7 @@ impl Company {
             t.last_updated_at = Utc::now();
             t.expand();
             // Update the token in the database.
-            t.update(&db).await;
+            t.update(db).await;
 
             return ta;
         }
@@ -429,7 +429,7 @@ impl Company {
             t.last_updated_at = Utc::now();
             t.expand();
             // Update the token in the database.
-            t.update(&db).await;
+            t.update(db).await;
 
             return Some(qb);
         }
@@ -657,7 +657,7 @@ pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) -> APIT
     t.expand();
 
     // Update the token in the database.
-    t.update(&db).await;
+    t.update(db).await;
 
     t
 }

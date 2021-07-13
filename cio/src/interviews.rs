@@ -67,7 +67,7 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) {
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Get the list of our calendars.
@@ -356,7 +356,7 @@ The Oxide Team
             let mut cover_path = env::temp_dir();
             cover_path.push(format!("{}.html", email.to_string()));
             let mut file = fs::File::create(&cover_path).unwrap();
-            file.write_all(&cover_html.as_bytes()).unwrap();
+            file.write_all(cover_html.as_bytes()).unwrap();
             let mut cover_output = env::temp_dir();
             cover_output.push(format!("{}.pdf", email.to_string()));
             // Convert it to a PDF with pandoc.
@@ -378,7 +378,7 @@ The Oxide Team
                 let mut file = fs::File::create(&html_path).unwrap();
                 // TODO: add the date and time and the real name here.
                 file.write_all(
-                    &format!(
+                    format!(
                         "<html><body><table><tr><td><h1>{}</h1></td></tr><tr><td><p>{} - {}</p></td></tr></table></html>",
                         i.full_name(),
                         start_time.format("%A, %B %e from %l:%M%P"),

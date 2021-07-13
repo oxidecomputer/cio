@@ -78,9 +78,9 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 
 /// Sync the recorded meetings.
 pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
-    RecordedMeetings::get_from_db(&db, company.id).update_airtable(&db).await;
+    RecordedMeetings::get_from_db(db, company.id).update_airtable(db).await;
 
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let mut gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
@@ -91,7 +91,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
-            gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, company.authenticate_google(&db).await);
+            gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, company.authenticate_google(db).await);
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
@@ -128,7 +128,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                     continue;
                 }
 
-                let delegated_token = company.authenticate_google(&db).await;
+                let delegated_token = company.authenticate_google(db).await;
                 let drive_client = GoogleDrive::new(delegated_token);
 
                 // If we have a chat log, we should download it.
@@ -137,7 +137,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                     // Download the file.
                     let contents = drive_client
                         .download_file_by_id(
-                            &chat_log_link
+                            chat_log_link
                                 .trim_start_matches("https://drive.google.com/open?id=")
                                 .trim_start_matches("https://drive.google.com/file/d/")
                                 .trim_end_matches("/view?usp=drive_web"),
@@ -150,7 +150,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                 // Try to download the video.
                 let video_contents = drive_client
                     .download_file_by_id(
-                        &video
+                        video
                             .trim_start_matches("https://drive.google.com/open?id=")
                             .trim_start_matches("https://drive.google.com/file/d/")
                             .trim_end_matches("/view?usp=drive_web"),
@@ -183,14 +183,14 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                 };
 
                 // Let's try to get the meeting.
-                let existing = RecordedMeeting::get_from_db(&db, event.id.to_string());
+                let existing = RecordedMeeting::get_from_db(db, event.id.to_string());
                 if let Some(m) = existing {
                     // Update the meeting.
                     meeting.transcript = m.transcript.to_string();
                     meeting.transcript_id = m.transcript_id.to_string();
 
                     // Get it from Airtable.
-                    if let Some(existing_airtable) = m.get_existing_airtable_record(&db).await {
+                    if let Some(existing_airtable) = m.get_existing_airtable_record(db).await {
                         if meeting.transcript.is_empty() {
                             meeting.transcript = existing_airtable.fields.transcript.to_string();
                         }
@@ -201,7 +201,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                 }
 
                 // Upsert the meeting in the database.
-                let mut db_meeting = meeting.upsert(&db).await;
+                let mut db_meeting = meeting.upsert(db).await;
 
                 if !video_contents.is_empty() {
                     // Only do this if we have the video contents.
@@ -213,7 +213,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                         let job = revai.create_job(video_contents).await.unwrap();
                         // Set the transcript id.
                         db_meeting.transcript_id = job.id.to_string();
-                        db_meeting.update(&db).await;
+                        db_meeting.update(db).await;
                     } else {
                         // We have a transcript id, let's try and get the transcript if we don't have
                         // it already.
@@ -221,7 +221,7 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                             // Now let's try to get the transcript.
                             let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
                             db_meeting.transcript = transcript.trim().to_string();
-                            db_meeting.update(&db).await;
+                            db_meeting.update(db).await;
                         }
                     }
                 }

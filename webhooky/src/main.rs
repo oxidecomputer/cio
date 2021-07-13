@@ -1174,7 +1174,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     // Parse the form body.
     for (name, value) in &form_data.fields {
         if i.carrier.is_empty() && (name == "html" || name == "text" || name == "email") {
-            let (carrier, tracking_number) = crate::tracking_numbers::parse_tracking_information(&value);
+            let (carrier, tracking_number) = crate::tracking_numbers::parse_tracking_information(value);
             if !carrier.is_empty() {
                 i.carrier = carrier.to_string();
                 i.tracking_number = tracking_number.to_string();
@@ -1363,7 +1363,7 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
 
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&name).unwrap();
-        let ct = mime_guess::from_ext(&ext).first().unwrap();
+        let ct = mime_guess::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", user_name, about_file, ext);
 
@@ -1417,11 +1417,11 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     let mut new_shipment: NewInboundShipment = record.into();
 
     new_shipment.expand().await;
-    let mut shipment = new_shipment.upsert_in_db(&db);
+    let mut shipment = new_shipment.upsert_in_db(db);
     if shipment.airtable_record_id.is_empty() {
         shipment.airtable_record_id = event.record_id;
     }
-    shipment.update(&db).await;
+    shipment.update(db).await;
 
     println!("inbound shipment {} updated successfully", shipment.tracking_number);
     sentry::end_session();
@@ -2389,7 +2389,7 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
 
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack BotCommand.
-    let bot_command: BotCommand = serde_urlencoded::from_bytes(&body_param.as_bytes()).unwrap();
+    let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes()).unwrap();
 
     // Get the company from the Slack team id.
     let company = Company::get_from_slack_team_id(db, &bot_command.team_id);
@@ -3347,18 +3347,18 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(db).await;
             // Update all the fields for the RFD.
-            rfd.expand(github, &company).await;
+            rfd.expand(github, company).await;
             rfd.update(db).await;
             println!("updated RFD {} in the database", new_rfd.number_string);
             println!("updated airtable for RFD {}", new_rfd.number_string);
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(&db, &github.repo(&company.github_org, "configs"), company.id).await;
+            generate_shorturls_for_rfds(db, &github.repo(&company.github_org, "configs"), company.id).await;
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(github, &drive, &company).await;
+            rfd.convert_and_upload_pdf(github, &drive, company).await;
             rfd.update(db).await;
             println!("updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
 
@@ -3500,7 +3500,7 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
         // Update our links in the database.
-        sync_links(&api_context.db, configs.links, configs.huddles, &company).await;
+        sync_links(&api_context.db, configs.links, configs.huddles, company).await;
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(&api_context.db, &github_repo, company.id).await;
@@ -3511,46 +3511,46 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
     // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
     // added a new group to GSuite.
     if commit.file_changed("configs/groups.toml") {
-        sync_groups(&api_context.db, configs.groups, &company).await;
+        sync_groups(&api_context.db, configs.groups, company).await;
     }
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.db, github, configs.users, &company).await;
+        sync_users(&api_context.db, github, configs.users, company).await;
     }
 
     if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
         // Sync okta users and group from the database.
         // Do this after we update the users and groups in the database.
-        generate_terraform_files_for_okta(github, &api_context.db, &company).await;
+        generate_terraform_files_for_okta(github, &api_context.db, company).await;
     }
 
     // Check if the buildings.toml file changed.
     // Buildings needs to be synchronized _before_ we move on to conference rooms.
     if commit.file_changed("configs/buildings.toml") {
-        sync_buildings(&api_context.db, configs.buildings, &company).await;
+        sync_buildings(&api_context.db, configs.buildings, company).await;
     }
 
     // Check if the resources.toml file changed.
     if commit.file_changed("configs/resources.toml") {
-        sync_conference_rooms(&api_context.db, configs.resources, &company).await;
+        sync_conference_rooms(&api_context.db, configs.resources, company).await;
     }
 
     // Check if the certificates.toml file changed.
     if commit.file_changed("configs/certificates.toml") {
-        sync_certificates(&api_context.db, github, configs.certificates, &company).await;
+        sync_certificates(&api_context.db, github, configs.certificates, company).await;
     }
 
     // Check if the github-outside-collaborators.toml file changed.
     if commit.file_changed("configs/github-outside-collaborators.toml") {
         // Sync github outside collaborators.
-        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, &company).await;
+        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company).await;
     }
 
     // Check if the huddles file changed.
     if commit.file_changed("configs/huddles.toml") {
         // Sync github outside collaborators.
-        cio_api::huddles::sync_huddles(&api_context.db, &company).await;
+        cio_api::huddles::sync_huddles(&api_context.db, company).await;
     }
 
     Ok(HttpResponseAccepted("ok".to_string()))

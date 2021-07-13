@@ -148,7 +148,7 @@ impl NewRFD {
 
     pub fn get_title(content: &str) -> String {
         let mut re = Regex::new(r"(?m)(RFD .*$)").unwrap();
-        match re.find(&content) {
+        match re.find(content) {
             Some(v) => {
                 // TODO: find less horrible way to do this.
                 let trimmed = v.as_str().replace("RFD", "").replace("# ", "").replace("= ", " ").trim().to_string();
@@ -164,7 +164,7 @@ impl NewRFD {
             None => {
                 // There is no "RFD" in our title. This is the case for RFD 31.
                 re = Regex::new(r"(?m)(^= .*$)").unwrap();
-                let results = re.find(&content).unwrap();
+                let results = re.find(content).unwrap();
                 results.as_str().replace("RFD", "").replace("# ", "").replace("= ", " ").trim().to_string()
             }
         }
@@ -172,7 +172,7 @@ impl NewRFD {
 
     pub fn get_state(content: &str) -> String {
         let re = Regex::new(r"(?m)(state:.*$)").unwrap();
-        match re.find(&content) {
+        match re.find(content) {
             Some(v) => return v.as_str().replace("state:", "").trim().to_string(),
             None => Default::default(),
         }
@@ -180,7 +180,7 @@ impl NewRFD {
 
     pub fn get_discussion(content: &str) -> String {
         let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
-        match re.find(&content) {
+        match re.find(content) {
             Some(v) => return v.as_str().replace("discussion:", "").trim().to_string(),
             None => Default::default(),
         }
@@ -212,7 +212,7 @@ impl NewRFD {
         if is_markdown {
             // TODO: make work w asciidoc.
             let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
-            match re.find(&content) {
+            match re.find(content) {
                 Some(v) => return v.as_str().replace("authors:", "").trim().to_string(),
                 None => Default::default(),
             }
@@ -222,7 +222,7 @@ impl NewRFD {
         // We want to find the line under the first "=" line (which is the title), authors is under
         // that.
         let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
-        match re.find(&content) {
+        match re.find(content) {
             Some(v) => {
                 let val = v.as_str().trim().to_string();
                 let parts: Vec<&str> = val.split('\n').collect();
@@ -233,7 +233,7 @@ impl NewRFD {
                     if authors == "{authors}" {
                         // Do the traditional check.
                         let re = Regex::new(r"(?m)(^:authors.*$)").unwrap();
-                        if let Some(v) = re.find(&content) {
+                        if let Some(v) = re.find(content) {
                             authors = v.as_str().replace(":authors:", "").trim().to_string();
                         }
                     }
@@ -677,7 +677,7 @@ pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> S
         re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
     }
 
-    let replacement = if let Some(v) = re.find(&content) { v.as_str().to_string() } else { String::new() };
+    let replacement = if let Some(v) = re.find(content) { v.as_str().to_string() } else { String::new() };
 
     content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1)
 }
@@ -693,7 +693,7 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
         re = Regex::new(r"(?m)(state:.*$)").unwrap();
     }
 
-    let replacement = if let Some(v) = re.find(&content) { v.as_str().to_string() } else { String::new() };
+    let replacement = if let Some(v) = re.find(content) { v.as_str().to_string() } else { String::new() };
 
     content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1)
 }
@@ -709,17 +709,17 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) {
     // Initialize the Google Drive client.
     let drive_client = GoogleDrive::new(token);
 
-    let rfds = get_rfds_from_repo(&github, &company).await;
+    let rfds = get_rfds_from_repo(&github, company).await;
 
     // Sync rfds.
     for (_, rfd) in rfds {
         let mut new_rfd = rfd.upsert(db).await;
 
         // Expand the fields in the RFD.
-        new_rfd.expand(&github, &company).await;
+        new_rfd.expand(&github, company).await;
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(&github, &drive_client, &company).await;
+        new_rfd.convert_and_upload_pdf(&github, &drive_client, company).await;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
@@ -741,7 +741,7 @@ pub async fn send_rfd_changelog(company: &Company) {
     // Iterate over the RFDs.
     let rfds = RFDs::get_from_db(&db, company.id);
     for rfd in rfds {
-        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, &company).await;
+        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, company).await;
         if !changes.is_empty() {
             changelog += &format!("\n{} {}\n{}", rfd.name, rfd.short_link, changes);
         }

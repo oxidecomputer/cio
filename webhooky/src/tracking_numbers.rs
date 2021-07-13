@@ -130,7 +130,7 @@ mod tests {
 </td>
 </tr>"#;
 
-        let (carrier, number) = parse_tracking_information(&example1);
+        let (carrier, number) = parse_tracking_information(example1);
         assert_eq!(carrier, "FedEx");
         assert_eq!(number, "784347694009");
 
@@ -149,7 +149,7 @@ If you have any questions, please reply to this email or call our Customer
 Service Team at 800-346-6873.
 
 Thank you and we appreciate your business."#;
-        let (carrier, number) = parse_tracking_information(&example2);
+        let (carrier, number) = parse_tracking_information(example2);
         assert_eq!(carrier, "UPS");
         assert_eq!(number, "1Z7759450248880648");
     }

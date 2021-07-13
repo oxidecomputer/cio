@@ -78,7 +78,7 @@ impl Order {
     pub async fn subtract_order_from_inventory(&self, db: &Database) {
         for item in &self.items {
             // Get the swag item from the database.
-            let mut swag_inventory_item = SwagInventoryItem::get_by_id(&db, item.id);
+            let mut swag_inventory_item = SwagInventoryItem::get_by_id(db, item.id);
             swag_inventory_item.current_stock -= item.quantity;
             if swag_inventory_item.current_stock < 0 {
                 // TODO: Hopefully this never happens. The store code _should_ only allow people

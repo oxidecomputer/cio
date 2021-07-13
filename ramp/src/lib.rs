@@ -109,7 +109,7 @@ impl Ramp {
         B: Serialize,
     {
         let base = Url::parse(ENDPOINT).unwrap();
-        let url = base.join(&path).unwrap();
+        let url = base.join(path).unwrap();
 
         let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
@@ -242,7 +242,7 @@ impl Ramp {
             ("redirect_uri", &self.redirect_uri),
             ("client_id", &self.client_id),
             ("client_secret", &self.client_secret),
-            ("state", &state),
+            ("state", state),
         ];
         let client = reqwest::Client::new();
         let resp = client

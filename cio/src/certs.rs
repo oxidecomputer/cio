@@ -90,7 +90,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
         // Check if we already have a TXT record and we need to update it.
         let dns_records = api_client
             .request(&dns::ListDnsRecords {
-                zone_identifier: &zone_identifier,
+                zone_identifier: zone_identifier,
                 params: dns::ListDnsRecordsParams {
                     name: Some(record_name.to_string()),
                     ..Default::default()
@@ -105,7 +105,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
             // Create the DNS record.
             let dns_record = api_client
                 .request(&dns::CreateDnsRecord {
-                    zone_identifier: &zone_identifier,
+                    zone_identifier: zone_identifier,
                     params: dns::CreateDnsRecordParams {
                         name: &record_name,
                         content: dns::DnsContent::TXT { content: challenge.dns_proof() },
@@ -123,7 +123,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
             // Update the DNS record.
             let dns_record = api_client
                 .request(&dns::UpdateDnsRecord {
-                    zone_identifier: &zone_identifier,
+                    zone_identifier: zone_identifier,
                     identifier: &dns_records[0].id,
                     params: dns::UpdateDnsRecordParams {
                         name: &record_name,

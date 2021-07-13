@@ -1658,7 +1658,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer
         let repo = github.repo(&company.github_org, "configs");
 
         // Check if we already have an issue for this user.
-        let issue = check_if_github_issue_exists(&configs_issues, &self.name);
+        let issue = check_if_github_issue_exists(configs_issues, &self.name);
 
         // Check if their status is not onboarding, we only care about onboarding applicants.
         if self.status != crate::applicant_status::Status::Onboarding.to_string() {
@@ -2303,7 +2303,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
         .unwrap();
 
     // Get the GSuite token.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
@@ -2315,7 +2315,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
     // depending on the application status.
     for (sheet_name, sheet_id) in get_sheets_map() {
         // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(&sheet_id, "Form Responses 1!A1:Z1000".to_string()).await.unwrap();
+        let sheet_values = sheets_client.get_values(sheet_id, "Form Responses 1!A1:Z1000".to_string()).await.unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
@@ -2338,7 +2338,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
             }
 
             // Parse the applicant out of the row information.
-            let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, &row).await;
+            let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, row).await;
             applicant
                 .expand(db, &drive_client, &sheets_client, columns.sent_email_received, columns.sent_email_follow_up, row_index + 1)
                 .await;
@@ -2394,13 +2394,13 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
 
 pub async fn update_applications_with_scoring_forms(db: &Database, company: &Company) {
     // Get the GSuite token.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(&sheet_id, "Applicants to review!A1:G1000".to_string()).await.unwrap();
+        let sheet_values = sheets_client.get_values(sheet_id, "Applicants to review!A1:G1000".to_string()).await.unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
@@ -2526,13 +2526,13 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
 
 pub async fn update_applications_with_scoring_results(db: &Database, company: &Company) {
     // Get the GSuite token.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
-        let sheet_values = sheets_client.get_values(&sheet_id, "Responses!A1:R1000".to_string()).await.unwrap();
+        let sheet_values = sheets_client.get_values(sheet_id, "Responses!A1:R1000".to_string()).await.unwrap();
         let values = sheet_values.values.unwrap();
 
         if values.is_empty() {
@@ -2709,7 +2709,7 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) {
             {
                 for report_id in &candidate.report_ids {
                     // Get the report for the candidate.
-                    let report = checkr.get_report(&report_id).await.unwrap();
+                    let report = checkr.get_report(report_id).await.unwrap();
 
                     // Set the status for the report.
                     if report.package.contains("premium_criminal") {
@@ -2775,14 +2775,14 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
 
 pub async fn update_applicant_reviewers(db: &Database, company: &Company) {
     // Get the GSuite token.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
     let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
 
     // Get the values in the sheet.
-    let sheet_values = sheets_client.get_values(&sheet_id, "Leaderboard!A1:R1000".to_string()).await.unwrap();
+    let sheet_values = sheets_client.get_values(sheet_id, "Leaderboard!A1:R1000".to_string()).await.unwrap();
     let values = sheet_values.values.unwrap();
 
     if values.is_empty() {
@@ -3318,7 +3318,7 @@ Sincerely,
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&self.docusign_envelope_id).await.unwrap();
 
-            self.update_applicant_from_docusign_offer_envelope(db, &ds, envelope).await;
+            self.update_applicant_from_docusign_offer_envelope(db, ds, envelope).await;
         }
     }
 
@@ -3353,7 +3353,7 @@ Sincerely,
         }
 
         // Get gsuite token.
-        let token = company.authenticate_google(&db).await;
+        let token = company.authenticate_google(db).await;
 
         // Initialize the Google Drive client.
         let drive_client = GoogleDrive::new(token);
@@ -3538,7 +3538,7 @@ Sincerely,
             // Let's get the status of the envelope in Docusign.
             let envelope = ds.get_envelope(&self.docusign_piia_envelope_id).await.unwrap();
 
-            self.update_applicant_from_docusign_piia_envelope(db, &ds, envelope).await;
+            self.update_applicant_from_docusign_piia_envelope(db, ds, envelope).await;
         }
     }
 
@@ -3567,7 +3567,7 @@ Sincerely,
         self.update(db).await;
 
         // Get gsuite token.
-        let token = company.authenticate_google(&db).await;
+        let token = company.authenticate_google(db).await;
 
         // Initialize the Google Drive client.
         let drive_client = GoogleDrive::new(token);

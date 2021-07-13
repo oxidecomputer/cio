@@ -18,7 +18,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Iterate over the huddle meetings.
@@ -60,7 +60,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
                 let mut discussion_topics = String::new();
                 for id in &record.fields.proposed_discussion {
                     // Get the topic from Airtable.
-                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, &id).await.unwrap();
+                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id).await.unwrap();
 
                     discussion_topics = format!("{}\n- {} from {}", discussion_topics, topic.fields.topic, topic.fields.submitter.name);
                 }
@@ -116,7 +116,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Define the date format.
@@ -224,7 +224,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                 // Get the discussion topics for the meeting.
                 for id in &record.fields.proposed_discussion {
                     // Get the topic from Airtable.
-                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, &id).await.unwrap();
+                    let topic: Record<DiscussionTopic> = airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id).await.unwrap();
                     // Add it to our list for the email.
                     email_data.topics.push(topic.fields);
                 }
@@ -350,7 +350,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Iterate over the huddles.
@@ -455,7 +455,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                     for attendee in event.attendees.clone() {
                         if !attendee.resource && attendee.email.ends_with(&company.gsuite_domain) {
                             // Make sure the person is still a user.
-                            if let Some(user) = User::get_from_db(&db, company.id, attendee.email.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
+                            if let Some(user) = User::get_from_db(db, company.id, attendee.email.trim_end_matches(&company.gsuite_domain).trim_end_matches('@').to_string()) {
                                 attendees.push(user.email);
                             }
                         }

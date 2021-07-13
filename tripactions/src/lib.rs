@@ -87,7 +87,7 @@ impl TripActions {
         B: Serialize,
     {
         let base = Url::parse(ENDPOINT).unwrap();
-        let url = base.join(&path).unwrap();
+        let url = base.join(path).unwrap();
 
         let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();

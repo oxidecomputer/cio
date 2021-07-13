@@ -56,7 +56,7 @@ impl ApplicationForm {
         let company = Company::get_by_id(db, self.cio_company_id);
 
         // Get the GSuite token.
-        let token = company.authenticate_google(&db).await;
+        let token = company.authenticate_google(db).await;
 
         // Initialize the GSuite sheets client.
         let drive_client = GoogleDrive::new(token.clone());

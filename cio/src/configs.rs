@@ -1210,7 +1210,7 @@ pub async fn get_configs_from_repo(github: &Github, company: &Company) -> Config
         let decoded = from_utf8(&contents.content).unwrap().trim().to_string();
 
         // Append the body of the file to the rest of the contents.
-        file_contents.push_str(&"\n");
+        file_contents.push_str("\n");
         file_contents.push_str(&decoded);
     }
 
@@ -1253,9 +1253,9 @@ pub async fn sync_github_outside_collaborators(db: &Database, github: &Github, o
 
             // Iterate over the users.
             for user in &outside_collaborators_config.users {
-                if !repo_collaborators.is_collaborator(&user).await.unwrap_or(false) {
+                if !repo_collaborators.is_collaborator(user).await.unwrap_or(false) {
                     // Add the collaborator.
-                    match repo_collaborators.add(&user, &perm).await {
+                    match repo_collaborators.add(user, &perm).await {
                         Ok(_) => {
                             println!("[{}] added user {} as a collaborator ({}) on repo {}", name, user, perm, repo);
                         }
@@ -1313,7 +1313,7 @@ pub async fn sync_github_outside_collaborators(db: &Database, github: &Github, o
 pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, UserConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Initialize the Gusto client.
@@ -1449,9 +1449,9 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&user.email) {
-            user.update_from_gusto(&gusto_user);
+            user.update_from_gusto(gusto_user);
         } else if let Some(gusto_user) = gusto_users.get(&user.recovery_email) {
-            user.update_from_gusto(&gusto_user);
+            user.update_from_gusto(gusto_user);
         } else {
             // Grab their date of birth, start date, and address from Airtable.
             if let Some(e) = existing.clone() {
@@ -1472,12 +1472,12 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 
                 if !e.gusto_id.is_empty() {
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
-                        user.update_from_gusto(&gusto_user);
+                        user.update_from_gusto(gusto_user);
                     }
                 } else if let Some(ref gusto) = gusto_auth {
                     user.populate_home_address().await;
                     // Create the user in Gusto if necessary.
-                    user.create_in_gusto_if_needed(&gusto).await;
+                    user.create_in_gusto_if_needed(gusto).await;
                 }
             }
         }
@@ -1690,7 +1690,7 @@ pub async fn sync_users(db: &Database, github: &Github, users: BTreeMap<String, 
 pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing google buildings.
@@ -1785,7 +1785,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<String, ResourceConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing GSuite calendar resources.
@@ -1883,7 +1883,7 @@ pub async fn sync_conference_rooms(db: &Database, conference_rooms: BTreeMap<Str
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the GSuite groups.
@@ -1966,7 +1966,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         update_group_aliases(&gsuite, &updated_group).await;
 
         // Update the groups settings.
-        update_google_group_settings(&gsuite, &group, company).await;
+        update_google_group_settings(&gsuite, group, company).await;
 
         // Remove the group from the database map and continue.
         // This allows us to add all the remaining new groups after.
@@ -2114,50 +2114,50 @@ pub async fn sync_certificates(db: &Database, github: &Github, certificates: BTr
     println!("updated configs certificates in the database");
 
     // Update certificates in airtable.
-    Certificates::get_from_db(db, company.id).update_airtable(&db).await;
+    Certificates::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
     let github = company.authenticate_github();
 
-    let configs = get_configs_from_repo(&github, &company).await;
+    let configs = get_configs_from_repo(&github, company).await;
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    sync_buildings(db, configs.buildings, &company).await;
+    sync_buildings(db, configs.buildings, company).await;
 
     // Sync conference rooms.
-    sync_conference_rooms(db, configs.resources, &company).await;
+    sync_conference_rooms(db, configs.resources, company).await;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
-    sync_groups(db, configs.groups, &company).await;
+    sync_groups(db, configs.groups, company).await;
 
     // Sync users.
-    sync_users(db, &github, configs.users, &company).await;
+    sync_users(db, &github, configs.users, company).await;
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
-    generate_terraform_files_for_okta(&github, db, &company).await;
+    generate_terraform_files_for_okta(&github, db, company).await;
     // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(&github, db, &company).await;
+    generate_terraform_files_for_aws_and_github(&github, db, company).await;
 
     // Sync links.
-    sync_links(db, configs.links, configs.huddles, &company).await;
+    sync_links(db, configs.links, configs.huddles, company).await;
 
     // Sync certificates.
-    sync_certificates(db, &github, configs.certificates, &company).await;
+    sync_certificates(db, &github, configs.certificates, company).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, &company).await;
+    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company).await;
 
-    refresh_anniversary_events(db, &company).await;
+    refresh_anniversary_events(db, company).await;
 }
 
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(&db).await;
+    let token = company.authenticate_google(db).await;
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Find the anniversary calendar.
