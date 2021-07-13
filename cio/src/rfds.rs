@@ -679,8 +679,8 @@ pub async fn get_rfds_from_repo(
 /// Try to get the markdown or asciidoc contents from the repo.
 pub async fn get_rfd_contents_from_repo(
     github: &octorust::Client,
-    owner: &str,
-    repo: &str,
+    _owner: &str,
+    _repo: &str,
     branch: &str,
     dir: &str,
     company: &Company,
@@ -775,7 +775,7 @@ pub async fn get_images_in_branch(
                         // that.
                         // We have the sha we can see if the files match using the
                         // Git Data API.
-                        let blob = github.git().get_blob(owner, repo, &file.sha).await.unwrap();
+                        let _blob = github.git().get_blob(owner, repo, &file.sha).await.unwrap();
 
                         // Push the new file.
                         files.push(octorust::types::Entries {
