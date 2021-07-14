@@ -239,7 +239,7 @@ impl NewRepo {
     pub fn new(r: octorust::types::MinimalRepository, cio_company_id: i32) -> Self {
         NewRepo {
             github_id: r.id.to_string(),
-            // TODO: figure out why octorust thinks this is empty.
+            // TODO: fix this
             owner: "".to_string(),
             name: r.name,
             full_name: r.full_name,
@@ -419,45 +419,31 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
             // Only do this if it is not already protected.
             if !default_branch.protected {
                 match github
-                .repos()
-                .update_branch_protection(
-                    &company.github_org,
-                    &r.name,
-                    &r.default_branch,
-                    &octorust::types::ReposUpdateBranchProtectionRequest {
-                        allow_deletions:Default::default(),
-                        allow_force_pushes: Default::default(),
-                        enforce_admins: true,
-                        required_conversation_resolution:Default::default(),
-                        required_linear_history: Default::default(),
-                        required_pull_request_reviews:
-                            octorust::types::ReposUpdateBranchProtectionRequestRequiredPullReviews {
-                                dismiss_stale_reviews:Default::default(),
-                                dismissal_restrictions: Default::default(),
-                                require_code_owner_reviews:Default::default(),
-                                required_approving_review_count: Default::default(),
-                            },
-                        required_status_checks:
-                            octorust::types::ReposUpdateBranchProtectionRequestRequiredStatusChecks {
-                                contexts: Default::default(),
-                                strict: Default::default(),
-                            },
-                        restrictions: octorust::types::Restrictions {
-                            apps: Default::default(),
-                            teams: Default::default(),
-                            users: Default::default(),
+                    .repos()
+                    .update_branch_protection(
+                        &company.github_org,
+                        &r.name,
+                        &r.default_branch,
+                        &octorust::types::ReposUpdateBranchProtectionRequest {
+                            allow_deletions: Default::default(),
+                            allow_force_pushes: Default::default(),
+                            enforce_admins: true,
+                            required_conversation_resolution: Default::default(),
+                            required_linear_history: Default::default(),
+                            required_pull_request_reviews: None,
+                            required_status_checks: None,
+                            restrictions: None,
                         },
-                    },
-                )
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => {
-                    if !e.to_string().contains("empty repository") {
-                        println!("could not update protection for repo {}: {}", r.name, e);
+                    )
+                    .await
+                {
+                    Ok(_) => (),
+                    Err(e) => {
+                        if !e.to_string().contains("empty repository") {
+                            println!("could not update protection for repo {}: {}", r.name, e);
+                        }
                     }
                 }
-            }
             }
         } else {
             println!("could not get default branch for repo {}", r.name);

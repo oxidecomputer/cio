@@ -1926,7 +1926,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         // Make sure it's lowercase.
         username = username.to_lowercase();
 
-        let labels = vec!["hiring".to_string()];
+        let label = "hiring".to_string();
         let title = format!("Onboarding: {}", self.name);
         let body = format!(
             r#"- [ ] Add to users.toml
@@ -2020,11 +2020,11 @@ Notes:
                         repo,
                         i.number,
                         &octorust::types::IssuesUpdateRequest {
-                            title,
+                            title: Some(title.into()),
                             body: Default::default(),
                             assignee: "jessfraz".to_string(),
                             assignees: Default::default(),
-                            labels,
+                            labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::IssuesUpdateRequestState::Closed),
                         },
@@ -2053,11 +2053,11 @@ Notes:
                         repo,
                         i.number,
                         &octorust::types::IssuesUpdateRequest {
-                            title,
+                            title: Some(title.into()),
                             body: body.to_string(),
                             assignee: "jessfraz".to_string(),
                             assignees: Default::default(),
-                            labels,
+                            labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::IssuesUpdateRequestState::Open),
                         },
@@ -2076,11 +2076,11 @@ Notes:
                             repo,
                             i.number,
                             &octorust::types::IssuesUpdateRequest {
-                                title,
+                                title: Some(title.into()),
                                 body: body.to_string(),
                                 assignee: "jessfraz".to_string(),
                                 assignees: Default::default(),
-                                labels,
+                                labels: vec![label.into()],
                                 milestone: Default::default(),
                                 state: Some(octorust::types::IssuesUpdateRequestState::Open),
                             },
@@ -2102,11 +2102,11 @@ Notes:
                 owner,
                 repo,
                 &octorust::types::IssuesCreateRequest {
-                    title,
+                    title: title.into(),
                     body,
                     assignee: "jessfraz".to_string(),
                     assignees: Default::default(),
-                    labels,
+                    labels: vec![label.into()],
                     milestone: Default::default(),
                 },
             )

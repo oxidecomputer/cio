@@ -114,7 +114,7 @@ impl NewRFD {
             .get_content(owner, repo, file_path, branch)
             .await
         {
-            let f = file.first().unwrap();
+            let f: octorust::types::ContentFile = file.into();
             content = decode_base64_to_string(&f.content);
             link = f.html_url.to_string();
             sha = f.sha.to_string();
@@ -413,7 +413,9 @@ impl RFD {
             if !message.is_empty() {
                 changelog += &format!(
                     "\t- \"{}\" by @{}\n\t\thttps://github.com/oxidecomputer/rfd/commit/{}\n",
-                    message[0], commit.author.login, commit.sha
+                    message[0],
+                    commit.author.unwrap().login,
+                    commit.sha
                 );
             }
         }
@@ -602,7 +604,7 @@ impl RFD {
             .await
         {
             let commit = commits.get(0).unwrap();
-            self.commit_date = commit.commit.author.date.parse().unwrap();
+            self.commit_date = commit.commit.author.as_ref().unwrap().date.parse().unwrap();
         }
 
         // Parse the HTML.
@@ -695,8 +697,8 @@ pub async fn get_rfd_contents_from_repo(
     // Get the contents of the file.
     let path = format!("{}/README.adoc", dir);
     match github.repos().get_content(owner, repo, &path, branch).await {
-        Ok(contents) => {
-            let f = contents.first().unwrap();
+        Ok(resp) => {
+            let f: octorust::types::ContentFile = resp.into();
             decoded = decode_base64_to_string(&f.content);
             sha = f.sha.to_string();
         }
@@ -708,13 +710,13 @@ pub async fn get_rfd_contents_from_repo(
 
             // Try to get the markdown instead.
             is_markdown = true;
-            let contents = github
+            let f: octorust::types::ContentFile = github
                 .repos()
                 .get_content(owner, repo, &format!("{}/README.md", dir), branch)
                 .await
-                .unwrap();
+                .unwrap()
+                .into();
 
-            let f = contents.first().unwrap();
             decoded = decode_base64_to_string(&f.content);
             sha = f.sha.to_string();
         }
@@ -746,16 +748,17 @@ pub async fn get_images_in_branch(
     repo: &str,
     dir: &str,
     branch: &str,
-) -> Vec<octorust::types::Entries> {
-    let mut files: Vec<octorust::types::Entries> = Default::default();
+) -> Vec<octorust::types::ContentFile> {
+    let mut files: Vec<octorust::types::ContentFile> = Default::default();
 
     // Get all the images in the branch and make sure they are in the images directory on master.
-    for file in github
+    let resp: Vec<octorust::types::Entries> = github
         .repos()
         .get_content(owner, repo, dir, branch)
         .await
         .unwrap()
-    {
+        .into();
+    for file in resp {
         if is_image(&file.name) {
             // Get the contents of the image.
             match github
@@ -763,9 +766,10 @@ pub async fn get_images_in_branch(
                 .get_content(owner, repo, &file.path, branch)
                 .await
             {
-                Ok(mut f) => {
+                Ok(resp) => {
+                    let f: octorust::types::ContentFile = resp.into();
                     // Push the file to our vector.
-                    files.append(&mut f);
+                    files.push(f);
                 }
                 Err(e) => {
                     // TODO: better match on errors
@@ -778,8 +782,10 @@ pub async fn get_images_in_branch(
                         let _blob = github.git().get_blob(owner, repo, &file.sha).await.unwrap();
 
                         // Push the new file.
-                        files.push(octorust::types::Entries {
-                            type_: "file".to_string(),
+                        files.push(octorust::types::ContentFile {
+                            encoding: Default::default(),
+                            submodule_git_url: Default::default(),
+                            target: Default::default(),
                             size: file.size,
                             name: file.name,
                             path: file.path,

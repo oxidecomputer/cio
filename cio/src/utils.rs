@@ -78,8 +78,8 @@ pub async fn get_file_content_from_repo(
         .get_content(owner, repo, &file_path, branch)
         .await
     {
-        Ok(files) => {
-            let file = files.first().unwrap();
+        Ok(resp) => {
+            let file: octorust::types::ContentFile = resp.into();
             return (decode_base64(&file.content), file.sha.to_string());
         }
         Err(e) => {
@@ -96,12 +96,13 @@ pub async fn get_file_content_from_repo(
                 let mut p = PathBuf::from(&file_path);
                 p.pop();
 
-                for item in github
+                let files: Vec<octorust::types::Entries> = github
                     .repos()
-                    .get_all_content(owner, repo, p.to_str().unwrap(), branch)
+                    .get_content(owner, repo, p.to_str().unwrap(), branch)
                     .await
                     .unwrap()
-                {
+                    .into();
+                for item in files {
                     if file_path.trim_start_matches('/') != item.path {
                         // Continue early.
                         continue;
@@ -217,7 +218,6 @@ pub async fn create_or_update_file_in_github_repo(
                 "[github content] updating file at {} on branch {} failed: {}",
                 file_path, branch, e
             );
-            
         }
     }
 }
