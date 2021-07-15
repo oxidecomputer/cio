@@ -321,8 +321,6 @@ async fn listen_github_webhooks(
     match event_type {
         EventType::Push => {
             println!("`{}` {:?}", event_type.name(), event);
-            let company =
-                Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
 
             // Ensure we have commits.
             if event.commits.is_empty() {
@@ -4093,7 +4091,7 @@ async fn handle_repository_event(
         .get(&company.github_org, &event.repository.name)
         .await
         .unwrap();
-    /*let nr = NewRepo::new(repo.clone(), company.id);
+    let nr = NewRepo::new_from_full(repo.clone(), company.id);
     nr.upsert(&api_context.db).await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
@@ -4112,7 +4110,7 @@ async fn handle_repository_event(
     // make this a bit better.
     cio_api::repos::sync_repo_settings(&api_context.db, github, company).await;
 
-    println!("generated shorturls for all the GitHub repos");*/
+    println!("generated shorturls for all the GitHub repos");
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
