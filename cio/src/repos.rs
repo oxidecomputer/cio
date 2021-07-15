@@ -239,8 +239,7 @@ impl NewRepo {
     pub fn new(r: octorust::types::MinimalRepository, cio_company_id: i32) -> Self {
         NewRepo {
             github_id: r.id.to_string(),
-            // TODO: fix this
-            owner: "".to_string(),
+            owner: r.owner.unwrap().login.to_string(),
             name: r.name,
             full_name: r.full_name,
             description: r.description,
