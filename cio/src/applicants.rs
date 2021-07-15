@@ -1904,6 +1904,12 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
     ) {
         let company = self.company(db);
 
+        // Make sure they have a start date.
+        if self.start_date.is_none() {
+            // Return early.
+            return;
+        }
+
         let owner = &company.github_org;
         let repo = "configs";
 
