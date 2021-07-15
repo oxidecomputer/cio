@@ -476,7 +476,7 @@ dependencies = [
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
- "octorust 0.1.13",
+ "octorust",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "pandoc",
@@ -542,7 +542,7 @@ dependencies = [
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
- "octorust 0.1.12",
+ "octorust",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "pandoc",
@@ -2414,28 +2414,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bc5aa8ee6d499333203415c0c81e0f072184d60321e39b99a14d1f2b655d615"
-dependencies = [
- "anyhow",
- "async-recursion",
- "chrono",
- "dirs",
- "http",
- "hyperx",
- "jsonwebtoken",
- "mime 0.3.16",
- "percent-encoding 2.1.0",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "octorust"
 version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1b772a21c77338fd41fc75697cb96ee7141e99f0ec3bcea076421d0d823f237"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4885,7 +4866,7 @@ dependencies = [
  "hyper 0.10.16",
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
- "octorust 0.1.12",
+ "octorust",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
