@@ -301,9 +301,9 @@ impl NewRepo {
             has_pages: r.has_pages,
             has_downloads: r.has_downloads,
             archived: r.archived,
-            pushed_at: r.pushed_at,
-            created_at: r.created_at,
-            updated_at: r.updated_at,
+            pushed_at: r.pushed_at.unwrap(),
+            created_at: r.created_at.unwrap(),
+            updated_at: r.updated_at.unwrap(),
             cio_company_id,
         }
     }

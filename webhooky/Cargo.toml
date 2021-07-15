@@ -25,7 +25,7 @@ http = "0.2.0"
 hyper = { version = "0.10" }
 mailchimp-api = "^0.1.11"
 mime_guess = "2"
-octorust = { version = "^0.1.11", features = ["httpcache"] }
+octorust = { version = "^0.1.12", features = ["httpcache"] }
 quickbooks = "^0.1.12"
 ramp-api = "^0.1.22"
 rand = "^0.8.4"

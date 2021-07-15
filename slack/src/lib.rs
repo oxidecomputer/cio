@@ -24,6 +24,7 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::nonstandard_macro_braces)]
 use std::{collections::HashMap, env, error, fmt, fmt::Debug, sync::Arc};
 
 use chrono::{offset::Utc, serde::ts_seconds, DateTime};

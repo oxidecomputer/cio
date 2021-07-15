@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 #![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::nonstandard_macro_braces)]
 
 pub mod airtable;
 pub mod analytics;
