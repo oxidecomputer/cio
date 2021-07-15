@@ -116,7 +116,7 @@ impl NewRFD {
         {
             content = decode_base64_to_string(&f.content);
             link = f.html_url.to_string();
-            sha = f.sha.to_string();
+            sha = f.sha;
         }
 
         // Parse the RFD directory as an int.
@@ -313,7 +313,7 @@ impl RFD {
         path.push("contents.adoc");
 
         // Write the contents to a temporary file.
-        write_file(&path, &deunicode::deunicode(&self.content).as_bytes());
+        write_file(&path, deunicode::deunicode(&self.content).as_bytes());
 
         // If the file contains inline images, we need to save those images locally.
         // TODO: we don't need to save all the images, only the inline ones, clean this up
@@ -696,7 +696,7 @@ pub async fn get_rfd_contents_from_repo(
     {
         Ok(f) => {
             decoded = decode_base64_to_string(&f.content);
-            sha = f.sha.to_string();
+            sha = f.sha;
         }
         Err(e) => {
             println!(
@@ -713,7 +713,7 @@ pub async fn get_rfd_contents_from_repo(
                 .unwrap();
 
             decoded = decode_base64_to_string(&f.content);
-            sha = f.sha.to_string();
+            sha = f.sha;
         }
     }
 

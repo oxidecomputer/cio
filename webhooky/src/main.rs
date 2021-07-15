@@ -497,7 +497,7 @@ async fn github_rate_limit(
     let github = oxide.authenticate_github();
 
     let response = github.rate_limit().get().await.unwrap();
-    let reset_time = Utc.timestamp(response.resources.core.reset.into(), 0);
+    let reset_time = Utc.timestamp(response.resources.core.reset, 0);
 
     let dur = reset_time - Utc::now();
 
@@ -4019,7 +4019,7 @@ async fn handle_configs_push(
         sync_links(&api_context.db, configs.links, configs.huddles, company).await;
 
         // We need to update the short URLs for the links.
-        generate_shorturls_for_configs_links(&api_context.db, &github, owner, &repo, company.id)
+        generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id)
             .await;
         println!("generated shorturls for the configs links");
     }

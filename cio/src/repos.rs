@@ -239,7 +239,7 @@ impl NewRepo {
     pub fn new_from_full(r: octorust::types::FullRepository, cio_company_id: i32) -> Self {
         NewRepo {
             github_id: r.id.to_string(),
-            owner: r.owner.unwrap().login.to_string(),
+            owner: r.owner.unwrap().login,
             name: r.name,
             full_name: r.full_name,
             description: r.description,
@@ -311,7 +311,7 @@ impl NewRepo {
     pub fn new(r: octorust::types::MinimalRepository, cio_company_id: i32) -> Self {
         NewRepo {
             github_id: r.id.to_string(),
-            owner: r.owner.unwrap().login.to_string(),
+            owner: r.owner.unwrap().login,
             name: r.name,
             full_name: r.full_name,
             description: r.description,
