@@ -1333,12 +1333,11 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
     let repo = "configs";
     let r = github.repos().get(owner, repo).await.unwrap();
 
-    let files: Vec<octorust::types::Entries> = github
+    let files = github
         .repos()
-        .get_content(owner, repo, "/configs/", &r.default_branch)
+        .get_content_vec_entries(owner, repo, "/configs/", &r.default_branch)
         .await
-        .unwrap()
-        .into();
+        .unwrap();
 
     let mut file_contents = String::new();
     for file in files {

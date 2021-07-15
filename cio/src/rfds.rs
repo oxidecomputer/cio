@@ -109,12 +109,11 @@ impl NewRFD {
         let mut content = String::new();
         let mut link = String::new();
         let mut sha = String::new();
-        if let Ok(file) = github
+        if let Ok(f) = github
             .repos()
-            .get_content(owner, repo, file_path, branch)
+            .get_content_file(owner, repo, file_path, branch)
             .await
         {
-            let f: octorust::types::ContentFile = file.into();
             content = decode_base64_to_string(&f.content);
             link = f.html_url.to_string();
             sha = f.sha.to_string();
@@ -696,9 +695,12 @@ pub async fn get_rfd_contents_from_repo(
 
     // Get the contents of the file.
     let path = format!("{}/README.adoc", dir);
-    match github.repos().get_content(owner, repo, &path, branch).await {
-        Ok(resp) => {
-            let f: octorust::types::ContentFile = resp.into();
+    match github
+        .repos()
+        .get_content_file(owner, repo, &path, branch)
+        .await
+    {
+        Ok(f) => {
             decoded = decode_base64_to_string(&f.content);
             sha = f.sha.to_string();
         }
@@ -710,12 +712,11 @@ pub async fn get_rfd_contents_from_repo(
 
             // Try to get the markdown instead.
             is_markdown = true;
-            let f: octorust::types::ContentFile = github
+            let f = github
                 .repos()
-                .get_content(owner, repo, &format!("{}/README.md", dir), branch)
+                .get_content_file(owner, repo, &format!("{}/README.md", dir), branch)
                 .await
-                .unwrap()
-                .into();
+                .unwrap();
 
             decoded = decode_base64_to_string(&f.content);
             sha = f.sha.to_string();
@@ -752,22 +753,20 @@ pub async fn get_images_in_branch(
     let mut files: Vec<octorust::types::ContentFile> = Default::default();
 
     // Get all the images in the branch and make sure they are in the images directory on master.
-    let resp: Vec<octorust::types::Entries> = github
+    let resp = github
         .repos()
-        .get_content(owner, repo, dir, branch)
+        .get_content_vec_entries(owner, repo, dir, branch)
         .await
-        .unwrap()
-        .into();
+        .unwrap();
     for file in resp {
         if is_image(&file.name) {
             // Get the contents of the image.
             match github
                 .repos()
-                .get_content(owner, repo, &file.path, branch)
+                .get_content_file(owner, repo, &file.path, branch)
                 .await
             {
-                Ok(resp) => {
-                    let f: octorust::types::ContentFile = resp.into();
+                Ok(f) => {
                     // Push the file to our vector.
                     files.push(f);
                 }
@@ -783,6 +782,7 @@ pub async fn get_images_in_branch(
 
                         // Push the new file.
                         files.push(octorust::types::ContentFile {
+                            type_: Default::default(),
                             encoding: Default::default(),
                             submodule_git_url: Default::default(),
                             target: Default::default(),

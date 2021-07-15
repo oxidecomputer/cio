@@ -75,11 +75,10 @@ pub async fn get_file_content_from_repo(
     // Try to get the content for the file from the repo.
     match github
         .repos()
-        .get_content(owner, repo, &file_path, branch)
+        .get_content_file(owner, repo, &file_path, branch)
         .await
     {
-        Ok(resp) => {
-            let file: octorust::types::ContentFile = resp.into();
+        Ok(file) => {
             return (decode_base64(&file.content), file.sha.to_string());
         }
         Err(e) => {
@@ -96,12 +95,11 @@ pub async fn get_file_content_from_repo(
                 let mut p = PathBuf::from(&file_path);
                 p.pop();
 
-                let files: Vec<octorust::types::Entries> = github
+                let files = github
                     .repos()
-                    .get_content(owner, repo, p.to_str().unwrap(), branch)
+                    .get_content_vec_entries(owner, repo, p.to_str().unwrap(), branch)
                     .await
-                    .unwrap()
-                    .into();
+                    .unwrap();
                 for item in files {
                     if file_path.trim_start_matches('/') != item.path {
                         // Continue early.
