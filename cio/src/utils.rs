@@ -10,13 +10,13 @@ use reqwest::get;
 use serde_json::Value;
 
 /// Write a file.
-pub fn write_file(file: &Path, contents: &str) {
+pub fn write_file(file: &Path, contents: &[u8]) {
     // create each directory.
     fs::create_dir_all(file.parent().unwrap()).unwrap();
 
     // Write to the file.
     let mut f = fs::File::create(file.to_path_buf()).unwrap();
-    f.write_all(contents.as_bytes()).unwrap();
+    f.write_all(contents).unwrap();
 
     println!("wrote file: {}", file.to_str().unwrap());
 }

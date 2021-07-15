@@ -313,7 +313,7 @@ impl RFD {
         path.push("contents.adoc");
 
         // Write the contents to a temporary file.
-        write_file(&path, &deunicode::deunicode(&self.content));
+        write_file(&path, &deunicode::deunicode(&self.content).as_bytes());
 
         // If the file contains inline images, we need to save those images locally.
         // TODO: we don't need to save all the images, only the inline ones, clean this up
@@ -328,10 +328,7 @@ impl RFD {
                     image.path.replace(&dir, "").trim_start_matches('/')
                 );
 
-                write_file(
-                    &PathBuf::from(image_path),
-                    &decode_base64_to_string(&image.content),
-                );
+                write_file(&PathBuf::from(image_path), &decode_base64(&image.content));
             }
         }
 
@@ -493,10 +490,7 @@ impl RFD {
                 image.path.replace(&old_dir, "").trim_start_matches('/')
             );
 
-            write_file(
-                &PathBuf::from(image_path),
-                &decode_base64_to_string(&image.content),
-            );
+            write_file(&PathBuf::from(image_path), &decode_base64(&image.content));
         }
 
         let cmd_output = Command::new("asciidoctor-pdf")
