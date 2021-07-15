@@ -786,9 +786,8 @@ they have already been deducted from inventory.
 
 As always, the \
                      Airtable with all the shipments lives at:
-https://airtable-shipments.corp.oxide.computer.xoxo,\
-                     
-  The Shipping Bot",
+https://airtable-shipments.corp.oxide.computer.xoxo,The \
+                     Shipping Bot",
                     self.contents,
                     self.name,
                     self.format_address(),
