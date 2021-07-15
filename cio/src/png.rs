@@ -40,8 +40,11 @@ pub fn get_info(bytes: &[u8]) -> PngInfo {
                 pos += 8 + size as usize + 4;
             }
             "iCCP" => {
-                let icc_start = bytes[pos + 8..pos + 8 + (size as usize)].iter().position(|&x| x == b'\x00');
-                icc = icc_start.map(|start| bytes[pos + 8 + start + 1..pos + 8 + (size as usize)].into());
+                let icc_start = bytes[pos + 8..pos + 8 + (size as usize)]
+                    .iter()
+                    .position(|&x| x == b'\x00');
+                icc = icc_start
+                    .map(|start| bytes[pos + 8 + start + 1..pos + 8 + (size as usize)].into());
                 pos += 8 + size as usize + 4;
             }
             "IDAT" => break,

@@ -66,7 +66,9 @@ impl StatesMap {
     }
 
     fn new() -> Self {
-        let mut sm = StatesMap { states: Default::default() };
+        let mut sm = StatesMap {
+            states: Default::default(),
+        };
         // Populate the states.
         sm.populate();
 

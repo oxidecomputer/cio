@@ -22,11 +22,20 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         email: env::var("CLOUDFLARE_EMAIL").unwrap(),
         key: env::var("CLOUDFLARE_TOKEN").unwrap(),
     };
-    let api_client = Client::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
+    let api_client = Client::new(
+        cf_creds,
+        HttpApiClientConfig::default(),
+        Environment::Production,
+    )
+    .unwrap();
 
     // We need the root of the domain not a subdomain.
     let domain_parts: Vec<&str> = domain.split('.').collect();
-    let root_domain = format!("{}.{}", domain_parts[domain_parts.len() - 2], domain_parts[domain_parts.len() - 1]);
+    let root_domain = format!(
+        "{}.{}",
+        domain_parts[domain_parts.len() - 2],
+        domain_parts[domain_parts.len() - 1]
+    );
 
     // Get the zone ID for the domain.
     let zones = api_client
@@ -70,7 +79,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                     zone_identifier,
                     params: dns::CreateDnsRecordParams {
                         name: domain,
-                        content: dns::DnsContent::A { content: ip.parse().unwrap() },
+                        content: dns::DnsContent::A {
+                            content: ip.parse().unwrap(),
+                        },
                         // This is the min.
                         ttl: Some(120),
                         proxied: None,
@@ -87,7 +98,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                     zone_identifier,
                     params: dns::CreateDnsRecordParams {
                         name: domain,
-                        content: dns::DnsContent::AAAA { content: ip.parse().unwrap() },
+                        content: dns::DnsContent::AAAA {
+                            content: ip.parse().unwrap(),
+                        },
                         // This is the min.
                         ttl: Some(120),
                         proxied: None,
@@ -109,7 +122,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                     identifier: &dns_records[0].id,
                     params: dns::UpdateDnsRecordParams {
                         name: domain,
-                        content: dns::DnsContent::A { content: ip.parse().unwrap() },
+                        content: dns::DnsContent::A {
+                            content: ip.parse().unwrap(),
+                        },
                         ttl: None,
                         proxied: None,
                     },
@@ -127,7 +142,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                     identifier: &dns_records[0].id,
                     params: dns::UpdateDnsRecordParams {
                         name: domain,
-                        content: dns::DnsContent::AAAA { content: ip.parse().unwrap() },
+                        content: dns::DnsContent::AAAA {
+                            content: ip.parse().unwrap(),
+                        },
                         ttl: None,
                         proxied: None,
                     },

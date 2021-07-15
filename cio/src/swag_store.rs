@@ -2,7 +2,10 @@ use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{companies::Company, db::Database, shipments::NewOutboundShipment, swag_inventory::SwagInventoryItem};
+use crate::{
+    companies::Company, db::Database, shipments::NewOutboundShipment,
+    swag_inventory::SwagInventoryItem,
+};
 
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Order {
@@ -50,7 +53,10 @@ impl Order {
         for item in &self.items {
             // Get the swag item from the database.
             let swag_inventory_item = SwagInventoryItem::get_by_id(&db, item.id);
-            contents = format!("{} x {}, Size: {}\n{}", item.quantity, swag_inventory_item.item, swag_inventory_item.size, contents);
+            contents = format!(
+                "{} x {}, Size: {}\n{}",
+                item.quantity, swag_inventory_item.item, swag_inventory_item.size, contents
+            );
         }
 
         contents.trim().to_string()

@@ -18,7 +18,9 @@
  *     // Get the GSuite credentials file.
  *     let gsuite_credential_file = env::var("GADMIN_CREDENTIAL_FILE").unwrap();
  *     let gsuite_subject = env::var("GADMIN_SUBJECT").unwrap();
- *     let gsuite_secret = read_service_account_key(gsuite_credential_file).await.expect("failed to read gsuite credential file");
+ *     let gsuite_secret = read_service_account_key(gsuite_credential_file)
+ *         .await
+ *         .expect("failed to read gsuite credential file");
  *     let auth = ServiceAccountAuthenticator::builder(gsuite_secret)
  *         .subject(gsuite_subject.to_string())
  *         .build()
@@ -99,7 +101,14 @@ impl GSuite {
         &self.token
     }
 
-    fn request<B>(&self, endpoint: &str, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
+    fn request<B>(
+        &self,
+        endpoint: &str,
+        method: Method,
+        path: &str,
+        body: B,
+        query: Option<&[(&str, &str)]>,
+    ) -> Request
     where
         B: Serialize,
     {
@@ -112,8 +121,14 @@ impl GSuite {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
-        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
+        headers.append(
+            header::ACCEPT,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -133,7 +148,13 @@ impl GSuite {
     /// List Google groups.
     pub async fn list_groups(&self) -> Result<Vec<Group>, APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::GET, "groups", (), Some(&[("customer", &self.customer), ("domain", &self.domain)]));
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            "groups",
+            (),
+            Some(&[("customer", &self.customer), ("domain", &self.domain)]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -155,7 +176,13 @@ impl GSuite {
     /// Get the settings for a Google group.
     pub async fn get_group_settings(&self, group_email: &str) -> Result<GroupSettings, APIError> {
         // Build the request.
-        let request = self.request(GROUPS_SETTINGS_ENDPOINT, Method::GET, group_email, (), Some(&[("alt", "json")]));
+        let request = self.request(
+            GROUPS_SETTINGS_ENDPOINT,
+            Method::GET,
+            group_email,
+            (),
+            Some(&[("alt", "json")]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -175,7 +202,13 @@ impl GSuite {
     /// Update a Google group.
     pub async fn update_group(&self, group: &Group) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::PUT, &format!("groups/{}", group.id), group, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            &format!("groups/{}", group.id),
+            group,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -194,7 +227,13 @@ impl GSuite {
     /// Update a Google group's settings.
     pub async fn update_group_settings(&self, settings: &GroupSettings) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(GROUPS_SETTINGS_ENDPOINT, Method::PUT, &settings.email, settings, Some(&[("alt", "json")]));
+        let request = self.request(
+            GROUPS_SETTINGS_ENDPOINT,
+            Method::PUT,
+            &settings.email,
+            settings,
+            Some(&[("alt", "json")]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -237,7 +276,9 @@ impl GSuite {
         A::Item: AsRef<str>,
     {
         for alias in aliases {
-            self.update_group_alias(group_key, alias.as_ref()).await.unwrap();
+            self.update_group_alias(group_key, alias.as_ref())
+                .await
+                .unwrap();
         }
     }
 
@@ -246,7 +287,13 @@ impl GSuite {
         let mut a: HashMap<&str, &str> = HashMap::new();
         a.insert("alias", alias);
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::POST, &format!("groups/{}/aliases", group_key), a, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            &format!("groups/{}/aliases", group_key),
+            a,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -259,7 +306,10 @@ impl GSuite {
                     return Ok(());
                 }
 
-                return Err(APIError { status_code: s, body });
+                return Err(APIError {
+                    status_code: s,
+                    body,
+                });
             }
         };
 
@@ -269,7 +319,13 @@ impl GSuite {
     /// Check if a user is a member of a Google group.
     pub async fn group_has_member(&self, group_id: &str, email: &str) -> Result<bool, APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::GET, &format!("groups/{}/hasMember/{}", group_id, email), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            &format!("groups/{}/hasMember/{}", group_id, email),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -289,7 +345,12 @@ impl GSuite {
     }
 
     /// Update a member of a Google group.
-    pub async fn group_update_member(&self, group_id: &str, email: &str, role: &str) -> Result<(), APIError> {
+    pub async fn group_update_member(
+        &self,
+        group_id: &str,
+        email: &str,
+        role: &str,
+    ) -> Result<(), APIError> {
         let member = Member {
             role: role.to_string(),
             email: email.to_string(),
@@ -302,7 +363,13 @@ impl GSuite {
         };
 
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::PUT, &format!("groups/{}/members/{}", group_id, email), member, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            &format!("groups/{}/members/{}", group_id, email),
+            member,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -319,7 +386,12 @@ impl GSuite {
     }
 
     /// Add a user as a member of a Google group.
-    pub async fn group_insert_member(&self, group_id: &str, email: &str, role: &str) -> Result<(), APIError> {
+    pub async fn group_insert_member(
+        &self,
+        group_id: &str,
+        email: &str,
+        role: &str,
+    ) -> Result<(), APIError> {
         let member = Member {
             role: role.to_string(),
             email: email.to_string(),
@@ -332,7 +404,13 @@ impl GSuite {
         };
 
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::POST, &format!("groups/{}/members", group_id), member, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            &format!("groups/{}/members", group_id),
+            member,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -351,7 +429,13 @@ impl GSuite {
     /// Remove a user as a member of a Google group.
     pub async fn group_remove_member(&self, group_id: &str, email: &str) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("groups/{}/members/{}", group_id, email), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::DELETE,
+            &format!("groups/{}/members/{}", group_id, email),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -373,7 +457,13 @@ impl GSuite {
     /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/groups/delete
     pub async fn delete_group(&self, group_key: &str) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("groups/{}", group_key), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::DELETE,
+            &format!("groups/{}", group_key),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -397,7 +487,11 @@ impl GSuite {
             Method::GET,
             "users",
             (),
-            Some(&[("customer", &self.customer), ("domain", &self.domain), ("projection", "full")]),
+            Some(&[
+                ("customer", &self.customer),
+                ("domain", &self.domain),
+                ("projection", "full"),
+            ]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -420,7 +514,13 @@ impl GSuite {
     /// Update a user.
     pub async fn update_user(&self, user: &User) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::PUT, &format!("users/{}", user.id), user, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::PUT,
+            &format!("users/{}", user.id),
+            user,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -461,7 +561,13 @@ impl GSuite {
     /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/users/delete
     pub async fn delete_user(&self, user_key: &str) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("users/{}", user_key), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::DELETE,
+            &format!("users/{}", user_key),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -484,7 +590,9 @@ impl GSuite {
         A::Item: AsRef<str>,
     {
         for alias in aliases {
-            self.update_user_alias(user_id, alias.as_ref()).await.unwrap();
+            self.update_user_alias(user_id, alias.as_ref())
+                .await
+                .unwrap();
         }
     }
 
@@ -493,7 +601,13 @@ impl GSuite {
         let mut a: HashMap<&str, &str> = HashMap::new();
         a.insert("alias", alias);
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::POST, &format!("users/{}/aliases", user_id), a, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            &format!("users/{}/aliases", user_id),
+            a,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -502,7 +616,10 @@ impl GSuite {
                 // Try again. It might just be that the user was just created.
                 // TODO: this will result in an endless loop if that is not the case
                 // clean this up eventually. Sorry future person.
-                println!("Got 404 while updating user alias for user {} alias {}, trying again", user_id, alias);
+                println!(
+                    "Got 404 while updating user alias for user {} alias {}, trying again",
+                    user_id, alias
+                );
                 //return self.update_user_alias(user_id, alias).await;
             }
             s => {
@@ -513,7 +630,10 @@ impl GSuite {
                     return Ok(());
                 }
 
-                return Err(APIError { status_code: s, body });
+                return Err(APIError {
+                    status_code: s,
+                    body,
+                });
             }
         };
 
@@ -523,7 +643,13 @@ impl GSuite {
     /// List calendar resources.
     pub async fn list_calendar_resources(&self) -> Result<Vec<CalendarResource>, APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::GET, &format!("customer/{}/resources/calendars", self.customer), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            &format!("customer/{}/resources/calendars", self.customer),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -543,12 +669,18 @@ impl GSuite {
     }
 
     /// Update a calendar resource.
-    pub async fn update_calendar_resource(&self, resource: &CalendarResource) -> Result<(), APIError> {
+    pub async fn update_calendar_resource(
+        &self,
+        resource: &CalendarResource,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            &format!("customer/{}/resources/calendars/{}", self.customer, resource.id),
+            &format!(
+                "customer/{}/resources/calendars/{}",
+                self.customer, resource.id
+            ),
             resource,
             None,
         );
@@ -568,9 +700,18 @@ impl GSuite {
     }
 
     /// Create a calendar resource.
-    pub async fn create_calendar_resource(&self, resource: &CalendarResource) -> Result<(), APIError> {
+    pub async fn create_calendar_resource(
+        &self,
+        resource: &CalendarResource,
+    ) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::POST, &format!("customer/{}/resources/calendars", self.customer), resource, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            &format!("customer/{}/resources/calendars", self.customer),
+            resource,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -590,7 +731,13 @@ impl GSuite {
     /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/resources.calendars/delete
     pub async fn delete_calendar_resource(&self, id: &str) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("customer/{}/resources/calendars/{}", self.customer, id), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::DELETE,
+            &format!("customer/{}/resources/calendars/{}", self.customer, id),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -610,7 +757,13 @@ impl GSuite {
     /// List buildings.
     pub async fn list_buildings(&self) -> Result<Vec<Building>, APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::GET, &format!("customer/{}/resources/buildings", self.customer), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::GET,
+            &format!("customer/{}/resources/buildings", self.customer),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -635,7 +788,10 @@ impl GSuite {
         let request = self.request(
             DIRECTORY_ENDPOINT,
             Method::PUT,
-            &format!("customer/{}/resources/buildings/{}", self.customer, building.id),
+            &format!(
+                "customer/{}/resources/buildings/{}",
+                self.customer, building.id
+            ),
             building,
             None,
         );
@@ -657,7 +813,13 @@ impl GSuite {
     /// Create a building.
     pub async fn create_building(&self, building: &Building) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::POST, &format!("customer/{}/resources/buildings", self.customer), building, None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::POST,
+            &format!("customer/{}/resources/buildings", self.customer),
+            building,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -677,7 +839,13 @@ impl GSuite {
     /// FROM: https://developers.google.com/admin-sdk/directory/reference/rest/v1/resources.buildings/delete
     pub async fn delete_building(&self, id: &str) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(DIRECTORY_ENDPOINT, Method::DELETE, &format!("customer/{}/resources/buildings/{}", self.customer, id), (), None);
+        let request = self.request(
+            DIRECTORY_ENDPOINT,
+            Method::DELETE,
+            &format!("customer/{}/resources/buildings/{}", self.customer, id),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -697,7 +865,13 @@ impl GSuite {
     /// List calendars for a user.
     pub async fn list_calendars(&self) -> Result<Vec<Calendar>, APIError> {
         // Build the request.
-        let request = self.request(CALENDAR_ENDPOINT, Method::GET, "users/me/calendarList", (), Some(&[("maxResults", "250")]));
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::GET,
+            "users/me/calendarList",
+            (),
+            Some(&[("maxResults", "250")]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -717,7 +891,11 @@ impl GSuite {
     }
 
     /// List events on a calendar with a query.
-    pub async fn list_calendar_events_query(&self, calendar_id: &str, query: &str) -> Result<Vec<CalendarEvent>, APIError> {
+    pub async fn list_calendar_events_query(
+        &self,
+        calendar_id: &str,
+        query: &str,
+    ) -> Result<Vec<CalendarEvent>, APIError> {
         // Build the request.
         let request = self.request(
             CALENDAR_ENDPOINT,
@@ -729,7 +907,13 @@ impl GSuite {
                 ("maxResults", "2500"),
                 ("showDeleted", "true"),
                 ("q", query),
-                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339()),
+                (
+                    "timeMax",
+                    &Utc::now()
+                        .checked_add_signed(Duration::weeks(13))
+                        .unwrap()
+                        .to_rfc3339(),
+                ),
             ]),
         );
 
@@ -751,14 +935,22 @@ impl GSuite {
     }
 
     /// List events on a calendar.
-    pub async fn list_calendar_events(&self, calendar_id: &str, show_deleted: bool) -> Result<Vec<CalendarEvent>, APIError> {
+    pub async fn list_calendar_events(
+        &self,
+        calendar_id: &str,
+        show_deleted: bool,
+    ) -> Result<Vec<CalendarEvent>, APIError> {
         // Build the request.
         let request = self.request(
             CALENDAR_ENDPOINT,
             Method::GET,
             &format!("calendars/{}/events", calendar_id),
             (),
-            Some(&[("singleEvents", "true"), ("maxResults", "2500"), ("showDeleted", &show_deleted.to_string())]),
+            Some(&[
+                ("singleEvents", "true"),
+                ("maxResults", "2500"),
+                ("showDeleted", &show_deleted.to_string()),
+            ]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -779,17 +971,30 @@ impl GSuite {
     }
 
     /// List recurring event instances.
-    pub async fn list_recurring_event_instances(&self, calendar_id: &str, recurring_event_id: &str) -> Result<Vec<CalendarEvent>, APIError> {
+    pub async fn list_recurring_event_instances(
+        &self,
+        calendar_id: &str,
+        recurring_event_id: &str,
+    ) -> Result<Vec<CalendarEvent>, APIError> {
         // Build the request.
         let request = self.request(
             CALENDAR_ENDPOINT,
             Method::GET,
-            &format!("calendars/{}/events/{}/instances", calendar_id, recurring_event_id),
+            &format!(
+                "calendars/{}/events/{}/instances",
+                calendar_id, recurring_event_id
+            ),
             (),
             Some(&[
                 ("maxResults", "2500"),
                 ("showDeleted", "true"),
-                ("timeMax", &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339()),
+                (
+                    "timeMax",
+                    &Utc::now()
+                        .checked_add_signed(Duration::weeks(13))
+                        .unwrap()
+                        .to_rfc3339(),
+                ),
             ]),
         );
 
@@ -811,14 +1016,21 @@ impl GSuite {
     }
 
     /// List past events on a calendar.
-    pub async fn list_past_calendar_events(&self, calendar_id: &str) -> Result<Vec<CalendarEvent>, APIError> {
+    pub async fn list_past_calendar_events(
+        &self,
+        calendar_id: &str,
+    ) -> Result<Vec<CalendarEvent>, APIError> {
         // Build the request.
         let request = self.request(
             CALENDAR_ENDPOINT,
             Method::GET,
             &format!("calendars/{}/events", calendar_id),
             (),
-            Some(&[("singleEvents", "true"), ("maxResults", "2500"), ("timeMax", &Utc::now().to_rfc3339())]),
+            Some(&[
+                ("singleEvents", "true"),
+                ("maxResults", "2500"),
+                ("timeMax", &Utc::now().to_rfc3339()),
+            ]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -839,9 +1051,19 @@ impl GSuite {
     }
 
     /// Create a calendar event.
-    pub async fn create_calendar_event(&self, calendar_id: &str, event: &CalendarEvent) -> Result<CalendarEvent, APIError> {
+    pub async fn create_calendar_event(
+        &self,
+        calendar_id: &str,
+        event: &CalendarEvent,
+    ) -> Result<CalendarEvent, APIError> {
         // Build the request.
-        let request = self.request(CALENDAR_ENDPOINT, Method::POST, &format!("calendars/{}/events", calendar_id), event, None);
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::POST,
+            &format!("calendars/{}/events", calendar_id),
+            event,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -858,9 +1080,20 @@ impl GSuite {
     }
 
     /// Update a calendar event.
-    pub async fn update_calendar_event(&self, calendar_id: &str, event_id: &str, event: &CalendarEvent) -> Result<CalendarEvent, APIError> {
+    pub async fn update_calendar_event(
+        &self,
+        calendar_id: &str,
+        event_id: &str,
+        event: &CalendarEvent,
+    ) -> Result<CalendarEvent, APIError> {
         // Build the request.
-        let request = self.request(CALENDAR_ENDPOINT, Method::PUT, &format!("calendars/{}/events/{}", calendar_id, event_id), event, None);
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::PUT,
+            &format!("calendars/{}/events/{}", calendar_id, event_id),
+            event,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -877,9 +1110,19 @@ impl GSuite {
     }
 
     /// Get a calendar event.
-    pub async fn get_calendar_event(&self, calendar_id: &str, event_id: &str) -> Result<CalendarEvent, APIError> {
+    pub async fn get_calendar_event(
+        &self,
+        calendar_id: &str,
+        event_id: &str,
+    ) -> Result<CalendarEvent, APIError> {
         // Build the request.
-        let request = self.request(CALENDAR_ENDPOINT, Method::GET, &format!("calendars/{}/events/{}", calendar_id, event_id), (), None);
+        let request = self.request(
+            CALENDAR_ENDPOINT,
+            Method::GET,
+            &format!("calendars/{}/events/{}", calendar_id, event_id),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -895,7 +1138,11 @@ impl GSuite {
         Ok(resp.json().await.unwrap())
     }
 
-    pub async fn delete_calendar_event(&self, calendar_id: &str, event_id: &str) -> Result<(), APIError> {
+    pub async fn delete_calendar_event(
+        &self,
+        calendar_id: &str,
+        event_id: &str,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             CALENDAR_ENDPOINT,
@@ -930,13 +1177,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -959,12 +1216,20 @@ pub fn generate_password() -> String {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Calendars {
     /// Token used to access next page of this result.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
     pub next_page_token: String,
     /// Token used at a later point in time to retrieve only the entries that have changed since
     /// this result was returned. Omitted if further results are available, in which case
     /// nextPageToken is provided.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextSyncToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextSyncToken"
+    )]
     pub next_sync_token: String,
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1007,12 +1272,20 @@ pub struct Calendar {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CalendarEvents {
     /// Token used to access next page of this result.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
     pub next_page_token: String,
     /// Token used at a later point in time to retrieve only the entries that have changed since
     /// this result was returned. Omitted if further results are available, in which case
     /// nextPageToken is provided.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextSyncToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextSyncToken"
+    )]
     pub next_sync_token: String,
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1046,15 +1319,35 @@ pub struct CalendarEvent {
     pub status: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "htmlLink")]
     pub html_link: String,
-    #[serde(default, skip_serializing_if = "Option::is_none", serialize_with = "calendar_date_format::serialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "calendar_date_format::serialize"
+    )]
     pub created: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", serialize_with = "calendar_date_format::serialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "calendar_date_format::serialize"
+    )]
     pub updated: Option<DateTime<Utc>>,
-    #[serde(default, rename = "originalStartTime", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "originalStartTime",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub original_start_time: Option<Date>,
-    #[serde(default, rename = "conferenceData", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "conferenceData",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub conference_data: Option<serde_json::Value>,
-    #[serde(default, rename = "extendedProperties", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "extendedProperties",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub extended_properties: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gadget: Option<serde_json::Value>,
@@ -1066,13 +1359,21 @@ pub struct CalendarEvent {
     pub description: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "colorId")]
     pub color_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "hangoutLink")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "hangoutLink"
+    )]
     pub hangout_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub location: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub recurrence: Vec<String>,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recurringEventId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "recurringEventId"
+    )]
     pub recurring_event_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub transparency: String,
@@ -1116,7 +1417,11 @@ pub struct EventReminders {
 pub struct EventCreator {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "displayName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "displayName"
+    )]
     pub display_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
@@ -1128,7 +1433,11 @@ pub struct EventCreator {
 pub struct EventOrganizer {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "displayName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "displayName"
+    )]
     pub display_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
@@ -1142,7 +1451,12 @@ pub struct Date {
     pub time_zone: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub date: Option<NaiveDate>,
-    #[serde(default, rename = "dateTime", skip_serializing_if = "Option::is_none", serialize_with = "calendar_date_format::serialize")]
+    #[serde(
+        default,
+        rename = "dateTime",
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "calendar_date_format::serialize"
+    )]
     pub date_time: Option<DateTime<Utc>>,
 }
 
@@ -1152,7 +1466,11 @@ pub struct Attendee {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "displayName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "displayName"
+    )]
     pub display_name: String,
     #[serde(default)]
     pub organizer: bool,
@@ -1160,7 +1478,11 @@ pub struct Attendee {
     pub resource: bool,
     #[serde(default)]
     pub optional: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "responseStatus")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "responseStatus"
+    )]
     pub response_status: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub comment: String,
@@ -1196,7 +1518,11 @@ pub struct Group {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
     /// Group direct members count
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "directMembersCount")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "directMembersCount"
+    )]
     pub direct_members_count: String,
     /// Email of group
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1214,7 +1540,11 @@ pub struct Group {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
     /// List of non editable aliases (Read-only)
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "nonEditableAliases")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "nonEditableAliases"
+    )]
     pub non_editable_aliases: Vec<String>,
 }
 
@@ -1222,135 +1552,299 @@ pub struct Group {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct GroupSettings {
     /// Permission to ban users. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanBanUsers")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanBanUsers"
+    )]
     pub who_can_ban_users: String,
     /// Permission for content assistants. Possible values are: Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanAssistContent")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanAssistContent"
+    )]
     pub who_can_assist_content: String,
     /// Are external members allowed to join the group.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowExternalMembers")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "allowExternalMembers"
+    )]
     pub allow_external_members: String,
     /// Permission to enter free form tags for topics in a forum. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanEnterFreeFormTags")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanEnterFreeFormTags"
+    )]
     pub who_can_enter_free_form_tags: String,
     /// Permission to approve pending messages in the moderation queue. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanApproveMessages")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanApproveMessages"
+    )]
     pub who_can_approve_messages: String,
     /// Permission to mark a topic as a duplicate of another topic. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanMarkDuplicate")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanMarkDuplicate"
+    )]
     pub who_can_mark_duplicate: String,
     /// Permissions to join the group. Possible values are: ANYONE_CAN_JOIN ALL_IN_DOMAIN_CAN_JOIN INVITED_CAN_JOIN CAN_REQUEST_TO_JOIN
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanJoin")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanJoin"
+    )]
     pub who_can_join: String,
     /// Permission to change tags and categories. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanModifyTagsAndCategories")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanModifyTagsAndCategories"
+    )]
     pub who_can_modify_tags_and_categories: String,
     /// Permission to mark a topic as not needing a response. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanMarkNoResponseNeeded")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanMarkNoResponseNeeded"
+    )]
     pub who_can_mark_no_response_needed: String,
     /// Permission to unmark any post from a favorite reply. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanUnmarkFavoriteReplyOnAnyTopic")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanUnmarkFavoriteReplyOnAnyTopic"
+    )]
     pub who_can_unmark_favorite_reply_on_any_topic: String,
     /// Permission for content moderation. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanModerateContent")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanModerateContent"
+    )]
     pub who_can_moderate_content: String,
     /// Primary language for the group.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "primaryLanguage")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "primaryLanguage"
+    )]
     pub primary_language: String,
     /// Permission to mark a post for a topic they started as a favorite reply. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanMarkFavoriteReplyOnOwnTopic")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanMarkFavoriteReplyOnOwnTopic"
+    )]
     pub who_can_mark_favorite_reply_on_own_topic: String,
     /// Permissions to view membership. Possible values are: ALL_IN_DOMAIN_CAN_VIEW ALL_MEMBERS_CAN_VIEW ALL_MANAGERS_CAN_VIEW ALL_OWNERS_CAN_VIEW
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanViewMembership")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanViewMembership"
+    )]
     pub who_can_view_membership: String,
     /// If favorite replies should be displayed above other replies.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "favoriteRepliesOnTop")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "favoriteRepliesOnTop"
+    )]
     pub favorite_replies_on_top: String,
     /// Permission to mark any other user's post as a favorite reply. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanMarkFavoriteReplyOnAnyTopic")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanMarkFavoriteReplyOnAnyTopic"
+    )]
     pub who_can_mark_favorite_reply_on_any_topic: String,
     /// Whether to include custom footer.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeCustomFooter")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "includeCustomFooter"
+    )]
     pub include_custom_footer: String,
     /// Permission to move topics out of the group or forum. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanMoveTopicsOut")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanMoveTopicsOut"
+    )]
     pub who_can_move_topics_out: String,
     /// Default message deny notification message
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "defaultMessageDenyNotificationText")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "defaultMessageDenyNotificationText"
+    )]
     pub default_message_deny_notification_text: String,
     /// If this groups should be included in global address list or not.
-    #[serde(default, rename = "includeInGlobalAddressList", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "includeInGlobalAddressList",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub include_in_global_address_list: String,
     /// If the group is archive only
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "archiveOnly")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "archiveOnly"
+    )]
     pub archive_only: String,
     /// Permission to delete topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanDeleteTopics")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanDeleteTopics"
+    )]
     pub who_can_delete_topics: String,
     /// Permission to delete replies to topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanDeleteAnyPost")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanDeleteAnyPost"
+    )]
     pub who_can_delete_any_post: String,
     /// If the contents of the group are archived.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "isArchived")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "isArchived"
+    )]
     pub is_archived: String,
     /// Can members post using the group email address.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "membersCanPostAsTheGroup")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "membersCanPostAsTheGroup"
+    )]
     pub members_can_post_as_the_group: String,
     /// Permission to make topics appear at the top of the topic list. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanMakeTopicsSticky")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanMakeTopicsSticky"
+    )]
     pub who_can_make_topics_sticky: String,
     /// If any of the settings that will be merged have custom roles which is anything other than owners, managers, or group scopes.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customRolesEnabledForSettingsToBeMerged")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customRolesEnabledForSettingsToBeMerged"
+    )]
     pub custom_roles_enabled_for_settings_to_be_merged: String,
     /// Email id of the group
     pub email: String,
     /// Permission for who can discover the group. Possible values are: ALL_MEMBERS_CAN_DISCOVER ALL_IN_DOMAIN_CAN_DISCOVER ANYONE_CAN_DISCOVER
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanDiscoverGroup")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanDiscoverGroup"
+    )]
     pub who_can_discover_group: String,
     /// Permission to modify members (change member roles). Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanModifyMembers")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanModifyMembers"
+    )]
     pub who_can_modify_members: String,
     /// Moderation level for messages. Possible values are: MODERATE_ALL_MESSAGES MODERATE_NON_MEMBERS MODERATE_NEW_MEMBERS MODERATE_NONE
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "messageModerationLevel")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "messageModerationLevel"
+    )]
     pub message_moderation_level: String,
     /// Description of the group
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
     /// Permission to unassign any topic in a forum. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanUnassignTopic")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanUnassignTopic"
+    )]
     pub who_can_unassign_topic: String,
     /// Whome should the default reply to a message go to. Possible values are: REPLY_TO_CUSTOM REPLY_TO_SENDER REPLY_TO_LIST REPLY_TO_OWNER REPLY_TO_IGNORE REPLY_TO_MANAGERS
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "replyTo")]
     pub reply_to: String,
     /// Default email to which reply to any message should go.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customReplyTo")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customReplyTo"
+    )]
     pub custom_reply_to: String,
     /// Should the member be notified if his message is denied by owner.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "sendMessageDenyNotification")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "sendMessageDenyNotification"
+    )]
     pub send_message_deny_notification: String,
     /// If a primary Collab Inbox feature is enabled.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "enableCollaborativeInbox")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "enableCollaborativeInbox"
+    )]
     pub enable_collaborative_inbox: String,
     /// Permission to contact owner of the group via web UI. Possible values are: ANYONE_CAN_CONTACT ALL_IN_DOMAIN_CAN_CONTACT ALL_MEMBERS_CAN_CONTACT ALL_MANAGERS_CAN_CONTACT
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanContactOwner")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanContactOwner"
+    )]
     pub who_can_contact_owner: String,
     /// Default message display font. Possible values are: DEFAULT_FONT FIXED_WIDTH_FONT
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "messageDisplayFont")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "messageDisplayFont"
+    )]
     pub message_display_font: String,
     /// Permission to leave the group. Possible values are: ALL_MANAGERS_CAN_LEAVE ALL_OWNERS_CAN_LEAVE ALL_MEMBERS_CAN_LEAVE NONE_CAN_LEAVE
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanLeaveGroup")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanLeaveGroup"
+    )]
     pub who_can_leave_group: String,
     /// Permissions to add members. Possible values are: ALL_MANAGERS_CAN_ADD ALL_OWNERS_CAN_ADD ALL_MEMBERS_CAN_ADD NONE_CAN_ADD
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanAdd")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanAdd"
+    )]
     pub who_can_add: String,
     /// Permissions to post messages to the group. Possible values are: NONE_CAN_POST ALL_MANAGERS_CAN_POST ALL_MEMBERS_CAN_POST ALL_OWNERS_CAN_POST ALL_IN_DOMAIN_CAN_POST ANYONE_CAN_POST
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanPostMessage")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanPostMessage"
+    )]
     pub who_can_post_message: String,
     /// Permission to move topics into the group or forum. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanMoveTopicsIn")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanMoveTopicsIn"
+    )]
     pub who_can_move_topics_in: String,
     /// Permission to take topics in a forum. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanTakeTopics")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanTakeTopics"
+    )]
     pub who_can_take_topics: String,
     /// Name of the group
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1359,56 +1853,120 @@ pub struct GroupSettings {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
     /// Maximum message size allowed.
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxMessageBytes")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "maxMessageBytes"
+    )]
     pub max_message_bytes: Option<i32>,
     /// Permissions to invite members. Possible values are: ALL_MEMBERS_CAN_INVITE ALL_MANAGERS_CAN_INVITE ALL_OWNERS_CAN_INVITE NONE_CAN_INVITE
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanInvite")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanInvite"
+    )]
     pub who_can_invite: String,
     /// Permission to approve members. Possible values are: ALL_OWNERS_CAN_APPROVE ALL_MANAGERS_CAN_APPROVE ALL_MEMBERS_CAN_APPROVE NONE_CAN_APPROVE
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanApproveMembers")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanApproveMembers"
+    )]
     pub who_can_approve_members: String,
     /// Moderation level for messages detected as spam. Possible values are: ALLOW MODERATE SILENTLY_MODERATE REJECT
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "spamModerationLevel")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "spamModerationLevel"
+    )]
     pub spam_moderation_level: String,
     /// If posting from web is allowed.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowWebPosting")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "allowWebPosting"
+    )]
     pub allow_web_posting: String,
     /// Permission for membership moderation. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanModerateMembers")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanModerateMembers"
+    )]
     pub who_can_moderate_members: String,
     /// Permission to add references to a topic. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanAddReferences")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanAddReferences"
+    )]
     pub who_can_add_references: String,
     /// Permissions to view group. Possible values are: ANYONE_CAN_VIEW ALL_IN_DOMAIN_CAN_VIEW ALL_MEMBERS_CAN_VIEW ALL_MANAGERS_CAN_VIEW ALL_OWNERS_CAN_VIEW
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanViewGroup")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanViewGroup"
+    )]
     pub who_can_view_group: String,
     /// Is the group listed in groups directory
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "showInGroupGSuite")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "showInGroupGSuite"
+    )]
     pub show_in_group_directory: String,
     /// Permission to post announcements, a special topic type. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanPostAnnouncements")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanPostAnnouncements"
+    )]
     pub who_can_post_announcements: String,
     /// Permission to lock topics. Possible values are: NONE OWNERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanLockTopics")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanLockTopics"
+    )]
     pub who_can_lock_topics: String,
     /// Permission to assign topics in a forum to another user. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanAssignTopics")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanAssignTopics"
+    )]
     pub who_can_assign_topics: String,
     /// Custom footer text.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customFooterText")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customFooterText"
+    )]
     pub custom_footer_text: String,
     /// Is google allowed to contact admins.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowGoogleCommunication")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "allowGoogleCommunication"
+    )]
     pub allow_google_communication: String,
     /// Permission to hide posts by reporting them as abuse. Possible values are: NONE OWNERS_ONLY MANAGERS_ONLY OWNERS_AND_MANAGERS ALL_MEMBERS
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "whoCanHideAbuse")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "whoCanHideAbuse"
+    )]
     pub who_can_hide_abuse: String,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Groups {
     /// Token used to access next page of this result.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
     pub next_page_token: String,
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1434,7 +1992,11 @@ struct MembersHasMember {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Members {
     /// Token used to access next page of this result.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
     pub next_page_token: String,
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1500,10 +2062,18 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none", rename = "creationTime")]
     pub creation_time: Option<DateTime<Utc>>,
     /// Custom fields of the user
-    #[serde(default, skip_serializing_if = "HashMap::is_empty", rename = "customSchemas")]
+    #[serde(
+        default,
+        skip_serializing_if = "HashMap::is_empty",
+        rename = "customSchemas"
+    )]
     pub custom_schemas: HashMap<String, UserCustomProperties>,
     /// CustomerId of User (read-only)
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customerId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customerId"
+    )]
     pub customer_id: String,
     /// User's G Suite account deletion time (read-only)
     #[serde(skip_serializing_if = "Option::is_none", rename = "deletionTime")]
@@ -1520,7 +2090,11 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gender: Option<UserGender>,
     /// Hash function name for password. Supported are MD5, SHA-1 and crypt
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "hashFunction")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "hashFunction"
+    )]
     pub hash_function: String,
     /// Unique identifier of User (read-only)
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1568,12 +2142,20 @@ pub struct User {
     /// User's name
     pub name: UserName,
     /// List of non editable aliases (read-only)
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "nonEditableAliases")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "nonEditableAliases"
+    )]
     pub non_editable_aliases: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<UserNotes>,
     /// OrgUnit of User
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "orgUnitPath")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "orgUnitPath"
+    )]
     pub org_unit_path: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub organizations: Vec<Organization>,
@@ -1582,31 +2164,63 @@ pub struct User {
     pub password: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub phones: Vec<UserPhone>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "posixAccounts")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "posixAccounts"
+    )]
     pub posix_accounts: Vec<UserPosixAccount>,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "primaryEmail")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "primaryEmail"
+    )]
     pub primary_email: String,
     /// Recovery email of the user
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recoveryEmail")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "recoveryEmail"
+    )]
     pub recovery_email: String,
     /// Recovery phone of the user
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recoveryPhone")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "recoveryPhone"
+    )]
     pub recovery_phone: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub relations: Vec<UserRelation>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "sshPublicKeys")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "sshPublicKeys"
+    )]
     pub ssh_public_keys: Vec<UserSSHKey>,
     /// Indicates if user is suspended
     #[serde(default)]
     pub suspended: bool,
     /// Suspension reason if user is suspended (read-only)
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "suspensionReason")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "suspensionReason"
+    )]
     pub suspension_reason: String,
     /// ETag of the user's photo (read-only)
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "thumbnailPhotoEtag")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "thumbnailPhotoEtag"
+    )]
     pub thumbnail_photo_etag: String,
     /// Photo Url of the user (read-only)
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "thumbnailPhotoUrl")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "thumbnailPhotoUrl"
+    )]
     pub thumbnail_photo_url: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub websites: Vec<UserWebsite>,
@@ -1618,13 +2232,25 @@ pub struct UserAddress {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub country: String,
     /// The country code. Uses the ISO 3166-1 standard.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "countryCode")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "countryCode"
+    )]
     pub country_code: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     /// For extended addresses, such as an address that includes a sub-region.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "extendedAddress")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "extendedAddress"
+    )]
     pub extended_address: String,
     /// A full and unstructured postal address. This is not synced with the structured address fields.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1635,7 +2261,11 @@ pub struct UserAddress {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "poBox")]
     pub po_box: String,
     /// The ZIP or postal code, if applicable.
-    #[serde(default, rename = "postalCode", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "postalCode",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub postal_code: String,
     #[serde(default)]
     pub primary: bool,
@@ -1647,7 +2277,11 @@ pub struct UserAddress {
     pub source_is_structured: bool,
     /// The street address, such as 1600 Amphitheatre Parkway.
     /// Whitespace within the string is ignored; however, newlines are significant.
-    #[serde(default, rename = "street_address", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "street_address",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub street_address: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
     pub typev: String,
@@ -1659,7 +2293,11 @@ pub struct UserEmail {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub address: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default)]
     pub primary: bool,
@@ -1671,7 +2309,11 @@ pub struct UserEmail {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserExternalId {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
     pub typev: String,
@@ -1682,9 +2324,17 @@ pub struct UserExternalId {
 /// A user's gender.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserGender {
-    #[serde(default, rename = "addressMeAs", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "addressMeAs",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub address_me_as: String,
-    #[serde(default, rename = "customGender", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "customGender",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub custom_gender: String,
     #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
     pub typev: String,
@@ -1694,10 +2344,18 @@ pub struct UserGender {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserInstantMessenger {
     /// If the protocol value is custom_protocol, this property holds the custom protocol's string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customProtocol")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customProtocol"
+    )]
     pub custom_protocol: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub im: String,
@@ -1713,7 +2371,11 @@ pub struct UserInstantMessenger {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserKeyword {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
     pub typev: String,
@@ -1726,10 +2388,18 @@ pub struct UserKeyword {
 pub struct UserLanguage {
     /// Other language. A user can provide their own language name if there is no corresponding
     /// Google III language code. If this is set, LanguageCode can't be set
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customLanguage")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customLanguage"
+    )]
     pub custom_language: String,
     /// Language Code. Should be used for storing Google III LanguageCode string representation for language. Illegal values cause SchemaException.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "languageCode")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "languageCode"
+    )]
     pub language_code: String,
 }
 
@@ -1739,19 +2409,35 @@ pub struct UserLocation {
     #[serde(default)]
     pub area: String,
     /// Unique ID for the building a resource is located in.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "buildingId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "buildingId"
+    )]
     pub building_id: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     /// Most specific textual code of individual desk location.
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "deskCode")]
     pub desk_code: String,
     /// Name of the floor a resource is located on.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "floorName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorName"
+    )]
     pub floor_name: String,
     /// Floor section. More specific location within the floor. For example, if a floor is divided into sections "A", "B", and "C", this field would identify one of those values.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "floorSection")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorSection"
+    )]
     pub floor_section: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
     pub typev: String,
@@ -1761,20 +2447,32 @@ pub struct UserLocation {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserName {
     /// Last name
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "familyName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "familyName"
+    )]
     pub family_name: String,
     /// Full name
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "fullName")]
     pub full_name: String,
     /// First name
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "givenName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "givenName"
+    )]
     pub given_name: String,
 }
 
 /// A user's notes.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserNotes {
-    #[serde(default, rename = "contentType", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "contentType",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub content_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
@@ -1783,10 +2481,18 @@ pub struct UserNotes {
 /// An organization
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Organization {
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "costCenter")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "costCenter"
+    )]
     pub cost_center: String,
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub department: String,
@@ -1814,7 +2520,11 @@ pub struct Organization {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserPhone {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default)]
     pub primary: bool,
@@ -1827,15 +2537,27 @@ pub struct UserPhone {
 /// A user's posix account.
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserPosixAccount {
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "accountId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "accountId"
+    )]
     pub account_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gecos: String,
     #[serde(default)]
     pub gid: isize,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "homeDirectory")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "homeDirectory"
+    )]
     pub home_directory: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "operatingSystemType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "operatingSystemType"
+    )]
     pub operating_system_type: String,
     #[serde(default)]
     pub primary: bool,
@@ -1853,7 +2575,11 @@ pub struct UserPosixAccount {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserRelation {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
     pub typev: String,
@@ -1867,7 +2593,11 @@ pub struct UserSSHKey {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub key: String,
     /// An expiration time in microseconds since epoch.
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "expirationTimeUsec")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "expirationTimeUsec"
+    )]
     pub expiration_time_usec: Option<i128>,
     /// A SHA-256 fingerprint of the SSH public key (read-only)
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1878,7 +2608,11 @@ pub struct UserSSHKey {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct UserWebsite {
     /// If the value of type is custom, this property contains the custom type string.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "customType"
+    )]
     pub custom_type: String,
     #[serde(default, alias = "is_group_admin")]
     pub primary: bool,
@@ -1903,7 +2637,8 @@ impl Serialize for UserCustomProperties {
             if v.is_string() {
                 map.serialize_entry(&k, v.as_str().unwrap()).unwrap();
             } else if v.is_array() {
-                let val: Vec<HashMap<String, String>> = serde_json::from_str(&v.to_string()).unwrap();
+                let val: Vec<HashMap<String, String>> =
+                    serde_json::from_str(&v.to_string()).unwrap();
                 map.serialize_entry(&k, &val).unwrap();
             }
         }
@@ -1914,7 +2649,11 @@ impl Serialize for UserCustomProperties {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Users {
     /// Token used to access next page of this result.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
     pub next_page_token: String,
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1939,49 +2678,101 @@ pub struct CalendarResource {
     /// Capacity of a resource, number of seats in a room.
     pub capacity: Option<i32>,
     /// The type of the calendar resource, intended for non-room resources.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "resourceType")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "resourceType"
+    )]
     pub typev: String,
     /// Description of the resource, visible only to admins.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "resourceDescription")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "resourceDescription"
+    )]
     pub description: String,
     /// The read-only auto-generated name of the calendar resource which includes metadata about the resource such as building name, floor, capacity, etc. For example, "NYC-2-Training Room 1A (16)".
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "generatedResourceName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "generatedResourceName"
+    )]
     pub generated_resource_name: String,
     /// ETag of the resource.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub etags: String,
     /// The category of the calendar resource. Either CONFERENCE_ROOM or OTHER. Legacy data is set to CATEGORY_UNKNOWN.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "resourceCategory")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "resourceCategory"
+    )]
     pub category: String,
     /// The read-only email for the calendar resource. Generated as part of creating a new calendar resource.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "resourceEmail")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "resourceEmail"
+    )]
     pub email: String,
     /// The name of the calendar resource. For example, "Training Room 1A".
-    #[serde(rename = "resourceName", skip_serializing_if = "String::is_empty", default)]
+    #[serde(
+        rename = "resourceName",
+        skip_serializing_if = "String::is_empty",
+        default
+    )]
     pub name: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "featureInstances")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "featureInstances"
+    )]
     pub feature_instances: Vec<CalendarFeatures>,
     /// Name of the section within a floor a resource is located in.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "floorSection")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorSection"
+    )]
     pub floor_section: String,
     /// The unique ID for the calendar resource.
-    #[serde(default, rename = "resourceId", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "resourceId",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub id: String,
     /// Unique ID for the building a resource is located in.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "buildingId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "buildingId"
+    )]
     pub building_id: String,
     /// Name of the floor a resource is located on.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "floorName")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "floorName"
+    )]
     pub floor_name: String,
     /// Description of the resource, visible to users and admins.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "userVisibleDescription")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "userVisibleDescription"
+    )]
     pub user_visible_description: String,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct CalendarResources {
     /// Token used to access next page of this result.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
     pub next_page_token: String,
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -2024,7 +2815,11 @@ pub struct Building {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
     /// The building name as seen by users in Calendar. Must be unique for the customer. For example, "NYC-CHEL". The maximum length is 100 characters.
-    #[serde(rename = "buildingName", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "buildingName",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub name: String,
     /// The geographic coordinates of the center of the building, expressed as latitude and longitude in decimal degrees.
     pub coordinates: Option<BuildingCoordinates>,
@@ -2038,7 +2833,11 @@ pub struct Building {
     #[serde(rename = "floorNames", default, skip_serializing_if = "Vec::is_empty")]
     pub floor_names: Vec<String>,
     /// Unique identifier for the building. The maximum length is 100 characters.
-    #[serde(rename = "buildingId", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "buildingId",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub id: String,
     /// A brief description of the building. For example, "Chelsea Market".
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -2048,7 +2847,11 @@ pub struct Building {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 struct Buildings {
     /// Token used to access next page of this result.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextPageToken")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "nextPageToken"
+    )]
     pub next_page_token: String,
     /// Kind of resource this is.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -2079,25 +2882,45 @@ pub struct BuildingCoordinates {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct BuildingAddress {
     /// Optional. BCP-47 language code of the contents of this address (if known).
-    #[serde(rename = "languageCode", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "languageCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub language_code: String,
     /// Optional. Highest administrative subdivision which is used for postal addresses of a country or region.
-    #[serde(rename = "administrativeArea", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "administrativeArea",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub administrative_area: String,
     /// Required. CLDR region code of the country/region of the address.
-    #[serde(rename = "regionCode", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "regionCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub region_code: String,
     /// Optional. Generally refers to the city/town portion of the address. Examples: US city, IT comune, UK post town. In regions of the world where localities are not well defined or do not fit into this structure well, leave locality empty and use addressLines.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub locality: String,
     /// Optional. Postal code of the address.
-    #[serde(rename = "postalCode", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "postalCode",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub postal_code: String,
     /// Optional. Sublocality of the address.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sublocality: String,
     /// Unstructured address lines describing the lower levels of an address.
-    #[serde(rename = "addressLines", default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "addressLines",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub address_lines: Vec<String>,
 }
 

@@ -14,7 +14,14 @@
  *     let airtable = Airtable::new_from_env();
  *
  *     // Get the current records from a table.
- *     let mut records: Vec<Record<SomeFormat>> = airtable.list_records("Table Name", "Grid view", vec!["the", "fields", "you", "want", "to", "return"]).await.unwrap();
+ *     let mut records: Vec<Record<SomeFormat>> = airtable
+ *         .list_records(
+ *             "Table Name",
+ *             "Grid view",
+ *             vec!["the", "fields", "you", "want", "to", "return"],
+ *         )
+ *         .await
+ *         .unwrap();
  *
  *     // Iterate over the records.
  *     for (i, record) in records.clone().iter().enumerate() {
@@ -97,12 +104,20 @@ impl Airtable {
         &self.key
     }
 
-    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
+    fn request<B>(
+        &self,
+        method: Method,
+        path: String,
+        body: B,
+        query: Option<Vec<(&str, String)>>,
+    ) -> Request
     where
         B: Serialize,
     {
         let base = Url::parse(ENDPOINT).unwrap();
-        let url = base.join(&(self.base_id.to_string() + "/" + &path)).unwrap();
+        let url = base
+            .join(&(self.base_id.to_string() + "/" + &path))
+            .unwrap();
 
         let bt = format!("Bearer {}", self.key);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
@@ -110,7 +125,10 @@ impl Airtable {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -131,7 +149,12 @@ impl Airtable {
     }
 
     /// List records in a table for a particular view.
-    pub async fn list_records<T: DeserializeOwned>(&self, table: &str, view: &str, fields: Vec<&str>) -> Result<Vec<Record<T>>, APIError> {
+    pub async fn list_records<T: DeserializeOwned>(
+        &self,
+        table: &str,
+        view: &str,
+        fields: Vec<&str>,
+    ) -> Result<Vec<Record<T>>, APIError> {
         let mut params = vec![("pageSize", "100".to_string()), ("view", view.to_string())];
         for field in fields {
             params.push(("fields", field.to_string()));
@@ -165,7 +188,11 @@ impl Airtable {
                 Method::GET,
                 table.to_string(),
                 (),
-                Some(vec![("pageSize", "100".to_string()), ("view", view.to_string()), ("offset", offset)]),
+                Some(vec![
+                    ("pageSize", "100".to_string()),
+                    ("view", view.to_string()),
+                    ("offset", offset),
+                ]),
             );
 
             resp = self.client.execute(request).await.unwrap();
@@ -191,7 +218,11 @@ impl Airtable {
     }
 
     /// Get record from a table.
-    pub async fn get_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<Record<T>, APIError> {
+    pub async fn get_record<T: DeserializeOwned>(
+        &self,
+        table: &str,
+        record_id: &str,
+    ) -> Result<Record<T>, APIError> {
         // Build the request.
         let request = self.request(Method::GET, format!("{}/{}", table, record_id), (), None);
 
@@ -215,7 +246,12 @@ impl Airtable {
     /// Delete record from a table.
     pub async fn delete_record(&self, table: &str, record_id: &str) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(Method::DELETE, table.to_string(), (), Some(vec![("records[]", record_id.to_string())]));
+        let request = self.request(
+            Method::DELETE,
+            table.to_string(),
+            (),
+            Some(vec![("records[]", record_id.to_string())]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -235,7 +271,11 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk create 10
     /// records at a time.
-    pub async fn create_records<T: Serialize + DeserializeOwned>(&self, table: &str, records: Vec<Record<T>>) -> Result<Vec<Record<T>>, APIError> {
+    pub async fn create_records<T: Serialize + DeserializeOwned>(
+        &self,
+        table: &str,
+        records: Vec<Record<T>>,
+    ) -> Result<Vec<Record<T>>, APIError> {
         // Build the request.
         let request = self.request(
             Method::POST,
@@ -269,7 +309,11 @@ impl Airtable {
     ///
     /// Due to limitations on the Airtable API, you can only bulk update 10
     /// records at a time.
-    pub async fn update_records<T: Serialize + DeserializeOwned>(&self, table: &str, records: Vec<Record<T>>) -> Result<Vec<Record<T>>, APIError> {
+    pub async fn update_records<T: Serialize + DeserializeOwned>(
+        &self,
+        table: &str,
+        records: Vec<Record<T>>,
+    ) -> Result<Vec<Record<T>>, APIError> {
         // Build the request.
         let request = self.request(
             Method::PATCH,
@@ -318,7 +362,10 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!(
+                "v0/meta/enterpriseAccounts/{}/users",
+                self.enterprise_account_id
+            ),
             (),
             Some(vec![("state", "provisioned".to_string())]),
         );
@@ -356,9 +403,15 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!(
+                "v0/meta/enterpriseAccounts/{}/users",
+                self.enterprise_account_id
+            ),
             (),
-            Some(vec![("email", email.to_string()), ("include", "collaborations".to_string())]),
+            Some(vec![
+                ("email", email.to_string()),
+                ("include", "collaborations".to_string()),
+            ]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -388,7 +441,12 @@ impl Airtable {
     /// This is for an enterprise admin to do only.
     /// FROM: https://airtable.com/api/enterprise#enterpriseWorkspaceAddCollaborator
     /// Permission level can be: owner | create | edit | comment | read
-    pub async fn add_collaborator_to_workspace(&self, workspace_id: &str, user_id: &str, permission_level: &str) -> Result<(), APIError> {
+    pub async fn add_collaborator_to_workspace(
+        &self,
+        workspace_id: &str,
+        user_id: &str,
+        permission_level: &str,
+    ) -> Result<(), APIError> {
         if self.enterprise_account_id.is_empty() {
             // Return an error early.
             return Err(APIError {
@@ -444,7 +502,10 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::DELETE,
-            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!(
+                "v0/meta/enterpriseAccounts/{}/users",
+                self.enterprise_account_id
+            ),
             (),
             Some(vec![("email", email.to_string())]),
         );
@@ -481,13 +542,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -589,9 +660,15 @@ impl<'de> Visitor<'de> for UserVisitor {
     where
         V: SeqAccess<'de>,
     {
-        let id = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-        let email = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
-        let name = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
+        let id = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+        let email = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+        let name = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
         Ok(User { id, email, name })
     }
 
@@ -664,7 +741,11 @@ pub struct UsersResponse {
 /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserDeleteUserByEmail
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DeleteUserResponse {
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "deletedUsers")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "deletedUsers"
+    )]
     pub deleted_users: Vec<User>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub errors: Vec<ErrorResponse>,
@@ -732,7 +813,12 @@ pub struct NewCollaborator {
 pub struct Collaborator {
     #[serde(default)]
     pub user: User,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "permissionLevel")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize",
+        rename = "permissionLevel"
+    )]
     pub permission_level: String,
 }
 
@@ -744,15 +830,35 @@ pub struct EnterpriseUsersResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnterpriseUser {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "lastActivityTime")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "lastActivityTime"
+    )]
     pub last_activity_time: Option<DateTime<Utc>>,
     #[serde(
         default,
@@ -769,23 +875,51 @@ pub struct EnterpriseUser {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Collaborations {
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "workspaceCollaborations")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "workspaceCollaborations"
+    )]
     pub workspace_collaborations: Vec<Collaboration>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "baseCollaborations")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "baseCollaborations"
+    )]
     pub base_collaborations: Vec<Collaboration>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Collaboration {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "baseId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize",
+        rename = "baseId"
+    )]
     pub base_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "permissionLevel")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize",
+        rename = "permissionLevel"
+    )]
     pub permission_level: String,
     #[serde(rename = "createdTime")]
     pub created_time: DateTime<Utc>,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "grantedByUserId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize",
+        rename = "grantedByUserId"
+    )]
     pub granted_by_user_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize", rename = "workspaceId")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize",
+        rename = "workspaceId"
+    )]
     pub workspace_id: String,
 }
 
@@ -894,7 +1028,9 @@ pub mod user_format_as_string {
     where
         D: Deserializer<'de>,
     {
-        let user = deserializer.deserialize_struct("User", USERFIELDS, UserVisitor).unwrap();
+        let user = deserializer
+            .deserialize_struct("User", USERFIELDS, UserVisitor)
+            .unwrap();
         Ok(user.email)
     }
 }
@@ -1013,8 +1149,12 @@ impl<'de> Visitor<'de> for BarcodeVisitor {
     where
         V: SeqAccess<'de>,
     {
-        let text = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-        let type_ = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+        let text = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+        let type_ = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
         Ok(Barcode { text, type_ })
     }
 
@@ -1117,7 +1257,9 @@ pub mod barcode_format_as_string {
     where
         D: Deserializer<'de>,
     {
-        let barcode = deserializer.deserialize_struct("Barcode", BARCODEFIELDS, BarcodeVisitor).unwrap();
+        let barcode = deserializer
+            .deserialize_struct("Barcode", BARCODEFIELDS, BarcodeVisitor)
+            .unwrap();
         Ok(barcode.text)
     }
 }

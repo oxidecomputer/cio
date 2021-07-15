@@ -82,11 +82,19 @@ impl NewAPIToken {
     pub fn expand(&mut self) {
         if self.expires_in > 0 {
             // Set the time the tokens expire.
-            self.expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.expires_in as i64)).unwrap());
+            self.expires_date = Some(
+                self.last_updated_at
+                    .checked_add_signed(Duration::seconds(self.expires_in as i64))
+                    .unwrap(),
+            );
         }
 
         if self.refresh_token_expires_in > 0 {
-            self.refresh_token_expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.refresh_token_expires_in as i64)).unwrap());
+            self.refresh_token_expires_date = Some(
+                self.last_updated_at
+                    .checked_add_signed(Duration::seconds(self.refresh_token_expires_in as i64))
+                    .unwrap(),
+            );
         }
     }
 }
@@ -95,11 +103,19 @@ impl APIToken {
     pub fn expand(&mut self) {
         if self.expires_in > 0 {
             // Set the time the tokens expire.
-            self.expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.expires_in as i64)).unwrap());
+            self.expires_date = Some(
+                self.last_updated_at
+                    .checked_add_signed(Duration::seconds(self.expires_in as i64))
+                    .unwrap(),
+            );
         }
 
         if self.refresh_token_expires_in > 0 {
-            self.refresh_token_expires_date = Some(self.last_updated_at.checked_add_signed(Duration::seconds(self.refresh_token_expires_in as i64)).unwrap());
+            self.refresh_token_expires_date = Some(
+                self.last_updated_at
+                    .checked_add_signed(Duration::seconds(self.refresh_token_expires_in as i64))
+                    .unwrap(),
+            );
         }
     }
 }
@@ -116,6 +132,8 @@ mod tests {
         // This should always be Oxide.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        APITokens::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        APITokens::get_from_db(&db, oxide.id)
+            .update_airtable(&db)
+            .await;
     }
 }

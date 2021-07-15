@@ -190,7 +190,9 @@ impl EventType {
             EventType::Installation => "installation",
             EventType::IntegrationInstallation => "integration_installation",
             EventType::InstallationRepositories => "installation_repositories",
-            EventType::IntegrationInstallationRepositories => "integration_installation_repositories",
+            EventType::IntegrationInstallationRepositories => {
+                "integration_installation_repositories"
+            }
             EventType::IssueComment => "issue_comment",
             EventType::Issues => "issues",
             EventType::Label => "label",
@@ -244,7 +246,9 @@ impl FromStr for EventType {
             "installation" => Ok(EventType::Installation),
             "integration_installation" => Ok(EventType::IntegrationInstallation),
             "installation_repositories" => Ok(EventType::InstallationRepositories),
-            "integration_installation_repositories" => Ok(EventType::IntegrationInstallationRepositories),
+            "integration_installation_repositories" => {
+                Ok(EventType::IntegrationInstallationRepositories)
+            }
             "issue_comment" => Ok(EventType::IssueComment),
             "issues" => Ok(EventType::Issues),
             "label" => Ok(EventType::Label),

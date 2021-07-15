@@ -48,7 +48,14 @@ impl Gusto {
     /// Create a new Gusto client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, R, T, Q, C>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q, company_id: C) -> Self
+    pub fn new<I, K, R, T, Q, C>(
+        client_id: I,
+        client_secret: K,
+        redirect_uri: R,
+        token: T,
+        refresh_token: Q,
+        company_id: C,
+    ) -> Self
     where
         I: ToString,
         K: ToString,
@@ -101,10 +108,23 @@ impl Gusto {
         let client_secret = env::var("GUSTO_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("GUSTO_REDIRECT_URI").unwrap();
 
-        Gusto::new(client_id, client_secret, redirect_uri, token, refresh_token, company_id)
+        Gusto::new(
+            client_id,
+            client_secret,
+            redirect_uri,
+            token,
+            refresh_token,
+            company_id,
+        )
     }
 
-    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
+    fn request<B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: B,
+        query: Option<&[(&str, &str)]>,
+    ) -> Request
     where
         B: Serialize,
     {
@@ -123,7 +143,10 @@ impl Gusto {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -141,12 +164,18 @@ impl Gusto {
     }
 
     pub fn user_consent_url(&self) -> String {
-        format!("{}oauth/authorize?client_id={}&response_type=code&redirect_uri={}", ENDPOINT, self.client_id, self.redirect_uri)
+        format!(
+            "{}oauth/authorize?client_id={}&response_type=code&redirect_uri={}",
+            ENDPOINT, self.client_id, self.redirect_uri
+        )
     }
 
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::ACCEPT,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let params = [
             ("grant_type", "refresh_token"),
@@ -156,7 +185,13 @@ impl Gusto {
             ("redirect_uri", &self.redirect_uri),
         ];
         let client = reqwest::Client::new();
-        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).form(&params).send().await.unwrap();
+        let resp = client
+            .post(&format!("{}oauth/token", ENDPOINT))
+            .headers(headers)
+            .form(&params)
+            .send()
+            .await
+            .unwrap();
 
         // Unwrap the response.
         let t: AccessToken = resp.json().await.unwrap();
@@ -169,7 +204,10 @@ impl Gusto {
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::ACCEPT,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let params = [
             ("grant_type", "authorization_code"),
@@ -179,7 +217,13 @@ impl Gusto {
             ("redirect_uri", &self.redirect_uri),
         ];
         let client = reqwest::Client::new();
-        let resp = client.post(&format!("{}oauth/token", ENDPOINT)).headers(headers).form(&params).send().await.unwrap();
+        let resp = client
+            .post(&format!("{}oauth/token", ENDPOINT))
+            .headers(headers)
+            .form(&params)
+            .send()
+            .await
+            .unwrap();
 
         // Unwrap the response.
         let t: AccessToken = resp.json().await.unwrap();
@@ -215,7 +259,12 @@ impl Gusto {
     /// List all employees.
     pub async fn list_employees(&self) -> Result<Vec<Employee>, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("/v1/companies/{}/employees", self.company_id), (), None);
+        let request = self.request(
+            Method::GET,
+            &format!("/v1/companies/{}/employees", self.company_id),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -237,7 +286,12 @@ impl Gusto {
     /// Create employee.
     pub async fn create_employee(&self, new_employee: &NewEmployee) -> Result<Employee, APIError> {
         // Build the request.
-        let request = self.request(Method::POST, &format!("/v1/companies/{}/employees", self.company_id), new_employee, None);
+        let request = self.request(
+            Method::POST,
+            &format!("/v1/companies/{}/employees", self.company_id),
+            new_employee,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -256,9 +310,18 @@ impl Gusto {
     }
 
     /// Update employee home address.
-    pub async fn update_employee_home_address(&self, employee_id: &str, new_address: &NewAddress) -> Result<Address, APIError> {
+    pub async fn update_employee_home_address(
+        &self,
+        employee_id: &str,
+        new_address: &NewAddress,
+    ) -> Result<Address, APIError> {
         // Build the request.
-        let request = self.request(Method::PUT, &format!("/v1/employees/{}/home_address", employee_id), new_address, None);
+        let request = self.request(
+            Method::PUT,
+            &format!("/v1/employees/{}/home_address", employee_id),
+            new_address,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -285,13 +348,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -325,23 +398,51 @@ pub struct NewEmployee {
 pub struct Employee {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub version: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub first_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub middle_initial: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub last_name: String,
     #[serde(default)]
     pub company_id: Option<u64>,
     #[serde(default)]
     pub manager_id: Option<u64>,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub department: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub ssn: String,
     // In the format YYYY-MM-DD.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -367,7 +468,11 @@ pub struct Employee {
 pub struct Job {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub version: String,
     #[serde(default)]
     pub employee_id: Option<u64>,
@@ -377,13 +482,25 @@ pub struct Job {
     // In the format YYYY-MM-DD.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hire_date: Option<NaiveDate>,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub title: String,
     #[serde(default)]
     pub primary: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub rate: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub payment_unit: String,
     #[serde(default)]
     pub current_compensation_id: Option<u64>,
@@ -397,23 +514,55 @@ pub struct Job {
 pub struct Location {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub version: String,
     #[serde(default)]
     pub company_id: Option<u64>,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub phone_number: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub street_1: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub street_2: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub city: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub zip: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub country: String,
     #[serde(default)]
     pub active: bool,
@@ -425,15 +574,31 @@ pub struct Location {
 pub struct Compensation {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub version: String,
     #[serde(default)]
     pub job_id: Option<u64>,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub rate: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub payment_unit: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub flsa_status: String,
     // In the format YYYY-MM-DD.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -464,21 +629,49 @@ pub struct NewAddress {
 pub struct Address {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub version: String,
     #[serde(default)]
     pub employee_id: Option<u64>,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub street_1: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub street_2: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub city: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub zip: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub country: String,
     #[serde(default)]
     pub active: bool,
@@ -490,15 +683,27 @@ pub struct Address {
 pub struct Garnishment {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub version: String,
     #[serde(default)]
     pub employee_id: Option<u64>,
     #[serde(default)]
     pub active: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub amount: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub description: String,
     #[serde(default)]
     pub court_ordered: bool,
@@ -506,9 +711,17 @@ pub struct Garnishment {
     pub times: u32,
     #[serde(default)]
     pub recurring: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub annual_maximum: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub deduct_as_percentage: String,
 }
 
@@ -516,17 +729,41 @@ pub struct Garnishment {
 /// FROM: https://docs.gusto.com/v1/paid_time_off
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct PaidTimeOff {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub accrual_unit: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub accrual_period: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub accrual_rate: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub accrual_balance: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub maximum_accrual_balance: String,
     #[serde(default)]
     pub paid_at_termination: bool,
@@ -538,7 +775,11 @@ pub struct PaidTimeOff {
 pub struct Termination {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub version: String,
     #[serde(default)]
     pub employee_id: Option<u64>,
@@ -555,7 +796,11 @@ pub struct Termination {
 /// FROM: https://docs.gusto.com/v1/current_user
 #[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct CurrentUser {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub email: String,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub roles: HashMap<String, Role>,
@@ -575,15 +820,35 @@ pub struct Role {
 pub struct Company {
     #[serde(default)]
     pub id: u64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub trade_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub ein: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub entity_type: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub company_status: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub location: Vec<Location>,
@@ -597,15 +862,27 @@ pub struct Company {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct AccessToken {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub access_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub token_type: String,
     #[serde(default)]
     pub expires_in: i64,
     #[serde(default)]
     pub x_refresh_token_expires_in: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub refresh_token: String,
 }
 

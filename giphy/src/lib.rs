@@ -14,7 +14,10 @@
  *     let giphy_client = Giphy::new_from_env();
  *
  *     // Get a list of gifs based on a search.
- *     let gifs = giphy_client.search_gifs("toddlers and tiaras", 5, "pg-13").await.unwrap();
+ *     let gifs = giphy_client
+ *         .search_gifs("toddlers and tiaras", 5, "pg-13")
+ *         .await
+ *         .unwrap();
  *
  *     for gif in gifs {
  *         println!("{:?}", gif);
@@ -71,7 +74,13 @@ impl Giphy {
         &self.key
     }
 
-    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&'static str, String)>>) -> Request
+    fn request<B>(
+        &self,
+        method: Method,
+        path: String,
+        body: B,
+        query: Option<Vec<(&'static str, String)>>,
+    ) -> Request
     where
         B: Serialize,
     {
@@ -80,7 +89,10 @@ impl Giphy {
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
         rb = rb.query(&[("api_key", self.key.to_string())]);
@@ -102,13 +114,22 @@ impl Giphy {
     }
 
     /// Search gifs, defaults to pg-13.
-    pub async fn search_gifs(&self, query: &str, limit: i32, rating: &str) -> Result<Vec<Gif>, APIError> {
+    pub async fn search_gifs(
+        &self,
+        query: &str,
+        limit: i32,
+        rating: &str,
+    ) -> Result<Vec<Gif>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
             "gifs/search".to_string(),
             (),
-            Some(vec![("q", query.to_string()), ("rating", rating.to_string()), ("limit", format!("{}", limit))]),
+            Some(vec![
+                ("q", query.to_string()),
+                ("rating", rating.to_string()),
+                ("limit", format!("{}", limit)),
+            ]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -136,13 +157,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 

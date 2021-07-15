@@ -13,7 +13,9 @@ impl Default for Database {
         let manager = r2d2::ConnectionManager::new(&database_url);
         let pool = r2d2::Pool::builder().max_size(15).build(manager).unwrap();
 
-        Database { pool: Arc::new(pool) }
+        Database {
+            pool: Arc::new(pool),
+        }
     }
 }
 
@@ -25,6 +27,8 @@ impl Database {
 
     /// Returns a connection from the pool.
     pub fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
-        self.pool.get().unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
+        self.pool
+            .get()
+            .unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
     }
 }

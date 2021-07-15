@@ -1,7 +1,10 @@
 use std::{env, fs::File, io::Write, process::Command, str::from_utf8, sync::Arc};
 
 use cio_api::swag_inventory::PrintLabelsRequest;
-use dropshot::{endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody};
+use dropshot::{
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError,
+    HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody,
+};
 use sentry::IntoDsn;
 use uuid::Uuid;
 
@@ -12,7 +15,11 @@ async fn main() -> Result<(), String> {
         gh
     } else {
         // Try to shell out.
-        let output = Command::new("git").arg("rev-parse").arg("HEAD").output().expect("failed to execute process");
+        let output = Command::new("git")
+            .arg("rev-parse")
+            .arg("HEAD")
+            .output()
+            .expect("failed to execute process");
         let o = std::str::from_utf8(&output.stdout).unwrap();
         o[0..8].to_string()
     };
@@ -24,7 +31,11 @@ async fn main() -> Result<(), String> {
         dsn: sentry_dsn.into_dsn().unwrap(),
 
         release: Some(git_hash.into()),
-        environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
+        environment: Some(
+            env::var("SENTRY_ENV")
+                .unwrap_or_else(|_| "development".to_string())
+                .into(),
+        ),
         ..Default::default()
     });
 
@@ -44,8 +55,13 @@ async fn main() -> Result<(), String> {
      * For simplicity, we'll configure an "info"-level logger that writes to
      * stderr assuming that it's a terminal.
      */
-    let config_logging = ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Info };
-    let log = config_logging.to_logger("printy-server").map_err(|error| format!("failed to create logger: {}", error)).unwrap();
+    let config_logging = ConfigLogging::StderrTerminal {
+        level: ConfigLoggingLevel::Info,
+    };
+    let log = config_logging
+        .to_logger("printy-server")
+        .map_err(|error| format!("failed to create logger: {}", error))
+        .unwrap();
 
     // Describe the API.
     let mut api = ApiDescription::new();
@@ -111,7 +127,9 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
     Ok(HttpResponseOk(api_context.schema.to_string()))
@@ -131,7 +149,10 @@ async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Str
     method = POST,
     path = "/print/rollo",
 }]
-async fn listen_print_rollo_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<String>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_print_rollo_requests(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<String>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let url = body_param.into_inner();
     let printer = get_printer("rollo");
@@ -155,7 +176,10 @@ async fn listen_print_rollo_requests(_rqctx: Arc<RequestContext<Context>>, body_
     method = POST,
     path = "/print/zebra",
 }]
-async fn listen_print_zebra_requests(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<PrintLabelsRequest>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_print_zebra_requests(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<PrintLabelsRequest>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let r = body_param.into_inner();
     let printer = get_printer("zebra");
@@ -176,9 +200,16 @@ async fn listen_print_zebra_requests(_rqctx: Arc<RequestContext<Context>>, body_
 
 // Return the printer we are looking for.
 fn get_printer(name: &str) -> String {
-    let output = Command::new("lpstat").args(&["-a"]).output().expect("failed to execute process");
+    let output = Command::new("lpstat")
+        .args(&["-a"])
+        .output()
+        .expect("failed to execute process");
     if !output.status.success() {
-        let e = format!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
+        let e = format!(
+            "[lpstat] stderr: {}\nstdout: {}",
+            from_utf8(&output.stderr).unwrap(),
+            from_utf8(&output.stdout).unwrap()
+        );
         println!("{}", e);
         sentry::capture_message(&e, sentry::Level::Fatal);
         return "".to_string();
@@ -242,7 +273,11 @@ fn print_file(printer: &str, file: &str, media: &str, copies: i32) {
         .output()
         .expect("failed to execute process");
     if !output.status.success() {
-        let e = format!("[lpstat] stderr: {}\nstdout: {}", from_utf8(&output.stderr).unwrap(), from_utf8(&output.stdout).unwrap());
+        let e = format!(
+            "[lpstat] stderr: {}\nstdout: {}",
+            from_utf8(&output.stderr).unwrap(),
+            from_utf8(&output.stdout).unwrap()
+        );
         println!("{}", e);
         sentry::capture_message(&e, sentry::Level::Fatal);
         return;

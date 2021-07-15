@@ -11,7 +11,11 @@ async fn main() -> Result<(), String> {
         gh
     } else {
         // Try to shell out.
-        let output = Command::new("git").arg("rev-parse").arg("HEAD").output().expect("failed to execute process");
+        let output = Command::new("git")
+            .arg("rev-parse")
+            .arg("HEAD")
+            .output()
+            .expect("failed to execute process");
         let o = std::str::from_utf8(&output.stdout).unwrap();
         o[0..8].to_string()
     };
@@ -25,7 +29,11 @@ async fn main() -> Result<(), String> {
         dsn: sentry_dsn.into_dsn().unwrap(),
 
         release: Some(git_hash.into()),
-        environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
+        environment: Some(
+            env::var("SENTRY_ENV")
+                .unwrap_or_else(|_| "development".to_string())
+                .into(),
+        ),
         ..Default::default()
     });
 
@@ -51,7 +59,9 @@ async fn main() -> Result<(), String> {
             }
         );
 
-        if device.product_string().unwrap_or_default() == search && device.product_id() == u16::from_str_radix("011a", 16).unwrap() {
+        if device.product_string().unwrap_or_default() == search
+            && device.product_id() == u16::from_str_radix("011a", 16).unwrap()
+        {
             // We found our device.
             vendor_id = device.vendor_id();
             product_id = device.product_id();
@@ -63,7 +73,9 @@ async fn main() -> Result<(), String> {
     }
 
     // Open the scanner device and listen for events to read.
-    let scanner = api.open(vendor_id, product_id).expect("Failed to open device");
+    let scanner = api
+        .open(vendor_id, product_id)
+        .expect("Failed to open device");
     println!(
         "Listening for events from (vendor ID: {} {:04x}) (product ID: {} {:04x}) in a loop...",
         vendor_id, vendor_id, product_id, product_id

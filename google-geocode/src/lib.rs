@@ -71,7 +71,13 @@ impl Geocode {
         Geocode::new(key)
     }
 
-    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
+    fn request<B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: B,
+        query: Option<Vec<(&str, String)>>,
+    ) -> Request
     where
         B: Serialize,
     {
@@ -80,9 +86,16 @@ impl Geocode {
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
-        let mut rb = self.client.request(method.clone(), url).headers(headers).basic_auth(&self.key, Some(""));
+        let mut rb = self
+            .client
+            .request(method.clone(), url)
+            .headers(headers)
+            .basic_auth(&self.key, Some(""));
 
         match query {
             None => (),
@@ -103,7 +116,15 @@ impl Geocode {
     /// Get information for an address.
     pub async fn get(&self, address: &str) -> Result<Reply, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, "", (), Some(vec![("address", address.to_string()), ("key", self.key.to_string())]));
+        let request = self.request(
+            Method::GET,
+            "",
+            (),
+            Some(vec![
+                ("address", address.to_string()),
+                ("key", self.key.to_string()),
+            ]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -135,13 +156,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 

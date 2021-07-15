@@ -4,7 +4,10 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{airtable::AIRTABLE_BOOKINGS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::bookings};
+use crate::{
+    airtable::AIRTABLE_BOOKINGS_TABLE, companies::Company, core::UpdateAirtableRecord,
+    db::Database, schema::bookings,
+};
 
 #[db {
     new_struct_name = "Booking",

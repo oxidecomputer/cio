@@ -71,7 +71,11 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) {
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gsuite = GSuite::new(
+        &company.gsuite_account_id,
+        &company.gsuite_domain,
+        token.clone(),
+    );
 
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -86,7 +90,10 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
         println!("Getting events for {}", calendar.id);
-        let events = gsuite.list_calendar_events(&calendar.id, true).await.unwrap();
+        let events = gsuite
+            .list_calendar_events(&calendar.id, true)
+            .await
+            .unwrap();
 
         for event in events {
             // If the event has been cancelled, clear it out of the database.
@@ -136,9 +143,14 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
 
                     // If the email is not their work email, let's firgure it out based
                     // on the information from their user.
-                    if !email.ends_with(&company.gsuite_domain) && !email.ends_with(&company.domain) {
+                    if !email.ends_with(&company.gsuite_domain) && !email.ends_with(&company.domain)
+                    {
                         match users::dsl::users
-                            .filter(users::dsl::recovery_email.eq(email.to_string()).and(users::dsl::cio_company_id.eq(company.id)))
+                            .filter(
+                                users::dsl::recovery_email
+                                    .eq(email.to_string())
+                                    .and(users::dsl::cio_company_id.eq(company.id)),
+                            )
                             .limit(1)
                             .load::<User>(&db.conn())
                         {
@@ -161,7 +173,11 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
                             .to_string();
                         // Find the real user.
                         match users::dsl::users
-                            .filter(users::dsl::username.eq(username.to_string()).or(users::dsl::aliases.contains(vec![username.to_string()])))
+                            .filter(
+                                users::dsl::username
+                                    .eq(username.to_string())
+                                    .or(users::dsl::aliases.contains(vec![username.to_string()])),
+                            )
                             .filter(users::dsl::cio_company_id.eq(company.id))
                             .limit(1)
                             .load::<User>(&db.conn())
@@ -204,9 +220,13 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
             }
 
             let mut interviewers = interview.interviewers.clone();
-            interviewers
-                .iter_mut()
-                .for_each(|x| *x = x.trim_end_matches(&company.gsuite_domain).trim_end_matches(&company.domain).trim_end_matches('@').to_string());
+            interviewers.iter_mut().for_each(|x| {
+                *x = x
+                    .trim_end_matches(&company.gsuite_domain)
+                    .trim_end_matches(&company.domain)
+                    .trim_end_matches('@')
+                    .to_string()
+            });
 
             interview.name = format!("{} ({})", name, interviewers.join(", "));
 
@@ -219,7 +239,9 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
         }
     }
 
-    ApplicantInterviews::get_from_db(db, company.id).update_airtable(db).await;
+    ApplicantInterviews::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 }
 
 /// Compile interview packets for each interviewee.
@@ -231,11 +253,17 @@ pub async fn compile_packets(db: &Database, company: &Company) {
     let drive_client = GoogleDrive::new(token);
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive_client
+        .get_drive_by_name("Automated Documents")
+        .await
+        .unwrap();
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let drive_rfd_dir = drive_client.get_file_by_name(&drive_id, "interview_packets").await.unwrap();
+    let drive_rfd_dir = drive_client
+        .get_file_by_name(&drive_id, "interview_packets")
+        .await
+        .unwrap();
     let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
 
     // Iterate over each user we have in gsuite and download their materials
@@ -256,7 +284,10 @@ pub async fn compile_packets(db: &Database, company: &Company) {
         }
 
         if materials_url.is_empty() {
-            println!("[interviews] could not find applicant with email {}", employee.recovery_email);
+            println!(
+                "[interviews] could not find applicant with email {}",
+                employee.recovery_email
+            );
             continue;
         }
 
@@ -281,7 +312,11 @@ pub async fn compile_packets(db: &Database, company: &Company) {
                 .trim()
                 .to_string();
             if let Ok(user) = users::dsl::users
-                .filter(users::dsl::username.eq(username.to_string()).or(users::dsl::aliases.contains(vec![username.to_string()])))
+                .filter(
+                    users::dsl::username
+                        .eq(username.to_string())
+                        .or(users::dsl::aliases.contains(vec![username.to_string()])),
+                )
                 .filter(users::dsl::cio_company_id.eq(company.id))
                 .first::<User>(&db.conn())
             {
@@ -303,7 +338,10 @@ pub async fn compile_packets(db: &Database, company: &Company) {
     // Let's compile the materials for candidates into one file.
     let mut packets: HashMap<String, (Applicant, Vec<String>)> = HashMap::new();
     for (email, itrs) in interviewers {
-        if let Ok(applicant) = applicants::dsl::applicants.filter(applicants::dsl::email.eq(email.to_string())).first::<Applicant>(&db.conn()) {
+        if let Ok(applicant) = applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(email.to_string()))
+            .first::<Applicant>(&db.conn())
+        {
             // Create the cover page.
             let mut user_html = "".to_string();
             for (i, start_time, end_time) in itrs.clone() {
@@ -382,7 +420,8 @@ The Oxide Team
                 // TODO: add the date and time and the real name here.
                 file.write_all(
                     format!(
-                        "<html><body><table><tr><td><h1>{}</h1></td></tr><tr><td><p>{} - {}</p></td></tr></table></html>",
+                        "<html><body><table><tr><td><h1>{}</h1></td></tr><tr><td><p>{} - \
+                         {}</p></td></tr></table></html>",
                         i.full_name(),
                         start_time.format("%A, %B %e from %l:%M%P"),
                         end_time.format("%l:%M%P %Z")
@@ -421,7 +460,10 @@ The Oxide Team
         let buffer = combine_pdfs(packet_args.to_vec());
 
         // Create or update the file in the google_drive.
-        let drive_file = drive_client.create_or_update_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer).await.unwrap();
+        let drive_file = drive_client
+            .create_or_update_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer)
+            .await
+            .unwrap();
         applicant.interview_packet = format!("https://drive.google.com/open?id={}", drive_file.id);
         applicant.update(db).await;
     }
@@ -475,10 +517,19 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
             }
 
             if (&*file.name()).ends_with('/') {
-                println!("[applicants] zip file {} extracted to \"{}\"", i, output.as_path().display());
+                println!(
+                    "[applicants] zip file {} extracted to \"{}\"",
+                    i,
+                    output.as_path().display()
+                );
                 fs::create_dir_all(&output).unwrap();
             } else {
-                println!("[applicants] zip file {} extracted to \"{}\" ({} bytes)", i, output.as_path().display(), file.size());
+                println!(
+                    "[applicants] zip file {} extracted to \"{}\" ({} bytes)",
+                    i,
+                    output.as_path().display(),
+                    file.size()
+                );
 
                 if let Some(p) = output.parent() {
                     if !p.exists() {
@@ -489,7 +540,11 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
                 copy(&mut file, &mut outfile).unwrap();
 
                 let file_name = output.to_str().unwrap();
-                if (!output.is_dir()) && (file_name.ends_with("responses.pdf") || file_name.ends_with("OxideQuestions.pdf") || file_name.ends_with("Questionnaire.pdf")) {
+                if (!output.is_dir())
+                    && (file_name.ends_with("responses.pdf")
+                        || file_name.ends_with("OxideQuestions.pdf")
+                        || file_name.ends_with("Questionnaire.pdf"))
+                {
                     let mut new_path = env::temp_dir();
                     new_path.push(format!("{}.pdf", username));
                     // Move the file to what we really want the output file to be.
@@ -540,7 +595,12 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
                 .into_iter()
                 .map(|(_, object_id)| {
                     if !first {
-                        let bookmark = Bookmark::new(format!("Page_{}", pagenum), [0.0, 0.0, 1.0], 0, object_id);
+                        let bookmark = Bookmark::new(
+                            format!("Page_{}", pagenum),
+                            [0.0, 0.0, 1.0],
+                            0,
+                            object_id,
+                        );
                         document.add_bookmark(bookmark, None);
                         first = true;
                         pagenum += 1;
@@ -564,7 +624,14 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
         match object.type_name().unwrap_or("") {
             "Catalog" => {
                 // Collect a first "Catalog" object and use it for the future "Pages"
-                catalog_object = Some((if let Some((id, _)) = catalog_object { id } else { *object_id }, object.clone()));
+                catalog_object = Some((
+                    if let Some((id, _)) = catalog_object {
+                        id
+                    } else {
+                        *object_id
+                    },
+                    object.clone(),
+                ));
             }
             "Pages" => {
                 // Collect and update a first "Pages" object and use it for the future "Catalog"
@@ -577,7 +644,14 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
                         }
                     }
 
-                    pages_object = Some((if let Some((id, _)) = pages_object { id } else { *object_id }, Object::Dictionary(dictionary)));
+                    pages_object = Some((
+                        if let Some((id, _)) = pages_object {
+                            id
+                        } else {
+                            *object_id
+                        },
+                        Object::Dictionary(dictionary),
+                    ));
                 }
             }
             "Page" => {}     // Ignored, processed later and separately
@@ -602,7 +676,9 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
             let mut dictionary = dictionary.clone();
             dictionary.set("Parent", pages_object.as_ref().unwrap().0);
 
-            document.objects.insert(*object_id, Object::Dictionary(dictionary));
+            document
+                .objects
+                .insert(*object_id, Object::Dictionary(dictionary));
         }
     }
 
@@ -624,9 +700,17 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
         dictionary.set("Count", documents_pages.len() as u32);
 
         // Set new "Kids" list (collected from documents pages) for "Pages"
-        dictionary.set("Kids", documents_pages.into_iter().map(|(object_id, _)| Object::Reference(object_id)).collect::<Vec<_>>());
+        dictionary.set(
+            "Kids",
+            documents_pages
+                .into_iter()
+                .map(|(object_id, _)| Object::Reference(object_id))
+                .collect::<Vec<_>>(),
+        );
 
-        document.objects.insert(pages_object.0, Object::Dictionary(dictionary));
+        document
+            .objects
+            .insert(pages_object.0, Object::Dictionary(dictionary));
     }
 
     // Build a new "Catalog" with updated fields
@@ -635,7 +719,9 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
         dictionary.set("Pages", pages_object.0);
         dictionary.remove(b"Outlines"); // Outlines not supported in merged PDFs
 
-        document.objects.insert(catalog_object.0, Object::Dictionary(dictionary));
+        document
+            .objects
+            .insert(catalog_object.0, Object::Dictionary(dictionary));
     }
 
     document.trailer.set("Root", catalog_object.0);

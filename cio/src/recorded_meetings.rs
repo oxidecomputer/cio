@@ -10,7 +10,10 @@ use revai::RevAI;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{airtable::AIRTABLE_RECORDED_MEETINGS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::recorded_meetings, utils::truncate};
+use crate::{
+    airtable::AIRTABLE_RECORDED_MEETINGS_TABLE, companies::Company, core::UpdateAirtableRecord,
+    db::Database, schema::recorded_meetings, utils::truncate,
+};
 
 /// The data type for a recorded meeting.
 #[db {
@@ -72,10 +75,16 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 
 /// Sync the recorded meetings.
 pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
-    RecordedMeetings::get_from_db(db, company.id).update_airtable(db).await;
+    RecordedMeetings::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
 
     let token = company.authenticate_google(db).await;
-    let mut gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let mut gsuite = GSuite::new(
+        &company.gsuite_account_id,
+        &company.gsuite_domain,
+        token.clone(),
+    );
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -85,12 +94,19 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
-            gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, company.authenticate_google(db).await);
+            gsuite = GSuite::new(
+                &company.gsuite_account_id,
+                &company.gsuite_domain,
+                company.authenticate_google(db).await,
+            );
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
             println!("Getting events for {}", calendar.id);
-            let events = gsuite.list_past_calendar_events(&calendar.id).await.unwrap();
+            let events = gsuite
+                .list_past_calendar_events(&calendar.id)
+                .await
+                .unwrap();
 
             for event in events {
                 // Let's check if there are attachments. We only care if there are attachments.
@@ -109,10 +125,14 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                 let mut video = "".to_string();
                 let mut chat_log_link = "".to_string();
                 for attachment in event.attachments {
-                    if attachment.mime_type == "video/mp4" && attachment.title.starts_with(&event.summary) {
+                    if attachment.mime_type == "video/mp4"
+                        && attachment.title.starts_with(&event.summary)
+                    {
                         video = attachment.file_url.to_string();
                     }
-                    if attachment.mime_type == "text/plain" && attachment.title.starts_with(&event.summary) {
+                    if attachment.mime_type == "text/plain"
+                        && attachment.title.starts_with(&event.summary)
+                    {
                         chat_log_link = attachment.file_url.to_string();
                     }
                 }
@@ -189,7 +209,8 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                             meeting.transcript = existing_airtable.fields.transcript.to_string();
                         }
                         if meeting.transcript_id.is_empty() {
-                            meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
+                            meeting.transcript_id =
+                                existing_airtable.fields.transcript_id.to_string();
                         }
                     }
                 }
@@ -213,7 +234,10 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
                         // it already.
                         if db_meeting.transcript.is_empty() {
                             // Now let's try to get the transcript.
-                            let transcript = revai.get_transcript(&db_meeting.transcript_id).await.unwrap_or_default();
+                            let transcript = revai
+                                .get_transcript(&db_meeting.transcript_id)
+                                .await
+                                .unwrap_or_default();
                             db_meeting.transcript = transcript.trim().to_string();
                             db_meeting.update(db).await;
                         }

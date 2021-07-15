@@ -102,7 +102,10 @@ impl Okta {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -140,7 +143,11 @@ impl Okta {
     /// Create a user.
     pub async fn create_user(&self, profile: Profile) -> Result<User, APIError> {
         // Build the request.
-        let rb = self.request(Method::POST, "/api/v1/users?activate=true", NewUser { profile });
+        let rb = self.request(
+            Method::POST,
+            "/api/v1/users?activate=true",
+            NewUser { profile },
+        );
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -189,7 +196,11 @@ impl Okta {
         let user = self.get_user(&profile.login).await.unwrap();
 
         // Build the request.
-        let rb = self.request(Method::PUT, format!("/api/v1/users/{}", user.id), NewUser { profile });
+        let rb = self.request(
+            Method::PUT,
+            format!("/api/v1/users/{}", user.id),
+            NewUser { profile },
+        );
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -281,7 +292,11 @@ impl Okta {
         let group = self.get_group(&profile.name).await.unwrap();
 
         // Build the request.
-        let rb = self.request(Method::PUT, format!("/api/v1/groups/{}", group.id), NewGroup { profile });
+        let rb = self.request(
+            Method::PUT,
+            format!("/api/v1/groups/{}", group.id),
+            NewGroup { profile },
+        );
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -307,7 +322,11 @@ impl Okta {
         let u = self.get_user(user).await.unwrap();
 
         // Build the request.
-        let rb = self.request(Method::PUT, format!("/api/v1/groups/{}/users/{}", group_id, u.id), ());
+        let rb = self.request(
+            Method::PUT,
+            format!("/api/v1/groups/{}/users/{}", group_id, u.id),
+            (),
+        );
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -330,7 +349,11 @@ impl Okta {
         let u = self.get_user(user).await.unwrap();
 
         // Build the request.
-        let rb = self.request(Method::DELETE, format!("/api/v1/groups/{}/users/{}", group_id, u.id), ());
+        let rb = self.request(
+            Method::DELETE,
+            format!("/api/v1/groups/{}/users/{}", group_id, u.id),
+            (),
+        );
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -357,13 +380,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -462,35 +495,92 @@ pub struct ChangePassword {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Profile {
-    #[serde(default, rename = "firstName", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "firstName",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub first_name: String,
     #[serde(default, rename = "lastName", skip_serializing_if = "String::is_empty")]
     pub last_name: String,
-    #[serde(default, rename = "displayName", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "displayName",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub display_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub login: String,
-    #[serde(default, rename = "primaryPhone", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "primaryPhone",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub primary_phone: String,
-    #[serde(default, rename = "mobilePhone", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "mobilePhone",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub mobile_phone: String,
-    #[serde(default, rename = "streetAddress", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "streetAddress",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub street_address: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub city: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub state: String,
-    #[serde(default, rename = "zipCode", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "zipCode",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub zip_code: String,
-    #[serde(default, rename = "countryCode", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "countryCode",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub country_code: String,
-    #[serde(default, rename = "secondEmail", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "secondEmail",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub second_email: String,
-    #[serde(default, rename = "githubUsername", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "githubUsername",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub github_username: String,
-    #[serde(default, rename = "matrixUsername", deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        rename = "matrixUsername",
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub matrix_username: String,
 }
 

@@ -5,7 +5,10 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{airtable::AIRTABLE_PAGE_VIEWS_TABLE, auth_logins::AuthUsers, companies::Companys, core::UpdateAirtableRecord, db::Database, schema::page_views};
+use crate::{
+    airtable::AIRTABLE_PAGE_VIEWS_TABLE, auth_logins::AuthUsers, companies::Companys,
+    core::UpdateAirtableRecord, db::Database, schema::page_views,
+};
 
 #[db {
     new_struct_name = "PageView",
@@ -57,7 +60,11 @@ impl UpdateAirtableRecord<PageView> for PageView {
 impl NewPageView {
     pub fn set_page_link(&mut self) {
         // Set the link.
-        self.page_link = format!("https://{}/{}", self.domain, self.path.trim_start_matches('/'));
+        self.page_link = format!(
+            "https://{}/{}",
+            self.domain,
+            self.path.trim_start_matches('/')
+        );
     }
 
     pub fn set_company_id(&mut self, db: &Database) {
@@ -85,6 +92,8 @@ mod tests {
         // TODO: iterate over all the companies.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        PageViews::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        PageViews::get_from_db(&db, oxide.id)
+            .update_airtable(&db)
+            .await;
     }
 }

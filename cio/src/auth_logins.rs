@@ -41,7 +41,11 @@ pub struct NewAuthUser {
     pub email: String,
     #[serde(default)]
     pub email_verified: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "airtable_api::attachment_format_as_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "airtable_api::attachment_format_as_string::deserialize"
+    )]
     pub picture: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub company: String,
@@ -218,7 +222,10 @@ impl User {
     pub fn to_auth_user(&self, c: &Company) -> NewAuthUser {
         let mut company: &str = &self.company;
         // Check if we have an Oxide email address.
-        if self.email.ends_with("@oxidecomputer.com") || self.email.ends_with("@oxide.computer") || *self.company.trim() == *"Oxide Computer Company" {
+        if self.email.ends_with("@oxidecomputer.com")
+            || self.email.ends_with("@oxide.computer")
+            || *self.company.trim() == *"Oxide Computer Company"
+        {
             company = "@oxidecomputer";
         } else if self.email.ends_with("@bench.com") {
             // Check if we have a Benchmark Manufacturing email address.
@@ -226,7 +233,10 @@ impl User {
         } else if *self.company.trim() == *"Algolia" {
             // Cleanup algolia.
             company = "@algolia";
-        } else if *self.company.trim() == *"0xF9BA143B95FF6D82" || self.company.trim().is_empty() || *self.company.trim() == *"TBD" {
+        } else if *self.company.trim() == *"0xF9BA143B95FF6D82"
+            || self.company.trim().is_empty()
+            || *self.company.trim() == *"TBD"
+        {
             // Cleanup David Tolnay and other weird empty parses
             company = "";
         }
@@ -290,7 +300,12 @@ pub async fn get_auth_users(domain: String, db: &Database, company: &Company) ->
     map.insert("audience", format!("https://{}.auth0.com/api/v2/", domain));
     map.insert("grant_type", "client_credentials".to_string());
 
-    let resp = client.post(&format!("https://{}.auth0.com/oauth/token", domain)).json(&map).send().await.unwrap();
+    let resp = client
+        .post(&format!("https://{}.auth0.com/oauth/token", domain))
+        .json(&map)
+        .send()
+        .await
+        .unwrap();
 
     let token: Token = resp.json().await.unwrap();
 
@@ -319,7 +334,8 @@ pub async fn get_auth_users(domain: String, db: &Database, company: &Company) ->
         let mut auth_user = user.to_auth_user(company);
 
         // Get the application they last accessed.
-        let auth_user_logins = get_auth_logs_for_user(&token.access_token, &domain, &user.user_id).await;
+        let auth_user_logins =
+            get_auth_logs_for_user(&token.access_token, &domain, &user.user_id).await;
 
         // Get the first result.
         if !auth_user_logins.is_empty() {
@@ -349,7 +365,10 @@ pub async fn get_auth_users(domain: String, db: &Database, company: &Company) ->
 async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec<NewAuthUserLogin> {
     let client = Client::new();
     let resp = client
-        .get(&format!("https://{}.auth0.com/api/v2/users/{}/logs", domain, user_id))
+        .get(&format!(
+            "https://{}.auth0.com/api/v2/users/{}/logs",
+            domain, user_id
+        ))
         .bearer_auth(token)
         .query(&[("sort", "date:-1"), ("per_page", "100")])
         .send()
@@ -362,7 +381,11 @@ async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec
             // Get the rate limit headers.
             let headers = resp.headers();
             let limit = headers.get("x-ratelimit-limit").unwrap().to_str().unwrap();
-            let remaining = headers.get("x-ratelimit-remaining").unwrap().to_str().unwrap();
+            let remaining = headers
+                .get("x-ratelimit-remaining")
+                .unwrap()
+                .to_str()
+                .unwrap();
             let reset = headers.get("x-ratelimit-reset").unwrap().to_str().unwrap();
             let reset_int = reset.parse::<i64>().unwrap();
 
@@ -374,12 +397,20 @@ async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec
             }
             let time = HumanTime::from(dur);
 
-            println!("getting auth0 user logs failed because of rate limit: {}, remaining: {}, reset: {}", limit, remaining, time);
+            println!(
+                "getting auth0 user logs failed because of rate limit: {}, remaining: {}, reset: \
+                 {}",
+                limit, remaining, time
+            );
 
             return vec![];
         }
         s => {
-            println!("getting auth0 user logs failed, status: {} | resp: {}", s, resp.text().await.unwrap(),);
+            println!(
+                "getting auth0 user logs failed, status: {} | resp: {}",
+                s,
+                resp.text().await.unwrap(),
+            );
 
             return vec![];
         }
@@ -393,7 +424,11 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
     let resp = client
         .get(&format!("https://{}.auth0.com/api/v2/users", domain))
         .bearer_auth(token)
-        .query(&[("per_page", "20"), ("page", page), ("sort", "last_login:-1")])
+        .query(&[
+            ("per_page", "20"),
+            ("page", page),
+            ("sort", "last_login:-1"),
+        ])
         .send()
         .await
         .unwrap();
@@ -401,7 +436,11 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
     match resp.status() {
         StatusCode::OK => (),
         s => {
-            println!("getting auth0 users failed, status: {} | resp: {}", s, resp.text().await.unwrap());
+            println!(
+                "getting auth0 users failed, status: {} | resp: {}",
+                s,
+                resp.text().await.unwrap()
+            );
 
             return vec![];
         }
@@ -441,7 +480,11 @@ mod tests {
         refresh_auth_users_and_logins(&db, &oxide).await;
 
         // Update auth user and auth user logins in airtable.
-        AuthUserLogins::get_from_db(&db, oxide.id).update_airtable(&db).await;
-        AuthUsers::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        AuthUserLogins::get_from_db(&db, oxide.id)
+            .update_airtable(&db)
+            .await;
+        AuthUsers::get_from_db(&db, oxide.id)
+            .update_airtable(&db)
+            .await;
     }
 }

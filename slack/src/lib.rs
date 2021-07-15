@@ -53,7 +53,14 @@ impl Slack {
     /// Create a new Slack client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API Token and Workspace ID your requests will work.
-    pub fn new<I, K, B, R, T, Q>(client_id: I, client_secret: K, workspace_id: B, redirect_uri: R, token: T, user_token: Q) -> Self
+    pub fn new<I, K, B, R, T, Q>(
+        client_id: I,
+        client_secret: K,
+        workspace_id: B,
+        redirect_uri: R,
+        token: T,
+        user_token: Q,
+    ) -> Self
     where
         I: ToString,
         K: ToString,
@@ -104,10 +111,24 @@ impl Slack {
         let client_secret = env::var("SLACK_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("SLACK_REDIRECT_URI").unwrap();
 
-        Slack::new(client_id, client_secret, workspace_id, redirect_uri, token, user_token)
+        Slack::new(
+            client_id,
+            client_secret,
+            workspace_id,
+            redirect_uri,
+            token,
+            user_token,
+        )
     }
 
-    fn request<B>(&self, token: &str, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
+    fn request<B>(
+        &self,
+        token: &str,
+        method: Method,
+        path: &str,
+        body: B,
+        query: Option<Vec<(&str, String)>>,
+    ) -> Request
     where
         B: Serialize,
     {
@@ -120,7 +141,10 @@ impl Slack {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -150,7 +174,10 @@ impl Slack {
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::ACCEPT,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let params = [
             ("client_id", self.client_id.to_string()),
@@ -184,7 +211,13 @@ impl Slack {
     pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
         // Build the request.
         // TODO: paginate.
-        let request = self.request(&self.token, Method::GET, "users.list", (), Some(vec![("limit", "100".to_string())]));
+        let request = self.request(
+            &self.token,
+            Method::GET,
+            "users.list",
+            (),
+            Some(vec![("limit", "100".to_string())]),
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -249,7 +282,13 @@ impl Slack {
     /// FROM: https://api.slack.com/methods/admin.users.invite
     pub async fn invite_user(&self, invite: UserInvite) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(&self.user_token, Method::POST, "admin.users.invite", invite, None);
+        let request = self.request(
+            &self.user_token,
+            Method::POST,
+            "admin.users.invite",
+            invite,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -272,7 +311,13 @@ impl Slack {
         let mut body: HashMap<&str, &str> = HashMap::new();
         body.insert("team_id", &self.workspace_id);
         body.insert("user_id", user_id);
-        let request = self.request(&self.user_token, Method::POST, "admin.users.remove", body, None);
+        let request = self.request(
+            &self.user_token,
+            Method::POST,
+            "admin.users.remove",
+            body,
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -290,13 +335,20 @@ impl Slack {
 
     /// Set a user's profile information, including custom status.
     /// FROM: https://api.slack.com/methods/users.profile.set
-    pub async fn update_user_profile(&self, user_id: &str, profile: UserProfile) -> Result<(), APIError> {
+    pub async fn update_user_profile(
+        &self,
+        user_id: &str,
+        profile: UserProfile,
+    ) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             &self.user_token,
             Method::POST,
             "users.profile.set",
-            UpdateUserProfileRequest { user: user_id.to_string(), profile },
+            UpdateUserProfileRequest {
+                user: user_id.to_string(),
+                profile,
+            },
             None,
         );
 
@@ -317,7 +369,12 @@ impl Slack {
     /// Post text to a channel.
     pub async fn post_to_channel(url: String, v: Value) -> Result<(), APIError> {
         let client = Client::new();
-        let resp = client.post(&url).body(Body::from(v.to_string())).send().await.unwrap();
+        let resp = client
+            .post(&url)
+            .body(Body::from(v.to_string()))
+            .send()
+            .await
+            .unwrap();
 
         match resp.status() {
             StatusCode::OK => (),
@@ -341,13 +398,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -523,7 +590,10 @@ pub struct MessageAttachment {
     pub title: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title_link: String,
-    #[serde(deserialize_with = "ts_seconds::deserialize", serialize_with = "ts_seconds::serialize")]
+    #[serde(
+        deserialize_with = "ts_seconds::deserialize",
+        serialize_with = "ts_seconds::serialize"
+    )]
     pub ts: DateTime<Utc>,
 }
 

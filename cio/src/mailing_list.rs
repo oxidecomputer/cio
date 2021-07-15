@@ -7,9 +7,14 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
+use slack_chat_api::{
+    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 
-use crate::{airtable::AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::mailing_list_subscribers};
+use crate::{
+    airtable::AIRTABLE_MAILING_LIST_SIGNUPS_TABLE, companies::Company, core::UpdateAirtableRecord,
+    db::Database, schema::mailing_list_subscribers,
+};
 
 /// The data type for a MailingListSubscriber.
 #[db {
@@ -189,7 +194,10 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
 
     let mailchimp = mailchimp_auth.unwrap();
 
-    let members = mailchimp.get_subscribers(&company.mailchimp_list_id).await.unwrap();
+    let members = mailchimp
+        .get_subscribers(&company.mailchimp_list_id)
+        .await
+        .unwrap();
 
     // Sync subscribers.
     for member in members {
@@ -200,7 +208,10 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
 }
 
 /// Convert to a signup data type.
-pub fn as_mailing_list_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> NewMailingListSubscriber {
+pub fn as_mailing_list_subscriber(
+    webhook: mailchimp_api::Webhook,
+    db: &Database,
+) -> NewMailingListSubscriber {
     let mut signup: NewMailingListSubscriber = Default::default();
 
     let list_id = webhook.data.list_id.as_ref().unwrap();
@@ -259,7 +270,10 @@ impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
             email: self.email_address,
             first_name: self.merge_fields.first_name.to_string(),
             last_name: self.merge_fields.last_name.to_string(),
-            name: format!("{} {}", self.merge_fields.first_name, self.merge_fields.last_name),
+            name: format!(
+                "{} {}",
+                self.merge_fields.first_name, self.merge_fields.last_name
+            ),
             company: self.merge_fields.company,
             interest: self.merge_fields.interest,
             // Note to next person. Finding these numbers means looking at actual records and the
@@ -295,7 +309,9 @@ mod tests {
         // Iterate over the companies and update the mailing list subscribers for both.
         for company in companies {
             refresh_db_mailing_list_subscribers(&db, &company).await;
-            MailingListSubscribers::get_from_db(&db, company.id).update_airtable(&db).await;
+            MailingListSubscribers::get_from_db(&db, company.id)
+                .update_airtable(&db)
+                .await;
         }
     }
 }

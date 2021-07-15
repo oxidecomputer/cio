@@ -45,7 +45,14 @@ impl MailChimp {
     /// Create a new MailChimp client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, R, T, Q, C>(client_id: I, client_secret: K, redirect_uri: R, token: T, refresh_token: Q, endpoint: C) -> Self
+    pub fn new<I, K, R, T, Q, C>(
+        client_id: I,
+        client_secret: K,
+        redirect_uri: R,
+        token: T,
+        refresh_token: Q,
+        endpoint: C,
+    ) -> Self
     where
         I: ToString,
         K: ToString,
@@ -98,7 +105,14 @@ impl MailChimp {
         let client_secret = env::var("MAILCHIMP_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("MAILCHIMP_REDIRECT_URI").unwrap();
 
-        MailChimp::new(client_id, client_secret, redirect_uri, token, refresh_token, endpoint)
+        MailChimp::new(
+            client_id,
+            client_secret,
+            redirect_uri,
+            token,
+            refresh_token,
+            endpoint,
+        )
     }
 
     fn request<P>(&self, method: Method, path: P) -> RequestBuilder
@@ -120,7 +134,10 @@ impl MailChimp {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         self.client.request(method, url).headers(headers)
     }
@@ -134,10 +151,14 @@ impl MailChimp {
 
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/x-www-form-urlencoded"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/x-www-form-urlencoded"),
+        );
 
         let body = format!(
-            "grant_type=refresh_token&client_id={}&client_secret={}&redirect_uri={}refresh_token={}",
+            "grant_type=refresh_token&client_id={}&client_secret={}&\
+             redirect_uri={}refresh_token={}",
             self.client_id,
             self.client_secret,
             urlencoding::encode(&self.redirect_uri),
@@ -145,7 +166,10 @@ impl MailChimp {
         );
 
         let client = reqwest::Client::new();
-        let req = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).body(bytes::Bytes::from(body));
+        let req = client
+            .post("https://login.mailchimp.com/oauth2/token")
+            .headers(headers)
+            .body(bytes::Bytes::from(body));
         let resp = req.send().await.unwrap();
 
         // Unwrap the response.
@@ -159,7 +183,10 @@ impl MailChimp {
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/x-www-form-urlencoded"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/x-www-form-urlencoded"),
+        );
 
         let body = format!(
             "grant_type=authorization_code&client_id={}&client_secret={}&redirect_uri={}&code={}",
@@ -170,7 +197,10 @@ impl MailChimp {
         );
 
         let client = reqwest::Client::new();
-        let req = client.post("https://login.mailchimp.com/oauth2/token").headers(headers).body(bytes::Bytes::from(body));
+        let req = client
+            .post("https://login.mailchimp.com/oauth2/token")
+            .headers(headers)
+            .body(bytes::Bytes::from(body));
         let resp = req.send().await.unwrap();
 
         // Unwrap the response.
@@ -185,12 +215,23 @@ impl MailChimp {
     /// Get metadata information.
     pub async fn metadata(&self) -> Result<Metadata, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
-        headers.append(header::AUTHORIZATION, header::HeaderValue::from_str(&format!("OAuth {}", self.token)).unwrap());
+        headers.append(
+            header::ACCEPT,
+            header::HeaderValue::from_static("application/json"),
+        );
+        headers.append(
+            header::AUTHORIZATION,
+            header::HeaderValue::from_str(&format!("OAuth {}", self.token)).unwrap(),
+        );
 
         // Build the request.
         let client = reqwest::Client::new();
-        let resp = client.get("https://login.mailchimp.com/oauth2/metadata").headers(headers).send().await.unwrap();
+        let resp = client
+            .get("https://login.mailchimp.com/oauth2/metadata")
+            .headers(headers)
+            .send()
+            .await
+            .unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -216,7 +257,13 @@ impl MailChimp {
 
         while has_more_rows {
             // Build the request.
-            let rb = self.request(Method::GET, &format!("3.0/lists/{}/members?count={}&offset={}", list_id, per_page, offset,));
+            let rb = self.request(
+                Method::GET,
+                &format!(
+                    "3.0/lists/{}/members?count={}&offset={}",
+                    list_id, per_page, offset,
+                ),
+            );
             let request = rb.build().unwrap();
 
             let resp = self.client.execute(request).await.unwrap();
@@ -250,13 +297,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -270,15 +327,27 @@ impl error::Error for APIError {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct AccessToken {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub access_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub token_type: String,
     #[serde(default)]
     pub expires_in: i64,
     #[serde(default)]
     pub x_refresh_token_expires_in: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub refresh_token: String,
 }
 
@@ -310,7 +379,12 @@ pub struct MergeFields {
     pub last_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "NAME")]
     pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "COMPANY", alias = "CNAME")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "COMPANY",
+        alias = "CNAME"
+    )]
     pub company: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "CSIZE")]
     pub company_size: String,
@@ -388,7 +462,10 @@ pub struct Tag {
 pub struct Webhook {
     #[serde(rename = "type")]
     pub webhook_type: String,
-    #[serde(deserialize_with = "mailchimp_date_format::deserialize", serialize_with = "mailchimp_date_format::serialize")]
+    #[serde(
+        deserialize_with = "mailchimp_date_format::deserialize",
+        serialize_with = "mailchimp_date_format::serialize"
+    )]
     pub fired_at: DateTime<Utc>,
     pub data: WebhookData,
 }
@@ -426,7 +503,8 @@ mod mailchimp_date_format {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer).unwrap();
-        Utc.datetime_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
+        Utc.datetime_from_str(&s, FORMAT)
+            .map_err(serde::de::Error::custom)
     }
 }
 
@@ -468,7 +546,11 @@ pub struct WebhookMerges {
     pub address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "PHONE")]
     pub phone: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "COMPANY", alias = "CNAME")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "COMPANY",
+        alias = "CNAME"
+    )]
     pub company: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "CSIZE")]
     pub company_size: Option<String>,
@@ -493,11 +575,23 @@ pub struct WebhookGrouping {
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Metadata {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub dc: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub accountname: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub api_endpoint: String,
     #[serde(default)]
     pub login: Login,
@@ -505,19 +599,43 @@ pub struct Metadata {
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct Login {
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub avatar: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub login_email: String,
     #[serde(default)]
     pub login_id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub login_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub login_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub role: String,
     #[serde(default)]
     pub user_id: i64,

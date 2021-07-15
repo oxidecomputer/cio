@@ -70,7 +70,13 @@ impl Shippo {
         Shippo::new(token)
     }
 
-    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(String, String)>>) -> Request
+    fn request<B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: B,
+        query: Option<Vec<(String, String)>>,
+    ) -> Request
     where
         B: Serialize,
     {
@@ -83,7 +89,10 @@ impl Shippo {
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -270,7 +279,10 @@ impl Shippo {
 
     /// Create a shipping label based on a rate.
     /// FROM: https://goshippo.com/docs/reference#transactions-create
-    pub async fn create_shipping_label_from_rate(&self, nt: NewTransaction) -> Result<Transaction, APIError> {
+    pub async fn create_shipping_label_from_rate(
+        &self,
+        nt: NewTransaction,
+    ) -> Result<Transaction, APIError> {
         // Build the request.
         let request = self.request(Method::POST, "transactions", nt, None);
 
@@ -347,7 +359,11 @@ impl Shippo {
     /// by POSTing to the tracking endpoint. This way Shippo will send HTTP notifications to your
     /// track_updated webhook(s) whenever the status changes.
     /// FROM: https://goshippo.com/docs/reference#tracks-create
-    pub async fn register_tracking_webhook(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
+    pub async fn register_tracking_webhook(
+        &self,
+        carrier: &str,
+        tracking_number: &str,
+    ) -> Result<TrackingStatus, APIError> {
         let mut body: HashMap<&str, &str> = HashMap::new();
         body.insert("tracking_number", tracking_number);
         body.insert("carrier", carrier);
@@ -372,9 +388,18 @@ impl Shippo {
 
     /// Request the tracking status of a shipment by sending a GET request.
     /// FROM: https://goshippo.com/docs/reference#tracks-retrieve
-    pub async fn get_tracking_status(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
+    pub async fn get_tracking_status(
+        &self,
+        carrier: &str,
+        tracking_number: &str,
+    ) -> Result<TrackingStatus, APIError> {
         // Build the request
-        let request = self.request(Method::GET, &format!("tracks/{}/{}", carrier, tracking_number), (), None);
+        let request = self.request(
+            Method::GET,
+            &format!("tracks/{}/{}", carrier, tracking_number),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -399,13 +424,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -420,9 +455,17 @@ impl error::Error for APIError {
 /// The data type for an API response.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct APIResponse {
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub next: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub previous: String,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
@@ -432,9 +475,17 @@ pub struct APIResponse {
 /// The data type for an API response for carrier accounts.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct CarrierAccountsAPIResponse {
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub next: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub previous: String,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
@@ -444,9 +495,17 @@ pub struct CarrierAccountsAPIResponse {
 /// The data type for a transactions API response.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TransactionsAPIResponse {
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub next: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub previous: String,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
@@ -617,11 +676,18 @@ impl Address {
         if self.country == "US" && zip.len() > 5 {
             zip.insert(5, '-');
         }
-        format!("{}\n{}, {} {} {}", street.trim(), self.city, self.state, zip, self.country)
-            .trim()
-            .trim_matches(',')
-            .trim()
-            .to_string()
+        format!(
+            "{}\n{}, {} {} {}",
+            street.trim(),
+            self.city,
+            self.state,
+            zip,
+            self.country
+        )
+        .trim()
+        .trim_matches(',')
+        .trim()
+        .to_string()
     }
 }
 
@@ -759,13 +825,25 @@ pub struct ServiceLevel {
     /// A servicelevel commonly defines the transit time of a Shipment
     /// (e.g., Express vs. Standard), along with other properties.
     /// These names vary depending on the provider.
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub name: String,
     /// Token of the Rate's servicelevel, e.g. "usps_priority" or "fedex_ground".
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub token: String,
     /// Further clarification of the service.
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub terms: String,
 }
 
@@ -942,7 +1020,10 @@ pub struct Transaction {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_url_provider: String,
     /// The estimated time of arrival according to the carrier.
-    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "null_date_format::deserialize",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub eta: Option<DateTime<Utc>>,
     /// A URL pointing directly to the label in the format you've set in your settings.
     /// A value will only be returned if the Transactions has been processed successfully.
@@ -950,7 +1031,11 @@ pub struct Transaction {
     pub label_url: String,
     /// A URL pointing to the commercial invoice as a 8.5x11 inch PDF file.
     /// A value will only be returned if the Transactions has been processed successfully and if the shipment is international.
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub commercial_invoice_url: String,
     /// An array containing elements of the following schema:
     /// - "code" (string): an identifier for the corresponding message (not always available")
@@ -959,7 +1044,11 @@ pub struct Transaction {
     pub messages: Vec<Message>,
     /// A URL pointing directly to the QR code in PNG format.
     /// A value will only be returned if requested using qr_code_requested flag and the carrier provides such an option.
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub qr_code_url: String,
     /// Indicates whether the object has been created in test mode.
     #[serde(default)]
@@ -1004,10 +1093,18 @@ pub struct ValidationResults {
 #[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct TrackingStatus {
     /// Name of the carrier of the shipment to track.
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub carrier: String,
     /// Tracking number to track.
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub tracking_number: String,
     /// The sender address with city, state, zip and country information.
     #[serde(default)]
@@ -1017,15 +1114,25 @@ pub struct TrackingStatus {
     pub address_to: Option<Address>,
     /// The object_id of the transaction associated with this tracking object.
     /// This field is visible only to the object owner of the transaction.
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub transaction: String,
     /// The estimated time of arrival according to the carrier, this might be
     /// updated by carriers during the life of the shipment.
-    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "null_date_format::deserialize",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub eta: Option<DateTime<Utc>>,
     /// The estimated time of arrival according to the carrier at the time the
     /// shipment first entered the system.
-    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "null_date_format::deserialize",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub original_eta: Option<DateTime<Utc>>,
     /// The service level of the shipment as token and full name.
     #[serde(default)]
@@ -1038,7 +1145,11 @@ pub struct TrackingStatus {
     pub tracking_history: Vec<Status>,
     /// A string of up to 100 characters that can be filled with any additional information you
     /// want to attach to the object.
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub metadata: String,
 }
 
@@ -1046,14 +1157,25 @@ pub struct TrackingStatus {
 pub struct Status {
     /// Indicates the high level status of the shipment.
     /// 'UNKNOWN' | 'PRE_TRANSIT' | 'TRANSIT' | 'DELIVERED' | 'RETURNED' | 'FAILURE'
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub status: String,
     /// The human-readable description of the status.
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub status_details: String,
     /// Date and time when the carrier scanned this tracking event.
     /// This is displayed in UTC.
-    #[serde(deserialize_with = "null_date_format::deserialize", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "null_date_format::deserialize",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub status_date: Option<DateTime<Utc>>,
     /// An object containing zip, city, state and country information of the tracking event.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1062,13 +1184,29 @@ pub struct Status {
 
 #[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
 pub struct TrackingLocation {
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub city: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub state: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub zip: String,
-    #[serde(default, deserialize_with = "deserialize_null_string::deserialize", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub country: String,
 }
 
@@ -1078,7 +1216,11 @@ impl TrackingLocation {
         if self.country == "US" && zip.len() > 5 {
             zip.insert(5, '-');
         }
-        format!("{}, {} {} {}", self.city, self.state, zip, self.country).trim().trim_matches(',').trim().to_string()
+        format!("{}, {} {} {}", self.city, self.state, zip, self.country)
+            .trim()
+            .trim_matches(',')
+            .trim()
+            .to_string()
     }
 }
 
@@ -1207,7 +1349,11 @@ pub struct CustomsItem {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tariff_number: String,
     /// SKU code of the item, which is required by some carriers.
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub sku_code: String,
     /// Export Control Classification Number, required on some exports from the United States.
     #[serde(default, skip_serializing_if = "String::is_empty")]

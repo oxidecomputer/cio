@@ -67,23 +67,42 @@ impl RevAI {
         RevAI::new(key)
     }
 
-    fn request(&self, method: Method, path: &str, form: Option<Form>, query: Option<Vec<(&str, String)>>) -> Request {
+    fn request(
+        &self,
+        method: Method,
+        path: &str,
+        form: Option<Form>,
+        query: Option<Vec<(&str, String)>>,
+    ) -> Request {
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(path).unwrap();
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
         if method != Method::POST {
-            headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+            headers.append(
+                header::CONTENT_TYPE,
+                header::HeaderValue::from_static("application/json"),
+            );
         }
         if path.ends_with("/transcript") {
             // Get the plain text transcript
-            headers.append(header::ACCEPT, header::HeaderValue::from_static("text/plain"));
+            headers.append(
+                header::ACCEPT,
+                header::HeaderValue::from_static("text/plain"),
+            );
         } else {
-            headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+            headers.append(
+                header::ACCEPT,
+                header::HeaderValue::from_static("application/json"),
+            );
         }
 
-        let mut rb = self.client.request(method, url).headers(headers).bearer_auth(&self.key);
+        let mut rb = self
+            .client
+            .request(method, url)
+            .headers(headers)
+            .bearer_auth(&self.key);
 
         match query {
             None => (),
@@ -104,7 +123,13 @@ impl RevAI {
     /// Create a job.
     pub async fn create_job(&self, bytes: Bytes) -> Result<Job, APIError> {
         let form = Form::new()
-            .part("media", reqwest::multipart::Part::bytes(bytes.to_vec()).mime_str("video/mp4").unwrap().file_name("testing.mp4"))
+            .part(
+                "media",
+                reqwest::multipart::Part::bytes(bytes.to_vec())
+                    .mime_str("video/mp4")
+                    .unwrap()
+                    .file_name("testing.mp4"),
+            )
             .text("options", "{}");
         // Build the request.
         let request = self.request(Method::POST, "jobs", Some(form), None);
@@ -151,13 +176,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 

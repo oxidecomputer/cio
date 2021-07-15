@@ -71,7 +71,13 @@ impl Tailscale {
         Tailscale::new(key, domain)
     }
 
-    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
+    fn request<B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: B,
+        query: Option<Vec<(&str, String)>>,
+    ) -> Request
     where
         B: Serialize,
     {
@@ -80,9 +86,16 @@ impl Tailscale {
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
-        headers.append(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+        headers.append(
+            header::CONTENT_TYPE,
+            header::HeaderValue::from_static("application/json"),
+        );
 
-        let mut rb = self.client.request(method.clone(), url).headers(headers).basic_auth(&self.key, Some(""));
+        let mut rb = self
+            .client
+            .request(method.clone(), url)
+            .headers(headers)
+            .basic_auth(&self.key, Some(""));
 
         match query {
             None => (),
@@ -104,7 +117,12 @@ impl Tailscale {
     pub async fn list_devices(&self) -> Result<Vec<Device>, APIError> {
         // Build the request.
         // TODO: paginate.
-        let request = self.request(Method::GET, &format!("domain/{}/devices", self.domain), (), None);
+        let request = self.request(
+            Method::GET,
+            &format!("domain/{}/devices", self.domain),
+            (),
+            None,
+        );
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -149,13 +167,23 @@ pub struct APIError {
 
 impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
 impl fmt::Debug for APIError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "APIError: status code -> {}, body -> {}", self.status_code.to_string(), self.body)
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code.to_string(),
+            self.body
+        )
     }
 }
 
@@ -187,7 +215,11 @@ pub struct Device {
     pub endpoints: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub derp: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "clientVersion")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "clientVersion"
+    )]
     pub client_version: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub os: String,
@@ -198,13 +230,21 @@ pub struct Device {
     pub last_seen: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub hostname: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "machineKey")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "machineKey"
+    )]
     pub machine_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "nodeKey")]
     pub node_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "displayNodeKey")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "displayNodeKey"
+    )]
     pub display_node_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "logID")]
     pub log_id: String,
