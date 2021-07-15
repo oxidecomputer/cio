@@ -111,9 +111,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.41"
+version = "1.0.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15af2628f6890fe2609a3b91bef4c83450512802e59489f9c1cb1fa5df064a61"
+checksum = "595d3cfa7a60d4555cb5067b99f07142a08ea778de5cf993f7b75c7d8fabc486"
 
 [[package]]
 name = "arc-swap"
@@ -352,9 +352,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.68"
+version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a72c244c1ff497a746a7e1fb3d14bd08420ecda70c8f25c7112f2781652d787"
+checksum = "e70cc2f62c6ce1868963827bd677764c62d07c3d9a3e1fb1177ee1a9ab199eb2"
 
 [[package]]
 name = "cfcert"
@@ -508,7 +508,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4d4e1972a7bdb3e7f0b020e680ca9e7a3bd6f68c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4a9364570394080700bae680959b78f05fe2b635"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -536,13 +536,13 @@ dependencies = [
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars",
  "html2text",
- "hubcaps",
  "image 0.23.14",
  "lopdf",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
+ "octorust",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "pandoc",
@@ -1001,7 +1001,7 @@ dependencies = [
 [[package]]
 name = "dropshot"
 version = "0.5.2-dev"
-source = "git+https://github.com/oxidecomputer/dropshot?branch=main#097c11468abfea2d3265f718377826ffb57aabac"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#3a9cb2ba9cb1c7da4c51937a82789d4d24de26f9"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
@@ -1047,7 +1047,7 @@ dependencies = [
 [[package]]
 name = "dropshot_endpoint"
 version = "0.5.2-dev"
-source = "git+https://github.com/oxidecomputer/dropshot?branch=main#097c11468abfea2d3265f718377826ffb57aabac"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=main#3a9cb2ba9cb1c7da4c51937a82789d4d24de26f9"
 dependencies = [
  "proc-macro2 1.0.27",
  "quote 1.0.9",
@@ -1665,30 +1665,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 
 [[package]]
-name = "hubcaps"
-version = "0.6.2"
-source = "git+https://github.com/jessfraz/hubcaps?branch=actions#93a904cbe4df86bc9b3c9b530c8e1c7e4c0649ef"
-dependencies = [
- "base64 0.12.3",
- "chrono",
- "data-encoding",
- "dirs",
- "futures",
- "http",
- "hyperx",
- "jsonwebtoken",
- "log 0.4.14",
- "mime 0.3.16",
- "percent-encoding 2.1.0",
- "reqwest",
- "schemars",
- "serde",
- "serde_derive",
- "serde_json",
- "url 2.2.2",
-]
-
-[[package]]
 name = "hyper"
 version = "0.10.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1863,37 +1839,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "influxdb"
-version = "0.3.0"
-source = "git+https://github.com/jessfraz/influxdb-rust?branch=cloud#2185bdec472781a63b5b9adaa6130c98f5846440"
-dependencies = [
- "chrono",
- "futures",
- "influxdb_derive",
- "lazy_static",
- "regex 1.5.4",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "influxdb_derive"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd351b85d6d79b8b73bda7452d8d9ac7da8a392f8b9eb0a4780b373539fb1e6e"
-dependencies = [
- "proc-macro2 1.0.27",
- "quote 1.0.9",
- "syn 1.0.73",
-]
-
-[[package]]
 name = "instant"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
+checksum = "bee0328b1209d157ef001c94dd85b4f8f64139adb0eac2659f4b08382b2f474d"
 dependencies = [
  "cfg-if 1.0.0",
 ]
@@ -2112,7 +2061,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4d4e1972a7bdb3e7f0b020e680ca9e7a3bd6f68c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#4a9364570394080700bae680959b78f05fe2b635"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.27",
@@ -4159,9 +4108,9 @@ dependencies = [
 
 [[package]]
 name = "synstructure"
-version = "0.12.4"
+version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b834f2d66f734cb897113e34aaff2f1ab4719ca946f9a7358dba8f8064148701"
+checksum = "474aaa926faa1603c40b7885a9eaea29b444d1cb2850cb7c0e37bb1a4182f4fa"
 dependencies = [
  "proc-macro2 1.0.27",
  "quote 1.0.9",
@@ -4914,11 +4863,10 @@ dependencies = [
  "google-drive 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "gusto-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "http",
- "hubcaps",
  "hyper 0.10.16",
- "influxdb",
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
+ "octorust",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",

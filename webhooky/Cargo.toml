@@ -22,13 +22,10 @@ futures-util = "0.3"
 google-drive = "^0.1.23"
 gusto-api = "^0.1.17"
 http = "0.2.0"
-#hubcaps = { version = "0.6", features = ["httpcache"] }
-hubcaps = { git = "https://github.com/jessfraz/hubcaps", branch = "actions", features = ["httpcache"] }
 hyper = { version = "0.10" }
-#influxdb = { version = "0.3.0", features = ["derive"] }
-influxdb = { git = "https://github.com/jessfraz/influxdb-rust", branch = "cloud", features = ["derive"] }
 mailchimp-api = "^0.1.11"
 mime_guess = "2"
+octorust = { version = "^0.1.11", features = ["httpcache"] }
 quickbooks = "^0.1.12"
 ramp-api = "^0.1.22"
 rand = "^0.8.4"

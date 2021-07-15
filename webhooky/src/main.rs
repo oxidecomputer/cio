@@ -5,19 +5,12 @@ pub mod slack_commands;
 use crate::slack_commands::SlackCommand;
 pub mod repos;
 use crate::repos::Repo;
-pub mod influx;
 pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
 use std::{
-    collections::HashMap,
-    convert::TryInto,
-    env,
-    ffi::OsStr,
-    fs::File,
-    io::Read,
-    str::{from_utf8, FromStr},
+    collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, io::Read, str::FromStr,
     sync::Arc,
 };
 
@@ -29,7 +22,10 @@ use cio_api::{
     applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
     asset_inventory::AssetItem,
     companies::Company,
-    configs::{get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms, sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User},
+    configs::{
+        get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms,
+        sync_github_outside_collaborators, sync_groups, sync_links, sync_users, User,
+    },
     db::Database,
     journal_clubs::JournalClubMeeting,
     mailing_list::MailingListSubscriber,
@@ -38,24 +34,27 @@ use cio_api::{
     rfds::{is_image, NewRFD, RFD},
     schema::{api_tokens, applicants, journal_club_meetings, rfds},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
-    shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
+    shorturls::{
+        generate_shorturls_for_configs_links, generate_shorturls_for_repos,
+        generate_shorturls_for_rfds,
+    },
     swag_inventory::SwagInventoryItem,
     swag_store::Order,
     templates::generate_terraform_files_for_okta,
-    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, merge_json},
+    utils::{
+        create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo,
+        merge_json,
+    },
 };
 use diesel::prelude::*;
 use docusign::DocuSign;
 use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody,
-    UntypedBody,
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError,
+    HttpResponseAccepted, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext,
+    TypedBody, UntypedBody,
 };
 use google_drive::GoogleDrive;
 use gusto_api::Gusto;
-use hubcaps::{
-    issues::{IssueListOptions, State},
-    Github,
-};
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
@@ -75,7 +74,11 @@ async fn main() -> Result<(), String> {
         dsn: sentry_dsn.into_dsn().unwrap(),
 
         release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
-        environment: Some(env::var("SENTRY_ENV").unwrap_or_else(|_| "development".to_string()).into()),
+        environment: Some(
+            env::var("SENTRY_ENV")
+                .unwrap_or_else(|_| "development".to_string())
+                .into(),
+        ),
         ..Default::default()
     });
 
@@ -95,8 +98,13 @@ async fn main() -> Result<(), String> {
      * For simplicity, we'll configure an "info"-level logger that writes to
      * stderr assuming that it's a terminal.
      */
-    let config_logging = ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Info };
-    let log = config_logging.to_logger("webhooky-server").map_err(|error| format!("failed to create logger: {}", error)).unwrap();
+    let config_logging = ConfigLogging::StderrTerminal {
+        level: ConfigLoggingLevel::Info,
+    };
+    let log = config_logging
+        .to_logger("webhooky-server")
+        .map_err(|error| format!("failed to create logger: {}", error))
+        .unwrap();
 
     // Describe the API.
     let mut api = ApiDescription::new();
@@ -107,18 +115,30 @@ async fn main() -> Result<(), String> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
-    api.register(listen_airtable_applicants_request_background_check_webhooks).unwrap();
-    api.register(listen_airtable_assets_items_print_barcode_label_webhooks).unwrap();
-    api.register(listen_airtable_employees_print_home_address_label_webhooks).unwrap();
-    api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
-    api.register(listen_airtable_shipments_outbound_create_webhooks).unwrap();
-    api.register(listen_airtable_shipments_outbound_reprint_label_webhooks).unwrap();
-    api.register(listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks).unwrap();
-    api.register(listen_airtable_shipments_outbound_schedule_pickup_webhooks).unwrap();
-    api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks).unwrap();
+    api.register(listen_airtable_applicants_request_background_check_webhooks)
+        .unwrap();
+    api.register(listen_airtable_assets_items_print_barcode_label_webhooks)
+        .unwrap();
+    api.register(listen_airtable_employees_print_home_address_label_webhooks)
+        .unwrap();
+    api.register(listen_airtable_shipments_inbound_create_webhooks)
+        .unwrap();
+    api.register(listen_airtable_shipments_outbound_create_webhooks)
+        .unwrap();
+    api.register(listen_airtable_shipments_outbound_reprint_label_webhooks)
+        .unwrap();
+    api.register(
+        listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks,
+    )
+    .unwrap();
+    api.register(listen_airtable_shipments_outbound_schedule_pickup_webhooks)
+        .unwrap();
+    api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks)
+        .unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_application_submit_requests).unwrap();
-    api.register(listen_application_files_upload_requests).unwrap();
+    api.register(listen_application_files_upload_requests)
+        .unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_github_callback).unwrap();
@@ -136,16 +156,22 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_slack_consent).unwrap();
     api.register(listen_auth_quickbooks_callback).unwrap();
     api.register(listen_auth_quickbooks_consent).unwrap();
-    api.register(listen_checkr_background_update_webhooks).unwrap();
-    api.register(listen_docusign_envelope_update_webhooks).unwrap();
-    api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
+    api.register(listen_checkr_background_update_webhooks)
+        .unwrap();
+    api.register(listen_docusign_envelope_update_webhooks)
+        .unwrap();
+    api.register(listen_emails_incoming_sendgrid_parse_webhooks)
+        .unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
-    api.register(listen_google_sheets_row_create_webhooks).unwrap();
+    api.register(listen_google_sheets_row_create_webhooks)
+        .unwrap();
     api.register(listen_github_webhooks).unwrap();
-    api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
+    api.register(listen_mailchimp_mailing_list_webhooks)
+        .unwrap();
     api.register(listen_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_products_sold_count_requests).unwrap();
-    api.register(listen_shippo_tracking_update_webhooks).unwrap();
+    api.register(listen_shippo_tracking_update_webhooks)
+        .unwrap();
     api.register(listen_slack_commands_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
@@ -184,7 +210,6 @@ async fn main() -> Result<(), String> {
  * Application-specific context (state shared by handler functions)
  */
 struct Context {
-    influx: influx::Client,
     db: Database,
 
     schema: String,
@@ -198,11 +223,7 @@ impl Context {
         let db = Database::new();
 
         // Create the context.
-        Context {
-            influx: influx::Client::new_from_env(),
-            db,
-            schema,
-        }
+        Context { db, schema }
     }
 }
 
@@ -217,7 +238,9 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
     Ok(HttpResponseOk(api_context.schema.to_string()))
@@ -242,7 +265,9 @@ struct CounterResponse {
     method = GET,
     path = "/products/sold/count",
 }]
-async fn listen_products_sold_count_requests(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
+async fn listen_products_sold_count_requests(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
     let api_context = rqctx.context();
 
     // TODO: find a better way to do this.
@@ -253,14 +278,17 @@ async fn listen_products_sold_count_requests(rqctx: Arc<RequestContext<Context>>
     // Get the applicants that need to be triaged.
     let applicants = applicants::dsl::applicants
         .filter(
-            applicants::dsl::cio_company_id
-                .eq(company.id)
-                .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
+            applicants::dsl::cio_company_id.eq(company.id).and(
+                applicants::dsl::status
+                    .eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
+            ),
         )
         .load::<Applicant>(&api_context.db.conn())
         .unwrap();
 
-    Ok(HttpResponseOk(CounterResponse { count: applicants.len() as i32 }))
+    Ok(HttpResponseOk(CounterResponse {
+        count: applicants.len() as i32,
+    }))
 }
 
 /** Listen for GitHub webhooks. */
@@ -268,7 +296,10 @@ async fn listen_products_sold_count_requests(rqctx: Arc<RequestContext<Context>>
     method = POST,
     path = "/github",
 }]
-async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_github_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<GitHubWebhook>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -286,16 +317,12 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param:
         .to_string();
     let event_type = EventType::from_str(&event_type_string).unwrap();
 
-    // Save all events to influxdb.
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
         EventType::Push => {
             println!("`{}` {:?}", event_type.name(), event);
-            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
-
-            let github = company.authenticate_github();
-
-            event.as_influx_push(&api_context.influx, &github).await;
+            let company =
+                Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
 
             // Ensure we have commits.
             if event.commits.is_empty() {
@@ -323,47 +350,19 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param:
                 // The branch name is empty.
                 // We can throw this out, log it and return early.
                 // This should never happen, but we won't rule it out because computers.
-                sentry::capture_message(&format!("`push` event branch name is empty: {:?}", event), sentry::Level::Fatal);
+                sentry::capture_message(
+                    &format!("`push` event branch name is empty: {:?}", event),
+                    sentry::Level::Fatal,
+                );
                 sentry::end_session();
                 return Ok(HttpResponseAccepted("ok".to_string()));
             }
         }
-        EventType::PullRequest => {
-            println!("`{}` {:?}", event_type.name(), event);
-            let influx_event = event.as_influx_pull_request();
-            api_context.influx.query(influx_event, event_type.name()).await;
-        }
-        EventType::PullRequestReviewComment => {
-            println!("`{}` {:?}", event_type.name(), event);
-            let influx_event = event.as_influx_pull_request_review_comment();
-            api_context.influx.query(influx_event, event_type.name()).await;
-        }
-        EventType::Issues => {
-            println!("`{}` {:?}", event_type.name(), event);
-            let influx_event = event.as_influx_issue();
-            api_context.influx.query(influx_event, event_type.name()).await;
-        }
-        EventType::IssueComment => {
-            println!("`{}` {:?}", event_type.name(), event);
-            let influx_event = event.as_influx_issue_comment();
-            api_context.influx.query(influx_event, event_type.name()).await;
-        }
-        EventType::CheckSuite => {
-            println!("`{}` {:?}", event_type.name(), event);
-            let influx_event = event.as_influx_check_suite();
-            api_context.influx.query(influx_event, event_type.name()).await;
-        }
-        EventType::CheckRun => {
-            println!("`{}` {:?}", event_type.name(), event);
-            let influx_event = event.as_influx_check_run();
-            api_context.influx.query(influx_event, event_type.name()).await;
-        }
         EventType::Repository => {
             println!("`{}` {:?}", event_type.name(), event);
-            let influx_event = event.as_influx_repository();
-            api_context.influx.query(influx_event, event_type.name()).await;
 
-            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
+            let company =
+                Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
             let github = company.authenticate_github();
 
             // Now let's handle the event.
@@ -405,7 +404,10 @@ async fn listen_github_webhooks(rqctx: Arc<RequestContext<Context>>, body_param:
             }
             _ => {
                 // We can throw this out, log it and return early.
-                println!("`{}` event was to the {} repo, no automations are set up for this repo yet", event_type, repo_name);
+                println!(
+                    "`{}` event was to the {} repo, no automations are set up for this repo yet",
+                    event_type, repo_name
+                );
             }
         }
     }
@@ -424,7 +426,10 @@ struct RFDPathParams {
     method = POST,
     path = "/rfd/{num}",
 }]
-async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_params: Path<RFDPathParams>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn trigger_rfd_update_by_number(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<RFDPathParams>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let num = path_params.into_inner().num;
     println!("Triggering an update for RFD number `{}`", num);
@@ -447,7 +452,10 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
-        sentry::capture_message(&format!("No RFD was found with number `{}`", num), sentry::Level::Fatal);
+        sentry::capture_message(
+            &format!("No RFD was found with number `{}`", num),
+            sentry::Level::Fatal,
+        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -456,8 +464,13 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     rfd.expand(&github, &oxide).await;
     println!("updated  RFD {}", rfd.number_string);
 
-    rfd.convert_and_upload_pdf(&github, &drive_client, &oxide).await;
-    println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
+    rfd.convert_and_upload_pdf(&github, &drive_client, &oxide)
+        .await;
+    println!(
+        "updated pdf `{}` for RFD {}",
+        rfd.get_pdf_filename(),
+        rfd.number_string
+    );
 
     // Save the rfd back to our database.
     rfd.update(db).await;
@@ -471,7 +484,9 @@ async fn trigger_rfd_update_by_number(rqctx: Arc<RequestContext<Context>>, path_
     method = GET,
     path = "/github/ratelimit",
 }]
-async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+async fn github_rate_limit(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -490,8 +505,8 @@ async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
 
     sentry::end_session();
     Ok(HttpResponseOk(GitHubRateLimit {
-        limit: response.resources.core.limit,
-        remaining: response.resources.core.remaining,
+        limit: response.resources.core.limit as u32,
+        remaining: response.resources.core.remaining as u32,
         reset: HumanTime::from(dur).to_string(),
     }))
 }
@@ -512,7 +527,10 @@ pub struct GitHubRateLimit {
     method = POST,
     path = "/google/sheets/edit",
 }]
-async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GoogleSpreadsheetEditEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_edit_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<GoogleSpreadsheetEditEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
     let api_context = rqctx.context();
@@ -547,11 +565,17 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
     //  - The name of the column that was updated.
     // Let's first get the email for this applicant. This is always in column B.
     let mut cell_name = format!("B{}", event.event.range.row_start);
-    let email = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
+    let email = sheets
+        .get_value(&event.spreadsheet.id, cell_name)
+        .await
+        .unwrap();
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
-        sentry::capture_message(&format!("email cell returned empty for event: {:?}", event), sentry::Level::Fatal);
+        sentry::capture_message(
+            &format!("email cell returned empty for event: {:?}", event),
+            sentry::Level::Fatal,
+        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -560,8 +584,19 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
     // This is always in row 1.
     // These should be zero indexed.
     let column_letters = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    cell_name = format!("{}1", column_letters.chars().nth(event.event.range.column_start.try_into().unwrap()).unwrap().to_string());
-    let column_header = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+    cell_name = format!(
+        "{}1",
+        column_letters
+            .chars()
+            .nth(event.event.range.column_start.try_into().unwrap())
+            .unwrap()
+            .to_string()
+    );
+    let column_header = sheets
+        .get_value(&event.spreadsheet.id, cell_name)
+        .await
+        .unwrap()
+        .to_lowercase();
 
     // Now let's get the applicant from the database so we can update it.
     let result = applicants::dsl::applicants
@@ -570,7 +605,10 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
         .first::<Applicant>(&db.conn());
     if result.is_err() {
         sentry::capture_message(
-            &format!("could not find applicant with email `{}`, sheet_id `{}` in the database", email, event.spreadsheet.id),
+            &format!(
+                "could not find applicant with email `{}`, sheet_id `{}` in the database",
+                email, event.spreadsheet.id
+            ),
             sentry::Level::Fatal,
         );
         sentry::end_session();
@@ -591,7 +629,9 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
         }
     } else if column_header.contains("status") {
         // Parse the new status.
-        let mut status = cio_api::applicant_status::Status::from_str(&event.event.value).unwrap_or_default().to_string();
+        let mut status = cio_api::applicant_status::Status::from_str(&event.event.value)
+            .unwrap_or_default()
+            .to_string();
         status = status.trim().to_string();
         if !status.is_empty() {
             a.status = status;
@@ -606,11 +646,16 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
                 let dsa = oxide.authenticate_docusign(db).await;
                 if let Some(ds) = dsa {
                     // Get the template we need.
-                    let offer_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
+                    let offer_template_id =
+                        get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE)
+                            .await;
 
-                    a.do_docusign_offer(db, &ds, &offer_template_id, &oxide).await;
+                    a.do_docusign_offer(db, &ds, &offer_template_id, &oxide)
+                        .await;
 
-                    let piia_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE).await;
+                    let piia_template_id =
+                        get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE)
+                            .await;
                     a.do_docusign_piia(db, &ds, &piia_template_id, &oxide).await;
                 }
             }
@@ -622,7 +667,14 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
             match NaiveDate::parse_from_str(event.event.value.trim(), "%m/%d/%Y") {
                 Ok(v) => a.start_date = Some(v),
                 Err(e) => {
-                    sentry::capture_message(&format!("error parsing start date from spreadsheet {}: {}", event.event.value.trim(), e), sentry::Level::Info);
+                    sentry::capture_message(
+                        &format!(
+                            "error parsing start date from spreadsheet {}: {}",
+                            event.event.value.trim(),
+                            e
+                        ),
+                        sentry::Level::Info,
+                    );
                     a.start_date = None
                 }
             }
@@ -637,34 +689,84 @@ async fn listen_google_sheets_edit_webhooks(rqctx: Arc<RequestContext<Context>>,
         // The person updated the values in tension.
         // We need to get the other value in tension in the next column to the right.
         let value_column = event.event.range.column_start + 1;
-        cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
-        let value_in_tension_2 = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+        cell_name = format!(
+            "{}{}",
+            column_letters
+                .chars()
+                .nth(value_column.try_into().unwrap())
+                .unwrap()
+                .to_string(),
+            event.event.range.row_start
+        );
+        let value_in_tension_2 = sheets
+            .get_value(&event.spreadsheet.id, cell_name)
+            .await
+            .unwrap()
+            .to_lowercase();
         a.values_in_tension = vec![value_in_tension_2, event.event.value.to_lowercase()];
     } else if column_header.contains("value in tension [2]") {
         // The person updated the values in tension.
         // We need to get the other value in tension in the next column to the left.
         let value_column = event.event.range.column_start - 1;
-        cell_name = format!("{}{}", column_letters.chars().nth(value_column.try_into().unwrap()).unwrap().to_string(), event.event.range.row_start);
-        let value_in_tension_1 = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap().to_lowercase();
+        cell_name = format!(
+            "{}{}",
+            column_letters
+                .chars()
+                .nth(value_column.try_into().unwrap())
+                .unwrap()
+                .to_string(),
+            event.event.range.row_start
+        );
+        let value_in_tension_1 = sheets
+            .get_value(&event.spreadsheet.id, cell_name)
+            .await
+            .unwrap()
+            .to_lowercase();
         a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
         // If this is a field wehipmentdon't care about, return early.
-        println!("column updated was `{}`, no automations set up for that column yet", column_header);
+        println!(
+            "column updated was `{}`, no automations set up for that column yet",
+            column_header
+        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Update the applicant in the database and Airtable.
     let new_applicant = a.update(db).await;
+    let company = Company::get_by_id(db, new_applicant.cio_company_id);
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
-        .repo(&oxide.github_org, "configs")
         .issues()
-        .list(&IssueListOptions::builder().per_page(100).state(State::All).labels(vec!["hiring"]).build())
+        .list_all_for_repo(
+            &company.github_org,
+            "configs",
+            // milestone
+            "",
+            octorust::types::IssuesListState::All,
+            // assignee
+            "",
+            // creator
+            "",
+            // mentioned
+            "",
+            // labels
+            "hiring",
+            // sort
+            Default::default(),
+            // direction
+            Default::default(),
+            // since
+            None,
+        )
         .await
         .unwrap();
-    new_applicant.create_github_onboarding_issue(db, &github, &configs_issues).await;
+
+    new_applicant
+        .create_github_onboarding_issue(db, &github, &configs_issues)
+        .await;
 
     println!("applicant {} updated successfully", new_applicant.email);
     sentry::end_session();
@@ -684,19 +786,36 @@ pub struct GoogleSpreadsheetEditEvent {
 pub struct GoogleSpreadsheetEvent {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "authMode")]
     pub auth_mode: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "oldValue", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "oldValue",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub old_value: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub value: String,
     #[serde(default)]
     pub range: GoogleSpreadsheetRange,
     #[serde(default)]
     pub source: GoogleSpreadsheetSource,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "triggerUid")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "triggerUid"
+    )]
     pub trigger_uid: String,
     #[serde(default)]
     pub user: GoogleSpreadsheetUser,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty", rename = "namedValues")]
+    #[serde(
+        default,
+        skip_serializing_if = "HashMap::is_empty",
+        rename = "namedValues"
+    )]
     pub named_values: HashMap<String, Vec<String>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub values: Vec<String>,
@@ -741,7 +860,10 @@ pub struct GoogleSpreadsheet {
     method = POST,
     path = "/google/sheets/row/create",
 }]
-async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_google_sheets_row_create_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
     let api_context = rqctx.context();
@@ -773,10 +895,14 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
     }
 
     // Parse the applicant out of the row information.
-    let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
+    let mut applicant =
+        NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
 
     if applicant.email.is_empty() {
-        sentry::capture_message(&format!("applicant has an empty email: {:?}", applicant), sentry::Level::Fatal);
+        sentry::capture_message(
+            &format!("applicant has an empty email: {:?}", applicant),
+            sentry::Level::Fatal,
+        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -797,7 +923,10 @@ async fn listen_google_sheets_row_create_webhooks(rqctx: Arc<RequestContext<Cont
         .await;
 
     if !applicant.sent_email_received {
-        println!("applicant is new, sending internal notifications: {:?}", applicant);
+        println!(
+            "applicant is new, sending internal notifications: {:?}",
+            applicant
+        );
 
         // Send a company-wide email.
         applicant.send_email_internally(db).await;
@@ -829,7 +958,10 @@ pub struct GoogleSpreadsheetRowCreateEvent {
     method = POST,
     path = "/airtable/employees/print_home_address_label",
 }]
-async fn listen_airtable_employees_print_home_address_label_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_employees_print_home_address_label_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -843,7 +975,8 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(rqctx: Arc<
     }
 
     // Get the row from airtable.
-    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let user =
+        User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Create a new shipment for the employee and print the label.
     user.create_shipment_to_home_address(&api_context.db).await;
@@ -859,7 +992,10 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(rqctx: Arc<
     method = POST,
     path = "/airtable/assets/items/print_barcode_label",
 }]
-async fn listen_airtable_assets_items_print_barcode_label_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_assets_items_print_barcode_label_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -873,7 +1009,8 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(rqctx: Arc<Re
     }
 
     // Get the row from airtable.
-    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let asset_item =
+        AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Print the barcode label(s).
     asset_item.print_label(&api_context.db).await;
@@ -907,11 +1044,19 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     }
 
     // Get the row from airtable.
-    let swag_inventory_item = SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let swag_inventory_item = SwagInventoryItem::get_from_airtable(
+        &event.record_id,
+        &api_context.db,
+        event.cio_company_id,
+    )
+    .await;
 
     // Print the barcode label(s).
     swag_inventory_item.print_label(&api_context.db).await;
-    println!("swag inventory item {} printed label", swag_inventory_item.name);
+    println!(
+        "swag inventory item {} printed label",
+        swag_inventory_item.name
+    );
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -924,7 +1069,10 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     method = POST,
     path = "/airtable/applicants/request_background_check",
 }]
-async fn listen_airtable_applicants_request_background_check_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_applicants_request_background_check_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -938,11 +1086,17 @@ async fn listen_airtable_applicants_request_background_check_webhooks(rqctx: Arc
     }
 
     // Get the row from airtable.
-    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let mut applicant =
+        Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
     if applicant.criminal_background_check_status.is_empty() {
         // Request the background check, since we previously have not requested one.
-        applicant.send_background_check_invitation(&api_context.db).await;
-        println!("sent background check invitation to applicant: {}", applicant.email);
+        applicant
+            .send_background_check_invitation(&api_context.db)
+            .await;
+        println!(
+            "sent background check invitation to applicant: {}",
+            applicant.email
+        );
     }
 
     sentry::end_session();
@@ -957,7 +1111,10 @@ async fn listen_airtable_applicants_request_background_check_webhooks(rqctx: Arc
     method = POST,
     path = "/airtable/shipments/outbound/create",
 }]
-async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_create_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -975,7 +1132,10 @@ async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestCo
     let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, 1).await;
 
     // If it is a row we created from our internal store do nothing.
-    if shipment.notes.contains("Oxide store") || shipment.notes.contains("Google sheet") || shipment.notes.contains("Internal") {
+    if shipment.notes.contains("Oxide store")
+        || shipment.notes.contains("Google sheet")
+        || shipment.notes.contains("Internal")
+    {
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -988,7 +1148,9 @@ async fn listen_airtable_shipments_outbound_create_webhooks(rqctx: Arc<RequestCo
     // Update the row in our database.
     let mut new_shipment = shipment.update(&api_context.db).await;
     // Create the shipment in shippo.
-    new_shipment.create_or_get_shippo_shipment(&api_context.db).await;
+    new_shipment
+        .create_or_get_shippo_shipment(&api_context.db)
+        .await;
     // Update airtable again.
     new_shipment.update(&api_context.db).await;
 
@@ -1013,7 +1175,10 @@ pub struct AirtableRowEvent {
     method = POST,
     path = "/airtable/shipments/outbound/reprint_label",
 }]
-async fn listen_airtable_shipments_outbound_reprint_label_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -1027,7 +1192,12 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(rqctx: Arc<Re
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let mut shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let mut shipment = OutboundShipment::get_from_airtable(
+        &event.record_id,
+        &api_context.db,
+        event.cio_company_id,
+    )
+    .await;
 
     // Reprint the label.
     shipment.print_label(&api_context.db).await;
@@ -1067,11 +1237,19 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let shipment = OutboundShipment::get_from_airtable(
+        &event.record_id,
+        &api_context.db,
+        event.cio_company_id,
+    )
+    .await;
 
     // Resend the email to the recipient.
     shipment.send_email_to_recipient(&api_context.db).await;
-    println!("resent the shipment email to the recipient {}", shipment.email);
+    println!(
+        "resent the shipment email to the recipient {}",
+        shipment.email
+    );
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1084,7 +1262,10 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     method = POST,
     path = "/airtable/shipments/outbound/schedule_pickup",
 }]
-async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("pickup shipment {:?}", event);
@@ -1113,7 +1294,11 @@ pub struct IncomingEmail {
     pub dkim: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "content-ids")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "content-ids"
+    )]
     pub content_ids: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub to: String,
@@ -1137,7 +1322,11 @@ pub struct IncomingEmail {
     pub subject: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub spam_score: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "attachment-info")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "attachment-info"
+    )]
     pub attachment_info: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub charsets: String,
@@ -1153,7 +1342,10 @@ pub struct IncomingEmail {
     method = POST,
     path = "/emails/incoming/sendgrid/parse",
 }]
-async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_emails_incoming_sendgrid_parse_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
     // Parse the body as bytes.
@@ -1176,7 +1368,8 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     // Parse the form body.
     for (name, value) in &form_data.fields {
         if i.carrier.is_empty() && (name == "html" || name == "text" || name == "email") {
-            let (carrier, tracking_number) = crate::tracking_numbers::parse_tracking_information(value);
+            let (carrier, tracking_number) =
+                crate::tracking_numbers::parse_tracking_information(value);
             if !carrier.is_empty() {
                 i.carrier = carrier.to_string();
                 i.tracking_number = tracking_number.to_string();
@@ -1195,10 +1388,19 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
                     .to_string();
             } else if value.contains("Arrow Order") {
                 i.name = "Arrow".to_string();
-                i.order_number = value.replace("Fwd:", "").replace("Arrow Order #", "").trim().to_string();
+                i.order_number = value
+                    .replace("Fwd:", "")
+                    .replace("Arrow Order #", "")
+                    .trim()
+                    .to_string();
             } else if value.contains("Microchip Order #") {
                 i.name = "Microchip".to_string();
-                i.order_number = value.replace("Fwd:", "").replace("Your Microchip Order #", "").replace("Has Been Shipped", "").trim().to_string();
+                i.order_number = value
+                    .replace("Fwd:", "")
+                    .replace("Your Microchip Order #", "")
+                    .replace("Has Been Shipped", "")
+                    .trim()
+                    .to_string();
             } else if value.contains("TI.com order") {
                 i.name = "Texas Instruments".to_string();
                 i.order_number = value
@@ -1224,7 +1426,10 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
 
     if i.carrier.is_empty() {
         sentry::capture_message(
-            &format!("could not find shipment for email:shipment: {:?}\nfields: {:?}\nfiles: {:?}", i, form_data.fields, form_data.files),
+            &format!(
+                "could not find shipment for email:shipment: {:?}\nfields: {:?}\nfiles: {:?}",
+                i, form_data.fields, form_data.files
+            ),
             sentry::Level::Info,
         );
 
@@ -1247,16 +1452,25 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(rqctx: Arc<RequestContex
     method = POST,
     path = "/application/submit",
 }]
-async fn listen_application_submit_requests(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<cio_api::application_form::ApplicationForm>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_application_submit_requests(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<cio_api::application_form::ApplicationForm>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = body_param.into_inner();
 
-    sentry::capture_message(&format!("application submit: {:?}", event), sentry::Level::Info);
+    sentry::capture_message(
+        &format!("application submit: {:?}", event),
+        sentry::Level::Info,
+    );
 
     event.do_form(&api_context.db).await;
 
-    println!("application for {} {} created successfully", event.email, event.role);
+    println!(
+        "application for {} {} created successfully",
+        event.email, event.role
+    );
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1268,7 +1482,10 @@ async fn listen_application_submit_requests(rqctx: Arc<RequestContext<Context>>,
     method = POST,
     path = "/application/files/upload",
 }]
-async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
+async fn listen_application_files_upload_requests(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
     sentry::start_session();
 
     // Parse the body as bytes.
@@ -1304,9 +1521,17 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
 
-    if email.is_empty() || role.is_empty() || cio_company_id <= 0 || form_data.files.is_empty() || user_name.is_empty() {
+    if email.is_empty()
+        || role.is_empty()
+        || cio_company_id <= 0
+        || form_data.files.is_empty()
+        || user_name.is_empty()
+    {
         sentry::capture_message(
-            &format!("could not get applicant information for fields: {:?}\nfiles: {:?}", form_data.fields, form_data.files),
+            &format!(
+                "could not get applicant information for fields: {:?}\nfiles: {:?}",
+                form_data.fields, form_data.files
+            ),
             sentry::Level::Info,
         );
 
@@ -1329,17 +1554,29 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"application_content"
-    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive
+        .get_drive_by_name("Automated Documents")
+        .await
+        .unwrap();
 
     // Get the directory by the name.
-    let drive_dir = drive.get_file_by_name(&shared_drive.id, "application_content").await.unwrap();
+    let drive_dir = drive
+        .get_file_by_name(&shared_drive.id, "application_content")
+        .await
+        .unwrap();
     let parent_id = drive_dir.get(0).unwrap().id.to_string();
 
     // Create the folder for our candidate with their email.
-    let email_folder_id = drive.create_folder(&shared_drive.id, &parent_id, &email).await.unwrap();
+    let email_folder_id = drive
+        .create_folder(&shared_drive.id, &parent_id, &email)
+        .await
+        .unwrap();
 
     // Create the folder for our candidate with the role.
-    let role_folder_id = drive.create_folder(&shared_drive.id, &email_folder_id, &role).await.unwrap();
+    let role_folder_id = drive
+        .create_folder(&shared_drive.id, &email_folder_id, &role)
+        .await
+        .unwrap();
 
     // Create a hashmap of our files.
     let mut files: HashMap<String, String> = HashMap::new();
@@ -1370,9 +1607,21 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
         let file_name = format!("{} - {}.{}", user_name, about_file, ext);
 
         // Upload our file to drive.
-        let drive_file = drive.create_or_update_file(&shared_drive.id, &role_folder_id, &file_name, &content_type, &buffer).await.unwrap();
+        let drive_file = drive
+            .create_or_update_file(
+                &shared_drive.id,
+                &role_folder_id,
+                &file_name,
+                &content_type,
+                &buffer,
+            )
+            .await
+            .unwrap();
         // Add the file to our links.
-        response.insert(about_file.to_string(), format!("https://drive.google.com/open?id={}", drive_file.id));
+        response.insert(
+            about_file.to_string(),
+            format!("https://drive.google.com/open?id={}", drive_file.id),
+        );
     }
 
     sentry::end_session();
@@ -1380,7 +1629,9 @@ async fn listen_application_files_upload_requests(rqctx: Arc<RequestContext<Cont
 }
 
 fn get_extension_from_filename(filename: &str) -> Option<&str> {
-    std::path::Path::new(filename).extension().and_then(OsStr::to_str)
+    std::path::Path::new(filename)
+        .extension()
+        .and_then(OsStr::to_str)
 }
 
 /**
@@ -1391,7 +1642,10 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
     method = POST,
     path = "/airtable/shipments/inbound/create",
 }]
-async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<AirtableRowEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_airtable_shipments_inbound_create_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -1411,7 +1665,10 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
-        sentry::capture_message("tracking_number and carrier are empty, ignoring", sentry::Level::Fatal);
+        sentry::capture_message(
+            "tracking_number and carrier are empty, ignoring",
+            sentry::Level::Fatal,
+        );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1425,7 +1682,10 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     }
     shipment.update(db).await;
 
-    println!("inbound shipment {} updated successfully", shipment.tracking_number);
+    println!(
+        "inbound shipment {} updated successfully",
+        shipment.tracking_number
+    );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1437,7 +1697,10 @@ async fn listen_airtable_shipments_inbound_create_webhooks(rqctx: Arc<RequestCon
     method = POST,
     path = "/store/order",
 }]
-async fn listen_store_order_create(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<Order>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_store_order_create(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<Order>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -1457,16 +1720,27 @@ async fn listen_store_order_create(rqctx: Arc<RequestContext<Context>>, body_par
     method = POST,
     path = "/shippo/tracking/update",
 }]
-async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_shippo_tracking_update_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<serde_json::Value>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
-        sentry::capture_message(&format!("decoding event body for shippo `{}` failed: {}", event.to_string(), e), sentry::Level::Info);
+    let body: ShippoTrackingUpdateEvent =
+        serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
+            sentry::capture_message(
+                &format!(
+                    "decoding event body for shippo `{}` failed: {}",
+                    event.to_string(),
+                    e
+                ),
+                sentry::Level::Info,
+            );
 
-        Default::default()
-    });
+            Default::default()
+        });
 
     let ts = body.data;
     if ts.tracking_number.is_empty() || ts.carrier.is_empty() {
@@ -1477,7 +1751,11 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
     }
 
     // Update the inbound shipment, if it exists.
-    if let Some(mut shipment) = InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()) {
+    if let Some(mut shipment) = InboundShipment::get_from_db(
+        &api_context.db,
+        ts.carrier.to_string(),
+        ts.tracking_number.to_string(),
+    ) {
         // Get the tracking status for the shipment and fill in the details.
         shipment.tracking_number = ts.tracking_number.to_string();
         let tracking_status = ts.tracking_status.unwrap_or_default();
@@ -1495,7 +1773,11 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
         for h in ts.tracking_history {
             if h.status == *"TRANSIT" {
                 if let Some(shipped_time) = h.status_date {
-                    let current_shipped_time = if let Some(s) = shipment.shipped_time { s } else { Utc::now() };
+                    let current_shipped_time = if let Some(s) = shipment.shipped_time {
+                        s
+                    } else {
+                        Utc::now()
+                    };
 
                     if shipped_time < current_shipped_time {
                         shipment.shipped_time = Some(shipped_time);
@@ -1512,15 +1794,24 @@ async fn listen_shippo_tracking_update_webhooks(rqctx: Arc<RequestContext<Contex
     }
 
     // Update the outbound shipment if it exists.
-    if let Some(mut shipment) = OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()) {
+    if let Some(mut shipment) = OutboundShipment::get_from_db(
+        &api_context.db,
+        ts.carrier.to_string(),
+        ts.tracking_number.to_string(),
+    ) {
         // Update the shipment in shippo.
         // TODO: we likely don't need the extra request here, but it makes the code more DRY.
         // Clean this up eventually.
-        shipment.create_or_get_shippo_shipment(&api_context.db).await;
+        shipment
+            .create_or_get_shippo_shipment(&api_context.db)
+            .await;
         shipment.update(&api_context.db).await;
     }
 
-    println!("shipment {} tracking status updated successfully", ts.tracking_number);
+    println!(
+        "shipment {} tracking status updated successfully",
+        ts.tracking_number
+    );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1541,16 +1832,25 @@ pub struct ShippoTrackingUpdateEvent {
     method = POST,
     path = "/checkr/background/update",
 }]
-async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<checkr::WebhookEvent>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_checkr_background_update_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<checkr::WebhookEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = body_param.into_inner();
 
     // Run the update of the background checks.
     // If we have a candidate ID let's get them from checkr.
-    if event.data.object.candidate_id.is_empty() || event.data.object.package.is_empty() || event.data.object.status.is_empty() {
+    if event.data.object.candidate_id.is_empty()
+        || event.data.object.package.is_empty()
+        || event.data.object.status.is_empty()
+    {
         // Return early we don't care.
-        sentry::capture_message(&format!("checkr candidate id is empty for event: {:?}", event), sentry::Level::Info);
+        sentry::capture_message(
+            &format!("checkr candidate id is empty for event: {:?}", event),
+            sentry::Level::Info,
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -1560,20 +1860,32 @@ async fn listen_checkr_background_update_webhooks(rqctx: Arc<RequestContext<Cont
     let checkr_auth = oxide.authenticate_checkr();
     if checkr_auth.is_none() {
         // Return early.
-        sentry::capture_message(&format!("this company {:?} does not have a checkr api key: {:?}", oxide, event), sentry::Level::Info);
+        sentry::capture_message(
+            &format!(
+                "this company {:?} does not have a checkr api key: {:?}",
+                oxide, event
+            ),
+            sentry::Level::Info,
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     let checkr = checkr_auth.unwrap();
-    let candidate = checkr.get_candidate(&event.data.object.candidate_id).await.unwrap();
+    let candidate = checkr
+        .get_candidate(&event.data.object.candidate_id)
+        .await
+        .unwrap();
     let result = applicants::dsl::applicants
         .filter(
             applicants::dsl::email
                 .eq(candidate.email.to_string())
                 // TODO: matching on name might be a bad idea here.
-                .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
+                .or(applicants::dsl::name
+                    .eq(format!("{} {}", candidate.first_name, candidate.last_name))),
         )
-        .filter(applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()))
+        .filter(
+            applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()),
+        )
         .first::<Applicant>(&api_context.db.conn());
     if result.is_ok() {
         let mut applicant = result.unwrap();
@@ -1615,7 +1927,9 @@ pub struct AuthCallback {
     method = GET,
     path = "/auth/google/consent",
 }]
-async fn listen_auth_google_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_google_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     sentry::end_session();
@@ -1629,7 +1943,10 @@ async fn listen_auth_google_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
     method = GET,
     path = "/auth/google/callback",
 }]
-async fn listen_auth_google_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_google_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = query_args.into_inner();
 
@@ -1646,7 +1963,9 @@ async fn listen_auth_google_callback(rqctx: Arc<RequestContext<Context>>, query_
     method = GET,
     path = "/auth/github/consent",
 }]
-async fn listen_auth_github_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_github_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     sentry::end_session();
@@ -1660,11 +1979,17 @@ async fn listen_auth_github_consent(_rqctx: Arc<RequestContext<Context>>) -> Res
     method = GET,
     path = "/auth/github/callback",
 }]
-async fn listen_auth_github_callback(_rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_github_callback(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<serde_json::Value>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
 
-    sentry::capture_message(&format!("github callback: {:?}", event), sentry::Level::Info);
+    sentry::capture_message(
+        &format!("github callback: {:?}", event),
+        sentry::Level::Info,
+    );
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1675,14 +2000,18 @@ async fn listen_auth_github_callback(_rqctx: Arc<RequestContext<Context>>, body_
     method = GET,
     path = "/auth/mailchimp/consent",
 }]
-async fn listen_auth_mailchimp_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_mailchimp_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     // Initialize the MailChimp client.
     let g = MailChimp::new_from_env("", "", "");
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+    Ok(HttpResponseOk(UserConsentURL {
+        url: g.user_consent_url(),
+    }))
 }
 
 /** Listen for callbacks to MailChimp auth. */
@@ -1690,7 +2019,10 @@ async fn listen_auth_mailchimp_consent(_rqctx: Arc<RequestContext<Context>>) -> 
     method = GET,
     path = "/auth/mailchimp/callback",
 }]
-async fn listen_auth_mailchimp_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_mailchimp_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
@@ -1749,14 +2081,18 @@ async fn listen_auth_mailchimp_callback(rqctx: Arc<RequestContext<Context>>, que
     method = GET,
     path = "/auth/gusto/consent",
 }]
-async fn listen_auth_gusto_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_gusto_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     // Initialize the Gusto client.
     let g = Gusto::new_from_env("", "", "");
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+    Ok(HttpResponseOk(UserConsentURL {
+        url: g.user_consent_url(),
+    }))
 }
 
 /** Listen for callbacks to Gusto auth. */
@@ -1764,7 +2100,10 @@ async fn listen_auth_gusto_consent(_rqctx: Arc<RequestContext<Context>>) -> Resu
     method = GET,
     path = "/auth/gusto/callback",
 }]
-async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_gusto_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
@@ -1828,14 +2167,18 @@ async fn listen_auth_gusto_callback(rqctx: Arc<RequestContext<Context>>, query_a
     method = GET,
     path = "/auth/ramp/consent",
 }]
-async fn listen_auth_ramp_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_ramp_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     // Initialize the Ramp client.
     let g = Ramp::new_from_env("", "");
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+    Ok(HttpResponseOk(UserConsentURL {
+        url: g.user_consent_url(),
+    }))
 }
 
 /** Listen for callbacks to Ramp auth. */
@@ -1843,7 +2186,10 @@ async fn listen_auth_ramp_consent(_rqctx: Arc<RequestContext<Context>>) -> Resul
     method = GET,
     path = "/auth/ramp/callback",
 }]
-async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_ramp_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
@@ -1901,14 +2247,18 @@ async fn listen_auth_ramp_callback(rqctx: Arc<RequestContext<Context>>, query_ar
     method = GET,
     path = "/auth/slack/consent",
 }]
-async fn listen_auth_slack_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_slack_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     // Initialize the Slack client.
     let s = Slack::new_from_env("", "", "");
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: s.user_consent_url() }))
+    Ok(HttpResponseOk(UserConsentURL {
+        url: s.user_consent_url(),
+    }))
 }
 
 /** Listen for callbacks to Slack auth. */
@@ -1916,7 +2266,10 @@ async fn listen_auth_slack_consent(_rqctx: Arc<RequestContext<Context>>) -> Resu
     method = GET,
     path = "/auth/slack/callback",
 }]
-async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_slack_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
@@ -2038,14 +2391,18 @@ async fn listen_auth_slack_callback(rqctx: Arc<RequestContext<Context>>, query_a
     method = GET,
     path = "/auth/quickbooks/consent",
 }]
-async fn listen_auth_quickbooks_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_quickbooks_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     // Initialize the QuickBooks client.
     let g = QuickBooks::new_from_env("", "", "");
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+    Ok(HttpResponseOk(UserConsentURL {
+        url: g.user_consent_url(),
+    }))
 }
 
 /** Listen for callbacks to QuickBooks auth. */
@@ -2053,7 +2410,10 @@ async fn listen_auth_quickbooks_consent(_rqctx: Arc<RequestContext<Context>>) ->
     method = GET,
     path = "/auth/quickbooks/callback",
 }]
-async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_quickbooks_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
@@ -2111,7 +2471,10 @@ async fn listen_auth_quickbooks_callback(rqctx: Arc<RequestContext<Context>>, qu
     method = POST,
     path = "/plaid",
 }]
-async fn listen_auth_plaid_callback(_rqctx: Arc<RequestContext<Context>>, body_args: TypedBody<serde_json::Value>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_plaid_callback(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_args: TypedBody<serde_json::Value>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_args.into_inner();
 
@@ -2126,14 +2489,18 @@ async fn listen_auth_plaid_callback(_rqctx: Arc<RequestContext<Context>>, body_a
     method = GET,
     path = "/auth/docusign/consent",
 }]
-async fn listen_auth_docusign_consent(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+async fn listen_auth_docusign_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
     // Initialize the DocuSign client.
     let g = DocuSign::new_from_env("", "", "", "");
 
     sentry::end_session();
-    Ok(HttpResponseOk(UserConsentURL { url: g.user_consent_url() }))
+    Ok(HttpResponseOk(UserConsentURL {
+        url: g.user_consent_url(),
+    }))
 }
 
 /** Listen for callbacks to DocuSign auth. */
@@ -2141,7 +2508,10 @@ async fn listen_auth_docusign_consent(_rqctx: Arc<RequestContext<Context>>) -> R
     method = GET,
     path = "/auth/docusign/callback",
 }]
-async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, query_args: Query<AuthCallback>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_auth_docusign_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let event = query_args.into_inner();
@@ -2198,7 +2568,10 @@ async fn listen_auth_docusign_callback(rqctx: Arc<RequestContext<Context>>, quer
     method = POST,
     path = "/docusign/envelope/update",
 }]
-async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<docusign::Envelope>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_docusign_envelope_update_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<docusign::Envelope>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -2217,11 +2590,16 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
             if let Some(ds) = dsa {
-                applicant.update_applicant_from_docusign_offer_envelope(db, &ds, event.clone()).await;
+                applicant
+                    .update_applicant_from_docusign_offer_envelope(db, &ds, event.clone())
+                    .await;
             }
         }
         Err(e) => {
-            println!("database could not find applicant with docusign offer envelope id {}: {}", event.envelope_id, e);
+            println!(
+                "database could not find applicant with docusign offer envelope id {}: {}",
+                event.envelope_id, e
+            );
         }
     }
 
@@ -2237,11 +2615,16 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
             if let Some(ds) = dsa {
-                applicant.update_applicant_from_docusign_piia_envelope(db, &ds, event).await;
+                applicant
+                    .update_applicant_from_docusign_piia_envelope(db, &ds, event)
+                    .await;
             }
         }
         Err(e) => {
-            println!("database could not find applicant with docusign piia envelope id {}: {}", event.envelope_id, e);
+            println!(
+                "database could not find applicant with docusign piia envelope id {}: {}",
+                event.envelope_id, e
+            );
         }
     }
 
@@ -2254,7 +2637,10 @@ async fn listen_docusign_envelope_update_webhooks(rqctx: Arc<RequestContext<Cont
     method = POST,
     path = "/analytics/page_view",
 }]
-async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<NewPageView>) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_analytics_page_view_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<NewPageView>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -2269,7 +2655,10 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext<Context>>
     // Add the page_view to the database and Airttable.
     let pv = event.create(db).await;
 
-    println!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
+    println!(
+        "page_view `{} | {}` created successfully",
+        pv.page_link, pv.user_email
+    );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -2279,7 +2668,9 @@ async fn listen_analytics_page_view_webhooks(rqctx: Arc<RequestContext<Context>>
     method = GET,
     path = "/mailchimp/mailing_list",
 }]
-async fn ping_mailchimp_mailing_list_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping_mailchimp_mailing_list_webhooks(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("ok".to_string()))
 }
 
@@ -2288,7 +2679,10 @@ async fn ping_mailchimp_mailing_list_webhooks(_rqctx: Arc<RequestContext<Context
     method = POST,
     path = "/mailchimp/mailing_list",
 }]
-async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_mailchimp_mailing_list_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -2328,7 +2722,9 @@ async fn listen_mailchimp_mailing_list_webhooks(rqctx: Arc<RequestContext<Contex
     method = GET,
     path = "/mailchimp/rack_line",
 }]
-async fn ping_mailchimp_rack_line_webhooks(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping_mailchimp_rack_line_webhooks(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("ok".to_string()))
 }
 
@@ -2337,7 +2733,10 @@ async fn ping_mailchimp_rack_line_webhooks(_rqctx: Arc<RequestContext<Context>>)
     method = POST,
     path = "/mailchimp/rack_line",
 }]
-async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn listen_mailchimp_rack_line_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -2384,7 +2783,10 @@ async fn listen_mailchimp_rack_line_webhooks(rqctx: Arc<RequestContext<Context>>
     method = POST,
     path = "/slack/commands",
 }]
-async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
+async fn listen_slack_commands_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -2405,13 +2807,24 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
         SlackCommand::RFD => {
             let num = text.parse::<i32>().unwrap_or(0);
             if num > 0 {
-                if let Ok(rfd) = rfds::dsl::rfds.filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num))).first::<RFD>(&db.conn()) {
+                if let Ok(rfd) = rfds::dsl::rfds
+                    .filter(
+                        rfds::dsl::cio_company_id
+                            .eq(company.id)
+                            .and(rfds::dsl::number.eq(num)),
+                    )
+                    .first::<RFD>(&db.conn())
+                {
                     json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: rfd.as_slack_msg(),
                     })
                 } else if let Ok(rfd) = rfds::dsl::rfds
-                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.ilike(format!("%{}%", text))))
+                    .filter(
+                        rfds::dsl::cio_company_id
+                            .eq(company.id)
+                            .and(rfds::dsl::name.ilike(format!("%{}%", text))),
+                    )
                     .first::<RFD>(&db.conn())
                 {
                     json!(MessageResponse {
@@ -2421,11 +2834,18 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 } else {
                     json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
-                        text: format!("Sorry <@{}> :scream: I could not find an RFD matching `{}`", bot_command.user_id, text),
+                        text: format!(
+                            "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
+                            bot_command.user_id, text
+                        ),
                     })
                 }
             } else if let Ok(rfd) = rfds::dsl::rfds
-                .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::name.ilike(format!("%{}%", text))))
+                .filter(
+                    rfds::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(rfds::dsl::name.ilike(format!("%{}%", text))),
+                )
                 .first::<RFD>(&db.conn())
             {
                 json!(MessageResponse {
@@ -2435,7 +2855,10 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
             } else {
                 json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
-                    text: format!("Sorry <@{}> :scream: I could not find an RFD matching `{}`", bot_command.user_id, text),
+                    text: format!(
+                        "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
+                        bot_command.user_id, text
+                    ),
                 })
             }
         }
@@ -2443,7 +2866,11 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
             let mut name = text.replace(" ", "-");
             if name.is_empty() {
                 // Generate a new random string.
-                name = thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect();
+                name = thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(6)
+                    .map(char::from)
+                    .collect();
             }
 
             json!(MessageResponse {
@@ -2455,9 +2882,10 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
             // Get the applicants that need to be triaged.
             let applicants = applicants::dsl::applicants
                 .filter(
-                    applicants::dsl::cio_company_id
-                        .eq(company.id)
-                        .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
+                    applicants::dsl::cio_company_id.eq(company.id).and(
+                        applicants::dsl::status
+                            .eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
+                    ),
                 )
                 .load::<Applicant>(&db.conn())
                 .unwrap();
@@ -2479,20 +2907,30 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 merge_json(&mut msg, obj);
             }
 
-            sentry::capture_message(&format!("applicants -> {}", msg.to_string()), sentry::Level::Info);
+            sentry::capture_message(
+                &format!("applicants -> {}", msg.to_string()),
+                sentry::Level::Info,
+            );
 
             msg
         }
         SlackCommand::Applicant => {
             if let Ok(applicant) = applicants::dsl::applicants
-                .filter(applicants::dsl::cio_company_id.eq(company.id).and(applicants::dsl::name.ilike(format!("%{}%", text))))
+                .filter(
+                    applicants::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(applicants::dsl::name.ilike(format!("%{}%", text))),
+                )
                 .first::<Applicant>(&db.conn())
             {
                 applicant.as_slack_msg()
             } else {
                 json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
-                    text: format!("Sorry <@{}> :scream: I could not find an applicant matching `{}`", bot_command.user_id, text),
+                    text: format!(
+                        "Sorry <@{}> :scream: I could not find an applicant matching `{}`",
+                        bot_command.user_id, text
+                    ),
                 })
             }
         }
@@ -2504,7 +2942,11 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 state = "closed";
             }
             let meetings = journal_club_meetings::dsl::journal_club_meetings
-                .filter(journal_club_meetings::dsl::cio_company_id.eq(company.id).and(journal_club_meetings::dsl::state.eq(state.to_string())))
+                .filter(
+                    journal_club_meetings::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(journal_club_meetings::dsl::state.eq(state.to_string())),
+                )
                 .load::<JournalClubMeeting>(&db.conn())
                 .unwrap();
 
@@ -2525,7 +2967,10 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
                 merge_json(&mut msg, obj);
             }
 
-            sentry::capture_message(&format!("papers -> {}", msg.to_string()), sentry::Level::Info);
+            sentry::capture_message(
+                &format!("papers -> {}", msg.to_string()),
+                sentry::Level::Info,
+            );
             msg
         }
         SlackCommand::Paper => {
@@ -2541,7 +2986,11 @@ async fn listen_slack_commands_webhooks(rqctx: Arc<RequestContext<Context>>, bod
             } else {
                 json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
-                    text: format!("Sorry <@{}> :scream: I could not find a journal club meeting matching `{}`", bot_command.user_id, text),
+                    text: format!(
+                        "Sorry <@{}> :scream: I could not find a journal club meeting matching \
+                         `{}`",
+                        bot_command.user_id, text
+                    ),
                 })
             }
         }
@@ -2686,150 +3135,24 @@ pub struct GitHubWebhook {
 pub struct GitHubRepo {
     #[serde(default)]
     pub owner: GitHubUser,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub full_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub default_branch: String,
-}
-
-impl GitHubWebhook {
-    // Push an event for every commit.
-    pub async fn as_influx_push(&self, influx: &influx::Client, github: &Github) {
-        let repo = &self.repository;
-
-        for commit in &self.commits {
-            if commit.distinct {
-                let c = github.repo(repo.owner.login.to_string(), repo.name.to_string()).commits().get(&commit.id).await.unwrap();
-
-                if c.sha != commit.id {
-                    // We have a problem.
-                    sentry::capture_message(&format!("commit sha mismatch: {} {}", c.sha, commit.id), sentry::Level::Fatal);
-                    return;
-                }
-
-                let push_event = influx::Push {
-                    time: c.commit.author.date,
-                    repo_name: repo.name.to_string(),
-                    sender: self.sender.login.to_string(),
-                    reference: self.refv.to_string(),
-                    added: commit.added.join(",").to_string(),
-                    modified: commit.removed.join(",").to_string(),
-                    removed: commit.removed.join(",").to_string(),
-                    sha: c.sha.to_string(),
-                    additions: c.stats.additions,
-                    deletions: c.stats.deletions,
-                    total: c.stats.total,
-                    message: c.commit.message.to_string(),
-                };
-
-                influx.query(push_event, EventType::Push.name()).await;
-            }
-        }
-    }
-
-    pub fn as_influx_pull_request(&self) -> influx::PullRequest {
-        influx::PullRequest {
-            time: Utc::now(),
-            repo_name: self.repository.name.to_string(),
-            sender: self.sender.login.to_string(),
-            action: self.action.to_string(),
-            head_reference: self.pull_request.head.commit_ref.to_string(),
-            base_reference: self.pull_request.base.commit_ref.to_string(),
-            number: self.number,
-            github_id: self.pull_request.id,
-            merged: self.pull_request.merged,
-        }
-    }
-
-    pub fn as_influx_pull_request_review_comment(&self) -> influx::PullRequestReviewComment {
-        influx::PullRequestReviewComment {
-            time: Utc::now(),
-            repo_name: self.repository.name.to_string(),
-            sender: self.sender.login.to_string(),
-            action: self.action.to_string(),
-            pull_request_number: self.pull_request.number,
-            github_id: self.comment.id,
-            comment: self.comment.body.to_string(),
-        }
-    }
-
-    pub fn as_influx_issue(&self) -> influx::Issue {
-        influx::Issue {
-            time: Utc::now(),
-            repo_name: self.repository.name.to_string(),
-            sender: self.sender.login.to_string(),
-            action: self.action.to_string(),
-            number: self.number,
-            github_id: self.pull_request.id,
-        }
-    }
-
-    pub fn as_influx_issue_comment(&self) -> influx::IssueComment {
-        influx::IssueComment {
-            time: Utc::now(),
-            repo_name: self.repository.name.to_string(),
-            sender: self.sender.login.to_string(),
-            action: self.action.to_string(),
-            issue_number: self.issue.number,
-            github_id: self.comment.id,
-            comment: self.comment.body.to_string(),
-        }
-    }
-
-    pub fn as_influx_check_suite(&self) -> influx::CheckSuite {
-        influx::CheckSuite {
-            time: Utc::now(),
-            repo_name: self.repository.name.to_string(),
-            sender: self.sender.login.to_string(),
-            action: self.action.to_string(),
-
-            head_branch: self.check_suite.head_branch.to_string(),
-            head_sha: self.check_suite.head_sha.to_string(),
-            status: self.check_suite.status.to_string(),
-            conclusion: self.check_suite.conclusion.to_string(),
-
-            slug: self.check_suite.app.slug.to_string(),
-            name: self.check_suite.app.name.to_string(),
-
-            reference: self.check_suite.head_branch.to_string(),
-            sha: self.check_suite.head_sha.to_string(),
-            github_id: self.check_suite.id,
-        }
-    }
-
-    pub fn as_influx_check_run(&self) -> influx::CheckRun {
-        influx::CheckRun {
-            time: Utc::now(),
-            repo_name: self.repository.name.to_string(),
-            sender: self.sender.login.to_string(),
-            action: self.action.to_string(),
-
-            head_branch: self.check_suite.head_branch.to_string(),
-            head_sha: self.check_run.head_sha.to_string(),
-            status: self.check_run.status.to_string(),
-            conclusion: self.check_run.conclusion.to_string(),
-
-            name: self.check_run.name.to_string(),
-            app_slug: self.check_run.app.slug.to_string(),
-            app_name: self.check_run.app.name.to_string(),
-
-            reference: self.check_suite.head_branch.to_string(),
-            sha: self.check_run.head_sha.to_string(),
-            check_suite_id: self.check_suite.id,
-            github_id: self.check_run.id,
-        }
-    }
-
-    pub fn as_influx_repository(&self) -> influx::Repository {
-        influx::Repository {
-            time: Utc::now(),
-            repo_name: self.repository.name.to_string(),
-            sender: self.sender.login.to_string(),
-            action: self.action.to_string(),
-        }
-    }
 }
 
 /// A GitHub commit.
@@ -2886,7 +3209,9 @@ impl GitHubCommit {
 
     /// Return if a specific file was added, modified, or removed in a commit.
     pub fn file_changed(&self, file: &str) -> bool {
-        self.added.contains(&file.to_string()) || self.modified.contains(&file.to_string()) || self.removed.contains(&file.to_string())
+        self.added.contains(&file.to_string())
+            || self.modified.contains(&file.to_string())
+            || self.removed.contains(&file.to_string())
     }
 }
 
@@ -2942,7 +3267,7 @@ pub struct GitHubPullRequest {
     pub merged: bool,
 }
 
-/// A Github issue.
+/// A octorust::Client issue.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubIssue {
@@ -2997,7 +3322,7 @@ pub struct GitHubPullRef {
     pub patch_url: String,
 }
 
-/// A Github comment.
+/// A octorust::Client comment.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues#comments
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubComment {
@@ -3027,7 +3352,11 @@ pub struct GitHubCheckSuite {
     pub head_sha: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub conclusion: String,
     #[serde(default)]
     pub app: GitHubApp,
@@ -3053,7 +3382,11 @@ pub struct GitHubCheckRun {
     pub head_sha: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", deserialize_with = "deserialize_null_string::deserialize")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub conclusion: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -3097,11 +3430,16 @@ fn filter(files: &[String], dir: &str) -> Vec<String> {
 }
 
 /// Handle a `pull_request` event for the rfd repo.
-async fn handle_rfd_pull_request(github: &Github, api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_pull_request(
+    github: &octorust::Client,
+    api_context: &Context,
+    event: GitHubWebhook,
+    company: &Company,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
-    // Get the repo.
-    let github_repo = github.repo(&company.github_org, "rfd".to_string());
+    let owner = &company.github_org;
+    let repo = "rfd";
 
     // Let's get the RFD.
     let branch = event.pull_request.head.commit_ref.to_string();
@@ -3110,24 +3448,36 @@ async fn handle_rfd_pull_request(github: &Github, api_context: &Context, event: 
     // This should never happen, but let's check regardless.
     if branch == event.repository.default_branch {
         // Return early.
-        println!("event was to the default branch `{}`, we don't care: {:?}", event.repository.default_branch, event);
+        println!(
+            "event was to the default branch `{}`, we don't care: {:?}",
+            event.repository.default_branch, event
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // The branch should be equivalent to the number in the database.
     // Let's try to get the RFD from that.
-    let number = branch.trim_start_matches('0').parse::<i32>().unwrap_or_default();
+    let number = branch
+        .trim_start_matches('0')
+        .parse::<i32>()
+        .unwrap_or_default();
     // Make sure we actually have a number.
     if number == 0 {
         // Return early.
-        println!("event was to the branch `{}`, which is not a number so it cannot be an RFD: {:?}", branch, event);
+        println!(
+            "event was to the branch `{}`, which is not a number so it cannot be an RFD: {:?}",
+            branch, event
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     // Try to get the RFD from the database.
     let result = RFD::get_from_db(db, number);
     if result.is_none() {
-        println!("could not find RFD with number `{}` in the database: {:?}", number, event);
+        println!(
+            "could not find RFD with number `{}` in the database: {:?}",
+            number, event
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
     let mut rfd = result.unwrap();
@@ -3136,32 +3486,55 @@ async fn handle_rfd_pull_request(github: &Github, api_context: &Context, event: 
     // The pull request title should be equal to the name of the pull request.
     if rfd.name != event.pull_request.title {
         // Update the title of the pull request.
-        github_repo
+        github
             .pulls()
-            .get(event.pull_request.number.try_into().unwrap())
-            .edit(&hubcaps::pulls::PullEditOptions::builder().title(rfd.name.to_string()).build())
+            .update(
+                owner,
+                repo,
+                event.pull_request.number.try_into().unwrap(),
+                &octorust::types::PullsUpdateRequest {
+                    title: rfd.name.to_string(),
+                    body: "".to_string(),
+                    base: "".to_string(),
+                    maintainer_can_modify: true,
+                    state: Default::default(),
+                },
+            )
             .await
             .unwrap_or_else(|e| {
                 panic!(
-                    "unable to update title of pull request from `{}` to `{}` for pr#{}: {}, {:?} {}",
+                    "unable to update title of pull request from `{}` to `{}` for pr#{}: {}, {:?} \
+                     {}",
                     event.pull_request.title, rfd.name, event.pull_request.number, e, rfd, number
                 )
             });
     }
 
     // Update the labels for the pull request.
-    let mut labels: Vec<&str> = Default::default();
+    let mut labels: Vec<String> = Default::default();
     if rfd.state == "discussion" {
-        labels.push(":thought_balloon: discussion");
+        labels.push(":thought_balloon: discussion".to_string());
     } else if rfd.state == "ideation" {
-        labels.push(":hatching_chick: ideation");
+        labels.push(":hatching_chick: ideation".to_string());
     }
-    github_repo.pulls().get(event.pull_request.number.try_into().unwrap()).labels().add(labels).await.unwrap();
+    github
+        .issues()
+        .add_labels(
+            owner,
+            repo,
+            event.pull_request.number.try_into().unwrap(),
+            &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
+        )
+        .await
+        .unwrap();
 
     // We only care if the pull request was `opened`.
     if event.action != "opened" {
         // We can throw this out, log it and return early.
-        println!("no automations are set up for action `{}` yet", event.action);
+        println!(
+            "no automations are set up for action `{}` yet",
+            event.action
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -3180,23 +3553,36 @@ async fn handle_rfd_pull_request(github: &Github, api_context: &Context, event: 
     let dir = format!("/rfd/{}", branch);
     // Get the contents of the file.
     let mut path = format!("{}/README.adoc", dir);
-    match github_repo.content().file(&path, &branch).await {
+    match github
+        .repos()
+        .get_content_file(owner, repo, &path, &branch)
+        .await
+    {
         Ok(contents) => {
-            rfd.content = from_utf8(&contents.content).unwrap().trim().to_string();
+            rfd.content = decode_base64_to_string(&contents.content);
             rfd.sha = contents.sha;
         }
         Err(e) => {
-            println!("[rfd] getting file contents for {} on branch {} failed: {}, trying markdown instead...", path, branch, e);
+            println!(
+                "[rfd] getting file contents for {} on branch {} failed: {}, trying markdown \
+                 instead...",
+                path, branch, e
+            );
 
             // Try to get the markdown instead.
             path = format!("{}/README.md", dir);
-            let contents = github_repo
-                .content()
-                .file(&path, &branch)
+            let contents = github
+                .repos()
+                .get_content_file(owner, repo, &path, &branch)
                 .await
-                .unwrap_or_else(|e| panic!("getting file contents for {} on branch {} failed: {}", path, branch, e));
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "getting file contents for {} on branch {} failed: {}",
+                        path, branch, e
+                    )
+                });
 
-            rfd.content = from_utf8(&contents.content).unwrap().trim().to_string();
+            rfd.content = decode_base64_to_string(&contents.content);
             rfd.sha = contents.sha;
         }
     }
@@ -3220,14 +3606,27 @@ async fn handle_rfd_pull_request(github: &Github, api_context: &Context, event: 
 
     // Update the file in GitHub.
     // Keep in mind: this push will kick off another webhook.
-    create_or_update_file_in_github_repo(&github_repo, &branch, &path, rfd.content.as_bytes().to_vec()).await;
+    create_or_update_file_in_github_repo(
+        github,
+        owner,
+        repo,
+        &branch,
+        &path,
+        rfd.content.as_bytes().to_vec(),
+    )
+    .await;
 
     println!("updated discussion link for RFD {}", rfd.number_string,);
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /// Handle a `push` event for the rfd repo.
-async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_rfd_push(
+    github: &octorust::Client,
+    api_context: &Context,
+    event: GitHubWebhook,
+    company: &Company,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
     // Get gsuite token.
@@ -3238,10 +3637,14 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive
+        .get_drive_by_name("Automated Documents")
+        .await
+        .unwrap();
 
     // Get the repo.
-    let github_repo = github.repo(&company.github_org, event.repository.name.to_string());
+    let owner = &company.github_org;
+    let repo = event.repository.name.to_string();
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -3252,7 +3655,10 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        println!("`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
+        println!(
+            "`push` event commit `{}` does not include any changes to the `{}` directory",
+            commit.id, dir
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -3276,23 +3682,40 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
             let website_file = file.replace("rfd/", "src/public/static/images/");
 
             // We need to get the current sha for the file we want to delete.
-            let (_, gh_file_sha) = get_file_content_from_repo(&github_repo, &website_file, &event.repository.default_branch).await;
+            let (_, gh_file_sha) = get_file_content_from_repo(
+                github,
+                owner,
+                &repo,
+                &website_file,
+                &event.repository.default_branch,
+            )
+            .await;
 
             if !gh_file_sha.is_empty() {
-                github_repo
-                    .content()
-                    .delete(
+                github
+                    .repos()
+                    .delete_file(
+                        owner,
+                        &repo,
                         &website_file,
-                        &format!(
-                            "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
-                            website_file
-                        ),
-                        &gh_file_sha,
-                        &event.repository.default_branch,
+                        &octorust::types::ReposDeleteFileRequest {
+                            message: format!(
+                                "Deleting file content {} programatically\n\nThis is done from \
+                                 the cio repo webhooky::listen_github_webhooks function.",
+                                website_file
+                            ),
+                            sha: gh_file_sha,
+                            committer: None,
+                            author: None,
+                            branch: event.repository.default_branch.to_string(),
+                        },
                     )
                     .await
                     .unwrap();
-                println!("deleted file `{}` since it was removed in mose recent push for RFD {:?}", website_file, event);
+                println!(
+                    "deleted file `{}` since it was removed in mose recent push for RFD {:?}",
+                    website_file, event
+                );
             }
         }
     }
@@ -3314,15 +3737,27 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let (gh_file_content, _) = get_file_content_from_repo(&github_repo, &file, branch).await;
+            let (gh_file_content, _) =
+                get_file_content_from_repo(github, owner, &repo, &file, branch).await;
 
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
             // this is where images go for the static website.
             // We update these on the default branch ONLY
             let website_file = file.replace("rfd/", "src/public/static/images/");
-            create_or_update_file_in_github_repo(&github_repo, &event.repository.default_branch, &website_file, gh_file_content).await;
-            println!("updated file `{}` since it was modified in mose recent push for RFD {:?}", website_file, event);
+            create_or_update_file_in_github_repo(
+                github,
+                owner,
+                &repo,
+                &event.repository.default_branch,
+                &website_file,
+                gh_file_content,
+            )
+            .await;
+            println!(
+                "updated file `{}` since it was modified in mose recent push for RFD {:?}",
+                website_file, event
+            );
             // We are done so we can continue throught the loop.
             continue;
         }
@@ -3331,9 +3766,21 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
         if file.ends_with("README.md") || file.ends_with("README.adoc") {
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
-            println!("`push` event -> file {} was modified on branch {}", file, branch,);
+            println!(
+                "`push` event -> file {} was modified on branch {}",
+                file, branch,
+            );
             // Parse the RFD.
-            let new_rfd = NewRFD::new_from_github(company, &github_repo, branch, &file, commit.timestamp.unwrap()).await;
+            let new_rfd = NewRFD::new_from_github(
+                company,
+                github,
+                owner,
+                &repo,
+                branch,
+                &file,
+                commit.timestamp.unwrap(),
+            )
+            .await;
 
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
@@ -3356,13 +3803,18 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(db, &github.repo(&company.github_org, "configs"), company.id).await;
+            generate_shorturls_for_rfds(db, github, &company.github_org, "configs", company.id)
+                .await;
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
             rfd.convert_and_upload_pdf(github, &drive, company).await;
             rfd.update(db).await;
-            println!("updated pdf `{}` for RFD {}", new_rfd.number_string, rfd.get_pdf_filename());
+            println!(
+                "updated pdf `{}` for RFD {}",
+                new_rfd.number_string,
+                rfd.get_pdf_filename()
+            );
 
             // Check if the RFD state changed from what is currently in the
             // database.
@@ -3372,22 +3824,38 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
             // a PR. Instead, below, the state of the RFD would be moved to `published`.
             // TODO: see if we drop events, if we do, we might want to remove the check with
             // the old state and just do it everytime an RFD is in discussion.
-            if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != event.repository.default_branch {
+            if old_rfd_state != rfd.state
+                && rfd.state == "discussion"
+                && branch != event.repository.default_branch
+            {
                 // First, we need to make sure we don't already have a pull request open.
-                let pulls = github_repo
+                let pulls = github
                     .pulls()
-                    .list(&hubcaps::pulls::PullListOptions::builder().state(hubcaps::issues::State::Open).build())
+                    .list_all(
+                        owner,
+                        &repo,
+                        octorust::types::IssuesListState::All,
+                        // head
+                        "",
+                        // base
+                        "",
+                        // sort
+                        Default::default(),
+                        // direction
+                        Default::default(),
+                    )
                     .await
                     .unwrap();
                 // Check if any pull requests are from our branch.
                 let mut has_pull = false;
                 for pull in pulls {
                     // Check if the pull request is for our branch.
-                    let pull_branch = pull.head.commit_ref.trim_start_matches("refs/heads/");
+                    let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
 
                     if pull_branch == branch {
                         println!(
-                            "RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                            "RFD {} has moved from state {} -> {}, on branch {}, we already have \
+                             a pull request: {}",
                             rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
                         );
 
@@ -3398,17 +3866,25 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
 
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
-                    github_repo
+                    github
                         .pulls()
-                        .create(&hubcaps::pulls::PullOptions::new(
-                            rfd.name.to_string(),
-                            format!("{}:{}", company.github_org, branch),
-                            event.repository.default_branch.to_string(),
-                            Some(
-                                "Automatically opening the pull request since the document is marked as being in discussion. If you wish to not have a pull request open, change the state of your \
-                                 document and close this pull request.",
-                            ),
-                        ))
+                        .create(
+                            owner,
+                            &repo,
+                            &octorust::types::PullsCreateRequest {
+                                title: rfd.name.to_string(),
+                                head: format!("{}:{}", company.github_org, branch),
+                                base: event.repository.default_branch.to_string(),
+                                body: "Automatically opening the pull request since the document \
+                                       is marked as being in discussion. If you wish to not have \
+                                       a pull request open, change the state of your document and \
+                                       close this pull request."
+                                    .to_string(),
+                                draft: false,
+                                maintainer_can_modify: true,
+                                issue: 0,
+                            },
+                        )
                         .await
                         .unwrap();
                     println!("opened pull request for RFD {}", new_rfd.number_string);
@@ -3431,8 +3907,19 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
 
                 // Update the file in GitHub.
                 // Keep in mind: this push will kick off another webhook.
-                create_or_update_file_in_github_repo(&github_repo, branch, &file, rfd_mut.content.as_bytes().to_vec()).await;
-                println!("updated state to `published` for  RFD {}", new_rfd.number_string);
+                create_or_update_file_in_github_repo(
+                    github,
+                    owner,
+                    &repo,
+                    branch,
+                    &file,
+                    rfd_mut.content.as_bytes().to_vec(),
+                )
+                .await;
+                println!(
+                    "updated state to `published` for  RFD {}",
+                    new_rfd.number_string
+                );
             }
 
             // If the title of the RFD changed, delete the old PDF file so it
@@ -3441,27 +3928,44 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
                 let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
                 // First get the sha of the old pdf.
-                let (_, old_pdf_sha) = get_file_content_from_repo(&github_repo, &pdf_path, &event.repository.default_branch).await;
+                let (_, old_pdf_sha) = get_file_content_from_repo(
+                    github,
+                    owner,
+                    &repo,
+                    &pdf_path,
+                    &event.repository.default_branch,
+                )
+                .await;
 
                 if !old_pdf_sha.is_empty() {
                     // Delete the old filename from GitHub.
-                    github_repo
-                        .content()
-                        .delete(
+                    github
+                        .repos()
+                        .delete_file(
+                            owner,
+                            &repo,
                             &pdf_path,
-                            &format!(
-                                "Deleting file content {} programatically\n\nThis is done from the cio repo webhooky::listen_github_webhooks function.",
-                                old_rfd_pdf
-                            ),
-                            &old_pdf_sha,
-                            &event.repository.default_branch,
+                            &octorust::types::ReposDeleteFileRequest {
+                                message: format!(
+                                    "Deleting file content {} programatically\n\nThis is done \
+                                     from the cio repo webhooky::listen_github_webhooks function.",
+                                    pdf_path
+                                ),
+                                sha: old_pdf_sha,
+                                committer: None,
+                                author: None,
+                                branch: event.repository.default_branch.to_string(),
+                            },
                         )
                         .await
                         .unwrap();
                 }
 
                 // Delete the old filename from drive.
-                drive.delete_file_by_name(&shared_drive.id, &old_rfd_pdf).await.unwrap();
+                drive
+                    .delete_file_by_name(&shared_drive.id, &old_rfd_pdf)
+                    .await
+                    .unwrap();
             }
 
             println!("RFD {} `push` operations completed", new_rfd.number_string);
@@ -3474,9 +3978,15 @@ async fn handle_rfd_push(github: &Github, api_context: &Context, event: GitHubWe
 }
 
 /// Handle a `push` event for the configs repo.
-async fn handle_configs_push(github: &Github, api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
+async fn handle_configs_push(
+    github: &octorust::Client,
+    api_context: &Context,
+    event: GitHubWebhook,
+    company: &Company,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get the repo.
-    let github_repo = github.repo(&company.github_org, event.repository.name.to_string());
+    let owner = &company.github_org;
+    let repo = event.repository.name;
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -3487,7 +3997,10 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        println!("`push` event commit `{}` does not include any changes to the `{}` directory", commit.id, dir);
+        println!(
+            "`push` event commit `{}` does not include any changes to the `{}` directory",
+            commit.id, dir
+        );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -3508,7 +4021,8 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
         sync_links(&api_context.db, configs.links, configs.huddles, company).await;
 
         // We need to update the short URLs for the links.
-        generate_shorturls_for_configs_links(&api_context.db, &github_repo, company.id).await;
+        generate_shorturls_for_configs_links(&api_context.db, &github, owner, &repo, company.id)
+            .await;
         println!("generated shorturls for the configs links");
     }
 
@@ -3549,7 +4063,13 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
     // Check if the github-outside-collaborators.toml file changed.
     if commit.file_changed("configs/github-outside-collaborators.toml") {
         // Sync github outside collaborators.
-        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company).await;
+        sync_github_outside_collaborators(
+            &api_context.db,
+            github,
+            configs.github_outside_collaborators,
+            company,
+        )
+        .await;
     }
 
     // Check if the huddles file changed.
@@ -3562,21 +4082,37 @@ async fn handle_configs_push(github: &Github, api_context: &Context, event: GitH
 }
 
 /// Handle the `repository` event for all repos.
-async fn handle_repository_event(github: &Github, api_context: &Context, event: GitHubWebhook, company: &Company) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let repo = github.repo(&company.github_org, event.repository.name).get().await.unwrap();
-    let nr = NewRepo::new(repo.clone(), company.id);
+async fn handle_repository_event(
+    github: &octorust::Client,
+    api_context: &Context,
+    event: GitHubWebhook,
+    company: &Company,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let repo = github
+        .repos()
+        .get(&company.github_org, &event.repository.name)
+        .await
+        .unwrap();
+    /*let nr = NewRepo::new(repo.clone(), company.id);
     nr.upsert(&api_context.db).await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(&api_context.db, &github.repo(&company.github_org, "configs"), company.id).await;
+    generate_shorturls_for_repos(
+        &api_context.db,
+        github,
+        &company.github_org,
+        &event.repository.name,
+        company.id,
+    )
+    .await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     cio_api::repos::sync_repo_settings(&api_context.db, github, company).await;
 
-    println!("generated shorturls for all the GitHub repos");
+    println!("generated shorturls for all the GitHub repos");*/
 
     Ok(HttpResponseAccepted("ok".to_string()))
 }
