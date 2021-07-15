@@ -3489,7 +3489,7 @@ async fn handle_rfd_pull_request(
             .update(
                 owner,
                 repo,
-                event.pull_request.number.try_into().unwrap(),
+                event.pull_request.number,
                 &octorust::types::PullsUpdateRequest {
                     title: rfd.name.to_string(),
                     body: "".to_string(),
@@ -3520,7 +3520,7 @@ async fn handle_rfd_pull_request(
         .add_labels(
             owner,
             repo,
-            event.pull_request.number.try_into().unwrap(),
+            event.pull_request.number,
             &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
         )
         .await
