@@ -1395,10 +1395,11 @@ pub async fn sync_github_outside_collaborators(
 
             // Iterate over the users.
             for user in &outside_collaborators_config.users {
-                if let Err(_) = github
+                if github
                     .repos()
                     .check_collaborator(&company.github_org, repo, user)
                     .await
+                    .is_err()
                 {
                     // The user is not already a collaborator
                     // Add the collaborator.

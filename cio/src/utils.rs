@@ -23,7 +23,7 @@ pub fn write_file(file: &Path, contents: &[u8]) {
 
 /// Check if a GitHub issue already exists.
 pub fn check_if_github_issue_exists(
-    issues: &Vec<octorust::types::IssueSimple>,
+    issues: &[octorust::types::IssueSimple],
     search: &str,
 ) -> Option<octorust::types::IssueSimple> {
     for i in issues {

@@ -1900,7 +1900,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         &self,
         db: &Database,
         github: &octorust::Client,
-        configs_issues: &Vec<octorust::types::IssueSimple>,
+        configs_issues: &[octorust::types::IssueSimple],
     ) {
         let company = self.company(db);
 
@@ -3347,7 +3347,7 @@ impl Applicant {
         db: &Database,
         drive_client: &GoogleDrive,
         github: &octorust::Client,
-        configs_issues: &Vec<octorust::types::IssueSimple>,
+        configs_issues: &[octorust::types::IssueSimple],
     ) {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
@@ -4352,7 +4352,7 @@ mod tests {
         // Let's test that serializing this is going to give us an array of Airtable users.
         let scorers = json!(applicant).to_string();
         // Let's assert in the string are the scorers formatted as Airtable users.
-        assert_eq!(scorers.contains("\"scorers\":[{\"email\":\""), true);
+        assert!(scorers.contains("\"scorers\":[{\"email\":\""));
 
         // Let's test that deserializing a string will give us the same applicant we had
         // originally.
