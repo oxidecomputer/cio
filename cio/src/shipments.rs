@@ -510,6 +510,7 @@ impl OutboundShipments {
         // For each of the shipments, let's set the pickup date.
         for mut shipment in shipments {
             shipment.pickup_date = Some(pickup_date);
+            shipment.status = "Waiting for pickup".to_string();
             shipment.update(db).await;
         }
     }
