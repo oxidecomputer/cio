@@ -1175,12 +1175,64 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
     // we do not.
-    let shipments = OutboundShipments::get_from_db(db, company.id);
+    /*let shipments = OutboundShipments::get_from_db(db, company.id);
     for mut s in shipments {
         if let Some(existing) = s.get_existing_airtable_record(db).await {
             // Take the field from Airtable.
             s.local_pickup = existing.fields.local_pickup;
         }
+
+        // Update the shipment from shippo.
+        s.create_or_get_shippo_shipment(db).await;
+        // Update airtable and the database again.
+        s.update(db).await;
+    }*/
+
+    // Create the shippo client.
+    let shippo = Shippo::new_from_env();
+
+    // Get each of the shippo orders and create or update it in our set.
+    // These are typically one off labels made from the UI.
+    let orders = shippo.list_orders().await.unwrap();
+    for order in orders {
+        let ns = NewOutboundShipment {
+            created_time: order.placed_at,
+            name: order.to_address.name.to_string(),
+            email: order.to_address.email.to_string(),
+            phone: order.to_address.phone.to_string(),
+            street_1: order.to_address.street1.to_string(),
+            street_2: order.to_address.street2.to_string(),
+            city: order.to_address.city.to_string(),
+            state: order.to_address.state.to_string(),
+            zipcode: order.to_address.zip.to_string(),
+            country: order.to_address.country.to_string(),
+            address_formatted: Default::default(),
+            latitude: Default::default(),
+            longitude: Default::default(),
+            contents: "Manual internal shipment: could be swag or tools, etc".to_string(),
+            carrier: Default::default(),
+            pickup_date: None,
+            delivered_time: None,
+            shipped_time: None,
+            shippo_id: order.transactions.get(0).unwrap().object_id.to_string(),
+            status: "Queued".to_string(),
+            tracking_link: Default::default(),
+            oxide_tracking_link: Default::default(),
+            tracking_number: Default::default(),
+            tracking_status: Default::default(),
+            cost: Default::default(),
+            label_link: Default::default(),
+            eta: None,
+            messages: Default::default(),
+            notes: Default::default(),
+            geocode_cache: Default::default(),
+            local_pickup: Default::default(),
+            link_to_package_pickup: Default::default(),
+            cio_company_id: company.id,
+        };
+
+        // Upsert the record in the database.
+        let mut s = ns.upsert_in_db(db);
 
         // Update the shipment from shippo.
         s.create_or_get_shippo_shipment(db).await;
@@ -1239,14 +1291,6 @@ mod tests {
         db::Database,
         shipments::{refresh_inbound_shipments, refresh_outbound_shipments},
     };
-
-    /*#[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_pickup() {
-        let db = Database::new();
-
-        OutboundShipments::create_pickup(&db).await;
-    }*/
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]

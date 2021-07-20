@@ -156,6 +156,67 @@ impl Shippo {
         Ok(resp.json().await.unwrap())
     }
 
+    /// List the orders.
+    /// FROM: https://goshippo.com/docs/reference#orders-list
+    pub async fn list_orders(&self) -> Result<Vec<Order>, APIError> {
+        // Build the request.
+        let mut request = self.request(Method::GET, "orders", (), None);
+
+        let mut resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let mut r: OrdersAPIResponse = resp.json().await.unwrap();
+        let mut orders = r.orders;
+        let mut page = r.next;
+
+        // Paginate if we should.
+        // TODO: make this more DRY
+        while !page.is_empty() {
+            let url = Url::parse(&page).unwrap();
+            let pairs: Vec<(Cow<'_, str>, Cow<'_, str>)> = url.query_pairs().collect();
+            let mut new_pairs: Vec<(String, String)> = Vec::new();
+            for (a, b) in pairs {
+                let sa = a.into_owned();
+                let sb = b.into_owned();
+                new_pairs.push((sa, sb));
+            }
+
+            request = self.request(Method::GET, "orders", (), Some(new_pairs));
+
+            resp = self.client.execute(request).await.unwrap();
+            match resp.status() {
+                StatusCode::OK => (),
+                s => {
+                    return Err(APIError {
+                        status_code: s,
+                        body: resp.text().await.unwrap(),
+                    })
+                }
+            };
+
+            // Try to deserialize the response.
+            r = resp.json().await.unwrap();
+
+            orders.append(&mut r.orders);
+
+            if !r.next.is_empty() && r.next != page {
+                page = r.next;
+            } else {
+                page = "".to_string();
+            }
+        }
+
+        Ok(orders)
+    }
+
     /// List the carrier accounts.
     /// FROM: https://goshippo.com/docs/reference#carrier-accounts
     pub async fn list_carrier_accounts(&self) -> Result<Vec<CarrierAccount>, APIError> {
@@ -470,6 +531,26 @@ pub struct APIResponse {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
     pub shipments: Vec<Shipment>,
+}
+
+/// The data type for an API response.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct OrdersAPIResponse {
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub next: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub previous: String,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "results")]
+    pub orders: Vec<Order>,
 }
 
 /// The data type for an API response for carrier accounts.
@@ -1305,6 +1386,105 @@ pub struct CustomsDeclaration {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub metadata: String,
     /// Indicates whether the object has been created in test mode.
+    #[serde(default)]
+    pub test: bool,
+}
+
+/// An order object.
+/// FROM: https://goshippo.com/docs/reference#orders
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Order {
+    /// Unique identifier of the given object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_id: String,
+    /// Username of the user who created the object.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object_owner: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub order_number: String,
+    pub placed_at: DateTime<Utc>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub order_status: String,
+    #[serde(default)]
+    pub to_address: Address,
+    #[serde(default)]
+    pub from_address: Address,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub shop_app: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub weight: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub weight_unit: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub transactions: Vec<Transaction>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub total_tax: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub total_price: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub subtotal_price: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub currency: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub shipping_method: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub shipping_cost: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub shipping_cost_currency: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_null_string::deserialize",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub notes: String,
     #[serde(default)]
     pub test: bool,
 }
