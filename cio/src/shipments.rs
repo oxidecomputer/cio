@@ -1294,12 +1294,21 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_shipments() {
+    async fn test_inbound_shipments() {
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_inbound_shipments(&db, &oxide).await;
+    }
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_outbound_shipments() {
+        let db = Database::new();
+
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
         refresh_outbound_shipments(&db, &oxide).await;
     }
 }

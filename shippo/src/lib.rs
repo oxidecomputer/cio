@@ -24,12 +24,17 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::{borrow::Cow, collections::HashMap, env, error, fmt, fmt::Debug, sync::Arc};
+use std::{
+    borrow::Cow, collections::HashMap, env, error, fmt, fmt::Debug, str::FromStr, sync::Arc,
+};
 
 use chrono::{offset::Utc, DateTime};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Serialize,
+};
 
 /// Endpoint for the Shippo API.
 const ENDPOINT: &str = "https://api.goshippo.com/";
@@ -737,7 +742,11 @@ pub struct Address {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     /// Indicates whether the object has been created in test mode.
-    #[serde(default, skip_serializing_if = "is_false")]
+    #[serde(
+        default,
+        skip_serializing_if = "is_false",
+        deserialize_with = "deserialize_null_boolean::deserialize"
+    )]
     pub test: bool,
     /// object that contains information regarding if an address had been validated or not. Also
     /// contains any messages generated during validation. Children keys are is_valid(boolean) and
@@ -1587,5 +1596,70 @@ pub mod null_date_format {
         }
 
         Ok(Some(Utc.datetime_from_str(&s, "%+").unwrap()))
+    }
+}
+
+pub mod deserialize_null_boolean {
+    use serde::{self, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<bool, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = deserializer
+            .deserialize_bool(crate::BoolVisitor)
+            .unwrap_or_default();
+
+        Ok(s)
+    }
+}
+
+struct BoolVisitor;
+
+impl<'de> Visitor<'de> for BoolVisitor {
+    type Value = bool;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a boolean")
+    }
+
+    fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value)
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        match FromStr::from_str(value) {
+            Ok(s) => Ok(s),
+            Err(_) => Err(de::Error::invalid_value(
+                de::Unexpected::Str(value),
+                &"bool",
+            )),
+        }
+    }
+
+    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        match FromStr::from_str(&value) {
+            Ok(s) => Ok(s),
+            Err(_) => Err(de::Error::invalid_value(
+                de::Unexpected::Str(&value),
+                &"bool",
+            )),
+        }
     }
 }
