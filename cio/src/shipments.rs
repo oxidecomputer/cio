@@ -667,6 +667,10 @@ impl OutboundShipment {
     /// Send an email to the recipient with their order information.
     /// This should happen before they get the email that it has been shipped.
     pub async fn send_email_to_recipient_pre_shipping(&self, db: &Database) {
+        if self.email.is_empty() {
+            return;
+        }
+
         let company = self.company(db);
 
         // Initialize the SendGrid client.
@@ -709,6 +713,10 @@ xoxo,
 
     /// Send an email to the recipient with their tracking code and information.
     pub async fn send_email_to_recipient(&self, db: &Database) {
+        if self.email.is_empty() {
+            return;
+        }
+
         let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
