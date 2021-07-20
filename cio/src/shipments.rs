@@ -1234,14 +1234,12 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         // We need to get the carrier and tracking number so we don't create
         // duplicates every single time.
         let label = shippo.get_shipping_label(&ns.shippo_id).await.unwrap();
-        if label.tracking_url_provider.contains(".usps.com") {
-            ns.carrier = "USPS".to_string();
-        } else if label.tracking_url_provider.contains("fedex.com") {
-            ns.carrier = "fedex".to_string();
-        } else if label.tracking_url_provider.contains("ups.com") {
-            ns.carrier = "UPS".to_string();
-        }
         ns.tracking_number = label.tracking_number.to_string();
+
+        // The rate will give us the carrier and the cost.
+        let rate = shippo.get_rate(&label.rate).await.unwrap();
+        ns.cost = rate.amount_local.parse().unwrap();
+        ns.carrier = rate.provider.to_string();
 
         // Upsert the record in the database.
         let mut s = ns.upsert_in_db(db);

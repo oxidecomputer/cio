@@ -303,6 +303,26 @@ impl Shippo {
         Ok(resp.json().await.unwrap())
     }
 
+    /// Get a rate.
+    /// FORMAT: https://goshippo.com/docs/reference#rates-retrieve
+    pub async fn get_rate(&self, id: &str) -> Result<Rate, APIError> {
+        // Build the request.
+        let request = self.request(Method::GET, &format!("rates/{}", id), (), None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(resp.json().await.unwrap())
+    }
+
     /// Create a pickup.
     /// FROM: https://goshippo.com/docs/reference#pickups-create
     pub async fn create_pickup(&self, np: &NewPickup) -> Result<Pickup, APIError> {

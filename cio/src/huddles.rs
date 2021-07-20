@@ -92,12 +92,13 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
 
                 // Update the event description.
                 let description = format!(
-                    "This is the event for {} huddles.
+                    r#"This is the event for {} huddles.
 
-You can submit topics at: https://{}-huddle-form.corp.{} \
-                     The Airtable workspace lives at: https://{}-huddle.corp.{}
+You can submit topics at: https://{}-huddle-form.corp.{}
 
-{}",
+The Airtable workspace lives at: https://{}-huddle.corp.{}
+
+{}"#,
                     slug.replace('-', " "),
                     slug,
                     company.domain,
