@@ -494,12 +494,22 @@ fn clean_vendor_name(s: &str) -> String {
         "Sublime".to_string()
     } else if s == "Dunkin" {
         "Dunkin' Donuts".to_string()
+    } else if s == "Benjamin Leonard Limited" {
+        "Benjamin Leonard".to_string()
+    } else if s == "Friendly Machines LLC" {
+        "Danny Milosavljevic".to_string()
+    } else if s == "Chroma Systems Solutions, Inc." {
+        "Chroma".to_string()
+    } else if s == "IOActive, Inc." {
+        "IOActive".to_string()
     } else if s == "GoEngineer" {
         "SolidWorks".to_string()
     } else if s == "Lattice Store" {
         "Lattice".to_string()
     } else if s == "Duro Labs" {
         "Duro".to_string()
+    } else if s == "TripActions, Inc" {
+        "TripActions".to_string()
     } else if s == "Hotel Indigo Rochester" {
         "Hotel Indigo".to_string()
     } else if s == "TestEquity LLC" {
