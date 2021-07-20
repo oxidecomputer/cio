@@ -1175,7 +1175,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
     // we do not.
-    /*let shipments = OutboundShipments::get_from_db(db, company.id);
+    let shipments = OutboundShipments::get_from_db(db, company.id);
     for mut s in shipments {
         if let Some(existing) = s.get_existing_airtable_record(db).await {
             // Take the field from Airtable.
@@ -1186,7 +1186,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         s.create_or_get_shippo_shipment(db).await;
         // Update airtable and the database again.
         s.update(db).await;
-    }*/
+    }
 
     // Create the shippo client.
     let shippo = Shippo::new_from_env();

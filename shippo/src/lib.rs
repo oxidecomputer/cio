@@ -1068,7 +1068,8 @@ pub struct Transaction {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub object_id: String,
     /// Date and time of Transaction creation.
-    pub object_created: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub object_created: Option<DateTime<Utc>>,
     /// Date and time of last Transaction update.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub object_updated: Option<DateTime<Utc>>,
@@ -1111,6 +1112,7 @@ pub struct Transaction {
     pub tracking_url_provider: String,
     /// The estimated time of arrival according to the carrier.
     #[serde(
+        default,
         deserialize_with = "null_date_format::deserialize",
         skip_serializing_if = "Option::is_none"
     )]
