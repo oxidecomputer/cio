@@ -1195,7 +1195,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     // These are typically one off labels made from the UI.
     let orders = shippo.list_orders().await.unwrap();
     for order in orders {
-        let ns = NewOutboundShipment {
+        let mut ns = NewOutboundShipment {
             created_time: order.placed_at,
             name: order.to_address.name.to_string(),
             email: order.to_address.email.to_string(),
@@ -1230,6 +1230,18 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
             link_to_package_pickup: Default::default(),
             cio_company_id: company.id,
         };
+
+        // We need to get the carrier and tracking number so we don't create
+        // duplicates every single time.
+        let label = shippo.get_shipping_label(&ns.shippo_id).await.unwrap();
+        if label.tracking_url_provider.contains(".usps.com") {
+            ns.carrier = "USPS".to_string();
+        } else if label.tracking_url_provider.contains("fedex.com") {
+            ns.carrier = "fedex".to_string();
+        } else if label.tracking_url_provider.contains("ups.com") {
+            ns.carrier = "UPS".to_string();
+        }
+        ns.tracking_number = label.tracking_number.to_string();
 
         // Upsert the record in the database.
         let mut s = ns.upsert_in_db(db);
