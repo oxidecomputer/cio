@@ -1033,7 +1033,7 @@ https://airtable-shipments.corp.oxide.computer.xoxo,The \
                     .unwrap();
 
                 // Set the additional fields.
-                self.carrier = rate.provider;
+                self.carrier = clean_provider_name(&rate.provider);
                 self.cost = rate.amount_local.parse().unwrap();
                 self.tracking_number = label.tracking_number.to_string();
                 self.tracking_link = label.tracking_url_provider.to_string();
@@ -1239,7 +1239,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         // The rate will give us the carrier and the cost.
         let rate = shippo.get_rate(&label.rate).await.unwrap();
         ns.cost = rate.amount_local.parse().unwrap();
-        ns.carrier = rate.provider.to_string();
+        ns.carrier = clean_provider_name(&rate.provider);
 
         // Upsert the record in the database.
         let mut s = ns.upsert_in_db(db);
@@ -1253,6 +1253,21 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     OutboundShipments::get_from_db(db, company.id)
         .update_airtable(db)
         .await;
+}
+
+pub fn clean_provider_name(s: &str) -> String {
+    let l = s.to_lowercase();
+    if l == "ups" {
+        "UPS".to_string();
+    } else if l == "fedex" {
+        "FedEx".to_string();
+    } else if l == "usps" {
+        "USPS".to_string();
+    } else if l == "dhl" || l == "dhl_express" {
+        "DHL".to_string();
+    }
+
+    s.to_string()
 }
 
 // Sync the inbound shipments.
