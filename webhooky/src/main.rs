@@ -3495,7 +3495,7 @@ async fn handle_rfd_pull_request(
                     title: rfd.name.to_string(),
                     body: "".to_string(),
                     base: "".to_string(),
-                    maintainer_can_modify: true,
+                    maintainer_can_modify: false,
                     state: Default::default(),
                 },
             )
