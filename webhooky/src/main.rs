@@ -3484,6 +3484,14 @@ async fn handle_rfd_pull_request(
     // Let's make sure the title of the pull request is what it should be.
     // The pull request title should be equal to the name of the pull request.
     if rfd.name != event.pull_request.title {
+        // Get the current set of settings for the pull request.
+        // We do this because we want to keep the current state for "maintainer_can_modify".
+        let pull = github
+            .pulls()
+            .get(owner, repo, event.pull_request.number)
+            .await
+            .unwrap();
+
         // Update the title of the pull request.
         match github
             .pulls()
@@ -3493,10 +3501,10 @@ async fn handle_rfd_pull_request(
                 event.pull_request.number,
                 &octorust::types::PullsUpdateRequest {
                     title: rfd.name.to_string(),
-                    body: "".to_string(),
+                    body: pull.body.to_string(),
                     base: "".to_string(),
-                    maintainer_can_modify: false,
-                    state: Default::default(),
+                    maintainer_can_modify: pull.maintainer_can_modify,
+                    state: None,
                 },
             )
             .await
