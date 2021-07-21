@@ -656,7 +656,7 @@ impl User {
         // Let's create the shipment.
         let new_shipment = NewOutboundShipment::from(self.clone());
         // Let's add it to our database.
-        let mut shipment = new_shipment.upsert(db).await;
+        let mut shipment = new_shipment.upsert_in_db(db);
         // Create the shipment in shippo.
         shipment.create_or_get_shippo_shipment(db).await;
         // Update airtable and the database again.

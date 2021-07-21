@@ -1133,6 +1133,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     if shipment.notes.contains("Oxide store")
         || shipment.notes.contains("Google sheet")
         || shipment.notes.contains("Internal")
+        || !shipment.shippo_id.is_empty()
     {
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
