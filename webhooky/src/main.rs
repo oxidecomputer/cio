@@ -3485,7 +3485,7 @@ async fn handle_rfd_pull_request(
     // The pull request title should be equal to the name of the pull request.
     if rfd.name != event.pull_request.title {
         // Update the title of the pull request.
-        github
+        match github
             .pulls()
             .update(
                 owner,
@@ -3500,13 +3500,24 @@ async fn handle_rfd_pull_request(
                 },
             )
             .await
-            .unwrap_or_else(|e| {
-                panic!(
-                    "unable to update title of pull request from `{}` to `{}` for pr#{}: {}, {:?} \
-                     {}",
-                    event.pull_request.title, rfd.name, event.pull_request.number, e, rfd, number
-                )
-            });
+        {
+            Ok(_) => (),
+            Err(e) => {
+                sentry::capture_message(
+                    &format!(
+                        "unable to update title of pull request from `{}` to `{}` for pr#{}: {}, \
+                         {:?} {}",
+                        event.pull_request.title,
+                        rfd.name,
+                        event.pull_request.number,
+                        e,
+                        rfd,
+                        number
+                    ),
+                    sentry::Level::Fatal,
+                );
+            }
+        }
     }
 
     // Update the labels for the pull request.
