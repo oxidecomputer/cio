@@ -194,7 +194,7 @@ pub async fn create_or_update_file_in_github_repo(
         .create_or_update_file_contents(
             owner,
             repo,
-            &file_path.trim_start_matches('/'),
+            file_path.trim_start_matches('/'),
             &octorust::types::ReposCreateUpdateFileContentsRequest {
                 message: format!(
                     "Updating file content {} programatically\n\nThis is done from the cio repo \
