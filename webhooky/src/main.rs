@@ -4121,7 +4121,7 @@ async fn handle_repository_event(
         &api_context.db,
         github,
         &company.github_org,
-        &event.repository.name,
+        "configs",
         company.id,
     )
     .await;
