@@ -2325,6 +2325,7 @@ async fn listen_auth_slack_callback(
             api_tokens::dsl::cio_company_id
                 .eq(1)
                 .and(api_tokens::dsl::product.eq("slack".to_string()))
+                .and(api_tokens::dsl::auth_company_id.eq(company.id))
                 .and(api_tokens::dsl::token_type.eq(token.token_type.to_string())),
         )
         .first::<APIToken>(&api_context.db.conn())
