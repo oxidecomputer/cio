@@ -529,7 +529,9 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
         {
             Ok(v) => (ts = v),
             Err(e) => {
-                if !e.to_string().contains("404") {
+                // If we get a 404 for teams then likely the repo is new, we can just move on and
+                // add the teams.
+                if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
                     println!("could not list teams for repo {}: {}", r.name, e);
                 }
             }
