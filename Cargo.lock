@@ -508,7 +508,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#05f8b07da32808a4735d8b561bb5340e3274d251"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0e8975de59f98b0c548c1aeef6a14cd345c7a2fa"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2062,7 +2062,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#05f8b07da32808a4735d8b561bb5340e3274d251"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#0e8975de59f98b0c548c1aeef6a14cd345c7a2fa"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -2415,9 +2415,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.15"
+version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9049a90bd66ca5f9779b2fe18609927a279770eed4908f84fcd37d3e4c3709da"
+checksum = "351c655326334b62fe0130243ab3620b300c0fd9fded1ef3023115f24495bc96"
 dependencies = [
  "anyhow",
  "async-recursion",

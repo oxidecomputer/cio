@@ -51,7 +51,7 @@ mailchimp-api = "^0.1.11"
 #mailchimp-api = { path = "../mailchimp" }
 names = "^0.11.0"
 nom_pem = "4"
-octorust = { version = "^0.1.15", features = ["httpcache"] }
+octorust = { version = "^0.1.16", features = ["httpcache"] }
 #octorust = { path = "../../github-api-client/github/", features = ["httpcache"] }
 okta = "^0.0.6"
 openssl = "0.10"

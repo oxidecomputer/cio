@@ -498,7 +498,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
                         &octorust::types::ReposUpdateBranchProtectionRequest {
                             allow_deletions: Default::default(),
                             allow_force_pushes: Default::default(),
-                            enforce_admins: true,
+                            enforce_admins: Some(true),
                             required_conversation_resolution: Default::default(),
                             required_linear_history: Default::default(),
                             required_pull_request_reviews: None,
