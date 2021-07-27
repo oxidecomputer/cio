@@ -1011,6 +1011,7 @@ The Oxide Team",
                     .trim_start_matches("http://www.github.com/")
                     .trim_start_matches('@')
                     .trim_end_matches('/')
+                    .trim_start_matches('/')
                     .replace("github.com", "")
             )
             .trim()
@@ -3355,6 +3356,9 @@ impl Applicant {
         github: &octorust::Client,
         configs_issues: &[octorust::types::IssueSimple],
     ) {
+        self.cleanup_phone();
+        self.parse_github_gitlab();
+
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
@@ -3370,9 +3374,6 @@ impl Applicant {
             // Send the email internally.
             self.send_email_internally(db).await;
         }
-
-        self.cleanup_phone();
-        self.parse_github_gitlab();
 
         // Get the time seven days ago.
         let duration_from_now = Utc::now().signed_duration_since(self.submitted_time);
@@ -3694,6 +3695,7 @@ Sincerely,
                     .trim_start_matches("http://www.github.com/")
                     .trim_start_matches('@')
                     .trim_end_matches('/')
+                    .trim_start_matches('/')
                     .replace("github.com/", "")
             )
             .trim()
