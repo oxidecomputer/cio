@@ -2227,7 +2227,7 @@ impl ApplicantSheetColumns {
             if c.contains("website") {
                 columns.website = index;
             }
-            if c.contains("linkedin") {
+            if c.contains("linkedin profile url") {
                 columns.linkedin = index;
             }
             if c.contains("resume") {
