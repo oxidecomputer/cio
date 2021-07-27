@@ -1019,7 +1019,7 @@ The Oxide Team",
             .trim()
             .to_string();
 
-            if github == "@" {
+            if github == "@" || github == "@n/a" || github.contains("linkedin.com") {
                 github = "".to_string();
             }
 
@@ -3705,7 +3705,7 @@ Sincerely,
             .trim()
             .to_string();
 
-            if github == "@" {
+            if github == "@" || github == "@n/a" || github.contains("linkedin.com") {
                 github = "".to_string();
             }
 
