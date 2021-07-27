@@ -533,11 +533,14 @@ The Oxide Team",
 
         // If the length of the row is greater than the linkedin column
         // then we have a linkedin.
-        let linkedin = if row.len() > columns.linkedin && columns.linkedin != 0 {
+        let mut linkedin = if row.len() > columns.linkedin && columns.linkedin != 0 {
             row[columns.linkedin].trim().to_lowercase()
         } else {
             "".to_string()
         };
+        if linkedin == "n/a" {
+            linkedin = "".to_string();
+        }
 
         // If the length of the row is greater than the start date column
         // then we have a start date.
