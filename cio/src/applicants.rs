@@ -541,18 +541,20 @@ The Oxide Team",
         if linkedin == "n/a" {
             linkedin = "".to_string();
         }
-        // Cleanup linkedin link.
-        linkedin = format!(
-            "https://linkedin.com/{}",
-            linkedin
-                .trim_start_matches("https://linkedin.com/")
-                .trim_start_matches("https://www.linkedin.com/")
-                .trim_start_matches("http://linkedin.com/")
-                .trim_start_matches("http://www.linkedin.com/")
-                .trim_start_matches("www.linkedin.com/")
-                .trim_start_matches("linkedin.com/")
-                .trim()
-        );
+        if !linkedin.is_empty() {
+            // Cleanup linkedin link.
+            linkedin = format!(
+                "https://linkedin.com/{}",
+                linkedin
+                    .trim_start_matches("https://linkedin.com/")
+                    .trim_start_matches("https://www.linkedin.com/")
+                    .trim_start_matches("http://linkedin.com/")
+                    .trim_start_matches("http://www.linkedin.com/")
+                    .trim_start_matches("www.linkedin.com/")
+                    .trim_start_matches("linkedin.com/")
+                    .trim()
+            );
+        }
 
         // If the length of the row is greater than the start date column
         // then we have a start date.
