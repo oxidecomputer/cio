@@ -10,8 +10,7 @@ pub mod tracking_numbers;
 extern crate serde_json;
 
 use std::{
-    collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, io::Read, str::FromStr,
-    sync::Arc,
+    collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc,
 };
 
 use chrono::{offset::Utc, DateTime, NaiveDate, TimeZone};
@@ -42,8 +41,8 @@ use cio_api::{
     swag_store::Order,
     templates::generate_terraform_files_for_okta,
     utils::{
-        create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo,
-        merge_json,
+        create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string,
+        get_file_content_from_repo, merge_json,
     },
 };
 use diesel::prelude::*;
@@ -1475,6 +1474,27 @@ async fn listen_application_submit_requests(
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+/// Application file upload data.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct ApplicationFileUploadData {
+    #[serde(default)]
+    pub cio_company_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub resume: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub materials: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub email: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub role: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub resume_contents: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub materials_contents: String,
+}
+
 /**
  * Listen for files being uploaded for incoming job applications */
 #[endpoint {
@@ -1483,54 +1503,26 @@ async fn listen_application_submit_requests(
 }]
 async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
+    body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
     sentry::start_session();
 
-    // Parse the body as bytes.
-    let mut b = body_param.as_bytes();
-
-    // Get the headers and parse the form data.
-    let headers = rqctx.request.lock().await.headers().clone();
-
-    let content_type = headers.get("content-type").unwrap();
-    let content_length = headers.get("content-length").unwrap();
-    let mut h = hyper::header::Headers::new();
-    h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
-    h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
-
-    let form_data = formdata::read_formdata(&mut b, &h).unwrap();
-
-    let mut email = "".to_string();
-    let mut role = "".to_string();
-    let mut cio_company_id = 0;
-    let mut user_name = "".to_string();
-    for (name, value) in &form_data.fields {
-        if name == "email" {
-            email = value.to_string();
-        } else if name == "role" {
-            role = value.to_string();
-        } else if name == "cio_company_id" {
-            cio_company_id = value.parse::<i32>().unwrap();
-        } else if name == "user_name" {
-            user_name = value.to_string();
-        }
-    }
+    let data = body_param.into_inner();
 
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
 
-    if email.is_empty()
-        || role.is_empty()
-        || cio_company_id <= 0
-        || form_data.files.is_empty()
-        || user_name.is_empty()
+    if data.email.is_empty()
+        || data.role.is_empty()
+        || data.cio_company_id <= 0
+        || data.materials.is_empty()
+        || data.resume.is_empty()
+        || data.materials_contents.is_empty()
+        || data.resume_contents.is_empty()
+        || data.user_name.is_empty()
     {
         sentry::capture_message(
-            &format!(
-                "could not get applicant information for fields: {:?}\nfiles: {:?}",
-                form_data.fields, form_data.files
-            ),
+            &format!("could not get applicant information for: {:?}", data),
             sentry::Level::Info,
         );
 
@@ -1543,7 +1535,7 @@ async fn listen_application_files_upload_requests(
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    let company = Company::get_by_id(db, cio_company_id);
+    let company = Company::get_by_id(db, data.cio_company_id);
 
     // Get gsuite token.
     let token = company.authenticate_google(db).await;
@@ -1567,43 +1559,37 @@ async fn listen_application_files_upload_requests(
 
     // Create the folder for our candidate with their email.
     let email_folder_id = drive
-        .create_folder(&shared_drive.id, &parent_id, &email)
+        .create_folder(&shared_drive.id, &parent_id, &data.email)
         .await
         .unwrap();
 
     // Create the folder for our candidate with the role.
     let role_folder_id = drive
-        .create_folder(&shared_drive.id, &email_folder_id, &role)
+        .create_folder(&shared_drive.id, &email_folder_id, &data.role)
         .await
         .unwrap();
 
-    // Create a hashmap of our files.
-    let mut files: HashMap<String, String> = HashMap::new();
-    for (name, file) in &form_data.files {
-        let path = file.path.to_str().unwrap();
-        files.insert(name.to_string(), path.to_string());
-    }
+    let mut files: HashMap<String, (String, String)> = HashMap::new();
+    files.insert(
+        "resume".to_string(),
+        (data.resume.to_string(), data.resume_contents.to_string()),
+    );
+    files.insert(
+        "materials".to_string(),
+        (
+            data.materials.to_string(),
+            data.materials_contents.to_string(),
+        ),
+    );
 
     // Iterate over our files and create them in google drive.
     // Create or update the file in the google_drive.
-    for (name, file_path) in files {
-        // Read the file.
-        let mut f = File::open(&file_path).expect("no file found");
-        let mut buffer = Vec::new();
-        f.read_to_end(&mut buffer).unwrap();
-
-        // The name is of the format "{field name}:{file name}"
-        // So "materials:thing.pdf".
-        // We split it to get the parts.
-        let split = name.split(':');
-        let vec: Vec<&str> = split.collect();
-        let about_file = vec.get(0).unwrap();
-
+    for (name, (file_path, contents)) in files {
         // Get the extension from the content type.
-        let ext = get_extension_from_filename(&name).unwrap();
+        let ext = get_extension_from_filename(&file_path).unwrap();
         let ct = mime_guess::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
-        let file_name = format!("{} - {}.{}", user_name, about_file, ext);
+        let file_name = format!("{} - {}.{}", data.user_name, name, ext);
 
         // Upload our file to drive.
         let drive_file = drive
@@ -1612,13 +1598,13 @@ async fn listen_application_files_upload_requests(
                 &role_folder_id,
                 &file_name,
                 &content_type,
-                &buffer,
+                &decode_base64(&contents),
             )
             .await
             .unwrap();
         // Add the file to our links.
         response.insert(
-            about_file.to_string(),
+            name.to_string(),
             format!("https://drive.google.com/open?id={}", drive_file.id),
         );
     }
