@@ -3487,7 +3487,7 @@ async fn handle_rfd_pull_request(
     // The pull request title should be equal to the name of the pull request.
     if rfd.name != event.pull_request.title {
         // Get the current set of settings for the pull request.
-        // We do this because we want to keep the current state for "maintainer_can_modify".
+        // We do this because we want to keep the current state for body.
         let pull = github
             .pulls()
             .get(owner, repo, event.pull_request.number)
@@ -3505,7 +3505,7 @@ async fn handle_rfd_pull_request(
                     title: rfd.name.to_string(),
                     body: pull.body.to_string(),
                     base: "".to_string(),
-                    maintainer_can_modify: pull.maintainer_can_modify,
+                    maintainer_can_modify: None,
                     state: None,
                 },
             )
@@ -3900,8 +3900,8 @@ async fn handle_rfd_push(
                                        a pull request open, change the state of your document and \
                                        close this pull request."
                                     .to_string(),
-                                draft: false,
-                                maintainer_can_modify: true,
+                                draft: Some(false),
+                                maintainer_can_modify: Some(true),
                                 issue: 0,
                             },
                         )
