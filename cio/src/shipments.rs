@@ -1197,7 +1197,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     }
 
     // Create the shippo client.
-    let shippo = Shippo::new_from_env();
+    /*let shippo = Shippo::new_from_env();
 
     // Get each of the shippo orders and create or update it in our set.
     // These are typically one off labels made from the UI.
@@ -1256,7 +1256,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         s.create_or_get_shippo_shipment(db).await;
         // Update airtable and the database again.
         s.update(db).await;
-    }
+    }*/
 
     OutboundShipments::get_from_db(db, company.id)
         .update_airtable(db)
