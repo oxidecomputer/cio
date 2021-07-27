@@ -1010,9 +1010,9 @@ The Oxide Team",
                     .trim_start_matches("https://www.github.com/")
                     .trim_start_matches("http://www.github.com/")
                     .trim_start_matches('@')
+                    .replace("github.com", "")
                     .trim_end_matches('/')
                     .trim_start_matches('/')
-                    .replace("github.com", "")
             )
             .trim()
             .to_string();
@@ -3694,9 +3694,9 @@ Sincerely,
                     .trim_start_matches("https://www.github.com/")
                     .trim_start_matches("http://www.github.com/")
                     .trim_start_matches('@')
+                    .replace("github.com/", "")
                     .trim_end_matches('/')
                     .trim_start_matches('/')
-                    .replace("github.com/", "")
             )
             .trim()
             .to_string();
