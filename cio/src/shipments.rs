@@ -1197,7 +1197,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
     }
 
     // Create the shippo client.
-    /*let shippo = Shippo::new_from_env();
+    let shippo = Shippo::new_from_env();
 
     // Get each of the shippo orders and create or update it in our set.
     // These are typically one off labels made from the UI.
@@ -1249,6 +1249,20 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         ns.cost = rate.amount_local.parse().unwrap();
         ns.carrier = clean_provider_name(&rate.provider);
 
+        // Only add the shipment if it doesn't already exist. Since we update it
+        // in the loop above. Otherwise the email notifications get stuck and you get
+        // innundated with notifications your package is on the way. Since it
+        // thinks the status is always changing.
+        let existing = OutboundShipment::get_from_db(
+            db,
+            ns.carrier.to_string(),
+            ns.tracking_number.to_string(),
+        );
+        if existing.is_some() {
+            // We already have this shipment. Continue through our loop.
+            continue;
+        }
+
         // Upsert the record in the database.
         let mut s = ns.upsert_in_db(db);
 
@@ -1256,7 +1270,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         s.create_or_get_shippo_shipment(db).await;
         // Update airtable and the database again.
         s.update(db).await;
-    }*/
+    }
 
     OutboundShipments::get_from_db(db, company.id)
         .update_airtable(db)
