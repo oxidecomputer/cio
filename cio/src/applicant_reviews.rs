@@ -1,8 +1,25 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    airtable::AIRTABLE_REVIEWS_TABLE, core::UpdateAirtableRecord, db::Database,
+    schema::applicant_reviews,
+};
+
+#[db {
+    new_struct_name = "ApplicantReview",
+    airtable_base = "hiring",
+    airtable_table = "AIRTABLE_REVIEWS_TABLE",
+    match_on = {
+        "name" = "String",
+    },
+}]
+#[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[table_name = "applicant_reviews"]
 #[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct ApplicantReview {
+pub struct NewApplicantReview {
+    // TODO: We don't have to do this crazy rename after we update to not use the
+    // Airtable form.
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Name")]
     pub name: String,
     #[serde(
