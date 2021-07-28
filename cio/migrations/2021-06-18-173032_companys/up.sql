@@ -21,6 +21,7 @@ CREATE TABLE companys (
     airtable_api_key VARCHAR NOT NULL,
     airtable_enterprise_account_id VARCHAR NOT NULL,
     airtable_workspace_id VARCHAR NOT NULL,
+    airtable_workspace_read_only_id VARCHAR NOT NULL,
     airtable_base_id_customer_leads VARCHAR NOT NULL,
     airtable_base_id_directory VARCHAR NOT NULL,
     airtable_base_id_misc VARCHAR NOT NULL,

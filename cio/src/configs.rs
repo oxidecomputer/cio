@@ -1611,11 +1611,15 @@ pub async fn sync_users(
                     // If we don't have the airtable user added to our workspace,
                     // we need to add them.
                     let mut has_access_to_workspace = false;
+                    let mut has_access_to_workspace_read_only = false;
                     for collabs in airtable_user.collaborations.workspace_collaborations {
                         if collabs.workspace_id == company.airtable_workspace_id {
                             // We already have given the user the permissions.
                             has_access_to_workspace = true;
-                            break;
+                        } else if collabs.workspace_id == company.airtable_workspace_read_only_id {
+                            // We already have given the user the permissions, to the read
+                            // only workspace.
+                            has_access_to_workspace_read_only = true;
                         }
                     }
 
@@ -1629,6 +1633,20 @@ pub async fn sync_users(
                         airtable_auth
                             .add_collaborator_to_workspace(
                                 &company.airtable_workspace_id,
+                                &user.airtable_id,
+                                "create",
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    if !has_access_to_workspace_read_only && user.is_full_time() {
+                        println!(
+                            "giving {} access to airtable workspace read only {}",
+                            user.email, company.airtable_workspace_read_only_id
+                        );
+                        airtable_auth
+                            .add_collaborator_to_workspace(
+                                &company.airtable_workspace_read_only_id,
                                 &user.airtable_id,
                                 "create",
                             )
