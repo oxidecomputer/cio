@@ -3606,8 +3606,10 @@ impl Applicant {
         // Since we are an Applicant.
         if !self.airtable_record_id.is_empty() {
             self.scoring_form_url = format!(
-                "https://airtable.com/shrE9NT2iR3XFs6W9?prefill_Applicant={}",
+                "https://airtable.com/shrE9NT2iR3XFs6W9?prefill_Applicant={}&prefill_Resume={}&prefill_Materials={}",
                 self.airtable_record_id,
+                self.resume,
+                self.materials
             );
         }
 
