@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_REVIEWS_TABLE, core::UpdateAirtableRecord, db::Database,
+    airtable::AIRTABLE_REVIEWS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
     schema::applicant_reviews,
 };
 
@@ -80,4 +80,48 @@ pub struct NewApplicantReview {
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
     async fn update_airtable_record(&mut self, _record: ApplicantReview) {}
+}
+
+pub async fn refresh_reviews(db: &Database, company: &Company) {
+    let is: Vec<airtable_api::Record<ApplicantReview>> = company
+        .authenticate_airtable(&company.airtable_base_id_hiring)
+        .list_records(&ApplicantReview::airtable_table(), "Grid view", vec![])
+        .await
+        .unwrap();
+
+    for record in is {
+        if record.fields.name.is_empty() || record.fields.applicant.is_empty() {
+            // Ignore it, it's a blank record.
+            continue;
+        }
+
+        let new_review: NewApplicantReview = record.fields.into();
+
+        let mut review = new_review.upsert_in_db(db);
+        if review.airtable_record_id.is_empty() {
+            review.airtable_record_id = record.id;
+        }
+        review.cio_company_id = company.id;
+        review.update(db).await;
+    }
+
+    // Update them all from the database.
+    ApplicantReviews::get_from_db(db, company.id)
+        .update_airtable(db)
+        .await;
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{applicant_reviews::refresh_reviews, companies::Company, db::Database};
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_applicant_reviews() {
+        let db = Database::new();
+
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+        refresh_reviews(&db, &oxide).await;
+    }
 }

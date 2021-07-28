@@ -1141,9 +1141,14 @@ async fn listen_airtable_applicants_review_create_webhooks(
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    let new_review: NewApplicantReview = review.into();
     // Add it to the database.
-    let added_review = new_review.upsert(&api_context.db).await;
+    let r: NewApplicantReview = review.into();
+    let mut new_review = r.upsert_in_db(&api_context.db);
+    if new_review.airtable_record_id.is_empty() {
+        new_review.airtable_record_id = event.record_id.to_string();
+    }
+    new_review.cio_company_id = event.cio_company_id;
+    let added_review = new_review.update(&api_context.db).await;
 
     // Get the applicant for the review.
     let mut applicant = Applicant::get_from_airtable(
@@ -1731,6 +1736,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     if shipment.airtable_record_id.is_empty() {
         shipment.airtable_record_id = event.record_id;
     }
+    // TODO: probably want to pass the company id here.
     shipment.update(db).await;
 
     println!(
