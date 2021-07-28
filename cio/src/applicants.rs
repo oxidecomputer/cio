@@ -1924,6 +1924,9 @@ impl Applicant {
 
     /// Send an invite to the applicant to do a background check.
     pub async fn send_background_check_invitation(&mut self, db: &Database) {
+        // Keep the fields from Airtable we need just in case they changed.
+        self.keep_fields_from_airtable(db).await;
+
         let company = self.company(db);
         let checkr_auth = company.authenticate_checkr();
         if checkr_auth.is_none() {
@@ -4349,6 +4352,9 @@ Sincerely,
         template_id: &str,
         company: &Company,
     ) {
+        // Keep the fields from Airtable we need just in case they changed.
+        self.keep_fields_from_airtable(db).await;
+
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
         if self.status != crate::applicant_status::Status::GivingOffer.to_string()
@@ -4462,6 +4468,9 @@ Sincerely,
         ds: &DocuSign,
         envelope: docusign::Envelope,
     ) {
+        // Keep the fields from Airtable we need just in case they changed.
+        self.keep_fields_from_airtable(db).await;
+
         let company = self.company(db);
 
         // Set the status in the database and airtable.
@@ -4632,6 +4641,9 @@ Sincerely,
         template_id: &str,
         company: &Company,
     ) {
+        // Keep the fields from Airtable we need just in case they changed.
+        self.keep_fields_from_airtable(db).await;
+
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
         if self.status != crate::applicant_status::Status::GivingOffer.to_string()
@@ -4776,6 +4788,9 @@ Sincerely,
         ds: &DocuSign,
         envelope: docusign::Envelope,
     ) {
+        // Keep the fields from Airtable we need just in case they changed.
+        self.keep_fields_from_airtable(db).await;
+
         let company = self.company(db);
 
         // Set the status in the database and airtable.

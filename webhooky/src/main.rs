@@ -1917,6 +1917,9 @@ async fn listen_checkr_background_update_webhooks(
         .first::<Applicant>(&api_context.db.conn());
     if result.is_ok() {
         let mut applicant = result.unwrap();
+        // Keep the fields from Airtable we need just in case they changed.
+        applicant.keep_fields_from_airtable(&api_context.db).await;
+
         // Set the status for the report.
         if event.data.object.package.contains("premium_criminal") {
             applicant.criminal_background_check_status = event.data.object.status.to_string();
