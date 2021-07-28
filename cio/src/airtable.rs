@@ -22,6 +22,7 @@ pub static AIRTABLE_RFD_TABLE: &str = "RFDs";
 pub static AIRTABLE_APPLICATIONS_TABLE: &str = "Applicants";
 pub static AIRTABLE_INTERVIEWS_TABLE: &str = "Interviews";
 pub static AIRTABLE_REVIEWER_LEADERBOARD_TABLE: &str = "Reviewer Leaderboard";
+pub static AIRTABLE_REVIEWS_TABLE: &str = "Reviews";
 
 pub static AIRTABLE_DISCUSSION_TOPICS_TABLE: &str = "Discussion topics";
 pub static AIRTABLE_MEETING_SCHEDULE_TABLE: &str = "Meeting schedule";

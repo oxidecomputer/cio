@@ -236,6 +236,9 @@ pub struct NewApplicant {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub piia_envelope_completed: Option<DateTime<Utc>>,
 
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_to_reviews: Vec<String>,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
@@ -356,6 +359,7 @@ impl NewApplicant {
             docusign_piia_envelope_status: Default::default(),
             piia_envelope_created: Default::default(),
             piia_envelope_completed: Default::default(),
+            link_to_reviews: Default::default(),
             // TODO: update this, when we support multiple companies.
             cio_company_id: 1,
         }
@@ -1002,6 +1006,7 @@ The Oxide Team",
             docusign_piia_envelope_status,
             piia_envelope_created,
             piia_envelope_completed,
+            link_to_reviews: Default::default(),
             cio_company_id,
         }
     }
@@ -1632,6 +1637,10 @@ Email: {}",
             msg += &format!("\nWebsite: {}", self.website);
         }
 
+        if !self.scoring_form_url.is_empty() {
+            msg += &format!("\n\nScoring form url: {}\n", self.scoring_form_url);
+        }
+
         msg += &format!(
             "\nResume: {}
 Oxide Candidate Materials: {}
@@ -2177,6 +2186,7 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
     async fn update_airtable_record(&mut self, record: Applicant) {
         self.interviews = record.interviews;
         self.geocode_cache = record.geocode_cache;
+        self.link_to_reviews = record.link_to_reviews;
         self.resume_contents = truncate(&self.resume_contents, 100000);
         self.materials_contents = truncate(&self.materials_contents, 100000);
         self.question_why_oxide = truncate(&self.question_why_oxide, 100000);
@@ -3456,6 +3466,10 @@ Email: {}",
         }
         if !self.website.is_empty() {
             msg += &format!("\nWebsite: {}", self.website);
+        }
+
+        if !self.scoring_form_url.is_empty() {
+            msg += &format!("\n\nScoring form url: {}\n", self.scoring_form_url);
         }
 
         msg += &format!(

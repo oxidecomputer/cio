@@ -72,5 +72,6 @@ CREATE TABLE applicants (
     docusign_piia_envelope_status VARCHAR NOT NULL,
     piia_envelope_created TIMESTAMPTZ DEFAULT NULL,
     piia_envelope_completed TIMESTAMPTZ DEFAULT NULL,
+	link_to_reviews TEXT [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

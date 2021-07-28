@@ -186,6 +186,7 @@ impl From<ApplicationForm> for NewApplicant {
             docusign_piia_envelope_status: Default::default(),
             piia_envelope_created: Default::default(),
             piia_envelope_completed: Default::default(),
+            link_to_reviews: Default::default(),
             cio_company_id: form.cio_company_id,
         }
     }
