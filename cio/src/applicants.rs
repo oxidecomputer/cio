@@ -3456,7 +3456,7 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
     async fn update_airtable_record(&mut self, _record: ApplicantReviewer) {}
 }
 
-pub async fn update_applicant_reviewers(db: &Database, company: &Company) {
+pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Company) {
     // Get the GSuite token.
     let token = company.authenticate_google(db).await;
 
@@ -4675,7 +4675,7 @@ mod tests {
     use crate::{
         applicants::{
             refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants,
-            refresh_new_applicants_and_reviews, update_applicant_reviewers,
+            refresh_new_applicants_and_reviews, update_applicant_reviewers_leaderboard,
             update_applications_with_scoring_forms, update_applications_with_scoring_results,
             Applicant, Applicants,
         },
@@ -4710,7 +4710,7 @@ mod tests {
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        update_applicant_reviewers(&db, &oxide).await;
+        update_applicant_reviewers_leaderboard(&db, &oxide).await;
     }
 
     #[ignore]
