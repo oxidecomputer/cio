@@ -9,6 +9,7 @@ CREATE TABLE applicant_reviews (
     notes VARCHAR NOT NULL,
     reviewer VARCHAR NOT NULL,
     applicant TEXT [] NOT NULL,
+    link_to_leaderboard TEXT [] NOT NULL,
     cio_company_id INTEGER NOT NULL,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

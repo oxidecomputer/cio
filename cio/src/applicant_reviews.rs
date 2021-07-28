@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_REVIEWS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
-    schema::applicant_reviews,
+    airtable::AIRTABLE_REVIEWS_TABLE, applicants::ApplicantReviewer, companies::Company,
+    core::UpdateAirtableRecord, db::Database, schema::applicant_reviews,
 };
 
 #[db {
@@ -71,6 +71,14 @@ pub struct NewApplicantReview {
     pub reviewer: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Applicant")]
     pub applicant: Vec<String>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "Link to Leaderboard"
+    )]
+    pub link_to_leaderboard: Vec<String>,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
@@ -82,6 +90,15 @@ impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
     async fn update_airtable_record(&mut self, _record: ApplicantReview) {
         // Set name to empty since it is a function we cannot update it.
         self.name = "".to_string();
+    }
+}
+
+impl ApplicantReview {
+    pub fn expand(&mut self, db: &Database) {
+        // We need to get the person from the leaderboard that matches this reviewer.
+        let reviewer = ApplicantReviewer::get_from_db(db, self.reviewer.to_string()).unwrap();
+        // Set this to the link to leaderboard.
+        self.link_to_leaderboard = vec![reviewer.airtable_record_id];
     }
 }
 
@@ -105,6 +122,9 @@ pub async fn refresh_reviews(db: &Database, company: &Company) {
             review.airtable_record_id = record.id;
         }
         review.cio_company_id = company.id;
+
+        review.expand(db);
+
         review.update(db).await;
     }
 

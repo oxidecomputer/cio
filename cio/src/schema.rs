@@ -84,6 +84,7 @@ table! {
         notes -> Varchar,
         reviewer -> Varchar,
         applicant -> Array<Text>,
+        link_to_leaderboard -> Array<Text>,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
