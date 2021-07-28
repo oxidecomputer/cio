@@ -58,6 +58,35 @@
         }
       }
     },
+    "/airtable/assets/items/print_barcode_label": {
+      "post": {
+        "description": "Listen for a button pressed to print a barcode label for an asset item.",
+        "operationId": "listen_airtable_assets_items_print_barcode_label_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/airtable/employees/print_home_address_label": {
       "post": {
         "description": "Listen for a button pressed to print a home address label for employees.",
@@ -296,10 +325,9 @@
         "operationId": "listen_application_files_upload_requests",
         "requestBody": {
           "content": {
-            "application/octet-stream": {
+            "application/json": {
               "schema": {
-                "type": "string",
-                "format": "binary"
+                "$ref": "#/components/schemas/ApplicationFileUploadData"
               }
             }
           },
@@ -330,7 +358,9 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {}
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationForm"
+              }
             }
           },
           "required": true
@@ -1324,6 +1354,85 @@
           }
         }
       },
+      "ApplicationFileUploadData": {
+        "description": "Application file upload data.",
+        "type": "object",
+        "properties": {
+          "cio_company_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "email": {
+            "type": "string"
+          },
+          "materials": {
+            "type": "string"
+          },
+          "materials_contents": {
+            "type": "string"
+          },
+          "resume": {
+            "type": "string"
+          },
+          "resume_contents": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          }
+        }
+      },
+      "ApplicationForm": {
+        "type": "object",
+        "properties": {
+          "cio_company_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "email": {
+            "type": "string"
+          },
+          "github": {
+            "type": "string"
+          },
+          "interested_in": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "linkedin": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "materials": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "portfolio": {
+            "type": "string"
+          },
+          "resume": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          }
+        }
+      },
       "BccEmailAddress": {
         "type": "object",
         "properties": {
@@ -1777,7 +1886,7 @@
         }
       },
       "GitHubComment": {
-        "description": "A Github comment. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues#comments",
+        "description": "A octorust::Client comment. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues#comments",
         "type": "object",
         "properties": {
           "body": {
@@ -1901,7 +2010,7 @@
         }
       },
       "GitHubIssue": {
-        "description": "A Github issue. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues",
+        "description": "A octorust::Client issue. FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/issues",
         "type": "object",
         "properties": {
           "assignee": {
