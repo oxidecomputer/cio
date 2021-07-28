@@ -244,6 +244,24 @@ pub struct NewApplicant {
     pub cio_company_id: i32,
 }
 
+pub fn clean_interested_in(st: &str) -> String {
+    let s = st.trim().to_lowercase();
+
+    if s == "product security engineer" || s == "security engineer" {
+        return "Product Security Engineer".to_string();
+    } else if s == "software engineer: web" {
+        return "Software Engineer: Web".to_string();
+    } else if s == "software engineer: embedded systems" {
+        return "Software Engineer: Embedded Systems".to_string();
+    } else if s == "software engineer: control plane" {
+        return "Software Engineer: Control Plane".to_string();
+    } else if s == "hardware engineer" {
+        return "Hardware Engineer".to_string();
+    }
+
+    st.to_string()
+}
+
 impl NewApplicant {
     /// Parse the sheet columns from single Google Sheets row values.
     /// This is what we get back from the webhook.
@@ -258,8 +276,9 @@ impl NewApplicant {
         let interested_in_str: Vec<&str> = split.collect();
         let mut interested_in: Vec<String> = Default::default();
         for s in interested_in_str {
-            if !s.trim().is_empty() {
-                interested_in.push(s.trim().to_string());
+            let i = clean_interested_in(s);
+            if !i.is_empty() {
+                interested_in.push(i.to_string());
             }
         }
 
@@ -587,7 +606,10 @@ The Oxide Team",
             };
         let mut interested_in: Vec<String> = Default::default();
         for s in interested_in_str {
-            interested_in.push(s.trim().to_string());
+            let i = clean_interested_in(s);
+            if !i.is_empty() {
+                interested_in.push(i.to_string());
+            }
         }
 
         // If the length of the row is greater than the portfolio column
@@ -1661,6 +1683,146 @@ The applicants Airtable \
 }
 
 impl Applicant {
+    /// Update applicant reviews counts.
+    pub async fn update_reviews_scoring(&mut self, db: &Database) {
+        // Let's get the existing record from Airtable so we have the set of reviews.
+        let existing = self.get_existing_airtable_record(db).await.unwrap().fields;
+
+        // If they have no reviews, eff it.
+        if existing.link_to_reviews.is_empty() {
+            // Return early.
+            return;
+        }
+
+        // Zero out the values for the scores.
+        self.scoring_evaluations_count = 0;
+        self.scoring_enthusiastic_yes_count = 0;
+        self.scoring_yes_count = 0;
+        self.scoring_pass_count = 0;
+        self.scoring_no_count = 0;
+        self.scoring_not_applicable_count = 0;
+        self.scoring_insufficient_experience_count = 0;
+        self.scoring_inapplicable_experience_count = 0;
+        self.scoring_job_function_yet_needed_count = 0;
+        self.scoring_underwhelming_materials_count = 0;
+
+        if self.status == crate::applicant_status::Status::Onboarding.to_string()
+            || self.status == crate::applicant_status::Status::Hired.to_string()
+        {
+            // TODO: delete all the reviews data from Airtable.
+            // TODO: do the values(?)
+
+            // We already zero-ed out the values for the scores, now we return early.
+            // We don't want people who join to know their scores.
+            self.update(db).await;
+            return;
+        }
+
+        // Create the Airtable client.
+        let company = Company::get_by_id(db, self.cio_company_id);
+        let airtable = company.authenticate_airtable(&company.airtable_base_id_customer_leads);
+
+        // Let's iterate over the reviews.
+        for record_id in existing.link_to_reviews {
+            // Get the record.
+            let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
+                .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, &record_id)
+                .await
+                .unwrap();
+
+            // Set the values if they are not empty.
+            // TODO: actually do the majority if they differ in value but for now YOLO.
+            if !record.fields.value_reflected.is_empty() {
+                self.value_reflected = record.fields.value_reflected.to_string();
+            }
+            if !record.fields.value_violated.is_empty() {
+                self.value_violated = record.fields.value_violated.to_string();
+            }
+            if !record.fields.values_in_tension.is_empty() {
+                self.values_in_tension = record.fields.values_in_tension.clone();
+            }
+
+            // Add the scoring count.
+            self.scoring_evaluations_count += 1;
+
+            // Up the scores for the relevant evaluations.
+            if record
+                .fields
+                .evaluation
+                .to_lowercase()
+                .starts_with("emphatic yes:")
+            {
+                self.scoring_enthusiastic_yes_count += 1;
+            }
+            if record.fields.evaluation.to_lowercase().starts_with("yes:") {
+                self.scoring_yes_count += 1;
+            }
+            if record.fields.evaluation.to_lowercase().starts_with("pass:") {
+                self.scoring_pass_count += 1;
+            }
+            if record.fields.evaluation.to_lowercase().starts_with("no:") {
+                self.scoring_no_count += 1;
+            }
+            if record.fields.evaluation.to_lowercase().starts_with("n/a:") {
+                self.scoring_not_applicable_count += 1;
+            }
+
+            // Add in the rationale.
+            if record
+                .fields
+                .evaluation
+                .to_lowercase()
+                .starts_with("insufficient experience")
+            {
+                self.scoring_insufficient_experience_count += 1;
+            }
+            if record
+                .fields
+                .evaluation
+                .to_lowercase()
+                .starts_with("inapplicable experience")
+            {
+                self.scoring_inapplicable_experience_count += 1;
+            }
+            if record
+                .fields
+                .evaluation
+                .to_lowercase()
+                .starts_with("job function not yet needed")
+            {
+                self.scoring_job_function_yet_needed_count += 1;
+            }
+            if record
+                .fields
+                .evaluation
+                .to_lowercase()
+                .starts_with("underwhelming materials")
+            {
+                self.scoring_underwhelming_materials_count += 1;
+            }
+
+            // If we don't already have the review in reviewers completed,
+            // add them.
+            if !self.scorers_completed.contains(&record.fields.reviewer) {
+                self.scorers_completed
+                    .push(record.fields.reviewer.to_string());
+            }
+
+            // If this reviewer was assigned, remove them since they completed scoring.
+            if self.scorers.contains(&record.fields.reviewer) {
+                let index = self
+                    .scorers
+                    .iter()
+                    .position(|r| *r == record.fields.reviewer)
+                    .unwrap();
+                self.scorers.remove(index);
+            }
+        }
+
+        // Update the record.
+        self.update(db).await;
+    }
+
     /// Get the human duration of time since the application was submitted.
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
