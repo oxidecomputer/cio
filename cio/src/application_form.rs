@@ -64,39 +64,8 @@ impl ApplicationForm {
         // Initialize the GSuite sheets client.
         let drive_client = GoogleDrive::new(token.clone());
 
-        let github = company.authenticate_github();
-
-        // Get all the hiring issues on the configs repository.
-        let configs_issues = github
-            .issues()
-            .list_all_for_repo(
-                &company.github_org,
-                "configs",
-                // milestone
-                "",
-                octorust::types::IssuesListState::All,
-                // assignee
-                "",
-                // creator
-                "",
-                // mentioned
-                "",
-                // labels
-                "hiring",
-                // sort
-                Default::default(),
-                // direction
-                Default::default(),
-                // since
-                None,
-            )
-            .await
-            .unwrap();
-
         // Expand the application.
-        applicant
-            .expand(db, &drive_client, &github, &configs_issues)
-            .await;
+        applicant.expand(db, &drive_client).await;
 
         // Update airtable and the database again.
         applicant.update(db).await;

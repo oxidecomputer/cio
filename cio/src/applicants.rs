@@ -1686,6 +1686,68 @@ The applicants Airtable \
 }
 
 impl Applicant {
+    /// Update an applicant's status based on dates, interviews, etc.
+    pub fn update_status(&mut self) {
+        // If we know they have more than 1 interview AND their current status is "next steps",
+        // THEN we can mark the applicant as in the "interviewing" state.
+        if self.interviews.len() > 1
+            && (self.status == crate::applicant_status::Status::NextSteps.to_string()
+                || self.status == crate::applicant_status::Status::NeedsToBeTriaged.to_string())
+        {
+            self.status = crate::applicant_status::Status::Interviewing.to_string();
+        }
+
+        // If their status is "Onboarding" and it is after their start date.
+        // Set their status to "Hired".
+        if (self.status == crate::applicant_status::Status::Onboarding.to_string()
+            || self.status == crate::applicant_status::Status::GivingOffer.to_string())
+            && self.start_date.is_some()
+            && self.start_date.unwrap() <= Utc::now().date().naive_utc()
+        {
+            // We shouldn't also check if we have an employee for the user, only if the employee had
+            // been hired and left.
+            self.status = crate::applicant_status::Status::Hired.to_string();
+        }
+    }
+
+    /// Update the interviews start and end time, if we have it.
+    pub fn update_interviews_start_end_time(&mut self, db: &Database) {
+        // If we have interviews for them, let's update the interviews_started and
+        // interviews_completed times.
+        if self.interviews.is_empty() || self.airtable_record_id.is_empty() {
+            // Return early we don't care.
+            return;
+        }
+
+        // Since our interviews length is at least one, we must have at least one interview.
+        // Let's query the interviews for this candidate.
+        let data = applicant_interviews::dsl::applicant_interviews
+            .filter(
+                applicant_interviews::dsl::applicant
+                    .contains(vec![self.airtable_record_id.to_string()]),
+            )
+            .order_by(applicant_interviews::dsl::start_time.asc())
+            .load::<ApplicantInterview>(&db.conn())
+            .unwrap();
+        // Probably a better way to do this using first and last, but whatever.
+        for (index, r) in data.iter().enumerate() {
+            if index == 0 {
+                // We have the first record.
+                // Let's update the started time.
+                self.interviews_started = Some(r.start_time);
+                // We continue here so we don't accidentally set the
+                // completed_time if we only have one record.
+                continue;
+            }
+            if index == data.len() - 1 {
+                // We are on the last record.
+                // Let's update the completed time.
+                self.interviews_completed = Some(r.end_time);
+                break;
+            }
+        }
+    }
+
     /// Update applicant reviews counts.
     pub async fn update_reviews_scoring(&mut self, db: &Database) {
         // Let's get the existing record from Airtable so we have the set of reviews.
@@ -2342,6 +2404,105 @@ Notes:
             .unwrap();
 
         println!("[applicant]: created onboarding issue for {}", self.email);
+    }
+
+    /// Send an email to the applicant that we love them but they are too junior.
+    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) {
+        let company = self.company(db);
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("Thank you for your application, {}", self.name),
+                format!(
+                    "Dear {},
+
+Thank you for your application to join Oxide Computer Company. At this point
+in time, we are focusing on hiring engineers with professional experience,
+who have a track record of self-directed contributions to a team.
+
+We are grateful you took the time to apply and put so much thought into
+your candidate materials, we loved reading them. Although engineers at the
+early stages of their career are unlikely to be a fit for us right now, we
+are growing, and encourage you to consider re-applying in the future.
+
+ We would absolutely love to work with you in the future and cannot wait for
+that stage of the company!
+
+All the best,
+The Oxide Team",
+                    self.name
+                ),
+                vec![self.email.to_string()],
+                vec![format!("careers@{}", company.gsuite_domain)],
+                vec![],
+                format!("careers@{}", company.gsuite_domain),
+            )
+            .await;
+    }
+
+    /// Send an email to the applicant that they did not provide materials.
+    pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) {
+        let company = self.company(db);
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("Thank you for your application, {}", self.name),
+                format!(
+                    "Dear {},
+
+Unfortunately, we cannot accept it at this time since you failed to provide the
+requested materials.
+
+All the best,
+The Oxide Team",
+                    self.name
+                ),
+                vec![self.email.to_string()],
+                vec![format!("careers@{}", company.gsuite_domain)],
+                vec![],
+                format!("careers@{}", company.gsuite_domain),
+            )
+            .await;
+    }
+
+    /// Send an email to the applicant about timing.
+    pub async fn send_email_rejection_timing(&self, db: &Database) {
+        let company = self.company(db);
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .send_mail(
+                format!("Thank you for your application, {}", self.name),
+                format!(
+                    "Dear {},
+
+We are so humbled by your application to join Oxide Computer Company. At this
+stage of the company we are hyper-focused on certain areas of the stack and
+when we need specific domain space experience such as yours, please engage
+with us. Our roles will be updated as we need them.
+
+We are grateful you took the time to apply and put so much thought into the
+candidate materials, we loved reading them. We would absolutely love to work
+with you in the future and cannot wait for that stage of the company!
+
+All the best,
+The Oxide Team",
+                    self.name
+                ),
+                vec![self.email.to_string()],
+                vec![format!("careers@{}", company.gsuite_domain)],
+                vec![],
+                format!("careers@{}", company.gsuite_domain),
+            )
+            .await;
     }
 }
 
@@ -3589,15 +3750,107 @@ impl Applicant {
                 .trim()
         );
     }
+    pub async fn set_lat_long(&mut self) {
+        // Get the latitude and longitude if we don't already have it.
+        if self.latitude != 0.0 && self.longitude != 0.0 {
+            // Return early we alreaedy have lat and long set.
+            return;
+        }
+
+        // Create the geocode client.
+        let geocode = Geocode::new_from_env();
+        // Attempt to get the lat and lng.
+        match geocode.get(&self.location).await {
+            Ok(result) => {
+                let location = result.geometry.location;
+                self.latitude = location.lat as f32;
+                self.longitude = location.lng as f32;
+            }
+            Err(e) => {
+                println!(
+                    "[applicants] could not get lat lng for location `{}`: {}",
+                    self.location, e
+                );
+            }
+        }
+    }
+
+    /// Send a rejection email if we need to.
+    pub async fn send_email_follow_up_if_necessary(&mut self, db: &Database) {
+        // Send an email follow up if we should.
+        if self.sent_email_follow_up {
+            // We have already followed up with the candidate.
+            // Let's return early.
+            return;
+        }
+
+        // Get the status for the applicant.
+        let status = crate::applicant_status::Status::from_str(&self.status).unwrap_or_default();
+
+        if status != crate::applicant_status::Status::NeedsToBeTriaged
+            && status != crate::applicant_status::Status::Declined
+            && status != crate::applicant_status::Status::Deferred
+        {
+            // Just set that we have sent the email so that we don't do it again if we move to
+            // next steps then interviews etc.
+            // Only when it's not in "NeedsToBeTriaged", or we are about to defer or decline.
+            // Mark the column as true not false.
+
+            self.sent_email_follow_up = true;
+            // Update the database.
+            self.update(db).await;
+            // Return early, we don't actually want to send something, likely a member
+            // of the Oxide team reached out directly.
+            return;
+        }
+
+        if status != crate::applicant_status::Status::Declined
+            && status != crate::applicant_status::Status::Deferred
+        {
+            // We want to return early, we only care about people who were deferred or declined.
+            // So sent the folks in the triage home.
+            // Above we sent home everyone else.
+            return;
+        }
+
+        // Check if we have sent the follow up email to them.unwrap_or_default().
+        if self.raw_status.contains("did not do materials") {
+            // Send the email.
+            self.send_email_rejection_did_not_provide_materials(db)
+                .await;
+
+            println!(
+                "[applicant] sent email to {} tell them they did not do the materials",
+                self.email
+            );
+        } else if self.raw_status.contains("junior") {
+            // Send the email.
+            self.send_email_rejection_junior_but_we_love_you(db).await;
+
+            println!(
+                "[applicant] sent email to {} tell them we can't hire them at this stage",
+                self.email
+            );
+        } else {
+            // Send the email.
+            self.send_email_rejection_timing(db).await;
+
+            println!(
+                "[applicant] sent email to {} tell them about timing",
+                self.email
+            );
+        }
+
+        // Mark the time we sent the email.
+        self.rejection_sent_date_time = Some(Utc::now());
+
+        self.sent_email_follow_up = true;
+        // Update the database.
+        self.update(db).await;
+    }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(
-        &mut self,
-        db: &Database,
-        drive_client: &GoogleDrive,
-        github: &octorust::Client,
-        configs_issues: &[octorust::types::IssueSimple],
-    ) {
+    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) {
         self.cleanup_phone();
         self.parse_github_gitlab();
         self.cleanup_linkedin();
@@ -3631,6 +3884,9 @@ impl Applicant {
             self.send_email_internally(db).await;
         }
 
+        // Set the latitude and longitude if we don't already have it.
+        self.set_lat_long().await;
+
         // Get the time seven days ago.
         let duration_from_now = Utc::now().signed_duration_since(self.submitted_time);
 
@@ -3645,9 +3901,6 @@ impl Applicant {
             self.materials_contents = get_file_contents(drive_client, &self.materials).await;
             self.parse_materials();
         }
-
-        self.create_github_onboarding_issue(db, github, configs_issues)
-            .await;
     }
 
     /// Get the applicant's information in the form of the body of an email for a
@@ -4649,17 +4902,31 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
             .fields;
         // We keep the scorers from Airtable in case someone assigned someone from the UI.
         applicant.scorers = existing.scorers.clone();
+        // TODO: do we need to keep the interviewers?.
 
         // TODO: Keep the status from Airtable.
         // TODO: Keep the start date from Airtable(?).
 
         // Expand the application.
+        applicant.expand(db, &drive_client).await;
+
+        // Update the applicant's status based on other criteria.
+        applicant.update_status();
+
+        // Update airtable and the database again, we want to save our status just in
+        // case there is an error.
+        applicant.update(db).await;
+
+        // Send the follow up email if we need to, this will also update the database.
+        applicant.send_email_follow_up_if_necessary(db).await;
+
+        // Create the GitHub onboarding issue if we need to.
         applicant
-            .expand(db, &drive_client, &github, &configs_issues)
+            .create_github_onboarding_issue(db, &github, &configs_issues)
             .await;
 
-        // Update airtable and the database again.
-        applicant.update(db).await;
+        // Update the interviews start and end time if we have interviews.
+        applicant.update_interviews_start_end_time(db);
 
         // Update the reviews for the applicant.
         // This function will update the database so we don't have to.
