@@ -4927,6 +4927,10 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         // Update the interviews start and end time if we have interviews.
         applicant.update_interviews_start_end_time(db);
 
+        // Update airtable and the database again, we want to save our status just in
+        // case there is an error.
+        applicant.update(db).await;
+
         // Update the reviews for the applicant.
         // This function will update the database so we don't have to.
         applicant.update_reviews_scoring(db).await;
