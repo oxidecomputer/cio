@@ -1714,7 +1714,7 @@ impl Applicant {
 
         // Create the Airtable client.
         let company = Company::get_by_id(db, self.cio_company_id);
-        let airtable = company.authenticate_airtable(&company.airtable_base_id_customer_leads);
+        let airtable = company.authenticate_airtable(&company.airtable_base_id_hiring);
 
         if self.status == crate::applicant_status::Status::Onboarding.to_string()
             || self.status == crate::applicant_status::Status::Hired.to_string()
