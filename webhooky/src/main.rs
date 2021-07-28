@@ -1197,8 +1197,12 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     }
 
     // Get the row from airtable.
-    // TODO: fix the company id.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, 1).await;
+    let shipment = OutboundShipment::get_from_airtable(
+        &event.record_id,
+        &api_context.db,
+        event.cio_company_id,
+    )
+    .await;
 
     // If it is a row we created from our internal store do nothing.
     if shipment.notes.contains("Oxide store")
@@ -1717,8 +1721,8 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     let db = &api_context.db;
 
     // Get the row from airtable.
-    // TODO: fix the company id
-    let record = InboundShipment::get_from_airtable(&event.record_id, db, 1).await;
+    let record =
+        InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id).await;
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
@@ -1737,7 +1741,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     if shipment.airtable_record_id.is_empty() {
         shipment.airtable_record_id = event.record_id;
     }
-    // TODO: probably want to pass the company id here.
+    shipment.cio_company_id = event.cio_company_id;
     shipment.update(db).await;
 
     println!(
