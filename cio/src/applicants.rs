@@ -1688,6 +1688,9 @@ impl Applicant {
         // Let's get the existing record from Airtable so we have the set of reviews.
         let existing = self.get_existing_airtable_record(db).await.unwrap().fields;
 
+        // We keep the scorers from Airtable in case someone assigned someone from the UI.
+        self.scorers = existing.scorers.clone();
+
         // If they have no reviews, eff it.
         if existing.link_to_reviews.is_empty() {
             // Return early.
@@ -4630,6 +4633,19 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
 
     // Iterate over the applicants and update them.
     for mut applicant in applicants {
+        // Let's get the existing record from Airtable, so we can use it as the source
+        // of truth for various things.
+        let existing = applicant
+            .get_existing_airtable_record(db)
+            .await
+            .unwrap()
+            .fields;
+        // We keep the scorers from Airtable in case someone assigned someone from the UI.
+        applicant.scorers = existing.scorers.clone();
+
+        // TODO: Keep the status from Airtable.
+        // TODO: Keep the start date from Airtable(?).
+
         // Expand the application.
         applicant
             .expand(db, &drive_client, &github, &configs_issues)
