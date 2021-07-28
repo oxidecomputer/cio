@@ -4759,8 +4759,15 @@ Sincerely,
         // Keep the reviews, since these are updated out of band by Airtable.
         self.link_to_reviews = existing.link_to_reviews;
 
-        // TODO: Keep the status/status raw from Airtable.
-        // TODO: Keep the start date from Airtable(?).
+        // We want to keep the status and status raw since we might have modified
+        // it to move a candidate along in the process.
+        self.status = existing.status.to_string();
+        self.raw_status = existing.raw_status.to_string();
+
+        // Mostly the start date will populate from docusign, but just in case they
+        // are someone who worked remotely, we might have to manually set it.
+        // TODO: ensure this is always true in the future.
+        self.start_date = existing.start_date;
     }
 
     pub async fn update_applicant_from_docusign_piia_envelope(
