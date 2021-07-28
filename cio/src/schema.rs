@@ -67,6 +67,23 @@ table! {
         pass -> Int4,
         no -> Int4,
         not_applicable -> Int4,
+        airtable_record_id -> Varchar,
+        cio_company_id -> Int4,
+    }
+}
+
+table! {
+    applicant_reviews (id) {
+        id -> Int4,
+        name -> Varchar,
+        value_reflected -> Varchar,
+        value_violated -> Varchar,
+        values_in_tension -> Array<Text>,
+        evaluation -> Varchar,
+        rationale -> Array<Text>,
+        notes -> Varchar,
+        reviewer -> Varchar,
+        applicant -> Array<Text>,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
@@ -864,6 +881,7 @@ allow_tables_to_appear_in_same_query!(
     api_tokens,
     applicant_interviews,
     applicant_reviewers,
+    applicant_reviews,
     applicants,
     asset_items,
     auth_user_logins,
