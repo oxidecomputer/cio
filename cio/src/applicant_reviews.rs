@@ -52,7 +52,7 @@ pub struct NewApplicantReview {
         skip_serializing_if = "Vec::is_empty",
         rename = "If \"Pass\" or \"No\", rationale if applicable (check all that apply)"
     )]
-    pub rationable: Vec<String>,
+    pub rationale: Vec<String>,
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",
@@ -70,4 +70,13 @@ pub struct NewApplicantReview {
     pub reviewer: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Applicant")]
     pub applicant: Vec<String>,
+    /// The CIO company ID.
+    #[serde(default)]
+    pub cio_company_id: i32,
+}
+
+/// Implement updating the Airtable record for a ApplicantReview.
+#[async_trait]
+impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
+    async fn update_airtable_record(&mut self, _record: ApplicantReview) {}
 }
