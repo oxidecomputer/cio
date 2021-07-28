@@ -56,14 +56,6 @@ impl ApplicationForm {
         // Add the applicant to the database.
         let mut applicant = new_applicant.upsert(db).await;
 
-        // Add the scoring url since now we should have an Airtable record id.
-        if !applicant.airtable_record_id.is_empty() {
-            applicant.scoring_form_url = format!(
-                "https://airtable.com/shrE9NT2iR3XFs6W9?prefill_Applicant={}",
-                applicant.airtable_record_id,
-            );
-        }
-
         let company = Company::get_by_id(db, self.cio_company_id);
 
         // Get the GSuite token.

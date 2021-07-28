@@ -3539,6 +3539,26 @@ pub async fn get_docusign_template_id(ds: &DocuSign, name: &str) -> String {
 }
 
 impl Applicant {
+    pub fn cleanup_linkedin(&mut self) {
+        if self.linkedin.trim().is_empty() {
+            self.linkedin = "".to_string();
+            return;
+        }
+
+        // Cleanup linkedin link.
+        self.linkedin = format!(
+            "https://linkedin.com/{}",
+            self.linkedin
+                .trim_start_matches("https://linkedin.com/")
+                .trim_start_matches("https://www.linkedin.com/")
+                .trim_start_matches("http://linkedin.com/")
+                .trim_start_matches("http://www.linkedin.com/")
+                .trim_start_matches("www.linkedin.com/")
+                .trim_start_matches("linkedin.com/")
+                .trim()
+        );
+    }
+
     /// Expand the applicants materials and do any automation that needs to be done.
     pub async fn expand(
         &mut self,
@@ -3549,6 +3569,16 @@ impl Applicant {
     ) {
         self.cleanup_phone();
         self.parse_github_gitlab();
+        self.cleanup_linkedin();
+
+        // Add the scoring url since now we should have an Airtable record id.
+        // Since we are an Applicant.
+        if !self.airtable_record_id.is_empty() {
+            self.scoring_form_url = format!(
+                "https://airtable.com/shrE9NT2iR3XFs6W9?prefill_Applicant={}",
+                self.airtable_record_id,
+            );
+        }
 
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
@@ -4530,6 +4560,65 @@ Sincerely,
     }
 }
 
+pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) {
+    // Get the GSuite token.
+    let token = company.authenticate_google(db).await;
+
+    // Initialize the GSuite sheets client.
+    let drive_client = GoogleDrive::new(token.clone());
+
+    let github = company.authenticate_github();
+
+    // Get all the hiring issues on the configs repository.
+    let configs_issues = github
+        .issues()
+        .list_all_for_repo(
+            &company.github_org,
+            "configs",
+            // milestone
+            "",
+            octorust::types::IssuesListState::All,
+            // assignee
+            "",
+            // creator
+            "",
+            // mentioned
+            "",
+            // labels
+            "hiring",
+            // sort
+            Default::default(),
+            // direction
+            Default::default(),
+            // since
+            None,
+        )
+        .await
+        .unwrap();
+
+    // We want all the applicants without a sheet id, since this is the list of applicants we care
+    // about. Everything else came from Google Sheets and therefore uses the old system.
+    let applicants = applicants::dsl::applicants
+        .filter(applicants::dsl::sheet_id.eq("".to_string()))
+        .load::<Applicant>(&db.conn())
+        .unwrap();
+
+    // Iterate over the applicants and update them.
+    for mut applicant in applicants {
+        // Expand the application.
+        applicant
+            .expand(db, &drive_client, &github, &configs_issues)
+            .await;
+
+        // Update airtable and the database again.
+        applicant.update(db).await;
+
+        // Update the reviews for the applicant.
+        // This function will update the database so we don't have to.
+        applicant.update_reviews_scoring(db).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use diesel::prelude::*;
@@ -4538,8 +4627,9 @@ mod tests {
     use crate::{
         applicants::{
             refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants,
-            update_applicant_reviewers, update_applications_with_scoring_forms,
-            update_applications_with_scoring_results, Applicant, Applicants,
+            refresh_new_applicants_and_reviews, update_applicant_reviewers,
+            update_applications_with_scoring_forms, update_applications_with_scoring_results,
+            Applicant, Applicants,
         },
         companies::Company,
         db::Database,
@@ -4592,6 +4682,11 @@ mod tests {
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
+        // Do the new applicants.
+        refresh_new_applicants_and_reviews(&db, &oxide).await;
+
+        // Do the old applicants from Google sheets.
+        // TODO: eventually remove this.
         refresh_db_applicants(&db, &oxide).await;
 
         // Update Airtable.
