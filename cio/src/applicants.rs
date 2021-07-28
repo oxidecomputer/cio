@@ -1750,14 +1750,10 @@ impl Applicant {
 
     /// Update applicant reviews counts.
     pub async fn update_reviews_scoring(&mut self, db: &Database) {
-        // Let's get the existing record from Airtable so we have the set of reviews.
-        let existing = self.get_existing_airtable_record(db).await.unwrap().fields;
-
-        // We keep the scorers from Airtable in case someone assigned someone from the UI.
-        self.scorers = existing.scorers.clone();
+        self.keep_fields_from_airtable(db).await;
 
         // If they have no reviews, eff it.
-        if existing.link_to_reviews.is_empty() {
+        if self.link_to_reviews.is_empty() {
             // Return early.
             return;
         }
@@ -1782,11 +1778,11 @@ impl Applicant {
             || self.status == crate::applicant_status::Status::Hired.to_string()
         {
             // Let's iterate over the reviews.
-            for record_id in existing.link_to_reviews {
+            for record_id in &self.link_to_reviews {
                 // Get the record.
                 let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> =
                     airtable
-                        .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, &record_id)
+                        .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
                         .await
                         .unwrap();
 
@@ -1804,7 +1800,7 @@ impl Applicant {
 
                 // Delete the record from the reviews Airtable.
                 airtable
-                    .delete_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, &record_id)
+                    .delete_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
                     .await
                     .unwrap();
             }
@@ -1816,10 +1812,10 @@ impl Applicant {
         }
 
         // Let's iterate over the reviews.
-        for record_id in existing.link_to_reviews {
+        for record_id in &self.link_to_reviews {
             // Get the record.
             let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
-                .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, &record_id)
+                .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
                 .await
                 .unwrap();
 
@@ -3864,7 +3860,7 @@ impl Applicant {
                 self.resume,
                 self.materials,
                 self.role,
-                self.interested_in.join(", ")
+                self.interested_in.join(", ").replace(" ", "%20")
             );
         }
 
@@ -4752,6 +4748,21 @@ Sincerely,
         }
     }
 
+    pub async fn keep_fields_from_airtable(&mut self, db: &Database) {
+        // Let's get the existing record from Airtable, so we can use it as the source
+        // of truth for various things.
+        let existing = self.get_existing_airtable_record(db).await.unwrap().fields;
+        // We keep the scorers from Airtable in case someone assigned someone from the UI.
+        self.scorers = existing.scorers.clone();
+        // Keep the interviewers from Airtable since they are updated out of bound by Airtable.
+        self.interviews = existing.interviews.clone();
+        // Keep the reviews, since these are updated out of band by Airtable.
+        self.link_to_reviews = existing.link_to_reviews;
+
+        // TODO: Keep the status/status raw from Airtable.
+        // TODO: Keep the start date from Airtable(?).
+    }
+
     pub async fn update_applicant_from_docusign_piia_envelope(
         &mut self,
         db: &Database,
@@ -4893,19 +4904,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
 
     // Iterate over the applicants and update them.
     for mut applicant in applicants {
-        // Let's get the existing record from Airtable, so we can use it as the source
-        // of truth for various things.
-        let existing = applicant
-            .get_existing_airtable_record(db)
-            .await
-            .unwrap()
-            .fields;
-        // We keep the scorers from Airtable in case someone assigned someone from the UI.
-        applicant.scorers = existing.scorers.clone();
-        // TODO: do we need to keep the interviewers?.
-
-        // TODO: Keep the status from Airtable.
-        // TODO: Keep the start date from Airtable(?).
+        applicant.keep_fields_from_airtable(db).await;
 
         // Expand the application.
         applicant.expand(db, &drive_client).await;
@@ -4931,6 +4930,8 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         // Update the reviews for the applicant.
         // This function will update the database so we don't have to.
         applicant.update_reviews_scoring(db).await;
+
+        // TODO: we could move docusign stuff here as well, and out of its own function.
     }
 }
 
