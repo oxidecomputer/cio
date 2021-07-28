@@ -1780,6 +1780,7 @@ impl Applicant {
             // Let's iterate over the reviews.
             for record_id in &self.link_to_reviews {
                 // Get the record.
+                // TODO: get these from the database.
                 let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> =
                     airtable
                         .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
@@ -1814,6 +1815,7 @@ impl Applicant {
         // Let's iterate over the reviews.
         for record_id in &self.link_to_reviews {
             // Get the record.
+            // TODO: get these from the database.
             let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
                 .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
                 .await
