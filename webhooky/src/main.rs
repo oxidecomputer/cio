@@ -116,6 +116,8 @@ async fn main() -> Result<(), String> {
     api.register(github_rate_limit).unwrap();
     api.register(listen_airtable_applicants_request_background_check_webhooks)
         .unwrap();
+    api.register(listen_airtable_applicants_review_create_webhooks)
+        .unwrap();
     api.register(listen_airtable_assets_items_print_barcode_label_webhooks)
         .unwrap();
     api.register(listen_airtable_employees_print_home_address_label_webhooks)
@@ -1096,6 +1098,47 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
         );
     }
 
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for rows created in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/applicants/review/create",
+}]
+async fn listen_airtable_applicants_review_create_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    let api_context = rqctx.context();
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Get the row from airtable.
+    // In this case, even tho the webhook fires on the "Reviews" table we pass
+    // in the data for the Applicant ID.
+    // TODO: fix the company id.
+    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, 1).await;
+
+    // This will also update the database after.
+    applicant.update_reviews_scoring(&api_context.db).await;
+
+    println!(
+        "applicant with reviews {} updated successfully",
+        applicant.email
+    );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }

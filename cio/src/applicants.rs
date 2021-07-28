@@ -1706,21 +1706,46 @@ impl Applicant {
         self.scoring_job_function_yet_needed_count = 0;
         self.scoring_underwhelming_materials_count = 0;
 
+        // Create the Airtable client.
+        let company = Company::get_by_id(db, self.cio_company_id);
+        let airtable = company.authenticate_airtable(&company.airtable_base_id_customer_leads);
+
         if self.status == crate::applicant_status::Status::Onboarding.to_string()
             || self.status == crate::applicant_status::Status::Hired.to_string()
         {
-            // TODO: delete all the reviews data from Airtable.
-            // TODO: do the values(?)
+            // Let's iterate over the reviews.
+            for record_id in existing.link_to_reviews {
+                // Get the record.
+                let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> =
+                    airtable
+                        .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, &record_id)
+                        .await
+                        .unwrap();
+
+                // Set the values if they are not empty.
+                // TODO: actually do the majority if they differ in value but for now YOLO.
+                if !record.fields.value_reflected.is_empty() {
+                    self.value_reflected = record.fields.value_reflected.to_string();
+                }
+                if !record.fields.value_violated.is_empty() {
+                    self.value_violated = record.fields.value_violated.to_string();
+                }
+                if !record.fields.values_in_tension.is_empty() {
+                    self.values_in_tension = record.fields.values_in_tension.clone();
+                }
+
+                // Delete the record from the reviews Airtable.
+                airtable
+                    .delete_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, &record_id)
+                    .await
+                    .unwrap();
+            }
 
             // We already zero-ed out the values for the scores, now we return early.
             // We don't want people who join to know their scores.
             self.update(db).await;
             return;
         }
-
-        // Create the Airtable client.
-        let company = Company::get_by_id(db, self.cio_company_id);
-        let airtable = company.authenticate_airtable(&company.airtable_base_id_customer_leads);
 
         // Let's iterate over the reviews.
         for record_id in existing.link_to_reviews {
