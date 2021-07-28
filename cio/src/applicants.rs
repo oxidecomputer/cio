@@ -247,7 +247,10 @@ pub struct NewApplicant {
 pub fn clean_interested_in(st: &str) -> String {
     let s = st.trim().to_lowercase();
 
-    if s == "product security engineer" || s == "security engineer" {
+    if s == "product security engineer"
+        || s == "security engineer"
+        || s == "software engineer - security"
+    {
         return "Product Security Engineer".to_string();
     } else if s == "software engineer: web" {
         return "Software Engineer: Web".to_string();
