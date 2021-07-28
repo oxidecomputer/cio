@@ -1641,14 +1641,17 @@ pub async fn sync_users(
                     }
                     if !has_access_to_workspace_read_only && user.is_full_time() {
                         println!(
-                            "giving {} access to airtable workspace read only {}",
+                            "giving {} comment access to airtable workspace read only {}",
                             user.email, company.airtable_workspace_read_only_id
                         );
                         airtable_auth
                             .add_collaborator_to_workspace(
                                 &company.airtable_workspace_read_only_id,
                                 &user.airtable_id,
-                                "create",
+                                // Giving comment access to the workspace means
+                                // that they can create personal views.
+                                // https://support.airtable.com/hc/en-us/articles/202887099-Permissions-overview
+                                "comment",
                             )
                             .await
                             .unwrap();
