@@ -1148,6 +1148,7 @@ async fn listen_airtable_applicants_review_create_webhooks(
         new_review.airtable_record_id = event.record_id.to_string();
     }
     new_review.cio_company_id = event.cio_company_id;
+    new_review.expand(&api_context.db);
     let added_review = new_review.update(&api_context.db).await;
 
     // Get the applicant for the review.
