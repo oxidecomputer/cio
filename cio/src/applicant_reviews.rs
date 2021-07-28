@@ -79,7 +79,10 @@ pub struct NewApplicantReview {
 /// Implement updating the Airtable record for a ApplicantReview.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
-    async fn update_airtable_record(&mut self, _record: ApplicantReview) {}
+    async fn update_airtable_record(&mut self, _record: ApplicantReview) {
+        // Set name to empty since it is a function we cannot update it.
+        self.name = "".to_string();
+    }
 }
 
 pub async fn refresh_reviews(db: &Database, company: &Company) {
