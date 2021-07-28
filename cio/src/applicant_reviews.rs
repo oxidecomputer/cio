@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +18,6 @@ use crate::{
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "applicant_reviews"]
-#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct NewApplicantReview {
     // TODO: We don't have to do this crazy rename after we update to not use the
     // Airtable form.

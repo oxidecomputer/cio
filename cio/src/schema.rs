@@ -67,8 +67,8 @@ table! {
         pass -> Int4,
         no -> Int4,
         not_applicable -> Int4,
-        airtable_record_id -> Varchar,
         cio_company_id -> Int4,
+        airtable_record_id -> Varchar,
     }
 }
 
