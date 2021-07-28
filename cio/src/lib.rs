@@ -5,8 +5,8 @@
 pub mod airtable;
 pub mod analytics;
 pub mod api_tokens;
-pub mod applicant_status;
 pub mod applicant_reviews;
+pub mod applicant_status;
 pub mod applicants;
 pub mod application_form;
 pub mod asset_inventory;
