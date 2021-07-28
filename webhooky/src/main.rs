@@ -18,6 +18,7 @@ use chrono_humanize::HumanTime;
 use cio_api::{
     analytics::NewPageView,
     api_tokens::{APIToken, NewAPIToken},
+    applicant_reviews::{ApplicantReview, NewApplicantReview},
     applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
     asset_inventory::AssetItem,
     companies::Company,
@@ -1127,17 +1128,39 @@ async fn listen_airtable_applicants_review_create_webhooks(
     }
 
     // Get the row from airtable.
-    // In this case, even tho the webhook fires on the "Reviews" table we pass
-    // in the data for the Applicant ID.
-    // TODO: fix the company id.
-    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, 1).await;
+    let review =
+        ApplicantReview::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+            .await;
 
+    if review.applicant.is_empty() || review.reviewer.is_empty() {
+        sentry::capture_message(
+            &format!("Applicant and reviewer cannot be empty for {:?}", review),
+            sentry::Level::Fatal,
+        );
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    let new_review: NewApplicantReview = review.into();
+    // Add it to the database.
+    let added_review = new_review.upsert(&api_context.db).await;
+
+    // Get the applicant for the review.
+    let mut applicant = Applicant::get_from_airtable(
+        // Get the record id for the applicant.
+        added_review.applicant.get(0).unwrap(),
+        &api_context.db,
+        event.cio_company_id,
+    )
+    .await;
+
+    // Update the scores for the applicant.
     // This will also update the database after.
     applicant.update_reviews_scoring(&api_context.db).await;
 
     println!(
-        "applicant with reviews {} updated successfully",
-        applicant.email
+        "applicant {} with review by {} updated successfully",
+        applicant.email, new_review.reviewer
     );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
