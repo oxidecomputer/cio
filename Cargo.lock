@@ -508,7 +508,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ad9d8796b9086c1ecf0303c3b87958be80574764"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#29b16a3fc20544f7ffbe9ff3cac224cd74c49aed"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2062,7 +2062,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#ad9d8796b9086c1ecf0303c3b87958be80574764"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#29b16a3fc20544f7ffbe9ff3cac224cd74c49aed"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -3617,9 +3617,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.64"
+version = "1.0.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
+checksum = "28c5e91e4240b46c4c19219d6cc84784444326131a4210f496f948d5cc827a29"
 dependencies = [
  "itoa",
  "ryu",
