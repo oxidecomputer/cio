@@ -31,9 +31,6 @@ pub enum Status {
 
     /// The applicant has been hired as a contractor.
     Contractor,
-
-    /// We are keeping the applicant warm.
-    KeepingWarm,
 }
 
 impl Default for Status {
@@ -64,8 +61,6 @@ impl FromStr for Status {
             Ok(Status::GivingOffer)
         } else if s.contains("contractor") || s.contains("consulting") {
             Ok(Status::Contractor)
-        } else if s.contains("keeping warm") {
-            Ok(Status::KeepingWarm)
         } else {
             Ok(Status::NeedsToBeTriaged)
         }
@@ -81,7 +76,6 @@ impl ToString for Status {
             Status::Hired => "Hired".to_string(),
             Status::GivingOffer => "Giving offer".to_string(),
             Status::Contractor => "Contractor".to_string(),
-            Status::KeepingWarm => "Keeping warm".to_string(),
             Status::NeedsToBeTriaged => "Needs to be triaged".to_string(),
             Status::Interviewing => "Interviewing".to_string(),
             Status::Onboarding => "Onboarding".to_string(),
