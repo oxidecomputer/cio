@@ -79,13 +79,18 @@ pub struct NewApplicantReview {
         alias = "reviewer"
     )]
     pub reviewer: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Applicant")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "Applicant",
+        alias = "applicant"
+    )]
     pub applicant: Vec<String>,
 
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
-        rename = "Link to Leaderboard"
+        rename = "Link to Leaderboard",
         alias = "link_to_leaderboard"
     )]
     pub link_to_leaderboard: Vec<String>,
