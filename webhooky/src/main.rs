@@ -139,6 +139,7 @@ async fn main() -> Result<(), String> {
         .unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_application_submit_requests).unwrap();
+    api.register(listen_applicant_review_requests).unwrap();
     api.register(listen_application_files_upload_requests)
         .unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
@@ -1515,6 +1516,33 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     // Add the shipment to our database.
     let api_context = rqctx.context();
     i.upsert(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for applicant reviews being submitted for job applicants */
+#[endpoint {
+    method = POST,
+    path = "/applicant/review/submit",
+}]
+async fn listen_applicant_review_requests(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let event = body_param.into_inner();
+
+    sentry::capture_message(
+        &format!("applicant review: {:?}", event),
+        sentry::Level::Info,
+    );
+
+    //event.do_form(&api_context.db).await;
+
+    println!("applicant review created successfully: {:?}", event);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
