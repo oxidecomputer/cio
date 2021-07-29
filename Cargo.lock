@@ -155,9 +155,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.50"
+version = "0.1.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b98e84bbb4cbcdd97da190ba0c58a1bb0de2c1fdf67d159e192ed766aeca722"
+checksum = "44318e776df68115a881de9a8fd1b9e53368d7a4a5ce4cc48517da3393233a5e"
 dependencies = [
  "proc-macro2 1.0.28",
  "quote 1.0.9",
@@ -508,7 +508,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#29b16a3fc20544f7ffbe9ff3cac224cd74c49aed"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#f5721fc7e129c46d51e87453870ea211cddecd99"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2062,7 +2062,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#29b16a3fc20544f7ffbe9ff3cac224cd74c49aed"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#f5721fc7e129c46d51e87453870ea211cddecd99"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -3888,9 +3888,9 @@ dependencies = [
 
 [[package]]
 name = "slog-json"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddc0d2aff1f8f325ef660d9a0eb6e6dcd20b30b3f581a5897f58bf42d061c37a"
+checksum = "52e9b96fb6b5e80e371423b4aca6656eb537661ce8f82c2697e619f8ca85d043"
 dependencies = [
  "chrono",
  "serde",
