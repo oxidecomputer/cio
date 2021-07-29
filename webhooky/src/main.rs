@@ -1543,7 +1543,11 @@ async fn listen_applicant_review_requests(
         sentry::Level::Info,
     );
 
-    if event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
+    if event.name.is_empty()
+        || event.applicant.is_empty()
+        || event.reviewer.is_empty()
+        || event.evaluation.is_empty()
+    {
         sentry::capture_message(
             &format!("review is empty: {:?}", event),
             sentry::Level::Fatal,
