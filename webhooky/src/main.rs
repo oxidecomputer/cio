@@ -1129,7 +1129,7 @@ async fn listen_airtable_applicants_review_create_webhooks(
     }
 
     // Get the row from airtable.
-    let review =
+    let mut review =
         ApplicantReview::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
             .await;
 
@@ -1142,20 +1142,23 @@ async fn listen_airtable_applicants_review_create_webhooks(
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
-    // Add it to the database.
-    let r: NewApplicantReview = review.into();
-    let mut new_review = r.upsert_in_db(&api_context.db);
-    if new_review.airtable_record_id.is_empty() {
-        new_review.airtable_record_id = event.record_id.to_string();
+    if review.id == 0 {
+        // We don't have it in the databse.
+        // Add it to the database.
+        let r: NewApplicantReview = review.into();
+        let mut new_review = r.upsert_in_db(&api_context.db);
+        if new_review.airtable_record_id.is_empty() {
+            new_review.airtable_record_id = event.record_id.to_string();
+        }
+        new_review.cio_company_id = event.cio_company_id;
+        new_review.expand(&api_context.db);
+        review = new_review.update(&api_context.db).await;
     }
-    new_review.cio_company_id = event.cio_company_id;
-    new_review.expand(&api_context.db);
-    let added_review = new_review.update(&api_context.db).await;
 
     // Get the applicant for the review.
     let mut applicant = Applicant::get_from_airtable(
         // Get the record id for the applicant.
-        added_review.applicant.get(0).unwrap(),
+        review.applicant.get(0).unwrap(),
         &api_context.db,
         event.cio_company_id,
     )
@@ -1167,7 +1170,7 @@ async fn listen_airtable_applicants_review_create_webhooks(
 
     println!(
         "applicant {} with review by {} updated successfully",
-        applicant.email, new_review.reviewer
+        applicant.email, review.reviewer
     );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1540,7 +1543,17 @@ async fn listen_applicant_review_requests(
         sentry::Level::Info,
     );
 
-    //event.do_form(&api_context.db).await;
+    if event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
+        sentry::capture_message(
+            &format!("review is empty: {:?}", event),
+            sentry::Level::Fatal,
+        );
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Add them to the database.
+    event.upsert(&api_context.db).await;
 
     println!("applicant review created successfully: {:?}", event);
 
