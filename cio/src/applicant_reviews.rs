@@ -21,18 +21,25 @@ use crate::{
 pub struct NewApplicantReview {
     // TODO: We don't have to do this crazy rename after we update to not use the
     // Airtable form.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Name")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "Name",
+        alias = "name"
+    )]
     pub name: String,
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",
-        rename = "Value Reflected (from Questionnaire)"
+        rename = "Value Reflected (from Questionnaire)",
+        alias = "value_reflected"
     )]
     pub value_reflected: String,
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",
-        rename = "Value Violated (from Questionnaire)"
+        rename = "Value Violated (from Questionnaire)",
+        alias = "value_violated"
     )]
     pub value_violated: String,
     #[serde(
@@ -44,7 +51,8 @@ pub struct NewApplicantReview {
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",
-        rename = "Evaluation"
+        rename = "Evaluation",
+        alias = "evaluation"
     )]
     pub evaluation: String,
 
@@ -57,7 +65,8 @@ pub struct NewApplicantReview {
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",
-        rename = "Any additional evaluation (not to be shared with applicant)"
+        rename = "Any additional evaluation (not to be shared with applicant)",
+        alias = "notes"
     )]
     pub notes: String,
 
@@ -66,7 +75,8 @@ pub struct NewApplicantReview {
         skip_serializing_if = "String::is_empty",
         serialize_with = "airtable_api::user_format_as_string::serialize",
         deserialize_with = "airtable_api::user_format_as_string::deserialize",
-        rename = "Reviewer"
+        rename = "Reviewer",
+        alias = "reviewer"
     )]
     pub reviewer: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Applicant")]
@@ -76,6 +86,7 @@ pub struct NewApplicantReview {
         default,
         skip_serializing_if = "Vec::is_empty",
         rename = "Link to Leaderboard"
+        alias = "link_to_leaderboard"
     )]
     pub link_to_leaderboard: Vec<String>,
 
