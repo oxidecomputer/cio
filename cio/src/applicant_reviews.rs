@@ -45,7 +45,8 @@ pub struct NewApplicantReview {
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
-        rename = "Values in Tension (from Questionnaire)"
+        rename = "Values in Tension (from Questionnaire)",
+        alias = "values_in_tension"
     )]
     pub values_in_tension: Vec<String>,
     #[serde(
@@ -59,7 +60,8 @@ pub struct NewApplicantReview {
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
-        rename = "If \"Pass\" or \"No\", rationale if applicable (check all that apply)"
+        rename = "If \"Pass\" or \"No\", rationale if applicable (check all that apply)",
+        alias = "rationale"
     )]
     pub rationale: Vec<String>,
     #[serde(
