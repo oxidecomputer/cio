@@ -3859,14 +3859,7 @@ impl Applicant {
         // Add the scoring url since now we should have an Airtable record id.
         // Since we are an Applicant.
         if !self.airtable_record_id.is_empty() {
-            self.scoring_form_url = format!(
-                "https://airtable.com/shrE9NT2iR3XFs6W9?prefill_Applicant={}&prefill_Resume={}&prefill_Materials={}&prefill_Role={}&prefill_Interested={}",
-                self.airtable_record_id,
-                self.resume,
-                self.materials,
-                self.role,
-                self.interested_in.join(", ").replace(" ", "%20")
-            );
+            self.scoring_form_url = format!("https://apply.oxide.computer/review/{}", self.email);
         }
 
         // Check if we have sent them an email that we received their application.
