@@ -119,6 +119,8 @@ async fn main() -> Result<(), String> {
         .unwrap();
     api.register(listen_airtable_applicants_review_create_webhooks)
         .unwrap();
+    api.register(listen_airtable_applicants_update_webhooks)
+        .unwrap();
     api.register(listen_airtable_assets_items_print_barcode_label_webhooks)
         .unwrap();
     api.register(listen_airtable_employees_print_home_address_label_webhooks)
@@ -1172,6 +1174,66 @@ async fn listen_airtable_applicants_review_create_webhooks(
         "applicant {} with review by {} updated successfully",
         applicant.email, review.reviewer
     );
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for rows updated in our Airtable workspace.
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/applicants/update",
+}]
+async fn listen_airtable_applicants_update_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    let api_context = rqctx.context();
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Get the row from airtable.
+    let applicant =
+        Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+
+    if applicant.status.is_empty() {
+        sentry::capture_message(
+            &format!("Got an empty applicant status for row: {}", applicant.email),
+            sentry::Level::Fatal,
+        );
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    // Grab our old applicant from the database.
+    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id);
+
+    // Grab the status and the status raw.
+    let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
+    db_applicant.status = status.to_string();
+    if !applicant.raw_status.is_empty() {
+        // Update the raw status if it had changed.
+        db_applicant.raw_status = applicant.raw_status.to_string();
+    }
+
+    // TODO: should we also update the start date if set in airtable?
+    // If we do this, we need to update the airtable webhook settings to include it as
+    // well.
+
+    // Update the row in our database.
+    db_applicant.update(&api_context.db).await;
+
+    println!("applicant {} updated successfully", applicant.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
