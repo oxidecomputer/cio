@@ -446,6 +446,7 @@ version = "0.2.0"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-recursion",
  "async-trait",
  "barcoders",
  "base64 0.12.3",

@@ -8,6 +8,7 @@ use std::{
     str::from_utf8,
 };
 
+use async_recursion::async_recursion;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
@@ -737,6 +738,7 @@ pub async fn get_rfd_contents_from_repo(
 }
 
 // Get all the images in a specific directory of a GitHub branch.
+#[async_recursion]
 pub async fn get_images_in_branch(
     github: &octorust::Client,
     owner: &str,
@@ -753,6 +755,13 @@ pub async fn get_images_in_branch(
         .await
         .unwrap();
     for file in resp {
+        if file.type_ == "dir" {
+            // We have a directory. We need to get the file contents recursively.
+            let mut fs = get_images_in_branch(github, owner, repo, &file.path, branch).await;
+            files.append(&mut fs);
+            continue;
+        }
+
         if is_image(&file.name) {
             // Get the contents of the image.
             match github
