@@ -408,8 +408,11 @@ fn clean_vendor_name(s: &str) -> String {
         || s == "Paypal Transaction Intuitimage"
         || s == "Paypal Transaction Djjrubs"
         || s == "PayPal Transaction - Frantiques"
+        || s == "shengmingelectronics via ebay/paypal"
     {
         "eBay".to_string()
+    } else if s == "Staybridge Suites Roch" {
+        "Staybridge Suites".to_string()
     } else if s == "Rocket EMS, Inc" {
         "Rocket EMS".to_string()
     } else if s == "Gumroad" {
@@ -500,8 +503,10 @@ fn clean_vendor_name(s: &str) -> String {
         "Amazon".to_string()
     } else if s == "Sublime Hq" {
         "Sublime".to_string()
-    } else if s == "Dunkin" {
+    } else if s == "Dunkin" || s == "Dunkin Donuts" {
         "Dunkin' Donuts".to_string()
+    } else if s == "National Rental Car" {
+        "National".to_string()
     } else if s == "Benjamin Leonard Limited" {
         "Benjamin Leonard".to_string()
     } else if s == "Friendly Machines LLC" {
