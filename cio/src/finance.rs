@@ -410,6 +410,8 @@ fn clean_vendor_name(s: &str) -> String {
         || s == "PayPal Transaction - Frantiques"
     {
         "eBay".to_string()
+    } else if s == "Rocket EMS, Inc" {
+        "Rocket EMS".to_string()
     } else if s == "Gumroad" {
         "Chart".to_string()
     } else if s == "Creative Safety Supply LLC" {
@@ -426,14 +428,20 @@ fn clean_vendor_name(s: &str) -> String {
         "IEC".to_string()
     } else if s == "Ubiquiti Labs, Llc" || s == "Ubiquiti Inc." || s == "Ubiquiti Networks" {
         "Ubiquiti".to_string()
+    } else if s == "Hioki USA" {
+        "Hioki".to_string()
+    } else if s == "Uber Trip" {
+        "Uber".to_string()
     } else if s == "IEEE Standards Association" || s == "IEEE SA - Products & Services" {
         "IEEE".to_string()
     } else if s == "Solarwinds" {
         "Pingdom".to_string()
     } else if s == "GoTanscript" || s == "PAYPAL *GOTRANSCRIP" {
         "GoTranscript".to_string()
-    } else if s == "Chelsio Communications" {
+    } else if s == "Chelsio Communications" || s == "Chelsio Web Store" {
         "Chelsio".to_string()
+    } else if s == "Elliott Ace Hardware" {
+        "Ace Hardware".to_string()
     } else if s == "The Linux Foundation" {
         "Linux Foundation".to_string()
     } else if s == "SparkFun Electronics" {
