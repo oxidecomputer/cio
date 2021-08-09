@@ -1,6 +1,6 @@
 max_width = 100
 edition = "2018"
 format_code_in_doc_comments = true
-format_strings = true
+format_strings = false
 imports_granularity = "Crate"
 group_imports = "StdExternalCrate"

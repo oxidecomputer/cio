@@ -680,22 +680,17 @@ impl User {
                 format!(
                     "Yoyoyo {},
 
-You should have an email from Okta about setting up your account with \
-                     them.
+You should have an email from Okta about setting up your account with them.
 We use Okta to authenticate to a number of different apps -- including
-Google \
-                     Workspace. This includes email, calendar, drive, etc.
+Google Workspace. This includes email, calendar, drive, etc.
 
-After setting up your Okta \
-                     account your email account with Google will be
-provisioned. You can then login \
-                     to your email from: mail.corp.{}.
+After setting up your Okta account your email account with Google will be
+provisioned. You can then login to your email from: mail.corp.{}.
 Details for accessing are below.
 
-Website for Okta \
-                     login: https://oxidecomputerlogin.okta.com
-Website for email login: https://mail.corp.{}Email: \
-                     {}
+Website for Okta login: https://oxidecomputerlogin.okta.com
+Website for email login: https://mail.corp.{}
+Email: {}
 Aliases: {}
 
 Make sure you set up two-factor authentication for your account, or in one week
@@ -743,27 +738,23 @@ xoxo,
                     "Yoyoyo {},
 
 We have set up your account on mail.corp.{}. Details for accessing
-are \
-                     below. You will be required to reset your password the next time you login.
+are below. You will be required to reset your password the next time you login.
 
-Website \
-                     for Login: https://mail.corp.{}Email: {}
+Website for Login: https://mail.corp.{}
+Email: {}
 Password: {}
 Aliases: {}
 
-Make sure you set \
-                     up two-factor authentication for your account, or in one week
-you will be locked \
-                     out.
+Make sure you set up two-factor authentication for your account, or in one week
+you will be locked out.
 
-Your GitHub @{} has been added to our organization (https://github.com/{})and \
-                     various teams within it. GitHub should have sent an email with instructions on\
-
+Your GitHub @{} has been added to our organization (https://github.com/{}) and
+various teams within it. GitHub should have sent an email with instructions on
 accepting the invitation to our organization to the email you used
-when you signed \
-                     up for GitHub. Or you can alternatively accept our invitation
-by going to https://github.com/{}.If \
-                     you have any questions or your email does not work please email your
+when you signed up for GitHub. Or you can alternatively accept our invitation
+by going to https://github.com/{}.
+
+If you have any questions or your email does not work please email your
 administrator, who is cc-ed on this email. Spoiler alert it's Jess...
 jess@{}. If you want other email aliases, let Jess know as well.
 
@@ -830,11 +821,10 @@ let jess@{} know what your GitHub handle is.",
 
 You should have an email from Okta about setting up your account with them.
 We use Okta to authenticate to a number of different apps -- including
-Google Workspace and GitHub. \
-                     This includes email, calendar, drive, etc.
+Google Workspace and GitHub. This includes email, calendar, drive, etc.
 
 After setting up your Okta account your email account with Google will be
-provisioned. You can then login to your email from: mail.corp.{}.\
+provisioned. You can then login to your email from: mail.corp.{}.
 
 Details for accessing are below.
 
@@ -843,48 +833,57 @@ Website for email login: https://mail.corp.{}
 Email: {}
 Aliases: {}
 
-Make sure you set up two-factor \
-                     authentication for your account, or in one week
+Make sure you set up two-factor authentication for your account, or in one week
 you will be locked out.
 
 {}
 
 If you have any questions or your email does not work please email your
-administrator, who is cc-ed on this \
-                     email. Spoiler alert it's Jess...
+administrator, who is cc-ed on this email. Spoiler alert it's Jess...
 jess@{}. If you want other email aliases, let Jess know as well.
 
 You can find more onboarding information in GitHub:
-https://github.com/{}/meta/blob/master/general/onboarding.md\
+https://github.com/{}/meta/blob/master/general/onboarding.md
 
 You can find information about internal processes and applications at:
 https://github.com/{}/meta/blob/master/general/README.md
 
-As a first contribution to one of our repos, add a book\
-
+As a first contribution to one of our repos, add a book
 to our internal library: https://github.com/{}/library
 
 We use Airtable for storing just about everything. You can login with single
 sign-on (SSO) after setting up your email at:
-https://airtable.com/sso/login.\
+https://airtable.com/sso/login.
 
 You will automatically be added to the workspace after you are finished setting up
 your email.
 
-We have both a Riot server and a Slack for chat. Josh (josh@oxidecomputer.com) can get\
+We have both a Riot server and a Slack for chat. Josh (josh@oxidecomputer.com) can get
 
 you set up with an account on the Riot server. You can use SSO to login to the Slack
 at https://oxidecomputer.slack.com.
 
-Lastly, be sure to order yourself some swag: https://swag.oxide.computer\
+Lastly, be sure to order yourself some swag: https://swag.oxide.computer
 
 
 xoxo,
   The Onboarding Bot",
-                    self.first_name, company.domain, company.domain, self.email, aliases, github_copy, company.gsuite_domain, company.github_org, company.github_org, company.github_org,
+                    self.first_name,
+                    company.domain,
+                    company.domain,
+                    self.email,
+                    aliases,
+                    github_copy,
+                    company.gsuite_domain,
+                    company.github_org,
+                    company.github_org,
+                    company.github_org,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
+                vec![
+                    self.email.to_string(),
+                    format!("jess@{}", company.gsuite_domain),
+                ],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
