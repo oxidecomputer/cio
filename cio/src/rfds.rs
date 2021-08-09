@@ -759,7 +759,7 @@ pub async fn get_images_in_branch(
         if file.type_ == "dir" {
             let path = file.path.trim_end_matches('/');
             // We have a directory. We need to get the file contents recursively.
-            let mut fs = get_images_in_branch(github, owner, repo, &path, branch).await;
+            let mut fs = get_images_in_branch(github, owner, repo, path, branch).await;
             files.append(&mut fs);
             continue;
         }
