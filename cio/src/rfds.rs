@@ -722,6 +722,7 @@ pub async fn get_rfd_contents_from_repo(
     let images = get_images_in_branch(github, owner, repo, dir, branch).await;
     for image in images {
         let new_path = image.path.replace("rfd/", "src/public/static/images/");
+
         // Make sure we have this file in the static images dir on the master branch.
         create_or_update_file_in_github_repo(
             github,
@@ -756,8 +757,9 @@ pub async fn get_images_in_branch(
         .unwrap();
     for file in resp {
         if file.type_ == "dir" {
+            let path = file.path.trim_end_matches('/');
             // We have a directory. We need to get the file contents recursively.
-            let mut fs = get_images_in_branch(github, owner, repo, &file.path, branch).await;
+            let mut fs = get_images_in_branch(github, owner, repo, &path, branch).await;
             files.append(&mut fs);
             continue;
         }
@@ -781,7 +783,7 @@ pub async fn get_images_in_branch(
                         // that.
                         // We have the sha we can see if the files match using the
                         // Git Data API.
-                        let _blob = github.git().get_blob(owner, repo, &file.sha).await.unwrap();
+                        let blob = github.git().get_blob(owner, repo, &file.sha).await.unwrap();
 
                         // Push the new file.
                         files.push(octorust::types::ContentFile {
@@ -789,10 +791,10 @@ pub async fn get_images_in_branch(
                             encoding: Default::default(),
                             submodule_git_url: Default::default(),
                             target: Default::default(),
-                            size: file.size,
+                            size: blob.size,
                             name: file.name,
                             path: file.path,
-                            content: file.content,
+                            content: blob.content,
                             sha: file.sha,
                             url: file.url,
                             git_url: file.git_url,
