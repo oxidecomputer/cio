@@ -1600,11 +1600,6 @@ async fn listen_applicant_review_requests(
     let api_context = rqctx.context();
     let event = body_param.into_inner();
 
-    sentry::capture_message(
-        &format!("applicant review: {:?}", event),
-        sentry::Level::Info,
-    );
-
     if event.name.is_empty()
         || event.applicant.is_empty()
         || event.reviewer.is_empty()
@@ -1640,11 +1635,6 @@ async fn listen_application_submit_requests(
     sentry::start_session();
     let api_context = rqctx.context();
     let event = body_param.into_inner();
-
-    sentry::capture_message(
-        &format!("application submit: {:?}", event),
-        sentry::Level::Info,
-    );
 
     event.do_form(&api_context.db).await;
 
