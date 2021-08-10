@@ -1343,7 +1343,7 @@ fn clean_merchant_name(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::{
-        companies::Company,
+        companies::{Company, Companys},
         db::Database,
         finance::{
             refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions,
@@ -1403,28 +1403,38 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_ramp() {
+        // Initialize our database.
         let db = Database::new();
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
+            refresh_ramp_reimbursements(&db, &company).await;
 
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_ramp_reimbursements(&db, &oxide).await;
-
-        refresh_ramp_transactions(&db, &oxide).await;
+            refresh_ramp_transactions(&db, &company).await;
+        }
     }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance() {
+    async fn test_acconts_payable() {
+        // Initialize our database.
         let db = Database::new();
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
+            refresh_accounts_payable(&db, &company).await;
+        }
+    }
 
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_software_vendors(&db, &oxide).await;
-
-        refresh_accounts_payable(&db, &oxide).await;
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_vendors() {
+        // Initialize our database.
+        let db = Database::new();
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
+            refresh_software_vendors(&db, &company).await;
+        }
     }
 }
