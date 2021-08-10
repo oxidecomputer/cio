@@ -653,12 +653,18 @@ The Oxide Team",
         // If the length of the row is greater than the value_in_tension1 column
         // then we have a value_in_tension1.
         if row.len() > columns.value_in_tension_1 && columns.value_in_tension_1 != 0 {
-            values_in_tension.push(row[columns.value_in_tension_1].trim().to_lowercase());
+            let value_1 = row[columns.value_in_tension_1].trim().to_lowercase();
+            if !value_1.is_empty() {
+                values_in_tension.push(value_1);
+            }
         }
         // If the length of the row is greater than the value_in_tension2 column
         // then we have a value_in_tension2.
         if row.len() > columns.value_in_tension_2 && columns.value_in_tension_2 != 0 {
-            values_in_tension.push(row[columns.value_in_tension_2].trim().to_lowercase());
+            let value_2 = row[columns.value_in_tension_2].trim().to_lowercase();
+            if !value_2.is_empty() {
+                values_in_tension.push(value_2);
+            }
         }
         values_in_tension.sort();
 
