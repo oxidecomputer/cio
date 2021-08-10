@@ -26,6 +26,7 @@ use crate::{
     airtable_base = "finance",
     airtable_table = "AIRTABLE_SOFTWARE_VENDORS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "name" = "String",
     },
 }]
@@ -189,6 +190,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
     airtable_base = "finance",
     airtable_table = "AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "transaction_id" = "String",
     },
 }]
@@ -293,7 +295,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&transaction.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
             Some(v) => {
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -360,7 +362,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&reimbursement.merchant);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
             Some(v) => {
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -763,7 +765,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -784,6 +786,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
     airtable_base = "finance",
     airtable_table = "AIRTABLE_ACCOUNTS_PAYABLE_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "confirmation_number" = "String",
     },
 }]
@@ -883,7 +886,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
 
         let vendor = clean_vendor_name(&bill.vendor);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
             Some(v) => {
                 bill.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -914,6 +917,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
     airtable_base = "finance",
     airtable_table = "AIRTABLE_EXPENSED_ITEMS_TABLE",
     match_on = {
+        "cio_company_id" = "i32",
         "transaction_id" = "String",
     },
 }]
@@ -1087,7 +1091,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -1137,7 +1141,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.vendor);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -1416,7 +1420,7 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_acconts_payable() {
+    async fn test_accounts_payable() {
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1);
