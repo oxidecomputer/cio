@@ -468,7 +468,7 @@ dependencies = [
  "google-drive 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.2.1",
+ "gusto-api",
  "handlebars",
  "html2text",
  "image 0.23.14",
@@ -509,7 +509,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#36ae4c8b101964d5fbe458838d6ff0092294c8c1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#480b9bce1b1059ee1c60fb9b1bbec1816b50691b"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -535,7 +535,7 @@ dependencies = [
  "google-drive 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gsuite-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.1.17",
+ "gusto-api",
  "handlebars",
  "html2text",
  "image 0.23.14",
@@ -1507,22 +1507,9 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.1.17"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "787cd5ea916b4cf8f7d2d895ef20c067ddd049d8231c472079d222a93ff3309f"
-dependencies = [
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "gusto-api"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1638ccd40d496cb52278d1377ef02b2ed52ab16aee91a805abff882a512a751a"
+checksum = "c59971e13d708eade064bf2eef4cd33923a3dc59379e4b301b187fc344d18f62"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2073,7 +2060,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#36ae4c8b101964d5fbe458838d6ff0092294c8c1"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#480b9bce1b1059ee1c60fb9b1bbec1816b50691b"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -2264,9 +2251,9 @@ dependencies = [
 
 [[package]]
 name = "native-tls"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8d96b2e1c8da3957d58100b09f102c6d9cfdfced01b7ec5a8974044bb09dbd4"
+checksum = "48ba9f7719b5a0f42f338907614285fb5fd70e53858141f69898a1fb7203b24d"
 dependencies = [
  "lazy_static",
  "libc",
@@ -4873,7 +4860,7 @@ dependencies = [
  "formdata",
  "futures-util",
  "google-drive 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "gusto-api 0.2.1",
+ "gusto-api",
  "http",
  "hyper 0.10.16",
  "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",

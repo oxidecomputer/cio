@@ -341,9 +341,9 @@ impl UserConfig {
         // Create the applicant in Gusto.
         let employee = gusto
             .employees()
-            .post_employees(
+            .post_employee(
                 gusto_company_id,
-                &gusto_api::types::PostEmployeesRequest {
+                &gusto_api::types::PostEmployeeRequest {
                     first_name: self.first_name.to_string(),
                     middle_initial: "".to_string(),
                     last_name: self.last_name.to_string(),
@@ -1526,13 +1526,7 @@ pub async fn sync_users(
     if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
         let gu = gusto
             .employees()
-            .get_all_company_employees(
-                gusto_company_id,
-                false,
-                100.0,
-                &[],
-                &gusto_api::types::GetCompanyEmployeesRequest {},
-            )
+            .get_all_company_employees(gusto_company_id, false, &[])
             .await
             .unwrap();
         for g in gu {
