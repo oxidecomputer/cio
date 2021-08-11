@@ -483,7 +483,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.2.1",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -550,7 +550,7 @@ dependencies = [
  "pandoc",
  "phonenumber",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.1.22",
  "rand 0.8.4",
  "regex 1.5.4",
  "reqwest",
@@ -2927,6 +2927,8 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.1.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2214bfa1451a021a88db19a0f26583b800882a6eaa95cf96f7d00a21b15fb19b"
 dependencies = [
  "chrono",
  "reqwest",
@@ -2938,11 +2940,16 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.1.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2214bfa1451a021a88db19a0f26583b800882a6eaa95cf96f7d00a21b15fb19b"
+version = "0.2.1"
 dependencies = [
+ "anyhow",
+ "async-recursion",
  "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
  "reqwest",
  "schemars",
  "serde",
@@ -4868,7 +4875,7 @@ dependencies = [
  "mime_guess",
  "octorust",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api 0.2.1",
  "rand 0.8.4",
  "regex 1.5.4",
  "schemars",

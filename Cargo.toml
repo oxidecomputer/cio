@@ -15,7 +15,6 @@ members = [
 	"okta",
 	"printy",
 	"quickbooks",
-	"ramp",
 	"revai",
 	"sendgrid",
 	"sheets",

@@ -57,7 +57,7 @@ use google_drive::GoogleDrive;
 use gusto_api::Client as Gusto;
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use quickbooks::QuickBooks;
-use ramp_api::Ramp;
+use ramp_api::Client as Ramp;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use schemars::JsonSchema;
 use sentry::IntoDsn;
@@ -2339,7 +2339,15 @@ async fn listen_auth_ramp_consent(
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
-        url: g.user_consent_url(),
+        url: g.user_consent_url(&[
+            "transactions:read".to_string(),
+            "users:read".to_string(),
+            "users:write".to_string(),
+            "receipts:read".to_string(),
+            "cards:read".to_string(),
+            "departments:read".to_string(),
+            "reimbursements:read".to_string(),
+        ]),
     }))
 }
 
@@ -2362,7 +2370,14 @@ async fn listen_auth_ramp_callback(
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code, &event.state).await.unwrap();
 
-    let ru = g.list_users().await.unwrap();
+    let ru = g
+        .users()
+        .get_all_users(
+            "", // department id
+            "", // location id
+        )
+        .await
+        .unwrap();
 
     // Let's get the domain from the email.
     let mut domain = "".to_string();

@@ -266,7 +266,14 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
     let ramp = r.unwrap();
 
     // List all our users.
-    let users = ramp.list_users().await.unwrap();
+    let users = ramp
+        .users()
+        .get_all_users(
+            "", // department id
+            "", // location id
+        )
+        .await
+        .unwrap();
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
         ramp_users.insert(
@@ -275,12 +282,31 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
         );
     }
 
-    let transactions = ramp.get_transactions().await.unwrap();
+    let transactions = ramp
+        .transactions()
+        .get_all_transactions(
+            "",    // department id
+            "",    // location id
+            None,  // from date
+            None,  // to date
+            "",    // merchant id
+            "",    // category id
+            false, // order by date desc
+            false, // order by date asc
+            false, // order by amount desc
+            false, // order by amount asc
+            "",    // state
+            0.0,   // min amount
+            0.0,   // max amount
+            false, // requires memo
+        )
+        .await
+        .unwrap();
     for transaction in transactions {
         let mut attachments = Vec::new();
         // Get the reciept for the transaction, if they exist.
         for receipt_id in transaction.receipts {
-            let receipt = ramp.get_receipt(&receipt_id).await.unwrap();
+            let receipt = ramp.receipts().get_receipt(&receipt_id).await.unwrap();
             attachments.push(receipt.receipt_url.to_string());
         }
 
@@ -316,7 +342,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
             state: transaction.state.to_string(),
             receipts: attachments,
             card_id: transaction.card_id.to_string(),
-            time: transaction.user_transaction_time,
+            time: transaction.user_transaction_time.unwrap(),
             memo: String::new(),
             link_to_vendor,
             cio_company_id: company.id,
@@ -341,18 +367,29 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
     let ramp = r.unwrap();
 
     // List all our users.
-    let users = ramp.list_users().await.unwrap();
+    let users = ramp
+        .users()
+        .get_all_users(
+            "", // department id
+            "", // location id
+        )
+        .await
+        .unwrap();
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
         ramp_users.insert(user.id.to_string(), user.email.to_string());
     }
 
-    let reimbursements = ramp.list_reimbursements().await.unwrap();
+    let reimbursements = ramp
+        .reimbursements()
+        .get_all_reimbursements()
+        .await
+        .unwrap();
     for reimbursement in reimbursements {
         let mut attachments = Vec::new();
         // Get the reciepts for the reimbursement, if they exist.
         for receipt_id in reimbursement.receipts {
-            let receipt = ramp.get_receipt(&receipt_id).await.unwrap();
+            let receipt = ramp.receipts().get_receipt(&receipt_id).await.unwrap();
             attachments.push(receipt.receipt_url.to_string());
         }
 
@@ -383,7 +420,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
             state: "CLEARED".to_string(),
             receipts: attachments,
             card_id: "".to_string(),
-            time: reimbursement.created_at,
+            time: reimbursement.created_at.unwrap(),
             memo: String::new(),
             link_to_vendor,
             cio_company_id: company.id,

@@ -18,7 +18,7 @@ use octorust::{
 };
 use okta::Okta;
 use quickbooks::QuickBooks;
-use ramp_api::Ramp;
+use ramp_api::Client as Ramp;
 use reqwest::{header, Client};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

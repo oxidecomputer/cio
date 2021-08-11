@@ -1546,15 +1546,22 @@ pub async fn sync_users(
     }
 
     // Initialize the Ramp client.
-    let mut ramp_users: HashMap<String, ramp_api::User> = HashMap::new();
-    let mut ramp_departments: HashMap<String, ramp_api::Department> = HashMap::new();
+    let mut ramp_users: HashMap<String, ramp_api::types::User> = HashMap::new();
+    let mut ramp_departments: HashMap<String, ramp_api::types::Department> = HashMap::new();
     let ramp_auth = company.authenticate_ramp(db).await;
     if let Some(ref ramp) = ramp_auth {
-        let ru = ramp.list_users().await.unwrap();
+        let ru = ramp
+            .users()
+            .get_all_users(
+                "", // department id
+                "", // location id
+            )
+            .await
+            .unwrap();
         for r in ru {
             ramp_users.insert(r.email.to_string(), r);
         }
-        let rd = ramp.list_departments().await.unwrap();
+        let rd = ramp.departments().get_all_departments().await.unwrap();
         for r in rd {
             ramp_departments.insert(r.name.to_string(), r);
         }
@@ -1779,14 +1786,15 @@ pub async fn sync_users(
                         if department_id != ramp_user.department_id
                             || users_manager.ramp_id != ramp_user.manager_id
                         {
-                            let updated_user = ramp_api::UpdateUser {
+                            let updated_user = ramp_api::types::PatchRequest {
                                 department_id: department_id.to_string(),
                                 direct_manager_id: users_manager.ramp_id.to_string(),
-                                role: ramp_user.role.to_string(),
+                                role: Some(ramp_user.role.clone()),
                                 location_id: ramp_user.location_id.to_string(),
                             };
 
-                            ramp.update_user(&ramp_user.id, &updated_user)
+                            ramp.users()
+                                .patch(&ramp_user.id, &updated_user)
                                 .await
                                 .unwrap();
                         }
@@ -1794,12 +1802,13 @@ pub async fn sync_users(
                     None => {
                         println!("inviting new ramp user {}", new_user.username);
                         // Invite the new ramp user.
-                        let mut ramp_user: ramp_api::User = Default::default();
+                        let mut ramp_user: ramp_api::types::PostDeferredRequest =
+                            Default::default();
                         ramp_user.email = new_user.email.to_string();
                         ramp_user.first_name = new_user.first_name.to_string();
                         ramp_user.last_name = new_user.last_name.to_string();
                         ramp_user.phone = new_user.recovery_phone.to_string();
-                        ramp_user.role = "BUSINESS_USER".to_string();
+                        ramp_user.role = ramp_api::types::Role::BusinessUser;
 
                         // Add the manager.
                         ramp_user.direct_manager_id = users_manager.ramp_id.to_string();
@@ -1810,7 +1819,7 @@ pub async fn sync_users(
                         }
 
                         // Add the manager.
-                        let r = ramp.invite_new_user(&ramp_user).await.unwrap();
+                        let r = ramp.users().post_deferred(&ramp_user).await.unwrap();
                         new_user.ramp_id = r.id.to_string();
 
                         // TODO: Create them a card.
