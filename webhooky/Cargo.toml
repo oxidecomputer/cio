@@ -20,7 +20,8 @@ dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "main" 
 formdata = "^0.13.0"
 futures-util = "0.3"
 google-drive = "^0.1.23"
-gusto-api = "^0.1.17"
+gusto-api = "^0.2.1"
+#gusto-api = { path = "../../third-party-api-clients/gusto" }
 http = "0.2.0"
 hyper = { version = "0.10" }
 mailchimp-api = "^0.1.11"

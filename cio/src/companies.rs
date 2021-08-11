@@ -9,7 +9,7 @@ use cloudflare::framework::{
     HttpApiClientConfig,
 };
 use docusign::DocuSign;
-use gusto_api::Gusto;
+use gusto_api::Client as Gusto;
 use macros::db;
 use mailchimp_api::MailChimp;
 use octorust::{
@@ -390,23 +390,22 @@ impl Company {
     }
 
     /// Authenticate with Gusto.
-    pub async fn authenticate_gusto(&self, db: &Database) -> Option<Gusto> {
+    pub async fn authenticate_gusto(&self, db: &Database) -> Option<(Gusto, String)> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()) {
             // Initialize the Gusto client.
-            let mut gusto =
-                Gusto::new_from_env(t.access_token, t.refresh_token, t.company_id.to_string());
+            let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token);
             let nt = gusto.refresh_access_token().await.unwrap();
             t.access_token = nt.access_token.to_string();
             t.expires_in = nt.expires_in as i32;
             t.refresh_token = nt.refresh_token.to_string();
-            t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+            t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
             t.last_updated_at = Utc::now();
             t.expand();
             // Update the token in the database.
             t.update(db).await;
 
-            return Some(gusto);
+            return Some((gusto, t.company_id.to_string()));
         }
 
         None

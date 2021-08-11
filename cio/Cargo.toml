@@ -41,8 +41,8 @@ google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
 gsuite-api = "^0.1.31"
 #gsuite-api = { path = "../gsuite" }
-gusto-api = "^0.1.17"
-#gusto-api = { path = "../gusto" }
+gusto-api = "^0.2.1"
+#gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "3.5.3"
 html2text = "0.1"
 image = "0.23.14"
@@ -53,7 +53,7 @@ mailchimp-api = "^0.1.11"
 names = "^0.11.0"
 nom_pem = "4"
 octorust = { version = "^0.1.16", features = ["httpcache"] }
-#octorust = { path = "../../github-api-client/github/", features = ["httpcache"] }
+#octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
 okta = "^0.0.6"
 openssl = "0.10"
 pandoc = "0.8"

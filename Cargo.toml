@@ -10,7 +10,6 @@ members = [
 	"giphy",
 	"gsuite",
 	"google-geocode",
-	"gusto",
 	"macros",
 	"mailchimp",
 	"okta",

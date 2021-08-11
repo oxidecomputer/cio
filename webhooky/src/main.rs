@@ -54,7 +54,7 @@ use dropshot::{
     TypedBody, UntypedBody,
 };
 use google_drive::GoogleDrive;
-use gusto_api::Gusto;
+use gusto_api::Client as Gusto;
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use quickbooks::QuickBooks;
 use ramp_api::Ramp;
@@ -2249,7 +2249,7 @@ async fn listen_auth_gusto_consent(
     sentry::start_session();
 
     // Initialize the Gusto client.
-    let g = Gusto::new_from_env("", "", "");
+    let g = Gusto::new_from_env("", "");
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
@@ -2271,18 +2271,17 @@ async fn listen_auth_gusto_callback(
     let event = query_args.into_inner();
 
     // Initialize the Gusto client.
-    let mut g = Gusto::new_from_env("", "", "");
+    let mut g = Gusto::new_from_env("", "");
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code).await.unwrap();
 
     // Let's get the company ID.
-    let current_user = g.current_user().await.unwrap();
+    let current_user = g.current_user().get_me().await.unwrap();
     let mut company_id = String::new();
-    for (t, role) in current_user.roles {
-        if t == "payroll_admin" {
-            company_id = role.companies[0].id.to_string();
-            break;
+    if let Some(roles) = current_user.roles {
+        if let Some(payroll_admin) = roles.payroll_admin {
+            company_id = payroll_admin.companies.get(0).unwrap().id.to_string();
         }
     }
 
@@ -2303,7 +2302,7 @@ async fn listen_auth_gusto_callback(
         access_token: t.access_token.to_string(),
         expires_in: t.expires_in as i32,
         refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        refresh_token_expires_in: t.refresh_token_expires_in as i32,
         company_id: company_id.to_string(),
         item_id: "".to_string(),
         user_email: current_user.email.to_string(),

@@ -15,7 +15,7 @@ use gsuite_api::{
     CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup,
     User as GSuiteUser,
 };
-use gusto_api::Gusto;
+use gusto_api::Client as Gusto;
 use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
@@ -305,7 +305,7 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
-    pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto) {
+    pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto, gusto_company_id: &str) {
         // Only do this if we have a start date.
         if self.start_date == crate::utils::default_date() {
             // Return early.
@@ -340,13 +340,18 @@ impl UserConfig {
 
         // Create the applicant in Gusto.
         let employee = gusto
-            .create_employee(&gusto_api::NewEmployee {
-                first_name: self.first_name.to_string(),
-                middle_initial: "".to_string(),
-                last_name: self.last_name.to_string(),
-                email: self.recovery_email.to_string(),
-                date_of_birth: None,
-            })
+            .employees()
+            .post_employees(
+                gusto_company_id,
+                &gusto_api::types::PostEmployeesRequest {
+                    first_name: self.first_name.to_string(),
+                    middle_initial: "".to_string(),
+                    last_name: self.last_name.to_string(),
+                    email: self.recovery_email.to_string(),
+                    date_of_birth: None,
+                    ssn: "".to_string(),
+                },
+            )
             .await
             .unwrap();
         // Set the gusto id.
@@ -356,9 +361,10 @@ impl UserConfig {
         // The state needs to be the abbreviation.
         let state = crate::states::StatesMap::shorthand(&self.home_address_state);
         gusto
-            .update_employee_home_address(
+            .employees()
+            .put_employee_home_address(
                 &self.gusto_id,
-                &gusto_api::NewAddress {
+                &gusto_api::types::PutEmployeeHomeAddressRequest {
                     version: "".to_string(),
                     street_1: self.home_address_street_1.to_string(),
                     street_2: self.home_address_street_2.to_string(),
@@ -371,7 +377,7 @@ impl UserConfig {
             .unwrap();
     }
 
-    fn update_from_gusto(&mut self, gusto_user: &gusto_api::Employee) {
+    fn update_from_gusto(&mut self, gusto_user: &gusto_api::types::Employee) {
         self.gusto_id = gusto_user.id.to_string();
 
         if gusto_user.jobs.is_empty() {
@@ -391,12 +397,14 @@ impl UserConfig {
 
         // Update the user's home address.
         // Gusto now becomes the source of truth for people's addresses.
-        self.home_address_street_1 = gusto_user.home_address.street_1.to_string();
-        self.home_address_street_2 = gusto_user.home_address.street_2.to_string();
-        self.home_address_city = gusto_user.home_address.city.to_string();
-        self.home_address_state = gusto_user.home_address.state.to_string();
-        self.home_address_zipcode = gusto_user.home_address.zip.to_string();
-        self.home_address_country = gusto_user.home_address.country.to_string();
+        if let Some(home_address) = &gusto_user.home_address {
+            self.home_address_street_1 = home_address.street_1.to_string();
+            self.home_address_street_2 = home_address.street_2.to_string();
+            self.home_address_city = home_address.city.to_string();
+            self.home_address_state = home_address.state.to_string();
+            self.home_address_zipcode = home_address.zip.to_string();
+            self.home_address_country = home_address.country.to_string();
+        }
 
         if self.home_address_country == "US"
             || self.home_address_country == "USA"
@@ -1512,11 +1520,21 @@ pub async fn sync_users(
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Initialize the Gusto client.
-    let mut gusto_users: HashMap<String, gusto_api::Employee> = HashMap::new();
-    let mut gusto_users_by_id: HashMap<String, gusto_api::Employee> = HashMap::new();
+    let mut gusto_users: HashMap<String, gusto_api::types::Employee> = HashMap::new();
+    let mut gusto_users_by_id: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
-    if let Some(ref gusto) = gusto_auth {
-        let gu = gusto.list_employees().await.unwrap();
+    if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
+        let gu = gusto
+            .employees()
+            .get_all_company_employees(
+                gusto_company_id,
+                false,
+                100.0,
+                &[],
+                &gusto_api::types::GetCompanyEmployeesRequest {},
+            )
+            .await
+            .unwrap();
         for g in gu {
             gusto_users.insert(g.email.to_string(), g.clone());
             gusto_users_by_id.insert(g.id.to_string(), g);
@@ -1709,10 +1727,11 @@ pub async fn sync_users(
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
                         user.update_from_gusto(gusto_user);
                     }
-                } else if let Some(ref gusto) = gusto_auth {
+                } else if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
                     user.populate_home_address().await;
                     // Create the user in Gusto if necessary.
-                    user.create_in_gusto_if_needed(gusto).await;
+                    user.create_in_gusto_if_needed(gusto, gusto_company_id)
+                        .await;
                 }
             }
         }
