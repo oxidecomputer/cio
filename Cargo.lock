@@ -1507,9 +1507,9 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c59971e13d708eade064bf2eef4cd33923a3dc59379e4b301b187fc344d18f62"
+checksum = "8c4636f2578413830f93f48f996a823b06de74e48a5ee6d8207acf088a9dffec"
 dependencies = [
  "anyhow",
  "async-recursion",

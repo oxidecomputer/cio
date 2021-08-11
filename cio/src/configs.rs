@@ -1524,14 +1524,16 @@ pub async fn sync_users(
     let mut gusto_users_by_id: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
     if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
-        let gu = gusto
-            .employees()
-            .get_all_company_employees(gusto_company_id, false, &[])
-            .await
-            .unwrap();
-        for g in gu {
-            gusto_users.insert(g.email.to_string(), g.clone());
-            gusto_users_by_id.insert(g.id.to_string(), g);
+        if gusto_company_id != "0" {
+            let gu = gusto
+                .employees()
+                .get_all_company_employees(gusto_company_id, false, &[])
+                .await
+                .unwrap();
+            for g in gu {
+                gusto_users.insert(g.email.to_string(), g.clone());
+                gusto_users_by_id.insert(g.id.to_string(), g);
+            }
         }
     }
 

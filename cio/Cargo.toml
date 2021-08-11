@@ -41,7 +41,7 @@ google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
 gsuite-api = "^0.1.31"
 #gsuite-api = { path = "../gsuite" }
-gusto-api = "^0.2.1"
+gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "3.5.3"
 html2text = "0.1"
