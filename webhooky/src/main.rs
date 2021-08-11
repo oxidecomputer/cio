@@ -3710,8 +3710,7 @@ async fn handle_rfd_pull_request(
             owner,
             repo,
             event.pull_request.number,
-            // TODO: fix this
-            //&octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
+            &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
         )
         .await
         .unwrap();
