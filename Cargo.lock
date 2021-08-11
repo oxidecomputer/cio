@@ -2941,6 +2941,8 @@ dependencies = [
 [[package]]
 name = "ramp-api"
 version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42b29d0453e68dfe3d7a9fa9f133edf8465505c5430a444f6339637a47352646"
 dependencies = [
  "anyhow",
  "async-recursion",
