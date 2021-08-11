@@ -2279,10 +2279,6 @@ async fn listen_auth_gusto_callback(
 
     // Let's get the company ID.
     let current_user = g.current_user().get_me().await.unwrap();
-    sentry::capture_message(
-        &format!("current user: {:?}", current_user),
-        sentry::Level::Info,
-    );
     let mut company_id = String::new();
     if let Some(roles) = current_user.roles {
         if let Some(payroll_admin) = roles.payroll_admin {
