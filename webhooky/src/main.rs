@@ -2253,7 +2253,8 @@ async fn listen_auth_gusto_consent(
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
-        url: g.user_consent_url(),
+        // We don't need to define scopes for Gusto.
+        url: g.user_consent_url(&[]),
     }))
 }
 
@@ -2274,7 +2275,7 @@ async fn listen_auth_gusto_callback(
     let mut g = Gusto::new_from_env("", "");
 
     // Let's get the token from the code.
-    let t = g.get_access_token(&event.code).await.unwrap();
+    let t = g.get_access_token(&event.code, &event.state).await.unwrap();
 
     // Let's get the company ID.
     let current_user = g.current_user().get_me().await.unwrap();
@@ -3709,7 +3710,8 @@ async fn handle_rfd_pull_request(
             owner,
             repo,
             event.pull_request.number,
-            &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
+            // TODO: fix this
+            //&octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
         )
         .await
         .unwrap();
