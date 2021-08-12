@@ -65,6 +65,7 @@ use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::Sheets;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
+use zoom_api::Client as Zoom;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -157,6 +158,9 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_ramp_callback).unwrap();
     api.register(listen_auth_ramp_consent).unwrap();
+    api.register(listen_auth_zoom_callback).unwrap();
+    api.register(listen_auth_zoom_consent).unwrap();
+    api.register(listen_auth_zoom_deauthorization).unwrap();
     api.register(listen_auth_slack_callback).unwrap();
     api.register(listen_auth_slack_consent).unwrap();
     api.register(listen_auth_quickbooks_callback).unwrap();
@@ -2320,6 +2324,130 @@ async fn listen_auth_gusto_callback(
     // Update it in the database.
     token.upsert(&api_context.db).await;
 
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Listen to deauthorization requests for our Zoom app. */
+#[endpoint {
+    method = GET,
+    path = "/auth/zoom/deauthorization",
+}]
+async fn listen_auth_zoom_deauthorization(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<serde_json::Value>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+
+    let event = body_param.into_inner();
+
+    sentry::capture_message(
+        &format!("zoom deauthorization: {:?}", event),
+        sentry::Level::Info,
+    );
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Get the consent URL for Zoom auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/zoom/consent",
+}]
+async fn listen_auth_zoom_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the Zoom client.
+    let g = Zoom::new_from_env("", "");
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL {
+        url: g.user_consent_url(&[]),
+    }))
+}
+
+/** Listen for callbacks to Zoom auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/zoom/callback",
+}]
+async fn listen_auth_zoom_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+    let event = query_args.into_inner();
+
+    sentry::capture_message(&format!("zoom callback: {:?}", event), sentry::Level::Info);
+
+    // Initialize the Zoom client.
+    let mut g = Zoom::new_from_env("", "");
+
+    // Let's get the token from the code.
+    let t = g.get_access_token(&event.code, &event.state).await.unwrap();
+
+    // TODO: this login type means google but that might not always be true...
+    let cu = g
+        .users()
+        .user("me", zoom_api::types::LoginType::One, false)
+        .await
+        .unwrap();
+
+    sentry::capture_message(&format!("zoom current user: {:?}", cu), sentry::Level::Info);
+
+    if let zoom_api::types::UserResponseAllOf::User(me) = cu.clone() {
+        if let zoom_api::types::UserResponseAllOf::UserResponse(user) = cu {
+            // Let's get the domain from the email.
+            let mut domain = "".to_string();
+            if !me.email.is_empty() {
+                let split = me.email.split('@');
+                let vec: Vec<&str> = split.collect();
+                if vec.len() > 1 {
+                    domain = vec.get(1).unwrap().to_string();
+                }
+            }
+
+            let company = Company::get_from_domain(&api_context.db, &domain);
+
+            // Save the token to the database.
+            let mut token = NewAPIToken {
+                product: "zoom".to_string(),
+                token_type: t.token_type.to_string(),
+                access_token: t.access_token.to_string(),
+                expires_in: t.expires_in as i32,
+                refresh_token: t.refresh_token.to_string(),
+                refresh_token_expires_in: t.refresh_token_expires_in as i32,
+                company_id: user.company.to_string(),
+                item_id: "".to_string(),
+                user_email: me.email.to_string(),
+                last_updated_at: Utc::now(),
+                expires_date: None,
+                refresh_token_expires_date: None,
+                endpoint: "".to_string(),
+                auth_company_id: company.id,
+                company: Default::default(),
+                // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+                cio_company_id: 1,
+            };
+            token.expand();
+            // Update it in the database.
+            token.upsert(&api_context.db).await;
+
+            sentry::end_session();
+            return Ok(HttpResponseAccepted("ok".to_string()));
+        }
+    }
+
+    // Otherwise we could not parse the current user.
+
+    sentry::capture_message(
+        &format!("failed to parse zoom current user: {:?}", cu),
+        sentry::Level::Fatal,
+    );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }

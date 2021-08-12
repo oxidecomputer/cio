@@ -504,6 +504,7 @@ dependencies = [
  "walkdir",
  "yup-oauth2",
  "zip",
+ "zoom-api",
 ]
 
 [[package]]
@@ -4876,6 +4877,7 @@ dependencies = [
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
+ "zoom-api",
 ]
 
 [[package]]
@@ -5019,4 +5021,25 @@ dependencies = [
  "flate2",
  "thiserror",
  "time 0.1.43",
+]
+
+[[package]]
+name = "zoom-api"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fdf192a667ca7370cc452592b13537577f6cd361761a3a33de95190415e638ba"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
