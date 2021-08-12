@@ -42,3 +42,5 @@ sheets = "^0.1.0"
 shippo = "^0.1.12"
 slack-chat-api = "^0.1.16"
 tokio = { version = "1", features = ["full"] }
+#zoom-api = "^0.2.0"
+zoom-api = { path = "../../third-party-api-clients/zoom" }

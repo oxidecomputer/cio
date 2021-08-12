@@ -96,3 +96,6 @@ jobs:
           GUSTO_CLIENT_ID: ${{ secrets.GUSTO_CLIENT_ID }}
           GUSTO_CLIENT_SECRET: ${{ secrets.GUSTO_CLIENT_SECRET }}
           GUSTO_REDIRECT_URI: ${{ secrets.GUSTO_REDIRECT_URI }}
+          ZOOM_CLIENT_ID: ${{ secrets.ZOOM_CLIENT_ID }}
+          ZOOM_CLIENT_SECRET: ${{ secrets.ZOOM_CLIENT_SECRET }}
+          ZOOM_REDIRECT_URI: ${{ secrets.ZOOM_REDIRECT_URI }}

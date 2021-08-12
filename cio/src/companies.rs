@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
 use tripactions::TripActions;
+use zoom_api::Client as Zoom;
 
 use crate::{
     airtable::AIRTABLE_COMPANIES_TABLE,
@@ -357,6 +358,32 @@ impl Company {
             t.update(db).await;
 
             return Some(ramp);
+        }
+
+        None
+    }
+
+    /// Authenticate with Zoom.
+    pub async fn authenticate_zoom(&self, db: &Database) -> Option<Zoom> {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoom".to_string()) {
+            // Initialize the Zoom client.
+            let mut zoom = Zoom::new_from_env(t.access_token, t.refresh_token.to_string());
+            let nt = zoom.refresh_access_token().await.unwrap();
+            t.access_token = nt.access_token.to_string();
+            t.expires_in = nt.expires_in as i32;
+            t.last_updated_at = Utc::now();
+            if !nt.refresh_token.is_empty() {
+                t.refresh_token = nt.refresh_token.to_string();
+            }
+            if nt.refresh_token_expires_in > 0 {
+                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+            }
+            t.expand();
+            // Update the token in the database.
+            t.update(db).await;
+
+            return Some(zoom);
         }
 
         None
