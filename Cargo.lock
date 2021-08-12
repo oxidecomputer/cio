@@ -5025,9 +5025,9 @@ dependencies = [
 
 [[package]]
 name = "zoom-api"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdf192a667ca7370cc452592b13537577f6cd361761a3a33de95190415e638ba"
+checksum = "90d3b5a29c2d024636ab51eeadc8cd91a81187754282d5601b418edeaf961563"
 dependencies = [
  "anyhow",
  "async-recursion",

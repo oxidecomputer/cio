@@ -2399,55 +2399,42 @@ async fn listen_auth_zoom_callback(
 
     sentry::capture_message(&format!("zoom current user: {:?}", cu), sentry::Level::Info);
 
-    if let zoom_api::types::UserResponseAllOf::User(me) = cu.clone() {
-        if let zoom_api::types::UserResponseAllOf::UserResponse(user) = cu {
-            // Let's get the domain from the email.
-            let mut domain = "".to_string();
-            if !me.email.is_empty() {
-                let split = me.email.split('@');
-                let vec: Vec<&str> = split.collect();
-                if vec.len() > 1 {
-                    domain = vec.get(1).unwrap().to_string();
-                }
-            }
-
-            let company = Company::get_from_domain(&api_context.db, &domain);
-
-            // Save the token to the database.
-            let mut token = NewAPIToken {
-                product: "zoom".to_string(),
-                token_type: t.token_type.to_string(),
-                access_token: t.access_token.to_string(),
-                expires_in: t.expires_in as i32,
-                refresh_token: t.refresh_token.to_string(),
-                refresh_token_expires_in: t.refresh_token_expires_in as i32,
-                company_id: user.company.to_string(),
-                item_id: "".to_string(),
-                user_email: me.email.to_string(),
-                last_updated_at: Utc::now(),
-                expires_date: None,
-                refresh_token_expires_date: None,
-                endpoint: "".to_string(),
-                auth_company_id: company.id,
-                company: Default::default(),
-                // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
-                cio_company_id: 1,
-            };
-            token.expand();
-            // Update it in the database.
-            token.upsert(&api_context.db).await;
-
-            sentry::end_session();
-            return Ok(HttpResponseAccepted("ok".to_string()));
+    // Let's get the domain from the email.
+    let mut domain = "".to_string();
+    if !cu.user.email.is_empty() {
+        let split = cu.user.email.split('@');
+        let vec: Vec<&str> = split.collect();
+        if vec.len() > 1 {
+            domain = vec.get(1).unwrap().to_string();
         }
     }
 
-    // Otherwise we could not parse the current user.
+    let company = Company::get_from_domain(&api_context.db, &domain);
 
-    sentry::capture_message(
-        &format!("failed to parse zoom current user: {:?}", cu),
-        sentry::Level::Fatal,
-    );
+    // Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "zoom".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.refresh_token_expires_in as i32,
+        company_id: cu.user_response.company.to_string(),
+        item_id: "".to_string(),
+        user_email: cu.user.email.to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        auth_company_id: company.id,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
+    };
+    token.expand();
+    // Update it in the database.
+    token.upsert(&api_context.db).await;
+
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
