@@ -256,9 +256,9 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "1.2.1"
+version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
+checksum = "2da1976d75adbe5fbc88130ecd119529cf1cc6a93ae1546d8696ee66f0d21af1"
 
 [[package]]
 name = "block-buffer"
@@ -510,7 +510,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f1e71c9dc953a60c263e81b8516b8b321371a2b5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#dc5869f67e5a6ec274ded220993b890fa726b140"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -572,6 +572,7 @@ dependencies = [
  "walkdir",
  "yup-oauth2",
  "zip",
+ "zoom-api",
 ]
 
 [[package]]
@@ -1508,9 +1509,9 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdc492382beca260bfa927bd3f56653567aa3bacdd09d6736adb13f8b935df67"
+checksum = "68782958400533a9f0d505f543e4b74dd1093f02d6502607ced0aeff5327170a"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2062,7 +2063,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f1e71c9dc953a60c263e81b8516b8b321371a2b5"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#dc5869f67e5a6ec274ded220993b890fa726b140"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -2141,9 +2142,9 @@ checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
 
 [[package]]
 name = "matches"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
+checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
 
 [[package]]
 name = "memchr"
@@ -2415,9 +2416,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.20"
+version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "251e2b29ece6e33c86ef7932a9abc4a1671e1ac5c3bd28d9f8ca830dd2b808be"
+checksum = "9fa7cd89d5f5c3e5c24a611752f075ccdd906bb62bc90c6fa107d7ccb0475f63"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4144,9 +4145,9 @@ checksum = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
 
 [[package]]
 name = "tar"
-version = "0.4.36"
+version = "0.4.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8190d9cdacf6ee1b080605fd719b58d80a9fcbcea64db6744b26f743da02e447"
+checksum = "d6f5515d3add52e0bbdcad7b83c388bb36ba7b754dda3b5f5bc2d38640cdba5c"
 dependencies = [
  "filetime",
  "libc",
@@ -4354,9 +4355,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b7b349f11a7047e6d1276853e612d152f5e8a352c61917887cc2169e2366b4c"
+checksum = "01cf844b23c6131f624accf65ce0e4e9956a8bb329400ea5bcc26ae3a5c20b0b"
 dependencies = [
  "autocfg",
  "bytes",
