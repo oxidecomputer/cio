@@ -389,7 +389,7 @@ pub async fn list_all_github_repos(github: &octorust::Client, company: &Company)
             &company.github_org,
             octorust::types::ReposListOrgType::All,
             octorust::types::ReposListOrgSort::Created,
-            octorust::types::Direction::Desc,
+            octorust::types::Order::Desc,
         )
         .await
         .unwrap();

@@ -256,9 +256,9 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "1.3.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56540ff7a320fb10dded2e423f551e9f40298da698c1d2493da17fc5e5970fb7"
+checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "block-buffer"
@@ -509,7 +509,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#28190dac756a0ffdf5203b07874d1c27fdd6a305"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d39901498494e60b38992bc2db93798c4d5c69c7"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1507,9 +1507,9 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "700a078684f4cdc0b11acc2813c41d248cdabb5d4fcf6af6f833badfbb2cd48d"
+checksum = "cdc492382beca260bfa927bd3f56653567aa3bacdd09d6736adb13f8b935df67"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2061,7 +2061,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#28190dac756a0ffdf5203b07874d1c27fdd6a305"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#d39901498494e60b38992bc2db93798c4d5c69c7"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -2414,9 +2414,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.19"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ebe71fc3f50e87cec90e1bd72bc62f9fd17589929b143780868ae3ce3f9272c"
+checksum = "251e2b29ece6e33c86ef7932a9abc4a1671e1ac5c3bd28d9f8ca830dd2b808be"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2926,9 +2926,9 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42b29d0453e68dfe3d7a9fa9f133edf8465505c5430a444f6339637a47352646"
+checksum = "d6cd57587c685d5b94e28e82c723dccd280fd84bacf3e203ef7475a7ac4708f5"
 dependencies = [
  "anyhow",
  "async-recursion",

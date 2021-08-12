@@ -1443,14 +1443,24 @@ mod tests {
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance_ramp() {
+    async fn test_finance_ramp_reimbursements() {
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1);
         // Iterate over the companies and update.
         for company in companies {
             refresh_ramp_reimbursements(&db, &company).await;
+        }
+    }
 
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_finance_ramp_transactions() {
+        // Initialize our database.
+        let db = Database::new();
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
             refresh_ramp_transactions(&db, &company).await;
         }
     }
