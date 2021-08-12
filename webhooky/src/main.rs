@@ -2494,6 +2494,8 @@ async fn listen_auth_ramp_callback(
         .await
         .unwrap();
 
+    sentry::capture_message(&format!("ramp list users: {:?}", ru), sentry::Level::Info);
+
     // Let's get the domain from the email.
     let mut domain = "".to_string();
     if !ru.is_empty() {
