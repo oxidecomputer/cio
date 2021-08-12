@@ -23,5 +23,4 @@ members = [
 	"tailscale",
 	"tripactions",
 	"webhooky",
-	"zoom",
 ]

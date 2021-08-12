@@ -5020,13 +5020,3 @@ dependencies = [
  "thiserror",
  "time 0.1.43",
 ]
-
-[[package]]
-name = "zoom-api"
-version = "0.1.5"
-dependencies = [
- "chrono",
- "jsonwebtoken",
- "reqwest",
- "serde",
-]
