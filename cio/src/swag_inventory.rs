@@ -329,7 +329,7 @@ pub fn generate_pdf_barcode_label(
     let original_width = logo_image.image.width.into_pt(DPI);
     let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
     let width_scale = new_width / original_width;
-    let logo_height: Pt = (logo_image.image.height.into_pt(DPI) * width_scale).into();
+    let logo_height: Pt = logo_image.image.height.into_pt(DPI) * width_scale;
     let logo_height_mm: Mm = From::from(logo_height);
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
@@ -354,7 +354,7 @@ pub fn generate_pdf_barcode_label(
     let original_width = barcode_image.image.width.into_pt(DPI);
     let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
     let width_scale = new_width / original_width;
-    let barcode_height: Pt = (barcode_image.image.height.into_pt(DPI) * width_scale).into();
+    let barcode_height: Pt = barcode_image.image.height.into_pt(DPI) * width_scale;
     let barcode_height_mm: Mm = From::from(barcode_height);
     let translate_y = hmm + barcode_height_mm + (pdf_margin * 2.0);
     // translate x, translate y, rotate, scale x, scale y
@@ -384,11 +384,11 @@ pub fn generate_pdf_barcode_label(
     current_layer.set_text_cursor(pdf_margin, pdf_margin + hmm);
     current_layer.set_line_height(line_height);
 
-    current_layer.write_text(text_line_1.clone(), &font);
+    current_layer.write_text(text_line_1, &font);
     current_layer.add_line_break();
-    current_layer.write_text(text_line_2.clone(), &font);
+    current_layer.write_text(text_line_2, &font);
     current_layer.add_line_break();
-    current_layer.write_text(text_line_3.clone(), &font);
+    current_layer.write_text(text_line_3, &font);
 
     current_layer.end_text_section();
 
