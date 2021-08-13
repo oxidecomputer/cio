@@ -343,19 +343,28 @@ pub fn generate_pdf_barcode_label(
         Some(DPI),
     );
 
-    let barcode_image = PdfImage::from_dynamic_image(&image::load_from_memory(&png_bytes).unwrap());
+    let line_height = 12.0;
+    let h = Pt(line_height * 2.0);
+    let hmm: Mm = From::from(h);
+
+    println!("png_bytes: {:?}", png_bytes);
+
+    let barcode_image = PdfImage::from_dynamic_image(
+        &image::load_from_memory_with_format(&png_bytes, image::ImageFormat::Png).unwrap(),
+    );
     // We want the barcode width to fit.
     let original_width = barcode_image.image.width.into_pt(DPI);
     let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
     let width_scale = new_width / original_width;
     let barcode_height: Pt = (barcode_image.image.height.into_pt(DPI) * width_scale).into();
     let barcode_height_mm: Mm = From::from(barcode_height);
+    let translate_y = hmm + barcode_height_mm + (pdf_margin * 2.0);
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
         current_layer.clone(),
         Some(pdf_margin),
-        Some(pdf_height - (pdf_margin * 2.0) - logo_height_mm - barcode_height_mm),
+        Some(translate_y),
         None,
         Some(width_scale),
         Some(width_scale),
@@ -371,10 +380,7 @@ pub fn generate_pdf_barcode_label(
     // in a `begin_text_section()` and `end_text_section()` wrapper
     current_layer.begin_text_section();
 
-    let line_height = 12.0;
     current_layer.set_font(&font, line_height - 2.0);
-    let h = Pt(line_height * 2.0);
-    let hmm: Mm = From::from(h);
     current_layer.set_text_cursor(pdf_margin, pdf_margin + hmm);
     current_layer.set_line_height(line_height);
 
