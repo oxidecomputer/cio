@@ -278,7 +278,7 @@ impl NewSwagInventoryItem {
             let im = Image::jpeg(60);
             let b = im.generate(&encoded[..]).unwrap();
             let label_bytes = generate_pdf_barcode_label(
-                b,
+                &b,
                 &self.barcode,
                 &self.item,
                 &format!("Size: {}", self.size),
@@ -311,7 +311,7 @@ impl NewSwagInventoryItem {
 
 // Get the bytes for a pdf barcode label.
 pub fn generate_pdf_barcode_label(
-    image_bytes: Vec<u8>,
+    image_bytes: &[u8],
     text_line_1: &str,
     text_line_2: &str,
     text_line_3: &str,

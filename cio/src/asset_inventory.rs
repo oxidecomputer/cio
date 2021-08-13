@@ -180,7 +180,7 @@ impl NewAssetItem {
             let im = Image::jpeg(60);
             let b = im.generate(&encoded[..]).unwrap();
             let label_bytes = generate_pdf_barcode_label(
-                b,
+                &b,
                 &self.barcode,
                 &self.name,
                 &format!("{} {} {}", self.manufacturer, self.type_, self.model_number),
