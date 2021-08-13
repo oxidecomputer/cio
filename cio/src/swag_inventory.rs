@@ -27,7 +27,8 @@ use crate::{
 };
 
 // The zebra label printer's dpi is 300.
-const DPI: f64 = 300.0;
+// But we can't do the configuration, requires windows, so let's use 203.
+const DPI: f64 = 203.0;
 
 #[db {
     new_struct_name = "SwagItem",
@@ -381,13 +382,13 @@ pub fn generate_pdf_barcode_label(
     let width_scale = new_width / original_width;
     let barcode_height: Pt = barcode_image.image.height.into_pt(DPI) * width_scale;
     let barcode_height_mm: Mm = From::from(barcode_height);
-    let translate_y = pdf_height - logo_height_mm - hmm - (pdf_margin * 3.0) - barcode_height_mm;
+    let translate_y = pdf_height - logo_height_mm - hmm - (pdf_margin * 3.0);
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
         current_layer.clone(),
         Some(pdf_margin),
-        Some(translate_y),
+        Some((barcode_height_mm - translate_y) * -1.0),
         None,
         Some(width_scale),
         Some(width_scale),
