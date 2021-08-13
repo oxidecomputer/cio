@@ -314,7 +314,7 @@ pub fn generate_pdf_barcode_label(
     text_line_2: &str,
     text_line_3: &str,
 ) -> Vec<u8> {
-    let pdf_margin = Mm(5.0);
+    let pdf_margin = Mm(2.0);
     let pdf_width = Mm(3.0 * 25.4);
     let pdf_height = Mm(2.0 * 25.4);
     let (doc, page1, layer1) = PdfDocument::new(text_line_2, pdf_width, pdf_height, "Layer 1");
@@ -370,11 +370,10 @@ pub fn generate_pdf_barcode_label(
     current_layer.begin_text_section();
 
     current_layer.set_font(&font, 12.0);
-    current_layer.set_text_cursor(pdf_margin, pdf_margin);
+    let h = Pt(14.0 * 3.0);
+    let hmm: Mm = From::from(h);
+    current_layer.set_text_cursor(pdf_margin, pdf_margin + hmm);
     current_layer.set_line_height(14.0);
-    //current_layer.set_word_spacing(3000.0);
-    //current_layer.set_character_spacing(10.0);
-    //current_layer.set_text_rendering_mode(TextRenderingMode::Stroke);
 
     current_layer.write_text(text_line_1.clone(), &font);
     current_layer.add_line_break();
