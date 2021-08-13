@@ -275,7 +275,7 @@ impl NewSwagInventoryItem {
             );
 
             // Generate the barcode label.
-            let im = Image::jpeg(60);
+            let im = Image::jpeg(200);
             let b = im.generate(&encoded[..]).unwrap();
             let label_bytes = generate_pdf_barcode_label(
                 &b,
@@ -365,10 +365,8 @@ pub fn generate_pdf_barcode_label(
         Some(pdf_margin),
         Some(translate_y),
         None,
-        //Some(width_scale),
-        //Some(width_scale),
-        None,
-        None,
+        Some(width_scale),
+        Some(width_scale),
         Some(DPI),
     );
 
