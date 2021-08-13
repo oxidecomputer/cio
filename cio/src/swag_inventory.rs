@@ -316,7 +316,8 @@ pub fn generate_pdf_barcode_label(
 ) -> Vec<u8> {
     let pdf_margin = Mm(5.0);
     let pdf_width = Mm(3.0 * 25.4);
-    let (doc, page1, layer1) = PdfDocument::new(text_line_2, pdf_width, Mm(2.0 * 25.4), "Layer 1");
+    let pdf_height = Mm(2.0 * 25.4);
+    let (doc, page1, layer1) = PdfDocument::new(text_line_2, pdf_width, pdf_height, "Layer 1");
     let current_layer = doc.get_page(page1).get_layer(layer1);
 
     // currently, the only reliable file formats are bmp/jpeg/png
@@ -328,16 +329,14 @@ pub fn generate_pdf_barcode_label(
     let original_width = logo_image.image.width.into_pt(DPI);
     let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
     let width_scale = new_width / original_width;
-    /*let position = (
-        (pdf_width - logo_info.width) / 2.0,
-        pdf_height - logo_info.height - pdf_margin,
-    );*/
+    let logo_height: Pt = (logo_image.image.height.into_pt(DPI) * width_scale).into();
+    let logo_height_mm: Mm = From::from(logo_height);
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
     logo_image.add_to_layer(
         current_layer.clone(),
-        None,
-        None,
+        Some(pdf_margin),
+        Some(pdf_height - pdf_margin - logo_height_mm),
         None,
         Some(width_scale),
         Some(width_scale),
@@ -353,8 +352,8 @@ pub fn generate_pdf_barcode_label(
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
         current_layer.clone(),
-        None,
-        None,
+        Some(pdf_margin),
+        Some(pdf_height - (pdf_margin * 2.0) - logo_height_mm),
         None,
         Some(width_scale),
         Some(width_scale),
@@ -371,10 +370,10 @@ pub fn generate_pdf_barcode_label(
     current_layer.begin_text_section();
 
     current_layer.set_font(&font, 12.0);
-    current_layer.set_text_cursor(Mm(10.0), Mm(10.0));
-    current_layer.set_line_height(33.0);
-    current_layer.set_word_spacing(3000.0);
-    current_layer.set_character_spacing(10.0);
+    current_layer.set_text_cursor(pdf_margin, pdf_margin);
+    current_layer.set_line_height(14.0);
+    //current_layer.set_word_spacing(3000.0);
+    //current_layer.set_character_spacing(10.0);
     //current_layer.set_text_rendering_mode(TextRenderingMode::Stroke);
 
     current_layer.write_text(text_line_1.clone(), &font);
