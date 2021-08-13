@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use barcoders::{
-    generators::{image::*, svg::*},
-    sym::code39::*,
+    generators::{image::Image, svg::SVG},
+    sym::code39::Code39,
 };
 use google_drive::GoogleDrive;
 use macros::db;
@@ -142,7 +142,7 @@ impl NewAssetItem {
         if !self.name.is_empty() {
             // Generate the barcode svg and png.
             let barcode = Code39::new(&self.barcode).unwrap();
-            let png = Image::png(45); // You must specify the height in pixels.
+            let png = Image::png(60); // You must specify the height in pixels.
             let encoded = barcode.encode();
 
             // Image generators return a Result<Vec<u8>, barcoders::error::Error) of encoded bytes.
@@ -177,8 +177,13 @@ impl NewAssetItem {
             );
 
             // Generate the barcode label.
+            let im = Image::image_buffer(60);
+            let b = im.generate_buffer(&encoded[..]).unwrap();
+            let (w, h) = b.dimensions();
             let label_bytes = generate_pdf_barcode_label(
-                &png_bytes,
+                w,
+                h,
+                b.into_raw(),
                 &self.barcode,
                 &self.name,
                 &format!("{} {} {}", self.manufacturer, self.type_, self.model_number),
