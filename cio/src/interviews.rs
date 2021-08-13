@@ -245,6 +245,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
 }
 
 /// Compile interview packets for each interviewee.
+#[allow(clippy::type_complexity)]
 pub async fn compile_packets(db: &Database, company: &Company) {
     // Get gsuite token.
     let token = company.authenticate_google(db).await;

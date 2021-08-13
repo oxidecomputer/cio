@@ -4181,6 +4181,13 @@ async fn handle_rfd_push(
 
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
+                    sentry::capture_message(
+                        &format!(
+                            "attempting to open a pull request for {}",
+                            new_rfd.number_string
+                        ),
+                        sentry::Level::Info,
+                    );
                     github
                         .pulls()
                         .create(
@@ -4203,6 +4210,13 @@ async fn handle_rfd_push(
                         .await
                         .unwrap();
                     println!("opened pull request for RFD {}", new_rfd.number_string);
+                    sentry::capture_message(
+                        &format!(
+                            "successfully opened a pull request for {}",
+                            rfd.number_string
+                        ),
+                        sentry::Level::Info,
+                    );
 
                     // We could update the discussion link here, but we will already
                     // trigger a `pull_request` `opened` event, so we might as well let
