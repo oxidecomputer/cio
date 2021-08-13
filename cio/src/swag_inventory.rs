@@ -316,7 +316,7 @@ pub fn generate_pdf_barcode_label(
     text_line_2: &str,
     text_line_3: &str,
 ) -> Vec<u8> {
-    let pdf_margin = Mm(2.0);
+    let pdf_margin = Mm(1.0);
     let pdf_width = Mm(3.0 * 25.4);
     let pdf_height = Mm(2.0 * 25.4);
     let (doc, page1, layer1) = PdfDocument::new(text_line_2, pdf_width, pdf_height, "Layer 1");
