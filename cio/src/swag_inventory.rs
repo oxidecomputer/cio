@@ -27,8 +27,7 @@ use crate::{
 };
 
 // The zebra label printer's dpi is 300.
-// But we can't do the configuration, requires windows, so let's use 203.
-const DPI: f64 = 203.0;
+const DPI: f64 = 300.0;
 
 #[db {
     new_struct_name = "SwagItem",
