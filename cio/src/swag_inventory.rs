@@ -213,7 +213,7 @@ impl NewSwagInventoryItem {
         // This makes sure the barcodes are all of uniform length.
         // To fit on the barcode label with the right DPI we CANNOT exceed this
         // legth.
-        let max_barcode_len = 13;
+        let max_barcode_len = 39;
         while barcode.len() < max_barcode_len {
             barcode = format!("0{}", barcode);
         }
@@ -348,12 +348,14 @@ pub fn generate_pdf_barcode_label(
     let original_width = barcode_image.image.width.into_pt(DPI);
     let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
     let width_scale = new_width / original_width;
+    let barcode_height: Pt = (barcode_image.image.height.into_pt(DPI) * width_scale).into();
+    let barcode_height_mm: Mm = From::from(barcode_height);
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
         current_layer.clone(),
         Some(pdf_margin),
-        Some(pdf_height - (pdf_margin * 2.0) - logo_height_mm),
+        Some(pdf_height - (pdf_margin * 2.0) - logo_height_mm - barcode_height_mm),
         None,
         Some(width_scale),
         Some(width_scale),
@@ -369,18 +371,18 @@ pub fn generate_pdf_barcode_label(
     // in a `begin_text_section()` and `end_text_section()` wrapper
     current_layer.begin_text_section();
 
-    current_layer.set_font(&font, 12.0);
-    let h = Pt(14.0 * 3.0);
+    let line_height = 12.0;
+    current_layer.set_font(&font, line_height - 2.0);
+    let h = Pt(line_height * 2.0);
     let hmm: Mm = From::from(h);
     current_layer.set_text_cursor(pdf_margin, pdf_margin + hmm);
-    current_layer.set_line_height(14.0);
+    current_layer.set_line_height(line_height);
 
     current_layer.write_text(text_line_1.clone(), &font);
     current_layer.add_line_break();
     current_layer.write_text(text_line_2.clone(), &font);
     current_layer.add_line_break();
     current_layer.write_text(text_line_3.clone(), &font);
-    current_layer.add_line_break();
 
     current_layer.end_text_section();
 
