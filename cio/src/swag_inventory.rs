@@ -349,6 +349,30 @@ pub fn generate_pdf_barcode_label(
     let h = Pt(line_height * 2.0);
     let hmm: Mm = From::from(h);
 
+    let font_bytes = include_bytes!("Inconsolata/Inconsolata-Regular.ttf").to_vec();
+    let font = doc.add_external_font(&*font_bytes).unwrap();
+
+    // For more complex layout of text, you can use functions
+    // defined on the PdfLayerReference
+    // Make sure to wrap your commands
+    // in a `begin_text_section()` and `end_text_section()` wrapper
+    current_layer.begin_text_section();
+
+    current_layer.set_font(&font, line_height - 2.0);
+    current_layer.set_text_cursor(
+        pdf_margin,
+        pdf_height - (pdf_margin * 2.0) - hmm - logo_height_mm,
+    );
+    current_layer.set_line_height(line_height);
+
+    current_layer.write_text(text_line_1, &font);
+    current_layer.add_line_break();
+    current_layer.write_text(text_line_2, &font);
+    current_layer.add_line_break();
+    current_layer.write_text(text_line_3, &font);
+
+    current_layer.end_text_section();
+
     let barcode_image =
         PdfImage::from_dynamic_image(&image::load_from_memory(image_bytes).unwrap());
     // We want the barcode width to fit.
@@ -357,7 +381,7 @@ pub fn generate_pdf_barcode_label(
     let width_scale = new_width / original_width;
     let barcode_height: Pt = barcode_image.image.height.into_pt(DPI) * width_scale;
     let barcode_height_mm: Mm = From::from(barcode_height);
-    let translate_y = hmm + barcode_height_mm + (pdf_margin * 2.0);
+    let translate_y = pdf_height - logo_height_mm - hmm - (pdf_margin * 3.0);
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
@@ -369,27 +393,6 @@ pub fn generate_pdf_barcode_label(
         Some(width_scale),
         Some(DPI),
     );
-
-    let font_bytes = include_bytes!("Inconsolata/Inconsolata-Regular.ttf").to_vec();
-    let font = doc.add_external_font(&*font_bytes).unwrap();
-
-    // For more complex layout of text, you can use functions
-    // defined on the PdfLayerReference
-    // Make sure to wrap your commands
-    // in a `begin_text_section()` and `end_text_section()` wrapper
-    current_layer.begin_text_section();
-
-    current_layer.set_font(&font, line_height - 2.0);
-    current_layer.set_text_cursor(pdf_margin, pdf_margin + hmm);
-    current_layer.set_line_height(line_height);
-
-    current_layer.write_text(text_line_1, &font);
-    current_layer.add_line_break();
-    current_layer.write_text(text_line_2, &font);
-    current_layer.add_line_break();
-    current_layer.write_text(text_line_3, &font);
-
-    current_layer.end_text_section();
 
     // Save the PDF
     let mut bw = BufWriter::new(Vec::new());
