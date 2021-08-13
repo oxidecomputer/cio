@@ -67,7 +67,7 @@ jobs:
                   -credential_file=${{ github.workspace }}/sql_proxy_key &
       - name: Run cargo test
         run: |
-          cargo test swag_inventory -- --ignored
+          cargo test --release swag_inventory -- --ignored
         shell: bash
         env:
           GOOGLE_CIO_KEY_ENCODED: ${{ secrets.GOOGLE_CIO_KEY_ENCODED }}

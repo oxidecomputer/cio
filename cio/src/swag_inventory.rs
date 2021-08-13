@@ -362,15 +362,16 @@ pub fn generate_pdf_barcode_label(
     barcode_image.add_to_layer(
         current_layer.clone(),
         Some(pdf_margin),
-        //Some(translate_y),
+        Some(translate_y),
+        None,
+        //Some(width_scale),
+        //Some(width_scale),
         None,
         None,
-        Some(width_scale),
-        Some(width_scale),
         Some(DPI),
     );
 
-    /*let font_bytes = include_bytes!("Inconsolata/Inconsolata-Regular.ttf").to_vec();
+    let font_bytes = include_bytes!("Inconsolata/Inconsolata-Regular.ttf").to_vec();
     let font = doc.add_external_font(&*font_bytes).unwrap();
 
     // For more complex layout of text, you can use functions
@@ -389,7 +390,7 @@ pub fn generate_pdf_barcode_label(
     current_layer.add_line_break();
     current_layer.write_text(text_line_3.clone(), &font);
 
-    current_layer.end_text_section();*/
+    current_layer.end_text_section();
 
     // Save the PDF
     let mut bw = BufWriter::new(Vec::new());
