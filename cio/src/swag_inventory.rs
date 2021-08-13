@@ -381,8 +381,12 @@ pub fn generate_pdf_barcode_label(
     let width_scale = new_width / original_width;
     let barcode_height: Pt = barcode_image.image.height.into_pt(DPI) * width_scale;
     let barcode_height_mm: Mm = From::from(barcode_height);
-    let translate_y =
-        pdf_height - logo_height_mm - hmm - (pdf_margin * 3.0) + (barcode_height_mm / 2.0);
+    let translate_y = pdf_height
+        - logo_height_mm
+        - hmm
+        - (pdf_margin * 3.0)
+        - barcode_height_mm
+        - (barcode_height_mm / 2.0);
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
