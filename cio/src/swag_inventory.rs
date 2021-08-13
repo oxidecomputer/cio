@@ -386,7 +386,7 @@ pub fn generate_pdf_barcode_label(
     // translate x, translate y, rotate, scale x, scale y
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
-        current_layer.clone(),
+        current_layer,
         Some(pdf_margin),
         Some((barcode_height_mm - (translate_y / 2.0)) * -1.0),
         None,
