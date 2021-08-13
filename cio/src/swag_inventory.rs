@@ -347,10 +347,8 @@ pub fn generate_pdf_barcode_label(
     let h = Pt(line_height * 2.0);
     let hmm: Mm = From::from(h);
 
-    println!("png_bytes: {:?}", png_bytes);
-
     let barcode_image = PdfImage::from_dynamic_image(
-        &image::load_from_memory_with_format(&png_bytes, image::ImageFormat::Png).unwrap(),
+        &image::load_from_memory_with_format(png_bytes, image::ImageFormat::Png).unwrap(),
     );
     // We want the barcode width to fit.
     let original_width = barcode_image.image.width.into_pt(DPI);
@@ -364,14 +362,15 @@ pub fn generate_pdf_barcode_label(
     barcode_image.add_to_layer(
         current_layer.clone(),
         Some(pdf_margin),
-        Some(translate_y),
+        //Some(translate_y),
+        None,
         None,
         Some(width_scale),
         Some(width_scale),
         Some(DPI),
     );
 
-    let font_bytes = include_bytes!("Inconsolata/Inconsolata-Regular.ttf").to_vec();
+    /*let font_bytes = include_bytes!("Inconsolata/Inconsolata-Regular.ttf").to_vec();
     let font = doc.add_external_font(&*font_bytes).unwrap();
 
     // For more complex layout of text, you can use functions
@@ -390,7 +389,7 @@ pub fn generate_pdf_barcode_label(
     current_layer.add_line_break();
     current_layer.write_text(text_line_3.clone(), &font);
 
-    current_layer.end_text_section();
+    current_layer.end_text_section();*/
 
     // Save the PDF
     let mut bw = BufWriter::new(Vec::new());
