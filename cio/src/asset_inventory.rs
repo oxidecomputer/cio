@@ -177,13 +177,10 @@ impl NewAssetItem {
             );
 
             // Generate the barcode label.
-            let im = Image::image_buffer(60);
-            let b = im.generate_buffer(&encoded[..]).unwrap();
-            let (w, h) = b.dimensions();
+            let im = Image::jpeg(60);
+            let b = im.generate(&encoded[..]).unwrap();
             let label_bytes = generate_pdf_barcode_label(
-                w,
-                h,
-                b.into_raw(),
+                b,
                 &self.barcode,
                 &self.name,
                 &format!("{} {} {}", self.manufacturer, self.type_, self.model_number),

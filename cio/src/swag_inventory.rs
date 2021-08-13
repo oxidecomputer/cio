@@ -275,13 +275,10 @@ impl NewSwagInventoryItem {
             );
 
             // Generate the barcode label.
-            let im = Image::image_buffer(60);
-            let b = im.generate_buffer(&encoded[..]).unwrap();
-            let (w, h) = b.dimensions();
+            let im = Image::jpeg(60);
+            let b = im.generate(&encoded[..]).unwrap();
             let label_bytes = generate_pdf_barcode_label(
-                w,
-                h,
-                b.into_raw(),
+                b,
                 &self.barcode,
                 &self.item,
                 &format!("Size: {}", self.size),
@@ -314,8 +311,6 @@ impl NewSwagInventoryItem {
 
 // Get the bytes for a pdf barcode label.
 pub fn generate_pdf_barcode_label(
-    width: u32,
-    height: u32,
     image_bytes: Vec<u8>,
     text_line_1: &str,
     text_line_2: &str,
@@ -354,9 +349,8 @@ pub fn generate_pdf_barcode_label(
     let h = Pt(line_height * 2.0);
     let hmm: Mm = From::from(h);
 
-    let barcode_image = PdfImage::from_dynamic_image(&image::DynamicImage::ImageRgba8(
-        image::ImageBuffer::from_raw(width, height, image_bytes).unwrap(),
-    ));
+    let barcode_image =
+        PdfImage::from_dynamic_image(&image::load_from_memory(image_bytes).unwrap());
     // We want the barcode width to fit.
     let original_width = barcode_image.image.width.into_pt(DPI);
     let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
