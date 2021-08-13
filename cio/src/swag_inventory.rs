@@ -1,3 +1,5 @@
+use std::io::BufWriter;
+
 use async_trait::async_trait;
 use barcoders::{
     generators::{image::*, svg::*},
@@ -5,12 +7,10 @@ use barcoders::{
 };
 use chrono::{DateTime, Utc};
 use google_drive::GoogleDrive;
-use image::{DynamicImage, ImageFormat};
-use lopdf::{
-    content::{Content, Operation},
-    Document, Object, Stream, StringFormat,
-};
 use macros::db;
+use printpdf::{
+    types::plugins::graphics::two_dimensional::image::Image as PdfImage, Mm, PdfDocument, Pt,
+};
 use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,9 @@ use crate::{
     db::Database,
     schema::{barcode_scans, swag_inventory_items, swag_items},
 };
+
+// The zebra label printer's dpi is 320.
+const DPI: f64 = 320.0;
 
 #[db {
     new_struct_name = "SwagItem",
@@ -272,7 +275,12 @@ impl NewSwagInventoryItem {
             );
 
             // Generate the barcode label.
-            let label_bytes = self.generate_pdf_barcode_label(&png_bytes);
+            let label_bytes = generate_pdf_barcode_label(
+                &png_bytes,
+                &self.barcode,
+                &self.item,
+                &format!("Size: {}", self.size),
+            );
             file_name = format!("{} - Barcode Label.pdf", self.name.replace('/', ""));
             // Create or update the file in the google drive.
             let label_file = drive_client
@@ -292,109 +300,98 @@ impl NewSwagInventoryItem {
         }
     }
 
-    // Get the bytes for a pdf barcode label.
-    pub fn generate_pdf_barcode_label(&self, png_bytes: &[u8]) -> Vec<u8> {
-        let pdf_width = 3.0 * 72.0;
-        let pdf_height = 2.0 * 72.0;
-        let pdf_margin = 5.0;
-        let font_size = 9.0;
-        let mut doc = Document::with_version("1.5");
-        let pages_id = doc.new_object_id();
-        let font_id = doc.add_object(dictionary! {
-            "Type" => "Font",
-            "Subtype" => "Type1",
-            "BaseFont" => "Courier",
-        });
-        let resources_id = doc.add_object(dictionary! {
-            "Font" => dictionary! {
-                "F1" => font_id,
-            },
-        });
-        let content = Content {
-            operations: vec![
-                Operation::new("BT", vec![]),
-                Operation::new("Tf", vec!["F1".into(), (font_size / 1.25).into()]),
-                Operation::new("TL", vec![(font_size * 1.25).into()]),
-                Operation::new(
-                    "Td",
-                    vec![pdf_margin.into(), (font_size * 0.9 * 3.0).into()],
-                ),
-                Operation::new("Tj", vec![Object::string_literal(self.barcode.to_string())]),
-                Operation::new("Tf", vec!["F1".into(), font_size.into()]),
-                Operation::new("'", vec![Object::string_literal(self.item.to_string())]),
-                Operation::new(
-                    "'",
-                    vec![Object::string_literal(format!("Size: {}", self.size))],
-                ),
-                Operation::new("ET", vec![]),
-            ],
-        };
-        let content_id = doc.add_object(Stream::new(dictionary! {}, content.encode().unwrap()));
-        let page_id = doc.add_object(dictionary! {
-            "Type" => "Page",
-            "Parent" => pages_id,
-            "Contents" => content_id,
-        });
-
-        let pages = dictionary! {
-            "Type" => "Pages",
-            "Kids" => vec![page_id.into()],
-            "Count" => 1,
-            "Resources" => resources_id,
-            // This should be (4 in x 6 in) for the rollo printer.
-            // You get `pts` by (inches * 72).
-            "MediaBox" => vec![0.into(), 0.into(),pdf_width.into(), pdf_height.into()],
-        };
-        doc.objects.insert(pages_id, Object::Dictionary(pages));
-        let catalog_id = doc.add_object(dictionary! {
-            "Type" => "Catalog",
-            "Pages" => pages_id,
-        });
-        doc.trailer.set("Root", catalog_id);
-
-        let logo_bytes = include_bytes!("oxide_logo.png");
-        let (mut doc, logo_stream, mut logo_info) = image_to_pdf_object(doc, logo_bytes);
-        // We want the logo width to fit.
-        let original_width = logo_info.width;
-        logo_info.width = pdf_width - (pdf_margin * 2.0);
-        logo_info.height *= logo_info.width / original_width;
-        let position = (
-            (pdf_width - logo_info.width) / 2.0,
-            pdf_height - logo_info.height - pdf_margin,
-        );
-        // Center the logo at the top of the pdf.
-        doc.insert_image(
-            page_id,
-            logo_stream,
-            position,
-            (logo_info.width, logo_info.height),
-        )
-        .unwrap();
-
-        let (mut doc, img_stream, info) = image_to_pdf_object(doc, png_bytes);
-        // We want the barcode width to fit.
-        // This will center it automatically.
-        let position = (
-            (pdf_width - info.width) / 2.0,
-            pdf_height - info.height - logo_info.height - (pdf_margin * 2.0),
-        );
-        // Center the barcode at the top of the pdf.
-        doc.insert_image(page_id, img_stream, position, (info.width, info.height))
-            .unwrap();
-
-        doc.compress();
-
-        // Save the PDF
-        let mut buffer = Vec::new();
-        doc.save_to(&mut buffer).unwrap();
-        buffer
-    }
-
     pub async fn expand(&mut self, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) {
         self.generate_barcode();
         self.generate_barcode_images(drive_client, drive_id, parent_id)
             .await;
     }
+}
+
+// Get the bytes for a pdf barcode label.
+pub fn generate_pdf_barcode_label(
+    png_bytes: &[u8],
+    text_line_1: &str,
+    text_line_2: &str,
+    text_line_3: &str,
+) -> Vec<u8> {
+    let pdf_margin = Mm(5.0);
+    let pdf_width = Mm(3.0 * 25.4);
+    let (doc, page1, layer1) = PdfDocument::new(text_line_2, pdf_width, Mm(2.0 * 25.4), "Layer 1");
+    let current_layer = doc.get_page(page1).get_layer(layer1);
+
+    // currently, the only reliable file formats are bmp/jpeg/png
+    // this is an issue of the image library, not a fault of printpdf
+    let logo_bytes = include_bytes!("oxide_logo.png");
+    let logo_image = PdfImage::from_dynamic_image(&image::load_from_memory(logo_bytes).unwrap());
+
+    // We want the logo width to fit.
+    let original_width = logo_image.image.width.into_pt(DPI);
+    let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
+    let width_scale = new_width / original_width;
+    /*let position = (
+        (pdf_width - logo_info.width) / 2.0,
+        pdf_height - logo_info.height - pdf_margin,
+    );*/
+    // translate x, translate y, rotate, scale x, scale y
+    // rotations and translations are always in relation to the lower left corner
+    logo_image.add_to_layer(
+        current_layer.clone(),
+        None,
+        None,
+        None,
+        Some(width_scale),
+        Some(width_scale),
+        Some(DPI),
+    );
+
+    let barcode_image = PdfImage::from_dynamic_image(&image::load_from_memory(&png_bytes).unwrap());
+    // We want the barcode width to fit.
+    let original_width = barcode_image.image.width.into_pt(DPI);
+    let new_width: Pt = (pdf_width - (pdf_margin * 2.0)).into();
+    let width_scale = new_width / original_width;
+    // translate x, translate y, rotate, scale x, scale y
+    // rotations and translations are always in relation to the lower left corner
+    barcode_image.add_to_layer(
+        current_layer.clone(),
+        None,
+        None,
+        None,
+        Some(width_scale),
+        Some(width_scale),
+        Some(DPI),
+    );
+
+    let font_bytes = include_bytes!("Inconsolata/Inconsolata-Regular.ttf").to_vec();
+    let font = doc.add_external_font(&*font_bytes).unwrap();
+
+    // For more complex layout of text, you can use functions
+    // defined on the PdfLayerReference
+    // Make sure to wrap your commands
+    // in a `begin_text_section()` and `end_text_section()` wrapper
+    current_layer.begin_text_section();
+
+    current_layer.set_font(&font, 12.0);
+    current_layer.set_text_cursor(Mm(10.0), Mm(10.0));
+    current_layer.set_line_height(33.0);
+    current_layer.set_word_spacing(3000.0);
+    current_layer.set_character_spacing(10.0);
+    //current_layer.set_text_rendering_mode(TextRenderingMode::Stroke);
+
+    current_layer.write_text(text_line_1.clone(), &font);
+    current_layer.add_line_break();
+    current_layer.write_text(text_line_2.clone(), &font);
+    current_layer.add_line_break();
+    current_layer.write_text(text_line_3.clone(), &font);
+    current_layer.add_line_break();
+
+    current_layer.end_text_section();
+
+    // Save the PDF
+    let mut bw = BufWriter::new(Vec::new());
+
+    doc.save(&mut bw).unwrap();
+
+    bw.into_inner().unwrap()
 }
 
 /// A request to print labels.
@@ -446,105 +443,6 @@ impl SwagInventoryItem {
             }
         };
     }
-}
-
-pub fn image_to_pdf_object(
-    mut doc: Document,
-    png_bytes: &[u8],
-) -> (Document, Stream, crate::png::PngInfo) {
-    // Insert our barcode image.
-    let info = crate::png::get_info(png_bytes);
-
-    let bytes = if info.interlace || info.color_type >= 4 {
-        let img = image::load_from_memory(png_bytes).unwrap();
-        let mut result = Vec::new();
-
-        match info.color_type {
-            4 => match info.depth {
-                8 => DynamicImage::ImageLuma8(img.into_luma8()),
-                16 => DynamicImage::ImageLuma16(img.into_luma16()),
-                _ => panic!(""),
-            },
-            6 => match info.depth {
-                8 => DynamicImage::ImageRgb8(img.into_rgb8()),
-                16 => DynamicImage::ImageRgb16(img.into_rgb16()),
-                _ => panic!(""),
-            },
-            _ => img,
-        }
-        .write_to(&mut result, ImageFormat::Png)
-        .unwrap();
-        result
-    } else {
-        png_bytes.into()
-    };
-
-    let colors = if let 0 | 3 | 4 = info.color_type {
-        1
-    } else {
-        3
-    };
-
-    let idat = crate::png::get_idat(&bytes[..]);
-
-    let cs: Object = match info.color_type {
-        0 | 2 | 4 | 6 => {
-            if let Some(ref raw) = info.icc {
-                let icc_id = doc.add_object(Stream::new(
-                    dictionary! {
-                        "N" => colors,
-                        "Alternate" => if let 0 | 4 = info.color_type { "DeviceGray" } else { "DeviceRGB" },
-                        "Length" => raw.len() as u32,
-                        "Filter" => "FlateDecode"
-                    },
-                    raw.to_vec(),
-                ));
-                vec!["ICCBased".into(), icc_id.into()].into()
-            } else {
-                if let 0 | 4 = info.color_type {
-                    "DeviceGray"
-                } else {
-                    "DeviceRGB"
-                }
-                .into()
-            }
-        }
-
-        3 => {
-            let palette = info.clone().palette.unwrap();
-            vec![
-                "Indexed".into(),
-                "DeviceRGB".into(),
-                (palette.1 - 1).into(),
-                Object::String(palette.0, StringFormat::Hexadecimal),
-            ]
-            .into()
-        }
-
-        _ => panic!("unexpected color type found: {}", info.color_type),
-    };
-
-    let img_stream = Stream::new(
-        dictionary! {
-            "Type" => "XObject",
-            "Subtype" => "Image",
-            "Filter" => "FlateDecode",
-            "BitsPerComponent" => info.depth,
-            "Length" => idat.len() as u32,
-            "Width" => info.width as u32,
-            "Height" => info.height as u32,
-            "DecodeParms" => dictionary!{
-                "BitsPerComponent" => info.depth,
-                "Predictor" => 15,
-                "Columns" => info.width as u32,
-                "Colors" => colors
-            },
-            "ColorSpace" => cs,
-        },
-        idat,
-    );
-
-    (doc, img_stream, info)
 }
 
 /// Sync swag inventory items from Airtable.

@@ -4,10 +4,6 @@ use barcoders::{
     sym::code39::*,
 };
 use google_drive::GoogleDrive;
-use lopdf::{
-    content::{Content, Operation},
-    Document, Object, Stream,
-};
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
@@ -15,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     airtable::AIRTABLE_ASSET_ITEMS_TABLE, companies::Company, core::UpdateAirtableRecord,
-    db::Database, schema::asset_items, swag_inventory::image_to_pdf_object,
+    db::Database, schema::asset_items, swag_inventory::generate_pdf_barcode_label,
 };
 
 #[db {
@@ -181,7 +177,12 @@ impl NewAssetItem {
             );
 
             // Generate the barcode label.
-            let label_bytes = self.generate_pdf_barcode_label(&png_bytes);
+            let label_bytes = generate_pdf_barcode_label(
+                &png_bytes,
+                &self.barcode,
+                &self.name,
+                &format!("{} {} {}", self.manufacturer, self.type_, self.model_number),
+            );
             file_name = format!(
                 "{} {} - Barcode Label.pdf",
                 self.type_,
@@ -203,107 +204,6 @@ impl NewAssetItem {
                 label_file.id
             );
         }
-    }
-
-    // Get the bytes for a pdf barcode label.
-    pub fn generate_pdf_barcode_label(&self, png_bytes: &[u8]) -> Vec<u8> {
-        let pdf_width = 3.0 * 72.0;
-        let pdf_height = 2.0 * 72.0;
-        let pdf_margin = 5.0;
-        let font_size = 9.0;
-        let mut doc = Document::with_version("1.5");
-        let pages_id = doc.new_object_id();
-        let font_id = doc.add_object(dictionary! {
-            "Type" => "Font",
-            "Subtype" => "Type1",
-            "BaseFont" => "Courier",
-        });
-        let resources_id = doc.add_object(dictionary! {
-            "Font" => dictionary! {
-                "F1" => font_id,
-            },
-        });
-        let content = Content {
-            operations: vec![
-                Operation::new("BT", vec![]),
-                Operation::new("Tf", vec!["F1".into(), (font_size / 1.25).into()]),
-                Operation::new("TL", vec![(font_size * 1.25).into()]),
-                Operation::new(
-                    "Td",
-                    vec![pdf_margin.into(), (font_size * 0.9 * 3.0).into()],
-                ),
-                Operation::new("Tj", vec![Object::string_literal(self.barcode.to_string())]),
-                Operation::new("Tf", vec!["F1".into(), font_size.into()]),
-                Operation::new("'", vec![Object::string_literal(self.name.to_string())]),
-                Operation::new(
-                    "'",
-                    vec![Object::string_literal(format!(
-                        "{} {} {}",
-                        self.manufacturer, self.type_, self.model_number
-                    ))],
-                ),
-                Operation::new("ET", vec![]),
-            ],
-        };
-        let content_id = doc.add_object(Stream::new(dictionary! {}, content.encode().unwrap()));
-        let page_id = doc.add_object(dictionary! {
-            "Type" => "Page",
-            "Parent" => pages_id,
-            "Contents" => content_id,
-        });
-
-        let pages = dictionary! {
-            "Type" => "Pages",
-            "Kids" => vec![page_id.into()],
-            "Count" => 1,
-            "Resources" => resources_id,
-            // This should be (4 in x 6 in) for the rollo printer.
-            // You get `pts` by (inches * 72).
-            "MediaBox" => vec![0.into(), 0.into(),pdf_width.into(), pdf_height.into()],
-        };
-        doc.objects.insert(pages_id, Object::Dictionary(pages));
-        let catalog_id = doc.add_object(dictionary! {
-            "Type" => "Catalog",
-            "Pages" => pages_id,
-        });
-        doc.trailer.set("Root", catalog_id);
-
-        let logo_bytes = include_bytes!("oxide_logo.png");
-        let (mut doc, logo_stream, mut logo_info) = image_to_pdf_object(doc, logo_bytes);
-        // We want the logo width to fit.
-        let original_width = logo_info.width;
-        logo_info.width = pdf_width - (pdf_margin * 2.0);
-        logo_info.height *= logo_info.width / original_width;
-        let position = (
-            (pdf_width - logo_info.width) / 2.0,
-            pdf_height - logo_info.height - pdf_margin,
-        );
-        // Center the logo at the top of the pdf.
-        doc.insert_image(
-            page_id,
-            logo_stream,
-            position,
-            (logo_info.width, logo_info.height),
-        )
-        .unwrap();
-
-        let (mut doc, img_stream, info) = image_to_pdf_object(doc, png_bytes);
-        // We want the barcode width to fit.
-        // This will center it automatically.
-        let position = (
-            (pdf_width - info.width) / 2.0,
-            pdf_height - info.height - logo_info.height - (pdf_margin * 2.0),
-        );
-        // Center the barcode at the top of the pdf.
-        doc.insert_image(page_id, img_stream, position, (info.width, info.height))
-            .unwrap();
-
-        doc.compress();
-
-        // Save the PDF
-        let mut buffer = Vec::new();
-        doc.save_to(&mut buffer).unwrap();
-        buffer
     }
 
     pub async fn expand(&mut self, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) {

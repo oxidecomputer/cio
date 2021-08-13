@@ -45,7 +45,7 @@ gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "3.5.3"
 html2text = "0.1"
-image = "0.23.14"
+image = "^0.23.14"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 macros = { path = "../macros" }
 mailchimp-api = "^0.1.11"
@@ -58,6 +58,7 @@ okta = "^0.0.6"
 openssl = "0.10"
 pandoc = "0.8"
 phonenumber = "0.2"
+printpdf = { version = "^0.3.2" }
 quickbooks = "^0.1.12"
 #quickbooks = { path = "../quickbooks" }
 ramp-api = "^0.2.2"

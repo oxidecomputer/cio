@@ -23,7 +23,6 @@ pub mod huddles;
 pub mod interviews;
 pub mod journal_clubs;
 pub mod mailing_list;
-pub mod png;
 pub mod rack_line;
 pub mod recorded_meetings;
 pub mod repos;
@@ -44,6 +43,3 @@ extern crate diesel;
 
 #[macro_use]
 extern crate serde_json;
-
-#[macro_use]
-extern crate lopdf;
