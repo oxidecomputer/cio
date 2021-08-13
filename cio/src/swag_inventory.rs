@@ -388,7 +388,7 @@ pub fn generate_pdf_barcode_label(
     barcode_image.add_to_layer(
         current_layer.clone(),
         Some(pdf_margin),
-        Some((barcode_height_mm - translate_y) * -1.0),
+        Some((barcode_height_mm - (translate_y / 2.0)) * -1.0),
         None,
         Some(width_scale),
         Some(width_scale),
