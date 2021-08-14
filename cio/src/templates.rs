@@ -77,7 +77,6 @@ pub async fn generate_terraform_files_for_okta(
 
     let owner = &company.github_org;
     let repo = "configs";
-    let r = github.repos().get(owner, repo).await.unwrap();
 
     // Set the paths for the files.
     let okta_path = "terraform/okta";
@@ -98,7 +97,7 @@ pub async fn generate_terraform_files_for_okta(
         github,
         owner,
         repo,
-        &r.default_branch,
+        "", // leaving the branch blank gives us the default branch
         &users_file,
         users_rendered.as_bytes().to_vec(),
     )
@@ -116,7 +115,7 @@ pub async fn generate_terraform_files_for_okta(
         github,
         owner,
         repo,
-        &r.default_branch,
+        "", // leaving the branch blank gives us the default branch
         &groups_file,
         groups_rendered.as_bytes().to_vec(),
     )
@@ -140,7 +139,6 @@ pub async fn generate_terraform_files_for_aws_and_github(
 
     let owner = &company.github_org;
     let repo = "configs";
-    let r = github.repos().get(owner, repo).await.unwrap();
 
     // Set the paths for the files.
     let github_path = "terraform/github";
@@ -162,7 +160,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
         github,
         owner,
         repo,
-        &r.default_branch,
+        "", // leaving the branch blank gives us the default branch
         &github_file,
         github_rendered.as_bytes().to_vec(),
     )
@@ -180,7 +178,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
         github,
         owner,
         repo,
-        &r.default_branch,
+        "", // leaving the branch blank gives us the default branch
         &aws_file,
         aws_rendered.as_bytes().to_vec(),
     )
@@ -220,7 +218,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
             github,
             owner,
             repo,
-            &r.default_branch,
+            "", // leaving the branch blank gives us the default branch
             &file,
             rendered.as_bytes().to_vec(),
         )
@@ -246,8 +244,6 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
         return;
     }
 
-    let r = github.repos().get(owner, repo).await.unwrap();
-
     // Initialize handlebars.
     let mut handlebars = Handlebars::new();
     handlebars.register_helper("terraformize", Box::new(terraform_name_helper));
@@ -271,7 +267,7 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
         github,
         owner,
         repo,
-        &r.default_branch,
+        "", // leaving the branch blank gives us the default branch
         &nginx_file,
         nginx_rendered.as_bytes().to_vec(),
     )
@@ -295,7 +291,7 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
         github,
         owner,
         repo,
-        &r.default_branch,
+        "", // leaving the branch blank gives us the default branch
         &nginx_paths_file,
         nginx_paths_rendered.as_bytes().to_vec(),
     )
@@ -317,8 +313,6 @@ pub async fn generate_terraform_files_for_shorturls(
         println!("no shorturls in array");
         return;
     }
-
-    let r = github.repos().get(owner, repo).await.unwrap();
 
     // Initialize handlebars.
     let mut handlebars = Handlebars::new();
@@ -344,7 +338,7 @@ pub async fn generate_terraform_files_for_shorturls(
         github,
         owner,
         repo,
-        &r.default_branch,
+        "", // leaving the branch blank gives us the default branch
         &terraform_file,
         terraform_rendered.as_bytes().to_vec(),
     )

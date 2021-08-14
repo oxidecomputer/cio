@@ -1338,11 +1338,15 @@ pub struct HuddleConfig {
 pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company) -> Config {
     let owner = &company.github_org;
     let repo = "configs";
-    let r = github.repos().get(owner, repo).await.unwrap();
 
     let files = github
         .repos()
-        .get_content_vec_entries(owner, repo, "/configs/", &r.default_branch)
+        .get_content_vec_entries(
+            owner,
+            repo,
+            "/configs/",
+            "", // leaving the branch blank gives us the default branch
+        )
         .await
         .unwrap();
 
@@ -1350,8 +1354,11 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
     for file in files {
         println!("decoding {}", file.name);
         // Get the contents of the file.
-        let (contents, _) =
-            get_file_content_from_repo(github, owner, repo, &r.default_branch, &file.path).await;
+        let (contents, _) = get_file_content_from_repo(
+            github, owner, repo, "", // leaving the branch blank gives us the default branch
+            &file.path,
+        )
+        .await;
 
         let decoded = from_utf8(&contents).unwrap().trim().to_string();
 

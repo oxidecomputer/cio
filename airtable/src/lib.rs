@@ -701,9 +701,9 @@ impl<'de> Visitor<'de> for UserVisitor {
                 }
             }
         }
-        let id = id.ok_or_else(|| serde::de::Error::missing_field("id"))?;
+        let id = id.unwrap_or_default();
         let email = email.ok_or_else(|| serde::de::Error::missing_field("email"))?;
-        let name = name.ok_or_else(|| serde::de::Error::missing_field("name"))?;
+        let name = name.unwrap_or_default();
         Ok(User { id, email, name })
     }
 }
