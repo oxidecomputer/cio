@@ -4,6 +4,8 @@ on:
   push:
     branches:
     - master
+  workflow_dispatch:
+    inputs:
 
 env:
   PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
