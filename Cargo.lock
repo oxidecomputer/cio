@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.32"
+version = "0.1.33"
 dependencies = [
  "chrono",
  "reqwest",
@@ -80,9 +80,9 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.32"
+version = "0.1.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "297b41c95d447a9843f39ff6fdd8a5efdda02a4552edcf7cd38f852ebf83ae15"
+checksum = "4941455824b9016753d9483ce76a6510f8b45daddecbc7ce612c35727cb23ae7"
 dependencies = [
  "chrono",
  "reqwest",
@@ -454,7 +454,7 @@ name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.32",
+ "airtable-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-recursion",
  "async-trait",
  "barcoders",
@@ -520,10 +520,10 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#8ae9d30024a8e9603a910f38afc4d5784585fefd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8399753c5211d3c343246c752a07c605e87f8e9e"
 dependencies = [
  "acme-lib",
- "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-recursion",
  "async-trait",
  "barcoders",
@@ -2090,7 +2090,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#8ae9d30024a8e9603a910f38afc4d5784585fefd"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8399753c5211d3c343246c752a07c605e87f8e9e"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -2443,9 +2443,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.24"
+version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41878f81973320bcbd061359cd307262e4d8be17302e398176856428a77d5a26"
+checksum = "264d8a9095f7eac1e189af6716eced83f39c180c54f9444333014710edc1f947"
 dependencies = [
  "anyhow",
  "async-recursion",
