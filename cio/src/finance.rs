@@ -536,6 +536,8 @@ fn clean_vendor_name(s: &str) -> String {
         || s == "Amazon.co.uk"
     {
         "Amazon".to_string()
+    } else if s == "JSX Air" {
+        "JSX".to_string()
     } else if s == "Sublime Hq" {
         "Sublime".to_string()
     } else if s == "Dunkin" || s == "Dunkin Donuts" {
