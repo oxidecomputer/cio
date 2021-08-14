@@ -2382,8 +2382,6 @@ async fn listen_auth_zoom_callback(
     let api_context = rqctx.context();
     let event = query_args.into_inner();
 
-    sentry::capture_message(&format!("zoom callback: {:?}", event), sentry::Level::Info);
-
     // Initialize the Zoom client.
     let mut g = Zoom::new_from_env("", "");
 
@@ -2398,8 +2396,6 @@ async fn listen_auth_zoom_callback(
             false)
         .await
         .unwrap();
-
-    sentry::capture_message(&format!("zoom current user: {:?}", cu), sentry::Level::Info);
 
     // Let's get the domain from the email.
     let mut domain = "".to_string();
@@ -2495,8 +2491,6 @@ async fn listen_auth_ramp_callback(
         )
         .await
         .unwrap();
-
-    sentry::capture_message(&format!("ramp list users: {:?}", ru), sentry::Level::Info);
 
     // Let's get the domain from the email.
     let mut domain = "".to_string();

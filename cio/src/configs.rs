@@ -1601,7 +1601,7 @@ pub async fn sync_users(
             .get_all(
                 zoom_api::types::UsersStatus::Pending,
                 "", // role id
-                zoom_api::types::UsersIncludeFields::HostKey,
+                zoom_api::types::UsersIncludeFields::Noop,
             )
             .await
             .unwrap();
