@@ -598,7 +598,7 @@ impl RFD {
             .await
         {
             let commit = commits.get(0).unwrap();
-            self.commit_date = commit.commit.author.as_ref().unwrap().date.parse().unwrap();
+            self.commit_date = commit.commit.author.date.parse().unwrap();
         }
 
         // Parse the HTML.

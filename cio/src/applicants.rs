@@ -2324,7 +2324,7 @@ Notes:
                             assignees: Default::default(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
-                            state: Some(octorust::types::IssuesUpdateRequestState::Closed),
+                            state: Some(octorust::types::State::Closed),
                         },
                     )
                     .await
@@ -2357,7 +2357,7 @@ Notes:
                             assignees: Default::default(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
-                            state: Some(octorust::types::IssuesUpdateRequestState::Open),
+                            state: Some(octorust::types::State::Open),
                         },
                     )
                     .await
@@ -2380,7 +2380,7 @@ Notes:
                                 assignees: Default::default(),
                                 labels: vec![label.into()],
                                 milestone: Default::default(),
-                                state: Some(octorust::types::IssuesUpdateRequestState::Open),
+                                state: Some(octorust::types::State::Open),
                             },
                         )
                         .await

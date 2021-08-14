@@ -111,9 +111,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.42"
+version = "1.0.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "595d3cfa7a60d4555cb5067b99f07142a08ea778de5cf993f7b75c7d8fabc486"
+checksum = "28ae2b3dec75a406790005a200b1bd89785afc02517a00ca99ecfe093ee9e6cf"
 
 [[package]]
 name = "approx"
@@ -520,7 +520,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#dc5869f67e5a6ec274ded220993b890fa726b140"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#9bc7e664a09c35d1d683230cc307bc70ba66c22b"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -560,6 +560,7 @@ dependencies = [
  "openssl",
  "pandoc",
  "phonenumber",
+ "printpdf",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api",
  "rand 0.8.4",
@@ -1519,9 +1520,9 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68782958400533a9f0d505f543e4b74dd1093f02d6502607ced0aeff5327170a"
+checksum = "b1c8b1462b7164552c8b978f73b5f0dc72b7c25213f2da5fbe98832ab9b01e87"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2089,7 +2090,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#dc5869f67e5a6ec274ded220993b890fa726b140"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#9bc7e664a09c35d1d683230cc307bc70ba66c22b"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -2442,9 +2443,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.21"
+version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fa7cd89d5f5c3e5c24a611752f075ccdd906bb62bc90c6fa107d7ccb0475f63"
+checksum = "41878f81973320bcbd061359cd307262e4d8be17302e398176856428a77d5a26"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2976,9 +2977,9 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6cd57587c685d5b94e28e82c723dccd280fd84bacf3e203ef7475a7ac4708f5"
+checksum = "b6622daef94c408de82d9b263863eb5c00c394b7fcba681f5ffc27bf9e6406b3"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4654,12 +4655,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-bidi"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeb8be209bb1c96b7c177c7420d26e04eccacb0eeae6b980e35fcb74678107e0"
-dependencies = [
- "matches",
-]
+checksum = "246f4c42e67e7a4e3c6106ff716a5d067d4132a642840b242e357e468a2a0085"
 
 [[package]]
 name = "unicode-normalization"

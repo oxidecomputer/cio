@@ -1395,9 +1395,10 @@ pub async fn sync_github_outside_collaborators(
                 }
             }
 
-            let mut perm = octorust::types::ReposAddCollaboratorRequestPermission::Pull;
+            let mut perm =
+                octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Pull;
             if outside_collaborators_config.perm == "push" {
-                perm = octorust::types::ReposAddCollaboratorRequestPermission::Push;
+                perm = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
             }
 
             // Iterate over the users.
@@ -1786,7 +1787,7 @@ pub async fn sync_users(
                         if department_id != ramp_user.department_id
                             || users_manager.ramp_id != ramp_user.manager_id
                         {
-                            let updated_user = ramp_api::types::PatchRequest {
+                            let updated_user = ramp_api::types::PatchUsersRequest {
                                 department_id: department_id.to_string(),
                                 direct_manager_id: users_manager.ramp_id.to_string(),
                                 role: Some(ramp_user.role.clone()),
@@ -1802,7 +1803,7 @@ pub async fn sync_users(
                     None => {
                         println!("inviting new ramp user {}", new_user.username);
                         // Invite the new ramp user.
-                        let mut ramp_user: ramp_api::types::PostDeferredRequest =
+                        let mut ramp_user: ramp_api::types::PostUsersDeferredRequest =
                             Default::default();
                         ramp_user.email = new_user.email.to_string();
                         ramp_user.first_name = new_user.first_name.to_string();
