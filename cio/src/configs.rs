@@ -1866,7 +1866,11 @@ pub async fn sync_users(
         // we cannot find the zoom user.
         // Otherwise update the zoom user.
         if let Some(ref zoom) = zoom_auth {
-            if !new_user.is_consultant() && !new_user.is_system_account() {
+            if !new_user.is_consultant()
+                && !new_user.is_system_account()
+            // We don't want to create Zoom users if we are already using okta.
+                && company.okta_domain.is_empty()
+            {
                 // Check if we have a zoom user for the user.
                 match zoom_users.get(&new_user.email) {
                     // We have the user, we don't need to do anything.
