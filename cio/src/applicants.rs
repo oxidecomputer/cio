@@ -2297,7 +2297,7 @@ manager = ''
                         owner,
                         repo,
                         i.number,
-                        &octorust::types::IssuesUpdateCommentRequest {
+                        &octorust::types::PullsUpdateReviewRequest {
                             body: format!(
                                 "Closing issue automatically since the applicant is now status: \
                                  `{}`

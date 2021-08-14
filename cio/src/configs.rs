@@ -343,7 +343,7 @@ impl UserConfig {
             .employees()
             .post_employee(
                 gusto_company_id,
-                &gusto_api::types::PostEmployeeRequest {
+                &gusto_api::types::PostEmployeesRequest {
                     first_name: self.first_name.to_string(),
                     middle_initial: "".to_string(),
                     last_name: self.last_name.to_string(),
@@ -1527,7 +1527,7 @@ pub async fn sync_users(
     if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
         let gu = gusto
             .employees()
-            .get_all_company_employees(gusto_company_id, false, &[])
+            .get_all_company(gusto_company_id, false, &[])
             .await
             .unwrap();
         for g in gu {
@@ -1553,7 +1553,7 @@ pub async fn sync_users(
     if let Some(ref ramp) = ramp_auth {
         let ru = ramp
             .users()
-            .get_all_users(
+            .get_all(
                 "", // department id
                 "", // location id
             )
@@ -1562,7 +1562,7 @@ pub async fn sync_users(
         for r in ru {
             ramp_users.insert(r.email.to_string(), r);
         }
-        let rd = ramp.departments().get_all_departments().await.unwrap();
+        let rd = ramp.departments().get_all().await.unwrap();
         for r in rd {
             ramp_departments.insert(r.name.to_string(), r);
         }
@@ -1803,16 +1803,17 @@ pub async fn sync_users(
                     None => {
                         println!("inviting new ramp user {}", new_user.username);
                         // Invite the new ramp user.
-                        let mut ramp_user: ramp_api::types::PostUsersDeferredRequest =
-                            Default::default();
-                        ramp_user.email = new_user.email.to_string();
-                        ramp_user.first_name = new_user.first_name.to_string();
-                        ramp_user.last_name = new_user.last_name.to_string();
-                        ramp_user.phone = new_user.recovery_phone.to_string();
-                        ramp_user.role = ramp_api::types::Role::BusinessUser;
-
-                        // Add the manager.
-                        ramp_user.direct_manager_id = users_manager.ramp_id.to_string();
+                        let mut ramp_user = ramp_api::types::PostUsersDeferredRequest {
+                            email: new_user.email.to_string(),
+                            first_name: new_user.first_name.to_string(),
+                            last_name: new_user.last_name.to_string(),
+                            phone: new_user.recovery_phone.to_string(),
+                            role: ramp_api::types::Role::BusinessUser,
+                            // Add the manager.
+                            direct_manager_id: users_manager.ramp_id.to_string(),
+                            department_id: String::new(),
+                            location_id: String::new(),
+                        };
 
                         // Add the department.
                         if let Some(department) = ramp_departments.get(&new_user.department) {

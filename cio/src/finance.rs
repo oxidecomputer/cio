@@ -268,7 +268,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
     // List all our users.
     let users = ramp
         .users()
-        .get_all_users(
+        .get_all(
             "", // department id
             "", // location id
         )
@@ -369,7 +369,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
     // List all our users.
     let users = ramp
         .users()
-        .get_all_users(
+        .get_all(
             "", // department id
             "", // location id
         )
@@ -380,11 +380,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
         ramp_users.insert(user.id.to_string(), user.email.to_string());
     }
 
-    let reimbursements = ramp
-        .reimbursements()
-        .get_all_reimbursements()
-        .await
-        .unwrap();
+    let reimbursements = ramp.reimbursements().get_all().await.unwrap();
     for reimbursement in reimbursements {
         let mut attachments = Vec::new();
         // Get the reciepts for the reimbursement, if they exist.
