@@ -47,6 +47,7 @@ CREATE TABLE users (
     google_id VARCHAR NOT NULL,
     airtable_id VARCHAR NOT NULL,
     ramp_id VARCHAR NOT NULL,
+    zoom_id VARCHAR NOT NULL,
     geocode_cache VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

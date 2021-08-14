@@ -520,7 +520,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#68c6a93e372e311ab6f18672aa6f74b2581b8dda"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#bee6ab8a96f0fd273c22dbd1031f64007d28de72"
 dependencies = [
  "acme-lib",
  "airtable-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2090,7 +2090,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#68c6a93e372e311ab6f18672aa6f74b2581b8dda"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#bee6ab8a96f0fd273c22dbd1031f64007d28de72"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -5092,9 +5092,9 @@ dependencies = [
 
 [[package]]
 name = "zoom-api"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90d3b5a29c2d024636ab51eeadc8cd91a81187754282d5601b418edeaf961563"
+checksum = "1f963af700bd1f1e7302dda763c8cc2b007eb4d642c844fd11fb715abbaf88aa"
 dependencies = [
  "anyhow",
  "async-recursion",

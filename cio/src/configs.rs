@@ -242,6 +242,8 @@ pub struct UserConfig {
     pub airtable_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub ramp_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub zoom_id: String,
 
     /// This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1575,6 +1577,24 @@ pub async fn sync_users(
         }
     }
 
+    // Initialize the Zoom client.
+    let mut zoom_users: HashMap<String, zoom_api::types::UsersResponse> = HashMap::new();
+    let zoom_auth = company.authenticate_zoom(db).await;
+    if let Some(ref zoom) = zoom_auth {
+        let active_users = zoom
+            .users()
+            .get_all(
+                zoom_api::types::UsersStatus::Active,
+                "", // role id
+                zoom_api::types::UsersIncludeFields::HostKey,
+            )
+            .await
+            .unwrap();
+        for r in active_users {
+            zoom_users.insert(r.email.to_string(), r);
+        }
+    }
+
     // Get the existing GSuite users.
     let gsuite_users = gsuite.list_users().await.unwrap();
     let mut gsuite_users_map: BTreeMap<String, GSuiteUser> = BTreeMap::new();
@@ -1700,6 +1720,11 @@ pub async fn sync_users(
         // See if we have a okta user for the user.
         if let Some(okta_user) = okta_users.get(&user.email) {
             user.okta_id = okta_user.id.to_string();
+        }
+
+        // See if we have a zoom user for the user.
+        if let Some(zoom_user) = zoom_users.get(&user.email) {
+            user.zoom_id = zoom_user.id.to_string();
         }
 
         // See if we have a gusto user for the user.
@@ -1832,6 +1857,49 @@ pub async fn sync_users(
                         new_user.ramp_id = r.id.to_string();
 
                         // TODO: Create them a card.
+                    }
+                }
+            }
+        }
+
+        // Create a zoom account for the user, if we have zoom credentials and
+        // we cannot find the zoom user.
+        // Otherwise update the zoom user.
+        if let Some(ref zoom) = zoom_auth {
+            if !new_user.is_consultant() && !new_user.is_system_account() {
+                // Check if we have a zoom user for the user.
+                match zoom_users.get(&new_user.email) {
+                    // We have the user, we don't need to do anything.
+                    Some(zoom_user) => {
+                        new_user.zoom_id = zoom_user.id.to_string();
+                    }
+                    None => {
+                        println!("creating new zoom user {}", new_user.username);
+
+                        let zoom_user = zoom
+                            .users()
+                            .user_create(&zoom_api::types::UserCreateRequest {
+                                // User will get an email sent from Zoom.
+                                // There is a confirmation link in this email.
+                                // The user will then need to use the link to activate their Zoom account.
+                                // The user can then set or change their password.
+                                action: zoom_api::types::UserCreateRequestAction::Create,
+                                user_info: Some(zoom_api::types::UserInfo {
+                                    email: new_user.email.to_string(),
+                                    first_name: new_user.first_name.to_string(),
+                                    last_name: new_user.last_name.to_string(),
+                                    password: "".to_string(), // Leave blank.
+                                    // Create a licensed user.
+                                    type_: 2,
+                                }),
+                            })
+                            .await
+                            .unwrap();
+
+                        // Set the id of the new zoom user.
+                        new_user.zoom_id = zoom_user.id.to_string();
+
+                        // TODO: fixup the vanity URL to be their username.
                     }
                 }
             }

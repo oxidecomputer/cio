@@ -871,6 +871,7 @@ table! {
         google_id -> Varchar,
         airtable_id -> Varchar,
         ramp_id -> Varchar,
+        zoom_id -> Varchar,
         geocode_cache -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
