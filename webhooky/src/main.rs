@@ -2487,7 +2487,7 @@ async fn listen_auth_ramp_callback(
 
     let ru = g
         .users()
-        .get_all_users(
+        .get_all(
             "", // department id
             "", // location id
         )
