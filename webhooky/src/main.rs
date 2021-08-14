@@ -2393,7 +2393,9 @@ async fn listen_auth_zoom_callback(
     // TODO: this login type means google but that might not always be true...
     let cu = g
         .users()
-        .user("me", zoom_api::types::LoginType::One, false)
+        .user("me",
+            zoom_api::types::LoginType::Noop, // We don't know the login type, so let's leave it empty.
+            false)
         .await
         .unwrap();
 

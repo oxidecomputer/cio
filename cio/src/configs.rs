@@ -1897,9 +1897,19 @@ pub async fn sync_users(
                     Some(zoom_user) => {
                         new_user.zoom_id = zoom_user.id.to_string();
 
-                        // TODO: fixup the vanity URL to be their username.
+                        // Fixup the vanity URL to be their username.
                         // We only do this here, since we can't do it until the
                         // user has activated their account.
+                        // Get the user to check their vanity URL as it's not
+                        // given to us when we list users.
+                        let zu = zoom
+                            .users()
+                            .user(&zoom_user.id,
+                                zoom_api::types::LoginType::Noop, // We don't know their login type...
+                                false)
+                            .await
+                            .unwrap();
+                        println!("zoom user: {:?}", zu);
                     }
                     None => {
                         // Only create the user if we don't already have a pending user.

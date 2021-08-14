@@ -272,13 +272,15 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()) {
             // Initialize the MailChimp client.
             let mut mailchimp = MailChimp::new_from_env(
-                t.access_token,
+                t.access_token.to_string(),
                 t.refresh_token.to_string(),
                 t.endpoint.to_string(),
             );
+
             // MailChimp does not give you a refresh token so we should never refresh.
+            // But just in case in the future they do, we will leave this here.
             // https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/
-            if !t.refresh_token.is_empty() {
+            if !t.refresh_token.is_empty() && t.is_expired() {
                 let nt = mailchimp.refresh_access_token().await.unwrap();
                 t.access_token = nt.access_token.to_string();
                 t.expires_in = nt.expires_in as i32;
@@ -342,20 +344,25 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "ramp".to_string()) {
             // Initialize the Ramp client.
-            let mut ramp = Ramp::new_from_env(t.access_token, t.refresh_token.to_string());
-            let nt = ramp.refresh_access_token().await.unwrap();
-            t.access_token = nt.access_token.to_string();
-            t.expires_in = nt.expires_in as i32;
-            t.last_updated_at = Utc::now();
-            if !nt.refresh_token.is_empty() {
-                t.refresh_token = nt.refresh_token.to_string();
+            let mut ramp =
+                Ramp::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+
+            if t.is_expired() {
+                // Only refresh the token if it is expired.
+                let nt = ramp.refresh_access_token().await.unwrap();
+                t.access_token = nt.access_token.to_string();
+                t.expires_in = nt.expires_in as i32;
+                t.last_updated_at = Utc::now();
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                if nt.refresh_token_expires_in > 0 {
+                    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                }
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
             }
-            if nt.refresh_token_expires_in > 0 {
-                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-            }
-            t.expand();
-            // Update the token in the database.
-            t.update(db).await;
 
             return Some(ramp);
         }
@@ -368,20 +375,29 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoom".to_string()) {
             // Initialize the Zoom client.
-            let mut zoom = Zoom::new_from_env(t.access_token, t.refresh_token.to_string());
-            let nt = zoom.refresh_access_token().await.unwrap();
-            t.access_token = nt.access_token.to_string();
-            t.expires_in = nt.expires_in as i32;
-            t.last_updated_at = Utc::now();
-            if !nt.refresh_token.is_empty() {
-                t.refresh_token = nt.refresh_token.to_string();
+            let mut zoom =
+                Zoom::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+
+            if t.is_expired() {
+                // Update the token if it is expired.
+                let nt = zoom.refresh_access_token().await.unwrap();
+                if !nt.access_token.is_empty() {
+                    t.access_token = nt.access_token.to_string();
+                }
+                if nt.expires_in > 0 {
+                    t.expires_in = nt.expires_in as i32;
+                }
+                t.last_updated_at = Utc::now();
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                if nt.refresh_token_expires_in > 0 {
+                    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                }
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
             }
-            if nt.refresh_token_expires_in > 0 {
-                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-            }
-            t.expand();
-            // Update the token in the database.
-            t.update(db).await;
 
             return Some(zoom);
         }
@@ -395,20 +411,26 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "docusign".to_string()) {
             // Initialize the DocuSign client.
             let mut ds = DocuSign::new_from_env(
-                t.access_token,
-                t.refresh_token,
+                t.access_token.to_string(),
+                t.refresh_token.to_string(),
                 t.company_id.to_string(),
                 t.endpoint.to_string(),
             );
-            let nt = ds.refresh_access_token().await.unwrap();
-            t.access_token = nt.access_token.to_string();
-            t.expires_in = nt.expires_in as i32;
-            t.refresh_token = nt.refresh_token.to_string();
-            t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-            t.last_updated_at = Utc::now();
-            t.expand();
-            // Update the token in the database.
-            t.update(db).await;
+
+            if t.is_expired() {
+                // Only refresh the token if it is expired.
+                let nt = ds.refresh_access_token().await.unwrap();
+                t.access_token = nt.access_token.to_string();
+                t.expires_in = nt.expires_in as i32;
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
 
             return Some(ds);
         }
@@ -421,16 +443,23 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()) {
             // Initialize the Gusto client.
-            let mut gusto = Gusto::new_from_env(t.access_token, t.refresh_token);
-            let nt = gusto.refresh_access_token().await.unwrap();
-            t.access_token = nt.access_token.to_string();
-            t.expires_in = nt.expires_in as i32;
-            t.refresh_token = nt.refresh_token.to_string();
-            t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-            t.last_updated_at = Utc::now();
-            t.expand();
-            // Update the token in the database.
-            t.update(db).await;
+            let mut gusto =
+                Gusto::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+
+            if t.is_expired() {
+                // Only refresh the token if it is expired.
+                let nt = gusto.refresh_access_token().await.unwrap();
+                t.access_token = nt.access_token.to_string();
+                t.expires_in = nt.expires_in as i32;
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
 
             return Some((gusto, t.company_id.to_string()));
         }
@@ -451,17 +480,23 @@ impl Company {
             let mut ta = TripActions::new(
                 self.tripactions_client_id.to_string(),
                 self.tripactions_client_secret.to_string(),
-                t.access_token,
+                t.access_token.to_string(),
             );
-            let nt = ta.get_access_token().await.unwrap();
-            t.access_token = nt.access_token.to_string();
-            t.expires_in = nt.expires_in as i32;
-            t.refresh_token = nt.refresh_token.to_string();
-            t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-            t.last_updated_at = Utc::now();
-            t.expand();
-            // Update the token in the database.
-            t.update(db).await;
+
+            if t.is_expired() {
+                // Only refresh the token if it is expired.
+                let nt = ta.get_access_token().await.unwrap();
+                t.access_token = nt.access_token.to_string();
+                t.expires_in = nt.expires_in as i32;
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
 
             return ta;
         }
@@ -504,17 +539,26 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "quickbooks".to_string()) {
             // Initialize the QuickBooks client.
-            let mut qb =
-                QuickBooks::new_from_env(t.company_id.to_string(), t.access_token, t.refresh_token);
-            let nt = qb.refresh_access_token().await.unwrap();
-            t.access_token = nt.access_token.to_string();
-            t.expires_in = nt.expires_in as i32;
-            t.refresh_token = nt.refresh_token.to_string();
-            t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-            t.last_updated_at = Utc::now();
-            t.expand();
-            // Update the token in the database.
-            t.update(db).await;
+            let mut qb = QuickBooks::new_from_env(
+                t.company_id.to_string(),
+                t.access_token.to_string(),
+                t.refresh_token.to_string(),
+            );
+
+            if t.is_expired() {
+                // Only refresh the token if it is expired.
+                let nt = qb.refresh_access_token().await.unwrap();
+                t.access_token = nt.access_token.to_string();
+                t.expires_in = nt.expires_in as i32;
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
 
             return Some(qb);
         }
@@ -525,9 +569,27 @@ impl Company {
     /// Get a Google token.
     pub async fn authenticate_google(&self, db: &Database) -> String {
         // Get the APIToken from the database.
-        if let Some(t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
-            let nt = refresh_google_access_token(db, t).await;
-            return nt.access_token;
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            if t.is_expired() {
+                // Only refresh the token if it is expired.
+                let nt = refresh_google_access_token(&t).await;
+                if !nt.access_token.is_empty() {
+                    t.access_token = nt.access_token.to_string();
+                }
+                if nt.expires_in > 0 {
+                    t.expires_in = nt.expires_in as i32;
+                }
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
+
+            return t.access_token;
         }
 
         "".to_string()
@@ -743,7 +805,7 @@ pub async fn get_google_access_token(db: &Database, code: &str) {
     token.upsert(db).await;
 }
 
-pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) -> APIToken {
+pub async fn refresh_google_access_token(t: &APIToken) -> APIToken {
     let secret = get_google_credentials().await;
 
     let mut headers = header::HeaderMap::new();
@@ -768,21 +830,7 @@ pub async fn refresh_google_access_token(db: &Database, mut t: APIToken) -> APIT
         .unwrap();
 
     // Unwrap the response.
-    let nt: ramp_api::AccessToken = resp.json().await.unwrap();
-
-    t.access_token = nt.access_token.to_string();
-    t.expires_in = nt.expires_in as i32;
-    if !nt.refresh_token.is_empty() {
-        t.refresh_token = nt.refresh_token.to_string();
-        t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-    }
-    t.last_updated_at = Utc::now();
-    t.expand();
-
-    // Update the token in the database.
-    t.update(db).await;
-
-    t
+    resp.json().await.unwrap()
 }
 
 #[cfg(test)]
