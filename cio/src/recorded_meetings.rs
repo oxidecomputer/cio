@@ -13,8 +13,13 @@ use serde::{Deserialize, Serialize};
 use zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesFileType;
 
 use crate::{
-    airtable::AIRTABLE_RECORDED_MEETINGS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
-    schema::recorded_meetings, utils::truncate,
+    airtable::AIRTABLE_RECORDED_MEETINGS_TABLE,
+    companies::Company,
+    configs::User,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::{recorded_meetings, users},
+    utils::truncate,
 };
 
 /// The data type for a recorded meeting.
@@ -138,8 +143,16 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                 || *file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::FallthroughString
             {
                 // Continue early.
-                println!("[zoom] got bad recording file type: {:?}", meeting);
+                println!("[zoom] got bad recording file type: {:?}", recording);
                 continue;
+            }
+
+            if let Some(status) = &recording.status {
+                if *status != zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesStatus::Completed {
+                    // Continue early.
+                    println!("[zoom] got bad recording status: {:?}", recording);
+                    continue;
+                }
             }
 
             let file_name = format!(
@@ -210,6 +223,15 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
         );
         }
 
+        let host = users::dsl::users
+            .filter(
+                users::dsl::zoom_id
+                    .eq(meeting.host_id.to_string())
+                    .and(users::dsl::cio_company_id.eq(company.id)),
+            )
+            .first::<User>(&db.conn())
+            .unwrap();
+
         // Create the meeting in the database.
         let m = NewRecordedMeeting {
             name: meeting.topic.trim().to_string(),
@@ -220,10 +242,10 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             chat_log_link,
             chat_log,
             is_recurring: false,
-            attendees: Default::default(),
+            attendees: vec![host.email.to_string()],
             transcript,
             transcript_id,
-            location: format!("Zoom meeting by host: {}", meeting.host_id),
+            location: format!("Meeting hosted by {}", host.full_name()),
             // We save the meeting ID here, even tho its in Zoom.
             // TODO: clean this up.
             google_event_id: meeting.uuid.to_string(),
