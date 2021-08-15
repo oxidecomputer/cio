@@ -334,8 +334,7 @@ pub async fn get_auth_users(domain: String, db: &Database, company: &Company) ->
         let mut auth_user = user.to_auth_user(company);
 
         // Get the application they last accessed.
-        let auth_user_logins =
-            get_auth_logs_for_user(&token.access_token, &domain, &user.user_id).await;
+        let auth_user_logins = get_auth_logs_for_user(&token.access_token, &domain, &user.user_id).await;
 
         // Get the first result.
         if !auth_user_logins.is_empty() {
@@ -365,10 +364,7 @@ pub async fn get_auth_users(domain: String, db: &Database, company: &Company) ->
 async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec<NewAuthUserLogin> {
     let client = Client::new();
     let resp = client
-        .get(&format!(
-            "https://{}.auth0.com/api/v2/users/{}/logs",
-            domain, user_id
-        ))
+        .get(&format!("https://{}.auth0.com/api/v2/users/{}/logs", domain, user_id))
         .bearer_auth(token)
         .query(&[("sort", "date:-1"), ("per_page", "100")])
         .send()
@@ -381,11 +377,7 @@ async fn get_auth_logs_for_user(token: &str, domain: &str, user_id: &str) -> Vec
             // Get the rate limit headers.
             let headers = resp.headers();
             let limit = headers.get("x-ratelimit-limit").unwrap().to_str().unwrap();
-            let remaining = headers
-                .get("x-ratelimit-remaining")
-                .unwrap()
-                .to_str()
-                .unwrap();
+            let remaining = headers.get("x-ratelimit-remaining").unwrap().to_str().unwrap();
             let reset = headers.get("x-ratelimit-reset").unwrap().to_str().unwrap();
             let reset_int = reset.parse::<i64>().unwrap();
 
@@ -424,11 +416,7 @@ async fn get_auth_users_page(token: &str, domain: &str, page: &str) -> Vec<User>
     let resp = client
         .get(&format!("https://{}.auth0.com/api/v2/users", domain))
         .bearer_auth(token)
-        .query(&[
-            ("per_page", "20"),
-            ("page", page),
-            ("sort", "last_login:-1"),
-        ])
+        .query(&[("per_page", "20"), ("page", page), ("sort", "last_login:-1")])
         .send()
         .await
         .unwrap();
@@ -480,11 +468,7 @@ mod tests {
         refresh_auth_users_and_logins(&db, &oxide).await;
 
         // Update auth user and auth user logins in airtable.
-        AuthUserLogins::get_from_db(&db, oxide.id)
-            .update_airtable(&db)
-            .await;
-        AuthUsers::get_from_db(&db, oxide.id)
-            .update_airtable(&db)
-            .await;
+        AuthUserLogins::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        AuthUsers::get_from_db(&db, oxide.id).update_airtable(&db).await;
     }
 }

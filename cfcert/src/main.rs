@@ -22,12 +22,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         email: env::var("CLOUDFLARE_EMAIL").unwrap(),
         key: env::var("CLOUDFLARE_TOKEN").unwrap(),
     };
-    let api_client = Client::new(
-        cf_creds,
-        HttpApiClientConfig::default(),
-        Environment::Production,
-    )
-    .unwrap();
+    let api_client = Client::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
 
     // We need the root of the domain not a subdomain.
     let domain_parts: Vec<&str> = domain.split('.').collect();

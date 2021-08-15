@@ -6,9 +6,7 @@ use crate::{
     db::Database,
     repos::GithubRepos,
     rfds::RFDs,
-    templates::{
-        generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls,
-    },
+    templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls},
 };
 
 /// Generate the files for the GitHub repository short URLs.
@@ -138,12 +136,7 @@ pub async fn generate_shorturls_for_configs_links(
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
-pub async fn generate_dns_for_tailscale_devices(
-    github: &octorust::Client,
-    owner: &str,
-    repo: &str,
-    company: &Company,
-) {
+pub async fn generate_dns_for_tailscale_devices(github: &octorust::Client, owner: &str, repo: &str, company: &Company) {
     let subdomain = "internal";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -156,10 +149,7 @@ pub async fn generate_dns_for_tailscale_devices(
 
     // Create the array of links.
     for device in devices {
-        if device.addresses.is_empty()
-            || device.hostname.is_empty()
-            || device.hostname.starts_with("console-git-")
-        {
+        if device.addresses.is_empty() || device.hostname.is_empty() || device.hostname.starts_with("console-git-") {
             // Skip over the domains we generate for the console.
             // Continue early.
             continue;
@@ -219,22 +209,13 @@ pub async fn refresh_shorturls() {
     // Iterate over the companies and update.
     for company in companies {
         let github = company.authenticate_github();
-        generate_shorturls_for_repos(&db, &github, &company.github_org, "configs", company.id)
-            .await;
+        generate_shorturls_for_repos(&db, &github, &company.github_org, "configs", company.id).await;
         generate_shorturls_for_rfds(&db, &github, &company.github_org, "configs", company.id).await;
-        generate_shorturls_for_configs_links(
-            &db,
-            &github,
-            &company.github_org,
-            "configs",
-            company.id,
-        )
-        .await;
+        generate_shorturls_for_configs_links(&db, &github, &company.github_org, "configs", company.id).await;
 
         // Only do this if we can auth with Tailscale.
         if !company.tailscale_api_key.is_empty() {
-            generate_dns_for_tailscale_devices(&github, &company.github_org, "configs", &company)
-                .await;
+            generate_dns_for_tailscale_devices(&github, &company.github_org, "configs", &company).await;
         }
     }
 }

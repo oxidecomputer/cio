@@ -7,9 +7,7 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use slack_chat_api::{
-    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
-};
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::{
     airtable::{AIRTABLE_JOURNAL_CLUB_MEETINGS_TABLE, AIRTABLE_JOURNAL_CLUB_PAPERS_TABLE},
@@ -180,8 +178,7 @@ impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
         let db = Database::new();
-        let journal_club_meetings =
-            JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await;
+        let journal_club_meetings = JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await;
 
         // Iterate over the journal_club_meetings and see if we find a match.
         for (_id, meeting_record) in journal_club_meetings {
@@ -307,11 +304,7 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
 }
 
 // Sync the journal_club_meetings with our database.
-pub async fn refresh_db_journal_club_meetings(
-    db: &Database,
-    github: &octorust::Client,
-    company: &Company,
-) {
+pub async fn refresh_db_journal_club_meetings(db: &Database, github: &octorust::Client, company: &Company) {
     let journal_club_meetings = get_meetings_from_repo(github, company).await;
 
     // Sync journal_club_meetings.
@@ -348,9 +341,7 @@ mod tests {
 
         refresh_db_journal_club_meetings(&db, &github, &oxide).await;
 
-        JournalClubPapers::get_from_db(&db, oxide.id)
-            .update_airtable(&db)
-            .await;
+        JournalClubPapers::get_from_db(&db, oxide.id).update_airtable(&db).await;
         JournalClubMeetings::get_from_db(&db, oxide.id)
             .update_airtable(&db)
             .await;

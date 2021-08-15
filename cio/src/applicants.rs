@@ -23,9 +23,7 @@ use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Sheets;
-use slack_chat_api::{
-    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
-};
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tar::Archive;
 use walkdir::WalkDir;
 
@@ -248,10 +246,7 @@ pub struct NewApplicant {
 pub fn clean_interested_in(st: &str) -> String {
     let s = st.trim().to_lowercase();
 
-    if s == "product security engineer"
-        || s == "security engineer"
-        || s == "software engineer - security"
-    {
+    if s == "product security engineer" || s == "security engineer" || s == "software engineer - security" {
         return "Product Security Engineer".to_string();
     } else if s == "software engineer: web" {
         return "Software Engineer: Web".to_string();
@@ -271,11 +266,9 @@ impl NewApplicant {
     /// This is what we get back from the webhook.
     pub async fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
         // Fill in the data we know from what we got from the row.
-        let (github, gitlab) =
-            NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
+        let (github, gitlab) = NewApplicant::parse_github_gitlab(&get_value(values, "GitHub Profile URL"));
 
-        let interested_in_string =
-            get_value(values, "Which job descriptions are you interested in?");
+        let interested_in_string = get_value(values, "Which job descriptions are you interested in?");
         let split = interested_in_string.trim().split(',');
         let interested_in_str: Vec<&str> = split.collect();
         let mut interested_in: Vec<String> = Default::default();
@@ -299,10 +292,7 @@ impl NewApplicant {
                 longitude = location.lng as f32;
             }
             Err(e) => {
-                println!(
-                    "[applicants] could not get lat lng for location `{}`: {}",
-                    location, e
-                );
+                println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
             }
         }
 
@@ -322,10 +312,7 @@ impl NewApplicant {
             linkedin: get_value(values, "LinkedIn profile URL"),
             portfolio: get_value(values, "Portfolio"),
             website: get_value(values, "Website"),
-            resume: get_value(
-                values,
-                "Submit your resume (or PDF export of LinkedIn profile)",
-            ),
+            resume: get_value(values, "Submit your resume (or PDF export of LinkedIn profile)"),
             materials: get_value(values, "Submit your Oxide candidate materials"),
             status: crate::applicant_status::Status::NeedsToBeTriaged.to_string(),
             raw_status: get_value(values, "Status"),
@@ -597,17 +584,16 @@ The Oxide Team",
 
         // If the length of the row is greater than the interested in column
         // then we have an interest.
-        let interested_in_str: Vec<&str> =
-            if row.len() > columns.interested_in && columns.interested_in != 0 {
-                if row[columns.interested_in].trim().is_empty() {
-                    vec![]
-                } else {
-                    let split = row[columns.interested_in].trim().split(',');
-                    split.collect()
-                }
-            } else {
+        let interested_in_str: Vec<&str> = if row.len() > columns.interested_in && columns.interested_in != 0 {
+            if row[columns.interested_in].trim().is_empty() {
                 vec![]
-            };
+            } else {
+                let split = row[columns.interested_in].trim().split(',');
+                split.collect()
+            }
+        } else {
+            vec![]
+        };
         let mut interested_in: Vec<String> = Default::default();
         for s in interested_in_str {
             let i = clean_interested_in(s);
@@ -634,21 +620,19 @@ The Oxide Team",
 
         // If the length of the row is greater than the value_reflected column
         // then we have a value_reflected.
-        let mut value_reflected =
-            if row.len() > columns.value_reflected && columns.value_reflected != 0 {
-                row[columns.value_reflected].trim().to_lowercase()
-            } else {
-                "".to_lowercase()
-            };
+        let mut value_reflected = if row.len() > columns.value_reflected && columns.value_reflected != 0 {
+            row[columns.value_reflected].trim().to_lowercase()
+        } else {
+            "".to_lowercase()
+        };
 
         // If the length of the row is greater than the value_violated column
         // then we have a value_violated.
-        let mut value_violated =
-            if row.len() > columns.value_violated && columns.value_violated != 0 {
-                row[columns.value_violated].trim().to_lowercase()
-            } else {
-                "".to_lowercase()
-            };
+        let mut value_violated = if row.len() > columns.value_violated && columns.value_violated != 0 {
+            row[columns.value_violated].trim().to_lowercase()
+        } else {
+            "".to_lowercase()
+        };
 
         let mut values_in_tension: Vec<String> = Default::default();
         // If the length of the row is greater than the value_in_tension1 column
@@ -671,19 +655,13 @@ The Oxide Team",
 
         // Check if we sent them an email that we received their application.
         let mut sent_email_received = true;
-        if row[columns.sent_email_received]
-            .to_lowercase()
-            .contains("false")
-        {
+        if row[columns.sent_email_received].to_lowercase().contains("false") {
             sent_email_received = false;
         }
 
         // Check if we sent them an email to either reject or follow up.
         let mut sent_email_follow_up = true;
-        if row[columns.sent_email_follow_up]
-            .to_lowercase()
-            .contains("false")
-        {
+        if row[columns.sent_email_follow_up].to_lowercase().contains("false") {
             sent_email_follow_up = false;
         }
 
@@ -882,8 +860,7 @@ The Oxide Team",
                 criminal_background_check_status = a.criminal_background_check_status.to_string();
             }
             if !a.motor_vehicle_background_check_status.is_empty() {
-                motor_vehicle_background_check_status =
-                    a.criminal_background_check_status.to_string();
+                motor_vehicle_background_check_status = a.criminal_background_check_status.to_string();
             }
 
             // The start date might be set by docusign, in that case we want it to propgate.
@@ -926,10 +903,7 @@ The Oxide Team",
                     longitude = location.lng as f32;
                 }
                 Err(e) => {
-                    println!(
-                        "[applicants] could not get lat lng for location `{}`: {}",
-                        location, e
-                    );
+                    println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
                 }
             }
         }
@@ -940,10 +914,7 @@ The Oxide Team",
             // Since our length is at least one, we must have at least one interview.
             // Let's query the interviews for this candidate.
             let data = applicant_interviews::dsl::applicant_interviews
-                .filter(
-                    applicant_interviews::dsl::applicant
-                        .contains(vec![airtable_record_id.to_string()]),
-                )
+                .filter(applicant_interviews::dsl::applicant.contains(vec![airtable_record_id.to_string()]))
                 .order_by(applicant_interviews::dsl::start_time.asc())
                 .load::<ApplicantInterview>(&db.conn())
                 .unwrap();
@@ -1115,10 +1086,7 @@ The Oxide Team",
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
             let rng = format!(
                 "{}{}",
-                colmn
-                    .nth(sent_email_received_column_index)
-                    .unwrap()
-                    .to_string(),
+                colmn.nth(sent_email_received_column_index).unwrap().to_string(),
                 row_index
             );
 
@@ -1143,16 +1111,14 @@ The Oxide Team",
                 row_index
             );
 
-            let status =
-                crate::applicant_status::Status::from_str(&self.status).unwrap_or_default();
+            let status = crate::applicant_status::Status::from_str(&self.status).unwrap_or_default();
             if status == crate::applicant_status::Status::Declined
                 || status == crate::applicant_status::Status::Deferred
             {
                 // Check if we have sent the follow up email to them.unwrap_or_default().
                 if self.raw_status.contains("did not do materials") {
                     // Send the email.
-                    self.send_email_rejection_did_not_provide_materials(db)
-                        .await;
+                    self.send_email_rejection_did_not_provide_materials(db).await;
 
                     println!(
                         "[applicant] sent email to {} tell them they did not do the materials",
@@ -1170,10 +1136,7 @@ The Oxide Team",
                     // Send the email.
                     self.send_email_rejection_timing(db).await;
 
-                    println!(
-                        "[applicant] sent email to {} tell them about timing",
-                        self.email
-                    );
+                    println!("[applicant] sent email to {} tell them about timing", self.email);
                 }
 
                 // Update the cell in the google sheet so we know we sent the email.
@@ -1224,8 +1187,7 @@ The Oxide Team",
     fn parse_materials(&mut self) {
         // Parse the samples and materials.
         let materials_contents = self.materials_contents.clone();
-        let mut work_samples =
-            parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
+        let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
         if work_samples.is_empty() {
             work_samples = parse_question(
                 r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
@@ -1248,18 +1210,10 @@ The Oxide Team",
                     );
 
                     if work_samples.is_empty() {
-                        work_samples = parse_question(
-                            r"Work samples",
-                            "Exploratory samples",
-                            &materials_contents,
-                        );
+                        work_samples = parse_question(r"Work samples", "Exploratory samples", &materials_contents);
 
                         if work_samples.is_empty() {
-                            work_samples = parse_question(
-                                r"design sample\(s\)",
-                                "Questionnaire",
-                                &materials_contents,
-                            );
+                            work_samples = parse_question(r"design sample\(s\)", "Questionnaire", &materials_contents);
                         }
                     }
                 }
@@ -1267,11 +1221,7 @@ The Oxide Team",
         }
         self.work_samples = work_samples;
 
-        let mut writing_samples = parse_question(
-            r"Writing sample\(s\)",
-            "Analysis samples",
-            &materials_contents,
-        );
+        let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
         if writing_samples.is_empty() {
             writing_samples = parse_question(
                 r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
@@ -1279,25 +1229,18 @@ The Oxide Team",
                 &materials_contents,
             );
             if writing_samples.is_empty() {
-                writing_samples =
-                    parse_question(r"Writing samples", "Analysis samples", &materials_contents);
+                writing_samples = parse_question(r"Writing samples", "Analysis samples", &materials_contents);
 
                 if writing_samples.is_empty() {
-                    writing_samples = parse_question(
-                        r"Writing sample\(s\)",
-                        "Code and/or design sample",
-                        &materials_contents,
-                    );
+                    writing_samples =
+                        parse_question(r"Writing sample\(s\)", "Code and/or design sample", &materials_contents);
                 }
             }
         }
         self.writing_samples = writing_samples;
 
-        let mut analysis_samples = parse_question(
-            r"Analysis sample\(s\)$",
-            "Presentation samples",
-            &materials_contents,
-        );
+        let mut analysis_samples =
+            parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
         if analysis_samples.is_empty() {
             analysis_samples = parse_question(
                 r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
@@ -1305,20 +1248,13 @@ The Oxide Team",
                 &materials_contents,
             );
             if analysis_samples.is_empty() {
-                analysis_samples = parse_question(
-                    r"Analysis samples",
-                    "Presentation samples",
-                    &materials_contents,
-                );
+                analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
             }
         }
         self.analysis_samples = analysis_samples;
 
-        let mut presentation_samples = parse_question(
-            r"Presentation sample\(s\)",
-            "Questionnaire",
-            &materials_contents,
-        );
+        let mut presentation_samples =
+            parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
         if presentation_samples.is_empty() {
             presentation_samples = parse_question(
                 r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
@@ -1326,20 +1262,12 @@ The Oxide Team",
                 &materials_contents,
             );
             if presentation_samples.is_empty() {
-                presentation_samples = parse_question(
-                    r"Presentation samples",
-                    "Questionnaire",
-                    &materials_contents,
-                );
+                presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
             }
         }
         self.presentation_samples = presentation_samples;
 
-        let mut exploratory_samples = parse_question(
-            r"Exploratory sample\(s\)",
-            "Questionnaire",
-            &materials_contents,
-        );
+        let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
         if exploratory_samples.is_empty() {
             exploratory_samples = parse_question(
                 r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
@@ -1347,8 +1275,7 @@ The Oxide Team",
                 &materials_contents,
             );
             if exploratory_samples.is_empty() {
-                exploratory_samples =
-                    parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
+                exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
             }
         }
         self.exploratory_samples = exploratory_samples;
@@ -1358,11 +1285,7 @@ The Oxide Team",
             QUESTION_WORK_PROUD_OF,
             &materials_contents,
         );
-        self.question_proud_of = parse_question(
-            QUESTION_WORK_PROUD_OF,
-            QUESTION_HAPPIEST_CAREER,
-            &materials_contents,
-        );
+        self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
         self.question_happiest = parse_question(
             QUESTION_HAPPIEST_CAREER,
             QUESTION_UNHAPPIEST_CAREER,
@@ -1373,21 +1296,12 @@ The Oxide Team",
             QUESTION_VALUE_REFLECTED,
             &materials_contents,
         );
-        self.question_value_reflected = parse_question(
-            QUESTION_VALUE_REFLECTED,
-            QUESTION_VALUE_VIOLATED,
-            &materials_contents,
-        );
-        self.question_value_violated = parse_question(
-            QUESTION_VALUE_VIOLATED,
-            QUESTION_VALUES_IN_TENSION,
-            &materials_contents,
-        );
-        self.question_values_in_tension = parse_question(
-            QUESTION_VALUES_IN_TENSION,
-            QUESTION_WHY_OXIDE,
-            &materials_contents,
-        );
+        self.question_value_reflected =
+            parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
+        self.question_value_violated =
+            parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
+        self.question_values_in_tension =
+            parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
         self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
@@ -1412,8 +1326,7 @@ The Oxide Team",
             && phone.starts_with("44")
         {
             country = phonenumber::country::GB;
-        } else if (location.to_lowercase().contains("czech republic")
-            || location.to_lowercase().contains("prague"))
+        } else if (location.to_lowercase().contains("czech republic") || location.to_lowercase().contains("prague"))
             && phone.starts_with("420")
         {
             country = phonenumber::country::CZ;
@@ -1451,13 +1364,9 @@ The Oxide Team",
             country = phonenumber::country::TW;
         } else if location.to_lowercase().contains("new zealand") {
             country = phonenumber::country::NZ;
-        } else if location.to_lowercase().contains("maragno")
-            || location.to_lowercase().contains("italy")
-        {
+        } else if location.to_lowercase().contains("maragno") || location.to_lowercase().contains("italy") {
             country = phonenumber::country::IT;
-        } else if location.to_lowercase().contains("nairobi")
-            || location.to_lowercase().contains("kenya")
-        {
+        } else if location.to_lowercase().contains("nairobi") || location.to_lowercase().contains("kenya") {
             country = phonenumber::country::KE;
         } else if location.to_lowercase().contains("dubai") {
             country = phonenumber::country::AE;
@@ -1465,9 +1374,7 @@ The Oxide Team",
             country = phonenumber::country::PL;
         } else if location.to_lowercase().contains("portugal") {
             country = phonenumber::country::PT;
-        } else if location.to_lowercase().contains("berlin")
-            || location.to_lowercase().contains("germany")
-        {
+        } else if location.to_lowercase().contains("berlin") || location.to_lowercase().contains("germany") {
             country = phonenumber::country::DE;
         } else if location.to_lowercase().contains("benin") && phone.starts_with("229") {
             country = phonenumber::country::BJ;
@@ -1487,10 +1394,7 @@ The Oxide Team",
                 println!("[applicants] phone number is invalid: {}", phone);
             }
 
-            phone = format!(
-                "{}",
-                phone_number.format().mode(phonenumber::Mode::International)
-            );
+            phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
         }
         self.phone = phone;
         self.country_code = country_code;
@@ -1729,10 +1633,7 @@ impl Applicant {
         // Since our interviews length is at least one, we must have at least one interview.
         // Let's query the interviews for this candidate.
         let data = applicant_interviews::dsl::applicant_interviews
-            .filter(
-                applicant_interviews::dsl::applicant
-                    .contains(vec![self.airtable_record_id.to_string()]),
-            )
+            .filter(applicant_interviews::dsl::applicant.contains(vec![self.airtable_record_id.to_string()]))
             .order_by(applicant_interviews::dsl::start_time.asc())
             .load::<ApplicantInterview>(&db.conn())
             .unwrap();
@@ -1788,11 +1689,10 @@ impl Applicant {
             for record_id in &self.link_to_reviews {
                 // Get the record.
                 // TODO: get these from the database.
-                let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> =
-                    airtable
-                        .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
-                        .await
-                        .unwrap();
+                let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
+                    .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
+                    .await
+                    .unwrap();
 
                 // Set the values if they are not empty.
                 // TODO: actually do the majority if they differ in value but for now YOLO.
@@ -1844,12 +1744,7 @@ impl Applicant {
             self.scoring_evaluations_count += 1;
 
             // Up the scores for the relevant evaluations.
-            if record
-                .fields
-                .evaluation
-                .to_lowercase()
-                .starts_with("emphatic yes:")
-            {
+            if record.fields.evaluation.to_lowercase().starts_with("emphatic yes:") {
                 self.scoring_enthusiastic_yes_count += 1;
             }
             if record.fields.evaluation.to_lowercase().starts_with("yes:") {
@@ -1902,17 +1797,12 @@ impl Applicant {
             // If we don't already have the review in reviewers completed,
             // add them.
             if !self.scorers_completed.contains(&record.fields.reviewer) {
-                self.scorers_completed
-                    .push(record.fields.reviewer.to_string());
+                self.scorers_completed.push(record.fields.reviewer.to_string());
             }
 
             // If this reviewer was assigned, remove them since they completed scoring.
             if self.scorers.contains(&record.fields.reviewer) {
-                let index = self
-                    .scorers
-                    .iter()
-                    .position(|r| *r == record.fields.reviewer)
-                    .unwrap();
+                let index = self.scorers.iter().position(|r| *r == record.fields.reviewer).unwrap();
                 self.scorers.remove(index);
             }
         }
@@ -1962,10 +1852,7 @@ impl Applicant {
 
                     self.update(db).await;
 
-                    println!(
-                        "[applicant] sent background check invitation to: {}",
-                        self.email
-                    );
+                    println!("[applicant] sent background check invitation to: {}", self.email);
                 }
                 // We can return early they already exist as a candidate.
                 return;
@@ -1986,10 +1873,7 @@ impl Applicant {
 
         self.update(db).await;
 
-        println!(
-            "[applicant] sent background check invitation to: {}",
-            self.email
-        );
+        println!("[applicant] sent background check invitation to: {}", self.email);
     }
 
     /// Convert the applicant into JSON for a Slack message.
@@ -2215,11 +2099,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         let mut username = first_name.to_lowercase().to_string();
         let existing_user = User::get_from_db(db, company.id, username.to_string());
         if existing_user.is_some() {
-            username = format!(
-                "{}.{}",
-                first_name.replace(' ', "-"),
-                last_name.replace(' ', "-")
-            );
+            username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
         }
         // Make sure it's lowercase.
         username = username.to_lowercase();
@@ -2260,10 +2140,7 @@ aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:s
 department = ''
 manager = ''
 ```"#,
-            self.start_date
-                .unwrap()
-                .format("%A, %B %-d, %C%y")
-                .to_string(),
+            self.start_date.unwrap().format("%A, %B %-d, %C%y").to_string(),
             self.email,
             self.github,
             self.phone,
@@ -2709,17 +2586,10 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
         // Extract the text from the archive.
         let cmd_out = Command::new("7z")
-            .args(&[
-                "x",
-                &format!("-o{}", output.to_str().unwrap()),
-                path.to_str().unwrap(),
-            ])
+            .args(&["x", &format!("-o{}", output.to_str().unwrap()), path.to_str().unwrap()])
             .output()
             .unwrap();
-        println!(
-            "pz7ip output: {}",
-            String::from_utf8(cmd_out.stdout).unwrap()
-        );
+        println!("pz7ip output: {}", String::from_utf8(cmd_out.stdout).unwrap());
 
         // Walk the output directory trying to find our file.
         for entry in WalkDir::new(&output).min_depth(1) {
@@ -2881,10 +2751,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                     }
                 }
                 Err(e) => {
-                    println!(
-                        "[applicants] error unwrapping materials name {}: {}",
-                        name, e
-                    );
+                    println!("[applicants] error unwrapping materials name {}: {}", name, e);
                 }
             }
         }
@@ -2951,10 +2818,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
 fn read_doc(path: std::path::PathBuf) -> String {
     // Extract the text from the DOC
-    let cmd_output = Command::new("catdoc")
-        .args(&[path.to_str().unwrap()])
-        .output()
-        .unwrap();
+    let cmd_output = Command::new("catdoc").args(&[path.to_str().unwrap()]).output().unwrap();
 
     let result = String::from_utf8(cmd_output.stdout).unwrap();
 
@@ -2993,12 +2857,7 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
 
     // Extract the text from the PDF
     let cmd_output = Command::new("pdftotext")
-        .args(&[
-            "-enc",
-            "UTF-8",
-            path.to_str().unwrap(),
-            output.to_str().unwrap(),
-        ])
+        .args(&["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -3037,10 +2896,7 @@ pub fn get_tracking_sheets() -> Vec<&'static str> {
 
 pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
     let mut sheets: BTreeMap<&str, &str> = BTreeMap::new();
-    sheets.insert(
-        "Engineering",
-        "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA",
-    );
+    sheets.insert("Engineering", "1FHA-otHCGwe5fCRpcl89MWI7GHiFfN3EWjO6K943rYA");
     sheets.insert(
         "Product Engineering and Design",
         "1VkRgmr_ZdR-y_1NJc8L0Iv6UVqKaZapt3T_Bq_gqPiI",
@@ -3049,10 +2905,7 @@ pub fn get_sheets_map() -> BTreeMap<&'static str, &'static str> {
         "Technical Program Management",
         "1Z9sNUBW2z-Tlie0ci8xiet4Nryh-F0O82TFmQ1rQqlU",
     );
-    sheets.insert(
-        "Operations Manager",
-        "1S21W7ouI4qLeic4T71MGRL1Vk-ToqSQ6Z95GN-PT6Zc",
-    );
+    sheets.insert("Operations Manager", "1S21W7ouI4qLeic4T71MGRL1Vk-ToqSQ6Z95GN-PT6Zc");
 
     sheets
 }
@@ -3140,9 +2993,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
             }
 
             // Parse the applicant out of the row information.
-            let mut applicant =
-                NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, row)
-                    .await;
+            let mut applicant = NewApplicant::parse_from_row_with_columns(sheet_name, sheet_id, &columns, row).await;
             applicant
                 .expand(
                     db,
@@ -3260,8 +3111,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
             let mut scorers_completed: Vec<String> = vec![];
             if row.len() > columns.scorers_completed {
                 let scorers_completed_string = row[columns.scorers_completed].to_string();
-                let scorers_completed_str: Vec<&str> =
-                    scorers_completed_string.split(',').collect();
+                let scorers_completed_str: Vec<&str> = scorers_completed_string.split(',').collect();
                 for s in scorers_completed_str {
                     match User::get_from_db(
                         db,
@@ -3460,14 +3310,10 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
                         applicant.scoring_pass_count = scoring_pass_count;
                         applicant.scoring_no_count = scoring_no_count;
                         applicant.scoring_not_applicable_count = scoring_not_applicable_count;
-                        applicant.scoring_insufficient_experience_count =
-                            scoring_insufficient_experience_count;
-                        applicant.scoring_inapplicable_experience_count =
-                            scoring_inapplicable_experience_count;
-                        applicant.scoring_job_function_yet_needed_count =
-                            scoring_job_function_yet_needed_count;
-                        applicant.scoring_underwhelming_materials_count =
-                            scoring_underwhelming_materials_count;
+                        applicant.scoring_insufficient_experience_count = scoring_insufficient_experience_count;
+                        applicant.scoring_inapplicable_experience_count = scoring_inapplicable_experience_count;
+                        applicant.scoring_job_function_yet_needed_count = scoring_job_function_yet_needed_count;
+                        applicant.scoring_underwhelming_materials_count = scoring_underwhelming_materials_count;
                     }
 
                     applicant.value_reflected = value_reflected.to_string();
@@ -3546,14 +3392,10 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) {
                 .filter(
                     applicants::dsl::email
                         .eq(candidate.email.to_string())
-                        .or(applicants::dsl::name
-                            .eq(format!("{} {}", candidate.first_name, candidate.last_name))),
+                        .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
                 )
                 .filter(applicants::dsl::sheet_id.eq(sheet_id.to_string()))
-                .filter(
-                    applicants::dsl::status
-                        .eq(crate::applicant_status::Status::Onboarding.to_string()),
-                )
+                .filter(applicants::dsl::status.eq(crate::applicant_status::Status::Onboarding.to_string()))
                 .first::<Applicant>(&db.conn())
             {
                 for report_id in &candidate.report_ids {
@@ -3717,13 +3559,9 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant
-            .do_docusign_offer(db, &ds, &offer_template_id, company)
-            .await;
+        applicant.do_docusign_offer(db, &ds, &offer_template_id, company).await;
 
-        applicant
-            .do_docusign_piia(db, &ds, &piia_template_id, company)
-            .await;
+        applicant.do_docusign_piia(db, &ds, &piia_template_id, company).await;
     }
 }
 
@@ -3812,9 +3650,7 @@ impl Applicant {
             return;
         }
 
-        if status != crate::applicant_status::Status::Declined
-            && status != crate::applicant_status::Status::Deferred
-        {
+        if status != crate::applicant_status::Status::Declined && status != crate::applicant_status::Status::Deferred {
             // We want to return early, we only care about people who were deferred or declined.
             // So sent the folks in the triage home.
             // Above we sent home everyone else.
@@ -3824,8 +3660,7 @@ impl Applicant {
         // Check if we have sent the follow up email to them.unwrap_or_default().
         if self.raw_status.contains("did not do materials") {
             // Send the email.
-            self.send_email_rejection_did_not_provide_materials(db)
-                .await;
+            self.send_email_rejection_did_not_provide_materials(db).await;
 
             println!(
                 "[applicant] sent email to {} tell them they did not do the materials",
@@ -3843,10 +3678,7 @@ impl Applicant {
             // Send the email.
             self.send_email_rejection_timing(db).await;
 
-            println!(
-                "[applicant] sent email to {} tell them about timing",
-                self.email
-            );
+            println!("[applicant] sent email to {} tell them about timing", self.email);
         }
 
         // Mark the time we sent the email.
@@ -4027,8 +3859,7 @@ Sincerely,
     fn parse_materials(&mut self) {
         // Parse the samples and materials.
         let materials_contents = self.materials_contents.clone();
-        let mut work_samples =
-            parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
+        let mut work_samples = parse_question(r"Work sample\(s\)", "Writing samples", &materials_contents);
         if work_samples.is_empty() {
             work_samples = parse_question(
                 r"If(?s:.*)his work is entirely proprietary(?s:.*)please describe it as fully as y(?s:.*)can, providing necessary context\.",
@@ -4051,18 +3882,10 @@ Sincerely,
                     );
 
                     if work_samples.is_empty() {
-                        work_samples = parse_question(
-                            r"Work samples",
-                            "Exploratory samples",
-                            &materials_contents,
-                        );
+                        work_samples = parse_question(r"Work samples", "Exploratory samples", &materials_contents);
 
                         if work_samples.is_empty() {
-                            work_samples = parse_question(
-                                r"design sample\(s\)",
-                                "Questionnaire",
-                                &materials_contents,
-                            );
+                            work_samples = parse_question(r"design sample\(s\)", "Questionnaire", &materials_contents);
                         }
                     }
                 }
@@ -4070,11 +3893,7 @@ Sincerely,
         }
         self.work_samples = work_samples;
 
-        let mut writing_samples = parse_question(
-            r"Writing sample\(s\)",
-            "Analysis samples",
-            &materials_contents,
-        );
+        let mut writing_samples = parse_question(r"Writing sample\(s\)", "Analysis samples", &materials_contents);
         if writing_samples.is_empty() {
             writing_samples = parse_question(
                 r"Please submit at least one writing sample \(and no more tha(?s:.*)three\) that you feel represent(?s:.*)you(?s:.*)providin(?s:.*)links if(?s:.*)necessary\.",
@@ -4082,25 +3901,18 @@ Sincerely,
                 &materials_contents,
             );
             if writing_samples.is_empty() {
-                writing_samples =
-                    parse_question(r"Writing samples", "Analysis samples", &materials_contents);
+                writing_samples = parse_question(r"Writing samples", "Analysis samples", &materials_contents);
 
                 if writing_samples.is_empty() {
-                    writing_samples = parse_question(
-                        r"Writing sample\(s\)",
-                        "Code and/or design sample",
-                        &materials_contents,
-                    );
+                    writing_samples =
+                        parse_question(r"Writing sample\(s\)", "Code and/or design sample", &materials_contents);
                 }
             }
         }
         self.writing_samples = writing_samples;
 
-        let mut analysis_samples = parse_question(
-            r"Analysis sample\(s\)$",
-            "Presentation samples",
-            &materials_contents,
-        );
+        let mut analysis_samples =
+            parse_question(r"Analysis sample\(s\)$", "Presentation samples", &materials_contents);
         if analysis_samples.is_empty() {
             analysis_samples = parse_question(
                 r"please recount a(?s:.*)incident(?s:.*)which you analyzed syste(?s:.*)misbehavior(?s:.*)including as much technical detail as you can recall\.",
@@ -4108,20 +3920,13 @@ Sincerely,
                 &materials_contents,
             );
             if analysis_samples.is_empty() {
-                analysis_samples = parse_question(
-                    r"Analysis samples",
-                    "Presentation samples",
-                    &materials_contents,
-                );
+                analysis_samples = parse_question(r"Analysis samples", "Presentation samples", &materials_contents);
             }
         }
         self.analysis_samples = analysis_samples;
 
-        let mut presentation_samples = parse_question(
-            r"Presentation sample\(s\)",
-            "Questionnaire",
-            &materials_contents,
-        );
+        let mut presentation_samples =
+            parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
         if presentation_samples.is_empty() {
             presentation_samples = parse_question(
                 r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
@@ -4129,20 +3934,12 @@ Sincerely,
                 &materials_contents,
             );
             if presentation_samples.is_empty() {
-                presentation_samples = parse_question(
-                    r"Presentation samples",
-                    "Questionnaire",
-                    &materials_contents,
-                );
+                presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
             }
         }
         self.presentation_samples = presentation_samples;
 
-        let mut exploratory_samples = parse_question(
-            r"Exploratory sample\(s\)",
-            "Questionnaire",
-            &materials_contents,
-        );
+        let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
         if exploratory_samples.is_empty() {
             exploratory_samples = parse_question(
                 r"What’s an example o(?s:.*)something that you needed to explore, reverse engineer, decipher or otherwise figure out a(?s:.*)part of a program or project and how did you do it\? Please provide as much detail as you ca(?s:.*)recall\.",
@@ -4150,8 +3947,7 @@ Sincerely,
                 &materials_contents,
             );
             if exploratory_samples.is_empty() {
-                exploratory_samples =
-                    parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
+                exploratory_samples = parse_question(r"Exploratory samples", "Questionnaire", &materials_contents);
             }
         }
         self.exploratory_samples = exploratory_samples;
@@ -4161,11 +3957,7 @@ Sincerely,
             QUESTION_WORK_PROUD_OF,
             &materials_contents,
         );
-        self.question_proud_of = parse_question(
-            QUESTION_WORK_PROUD_OF,
-            QUESTION_HAPPIEST_CAREER,
-            &materials_contents,
-        );
+        self.question_proud_of = parse_question(QUESTION_WORK_PROUD_OF, QUESTION_HAPPIEST_CAREER, &materials_contents);
         self.question_happiest = parse_question(
             QUESTION_HAPPIEST_CAREER,
             QUESTION_UNHAPPIEST_CAREER,
@@ -4176,21 +3968,12 @@ Sincerely,
             QUESTION_VALUE_REFLECTED,
             &materials_contents,
         );
-        self.question_value_reflected = parse_question(
-            QUESTION_VALUE_REFLECTED,
-            QUESTION_VALUE_VIOLATED,
-            &materials_contents,
-        );
-        self.question_value_violated = parse_question(
-            QUESTION_VALUE_VIOLATED,
-            QUESTION_VALUES_IN_TENSION,
-            &materials_contents,
-        );
-        self.question_values_in_tension = parse_question(
-            QUESTION_VALUES_IN_TENSION,
-            QUESTION_WHY_OXIDE,
-            &materials_contents,
-        );
+        self.question_value_reflected =
+            parse_question(QUESTION_VALUE_REFLECTED, QUESTION_VALUE_VIOLATED, &materials_contents);
+        self.question_value_violated =
+            parse_question(QUESTION_VALUE_VIOLATED, QUESTION_VALUES_IN_TENSION, &materials_contents);
+        self.question_values_in_tension =
+            parse_question(QUESTION_VALUES_IN_TENSION, QUESTION_WHY_OXIDE, &materials_contents);
         self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
@@ -4263,8 +4046,7 @@ Sincerely,
             && phone.starts_with("44")
         {
             country = phonenumber::country::GB;
-        } else if (location.to_lowercase().contains("czech republic")
-            || location.to_lowercase().contains("prague"))
+        } else if (location.to_lowercase().contains("czech republic") || location.to_lowercase().contains("prague"))
             && phone.starts_with("420")
         {
             country = phonenumber::country::CZ;
@@ -4302,13 +4084,9 @@ Sincerely,
             country = phonenumber::country::TW;
         } else if location.to_lowercase().contains("new zealand") {
             country = phonenumber::country::NZ;
-        } else if location.to_lowercase().contains("maragno")
-            || location.to_lowercase().contains("italy")
-        {
+        } else if location.to_lowercase().contains("maragno") || location.to_lowercase().contains("italy") {
             country = phonenumber::country::IT;
-        } else if location.to_lowercase().contains("nairobi")
-            || location.to_lowercase().contains("kenya")
-        {
+        } else if location.to_lowercase().contains("nairobi") || location.to_lowercase().contains("kenya") {
             country = phonenumber::country::KE;
         } else if location.to_lowercase().contains("dubai") {
             country = phonenumber::country::AE;
@@ -4316,9 +4094,7 @@ Sincerely,
             country = phonenumber::country::PL;
         } else if location.to_lowercase().contains("portugal") {
             country = phonenumber::country::PT;
-        } else if location.to_lowercase().contains("berlin")
-            || location.to_lowercase().contains("germany")
-        {
+        } else if location.to_lowercase().contains("berlin") || location.to_lowercase().contains("germany") {
             country = phonenumber::country::DE;
         } else if location.to_lowercase().contains("benin") && phone.starts_with("229") {
             country = phonenumber::country::BJ;
@@ -4338,22 +4114,13 @@ Sincerely,
                 println!("[applicants] phone number is invalid: {}", phone);
             }
 
-            phone = format!(
-                "{}",
-                phone_number.format().mode(phonenumber::Mode::International)
-            );
+            phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
         }
         self.phone = phone;
         self.country_code = country_code;
     }
 
-    pub async fn do_docusign_offer(
-        &mut self,
-        db: &Database,
-        ds: &DocuSign,
-        template_id: &str,
-        company: &Company,
-    ) {
+    pub async fn do_docusign_offer(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
@@ -4509,10 +4276,7 @@ Sincerely,
         let drive_client = GoogleDrive::new(token);
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client
-            .get_drive_by_name("Offer Letters")
-            .await
-            .unwrap();
+        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -4543,25 +4307,15 @@ Sincerely,
                 filename = format!("{} - Offer.pdf", self.name);
             } else if document.name.contains("Summary") {
                 filename = format!("{} - Offer - DocuSign Summary.pdf", self.name);
-            } else if document.name.contains("Employee Mediation")
-                || document.name.contains("Employee_Mediation")
-            {
+            } else if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {
                 filename = format!("{} - Mediation Agreement.pdf", self.name);
-            } else if document.name.contains("Employee Proprietary")
-                || document.name.contains("Employee_Proprietary")
-            {
+            } else if document.name.contains("Employee Proprietary") || document.name.contains("Employee_Proprietary") {
                 filename = format!("{} - PIIA.pdf", self.name);
             }
 
             // Create or update the file in the google_drive.
             drive_client
-                .create_or_update_file(
-                    &drive_id,
-                    &name_folder_id,
-                    &filename,
-                    "application/pdf",
-                    &bytes,
-                )
+                .create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await
                 .unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);
@@ -4571,10 +4325,7 @@ Sincerely,
         // min before getting each of the documents.
         // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
         //thread::sleep(std::time::Duration::from_secs(900));
-        let form_data = ds
-            .get_envelope_form_data(&self.docusign_envelope_id)
-            .await
-            .unwrap();
+        let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
 
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
@@ -4589,9 +4340,7 @@ Sincerely,
             let mut employee = result.unwrap();
             // Only do this if we don't have the employee's home address or start date.
             // This will help us to not override any changes then that are later made in gusto.
-            if employee.home_address_street_1.is_empty()
-                || employee.start_date == crate::utils::default_date()
-            {
+            if employee.home_address_street_1.is_empty() || employee.start_date == crate::utils::default_date() {
                 // We have an employee, so we can update their data from the data in Docusign.
 
                 for fd in form_data.clone() {
@@ -4613,8 +4362,7 @@ Sincerely,
                         employee.home_address_country = fd.value.trim().to_string();
                     }
                     if fd.name == "Start Date" {
-                        let start_date =
-                            NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+                        let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
                         employee.start_date = start_date;
                     }
                 }
@@ -4636,13 +4384,7 @@ Sincerely,
         self.update(db).await;
     }
 
-    pub async fn do_docusign_piia(
-        &mut self,
-        db: &Database,
-        ds: &DocuSign,
-        template_id: &str,
-        company: &Company,
-    ) {
+    pub async fn do_docusign_piia(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
@@ -4691,10 +4433,7 @@ Sincerely,
                     routing_order: "1".to_string(),
                     // Make Steve's email notification different than the actual applicant.
                     email_notification: docusign::EmailNotification {
-                        email_subject: format!(
-                            "Complete the employee agreements for {}",
-                            self.name
-                        ),
+                        email_subject: format!("Complete the employee agreements for {}", self.name),
                         email_body: format!(
                             "The status for the applicant, {}, has been changed to `Giving \
                              offer`. Therefore, we are sending you employee agreements to \
@@ -4730,10 +4469,8 @@ Sincerely,
                     signer_name: "Ruth Alexander".to_string(),
                     routing_order: "3".to_string(),
                     email_notification: docusign::EmailNotification {
-                        email_subject: "Oxide Computer Company Employee Agreements Signed"
-                            .to_string(),
-                        email_body: "Attached are newly signed employee agreements. Thank you!"
-                            .to_string(),
+                        email_subject: "Oxide Computer Company Employee Agreements Signed".to_string(),
+                        email_body: "Attached are newly signed employee agreements. Thank you!".to_string(),
                         language: Default::default(),
                     },
                 },
@@ -4752,10 +4489,7 @@ Sincerely,
         } else if !self.docusign_piia_envelope_id.is_empty() {
             // We have sent their employee agreements.
             // Let's get the status of the envelope in Docusign.
-            let envelope = ds
-                .get_envelope(&self.docusign_piia_envelope_id)
-                .await
-                .unwrap();
+            let envelope = ds.get_envelope(&self.docusign_piia_envelope_id).await.unwrap();
 
             self.update_applicant_from_docusign_piia_envelope(db, ds, envelope)
                 .await;
@@ -4823,10 +4557,7 @@ Sincerely,
         let drive_client = GoogleDrive::new(token);
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client
-            .get_drive_by_name("Offer Letters")
-            .await
-            .unwrap();
+        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -4853,13 +4584,9 @@ Sincerely,
                 .unwrap();
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
-            if document.name.contains("Employee Mediation")
-                || document.name.contains("Employee_Mediation")
-            {
+            if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {
                 filename = format!("{} - Mediation Agreement.pdf", self.name);
-            } else if document.name.contains("Employee Proprietary")
-                || document.name.contains("Employee_Proprietary")
-            {
+            } else if document.name.contains("Employee Proprietary") || document.name.contains("Employee_Proprietary") {
                 filename = format!("{} - PIIA.pdf", self.name);
             } else if document.name.contains("Summary") {
                 filename = format!("{} - Employee Agreements - DocuSign Summary.pdf", self.name);
@@ -4869,13 +4596,7 @@ Sincerely,
 
             // Create or update the file in the google_drive.
             drive_client
-                .create_or_update_file(
-                    &drive_id,
-                    &name_folder_id,
-                    &filename,
-                    "application/pdf",
-                    &bytes,
-                )
+                .create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await
                 .unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);
@@ -4972,8 +4693,7 @@ mod tests {
         applicants::{
             refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants,
             refresh_new_applicants_and_reviews, update_applicant_reviewers_leaderboard,
-            update_applications_with_scoring_forms, update_applications_with_scoring_results,
-            Applicant, Applicants,
+            update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants,
         },
         companies::Company,
         db::Database,
@@ -5034,9 +4754,7 @@ mod tests {
         refresh_db_applicants(&db, &oxide).await;
 
         // Update Airtable.
-        Applicants::get_from_db(&db, oxide.id)
-            .update_airtable(&db)
-            .await;
+        Applicants::get_from_db(&db, oxide.id).update_airtable(&db).await;
 
         // Refresh DocuSign for the applicants.
         refresh_docusign_for_applicants(&db, &oxide).await;

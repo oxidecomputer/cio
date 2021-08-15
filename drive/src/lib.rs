@@ -274,11 +274,7 @@ impl GoogleDrive {
     }
 
     /// Get a file by it's name.
-    pub async fn get_file_by_name(
-        &self,
-        drive_id: &str,
-        name: &str,
-    ) -> Result<Vec<File>, APIError> {
+    pub async fn get_file_by_name(&self, drive_id: &str, name: &str) -> Result<Vec<File>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -313,16 +309,8 @@ impl GoogleDrive {
     }
 
     /// Get a folder by it's name.
-    pub async fn get_folder_by_name(
-        &self,
-        drive_id: &str,
-        parent_id: &str,
-        name: &str,
-    ) -> Result<Vec<File>, APIError> {
-        let mut query = format!(
-            "name = '{}' and mimeType = 'application/vnd.google-apps.folder'",
-            name
-        );
+    pub async fn get_folder_by_name(&self, drive_id: &str, parent_id: &str, name: &str) -> Result<Vec<File>, APIError> {
+        let mut query = format!("name = '{}' and mimeType = 'application/vnd.google-apps.folder'", name);
         if !parent_id.is_empty() {
             query = format!("{} and '{}' in parents", query, parent_id);
         }
@@ -406,12 +394,7 @@ impl GoogleDrive {
     }
 
     /// Create a folder.
-    pub async fn create_folder(
-        &self,
-        drive_id: &str,
-        parent_id: &str,
-        name: &str,
-    ) -> Result<String, APIError> {
+    pub async fn create_folder(&self, drive_id: &str, parent_id: &str, name: &str) -> Result<String, APIError> {
         let folder_mime_type = "application/vnd.google-apps.folder";
         let mut file: File = Default::default();
         // Set the name,
@@ -481,10 +464,7 @@ impl GoogleDrive {
         let mut uri = "https://www.googleapis.com/upload/drive/v3/files".to_string();
 
         // Check if the file exists.
-        let files = self
-            .get_file_by_name(drive_id, name)
-            .await
-            .unwrap_or_default();
+        let files = self.get_file_by_name(drive_id, name).await.unwrap_or_default();
         if files.is_empty() {
             // Set the name,
             f.name = name.to_string();
@@ -535,14 +515,7 @@ impl GoogleDrive {
         let location = resp.headers().get("Location").unwrap().to_str().unwrap();
 
         // Now upload the file to that location.
-        let request = self.request(
-            Method::PUT,
-            location.to_string(),
-            (),
-            None,
-            contents,
-            mime_type,
-        );
+        let request = self.request(Method::PUT, location.to_string(), (), None, contents, mime_type);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -603,10 +576,7 @@ impl GoogleDrive {
         body: &[u8],
         is_public: bool,
     ) -> Result<ObjectResource, APIError> {
-        let mut q = vec![
-            ("name", name.to_string()),
-            ("uploadType", "media".to_string()),
-        ];
+        let mut q = vec![("name", name.to_string()), ("uploadType", "media".to_string())];
         if is_public {
             q.push(("predefinedAcl", "publicRead".to_string()));
         }
@@ -614,10 +584,7 @@ impl GoogleDrive {
         // Build the request.
         let request = self.request(
             Method::POST,
-            format!(
-                "https://storage.googleapis.com/upload/storage/v1/b/{}/o",
-                bucket
-            ),
+            format!("https://storage.googleapis.com/upload/storage/v1/b/{}/o", bucket),
             (),
             Some(q),
             body,
@@ -682,11 +649,7 @@ struct FilesResponse {
     /// Identifies what kind of resource this is. Value: the fixed string "drive#fileList".
     pub kind: String,
     /// The page token for the next page of files. This will be absent if the end of the files list has been reached. If the token is rejected for any reason, it should be discarded, and pagination should be restarted from the first page of results.
-    #[serde(
-        default,
-        rename = "nextPageToken",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "nextPageToken", skip_serializing_if = "String::is_empty")]
     pub next_page_token: String,
     /// Whether the search process was incomplete. If true, then some search results may be missing, since all documents were not searched. This may occur when searching multiple drives with the "allDrives" corpora, but all corpora could not be searched. When this happens, it is suggested that clients narrow their query by choosing a different corpus such as "user" or "drive".
     #[serde(rename = "incompleteSearch")]
@@ -701,11 +664,7 @@ struct DrivesResponse {
     /// Identifies what kind of resource this is. Value: the fixed string "drive#driveList".
     pub kind: String,
     /// The page token for the next page of shared drives. This will be absent if the end of the list has been reached. If the token is rejected for any reason, it should be discarded, and pagination should be restarted from the first page of results.
-    #[serde(
-        default,
-        rename = "nextPageToken",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "nextPageToken", skip_serializing_if = "String::is_empty")]
     pub next_page_token: String,
     /// The list of shared drives. If nextPageToken is populated, then this list may be incomplete and an additional page of results should be fetched.
     pub drives: Vec<Drive>,
@@ -737,11 +696,7 @@ pub struct Drive {
     #[serde(default, rename = "colorRgb", skip_serializing_if = "String::is_empty")]
     pub color_rgb: String,
     /// A short-lived link to this shared drive's background image.
-    #[serde(
-        default,
-        rename = "backgroundImageLink",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "backgroundImageLink", skip_serializing_if = "String::is_empty")]
     pub background_image_link: String,
     /// The name of this shared drive.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -758,11 +713,7 @@ pub struct Drive {
     #[serde(rename = "backgroundImageFile")]
     pub background_image_file: Option<DriveBackgroundImageFile>,
     /// The time at which the shared drive was created (RFC 3339 date-time).
-    #[serde(
-        default,
-        rename = "createdTime",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "createdTime", skip_serializing_if = "String::is_empty")]
     pub created_time: String,
     /// Whether the shared drive is hidden from default view.
     #[serde(default)]
@@ -948,25 +899,13 @@ pub struct File {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "mimeType")]
     pub mime_type: String,
     /// The last time the file was modified by the user (RFC 3339 date-time).
-    #[serde(
-        default,
-        rename = "modifiedByMeTime",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "modifiedByMeTime", skip_serializing_if = "String::is_empty")]
     pub modified_by_me_time: String,
     /// A short-lived link to the file's thumbnail, if available. Typically lasts on the order of hours. Only populated when the requesting app can access the file's content.
-    #[serde(
-        default,
-        rename = "thumbnailLink",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "thumbnailLink", skip_serializing_if = "String::is_empty")]
     pub thumbnail_link: String,
     /// The thumbnail version for use in thumbnail cache invalidation.
-    #[serde(
-        default,
-        rename = "thumbnailVersion",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "thumbnailVersion", skip_serializing_if = "String::is_empty")]
     pub thumbnail_version: String,
     /// Whether the file has been explicitly trashed, as opposed to recursively trashed from a parent folder.
     //#[serde(default, rename = "explicitlyTrashed")]
@@ -981,11 +920,7 @@ pub struct File {
     //#[serde(default, rename = "ownedByMe")]
     //pub owned_by_me: bool,
     /// The last time the file was viewed by the user (RFC 3339 date-time).
-    #[serde(
-        default,
-        rename = "viewedByMeTime",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "viewedByMeTime", skip_serializing_if = "String::is_empty")]
     pub viewed_by_me_time: String,
     /// The ID of the file.
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -1004,19 +939,11 @@ pub struct File {
     pub last_modifying_user: Option<User>,
     /// The color for a folder as an RGB hex string. The supported colors are published in the folderColorPalette field of the About resource.
     /// If an unsupported color is specified, the closest color in the palette will be used instead.
-    #[serde(
-        default,
-        rename = "folderColorRgb",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "folderColorRgb", skip_serializing_if = "String::is_empty")]
     pub folder_color_rgb: String,
     /// A collection of arbitrary key-value pairs which are private to the requesting app.
     /// Entries with null values are cleared in update and copy requests.
-    #[serde(
-        default,
-        rename = "appProperties",
-        skip_serializing_if = "HashMap::is_empty"
-    )]
+    #[serde(default, rename = "appProperties", skip_serializing_if = "HashMap::is_empty")]
     pub app_properties: HashMap<String, String>,
     /// Capabilities the current user has on this file. Each capability corresponds to a fine-grained action that a user may take.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1026,11 +953,7 @@ pub struct File {
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub properties: HashMap<String, String>,
     /// A link for opening the file in a relevant Google editor or viewer in a browser.
-    #[serde(
-        default,
-        rename = "webViewLink",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "webViewLink", skip_serializing_if = "String::is_empty")]
     pub web_view_link: String,
     /// A monotonically increasing version number for the file. This reflects every change made to the file on the server, even those not visible to the user.
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -1040,18 +963,10 @@ pub struct File {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub parents: Vec<String>,
     /// The MD5 checksum for the content of the file. This is only applicable to files with binary content in Google Drive.
-    #[serde(
-        default,
-        rename = "md5Checksum",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "md5Checksum", skip_serializing_if = "String::is_empty")]
     pub md5_checksum: String,
     /// Links for exporting Google Docs to specific formats.
-    #[serde(
-        default,
-        skip_serializing_if = "HashMap::is_empty",
-        rename = "exportLinks"
-    )]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty", rename = "exportLinks")]
     pub export_links: HashMap<String, String>,
     /// Whether the file has been shared. Not populated for items in shared drives.
     //#[serde(default)]
@@ -1061,18 +976,10 @@ pub struct File {
     pub copy_requires_writer_permission: bool,
     /// The full file extension extracted from the name field. May contain multiple concatenated extensions, such as "tar.gz". This is only available for files with binary content in Google Drive.
     /// This is automatically updated when the name field changes, however it is not cleared if the new name does not contain a valid extension.
-    #[serde(
-        default,
-        rename = "fullFileExtension",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "fullFileExtension", skip_serializing_if = "String::is_empty")]
     pub full_file_extension: String,
     /// The original filename of the uploaded content if available, or else the original value of the name field. This is only available for files with binary content in Google Drive.
-    #[serde(
-        default,
-        rename = "originalFilename",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "originalFilename", skip_serializing_if = "String::is_empty")]
     pub original_filename: String,
     /// Additional metadata about image media, if available.
     #[serde(rename = "imageMediaMetadata", skip_serializing_if = "Option::is_none")]
@@ -1082,11 +989,7 @@ pub struct File {
     pub description: String,
     /// The last time the file was modified by anyone (RFC 3339 date-time).
     /// Note that setting modifiedTime will also update modifiedByMeTime for the user.
-    #[serde(
-        default,
-        rename = "modifiedTime",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "modifiedTime", skip_serializing_if = "String::is_empty")]
     pub modified_time: String,
     /// Whether the file has been viewed by this user.
     //#[serde(default, rename = "viewedByMe")]
@@ -1098,32 +1001,16 @@ pub struct File {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
     /// The time at which the file was created (RFC 3339 date-time).
-    #[serde(
-        default,
-        rename = "createdTime",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "createdTime", skip_serializing_if = "String::is_empty")]
     pub created_time: String,
     /// The number of storage quota bytes used by the file. This includes the head revision as well as previous revisions with keepForever enabled.
-    #[serde(
-        default,
-        rename = "quotaBytesUsed",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "quotaBytesUsed", skip_serializing_if = "String::is_empty")]
     pub quota_bytes_used: String,
     /// The time that the item was trashed (RFC 3339 date-time). Only populated for items in shared drives.
-    #[serde(
-        default,
-        rename = "trashedTime",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "trashedTime", skip_serializing_if = "String::is_empty")]
     pub trashed_time: String,
     /// The time at which the file was shared with the user, if applicable (RFC 3339 date-time).
-    #[serde(
-        default,
-        rename = "sharedWithMeTime",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "sharedWithMeTime", skip_serializing_if = "String::is_empty")]
     pub shared_with_me_time: String,
     /// A static, unauthenticated link to the file's icon.
     #[serde(default, rename = "iconLink", skip_serializing_if = "String::is_empty")]
@@ -1135,11 +1022,7 @@ pub struct File {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
     /// A link for downloading the content of the file in a browser. This is only available for files with binary content in Google Drive.
-    #[serde(
-        default,
-        rename = "webContentLink",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "webContentLink", skip_serializing_if = "String::is_empty")]
     pub web_content_link: String,
     /// If the file has been explicitly trashed, the user who trashed it. Only populated for items in shared drives.
     #[serde(rename = "trashingUser", skip_serializing_if = "Option::is_none")]
@@ -1151,11 +1034,7 @@ pub struct File {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub spaces: Vec<String>,
     /// List of permission IDs for users with access to this file.
-    #[serde(
-        default,
-        rename = "permissionIds",
-        skip_serializing_if = "Vec::is_empty"
-    )]
+    #[serde(default, rename = "permissionIds", skip_serializing_if = "Vec::is_empty")]
     pub permission_ids: Vec<String>,
     /// Whether the file has been trashed, either explicitly or from a trashed parent folder. Only the owner may trash a file, and other users cannot see files in the owner's trash.
     //#[serde(default)]
@@ -1164,11 +1043,7 @@ pub struct File {
     #[serde(rename = "contentHints", skip_serializing_if = "Option::is_none")]
     pub content_hints: Option<FileContentHints>,
     /// The final component of fullFileExtension. This is only available for files with binary content in Google Drive.
-    #[serde(
-        default,
-        rename = "fileExtension",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "fileExtension", skip_serializing_if = "String::is_empty")]
     pub file_extension: String,
     /// Whether any users are granted file access directly on this file. This field is only populated for shared drive files.
     //#[serde(default, rename = "hasAugmentedPermissions")]
@@ -1177,11 +1052,7 @@ pub struct File {
     #[serde(default)]
     pub starred: bool,
     /// The ID of the file's head revision. This is currently only available for files with binary content in Google Drive.
-    #[serde(
-        default,
-        rename = "headRevisionId",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "headRevisionId", skip_serializing_if = "String::is_empty")]
     pub head_revision_id: String,
     /// The full list of permissions for the file. This is only available if the requesting user can share the file. Not populated for items in shared drives.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

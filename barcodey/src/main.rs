@@ -73,9 +73,7 @@ async fn main() -> Result<(), String> {
     }
 
     // Open the scanner device and listen for events to read.
-    let scanner = api
-        .open(vendor_id, product_id)
-        .expect("Failed to open device");
+    let scanner = api.open(vendor_id, product_id).expect("Failed to open device");
     println!(
         "Listening for events from (vendor ID: {} {:04x}) (product ID: {} {:04x}) in a loop...",
         vendor_id, vendor_id, product_id, product_id

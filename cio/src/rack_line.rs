@@ -8,13 +8,11 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use slack_chat_api::{
-    FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
-};
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::{
-    airtable::AIRTABLE_RACK_LINE_SIGNUPS_TABLE, companies::Company, core::UpdateAirtableRecord,
-    db::Database, schema::rack_line_subscribers,
+    airtable::AIRTABLE_RACK_LINE_SIGNUPS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
+    schema::rack_line_subscribers,
 };
 
 /// The data type for a RackLineSubscriber.
@@ -179,10 +177,7 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
 }
 
 /// Convert to a signup data type.
-pub fn as_rack_line_subscriber(
-    webhook: mailchimp_api::Webhook,
-    db: &Database,
-) -> NewRackLineSubscriber {
+pub fn as_rack_line_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> NewRackLineSubscriber {
     let mut signup: NewRackLineSubscriber = Default::default();
 
     let _list_id = webhook.data.list_id.as_ref().unwrap();

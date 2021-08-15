@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_REVIEWS_TABLE, applicants::ApplicantReviewer, companies::Company,
-    core::UpdateAirtableRecord, db::Database, schema::applicant_reviews,
+    airtable::AIRTABLE_REVIEWS_TABLE, applicants::ApplicantReviewer, companies::Company, core::UpdateAirtableRecord,
+    db::Database, schema::applicant_reviews,
 };
 
 #[db {
@@ -21,12 +21,7 @@ use crate::{
 pub struct NewApplicantReview {
     // TODO: We don't have to do this crazy rename after we update to not use the
     // Airtable form.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Name",
-        alias = "name"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Name", alias = "name")]
     pub name: String,
     #[serde(
         default,
@@ -147,9 +142,7 @@ pub async fn refresh_reviews(db: &Database, company: &Company) {
     }
 
     // Update them all from the database.
-    ApplicantReviews::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    ApplicantReviews::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 #[cfg(test)]

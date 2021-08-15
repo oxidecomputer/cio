@@ -9,9 +9,7 @@ use reqwest::StatusCode;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
-use shippo::{
-    Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo,
-};
+use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
 use crate::{
     airtable::{AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE},
@@ -32,9 +30,7 @@ use crate::{
         "tracking_number" = "String",
     },
 }]
-#[derive(
-    Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "inbound_shipments"]
 pub struct NewInboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -102,10 +98,7 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
 
 impl NewInboundShipment {
     pub fn oxide_tracking_link(&self) -> String {
-        format!(
-            "https://track.oxide.computer/{}/{}",
-            self.carrier, self.tracking_number
-        )
+        format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     // Get the tracking link for the provider.
@@ -118,10 +111,7 @@ impl NewInboundShipment {
                 self.tracking_number
             );
         } else if carrier == "ups" {
-            self.tracking_link = format!(
-                "https://www.ups.com/track?tracknum={}",
-                self.tracking_number
-            );
+            self.tracking_link = format!("https://www.ups.com/track?tracknum={}", self.tracking_number);
         } else if carrier == "fedex" {
             self.tracking_link = format!(
                 "https://www.fedex.com/apps/fedextrack/?tracknumbers={}",
@@ -167,11 +157,7 @@ impl NewInboundShipment {
         for h in ts.tracking_history {
             if h.status == *"TRANSIT" {
                 if let Some(shipped_time) = h.status_date {
-                    let current_shipped_time = if let Some(s) = self.shipped_time {
-                        s
-                    } else {
-                        Utc::now()
-                    };
+                    let current_shipped_time = if let Some(s) = self.shipped_time { s } else { Utc::now() };
 
                     if shipped_time < current_shipped_time {
                         self.shipped_time = Some(shipped_time);
@@ -188,10 +174,7 @@ impl NewInboundShipment {
 
 impl InboundShipment {
     pub fn oxide_tracking_link(&self) -> String {
-        format!(
-            "https://track.oxide.computer/{}/{}",
-            self.carrier, self.tracking_number
-        )
+        format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     // Get the tracking link for the provider.
@@ -204,10 +187,7 @@ impl InboundShipment {
                 self.tracking_number
             );
         } else if carrier == "ups" {
-            self.tracking_link = format!(
-                "https://www.ups.com/track?tracknum={}",
-                self.tracking_number
-            );
+            self.tracking_link = format!("https://www.ups.com/track?tracknum={}", self.tracking_number);
         } else if carrier == "fedex" {
             self.tracking_link = format!(
                 "https://www.fedex.com/apps/fedextrack/?tracknumbers={}",
@@ -530,16 +510,10 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
     }
 
     // Let's create the start time, which should be around 9am.
-    let start_time = next_day
-        .date()
-        .and_time(NaiveTime::from_hms(8, 59, 59))
-        .unwrap();
+    let start_time = next_day.date().and_time(NaiveTime::from_hms(8, 59, 59)).unwrap();
 
     // Let's create the end time, which should be around 5pm.
-    let end_time = next_day
-        .date()
-        .and_time(NaiveTime::from_hms(16, 59, 59))
-        .unwrap();
+    let end_time = next_day.date().and_time(NaiveTime::from_hms(16, 59, 59)).unwrap();
 
     (start_time.with_timezone(&Utc), end_time.with_timezone(&Utc))
 }
@@ -611,10 +585,7 @@ impl OutboundShipment {
     }
 
     pub fn oxide_tracking_link(&self) -> String {
-        format!(
-            "https://track.oxide.computer/{}/{}",
-            self.carrier, self.tracking_number
-        )
+        format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     /// Send the label to our printer.
@@ -642,11 +613,7 @@ impl OutboundShipment {
         match resp.status() {
             StatusCode::ACCEPTED => (),
             s => {
-                panic!(
-                    "[print]: status_code: {}, body: {}",
-                    s,
-                    resp.text().await.unwrap()
-                );
+                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
             }
         };
     }
@@ -678,10 +645,7 @@ impl OutboundShipment {
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!(
-                    "{}, your order from {} has been received!",
-                    self.name, company.name
-                ),
+                format!("{}, your order from {} has been received!", self.name, company.name),
                 format!(
                     "Below is the information for your order:
 
@@ -723,10 +687,7 @@ xoxo,
         // Send the message.
         sendgrid_client
             .send_mail(
-                format!(
-                    "{}, your package from {} is on the way!",
-                    self.name, company.name
-                ),
+                format!("{}, your package from {} is on the way!", self.name, company.name),
                 format!(
                     "Below is the information for your package:
 
@@ -847,10 +808,7 @@ https://airtable-shipments.corp.oxide.computer.xoxo,The \
 
         // If we already have a shippo id, get the information for the label.
         if !self.shippo_id.is_empty() {
-            let label = shippo_client
-                .get_shipping_label(&self.shippo_id)
-                .await
-                .unwrap();
+            let label = shippo_client.get_shipping_label(&self.shippo_id).await.unwrap();
 
             // Set the additional fields.
             self.tracking_number = label.tracking_number;
@@ -913,11 +871,7 @@ https://airtable-shipments.corp.oxide.computer.xoxo,The \
             for h in status.tracking_history {
                 if h.status == *"TRANSIT" {
                     if let Some(shipped_time) = h.status_date {
-                        let current_shipped_time = if let Some(s) = self.shipped_time {
-                            s
-                        } else {
-                            Utc::now()
-                        };
+                        let current_shipped_time = if let Some(s) = self.shipped_time { s } else { Utc::now() };
 
                         if shipped_time < current_shipped_time {
                             self.shipped_time = Some(shipped_time);
@@ -1025,9 +979,7 @@ https://airtable-shipments.corp.oxide.computer.xoxo,The \
         // Now we can create our label from the available rates.
         // Try to find the rate that is "BESTVALUE" or "CHEAPEST".
         for rate in shipment.rates {
-            if rate.attributes.contains(&"BESTVALUE".to_string())
-                || rate.attributes.contains(&"CHEAPEST".to_string())
-            {
+            if rate.attributes.contains(&"BESTVALUE".to_string()) || rate.attributes.contains(&"CHEAPEST".to_string()) {
                 // Use this rate.
                 // Create the shipping label.
                 let label = shippo_client
@@ -1165,11 +1117,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         // in the loop above. Otherwise the email notifications get stuck and you get
         // innundated with notifications your package is on the way. Since it
         // thinks the status is always changing.
-        let existing = OutboundShipment::get_from_db(
-            db,
-            ns.carrier.to_string(),
-            ns.tracking_number.to_string(),
-        );
+        let existing = OutboundShipment::get_from_db(db, ns.carrier.to_string(), ns.tracking_number.to_string());
         if existing.is_some() {
             // We already have this shipment. Continue through our loop.
             continue;
@@ -1184,9 +1132,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         s.update(db).await;
     }
 
-    OutboundShipments::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    OutboundShipments::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 pub fn clean_provider_name(s: &str) -> String {
@@ -1228,9 +1174,7 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) {
         shipment.update(db).await;
     }
 
-    InboundShipments::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    InboundShipments::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 pub fn clean_address_string(s: &str) -> String {

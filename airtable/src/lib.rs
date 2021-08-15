@@ -104,20 +104,12 @@ impl Airtable {
         &self.key
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: String,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
         let base = Url::parse(ENDPOINT).unwrap();
-        let url = base
-            .join(&(self.base_id.to_string() + "/" + &path))
-            .unwrap();
+        let url = base.join(&(self.base_id.to_string() + "/" + &path)).unwrap();
 
         let bt = format!("Bearer {}", self.key);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
@@ -218,11 +210,7 @@ impl Airtable {
     }
 
     /// Get record from a table.
-    pub async fn get_record<T: DeserializeOwned>(
-        &self,
-        table: &str,
-        record_id: &str,
-    ) -> Result<Record<T>, APIError> {
+    pub async fn get_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<Record<T>, APIError> {
         // Build the request.
         let request = self.request(Method::GET, format!("{}/{}", table, record_id), (), None);
 
@@ -362,10 +350,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!(
-                "v0/meta/enterpriseAccounts/{}/users",
-                self.enterprise_account_id
-            ),
+            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![("state", "provisioned".to_string())]),
         );
@@ -403,10 +388,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!(
-                "v0/meta/enterpriseAccounts/{}/users",
-                self.enterprise_account_id
-            ),
+            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![
                 ("email", email.to_string()),
@@ -502,10 +484,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::DELETE,
-            format!(
-                "v0/meta/enterpriseAccounts/{}/users",
-                self.enterprise_account_id
-            ),
+            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![("email", email.to_string())]),
         );
@@ -741,11 +720,7 @@ pub struct UsersResponse {
 /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserDeleteUserByEmail
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DeleteUserResponse {
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "deletedUsers"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "deletedUsers")]
     pub deleted_users: Vec<User>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub errors: Vec<ErrorResponse>,
@@ -854,11 +829,7 @@ pub struct EnterpriseUser {
         deserialize_with = "deserialize_null_string::deserialize"
     )]
     pub name: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "lastActivityTime"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "lastActivityTime")]
     pub last_activity_time: Option<DateTime<Utc>>,
     #[serde(
         default,
@@ -875,17 +846,9 @@ pub struct EnterpriseUser {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Collaborations {
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "workspaceCollaborations"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "workspaceCollaborations")]
     pub workspace_collaborations: Vec<Collaboration>,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "baseCollaborations"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "baseCollaborations")]
     pub base_collaborations: Vec<Collaboration>,
 }
 

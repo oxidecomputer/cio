@@ -90,13 +90,7 @@ impl Sheets {
         &self.token
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: String,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -189,11 +183,7 @@ impl Sheets {
         // Build the request.
         let request = self.request(
             Method::PUT,
-            format!(
-                "spreadsheets/{}/values/{}",
-                sheet_id.to_string(),
-                range.to_string()
-            ),
+            format!("spreadsheets/{}/values/{}", sheet_id.to_string(), range.to_string()),
             ValueRange {
                 range: Some(range.to_string()),
                 values: Some(vec![vec![value]]),
@@ -202,10 +192,7 @@ impl Sheets {
             Some(vec![
                 ("valueInputOption", "USER_ENTERED".to_string()),
                 ("responseValueRenderOption", "FORMATTED_VALUE".to_string()),
-                (
-                    "responseDateTimeRenderOption",
-                    "FORMATTED_STRING".to_string(),
-                ),
+                ("responseDateTimeRenderOption", "FORMATTED_STRING".to_string()),
             ]),
         );
 

@@ -67,13 +67,7 @@ impl RevAI {
         RevAI::new(key)
     }
 
-    fn request(
-        &self,
-        method: Method,
-        path: &str,
-        form: Option<Form>,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request {
+    fn request(&self, method: Method, path: &str, form: Option<Form>, query: Option<Vec<(&str, String)>>) -> Request {
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(path).unwrap();
 
@@ -87,22 +81,12 @@ impl RevAI {
         }
         if path.ends_with("/transcript") {
             // Get the plain text transcript
-            headers.append(
-                header::ACCEPT,
-                header::HeaderValue::from_static("text/plain"),
-            );
+            headers.append(header::ACCEPT, header::HeaderValue::from_static("text/plain"));
         } else {
-            headers.append(
-                header::ACCEPT,
-                header::HeaderValue::from_static("application/json"),
-            );
+            headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
         }
 
-        let mut rb = self
-            .client
-            .request(method, url)
-            .headers(headers)
-            .bearer_auth(&self.key);
+        let mut rb = self.client.request(method, url).headers(headers).bearer_auth(&self.key);
 
         match query {
             None => (),

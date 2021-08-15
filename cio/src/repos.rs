@@ -13,14 +13,12 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_GITHUB_REPOS_TABLE, companies::Company, core::UpdateAirtableRecord,
-    db::Database, schema::github_repos,
+    airtable::AIRTABLE_GITHUB_REPOS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
+    schema::github_repos,
 };
 
 /// The data type for a GitHub user.
-#[derive(
-    Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize,
-)]
+#[derive(Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize)]
 #[sql_type = "Jsonb"]
 pub struct GitHubUser {
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -522,11 +520,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
 
         // Get this repository's teams.
         let mut ts: Vec<octorust::types::Team> = Default::default();
-        match github
-            .repos()
-            .list_all_teams(&company.github_org, &r.name)
-            .await
-        {
+        match github.repos().list_all_teams(&company.github_org, &r.name).await {
             Ok(v) => (ts = v),
             Err(e) => {
                 // If we get a 404 for teams then likely the repo is new, we can just move on and
@@ -548,8 +542,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
 
             // Check if the team already has the permission.
             if let Some(val) = teams.get(team_name) {
-                if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin"
-                {
+                if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin" {
                     // Continue since they already have permission.
                     println!(
                         "team {} already has push access to {}/{}",
@@ -609,9 +602,7 @@ mod tests {
             sync_repo_settings(&db, &github, &company).await;
             refresh_db_github_repos(&db, &github, &company).await;
 
-            GithubRepos::get_from_db(&db, company.id)
-                .update_airtable(&db)
-                .await;
+            GithubRepos::get_from_db(&db, company.id).update_airtable(&db).await;
         }
     }
 }

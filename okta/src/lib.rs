@@ -143,11 +143,7 @@ impl Okta {
     /// Create a user.
     pub async fn create_user(&self, profile: Profile) -> Result<User, APIError> {
         // Build the request.
-        let rb = self.request(
-            Method::POST,
-            "/api/v1/users?activate=true",
-            NewUser { profile },
-        );
+        let rb = self.request(Method::POST, "/api/v1/users?activate=true", NewUser { profile });
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -196,11 +192,7 @@ impl Okta {
         let user = self.get_user(&profile.login).await.unwrap();
 
         // Build the request.
-        let rb = self.request(
-            Method::PUT,
-            format!("/api/v1/users/{}", user.id),
-            NewUser { profile },
-        );
+        let rb = self.request(Method::PUT, format!("/api/v1/users/{}", user.id), NewUser { profile });
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -322,11 +314,7 @@ impl Okta {
         let u = self.get_user(user).await.unwrap();
 
         // Build the request.
-        let rb = self.request(
-            Method::PUT,
-            format!("/api/v1/groups/{}/users/{}", group_id, u.id),
-            (),
-        );
+        let rb = self.request(Method::PUT, format!("/api/v1/groups/{}/users/{}", group_id, u.id), ());
         let request = rb.build().unwrap();
 
         let resp = self.client.execute(request).await.unwrap();
@@ -495,11 +483,7 @@ pub struct ChangePassword {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Profile {
-    #[serde(
-        default,
-        rename = "firstName",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, rename = "firstName", skip_serializing_if = "String::is_empty")]
     pub first_name: String,
     #[serde(default, rename = "lastName", skip_serializing_if = "String::is_empty")]
     pub last_name: String,

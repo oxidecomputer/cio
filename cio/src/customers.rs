@@ -30,17 +30,12 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
         }
 
         let notes_path = record.fields.notes_link.replace(
-            &format!(
-                "https://github.com/{}/reports/blob/master",
-                company.github_org
-            ),
+            &format!("https://github.com/{}/reports/blob/master", company.github_org),
             "",
         );
 
         // Get the reports repo client.
-        let (content, _) =
-            get_file_content_from_repo(&github, &company.github_org, "reports", "", &notes_path)
-                .await;
+        let (content, _) = get_file_content_from_repo(&github, &company.github_org, "reports", "", &notes_path).await;
         let decoded = from_utf8(&content).unwrap().trim().to_string();
         // Compare the notes and see if we need to update them.
         if record.fields.notes == decoded {

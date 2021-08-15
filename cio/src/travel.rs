@@ -5,8 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_BOOKINGS_TABLE, companies::Company, core::UpdateAirtableRecord,
-    db::Database, schema::bookings,
+    airtable::AIRTABLE_BOOKINGS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database, schema::bookings,
 };
 
 #[db {

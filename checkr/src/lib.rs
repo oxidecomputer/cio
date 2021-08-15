@@ -68,13 +68,7 @@ impl Checkr {
         Checkr::new(key)
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: &str,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -134,12 +128,7 @@ impl Checkr {
         // Paginate if we should.
         // TODO: make this more DRY
         while !next_href.is_empty() {
-            request = self.request(
-                Method::GET,
-                next_href.trim_start_matches(ENDPOINT),
-                (),
-                None,
-            );
+            request = self.request(Method::GET, next_href.trim_start_matches(ENDPOINT), (), None);
 
             resp = self.client.execute(request).await.unwrap();
             match resp.status() {
@@ -251,11 +240,7 @@ impl Checkr {
     }
 
     /// Create a new invitation.
-    pub async fn create_invitation(
-        &self,
-        candidate_id: &str,
-        package: &str,
-    ) -> Result<Invitation, APIError> {
+    pub async fn create_invitation(&self, candidate_id: &str, package: &str) -> Result<Invitation, APIError> {
         // Build the request.
         let request = self.request(
             Method::POST,

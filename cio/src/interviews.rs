@@ -71,11 +71,7 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) {
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(
-        &company.gsuite_account_id,
-        &company.gsuite_domain,
-        token.clone(),
-    );
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Get the list of our calendars.
     let calendars = gsuite.list_calendars().await.unwrap();
@@ -90,10 +86,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
         println!("Getting events for {}", calendar.id);
-        let events = gsuite
-            .list_calendar_events(&calendar.id, true)
-            .await
-            .unwrap();
+        let events = gsuite.list_calendar_events(&calendar.id, true).await.unwrap();
 
         for event in events {
             // If the event has been cancelled, clear it out of the database.
@@ -143,8 +136,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
 
                     // If the email is not their work email, let's firgure it out based
                     // on the information from their user.
-                    if !email.ends_with(&company.gsuite_domain) && !email.ends_with(&company.domain)
-                    {
+                    if !email.ends_with(&company.gsuite_domain) && !email.ends_with(&company.domain) {
                         match users::dsl::users
                             .filter(
                                 users::dsl::recovery_email
@@ -254,10 +246,7 @@ pub async fn compile_packets(db: &Database, company: &Company) {
     let drive_client = GoogleDrive::new(token);
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client
-        .get_drive_by_name("Automated Documents")
-        .await
-        .unwrap();
+    let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
@@ -596,12 +585,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
                 .into_iter()
                 .map(|(_, object_id)| {
                     if !first {
-                        let bookmark = Bookmark::new(
-                            format!("Page_{}", pagenum),
-                            [0.0, 0.0, 1.0],
-                            0,
-                            object_id,
-                        );
+                        let bookmark = Bookmark::new(format!("Page_{}", pagenum), [0.0, 0.0, 1.0], 0, object_id);
                         document.add_bookmark(bookmark, None);
                         first = true;
                         pagenum += 1;
@@ -677,9 +661,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
             let mut dictionary = dictionary.clone();
             dictionary.set("Parent", pages_object.as_ref().unwrap().0);
 
-            document
-                .objects
-                .insert(*object_id, Object::Dictionary(dictionary));
+            document.objects.insert(*object_id, Object::Dictionary(dictionary));
         }
     }
 
@@ -709,9 +691,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
                 .collect::<Vec<_>>(),
         );
 
-        document
-            .objects
-            .insert(pages_object.0, Object::Dictionary(dictionary));
+        document.objects.insert(pages_object.0, Object::Dictionary(dictionary));
     }
 
     // Build a new "Catalog" with updated fields

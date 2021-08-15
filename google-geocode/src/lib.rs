@@ -71,13 +71,7 @@ impl Geocode {
         Geocode::new(key)
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: &str,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -120,10 +114,7 @@ impl Geocode {
             Method::GET,
             "",
             (),
-            Some(vec![
-                ("address", address.to_string()),
-                ("key", self.key.to_string()),
-            ]),
+            Some(vec![("address", address.to_string()), ("key", self.key.to_string())]),
         );
 
         let resp = self.client.execute(request).await.unwrap();

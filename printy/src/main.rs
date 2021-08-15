@@ -2,8 +2,8 @@ use std::{env, fs::File, io::Write, process::Command, str::from_utf8, sync::Arc}
 
 use cio_api::swag_inventory::PrintLabelsRequest;
 use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError,
-    HttpResponseAccepted, HttpResponseOk, HttpServerStarter, RequestContext, TypedBody,
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
+    HttpResponseOk, HttpServerStarter, RequestContext, TypedBody,
 };
 use sentry::IntoDsn;
 use uuid::Uuid;
@@ -127,9 +127,7 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
     Ok(HttpResponseOk(api_context.schema.to_string()))

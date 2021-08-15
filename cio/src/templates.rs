@@ -62,11 +62,7 @@ struct GitHubTeamMembers {
  *
  * This function uses the users.toml and the groups.toml file in the configs repo for information.
  */
-pub async fn generate_terraform_files_for_okta(
-    github: &octorust::Client,
-    db: &Database,
-    company: &Company,
-) {
+pub async fn generate_terraform_files_for_okta(github: &octorust::Client, db: &Database, company: &Company) {
     if company.okta_domain.is_empty() {
         // Return early, the company does not use Okta.
         return;
@@ -130,11 +126,7 @@ pub async fn generate_terraform_files_for_okta(
  *
  * This function uses the users.toml file in the configs repo for information.
  */
-pub async fn generate_terraform_files_for_aws_and_github(
-    github: &octorust::Client,
-    db: &Database,
-    company: &Company,
-) {
+pub async fn generate_terraform_files_for_aws_and_github(github: &octorust::Client, db: &Database, company: &Company) {
     let users = Users::get_from_db(db, company.id);
 
     let owner = &company.github_org;
@@ -208,11 +200,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
             .unwrap();
 
         // Join it with the directory to save the files in.
-        let file = format!(
-            "{}/generated.team-members-{}.tf",
-            github_path,
-            team.to_string()
-        );
+        let file = format!("{}/generated.team-members-{}.tf", github_path, team.to_string());
 
         create_or_update_file_in_github_repo(
             github,
@@ -256,10 +244,8 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
     let nginx_file = format!("/nginx/conf.d/generated.{}.{}.conf", subdomain, domain);
     // Add a warning to the top of the file that it should _never_
     // be edited by hand and generate it.
-    let mut nginx_rendered = TEMPLATE_WARNING.to_owned()
-        + &handlebars
-            .render_template(TEMPLATE_NGINX, &shorturls)
-            .unwrap();
+    let mut nginx_rendered =
+        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_NGINX, &shorturls).unwrap();
     // Add the vim formating string.
     nginx_rendered += "# vi: ft=nginx";
 
@@ -274,16 +260,11 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
     .await;
 
     // Generate the paths nginx file.
-    let nginx_paths_file = format!(
-        "/nginx/conf.d/generated.{}.paths.{}.conf",
-        subdomain, domain
-    );
+    let nginx_paths_file = format!("/nginx/conf.d/generated.{}.paths.{}.conf", subdomain, domain);
     // Add a warning to the top of the file that it should _never_
     // be edited by hand and generate it.
-    let mut nginx_paths_rendered = TEMPLATE_WARNING.to_owned()
-        + &handlebars
-            .render_template(TEMPLATE_NGINX_PATHS, &shorturls)
-            .unwrap();
+    let mut nginx_paths_rendered =
+        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_NGINX_PATHS, &shorturls).unwrap();
     // Add the vim formating string.
     nginx_paths_rendered += "# vi: ft=nginx";
 
@@ -323,10 +304,7 @@ pub async fn generate_terraform_files_for_shorturls(
     let domain = shorturls[0].domain.to_string();
 
     // Generate the terraform file.
-    let terraform_file = format!(
-        "/terraform/cloudflare/generated.{}.{}.tf",
-        subdomain, domain
-    );
+    let terraform_file = format!("/terraform/cloudflare/generated.{}.{}.tf", subdomain, domain);
     // Add a warning to the top of the file that it should _never_
     // be edited by hand and generate it.
     let terraform_rendered = TEMPLATE_WARNING.to_owned()

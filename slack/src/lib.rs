@@ -112,14 +112,7 @@ impl Slack {
         let client_secret = env::var("SLACK_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("SLACK_REDIRECT_URI").unwrap();
 
-        Slack::new(
-            client_id,
-            client_secret,
-            workspace_id,
-            redirect_uri,
-            token,
-            user_token,
-        )
+        Slack::new(client_id, client_secret, workspace_id, redirect_uri, token, user_token)
     }
 
     fn request<B>(
@@ -169,16 +162,17 @@ impl Slack {
         let state = uuid::Uuid::new_v4();
         format!(
             "https://slack.com/oauth/v2/authorize?scope={}&client_id={}&user_scope={}&redirect_uri={}&state={}",
-            "commands,incoming-webhook,team:read,users:read,users:read.email,users.profile:read", self.client_id, "identity.basic,identity.email", self.redirect_uri, state
+            "commands,incoming-webhook,team:read,users:read,users:read.email,users.profile:read",
+            self.client_id,
+            "identity.basic,identity.email",
+            self.redirect_uri,
+            state
         )
     }
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
         let params = [
             ("client_id", self.client_id.to_string()),
@@ -283,13 +277,7 @@ impl Slack {
     /// FROM: https://api.slack.com/methods/admin.users.invite
     pub async fn invite_user(&self, invite: UserInvite) -> Result<(), APIError> {
         // Build the request.
-        let request = self.request(
-            &self.user_token,
-            Method::POST,
-            "admin.users.invite",
-            invite,
-            None,
-        );
+        let request = self.request(&self.user_token, Method::POST, "admin.users.invite", invite, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -312,13 +300,7 @@ impl Slack {
         let mut body: HashMap<&str, &str> = HashMap::new();
         body.insert("team_id", &self.workspace_id);
         body.insert("user_id", user_id);
-        let request = self.request(
-            &self.user_token,
-            Method::POST,
-            "admin.users.remove",
-            body,
-            None,
-        );
+        let request = self.request(&self.user_token, Method::POST, "admin.users.remove", body, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -336,11 +318,7 @@ impl Slack {
 
     /// Set a user's profile information, including custom status.
     /// FROM: https://api.slack.com/methods/users.profile.set
-    pub async fn update_user_profile(
-        &self,
-        user_id: &str,
-        profile: UserProfile,
-    ) -> Result<(), APIError> {
+    pub async fn update_user_profile(&self, user_id: &str, profile: UserProfile) -> Result<(), APIError> {
         // Build the request.
         let request = self.request(
             &self.user_token,
@@ -370,12 +348,7 @@ impl Slack {
     /// Post text to a channel.
     pub async fn post_to_channel(url: String, v: Value) -> Result<(), APIError> {
         let client = Client::new();
-        let resp = client
-            .post(&url)
-            .body(Body::from(v.to_string()))
-            .send()
-            .await
-            .unwrap();
+        let resp = client.post(&url).body(Body::from(v.to_string())).send().await.unwrap();
 
         match resp.status() {
             StatusCode::OK => (),

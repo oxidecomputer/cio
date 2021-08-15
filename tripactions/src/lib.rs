@@ -79,13 +79,7 @@ impl TripActions {
         TripActions::new(client_id, client_secret, token)
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: &str,
-        body: B,
-        query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -123,10 +117,7 @@ impl TripActions {
 
     /// Get all the bookings in the account.
     pub async fn get_bookings(&self) -> Result<Vec<Booking>, APIError> {
-        let date_from = Utc::now()
-            .checked_sub_signed(Duration::weeks(52))
-            .unwrap()
-            .timestamp();
+        let date_from = Utc::now().checked_sub_signed(Duration::weeks(52)).unwrap().timestamp();
         let date_to = Utc::now().timestamp();
 
         // Build the request.
@@ -196,10 +187,7 @@ impl TripActions {
 
     pub async fn get_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
         let params = [
             ("grant_type", "client_credentials"),

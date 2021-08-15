@@ -9,9 +9,7 @@ pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
-use std::{
-    collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc,
-};
+use std::{collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc};
 
 use chrono::{offset::Utc, DateTime, NaiveDate, TimeZone};
 use chrono_humanize::HumanTime;
@@ -34,24 +32,20 @@ use cio_api::{
     rfds::{is_image, NewRFD, RFD},
     schema::{api_tokens, applicants, journal_club_meetings, rfds},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
-    shorturls::{
-        generate_shorturls_for_configs_links, generate_shorturls_for_repos,
-        generate_shorturls_for_rfds,
-    },
+    shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
     swag_inventory::SwagInventoryItem,
     swag_store::Order,
     templates::generate_terraform_files_for_okta,
     utils::{
-        create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string,
-        get_file_content_from_repo, merge_json,
+        create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string, get_file_content_from_repo,
+        merge_json,
     },
 };
 use diesel::prelude::*;
 use docusign::DocuSign;
 use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError,
-    HttpResponseAccepted, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext,
-    TypedBody, UntypedBody,
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
+    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
 use google_drive::GoogleDrive;
 use gusto_api::Client as Gusto;
@@ -118,24 +112,19 @@ async fn main() -> Result<(), String> {
     api.register(github_rate_limit).unwrap();
     api.register(listen_airtable_applicants_request_background_check_webhooks)
         .unwrap();
-    api.register(listen_airtable_applicants_review_create_webhooks)
-        .unwrap();
-    api.register(listen_airtable_applicants_update_webhooks)
-        .unwrap();
+    api.register(listen_airtable_applicants_review_create_webhooks).unwrap();
+    api.register(listen_airtable_applicants_update_webhooks).unwrap();
     api.register(listen_airtable_assets_items_print_barcode_label_webhooks)
         .unwrap();
     api.register(listen_airtable_employees_print_home_address_label_webhooks)
         .unwrap();
-    api.register(listen_airtable_shipments_inbound_create_webhooks)
-        .unwrap();
+    api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_create_webhooks)
         .unwrap();
     api.register(listen_airtable_shipments_outbound_reprint_label_webhooks)
         .unwrap();
-    api.register(
-        listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks,
-    )
-    .unwrap();
+    api.register(listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks)
+        .unwrap();
     api.register(listen_airtable_shipments_outbound_schedule_pickup_webhooks)
         .unwrap();
     api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks)
@@ -143,8 +132,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_application_submit_requests).unwrap();
     api.register(listen_applicant_review_requests).unwrap();
-    api.register(listen_application_files_upload_requests)
-        .unwrap();
+    api.register(listen_application_files_upload_requests).unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_github_callback).unwrap();
@@ -165,22 +153,16 @@ async fn main() -> Result<(), String> {
     api.register(listen_auth_slack_consent).unwrap();
     api.register(listen_auth_quickbooks_callback).unwrap();
     api.register(listen_auth_quickbooks_consent).unwrap();
-    api.register(listen_checkr_background_update_webhooks)
-        .unwrap();
-    api.register(listen_docusign_envelope_update_webhooks)
-        .unwrap();
-    api.register(listen_emails_incoming_sendgrid_parse_webhooks)
-        .unwrap();
+    api.register(listen_checkr_background_update_webhooks).unwrap();
+    api.register(listen_docusign_envelope_update_webhooks).unwrap();
+    api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
     api.register(listen_google_sheets_edit_webhooks).unwrap();
-    api.register(listen_google_sheets_row_create_webhooks)
-        .unwrap();
+    api.register(listen_google_sheets_row_create_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
-    api.register(listen_mailchimp_mailing_list_webhooks)
-        .unwrap();
+    api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
     api.register(listen_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_products_sold_count_requests).unwrap();
-    api.register(listen_shippo_tracking_update_webhooks)
-        .unwrap();
+    api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(listen_slack_commands_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
@@ -247,9 +229,7 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
     Ok(HttpResponseOk(api_context.schema.to_string()))
@@ -287,10 +267,9 @@ async fn listen_products_sold_count_requests(
     // Get the applicants that need to be triaged.
     let applicants = applicants::dsl::applicants
         .filter(
-            applicants::dsl::cio_company_id.eq(company.id).and(
-                applicants::dsl::status
-                    .eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
-            ),
+            applicants::dsl::cio_company_id
+                .eq(company.id)
+                .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
         )
         .load::<Applicant>(&api_context.db.conn())
         .unwrap();
@@ -368,8 +347,7 @@ async fn listen_github_webhooks(
         EventType::Repository => {
             println!("`{}` {:?}", event_type.name(), event);
 
-            let company =
-                Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
+            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
             let github = company.authenticate_github();
 
             // Now let's handle the event.
@@ -459,10 +437,7 @@ async fn trigger_rfd_update_by_number(
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
-        sentry::capture_message(
-            &format!("No RFD was found with number `{}`", num),
-            sentry::Level::Fatal,
-        );
+        sentry::capture_message(&format!("No RFD was found with number `{}`", num), sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -471,13 +446,8 @@ async fn trigger_rfd_update_by_number(
     rfd.expand(&github, &oxide).await;
     println!("updated  RFD {}", rfd.number_string);
 
-    rfd.convert_and_upload_pdf(&github, &drive_client, &oxide)
-        .await;
-    println!(
-        "updated pdf `{}` for RFD {}",
-        rfd.get_pdf_filename(),
-        rfd.number_string
-    );
+    rfd.convert_and_upload_pdf(&github, &drive_client, &oxide).await;
+    println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
     rfd.update(db).await;
@@ -491,9 +461,7 @@ async fn trigger_rfd_update_by_number(
     method = GET,
     path = "/github/ratelimit",
 }]
-async fn github_rate_limit(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     sentry::start_session();
     let api_context = rqctx.context();
 
@@ -572,10 +540,7 @@ async fn listen_google_sheets_edit_webhooks(
     //  - The name of the column that was updated.
     // Let's first get the email for this applicant. This is always in column B.
     let mut cell_name = format!("B{}", event.event.range.row_start);
-    let email = sheets
-        .get_value(&event.spreadsheet.id, cell_name)
-        .await
-        .unwrap();
+    let email = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
@@ -654,15 +619,12 @@ async fn listen_google_sheets_edit_webhooks(
                 if let Some(ds) = dsa {
                     // Get the template we need.
                     let offer_template_id =
-                        get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE)
-                            .await;
+                        get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
 
-                    a.do_docusign_offer(db, &ds, &offer_template_id, &oxide)
-                        .await;
+                    a.do_docusign_offer(db, &ds, &offer_template_id, &oxide).await;
 
                     let piia_template_id =
-                        get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE)
-                            .await;
+                        get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE).await;
                     a.do_docusign_piia(db, &ds, &piia_template_id, &oxide).await;
                 }
             }
@@ -810,19 +772,11 @@ pub struct GoogleSpreadsheetEvent {
     pub range: GoogleSpreadsheetRange,
     #[serde(default)]
     pub source: GoogleSpreadsheetSource,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "triggerUid"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "triggerUid")]
     pub trigger_uid: String,
     #[serde(default)]
     pub user: GoogleSpreadsheetUser,
-    #[serde(
-        default,
-        skip_serializing_if = "HashMap::is_empty",
-        rename = "namedValues"
-    )]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty", rename = "namedValues")]
     pub named_values: HashMap<String, Vec<String>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub values: Vec<String>,
@@ -902,8 +856,7 @@ async fn listen_google_sheets_row_create_webhooks(
     }
 
     // Parse the applicant out of the row information.
-    let mut applicant =
-        NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
+    let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
 
     if applicant.email.is_empty() {
         sentry::capture_message(
@@ -930,10 +883,7 @@ async fn listen_google_sheets_row_create_webhooks(
         .await;
 
     if !applicant.sent_email_received {
-        println!(
-            "applicant is new, sending internal notifications: {:?}",
-            applicant
-        );
+        println!("applicant is new, sending internal notifications: {:?}", applicant);
 
         // Send a company-wide email.
         applicant.send_email_internally(db).await;
@@ -982,8 +932,7 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     }
 
     // Get the row from airtable.
-    let user =
-        User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Create a new shipment for the employee and print the label.
     user.create_shipment_to_home_address(&api_context.db).await;
@@ -1016,8 +965,7 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     }
 
     // Get the row from airtable.
-    let asset_item =
-        AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Print the barcode label(s).
     asset_item.print_label(&api_context.db).await;
@@ -1051,19 +999,12 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     }
 
     // Get the row from airtable.
-    let swag_inventory_item = SwagInventoryItem::get_from_airtable(
-        &event.record_id,
-        &api_context.db,
-        event.cio_company_id,
-    )
-    .await;
+    let swag_inventory_item =
+        SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Print the barcode label(s).
     swag_inventory_item.print_label(&api_context.db).await;
-    println!(
-        "swag inventory item {} printed label",
-        swag_inventory_item.name
-    );
+    println!("swag inventory item {} printed label", swag_inventory_item.name);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1093,17 +1034,11 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     }
 
     // Get the row from airtable.
-    let mut applicant =
-        Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
     if applicant.criminal_background_check_status.is_empty() {
         // Request the background check, since we previously have not requested one.
-        applicant
-            .send_background_check_invitation(&api_context.db)
-            .await;
-        println!(
-            "sent background check invitation to applicant: {}",
-            applicant.email
-        );
+        applicant.send_background_check_invitation(&api_context.db).await;
+        println!("sent background check invitation to applicant: {}", applicant.email);
     }
 
     sentry::end_session();
@@ -1135,9 +1070,7 @@ async fn listen_airtable_applicants_review_create_webhooks(
     }
 
     // Get the row from airtable.
-    let mut review =
-        ApplicantReview::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-            .await;
+    let mut review = ApplicantReview::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     if review.applicant.is_empty() || review.reviewer.is_empty() {
         sentry::capture_message(
@@ -1207,8 +1140,7 @@ async fn listen_airtable_applicants_update_webhooks(
     }
 
     // Get the row from airtable.
-    let applicant =
-        Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     if applicant.status.is_empty() {
         sentry::capture_message(
@@ -1267,12 +1199,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     }
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(
-        &event.record_id,
-        &api_context.db,
-        event.cio_company_id,
-    )
-    .await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // If it is a row we created from our internal store do nothing.
     if shipment.notes.contains("Oxide store")
@@ -1292,9 +1219,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     // Update the row in our database.
     let mut new_shipment = shipment.update(&api_context.db).await;
     // Create the shipment in shippo.
-    new_shipment
-        .create_or_get_shippo_shipment(&api_context.db)
-        .await;
+    new_shipment.create_or_get_shippo_shipment(&api_context.db).await;
     // Update airtable again.
     new_shipment.update(&api_context.db).await;
 
@@ -1336,12 +1261,8 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let mut shipment = OutboundShipment::get_from_airtable(
-        &event.record_id,
-        &api_context.db,
-        event.cio_company_id,
-    )
-    .await;
+    let mut shipment =
+        OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Reprint the label.
     shipment.print_label(&api_context.db).await;
@@ -1381,19 +1302,11 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(
-        &event.record_id,
-        &api_context.db,
-        event.cio_company_id,
-    )
-    .await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Resend the email to the recipient.
     shipment.send_email_to_recipient(&api_context.db).await;
-    println!(
-        "resent the shipment email to the recipient {}",
-        shipment.email
-    );
+    println!("resent the shipment email to the recipient {}", shipment.email);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1438,11 +1351,7 @@ pub struct IncomingEmail {
     pub dkim: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "content-ids"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "content-ids")]
     pub content_ids: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub to: String,
@@ -1466,11 +1375,7 @@ pub struct IncomingEmail {
     pub subject: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub spam_score: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "attachment-info"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "attachment-info")]
     pub attachment_info: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub charsets: String,
@@ -1512,8 +1417,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     // Parse the form body.
     for (name, value) in &form_data.fields {
         if i.carrier.is_empty() && (name == "html" || name == "text" || name == "email") {
-            let (carrier, tracking_number) =
-                crate::tracking_numbers::parse_tracking_information(value);
+            let (carrier, tracking_number) = crate::tracking_numbers::parse_tracking_information(value);
             if !carrier.is_empty() {
                 i.carrier = carrier.to_string();
                 i.tracking_number = tracking_number.to_string();
@@ -1604,15 +1508,8 @@ async fn listen_applicant_review_requests(
     let api_context = rqctx.context();
     let event = body_param.into_inner();
 
-    if event.name.is_empty()
-        || event.applicant.is_empty()
-        || event.reviewer.is_empty()
-        || event.evaluation.is_empty()
-    {
-        sentry::capture_message(
-            &format!("review is empty: {:?}", event),
-            sentry::Level::Fatal,
-        );
+    if event.name.is_empty() || event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
+        sentry::capture_message(&format!("review is empty: {:?}", event), sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1642,10 +1539,7 @@ async fn listen_application_submit_requests(
 
     event.do_form(&api_context.db).await;
 
-    println!(
-        "application for {} {} created successfully",
-        event.email, event.role
-    );
+    println!("application for {} {} created successfully", event.email, event.role);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1722,10 +1616,7 @@ async fn listen_application_files_upload_requests(
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"application_content"
-    let shared_drive = drive
-        .get_drive_by_name("Automated Documents")
-        .await
-        .unwrap();
+    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
 
     // Get the directory by the name.
     let drive_dir = drive
@@ -1753,10 +1644,7 @@ async fn listen_application_files_upload_requests(
     );
     files.insert(
         "materials".to_string(),
-        (
-            data.materials.to_string(),
-            data.materials_contents.to_string(),
-        ),
+        (data.materials.to_string(), data.materials_contents.to_string()),
     );
 
     // Iterate over our files and create them in google drive.
@@ -1791,9 +1679,7 @@ async fn listen_application_files_upload_requests(
 }
 
 fn get_extension_from_filename(filename: &str) -> Option<&str> {
-    std::path::Path::new(filename)
-        .extension()
-        .and_then(OsStr::to_str)
+    std::path::Path::new(filename).extension().and_then(OsStr::to_str)
 }
 
 /**
@@ -1822,15 +1708,11 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     let db = &api_context.db;
 
     // Get the row from airtable.
-    let record =
-        InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id).await;
+    let record = InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id).await;
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
-        sentry::capture_message(
-            "tracking_number and carrier are empty, ignoring",
-            sentry::Level::Fatal,
-        );
+        sentry::capture_message("tracking_number and carrier are empty, ignoring", sentry::Level::Fatal);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1845,10 +1727,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     shipment.cio_company_id = event.cio_company_id;
     shipment.update(db).await;
 
-    println!(
-        "inbound shipment {} updated successfully",
-        shipment.tracking_number
-    );
+    println!("inbound shipment {} updated successfully", shipment.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1891,19 +1770,14 @@ async fn listen_shippo_tracking_update_webhooks(
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    let body: ShippoTrackingUpdateEvent =
-        serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
-            sentry::capture_message(
-                &format!(
-                    "decoding event body for shippo `{}` failed: {}",
-                    event.to_string(),
-                    e
-                ),
-                sentry::Level::Info,
-            );
+    let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
+        sentry::capture_message(
+            &format!("decoding event body for shippo `{}` failed: {}", event.to_string(), e),
+            sentry::Level::Info,
+        );
 
-            Default::default()
-        });
+        Default::default()
+    });
 
     let ts = body.data;
     if ts.tracking_number.is_empty() || ts.carrier.is_empty() {
@@ -1914,11 +1788,9 @@ async fn listen_shippo_tracking_update_webhooks(
     }
 
     // Update the inbound shipment, if it exists.
-    if let Some(mut shipment) = InboundShipment::get_from_db(
-        &api_context.db,
-        ts.carrier.to_string(),
-        ts.tracking_number.to_string(),
-    ) {
+    if let Some(mut shipment) =
+        InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
+    {
         // Get the tracking status for the shipment and fill in the details.
         shipment.tracking_number = ts.tracking_number.to_string();
         let tracking_status = ts.tracking_status.unwrap_or_default();
@@ -1957,24 +1829,17 @@ async fn listen_shippo_tracking_update_webhooks(
     }
 
     // Update the outbound shipment if it exists.
-    if let Some(mut shipment) = OutboundShipment::get_from_db(
-        &api_context.db,
-        ts.carrier.to_string(),
-        ts.tracking_number.to_string(),
-    ) {
+    if let Some(mut shipment) =
+        OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
+    {
         // Update the shipment in shippo.
         // TODO: we likely don't need the extra request here, but it makes the code more DRY.
         // Clean this up eventually.
-        shipment
-            .create_or_get_shippo_shipment(&api_context.db)
-            .await;
+        shipment.create_or_get_shippo_shipment(&api_context.db).await;
         shipment.update(&api_context.db).await;
     }
 
-    println!(
-        "shipment {} tracking status updated successfully",
-        ts.tracking_number
-    );
+    println!("shipment {} tracking status updated successfully", ts.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -2024,31 +1889,22 @@ async fn listen_checkr_background_update_webhooks(
     if checkr_auth.is_none() {
         // Return early.
         sentry::capture_message(
-            &format!(
-                "this company {:?} does not have a checkr api key: {:?}",
-                oxide, event
-            ),
+            &format!("this company {:?} does not have a checkr api key: {:?}", oxide, event),
             sentry::Level::Info,
         );
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
     let checkr = checkr_auth.unwrap();
-    let candidate = checkr
-        .get_candidate(&event.data.object.candidate_id)
-        .await
-        .unwrap();
+    let candidate = checkr.get_candidate(&event.data.object.candidate_id).await.unwrap();
     let result = applicants::dsl::applicants
         .filter(
             applicants::dsl::email
                 .eq(candidate.email.to_string())
                 // TODO: matching on name might be a bad idea here.
-                .or(applicants::dsl::name
-                    .eq(format!("{} {}", candidate.first_name, candidate.last_name))),
+                .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
         )
-        .filter(
-            applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()),
-        )
+        .filter(applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()))
         .first::<Applicant>(&api_context.db.conn());
     if result.is_ok() {
         let mut applicant = result.unwrap();
@@ -2152,10 +2008,7 @@ async fn listen_auth_github_callback(
     sentry::start_session();
     let event = body_param.into_inner();
 
-    sentry::capture_message(
-        &format!("github callback: {:?}", event),
-        sentry::Level::Info,
-    );
+    sentry::capture_message(&format!("github callback: {:?}", event), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2341,10 +2194,7 @@ async fn listen_auth_zoom_deauthorization(
 
     let event = body_param.into_inner();
 
-    sentry::capture_message(
-        &format!("zoom deauthorization: {:?}", event),
-        sentry::Level::Info,
-    );
+    sentry::capture_message(&format!("zoom deauthorization: {:?}", event), sentry::Level::Info);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2391,9 +2241,11 @@ async fn listen_auth_zoom_callback(
     // TODO: this login type means google but that might not always be true...
     let cu = g
         .users()
-        .user("me",
+        .user(
+            "me",
             zoom_api::types::LoginType::Noop, // We don't know the login type, so let's leave it empty.
-            false)
+            false,
+        )
         .await
         .unwrap();
 
@@ -2947,10 +2799,7 @@ async fn listen_analytics_page_view_webhooks(
     // Add the page_view to the database and Airttable.
     let pv = event.create(db).await;
 
-    println!(
-        "page_view `{} | {}` created successfully",
-        pv.page_link, pv.user_email
-    );
+    println!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -3100,11 +2949,7 @@ async fn listen_slack_commands_webhooks(
             let num = text.parse::<i32>().unwrap_or(0);
             if num > 0 {
                 if let Ok(rfd) = rfds::dsl::rfds
-                    .filter(
-                        rfds::dsl::cio_company_id
-                            .eq(company.id)
-                            .and(rfds::dsl::number.eq(num)),
-                    )
+                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num)))
                     .first::<RFD>(&db.conn())
                 {
                     json!(MessageResponse {
@@ -3172,15 +3017,13 @@ async fn listen_slack_commands_webhooks(
         }
         SlackCommand::Applicants => {
             // Get the applicants that need to be triaged.
-            let applicants = applicants::dsl::applicants
-                .filter(
-                    applicants::dsl::cio_company_id.eq(company.id).and(
-                        applicants::dsl::status
-                            .eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
-                    ),
-                )
-                .load::<Applicant>(&db.conn())
-                .unwrap();
+            let applicants =
+                applicants::dsl::applicants
+                    .filter(applicants::dsl::cio_company_id.eq(company.id).and(
+                        applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
+                    ))
+                    .load::<Applicant>(&db.conn())
+                    .unwrap();
 
             let mut msg: serde_json::Value = Default::default();
             for (i, a) in applicants.into_iter().enumerate() {
@@ -3199,10 +3042,7 @@ async fn listen_slack_commands_webhooks(
                 merge_json(&mut msg, obj);
             }
 
-            sentry::capture_message(
-                &format!("applicants -> {}", msg.to_string()),
-                sentry::Level::Info,
-            );
+            sentry::capture_message(&format!("applicants -> {}", msg.to_string()), sentry::Level::Info);
 
             msg
         }
@@ -3259,10 +3099,7 @@ async fn listen_slack_commands_webhooks(
                 merge_json(&mut msg, obj);
             }
 
-            sentry::capture_message(
-                &format!("papers -> {}", msg.to_string()),
-                sentry::Level::Info,
-            );
+            sentry::capture_message(&format!("papers -> {}", msg.to_string()), sentry::Level::Info);
             msg
         }
         SlackCommand::Paper => {
@@ -3749,10 +3586,7 @@ async fn handle_rfd_pull_request(
 
     // The branch should be equivalent to the number in the database.
     // Let's try to get the RFD from that.
-    let number = branch
-        .trim_start_matches('0')
-        .parse::<i32>()
-        .unwrap_or_default();
+    let number = branch.trim_start_matches('0').parse::<i32>().unwrap_or_default();
     // Make sure we actually have a number.
     if number == 0 {
         // Return early.
@@ -3808,12 +3642,7 @@ async fn handle_rfd_pull_request(
                     &format!(
                         "unable to update title of pull request from `{}` to `{}` for pr#{}: {}, \
                          {:?} {}",
-                        event.pull_request.title,
-                        rfd.name,
-                        event.pull_request.number,
-                        e,
-                        rfd,
-                        number
+                        event.pull_request.title, rfd.name, event.pull_request.number, e, rfd, number
                     ),
                     sentry::Level::Fatal,
                 );
@@ -3842,10 +3671,7 @@ async fn handle_rfd_pull_request(
     // We only care if the pull request was `opened`.
     if event.action != "opened" {
         // We can throw this out, log it and return early.
-        println!(
-            "no automations are set up for action `{}` yet",
-            event.action
-        );
+        println!("no automations are set up for action `{}` yet", event.action);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -3864,11 +3690,7 @@ async fn handle_rfd_pull_request(
     let dir = format!("/rfd/{}", branch);
     // Get the contents of the file.
     let mut path = format!("{}/README.adoc", dir);
-    match github
-        .repos()
-        .get_content_file(owner, repo, &path, &branch)
-        .await
-    {
+    match github.repos().get_content_file(owner, repo, &path, &branch).await {
         Ok(contents) => {
             rfd.content = decode_base64_to_string(&contents.content);
             rfd.sha = contents.sha;
@@ -3886,12 +3708,7 @@ async fn handle_rfd_pull_request(
                 .repos()
                 .get_content_file(owner, repo, &path, &branch)
                 .await
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "getting file contents for {} on branch {} failed: {}",
-                        path, branch, e
-                    )
-                });
+                .unwrap_or_else(|e| panic!("getting file contents for {} on branch {} failed: {}", path, branch, e));
 
             rfd.content = decode_base64_to_string(&contents.content);
             rfd.sha = contents.sha;
@@ -3917,15 +3734,7 @@ async fn handle_rfd_pull_request(
 
     // Update the file in GitHub.
     // Keep in mind: this push will kick off another webhook.
-    create_or_update_file_in_github_repo(
-        github,
-        owner,
-        repo,
-        &branch,
-        &path,
-        rfd.content.as_bytes().to_vec(),
-    )
-    .await;
+    create_or_update_file_in_github_repo(github, owner, repo, &branch, &path, rfd.content.as_bytes().to_vec()).await;
 
     println!("updated discussion link for RFD {}", rfd.number_string,);
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -3948,10 +3757,7 @@ async fn handle_rfd_push(
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive
-        .get_drive_by_name("Automated Documents")
-        .await
-        .unwrap();
+    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
 
     // Get the repo.
     let owner = &company.github_org;
@@ -3993,14 +3799,8 @@ async fn handle_rfd_push(
             let website_file = file.replace("rfd/", "src/public/static/images/");
 
             // We need to get the current sha for the file we want to delete.
-            let (_, gh_file_sha) = get_file_content_from_repo(
-                github,
-                owner,
-                &repo,
-                &website_file,
-                &event.repository.default_branch,
-            )
-            .await;
+            let (_, gh_file_sha) =
+                get_file_content_from_repo(github, owner, &repo, &website_file, &event.repository.default_branch).await;
 
             if !gh_file_sha.is_empty() {
                 github
@@ -4048,8 +3848,7 @@ async fn handle_rfd_push(
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let (gh_file_content, _) =
-                get_file_content_from_repo(github, owner, &repo, &file, branch).await;
+            let (gh_file_content, _) = get_file_content_from_repo(github, owner, &repo, &file, branch).await;
 
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
@@ -4077,21 +3876,10 @@ async fn handle_rfd_push(
         if file.ends_with("README.md") || file.ends_with("README.adoc") {
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
-            println!(
-                "`push` event -> file {} was modified on branch {}",
-                file, branch,
-            );
+            println!("`push` event -> file {} was modified on branch {}", file, branch,);
             // Parse the RFD.
-            let new_rfd = NewRFD::new_from_github(
-                company,
-                github,
-                owner,
-                &repo,
-                branch,
-                &file,
-                commit.timestamp.unwrap(),
-            )
-            .await;
+            let new_rfd =
+                NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap()).await;
 
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
@@ -4114,8 +3902,7 @@ async fn handle_rfd_push(
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(db, github, &company.github_org, "configs", company.id)
-                .await;
+            generate_shorturls_for_rfds(db, github, &company.github_org, "configs", company.id).await;
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
@@ -4135,10 +3922,7 @@ async fn handle_rfd_push(
             // a PR. Instead, below, the state of the RFD would be moved to `published`.
             // TODO: see if we drop events, if we do, we might want to remove the check with
             // the old state and just do it everytime an RFD is in discussion.
-            if old_rfd_state != rfd.state
-                && rfd.state == "discussion"
-                && branch != event.repository.default_branch
-            {
+            if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != event.repository.default_branch {
                 // First, we need to make sure we don't already have a pull request open.
                 let pulls = github
                     .pulls()
@@ -4178,10 +3962,7 @@ async fn handle_rfd_push(
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
                     sentry::capture_message(
-                        &format!(
-                            "attempting to open a pull request for {}",
-                            new_rfd.number_string
-                        ),
+                        &format!("attempting to open a pull request for {}", new_rfd.number_string),
                         sentry::Level::Info,
                     );
                     github
@@ -4207,10 +3988,7 @@ async fn handle_rfd_push(
                         .unwrap();
                     println!("opened pull request for RFD {}", new_rfd.number_string);
                     sentry::capture_message(
-                        &format!(
-                            "successfully opened a pull request for {}",
-                            rfd.number_string
-                        ),
+                        &format!("successfully opened a pull request for {}", rfd.number_string),
                         sentry::Level::Info,
                     );
 
@@ -4241,10 +4019,7 @@ async fn handle_rfd_push(
                     rfd_mut.content.as_bytes().to_vec(),
                 )
                 .await;
-                println!(
-                    "updated state to `published` for  RFD {}",
-                    new_rfd.number_string
-                );
+                println!("updated state to `published` for  RFD {}", new_rfd.number_string);
             }
 
             // If the title of the RFD changed, delete the old PDF file so it
@@ -4253,14 +4028,8 @@ async fn handle_rfd_push(
                 let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
                 // First get the sha of the old pdf.
-                let (_, old_pdf_sha) = get_file_content_from_repo(
-                    github,
-                    owner,
-                    &repo,
-                    &pdf_path,
-                    &event.repository.default_branch,
-                )
-                .await;
+                let (_, old_pdf_sha) =
+                    get_file_content_from_repo(github, owner, &repo, &pdf_path, &event.repository.default_branch).await;
 
                 if !old_pdf_sha.is_empty() {
                     // Delete the old filename from GitHub.
@@ -4287,10 +4056,7 @@ async fn handle_rfd_push(
                 }
 
                 // Delete the old filename from drive.
-                drive
-                    .delete_file_by_name(&shared_drive.id, &old_rfd_pdf)
-                    .await
-                    .unwrap();
+                drive.delete_file_by_name(&shared_drive.id, &old_rfd_pdf).await.unwrap();
             }
 
             println!("RFD {} `push` operations completed", new_rfd.number_string);
@@ -4346,8 +4112,7 @@ async fn handle_configs_push(
         sync_links(&api_context.db, configs.links, configs.huddles, company).await;
 
         // We need to update the short URLs for the links.
-        generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id)
-            .await;
+        generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id).await;
         println!("generated shorturls for the configs links");
     }
 
@@ -4388,13 +4153,7 @@ async fn handle_configs_push(
     // Check if the github-outside-collaborators.toml file changed.
     if commit.file_changed("configs/github-outside-collaborators.toml") {
         // Sync github outside collaborators.
-        sync_github_outside_collaborators(
-            &api_context.db,
-            github,
-            configs.github_outside_collaborators,
-            company,
-        )
-        .await;
+        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company).await;
     }
 
     // Check if the huddles file changed.
@@ -4424,14 +4183,7 @@ async fn handle_repository_event(
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(
-        &api_context.db,
-        github,
-        &company.github_org,
-        "configs",
-        company.id,
-    )
-    .await;
+    generate_shorturls_for_repos(&api_context.db, github, &company.github_org, "configs", company.id).await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.

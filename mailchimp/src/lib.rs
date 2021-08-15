@@ -105,14 +105,7 @@ impl MailChimp {
         let client_secret = env::var("MAILCHIMP_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("MAILCHIMP_REDIRECT_URI").unwrap();
 
-        MailChimp::new(
-            client_id,
-            client_secret,
-            redirect_uri,
-            token,
-            refresh_token,
-            endpoint,
-        )
+        MailChimp::new(client_id, client_secret, redirect_uri, token, refresh_token, endpoint)
     }
 
     fn request<P>(&self, method: Method, path: P) -> RequestBuilder
@@ -215,10 +208,7 @@ impl MailChimp {
     /// Get metadata information.
     pub async fn metadata(&self) -> Result<Metadata, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
         headers.append(
             header::AUTHORIZATION,
             header::HeaderValue::from_str(&format!("OAuth {}", self.token)).unwrap(),
@@ -259,10 +249,7 @@ impl MailChimp {
             // Build the request.
             let rb = self.request(
                 Method::GET,
-                &format!(
-                    "3.0/lists/{}/members?count={}&offset={}",
-                    list_id, per_page, offset,
-                ),
+                &format!("3.0/lists/{}/members?count={}&offset={}", list_id, per_page, offset,),
             );
             let request = rb.build().unwrap();
 
@@ -503,8 +490,7 @@ mod mailchimp_date_format {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer).unwrap();
-        Utc.datetime_from_str(&s, FORMAT)
-            .map_err(serde::de::Error::custom)
+        Utc.datetime_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
     }
 }
 
@@ -546,11 +532,7 @@ pub struct WebhookMerges {
     pub address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "PHONE")]
     pub phone: Option<String>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "COMPANY",
-        alias = "CNAME"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "COMPANY", alias = "CNAME")]
     pub company: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "CSIZE")]
     pub company_size: Option<String>,

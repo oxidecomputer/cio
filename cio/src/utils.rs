@@ -73,11 +73,7 @@ pub async fn get_file_content_from_repo(
     }
 
     // Try to get the content for the file from the repo.
-    match github
-        .repos()
-        .get_content_file(owner, repo, &file_path, branch)
-        .await
-    {
+    match github.repos().get_content_file(owner, repo, &file_path, branch).await {
         Ok(file) => {
             return (decode_base64(&file.content), file.sha.to_string());
         }
@@ -152,8 +148,7 @@ pub async fn create_or_update_file_in_github_repo(
     }
 
     // Try to get the content for the file from the repo.
-    let (existing_content, sha) =
-        get_file_content_from_repo(github, owner, repo, branch, path).await;
+    let (existing_content, sha) = get_file_content_from_repo(github, owner, repo, branch, path).await;
 
     if !existing_content.is_empty() || !sha.is_empty() {
         if content == existing_content {

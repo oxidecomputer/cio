@@ -24,9 +24,7 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::{
-    borrow::Cow, collections::HashMap, env, error, fmt, fmt::Debug, str::FromStr, sync::Arc,
-};
+use std::{borrow::Cow, collections::HashMap, env, error, fmt, fmt::Debug, str::FromStr, sync::Arc};
 
 use chrono::{offset::Utc, DateTime};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
@@ -75,13 +73,7 @@ impl Shippo {
         Shippo::new(token)
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: &str,
-        body: B,
-        query: Option<Vec<(String, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(String, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -365,10 +357,7 @@ impl Shippo {
 
     /// Create a shipping label based on a rate.
     /// FROM: https://goshippo.com/docs/reference#transactions-create
-    pub async fn create_shipping_label_from_rate(
-        &self,
-        nt: NewTransaction,
-    ) -> Result<Transaction, APIError> {
+    pub async fn create_shipping_label_from_rate(&self, nt: NewTransaction) -> Result<Transaction, APIError> {
         // Build the request.
         let request = self.request(Method::POST, "transactions", nt, None);
 
@@ -474,11 +463,7 @@ impl Shippo {
 
     /// Request the tracking status of a shipment by sending a GET request.
     /// FROM: https://goshippo.com/docs/reference#tracks-retrieve
-    pub async fn get_tracking_status(
-        &self,
-        carrier: &str,
-        tracking_number: &str,
-    ) -> Result<TrackingStatus, APIError> {
+    pub async fn get_tracking_status(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
         // Build the request
         let request = self.request(
             Method::GET,
@@ -1635,9 +1620,7 @@ pub mod deserialize_null_boolean {
     where
         D: Deserializer<'de>,
     {
-        let s = deserializer
-            .deserialize_bool(crate::BoolVisitor)
-            .unwrap_or_default();
+        let s = deserializer.deserialize_bool(crate::BoolVisitor).unwrap_or_default();
 
         Ok(s)
     }
@@ -1665,10 +1648,7 @@ impl<'de> Visitor<'de> for BoolVisitor {
     {
         match FromStr::from_str(value) {
             Ok(s) => Ok(s),
-            Err(_) => Err(de::Error::invalid_value(
-                de::Unexpected::Str(value),
-                &"bool",
-            )),
+            Err(_) => Err(de::Error::invalid_value(de::Unexpected::Str(value), &"bool")),
         }
     }
 
@@ -1678,10 +1658,7 @@ impl<'de> Visitor<'de> for BoolVisitor {
     {
         match FromStr::from_str(&value) {
             Ok(s) => Ok(s),
-            Err(_) => Err(de::Error::invalid_value(
-                de::Unexpected::Str(&value),
-                &"bool",
-            )),
+            Err(_) => Err(de::Error::invalid_value(de::Unexpected::Str(&value), &"bool")),
         }
     }
 }

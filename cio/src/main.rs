@@ -3,10 +3,7 @@ use std::{fs::File, sync::Arc};
 use cio_api::{
     applicants::{Applicant, Applicants},
     auth_logins::{AuthUser, AuthUsers},
-    configs::{
-        Building, Buildings, ConferenceRoom, ConferenceRooms, Group, Groups, Link, Links, User,
-        Users,
-    },
+    configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, Group, Groups, Link, Links, User, Users},
     db::Database,
     journal_clubs::{JournalClubMeeting, JournalClubMeetings},
     mailing_list::{MailingListSubscriber, MailingListSubscribers},
@@ -14,8 +11,8 @@ use cio_api::{
     rfds::{RFDs, RFD},
 };
 use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError,
-    HttpResponseOk, HttpServerStarter, RequestContext,
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk,
+    HttpServerStarter, RequestContext,
 };
 
 #[tokio::main]
@@ -119,9 +116,7 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
     Ok(HttpResponseOk(api_context.schema.to_string()))
@@ -134,9 +129,7 @@ async fn api_get_schema(
     method = GET,
     path = "/auth/users",
 }]
-async fn api_get_auth_users(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
+async fn api_get_auth_users(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -150,9 +143,7 @@ async fn api_get_auth_users(
     method = GET,
     path = "/applicants",
 }]
-async fn api_get_applicants(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
+async fn api_get_applicants(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -166,9 +157,7 @@ async fn api_get_applicants(
     method = GET,
     path = "/buildings",
 }]
-async fn api_get_buildings(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
+async fn api_get_buildings(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -215,9 +204,7 @@ async fn api_get_github_repos(
     method = GET,
     path = "/groups",
 }]
-async fn api_get_groups(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
+async fn api_get_groups(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -247,9 +234,7 @@ async fn api_get_journal_club_meetings(
     method = GET,
     path = "/links",
 }]
-async fn api_get_links(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
+async fn api_get_links(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -279,9 +264,7 @@ async fn api_get_mailing_list_subscribers(
     method = GET,
     path = "/rfds",
 }]
-async fn api_get_rfds(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
+async fn api_get_rfds(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -295,9 +278,7 @@ async fn api_get_rfds(
     method = GET,
     path = "/users",
 }]
-async fn api_get_users(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
+async fn api_get_users(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 

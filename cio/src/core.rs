@@ -27,11 +27,7 @@ pub struct CustomerInteraction {
     pub people: Vec<String>,
     #[serde(default, rename = "Oxide Folks")]
     pub oxide_folks: Vec<AirtableUser>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Link to Notes"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Link to Notes")]
     pub notes_link: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Notes")]
     pub notes: String,

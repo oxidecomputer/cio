@@ -111,23 +111,10 @@ impl QuickBooks {
         let client_secret = env::var("QUICKBOOKS_CLIENT_SECRET").unwrap();
         let redirect_uri = env::var("QUICKBOOKS_REDIRECT_URI").unwrap();
 
-        QuickBooks::new(
-            client_id,
-            client_secret,
-            company_id,
-            redirect_uri,
-            token,
-            refresh_token,
-        )
+        QuickBooks::new(client_id, client_secret, company_id, redirect_uri, token, refresh_token)
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: &str,
-        body: B,
-        query: Option<&[(&str, &str)]>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
     where
         B: Serialize,
     {
@@ -144,10 +131,7 @@ impl QuickBooks {
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("application/json"),
         );
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -174,15 +158,9 @@ impl QuickBooks {
 
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
-        let params = [
-            ("grant_type", "refresh_token"),
-            ("refresh_token", &self.refresh_token),
-        ];
+        let params = [("grant_type", "refresh_token"), ("refresh_token", &self.refresh_token)];
         let client = reqwest::Client::new();
         let resp = client
             .post("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer")
@@ -204,10 +182,7 @@ impl QuickBooks {
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
         let params = [
             ("grant_type", "authorization_code"),
@@ -258,10 +233,7 @@ impl QuickBooks {
         Ok(r.query_response.company_info.get(0).unwrap().clone())
     }
 
-    pub async fn list_attachments_for_purchase(
-        &self,
-        purchase_id: &str,
-    ) -> Result<Vec<Attachment>, APIError> {
+    pub async fn list_attachments_for_purchase(&self, purchase_id: &str) -> Result<Vec<Attachment>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -293,10 +265,7 @@ impl QuickBooks {
         Ok(r.query_response.attachable)
     }
 
-    pub async fn list_attachments_for_bill(
-        &self,
-        bill_id: &str,
-    ) -> Result<Vec<Attachment>, APIError> {
+    pub async fn list_attachments_for_bill(&self, bill_id: &str) -> Result<Vec<Attachment>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -328,10 +297,7 @@ impl QuickBooks {
         Ok(r.query_response.attachable)
     }
 
-    pub async fn list_attachments_for_bill_payment(
-        &self,
-        bill_payment_id: &str,
-    ) -> Result<Vec<Attachment>, APIError> {
+    pub async fn list_attachments_for_bill_payment(&self, bill_payment_id: &str) -> Result<Vec<Attachment>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -388,10 +354,7 @@ impl QuickBooks {
         Ok(r.bill)
     }
 
-    pub async fn fetch_bill_payment_page(
-        &self,
-        start_position: i64,
-    ) -> Result<Vec<BillPayment>, APIError> {
+    pub async fn fetch_bill_payment_page(&self, start_position: i64) -> Result<Vec<BillPayment>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -458,10 +421,7 @@ impl QuickBooks {
         Ok(bill_payments)
     }
 
-    pub async fn fetch_purchase_page(
-        &self,
-        start_position: i64,
-    ) -> Result<Vec<Purchase>, APIError> {
+    pub async fn fetch_purchase_page(&self, start_position: i64) -> Result<Vec<Purchase>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -534,10 +494,7 @@ impl QuickBooks {
             Method::GET,
             &format!("company/{}/query", self.company_id),
             (),
-            Some(&[(
-                "query",
-                &format!("SELECT * FROM Item MAXRESULTS {}", QUERY_PAGE_SIZE),
-            )]),
+            Some(&[("query", &format!("SELECT * FROM Item MAXRESULTS {}", QUERY_PAGE_SIZE))]),
         );
 
         let resp = self.client.execute(request).await.unwrap();
@@ -652,11 +609,7 @@ pub struct Item {
     pub name: String,
     #[serde(default, rename = "Active")]
     pub active: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "FullyQualifiedName"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FullyQualifiedName")]
     pub fully_qualified_name: String,
     #[serde(default, rename = "Taxable")]
     pub taxable: bool,
@@ -676,11 +629,7 @@ pub struct Item {
     pub sparse: bool,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
     pub id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
     pub sync_token: String,
     #[serde(rename = "MetaData")]
     pub meta_data: MetaData,
@@ -696,23 +645,11 @@ pub struct Item {
     pub asset_account_ref: NtRef,
     #[serde(default, rename = "QtyOnHand")]
     pub qty_on_hand: i64,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "InvStartDate"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "InvStartDate")]
     pub inv_start_date: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Description"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Description")]
     pub description: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PurchaseDesc"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PurchaseDesc")]
     pub purchase_desc: String,
 }
 
@@ -759,11 +696,7 @@ pub struct AttachmentResponse {
 pub struct Purchase {
     #[serde(default, rename = "AccountRef")]
     pub account_ref: NtRef,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PaymentType"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PaymentType")]
     pub payment_type: String,
     #[serde(default, rename = "EntityRef")]
     pub entity_ref: NtRef,
@@ -776,11 +709,7 @@ pub struct Purchase {
     pub sparse: bool,
     #[serde(rename = "Id")]
     pub id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
     pub sync_token: String,
     #[serde(rename = "MetaData")]
     pub meta_data: MetaData,
@@ -792,17 +721,9 @@ pub struct Purchase {
     pub line: Vec<Line>,
     #[serde(default, rename = "Credit")]
     pub credit: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "DocNumber"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "DocNumber")]
     pub doc_number: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PrivateNote"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PrivateNote")]
     pub private_note: String,
 }
 
@@ -810,19 +731,11 @@ pub struct Purchase {
 pub struct Line {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
     pub id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Description"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Description")]
     pub description: String,
     #[serde(default, rename = "Amount")]
     pub amount: f32,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "DetailType"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "DetailType")]
     pub detail_type: String,
     #[serde(default, rename = "AccountBasedExpenseLineDetail")]
     pub account_based_expense_line_detail: AccountBasedExpenseLineDetail,
@@ -842,11 +755,7 @@ pub struct LinkedTxn {
 pub struct AccountBasedExpenseLineDetail {
     #[serde(default, rename = "AccountRef")]
     pub account_ref: NtRef,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "BillableStatus"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "BillableStatus")]
     pub billable_status: String,
     #[serde(default, rename = "TaxCodeRef")]
     pub tax_code_ref: NtRef,
@@ -862,11 +771,7 @@ pub struct PurchaseEx {
 pub struct Any {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "declaredType"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "declaredType")]
     pub declared_type: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub scope: String,
@@ -884,17 +789,9 @@ pub struct Any {
 pub struct Attachment {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "FileName")]
     pub file_name: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "FileAccessUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FileAccessUri")]
     pub file_access_uri: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "TempDownloadUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TempDownloadUri")]
     pub temp_download_uri: String,
     #[serde(default, rename = "Size")]
     pub size: i64,
@@ -904,19 +801,11 @@ pub struct Attachment {
     pub sparse: bool,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
     pub id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
     pub sync_token: String,
     #[serde(rename = "MetaData")]
     pub meta_data: MetaData,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "AttachableRef"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "AttachableRef")]
     pub attachable_ref: Vec<AttachableRef>,
 }
 
@@ -944,19 +833,11 @@ pub struct BillPayment {
     pub sparse: bool,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
     pub id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
     pub sync_token: String,
     #[serde(rename = "MetaData")]
     pub meta_data: MetaData,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "DocNumber"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "DocNumber")]
     pub doc_number: String,
     #[serde(rename = "TxnDate")]
     pub txn_date: NaiveDate,
@@ -964,11 +845,7 @@ pub struct BillPayment {
     pub currency_ref: NtRef,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Line")]
     pub line: Vec<Line>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PrivateNote"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PrivateNote")]
     pub private_note: String,
     #[serde(default, rename = "CreditCardPayment")]
     pub credit_card_payment: Payment,
@@ -980,11 +857,7 @@ pub struct Payment {
     pub cc_account_ref: NtRef,
     #[serde(default, rename = "BankAccountRef")]
     pub bank_account_ref: NtRef,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PrintStatus"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PrintStatus")]
     pub print_status: String,
 }
 
@@ -997,11 +870,7 @@ pub struct BillResponse {
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct Bill {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
     pub sync_token: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub domain: String,
@@ -1035,27 +904,15 @@ pub struct Bill {
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct CompanyInfo {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SyncToken")]
     pub sync_token: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub domain: String,
     #[serde(default, rename = "LegalAddr")]
     pub legal_addr: Addr,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SupportedLanguages"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "SupportedLanguages")]
     pub supported_languages: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "CompanyName"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "CompanyName")]
     pub company_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Country")]
     pub country: String,
@@ -1067,21 +924,13 @@ pub struct CompanyInfo {
     pub id: String,
     #[serde(default, rename = "WebAddr")]
     pub web_addr: WebAddr,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "FiscalYearStartMonth"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FiscalYearStartMonth")]
     pub fiscal_year_start_month: String,
     #[serde(default, rename = "CustomerCommunicationAddr")]
     pub customer_communication_addr: Addr,
     #[serde(default, rename = "PrimaryPhone")]
     pub primary_phone: PrimaryPhone,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "LegalName"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "LegalName")]
     pub legal_name: String,
     #[serde(rename = "CompanyStartDate")]
     pub company_start_date: NaiveDate,
@@ -1101,17 +950,9 @@ pub struct Addr {
     pub country: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Line1")]
     pub line1: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PostalCode"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "PostalCode")]
     pub postal_code: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "CountrySubDivisionCode"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "CountrySubDivisionCode")]
     pub country_sub_division_code: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
     pub id: String,
@@ -1125,11 +966,7 @@ pub struct Email {
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct PrimaryPhone {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "FreeFormNumber"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "FreeFormNumber")]
     pub free_form_number: String,
 }
 

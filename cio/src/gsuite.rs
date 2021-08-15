@@ -4,10 +4,9 @@ use std::{
 };
 
 use gsuite_api::{
-    generate_password, Building as GSuiteBuilding, BuildingAddress,
-    CalendarResource as GSuiteCalendarResource, GSuite, Group as GSuiteGroup, User as GSuiteUser,
-    UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger, UserLocation,
-    UserName, UserPhone, UserSSHKey,
+    generate_password, Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite,
+    Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender,
+    UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
 };
 use serde_json::Value;
 
@@ -17,12 +16,7 @@ use crate::{
 };
 
 /// Update a GSuite user.
-pub async fn update_gsuite_user(
-    gu: &GSuiteUser,
-    user: &User,
-    change_password: bool,
-    company: &Company,
-) -> GSuiteUser {
+pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool, company: &Company) -> GSuiteUser {
     let mut gsuite_user = gu.clone();
 
     gsuite_user.name = UserName {
@@ -87,10 +81,7 @@ pub async fn update_gsuite_user(
         // TODO: this code is duplicated in configs.rs find a way to make it DRY.
         let mut street_address = user.home_address_street_1.to_string();
         if !user.home_address_street_2.is_empty() {
-            street_address = format!(
-                "{}\n{}",
-                user.home_address_street_1, user.home_address_street_2,
-            );
+            street_address = format!("{}\n{}", user.home_address_street_1, user.home_address_street_2,);
         }
         gsuite_user.addresses = vec![UserAddress {
             country: user.home_address_country.to_string(),
@@ -179,10 +170,7 @@ pub async fn update_gsuite_user(
 
     // Set the GitHub username.
     if !user.github.is_empty() {
-        contact.insert(
-            "GitHub_Username".to_string(),
-            json!(user.github.to_string()),
-        );
+        contact.insert("GitHub_Username".to_string(), json!(user.github.to_string()));
     }
     // Oxide got set up weird but all the rest should be under miscellaneous.
     if company.name == "Oxide" {
@@ -190,10 +178,9 @@ pub async fn update_gsuite_user(
             .custom_schemas
             .insert("Contact".to_string(), UserCustomProperties(Some(contact)));
     } else {
-        gsuite_user.custom_schemas.insert(
-            "Miscellaneous".to_string(),
-            UserCustomProperties(Some(contact)),
-        );
+        gsuite_user
+            .custom_schemas
+            .insert("Miscellaneous".to_string(), UserCustomProperties(Some(contact)));
     }
 
     // Get the AWS Role information.
@@ -203,22 +190,16 @@ pub async fn update_gsuite_user(
         aws_type.insert("type".to_string(), "work".to_string());
         aws_type.insert("value".to_string(), user.aws_role.to_string());
         aws_role.insert("Role".to_string(), json!(vec![aws_type]));
-        gsuite_user.custom_schemas.insert(
-            "Amazon_Web_Services".to_string(),
-            UserCustomProperties(Some(aws_role)),
-        );
+        gsuite_user
+            .custom_schemas
+            .insert("Amazon_Web_Services".to_string(), UserCustomProperties(Some(aws_role)));
     }
 
     gsuite_user
 }
 
 /// Update a user's aliases in GSuite to match our database.
-pub async fn update_user_aliases(
-    gsuite: &GSuite,
-    u: &GSuiteUser,
-    aliases: Vec<String>,
-    company: &Company,
-) {
+pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<String>, company: &Company) {
     if aliases.is_empty() {
         // Return early.
         return;
@@ -230,18 +211,12 @@ pub async fn update_user_aliases(
     }
 
     // Update the user's aliases.
-    gsuite
-        .update_user_aliases(&u.primary_email, formatted_aliases)
-        .await;
+    gsuite.update_user_aliases(&u.primary_email, formatted_aliases).await;
     println!("updated gsuite user aliases: {}", u.primary_email);
 }
 
 /// Update a user's groups in GSuite to match our database.
-pub async fn update_user_google_groups(
-    gsuite: &GSuite,
-    user: &User,
-    google_groups: BTreeMap<String, GSuiteGroup>,
-) {
+pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_groups: BTreeMap<String, GSuiteGroup>) {
     // Iterate over the groups and add the user as a member to it.
     for g in &user.groups {
         // Make sure the group exists.
@@ -250,14 +225,8 @@ pub async fn update_user_google_groups(
             Some(val) => group = val,
             // Continue through the loop and we will add the user later.
             None => {
-                println!(
-                    "google group {} does not exist so cannot add user {}",
-                    g, user.email
-                );
-                println!(
-                    "google group {} does not exist so cannot add user {}",
-                    g, user.email
-                );
+                println!("google group {} does not exist so cannot add user {}", g, user.email);
+                println!("google group {} does not exist so cannot add user {}", g, user.email);
                 continue;
             }
         }
@@ -268,31 +237,19 @@ pub async fn update_user_google_groups(
         }
 
         // Check if the user is already a member of the group.
-        let is_member = gsuite
-            .group_has_member(&group.id, &user.email)
-            .await
-            .unwrap();
+        let is_member = gsuite.group_has_member(&group.id, &user.email).await.unwrap();
         if is_member {
             // They are a member so we can just update their member status.
-            gsuite
-                .group_update_member(&group.id, &user.email, role)
-                .await
-                .unwrap();
+            gsuite.group_update_member(&group.id, &user.email, role).await.unwrap();
 
             // Continue through the other groups.
             continue;
         }
 
         // Add the user to the group.
-        gsuite
-            .group_insert_member(&group.id, &user.email, role)
-            .await
-            .unwrap();
+        gsuite.group_insert_member(&group.id, &user.email, role).await.unwrap();
 
-        println!(
-            "added {} to gsuite group {} as {}",
-            user.email, group.name, role
-        );
+        println!("added {} to gsuite group {} as {}", user.email, group.name, role);
     }
 
     // Iterate over all the groups and if the user is a member and should not
@@ -304,10 +261,7 @@ pub async fn update_user_google_groups(
 
         // Now we have a google group. The user should not be a member of it,
         // but we need to make sure they are not a member.
-        let is_member = gsuite
-            .group_has_member(&group.id, &user.email)
-            .await
-            .unwrap();
+        let is_member = gsuite.group_has_member(&group.id, &user.email).await.unwrap();
 
         if !is_member {
             // They are not a member so we can continue early.
@@ -316,10 +270,7 @@ pub async fn update_user_google_groups(
 
         // They are a member of the group.
         // We need to remove them.
-        gsuite
-            .group_remove_member(&group.id, &user.email)
-            .await
-            .unwrap();
+        gsuite.group_remove_member(&group.id, &user.email).await.unwrap();
 
         println!("removed {} from gsuite group {}", user.email, group.name);
     }
@@ -333,9 +284,7 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
     }
 
     // Update the user's aliases.
-    gsuite
-        .update_group_aliases(&g.email, g.aliases.clone())
-        .await;
+    gsuite.update_group_aliases(&g.email, g.aliases.clone()).await;
     println!("updated gsuite group aliases: {}", g.email);
 }
 

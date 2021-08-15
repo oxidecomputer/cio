@@ -141,13 +141,7 @@ impl DocuSign {
         );
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: &str,
-        body: B,
-        query: Option<&[(&str, &str)]>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
     where
         B: Serialize,
     {
@@ -164,10 +158,7 @@ impl DocuSign {
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("application/json"),
         );
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
         let mut rb = self.client.request(method.clone(), url).headers(headers);
 
@@ -186,10 +177,7 @@ impl DocuSign {
 
     pub async fn get_user_info(&self) -> Result<UserInfo, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
         let bt = format!("Bearer {}", self.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
         headers.append(header::AUTHORIZATION, bearer);
@@ -208,15 +196,9 @@ impl DocuSign {
 
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
-        let params = [
-            ("grant_type", "refresh_token"),
-            ("refresh_token", &self.refresh_token),
-        ];
+        let params = [("grant_type", "refresh_token"), ("refresh_token", &self.refresh_token)];
         let client = reqwest::Client::new();
         let resp = client
             .post("https://account.docusign.com/oauth/token")
@@ -238,10 +220,7 @@ impl DocuSign {
 
     pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
+        headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
         let params = [("grant_type", "authorization_code"), ("code", code)];
         let client = reqwest::Client::new();
@@ -315,12 +294,7 @@ impl DocuSign {
     /// List webhooks with "Connect".
     pub async fn list_webhooks(&self) -> Result<Vec<Webhook>, APIError> {
         // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("accounts/{}/connect", self.account_id),
-            (),
-            None,
-        );
+        let request = self.request(Method::GET, &format!("accounts/{}/connect", self.account_id), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -426,17 +400,11 @@ impl DocuSign {
     }
 
     /// Get envelope form fields.
-    pub async fn get_envelope_form_data(
-        &self,
-        envelope_id: &str,
-    ) -> Result<Vec<FormDatum>, APIError> {
+    pub async fn get_envelope_form_data(&self, envelope_id: &str) -> Result<Vec<FormDatum>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
-            &format!(
-                "accounts/{}/envelopes/{}/form_data",
-                self.account_id, envelope_id
-            ),
+            &format!("accounts/{}/envelopes/{}/form_data", self.account_id, envelope_id),
             (),
             None,
         );
@@ -488,11 +456,7 @@ impl DocuSign {
     }
 
     /// Get document.
-    pub async fn get_document(
-        &self,
-        envelope_id: &str,
-        document_id: &str,
-    ) -> Result<Bytes, APIError> {
+    pub async fn get_document(&self, envelope_id: &str, document_id: &str) -> Result<Bytes, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,
@@ -589,41 +553,17 @@ impl error::Error for APIError {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Envelope {
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "envelopeDocuments"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeDocuments")]
     pub documents: Vec<Document>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "createdDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "createdDateTime")]
     pub created_date_time: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "completedDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "completedDateTime")]
     pub completed_date_time: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "declinedDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "declinedDateTime")]
     pub declined_date_time: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "deliveredDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "deliveredDateTime")]
     pub delivered_date_time: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "transactionId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "transactionId")]
     pub transaction_id: String,
     /// Indicates the envelope status. Valid values are:
     ///
@@ -636,101 +576,45 @@ pub struct Envelope {
     /// * `voided`: The envelope is no longer valid and recipients cannot access or sign the envelope.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "documentsUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "documentsUri")]
     pub documents_uri: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "recipientsUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recipientsUri")]
     pub recipients_uri: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "attachmentsUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "attachmentsUri")]
     pub attachments_uri: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "envelopeUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "envelopeUri")]
     pub envelope_uri: String,
     /// The subject line of the email message that is sent to all recipients.
     ///
     /// For information about adding merge field information to the email subject, see [Template Email Subject Merge Fields](https://developers.docusign.com/esign-rest-api/reference/Templates/Templates/create#template-email-subject-merge-fields).
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "emailSubject"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailSubject")]
     pub email_subject: String,
     /// This is the same as the email body. If specified it is included in the email body for all envelope recipients.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "emailBlurb"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailBlurb")]
     pub email_blurb: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "envelopeId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "envelopeId")]
     pub envelope_id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "signingLocation"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "signingLocation")]
     pub signing_location: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "customFieldsUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "customFieldsUri")]
     pub custom_fields_uri: String,
     #[serde(default, rename = "customFields")]
     pub custom_fields: CustomFields,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "brandLock"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "brandLock")]
     pub brand_lock: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "brandId")]
     pub brand_id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "useDisclosure"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "useDisclosure")]
     pub use_disclosure: String,
     #[serde(default, rename = "emailSettings")]
     pub email_settings: EmailSettings,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "purgeState"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "purgeState")]
     pub purge_state: String,
     #[serde(default, rename = "lockInformation")]
     pub lock_information: LockInformation,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "is21CFRPart11"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "is21CFRPart11")]
     pub is21_cfr_part11: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "signerCanSignOnMobile"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "signerCanSignOnMobile")]
     pub signer_can_sign_on_mobile: String,
     #[serde(
         default,
@@ -738,29 +622,13 @@ pub struct Envelope {
         rename = "isSignatureProviderEnvelope"
     )]
     pub is_signature_provider_envelope: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "allowViewHistory"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowViewHistory")]
     pub allow_view_history: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "allowComments"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowComments")]
     pub allow_comments: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "allowMarkup"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowMarkup")]
     pub allow_markup: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "allowReassign"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowReassign")]
     pub allow_reassign: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub asynchronous: String,
@@ -770,24 +638,12 @@ pub struct Envelope {
         rename = "disableResponsiveDocument"
     )]
     pub disable_responsive_document: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "copyRecipientData"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "copyRecipientData")]
     pub copy_recipient_data: String,
     /// The id of the template. If a value is not provided, DocuSign generates a value.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "templateId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "templateId")]
     pub template_id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "templateRoles"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "templateRoles")]
     pub template_roles: Vec<TemplateRole>,
     #[serde(default)]
     pub recipients: Recipients,
@@ -795,11 +651,7 @@ pub struct Envelope {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Document {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "documentId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "documentId")]
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -836,18 +688,10 @@ pub struct Recipient {
     /// Maximum Length: 100 characters.
     ///
     /// The full legal name of a signer for the envelope.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "signerName"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "signerName")]
     pub signer_name: String,
     /// Unique for the recipient. It is used by the tab element to indicate which recipient is to sign the Document.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "recipientId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recipientId")]
     pub recipient_id: String,
 }
 
@@ -871,18 +715,10 @@ pub struct TemplateRole {
     /// Maximum Length: 100 characters.
     ///
     /// The full legal name of a signer for the envelope.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "signerName"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "signerName")]
     pub signer_name: String,
     /// This specifies the routing order of the recipient in the envelope.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "routingOrder"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "routingOrder")]
     pub routing_order: String,
     #[serde(default, rename = "emailNotification")]
     pub email_notification: EmailNotification,
@@ -893,18 +729,10 @@ pub struct EmailNotification {
     /// The subject line of the email message that is sent to all recipients.
     ///
     /// For information about adding merge field information to the email subject, see [Template Email Subject Merge Fields](https://developers.docusign.com/esign-rest-api/reference/Templates/Templates/create#template-email-subject-merge-fields).
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "emailSubject"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailSubject")]
     pub email_subject: String,
     /// This is the same as the email body. If specified it is included in the email body for all envelope recipients.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "emailBody"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "emailBody")]
     pub email_body: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub language: String,
@@ -912,11 +740,7 @@ pub struct EmailNotification {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct CustomFields {
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "textCustomFields"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "textCustomFields")]
     pub text_custom_fields: Vec<TextCustomField>,
 }
 
@@ -928,11 +752,7 @@ pub struct TextCustomField {
     pub show: String,
     pub required: String,
     pub value: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "configurationType"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "configurationType")]
     pub configuration_type: String,
     #[serde(default, rename = "errorDetails")]
     pub error_details: ErrorDetails,
@@ -940,11 +760,7 @@ pub struct TextCustomField {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct ErrorDetails {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "errorCode"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "errorCode")]
     pub error_code: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub message: String,
@@ -958,27 +774,15 @@ pub struct EmailSettings {
         rename = "replyEmailAddressOverride"
     )]
     pub reply_email_address_override: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "replyEmailNameOverride"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "replyEmailNameOverride")]
     pub reply_email_name_override: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "bccEmailAddresses"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "bccEmailAddresses")]
     pub bcc_email_addresses: Vec<BccEmailAddress>,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct BccEmailAddress {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "bccEmailAddressId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "bccEmailAddressId")]
     pub bcc_email_address_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
@@ -988,37 +792,17 @@ pub struct BccEmailAddress {
 pub struct LockInformation {
     #[serde(default, rename = "lockedByUser")]
     pub locked_by_user: LockedByUser,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "lockedByApp"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "lockedByApp")]
     pub locked_by_app: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "lockedUntilDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "lockedUntilDateTime")]
     pub locked_until_date_time: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "lockDurationInSeconds"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "lockDurationInSeconds")]
     pub lock_duration_in_seconds: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "lockType")]
     pub lock_type: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "useScratchPad"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "useScratchPad")]
     pub use_scratch_pad: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "lockToken"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "lockToken")]
     pub lock_token: String,
     #[serde(default, rename = "errorDetails")]
     pub error_details: ErrorDetails,
@@ -1029,43 +813,19 @@ pub struct LockedByUser {}
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct TemplatesResponse {
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "envelopeTemplates"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeTemplates")]
     pub envelope_templates: Vec<Template>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "resultSetSize"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "resultSetSize")]
     pub result_set_size: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "startPosition"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "startPosition")]
     pub start_position: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "endPosition"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "endPosition")]
     pub end_position: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "totalSetSize"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "totalSetSize")]
     pub total_set_size: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "nextUri")]
     pub next_uri: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "previousUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "previousUri")]
     pub previous_uri: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub folders: Vec<Folder>,
@@ -1073,23 +833,11 @@ pub struct TemplatesResponse {
 
 #[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
 pub struct Folder {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "ownerUserName"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ownerUserName")]
     pub owner_user_name: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "ownerEmail"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ownerEmail")]
     pub owner_email: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "ownerUserId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ownerUserId")]
     pub owner_user_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
     pub folder_type: String,
@@ -1097,17 +845,9 @@ pub struct Folder {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub uri: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "parentFolderId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "parentFolderId")]
     pub parent_folder_id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "parentFolderUri"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "parentFolderUri")]
     pub parent_folder_uri: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "folderId")]
     pub folder_id: String,
@@ -1121,51 +861,23 @@ pub struct Folder {
 
 #[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
 pub struct Filter {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "actionRequired"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "actionRequired")]
     pub action_required: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub expires: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "isTemplate"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "isTemplate")]
     pub is_template: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "fromDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "fromDateTime")]
     pub from_date_time: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "toDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "toDateTime")]
     pub to_date_time: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "searchTarget"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "searchTarget")]
     pub search_target: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "searchText"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "searchText")]
     pub search_text: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "folderIds"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "folderIds")]
     pub folder_ids: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "orderBy")]
     pub order_by: String,
@@ -1175,11 +887,7 @@ pub struct Filter {
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Template {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "templateId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "templateId")]
     pub template_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -1189,19 +897,11 @@ pub struct Template {
     pub password: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "lastModified"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "lastModified")]
     pub last_modified: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub created: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "pageCount"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "pageCount")]
     pub page_count: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub uri: String,
@@ -1219,25 +919,13 @@ pub struct DocumentField {
 pub struct FormData {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "formData")]
     pub form_data: Vec<FormDatum>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "envelopeId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "envelopeId")]
     pub envelope_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "sentDateTime"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "sentDateTime")]
     pub sent_date_time: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "recipientFormData"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "recipientFormData")]
     pub recipient_form_data: Vec<RecipientFormDatum>,
 }
 
@@ -1247,11 +935,7 @@ pub struct FormDatum {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "originalValue"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "originalValue")]
     pub original_value: Option<String>,
 }
 
@@ -1259,69 +943,33 @@ pub struct FormDatum {
 pub struct RecipientFormDatum {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "formData")]
     pub form_data: Vec<FormDatum>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "recipientId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "recipientId")]
     pub recipient_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "SignedTime"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "SignedTime")]
     pub signed_time: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        rename = "DeliveredTime"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "DeliveredTime")]
     pub delivered_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
 pub struct Webhook {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "connectId"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "connectId")]
     pub connect_id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "configurationType"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "configurationType")]
     pub configuration_type: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "urlToPublishTo"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "urlToPublishTo")]
     pub url_to_publish_to: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "allowEnvelopePublish"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "allowEnvelopePublish")]
     pub allow_envelope_publish: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "enableLog"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "enableLog")]
     pub enable_log: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "includeDocuments"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeDocuments")]
     pub include_documents: String,
     #[serde(
         default,
@@ -1341,11 +989,7 @@ pub struct Webhook {
         rename = "signMessageWithX509Certificate"
     )]
     pub sign_message_with_x509_certificate: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "useSoapInterface"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "useSoapInterface")]
     pub use_soap_interface: String,
     #[serde(
         default,
@@ -1353,11 +997,7 @@ pub struct Webhook {
         rename = "includeTimeZoneInformation"
     )]
     pub include_time_zone_information: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "includeHMAC"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeHMAC")]
     pub include_hmac: String,
     #[serde(
         default,
@@ -1371,45 +1011,21 @@ pub struct Webhook {
         rename = "includeSenderAccountasCustomField"
     )]
     pub include_sender_accountas_custom_field: String,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "envelopeEvents"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "envelopeEvents")]
     pub envelope_events: Vec<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        rename = "recipientEvents"
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "recipientEvents")]
     pub recipient_events: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "userIds")]
     pub user_ids: Vec<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "soapNamespace"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "soapNamespace")]
     pub soap_namespace: String,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "allUsers")]
     pub all_users: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "includeCertSoapHeader"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeCertSoapHeader")]
     pub include_cert_soap_header: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "includeDocumentFields"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "includeDocumentFields")]
     pub include_document_fields: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "salesforceAPIVersion"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceAPIVersion")]
     pub salesforce_api_version: String,
     #[serde(
         default,
@@ -1417,17 +1033,9 @@ pub struct Webhook {
         rename = "salesforceDocumentsAsContentFiles"
     )]
     pub salesforce_documents_as_content_files: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "salesforceAuthcode"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceAuthcode")]
     pub salesforce_auth_code: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "salesforceCallBackUrl"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "salesforceCallBackUrl")]
     pub salesforce_callback_url: String,
     #[serde(default, rename = "eventData")]
     pub event_data: WebhookEventData,
@@ -1447,11 +1055,7 @@ pub struct WebhookEventData {
 pub struct WebhooksResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub configurations: Vec<Webhook>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "totalRecords"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", rename = "totalRecords")]
     pub total_records: String,
 }
 

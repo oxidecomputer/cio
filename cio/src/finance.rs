@@ -9,16 +9,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     airtable::{
-        AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE,
-        AIRTABLE_EXPENSED_ITEMS_TABLE, AIRTABLE_SOFTWARE_VENDORS_TABLE,
+        AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE,
+        AIRTABLE_SOFTWARE_VENDORS_TABLE,
     },
     companies::Company,
     configs::{Group, User},
     core::UpdateAirtableRecord,
     db::Database,
-    schema::{
-        accounts_payables, credit_card_transactions, expensed_items, software_vendors, users,
-    },
+    schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users},
 };
 
 #[db {
@@ -98,11 +96,7 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 /// Sync software vendors from Airtable.
 pub async fn refresh_software_vendors(db: &Database, company: &Company) {
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(
-        &company.gsuite_account_id,
-        &company.gsuite_domain,
-        token.clone(),
-    );
+    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     let github = company.authenticate_github();
 
@@ -173,16 +167,13 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         }
 
         // Update the cost per month.
-        db_vendor.total_cost_per_month = (db_vendor.cost_per_user_per_month
-            * db_vendor.users as f32)
-            + db_vendor.flat_cost_per_month;
+        db_vendor.total_cost_per_month =
+            (db_vendor.cost_per_user_per_month * db_vendor.users as f32) + db_vendor.flat_cost_per_month;
 
         db_vendor.update(db).await;
     }
 
-    SoftwareVendors::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await
+    SoftwareVendors::get_from_db(db, company.id).update_airtable(db).await
 }
 
 #[db {
@@ -214,19 +205,11 @@ pub struct NewCreditCardTransaction {
     pub card_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "User")]
     pub merchant_id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "Merchant Name"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Merchant Name")]
     pub merchant_name: String,
     #[serde(default)]
     pub category_id: i32,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "Brex Category"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Brex Category")]
     pub category_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
@@ -276,10 +259,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
         .unwrap();
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
-        ramp_users.insert(
-            format!("{}{}", user.first_name, user.last_name),
-            user.email.to_string(),
-        );
+        ramp_users.insert(format!("{}{}", user.first_name, user.last_name), user.email.to_string());
     }
 
     let transactions = ramp
@@ -425,9 +405,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
         nt.upsert(db).await;
     }
 
-    ExpensedItems::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 // Changes the vendor name to one that matches our existing list.
@@ -512,8 +490,7 @@ fn clean_vendor_name(s: &str) -> String {
         "ULINE".to_string()
     } else if s == "Openphone" {
         "OpenPhone".to_string()
-    } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo"
-    {
+    } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo" {
         "TaskRabbit".to_string()
     } else if s == "Dell Inc" {
         "Dell".to_string()
@@ -682,9 +659,7 @@ fn clean_vendor_name(s: &str) -> String {
         "TYAN".to_string()
     } else if s == "510 Investments LLC" {
         "510 Investments".to_string()
-    } else if s == "The Association for Computing Machinery"
-        || s == "Association for Computing Machinery"
-    {
+    } else if s == "The Association for Computing Machinery" || s == "Association for Computing Machinery" {
         "ACM".to_string()
     } else if s == "LATHAM&WATKINS" {
         "Latham & Watkins".to_string()
@@ -704,9 +679,7 @@ fn clean_vendor_name(s: &str) -> String {
         "Bed Bath and Beyond".to_string()
     } else if s == "Delta Air Lines" || s == "Delta" {
         "Delta Airlines".to_string()
-    } else if s == "National Passenger Rail Corporation"
-        || s == "National Passenger Railroad Corporation"
-    {
+    } else if s == "National Passenger Rail Corporation" || s == "National Passenger Railroad Corporation" {
         "Amtrak".to_string()
     } else if s == "TRINET" || s == "Trinet Cobra" {
         "TriNet".to_string()
@@ -737,10 +710,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
 
     if !path.exists() {
         // Return early the path does not exist.
-        println!(
-            "Brex csv at {} does not exist, returning early",
-            path.to_str().unwrap()
-        );
+        println!("Brex csv at {} does not exist, returning early", path.to_str().unwrap());
         return;
     }
 
@@ -828,11 +798,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "accounts_payables"]
 pub struct NewAccountsPayable {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "CONFIRMATION #"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "CONFIRMATION #")]
     pub confirmation_number: String,
     #[serde(default)]
     pub amount: f32,
@@ -842,28 +808,13 @@ pub struct NewAccountsPayable {
     pub vendor: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "CURRENCY")]
     pub currency: String,
-    #[serde(
-        alias = "PROCESS DATE",
-        deserialize_with = "bill_com_date_format::deserialize"
-    )]
+    #[serde(alias = "PROCESS DATE", deserialize_with = "bill_com_date_format::deserialize")]
     pub date: NaiveDate,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "PAYMENT TYPE"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT TYPE")]
     pub payment_type: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "PAYMENT STATUS"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT STATUS")]
     pub status: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "PAYMENT AMOUNT"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PAYMENT AMOUNT")]
     pub notes: String,
     #[serde(
         default,
@@ -942,9 +893,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
         db_bill.update(db).await;
     }
 
-    AccountsPayables::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    AccountsPayables::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 #[db {
@@ -984,11 +933,7 @@ pub struct NewExpensedItem {
     pub category_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub state: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "Description"
-    )]
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Description")]
     pub memo: String,
     #[serde(alias = "Timestamp")]
     pub time: DateTime<Utc>,
@@ -1016,9 +961,7 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
 pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
-    ExpensedItems::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
 
     let mut path = env::current_dir().unwrap();
     path.push("expensify.csv");
@@ -1047,11 +990,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         let split = name.split(' ');
         let vec: Vec<&str> = split.collect();
         // Get the last item in the vector.
-        let last_name = vec
-            .last()
-            .unwrap()
-            .trim_end_matches("@oxidecomputer.com")
-            .to_string();
+        let last_name = vec.last().unwrap().trim_end_matches("@oxidecomputer.com").to_string();
 
         // Reset the merchand id so it is clean.
         record.merchant_id = "".to_string();
@@ -1087,12 +1026,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         // Grab the card_id and set it as part of receipts.
         if !record.card_id.is_empty() && record.employee_email != "allison@oxidecomputer.com" {
             // Get the URL.
-            let body = reqwest::get(&record.card_id)
-                .await
-                .unwrap()
-                .text()
-                .await
-                .unwrap();
+            let body = reqwest::get(&record.card_id).await.unwrap().text().await.unwrap();
             let split = body.split(' ');
             let vec: Vec<&str> = split.collect();
 
@@ -1204,13 +1138,9 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
     let bill_payments = qb.list_bill_payments().await.unwrap();
     for bill_payment in bill_payments {
         // Let's check if there are any attachments.
-        let attachments = qb
-            .list_attachments_for_bill_payment(&bill_payment.id)
-            .await
-            .unwrap();
+        let attachments = qb.list_attachments_for_bill_payment(&bill_payment.id).await.unwrap();
 
-        if (attachments.is_empty() && bill_payment.line.is_empty()) || bill_payment.total_amt == 0.0
-        {
+        if (attachments.is_empty() && bill_payment.line.is_empty()) || bill_payment.total_amt == 0.0 {
             // Continue early if we have no lines on the bill.
             continue;
         }
@@ -1238,9 +1168,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                             // Get the attachments for the bill.
                             let attachments = qb.list_attachments_for_bill(&bill.id).await.unwrap();
                             for attachment in attachments {
-                                transaction
-                                    .invoices
-                                    .push(attachment.temp_download_uri.to_string());
+                                transaction.invoices.push(attachment.temp_download_uri.to_string());
                             }
                         }
                     }
@@ -1254,11 +1182,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                 println!(
                     "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` \
                      date `{}`: {}",
-                    bill_payment.vendor_ref.name,
-                    merchant_name,
-                    bill_payment.total_amt,
-                    bill_payment.txn_date,
-                    e
+                    bill_payment.vendor_ref.name, merchant_name, bill_payment.total_amt, bill_payment.txn_date, e
                 );
             }
         }
@@ -1269,10 +1193,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
         // Let's try to match the Brex reciepts to the transactions.
         if purchase.account_ref.name == "Credit Cards:Brex" {
             // See if we even have attachments.
-            let attachments = qb
-                .list_attachments_for_purchase(&purchase.id)
-                .await
-                .unwrap();
+            let attachments = qb.list_attachments_for_purchase(&purchase.id).await.unwrap();
             if attachments.is_empty() {
                 // We can continue early since we don't have attachments.
                 continue;
@@ -1295,14 +1216,8 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                         .eq(merchant_name.to_string())
                         .and(credit_card_transactions::dsl::card_vendor.eq("Brex".to_string()))
                         .and(credit_card_transactions::dsl::amount.eq(purchase.total_amt))
-                        .and(
-                            credit_card_transactions::dsl::time
-                                .ge(DateTime::<Utc>::from_utc(sdt, Utc)),
-                        )
-                        .and(
-                            credit_card_transactions::dsl::time
-                                .le(DateTime::<Utc>::from_utc(edt, Utc)),
-                        ),
+                        .and(credit_card_transactions::dsl::time.ge(DateTime::<Utc>::from_utc(sdt, Utc)))
+                        .and(credit_card_transactions::dsl::time.le(DateTime::<Utc>::from_utc(edt, Utc))),
                 )
                 .first::<CreditCardTransaction>(&db.conn())
             {
@@ -1311,9 +1226,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                     // Clear out existing receipts.
                     transaction.receipts = vec![];
                     for attachment in attachments {
-                        transaction
-                            .receipts
-                            .push(attachment.temp_download_uri.to_string());
+                        transaction.receipts.push(attachment.temp_download_uri.to_string());
                     }
                     transaction.update(db).await;
                     continue;
@@ -1322,13 +1235,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                     println!(
                         "WARN: could not find transaction with merchant_name `{}` -> `{}` amount \
                          `{}` date `{}` --> less than `{}` greater than `{}`: {}",
-                        purchase.entity_ref.name,
-                        merchant_name,
-                        purchase.total_amt,
-                        purchase.txn_date,
-                        sdt,
-                        edt,
-                        e
+                        purchase.entity_ref.name, merchant_name, purchase.total_amt, purchase.txn_date, sdt, edt, e
                     );
                 }
             }

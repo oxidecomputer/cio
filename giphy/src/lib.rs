@@ -74,13 +74,7 @@ impl Giphy {
         &self.key
     }
 
-    fn request<B>(
-        &self,
-        method: Method,
-        path: String,
-        body: B,
-        query: Option<Vec<(&'static str, String)>>,
-    ) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&'static str, String)>>) -> Request
     where
         B: Serialize,
     {
@@ -114,12 +108,7 @@ impl Giphy {
     }
 
     /// Search gifs, defaults to pg-13.
-    pub async fn search_gifs(
-        &self,
-        query: &str,
-        limit: i32,
-        rating: &str,
-    ) -> Result<Vec<Gif>, APIError> {
+    pub async fn search_gifs(&self, query: &str, limit: i32, rating: &str) -> Result<Vec<Gif>, APIError> {
         // Build the request.
         let request = self.request(
             Method::GET,

@@ -13,9 +13,7 @@ impl Default for Database {
         let manager = r2d2::ConnectionManager::new(&database_url);
         let pool = r2d2::Pool::builder().max_size(15).build(manager).unwrap();
 
-        Database {
-            pool: Arc::new(pool),
-        }
+        Database { pool: Arc::new(pool) }
     }
 }
 

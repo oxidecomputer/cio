@@ -285,11 +285,7 @@ impl NewCertificate {
     }
 
     fn get_github_path(&self, file: &str) -> String {
-        format!(
-            "/nginx/ssl/{}/{}",
-            self.domain.replace("*.", "wildcard."),
-            file
-        )
+        format!("/nginx/ssl/{}/{}", self.domain.replace("*.", "wildcard."), file)
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
