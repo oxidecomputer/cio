@@ -908,7 +908,7 @@ xoxo,
             dept: self.department.to_string(),
             first_name: self.first_name.to_string(),
             last_name: self.last_name.to_string(),
-            manager: self.manager(db).email.to_string(),
+            manager: self.manager(db).email,
             /*
              * This is broken and should be an array the spec is wrong.
              * FIX THIS WHEN THE SPEC IS FIXED.
@@ -1920,10 +1920,35 @@ pub async fn sync_users(
                                     );
 
                                     if !new_user.github.is_empty() {
-                                        new_user
+                                        match new_user
                                             .update_zoom_vanity_name(db, zoom, &zoom_user.id, &zu, &new_user.github)
                                             .await
-                                            .unwrap();
+                                        {
+                                            Ok(_) => (),
+                                            Err(e) => {
+                                                // Try their {first_name}.{last_name}.
+                                                println!(
+                                        "updating zoom vanity_url failed for github handle {}, will try with {}.{}: {}",
+                                        new_user.github, new_user.first_name, new_user.last_name, e
+                                    );
+                                                // Ignore the error if it does not work.
+                                                if let Err(e) = new_user
+                                                    .update_zoom_vanity_name(
+                                                        db,
+                                                        zoom,
+                                                        &zoom_user.id,
+                                                        &zu,
+                                                        &format!("{}.{}", new_user.first_name, new_user.last_name),
+                                                    )
+                                                    .await
+                                                {
+                                                    println!(
+                                                        "updating zoom vanity_url failed for {}.{}: {}",
+                                                        new_user.first_name, new_user.last_name, e
+                                                    );
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
