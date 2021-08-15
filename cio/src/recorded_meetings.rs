@@ -107,9 +107,6 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
     // Initialize the Google Drive client.
     let drive = GoogleDrive::new(token);
 
-    // Initialize the RevAI client.
-    let revai = RevAI::new_from_env();
-
     // Get the shared drive.
     let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
 
@@ -121,10 +118,10 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
 
     for meeting in recordings {
         // Move the recordings to the Google Drive folder.
-        for recording in meeting.recording_files {
-            let file_type = recording.file_type.unwrap();
-            if file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::Noop
-                || file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::FallthroughString
+        for recording in &meeting.recording_files {
+            let file_type = recording.file_type.as_ref().unwrap();
+            if *file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::Noop
+                || *file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::FallthroughString
             {
                 // Continue early.
                 println!("[zoom] got bad recording file type: {:?}", meeting);
@@ -143,7 +140,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                 "[zoom] meeting {} -> downloading recording {}... This might take a bit...",
                 meeting.topic, recording.download_url,
             );
-            let resp = reqwest::get(recording.download_url).await.unwrap();
+            let resp = reqwest::get(&recording.download_url).await.unwrap();
             let b = resp.bytes().await.unwrap();
 
             // Get the mime type.
