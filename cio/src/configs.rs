@@ -6,25 +6,26 @@ use std::{
     thread, time,
 };
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
 use google_geocode::Geocode;
 use gsuite_api::{
-    Attendee, Building as GSuiteBuilding, CalendarEvent,
-    CalendarResource as GSuiteCalendarResource, Date, GSuite, Group as GSuiteGroup,
-    User as GSuiteUser,
+    Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite,
+    Group as GSuiteGroup, User as GSuiteUser,
 };
 use gusto_api::Client as Gusto;
 use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
+use zoom_api::Client as Zoom;
 
 use crate::{
     airtable::{
-        AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE,
-        AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE,
+        AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE,
+        AIRTABLE_LINKS_TABLE,
     },
     applicants::Applicant,
     certs::{Certificate, Certificates, NewCertificate},
@@ -32,9 +33,8 @@ use crate::{
     core::UpdateAirtableRecord,
     db::Database,
     gsuite::{
-        update_google_group_settings, update_group_aliases, update_gsuite_building,
-        update_gsuite_calendar_resource, update_gsuite_user, update_user_aliases,
-        update_user_google_groups,
+        update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource,
+        update_gsuite_user, update_user_aliases, update_user_google_groups,
     },
     schema::{applicants, buildings, conference_rooms, groups, links, users},
     shipments::NewOutboundShipment,
@@ -118,17 +118,9 @@ pub struct UserConfig {
     pub username: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
-    #[serde(
-        default,
-        alias = "recovery_email",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, alias = "recovery_email", skip_serializing_if = "String::is_empty")]
     pub recovery_email: String,
-    #[serde(
-        default,
-        alias = "recovery_phone",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(default, alias = "recovery_phone", skip_serializing_if = "String::is_empty")]
     pub recovery_phone: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub gender: String,
@@ -289,8 +281,7 @@ pub mod null_date_format {
         D: Deserializer<'de>,
     {
         // TODO: actually get the Unix timestamp.
-        let s = String::deserialize(deserializer)
-            .unwrap_or_else(|_| "2020-12-03T15:49:27Z".to_string());
+        let s = String::deserialize(deserializer).unwrap_or_else(|_| "2020-12-03T15:49:27Z".to_string());
 
         // Try to convert from the string to an int, in case we have a numerical
         // time stamp.
@@ -428,14 +419,10 @@ impl UserConfig {
     async fn populate_home_address(&mut self) {
         let mut street_address = self.home_address_street_1.to_string();
         if !self.home_address_street_2.is_empty() {
-            street_address = format!(
-                "{}\n{}",
-                self.home_address_street_1, self.home_address_street_2,
-            );
+            street_address = format!("{}\n{}", self.home_address_street_1, self.home_address_street_2,);
         }
         // Make sure the state is not an abreev.
-        self.home_address_state =
-            crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
+        self.home_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&self.home_address_state);
 
         // Set the formatted address.
         self.home_address_formatted = format!(
@@ -473,14 +460,12 @@ impl UserConfig {
         if !self.building.is_empty() {
             // The user has an actual building for their work address.
             // Let's get it.
-            let building =
-                Building::get_from_db(db, self.cio_company_id, self.building.to_string()).unwrap();
+            let building = Building::get_from_db(db, self.cio_company_id, self.building.to_string()).unwrap();
             // Now let's set their address to the building's address.
             self.work_address_street_1 = building.street_address.to_string();
             self.work_address_street_2 = "".to_string();
             self.work_address_city = building.city.to_string();
-            self.work_address_state =
-                crate::states::StatesMap::match_abreev_or_return_existing(&building.state);
+            self.work_address_state = crate::states::StatesMap::match_abreev_or_return_existing(&building.state);
             self.work_address_zipcode = building.zipcode.to_string();
             self.work_address_country = building.country.to_string();
             if self.work_address_country == "US"
@@ -712,18 +697,10 @@ jess@{}.
 
 xoxo,
   The Onboarding Bot",
-                    self.first_name,
-                    company.domain,
-                    company.domain,
-                    self.email,
-                    aliases,
-                    company.gsuite_domain,
+                    self.first_name, company.domain, company.domain, self.email, aliases, company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![
-                    self.email.to_string(),
-                    format!("jess@{}", company.gsuite_domain),
-                ],
+                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -782,10 +759,7 @@ xoxo,
                     company.gsuite_domain,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![
-                    self.email.to_string(),
-                    format!("jess@{}", company.gsuite_domain),
-                ],
+                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
@@ -890,14 +864,65 @@ xoxo,
                     company.github_org,
                 ),
                 vec![self.recovery_email.to_string()],
-                vec![
-                    self.email.to_string(),
-                    format!("jess@{}", company.gsuite_domain),
-                ],
+                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
                 vec![],
                 format!("admin@{}", company.gsuite_domain),
             )
             .await;
+    }
+
+    pub async fn update_zoom_vanity_name(
+        &self,
+        zoom: &Zoom,
+        zoom_user_id: &str,
+        zu: &zoom_api::types::UserResponseAllOf,
+        vanity_name: &str,
+    ) -> Result<()> {
+        zoom.users()
+            .user_update(
+                zoom_user_id,
+                zoom_api::types::LoginType::Noop, // We don't know their login type...
+                &zoom_api::types::UserUpdate {
+                    // Set values from Zoom.
+                    cms_user_id: zu.user_response.cms_user_id.to_string(),
+                    company: zu.user_response.company.to_string(),
+                    // TODO: actually pass these along.
+                    custom_attributes: None,
+                    host_key: zu.user_response.host_key.to_string(),
+                    job_title: zu.user_response.job_title.to_string(),
+                    language: zu.user_response.language.to_string(),
+                    location: zu.user_response.location.to_string(),
+
+                    // Set more values from Zoom.
+                    pmi: zu.user.pmi,
+                    type_: zu.user.type_,
+                    timezone: zu.user.timezone.to_string(),
+
+                    // Get the groups information.
+                    group_id: zu.groups.id.to_string(),
+
+                    // This is depreciated, user phone_numbers instead.
+                    phone_country: "".to_string(),
+                    phone_number: "".to_string(),
+
+                    // Set our values.
+                    vanity_name: vanity_name.to_string(),
+                    use_pmi: true,
+                    dept: self.department.to_string(),
+                    first_name: self.first_name.to_string(),
+                    last_name: self.last_name.to_string(),
+                    manager: self.manager.to_string(),
+                    phone_numbers: Some(zoom_api::types::PhoneNumbers {
+                        // TODO: Make this work for people outside the US as well.
+                        code: "+1".to_string(),
+                        number: self.recovery_phone.to_string(),
+                        label: Some(zoom_api::types::Label::Mobile),
+                        // TODO: Make this work for people outside the US as well.
+                        country: "US".to_string(),
+                    }),
+                },
+            )
+            .await
     }
 }
 
@@ -929,9 +954,7 @@ impl UpdateAirtableRecord<User> for User {
 
         self.geocode_cache = record.geocode_cache.to_string();
 
-        if self.start_date == crate::utils::default_date()
-            && record.start_date != crate::utils::default_date()
-        {
+        if self.start_date == crate::utils::default_date() && record.start_date != crate::utils::default_date() {
             self.start_date = record.start_date;
         }
 
@@ -967,9 +990,7 @@ impl UpdateAirtableRecord<User> for User {
         "name" = "String",
     },
 }]
-#[derive(
-    Debug, Default, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Default, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "groups"]
 pub struct GroupConfig {
     pub name: String,
@@ -1012,11 +1033,7 @@ pub struct GroupConfig {
     /// - ANYONE_CAN_DISCOVER
     /// - ALL_IN_DOMAIN_CAN_DISCOVER
     /// - ALL_MEMBERS_CAN_DISCOVER
-    #[serde(
-        alias = "who_can_discover_group",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_discover_group", skip_serializing_if = "String::is_empty", default)]
     pub who_can_discover_group: String,
 
     /// who_can_join: Permission to join group. Possible values are:
@@ -1032,11 +1049,7 @@ pub struct GroupConfig {
     /// - INVITED_CAN_JOIN: Candidates for membership can be invited to join.
     ///
     /// - CAN_REQUEST_TO_JOIN: Non members can request an invitation to join.
-    #[serde(
-        alias = "who_can_join",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_join", skip_serializing_if = "String::is_empty", default)]
     pub who_can_join: String,
 
     /// who_can_moderate_members: Specifies who can manage members. Possible
@@ -1071,11 +1084,7 @@ pub struct GroupConfig {
     /// who_can_post_message is set to ANYONE_CAN_POST, we recommend the
     /// messageModerationLevel be set to MODERATE_NON_MEMBERS to protect the
     /// group from possible spam.
-    #[serde(
-        alias = "who_can_post_message",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_post_message", skip_serializing_if = "String::is_empty", default)]
     pub who_can_post_message: String,
 
     /// who_can_view_group: Permissions to view group messages. Possible values
@@ -1088,11 +1097,7 @@ pub struct GroupConfig {
     /// messages.
     /// - ALL_MANAGERS_CAN_VIEW: Any group manager can view this group's
     /// messages.
-    #[serde(
-        alias = "who_can_view_group",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_view_group", skip_serializing_if = "String::is_empty", default)]
     pub who_can_view_group: String,
 
     /// who_can_view_membership: Permissions to view membership. Possible values
@@ -1106,11 +1111,7 @@ pub struct GroupConfig {
     /// list.
     /// - ALL_MANAGERS_CAN_VIEW: The group managers can view group members
     /// list.
-    #[serde(
-        alias = "who_can_view_membership",
-        skip_serializing_if = "String::is_empty",
-        default
-    )]
+    #[serde(alias = "who_can_view_membership", skip_serializing_if = "String::is_empty", default)]
     pub who_can_view_membership: String,
 
     /// Specifies whether a collaborative inbox will remain turned on for the group.
@@ -1155,9 +1156,7 @@ impl UpdateAirtableRecord<Group> for Group {
         "name" = "String",
     },
 }]
-#[derive(
-    Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "buildings"]
 pub struct BuildingConfig {
     pub name: String,
@@ -1228,9 +1227,7 @@ impl UpdateAirtableRecord<Building> for Building {
         "name" = "String",
     },
 }]
-#[derive(
-    Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "conference_rooms"]
 pub struct ResourceConfig {
     pub name: String,
@@ -1284,9 +1281,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
         "name" = "String",
     },
 }]
-#[derive(
-    Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize,
-)]
+#[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 #[table_name = "links"]
 pub struct LinkConfig {
     /// name will not be used in config files.
@@ -1399,13 +1394,11 @@ pub async fn sync_github_outside_collaborators(
                     collaborators_map.insert(repo.to_string(), users.to_vec());
                 }
                 None => {
-                    collaborators_map
-                        .insert(repo.to_string(), outside_collaborators_config.users.clone());
+                    collaborators_map.insert(repo.to_string(), outside_collaborators_config.users.clone());
                 }
             }
 
-            let mut perm =
-                octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Pull;
+            let mut perm = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Pull;
             if outside_collaborators_config.perm == "push" {
                 perm = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
             }
@@ -1453,10 +1446,7 @@ pub async fn sync_github_outside_collaborators(
             }
         }
 
-        println!(
-            "Successfully ran configuration for outside collaborators: {}",
-            name
-        );
+        println!("Successfully ran configuration for outside collaborators: {}", name);
     }
 
     // Get all the internal to the company collaborators.
@@ -1476,11 +1466,7 @@ pub async fn sync_github_outside_collaborators(
         // Get the collaborators on the repo.
         let github_collaborators = github
             .repos()
-            .list_all_collaborators(
-                &company.github_org,
-                &repo,
-                octorust::types::Affiliation::All,
-            )
+            .list_all_collaborators(&company.github_org, &repo, octorust::types::Affiliation::All)
             .await
             .unwrap();
 
@@ -1488,17 +1474,19 @@ pub async fn sync_github_outside_collaborators(
         // vector.
         for existing_collaborator in github_collaborators {
             // Check if they are an internal user.
-            if internal_github_users.iter().any(|internal| {
-                internal.to_lowercase() == existing_collaborator.login.to_lowercase()
-            }) {
+            if internal_github_users
+                .iter()
+                .any(|internal| internal.to_lowercase() == existing_collaborator.login.to_lowercase())
+            {
                 // They are an internal user so continue;
                 continue;
             }
 
             // Check if they should have access.
-            if collaborators.iter().any(|external| {
-                external.to_lowercase() == existing_collaborator.login.to_lowercase()
-            }) {
+            if collaborators
+                .iter()
+                .any(|external| external.to_lowercase() == existing_collaborator.login.to_lowercase())
+            {
                 // They are supposed to be an external collaborator so continue;
                 continue;
             }
@@ -1693,11 +1681,7 @@ pub async fn sync_users(
                             user.email, company.airtable_workspace_id
                         );
                         airtable_auth
-                            .add_collaborator_to_workspace(
-                                &company.airtable_workspace_id,
-                                &user.airtable_id,
-                                "create",
-                            )
+                            .add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create")
                             .await
                             .unwrap();
                     }
@@ -1720,10 +1704,7 @@ pub async fn sync_users(
                     }
                 }
                 Err(e) => {
-                    println!(
-                        "getting airtable enterprise user for {} failed: {}",
-                        user.email, e
-                    );
+                    println!("getting airtable enterprise user for {} failed: {}", user.email, e);
                 }
             }
         }
@@ -1746,7 +1727,7 @@ pub async fn sync_users(
             if let Some(zoom_user) = zoom_users_pending.get(&user.email) {
                 if !user.zoom_id.is_empty() {
                     user.zoom_id = zoom_user.id.to_string();
-                } else if let Some(e) = existing {
+                } else if let Some(ref e) = existing.clone() {
                     // Get it from the database.
                     user.zoom_id = e.zoom_id.to_string();
                 }
@@ -1763,16 +1744,12 @@ pub async fn sync_users(
             // Grab their date of birth, start date, and address from Airtable.
             if let Some(e) = existing.clone() {
                 if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
-                    user.home_address_street_1 =
-                        airtable_record.fields.home_address_street_1.to_string();
-                    user.home_address_street_2 =
-                        airtable_record.fields.home_address_street_2.to_string();
+                    user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
+                    user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
                     user.home_address_city = airtable_record.fields.home_address_city.to_string();
                     user.home_address_state = airtable_record.fields.home_address_state.to_string();
-                    user.home_address_zipcode =
-                        airtable_record.fields.home_address_zipcode.to_string();
-                    user.home_address_country =
-                        airtable_record.fields.home_address_country.to_string();
+                    user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
+                    user.home_address_country = airtable_record.fields.home_address_country.to_string();
                     user.birthday = airtable_record.fields.birthday;
                     // Keep the start date in airtable if we already have one.
                     if user.start_date == crate::utils::default_date()
@@ -1790,8 +1767,7 @@ pub async fn sync_users(
                 } else if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
                     user.populate_home_address().await;
                     // Create the user in Gusto if necessary.
-                    user.create_in_gusto_if_needed(gusto, gusto_company_id)
-                        .await;
+                    user.create_in_gusto_if_needed(gusto, gusto_company_id).await;
                 }
             }
         }
@@ -1842,9 +1818,7 @@ pub async fn sync_users(
                             department_id = department.id.to_string();
                         }
 
-                        if department_id != ramp_user.department_id
-                            || users_manager.ramp_id != ramp_user.manager_id
-                        {
+                        if department_id != ramp_user.department_id || users_manager.ramp_id != ramp_user.manager_id {
                             let updated_user = ramp_api::types::PatchUsersRequest {
                                 department_id: department_id.to_string(),
                                 direct_manager_id: users_manager.ramp_id.to_string(),
@@ -1852,10 +1826,7 @@ pub async fn sync_users(
                                 location_id: ramp_user.location_id.to_string(),
                             };
 
-                            ramp.users()
-                                .patch(&ramp_user.id, &updated_user)
-                                .await
-                                .unwrap();
+                            ramp.users().patch(&ramp_user.id, &updated_user).await.unwrap();
                         }
                     }
                     None => {
@@ -1910,9 +1881,11 @@ pub async fn sync_users(
                         // given to us when we list users.
                         let zu = zoom
                             .users()
-                            .user(&zoom_user.id,
+                            .user(
+                                &zoom_user.id,
                                 zoom_api::types::LoginType::Noop, // We don't know their login type...
-                                false)
+                                false,
+                            )
                             .await
                             .unwrap();
                         println!("zoom user: {:?}", zu);
@@ -1923,63 +1896,18 @@ pub async fn sync_users(
                                 .user_response
                                 .vanity_url
                                 .ends_with(&format!("/{}", new_user.username))
-                                && !zu
-                                    .user_response
-                                    .vanity_url
-                                    .ends_with(&format!("/{}", new_user.github)))
+                                && !zu.user_response.vanity_url.ends_with(&format!("/{}", new_user.github)))
                         {
                             // Update the vanity URL for the user.
                             // First try their username.
                             // This should succeed _if_ we have a custom domain.
-                            match  zoom
-                            .users()
-                            .user_update(&zoom_user.id,
-                                zoom_api::types::LoginType::Noop, // We don't know their login type...
-                                &zoom_api::types::UserUpdate{
-                                    // Set values from Zoom.
-                                    cms_user_id:zu.user_response.cms_user_id.to_string(),
-     company: zu.user_response.company.to_string(),
-     //custom_attributes:zu.user_response.custom_attributes,
-     host_key: zu.user_response.host_key.to_string(),
-     job_title:zu.user_response.job_title.to_string(),
-     language: zu.user_response.language.to_string(),
-     location: zu.user_response.location.to_string(),
-
-     // Set more values from Zoom.
-     pmi: zu.user.pmi,
-     type_: zu.user.type_,
-     timezone: zu.user.timezone.to_string(),
-
-     // Get the groups information.
-     group_id: zu.groups.id.to_string(),
-
-     // This is depreciated, user phone_numbers instead.
-     phone_country: "".to_string(),
-     phone_number: "".to_string(),
-
-     // Set our values.
-     vanity_name: new_user.username.to_string(),
-     use_pmi: true,
-     dept: new_user.department.to_string(),
-     first_name: new_user.first_name.to_string(),
-     last_name: new_user.last_name.to_string(),
-     manager: new_user.manager.to_string(),
-     phone_numbers:Some(
-     zoom_api::types::PhoneNumbers{
-         // TODO: Make this work for people outside the US as well.
-         code: "+1".to_string(),
-         number: new_user.recovery_phone.to_string(),
-         label:Some(zoom_api::types::Label::Mobile),
-         // TODO: Make this work for people outside the US as well.
-         country: "US".to_string(),
-
-     }),
-
-                                })
-                            .await {
-                                Ok(_)=> (),
+                            match new_user
+                                .update_zoom_vanity_name(zoom, &zoom_user.id, &zu, &new_user.username)
+                                .await
+                            {
+                                Ok(_) => (),
                                 Err(e) => {
-                            // Try their github username.
+                                    // Try their github username.
                                     println!("updating zoom user failed: {}", e);
                                 }
                             }
@@ -2057,10 +1985,7 @@ pub async fn sync_users(
             if !company.airtable_enterprise_account_id.is_empty() {
                 // We don't need a base id here since we are only using the enterprise api features.
                 let airtable_auth = company.authenticate_airtable("");
-                airtable_auth
-                    .delete_internal_user_by_email(&user.email)
-                    .await
-                    .unwrap();
+                airtable_auth.delete_internal_user_by_email(&user.email).await.unwrap();
                 println!("deleted user from airtable: {}", username);
             }
         }
@@ -2099,9 +2024,7 @@ pub async fn sync_users(
                     gsuite
                         .delete_user(&format!("{}@{}", username, company.gsuite_domain))
                         .await
-                        .unwrap_or_else(|e| {
-                            panic!("deleting user {} from gsuite failed: {}", username, e)
-                        });
+                        .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
 
                     println!("deleted user from gsuite: {}", username);
                     continue;
@@ -2147,8 +2070,7 @@ pub async fn sync_users(
 
             // Send an email to the new user.
             // Do this here in case another step fails.
-            user.send_email_new_gsuite_user(db, &gsuite_user.password)
-                .await;
+            user.send_email_new_gsuite_user(db, &gsuite_user.password).await;
             println!("created new user in gsuite: {}", username);
 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
@@ -2163,11 +2085,7 @@ pub async fn sync_users(
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
-pub async fn sync_buildings(
-    db: &Database,
-    buildings: BTreeMap<String, BuildingConfig>,
-    company: &Company,
-) {
+pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let token = company.authenticate_google(db).await;
@@ -2228,9 +2146,10 @@ pub async fn sync_buildings(
                 // If the building does not exist in our map we need to delete
                 // them from GSuite.
                 println!("deleting building {} from gsuite", id);
-                gsuite.delete_building(&id).await.unwrap_or_else(|e| {
-                    panic!("deleting building {} from gsuite failed: {}", id, e)
-                });
+                gsuite
+                    .delete_building(&id)
+                    .await
+                    .unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
 
                 println!("deleted building from gsuite: {}", id);
                 continue;
@@ -2269,9 +2188,7 @@ pub async fn sync_buildings(
     }
 
     // Update buildings in airtable.
-    Buildings::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    Buildings::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
@@ -2331,15 +2248,12 @@ pub async fn sync_conference_rooms(
                 // If the conference room does not exist in our map we need to delete
                 // it from GSuite.
                 println!("deleting conference room {} from gsuite", id);
-                gsuite
-                    .delete_calendar_resource(&r.id)
-                    .await
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "deleting conference room {} with id {} from gsuite failed: {}",
-                            id, r.id, e
-                        )
-                    });
+                gsuite.delete_calendar_resource(&r.id).await.unwrap_or_else(|e| {
+                    panic!(
+                        "deleting conference room {} with id {} from gsuite failed: {}",
+                        id, r.id, e
+                    )
+                });
 
                 println!("deleted conference room from gsuite: {}", id);
                 continue;
@@ -2378,9 +2292,7 @@ pub async fn sync_conference_rooms(
     }
 
     // Update conference_rooms in airtable.
-    ConferenceRooms::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    ConferenceRooms::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
@@ -2513,9 +2425,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     }
 
     // Update groups in airtable.
-    Groups::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    Groups::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 /// Sync our links with our database and then update Airtable from the database.
@@ -2642,9 +2552,7 @@ pub async fn sync_certificates(
     println!("updated configs certificates in the database");
 
     // Update certificates in airtable.
-    Certificates::get_from_db(db, company.id)
-        .update_airtable(db)
-        .await;
+    Certificates::get_from_db(db, company.id).update_airtable(db).await;
 }
 
 pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
@@ -2679,8 +2587,7 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
     sync_certificates(db, &github, configs.certificates, company).await;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company)
-        .await;
+    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company).await;
 
     refresh_anniversary_events(db, company).await;
 }
@@ -2760,10 +2667,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
                 .create_calendar_event(&anniversary_cal_id, &new_event)
                 .await
                 .unwrap();
-            println!(
-                "created event for user {} anniversary: {:?}",
-                user.username, event
-            );
+            println!("created event for user {} anniversary: {:?}", user.username, event);
 
             user.google_anniversary_event_id = event.id.to_string();
         } else {
@@ -2783,17 +2687,10 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
                 new_event.sequence = old_event.sequence;
                 // Update the event.
                 let event = gsuite
-                    .update_calendar_event(
-                        &anniversary_cal_id,
-                        &user.google_anniversary_event_id,
-                        &new_event,
-                    )
+                    .update_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id, &new_event)
                     .await
                     .unwrap();
-                println!(
-                    "updated event for user {} anniversary: {:?}",
-                    user.username, event
-                );
+                println!("updated event for user {} anniversary: {:?}", user.username, event);
             }
         }
 

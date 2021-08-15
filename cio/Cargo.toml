@@ -11,6 +11,7 @@ documentation = "https://docs.rs/cio-api"
 [dependencies]
 acme-lib = "^0.8.0"
 airtable-api = "^0.1.33"
+anyhow = "1"
 #airtable-api = { path = "../airtable" }
 async-recursion = "^0.3.2"
 async-trait = "^0.1.0"
