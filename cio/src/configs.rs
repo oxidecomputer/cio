@@ -1908,7 +1908,17 @@ pub async fn sync_users(
                                 Ok(_) => (),
                                 Err(e) => {
                                     // Try their github username.
-                                    println!("updating zoom user failed: {}", e);
+                                    println!(
+                                        "updating zoom vanity_url failed for username {} , will try with github handle {}: {}",
+                                        new_user.username, new_user.github, e
+                                    );
+
+                                    if !new_user.github.is_empty() {
+                                        new_user
+                                            .update_zoom_vanity_name(zoom, &zoom_user.id, &zu, &new_user.github)
+                                            .await
+                                            .unwrap();
+                                    }
                                 }
                             }
                         }
