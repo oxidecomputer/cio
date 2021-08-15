@@ -117,6 +117,12 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
         .unwrap();
 
     for meeting in recordings {
+        if meeting.topic.is_empty() {
+            // Continue early.
+            println!("Meeting must have a topic!! {:?}", meeting);
+            continue;
+        }
+
         // Move the recordings to the Google Drive folder.
         for recording in &meeting.recording_files {
             let file_type = recording.file_type.as_ref().unwrap();
@@ -176,6 +182,27 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             drive_file.id
         );
         }
+
+        // Create the meeting in the database.
+        /*let m = NewRecordedMeeting {
+            name: meeting.topic.trim().to_string(),
+            description: event.description.trim().to_string(),
+            start_time: meeting.start_time.unwrap(),
+            end_time: event.end.date_time.unwrap(),
+            video,
+            chat_log_link,
+            chat_log,
+            is_recurring: !event.recurring_event_id.is_empty(),
+            attendees,
+            transcript: "".to_string(),
+            transcript_id: "".to_string(),
+            location: event.location.to_string(),
+            // We save the meeting ID here, even tho its in Zoom.
+            // TODO: clean this up.
+            google_event_id: meeting.id.to_string(),
+            event_link: event.html_link.to_string(),
+            cio_company_id: company.id,
+        };*/
     }
 }
 
