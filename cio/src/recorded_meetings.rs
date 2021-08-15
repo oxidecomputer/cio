@@ -123,6 +123,14 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             continue;
         }
 
+        let mut transcript = String::new();
+        let mut transcript_id = String::new();
+        let mut video = String::new();
+        let mut video_html_link = String::new();
+        let mut chat_log_link = String::new();
+        let mut chat_log = String::new();
+        let mut end_time = Utc::now();
+
         // Move the recordings to the Google Drive folder.
         for recording in &meeting.recording_files {
             let file_type = recording.file_type.as_ref().unwrap();
@@ -168,6 +176,25 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                 .await
                 .unwrap();
 
+            match *file_type {
+                GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => {
+                    video = format!("https://drive.google.com/open?id={}", drive_file.id);
+                    video_html_link = recording.play_url.to_string();
+                    end_time = DateTime::parse_from_rfc3339(&recording.recording_end)
+                        .unwrap()
+                        .with_timezone(&Utc);
+                }
+                GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => {
+                    transcript = from_utf8(&b).unwrap().to_string();
+                    transcript_id = recording.id.to_string();
+                }
+                GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => {
+                    chat_log_link = format!("https://drive.google.com/open?id={}", drive_file.id);
+                    chat_log = from_utf8(&b).unwrap().to_string();
+                }
+                _ => (),
+            }
+
             zoom.cloud_recording()
                 .recording_delete_one(
                     &recording.meeting_id,
@@ -184,25 +211,26 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
         }
 
         // Create the meeting in the database.
-        /*let m = NewRecordedMeeting {
+        let m = NewRecordedMeeting {
             name: meeting.topic.trim().to_string(),
-            description: event.description.trim().to_string(),
+            description: "".to_string(),
             start_time: meeting.start_time.unwrap(),
-            end_time: event.end.date_time.unwrap(),
+            end_time,
             video,
             chat_log_link,
             chat_log,
-            is_recurring: !event.recurring_event_id.is_empty(),
-            attendees,
-            transcript: "".to_string(),
-            transcript_id: "".to_string(),
-            location: event.location.to_string(),
+            is_recurring: false,
+            attendees: Default::default(),
+            transcript,
+            transcript_id,
+            location: format!("Zoom meeting by host: {}", meeting.host_id),
             // We save the meeting ID here, even tho its in Zoom.
             // TODO: clean this up.
-            google_event_id: meeting.id.to_string(),
-            event_link: event.html_link.to_string(),
+            google_event_id: meeting.uuid.to_string(),
+            event_link: video_html_link,
             cio_company_id: company.id,
-        };*/
+        };
+        println!("{}", serde_json::to_string_pretty(&m).unwrap());
     }
 }
 
@@ -376,28 +404,28 @@ impl FileInfo for GetAccountCloudRecordingResponseMeetingsFilesFileType {
     // Returns the extension for each file type.
     fn to_extension(&self) -> String {
         match self {
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => return "-video.mp4".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::M4A => return "-audio.m4a".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Tb => return ".json".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => return "-transcript.vtt".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => return "-chat.txt".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Cc => return "-closed-captions.vtt".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Csv => return ".csv".to_string(),
-            _ => return "".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => "-video.mp4".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::M4A => "-audio.m4a".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Tb => ".json".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => "-transcript.vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => "-chat.txt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Cc => "-closed-captions.vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Csv => ".csv".to_string(),
+            _ => "".to_string(),
         }
     }
 
     // Returns the mime type for each file type.
     fn get_mime_type(&self) -> String {
         match self {
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => return "video/mp4".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::M4A => return "audio/m4a".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Tb => return "application/json".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => return "text/vtt".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => return "text/plain".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Cc => return "text/vtt".to_string(),
-            GetAccountCloudRecordingResponseMeetingsFilesFileType::Csv => return "text/csv".to_string(),
-            _ => return "".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => "video/mp4".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::M4A => "audio/m4a".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Tb => "application/json".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => "text/vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => "text/plain".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Cc => "text/vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Csv => "text/csv".to_string(),
+            _ => "".to_string(),
         }
     }
 }

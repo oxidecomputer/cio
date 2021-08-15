@@ -1902,7 +1902,12 @@ pub async fn sync_users(
                                 .user_response
                                 .vanity_url
                                 .ends_with(&format!("/{}", new_user.username))
-                                && !zu.user_response.vanity_url.ends_with(&format!("/{}", new_user.github)))
+                                && !zu.user_response.vanity_url.ends_with(&format!("/{}", new_user.github))
+                                && !zu.user_response.vanity_url.ends_with(&format!(
+                                    "/{}.{}",
+                                    new_user.first_name.to_lowercase(),
+                                    new_user.last_name.to_lowercase()
+                                )))
                         {
                             // Update the vanity URL for the user.
                             // First try their username.

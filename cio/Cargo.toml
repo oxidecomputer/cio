@@ -90,5 +90,5 @@ toml = "0.5"
 walkdir = "^2.3.2"
 yup-oauth2 = "^5"
 zip = "0.5"
-zoom-api = "^0.2.0"
-#zoom-api = { path = "../../third-party-api-clients/zoom" }
+#zoom-api = "^0.2.0"
+zoom-api = { path = "../../third-party-api-clients/zoom" }
