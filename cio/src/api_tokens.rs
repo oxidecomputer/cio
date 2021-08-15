@@ -122,7 +122,8 @@ impl APIToken {
     /// Returns if the token is expired.
     pub fn is_expired(&self) -> bool {
         if let Some(d) = self.expires_date {
-            Utc::now() > d
+            // To be safe, let's subtract 1 hour.
+            Utc::now() > d.checked_sub_signed(Duration::hours(1)).unwrap()
         } else {
             // Set to being expired by default if we don't know the date.
             true
