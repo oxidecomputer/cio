@@ -900,7 +900,7 @@ xoxo,
 
             // This is depreciated, user phone_numbers instead.
             phone_country: "US".to_string(),
-            phone_number: self.recovery_phone.to_string(),
+            phone_number: self.recovery_phone.trim_start_matches("+1").to_string(),
 
             // Set our values.
             vanity_name: vanity_name.to_string(),
@@ -1901,10 +1901,10 @@ pub async fn sync_users(
                             || (!zu
                                 .user_response
                                 .vanity_url
-                                .ends_with(&format!("/{}", new_user.username))
-                                && !zu.user_response.vanity_url.ends_with(&format!("/{}", new_user.github))
-                                && !zu.user_response.vanity_url.ends_with(&format!(
-                                    "/{}.{}",
+                                .contains(&format!("/{}?", new_user.username))
+                                && !zu.user_response.vanity_url.contains(&format!("/{}?", new_user.github))
+                                && !zu.user_response.vanity_url.contains(&format!(
+                                    "/{}.{}?",
                                     new_user.first_name.to_lowercase(),
                                     new_user.last_name.to_lowercase()
                                 )))
