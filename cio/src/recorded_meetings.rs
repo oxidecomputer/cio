@@ -88,7 +88,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
         return;
     }
 
-    let zoom = zoom_auth.unwrap();
+    let mut zoom = zoom_auth.unwrap();
 
     // List all the recorded meetings.
     let recordings = zoom
@@ -121,12 +121,25 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
         .await
         .unwrap();
 
+    // We need the zoom token to download the URL.
+    let at = zoom.refresh_access_token().await.unwrap();
+
     for meeting in recordings {
         if meeting.topic.is_empty() {
             // Continue early.
             println!("Meeting must have a topic!! {:?}", meeting);
             continue;
         }
+
+        // Create the folder for our zoom recordings.
+        let start_folder_id = drive
+            .create_folder(
+                &shared_drive.id,
+                &recordings_folder_id,
+                &meeting.start_time.unwrap().to_string(),
+            )
+            .await
+            .unwrap();
 
         let mut transcript = String::new();
         let mut transcript_id = String::new();
@@ -155,19 +168,14 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                 }
             }
 
-            let file_name = format!(
-                "{} {} {}",
-                meeting.topic,
-                recording.recording_start,
-                file_type.to_extension()
-            );
-
             // Download the file to memory.
             println!(
                 "[zoom] meeting {} -> downloading recording {}... This might take a bit...",
                 meeting.topic, recording.download_url,
             );
-            let resp = reqwest::get(&recording.download_url).await.unwrap();
+            let resp = reqwest::get(&format!("{}?access_token={}", recording.download_url, at.access_token))
+                .await
+                .unwrap();
             let b = resp.bytes().await.unwrap();
 
             // Get the mime type.
@@ -181,8 +189,12 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             let drive_file = drive
                 .create_or_update_file(
                     &shared_drive.id,
-                    &recordings_folder_id,
-                    &to_kebab_case(file_name.trim()),
+                    &start_folder_id,
+                    &format!(
+                        "{}{}",
+                        to_kebab_case(meeting.topic.replace("'s", "").trim()),
+                        file_type.to_extension()
+                    ),
                     &mime_type,
                     &b,
                 )
@@ -192,7 +204,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             match *file_type {
                 GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => {
                     video = format!("https://drive.google.com/open?id={}", drive_file.id);
-                    video_html_link = recording.play_url.to_string();
+                    // TODO: get a better link
+                    video_html_link = video.to_string();
                     end_time = DateTime::parse_from_rfc3339(&recording.recording_end)
                         .unwrap()
                         .with_timezone(&Utc);
@@ -252,7 +265,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             event_link: video_html_link,
             cio_company_id: company.id,
         };
-        println!("{}", serde_json::to_string_pretty(&m).unwrap());
+        m.upsert(db).await;
     }
 }
 
