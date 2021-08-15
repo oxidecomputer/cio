@@ -453,6 +453,7 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 name = "cio-api"
 version = "0.2.0"
 dependencies = [
+ "Inflector",
  "acme-lib",
  "airtable-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "anyhow",

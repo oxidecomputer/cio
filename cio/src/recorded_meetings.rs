@@ -2,13 +2,15 @@
 use std::str::from_utf8;
 
 use async_trait::async_trait;
-use chrono::{offset::Utc, DateTime};
+use chrono::{offset::Utc, DateTime, Duration};
 use google_drive::GoogleDrive;
 use gsuite_api::GSuite;
+use inflector::cases::kebabcase::to_kebab_case;
 use macros::db;
 use revai::RevAI;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesFileType;
 
 use crate::{
     airtable::AIRTABLE_RECORDED_MEETINGS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
@@ -73,8 +75,115 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
     }
 }
 
-/// Sync the recorded meetings.
-pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
+/// Sync the recorded meetings from zoom.
+pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
+    let zoom_auth = company.authenticate_zoom(db).await;
+    if zoom_auth.is_none() {
+        // Return early, this company does not use Zoom.
+        return;
+    }
+
+    let zoom = zoom_auth.unwrap();
+
+    // List all the recorded meetings.
+    let recordings = zoom
+        .cloud_recording()
+        .get_all_account(
+            "me", // we set account to me since the autorized user is an admin
+            Some(Utc::now().checked_sub_signed(Duration::days(30)).unwrap()), // from: the max date range is a month.
+            Some(Utc::now()), // to
+        )
+        .await
+        .unwrap();
+
+    if recordings.is_empty() {
+        // Return early.
+        return;
+    }
+
+    // Get our Google token.
+    let token = company.authenticate_google(db).await;
+
+    // Initialize the Google Drive client.
+    let drive = GoogleDrive::new(token);
+
+    // Initialize the RevAI client.
+    let revai = RevAI::new_from_env();
+
+    // Get the shared drive.
+    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+
+    // Create the folder for our zoom recordings.
+    let recordings_folder_id = drive
+        .create_folder(&shared_drive.id, "", "zoom_recordings")
+        .await
+        .unwrap();
+
+    for meeting in recordings {
+        // Move the recordings to the Google Drive folder.
+        for recording in meeting.recording_files {
+            let file_type = recording.file_type.unwrap();
+            if file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::Noop
+                || file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::FallthroughString
+            {
+                // Continue early.
+                println!("[zoom] got bad recording file type: {:?}", meeting);
+                continue;
+            }
+
+            let file_name = format!(
+                "{} {} {}",
+                meeting.topic,
+                recording.recording_start,
+                file_type.to_extension()
+            );
+
+            // Download the file to memory.
+            println!(
+                "[zoom] meeting {} -> downloading recording {}... This might take a bit...",
+                meeting.topic, recording.download_url,
+            );
+            let resp = reqwest::get(recording.download_url).await.unwrap();
+            let b = resp.bytes().await.unwrap();
+
+            // Get the mime type.
+            let mime_type = file_type.get_mime_type();
+
+            // Upload the recording to Google drive.
+            println!(
+                "[zoom] uploading meeting {} recording to Google drive... This might take a bit...",
+                meeting.topic
+            );
+            let drive_file = drive
+                .create_or_update_file(
+                    &shared_drive.id,
+                    &recordings_folder_id,
+                    &to_kebab_case(file_name.trim()),
+                    &mime_type,
+                    &b,
+                )
+                .await
+                .unwrap();
+
+            zoom.cloud_recording()
+                .recording_delete_one(
+                    &recording.meeting_id,
+                    &recording.id,
+                    zoom_api::types::RecordingDeleteAction::Trash,
+                )
+                .await
+                .unwrap();
+            println!(
+            "[zoom] deleted meeting {} recording in Zoom since they are now in Google drive at https://drive.google.com/open?id={}",
+                meeting.topic,
+            drive_file.id
+        );
+        }
+    }
+}
+
+/// Sync the recorded meetings from Google.
+pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) {
     RecordedMeetings::get_from_db(db, company.id).update_airtable(db).await;
 
     let token = company.authenticate_google(db).await;
@@ -234,19 +343,70 @@ pub async fn refresh_recorded_meetings(db: &Database, company: &Company) {
     }
 }
 
+trait FileInfo {
+    fn to_extension(&self) -> String;
+    fn get_mime_type(&self) -> String;
+}
+
+impl FileInfo for GetAccountCloudRecordingResponseMeetingsFilesFileType {
+    // Returns the extension for each file type.
+    fn to_extension(&self) -> String {
+        match self {
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => return "-video.mp4".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::M4A => return "-audio.m4a".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Tb => return ".json".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => return "-transcript.vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => return "-chat.txt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Cc => return "-closed-captions.vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Csv => return ".csv".to_string(),
+            _ => return "".to_string(),
+        }
+    }
+
+    // Returns the mime type for each file type.
+    fn get_mime_type(&self) -> String {
+        match self {
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => return "video/mp4".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::M4A => return "audio/m4a".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Tb => return "application/json".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => return "text/vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => return "text/plain".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Cc => return "text/vtt".to_string(),
+            GetAccountCloudRecordingResponseMeetingsFilesFileType::Csv => return "text/csv".to_string(),
+            _ => return "".to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{companies::Companys, db::Database, recorded_meetings::refresh_recorded_meetings};
+    use crate::{
+        companies::Companys,
+        db::Database,
+        recorded_meetings::{refresh_google_recorded_meetings, refresh_zoom_recorded_meetings},
+    };
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_recorded_meetings() {
+    async fn test_zoom_recorded_meetings() {
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1);
         // Iterate over the companies and update.
         for company in companies {
-            refresh_recorded_meetings(&db, &company).await;
+            refresh_zoom_recorded_meetings(&db, &company).await;
+        }
+    }
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_google_recorded_meetings() {
+        // Initialize our database.
+        let db = Database::new();
+        let companies = Companys::get_from_db(&db, 1);
+        // Iterate over the companies and update.
+        for company in companies {
+            refresh_google_recorded_meetings(&db, &company).await;
         }
     }
 }

@@ -1938,7 +1938,11 @@ pub async fn sync_users(
                                                         zoom,
                                                         &zoom_user.id,
                                                         &zu,
-                                                        &format!("{}.{}", new_user.first_name, new_user.last_name),
+                                                        &format!(
+                                                            "{}.{}",
+                                                            new_user.first_name.to_lowercase(),
+                                                            new_user.last_name.to_lowercase()
+                                                        ),
                                                     )
                                                     .await
                                                 {
