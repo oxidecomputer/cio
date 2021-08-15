@@ -2021,6 +2021,8 @@ pub async fn sync_users(
             );
         }
 
+        // TODO: Delete the user from Ramp.
+
         if company.okta_domain.is_empty() {
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
@@ -2038,6 +2040,10 @@ pub async fn sync_users(
                 airtable_auth.delete_internal_user_by_email(&user.email).await.unwrap();
                 println!("deleted user from airtable: {}", username);
             }
+
+            // TODO: Delete the user from Slack.
+
+            // TODO: Delete the user from Zoom.
         }
 
         // Delete the user from the database and Airtable.
