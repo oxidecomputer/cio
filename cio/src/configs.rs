@@ -899,8 +899,8 @@ xoxo,
             group_id: zu.groups.id.to_string(),
 
             // This is depreciated, user phone_numbers instead.
-            phone_country: "".to_string(),
-            phone_number: "".to_string(),
+            phone_country: "US".to_string(),
+            phone_number: self.recovery_phone.to_string(),
 
             // Set our values.
             vanity_name: vanity_name.to_string(),
@@ -909,17 +909,21 @@ xoxo,
             first_name: self.first_name.to_string(),
             last_name: self.last_name.to_string(),
             manager: self.manager(db).email.to_string(),
-            phone_numbers: Some(zoom_api::types::PhoneNumbers {
+            /*
+             * This is broken and should be an array the spec is wrong.
+             * FIX THIS WHEN THE SPEC IS FIXED.
+            * */
+            /*phone_numbers: Some(zoom_api::types::PhoneNumbers {
                 // TODO: Make this work for people outside the US as well.
                 code: "+1".to_string(),
                 number: self.recovery_phone.trim_start_matches("+1").to_string(),
                 label: Some(zoom_api::types::Label::Mobile),
                 // TODO: Make this work for people outside the US as well.
                 country: "US".to_string(),
-            }),
+            }),*/
+            phone_numbers: None,
         };
 
-        println!("ZOOM USER: {}", serde_json::to_string_pretty(&update_user).unwrap());
         zoom.users()
             .user_update(
                 zoom_user_id,
