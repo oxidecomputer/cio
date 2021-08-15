@@ -873,54 +873,58 @@ xoxo,
 
     pub async fn update_zoom_vanity_name(
         &self,
+        db: &Database,
         zoom: &Zoom,
         zoom_user_id: &str,
         zu: &zoom_api::types::UserResponseAllOf,
         vanity_name: &str,
     ) -> Result<()> {
+        let update_user = zoom_api::types::UserUpdate {
+            // Set values from Zoom.
+            cms_user_id: zu.user_response.cms_user_id.to_string(),
+            company: zu.user_response.company.to_string(),
+            // Since this is a PATCH call, we can pass None, here just fine.
+            custom_attributes: None,
+            host_key: zu.user_response.host_key.to_string(),
+            job_title: zu.user_response.job_title.to_string(),
+            language: zu.user_response.language.to_string(),
+            location: zu.user_response.location.to_string(),
+
+            // Set more values from Zoom.
+            pmi: zu.user.pmi,
+            type_: zu.user.type_,
+            timezone: zu.user.timezone.to_string(),
+
+            // Get the groups information.
+            group_id: zu.groups.id.to_string(),
+
+            // This is depreciated, user phone_numbers instead.
+            phone_country: "".to_string(),
+            phone_number: "".to_string(),
+
+            // Set our values.
+            vanity_name: vanity_name.to_string(),
+            use_pmi: true,
+            dept: self.department.to_string(),
+            first_name: self.first_name.to_string(),
+            last_name: self.last_name.to_string(),
+            manager: self.manager(db).email.to_string(),
+            phone_numbers: Some(zoom_api::types::PhoneNumbers {
+                // TODO: Make this work for people outside the US as well.
+                code: "+1".to_string(),
+                number: self.recovery_phone.trim_start_matches("+1").to_string(),
+                label: Some(zoom_api::types::Label::Mobile),
+                // TODO: Make this work for people outside the US as well.
+                country: "US".to_string(),
+            }),
+        };
+
+        println!("ZOOM USER: {}", serde_json::to_string_pretty(&update_user).unwrap());
         zoom.users()
             .user_update(
                 zoom_user_id,
                 zoom_api::types::LoginType::Noop, // We don't know their login type...
-                &zoom_api::types::UserUpdate {
-                    // Set values from Zoom.
-                    cms_user_id: zu.user_response.cms_user_id.to_string(),
-                    company: zu.user_response.company.to_string(),
-                    // TODO: actually pass these along.
-                    custom_attributes: None,
-                    host_key: zu.user_response.host_key.to_string(),
-                    job_title: zu.user_response.job_title.to_string(),
-                    language: zu.user_response.language.to_string(),
-                    location: zu.user_response.location.to_string(),
-
-                    // Set more values from Zoom.
-                    pmi: zu.user.pmi,
-                    type_: zu.user.type_,
-                    timezone: zu.user.timezone.to_string(),
-
-                    // Get the groups information.
-                    group_id: zu.groups.id.to_string(),
-
-                    // This is depreciated, user phone_numbers instead.
-                    phone_country: "".to_string(),
-                    phone_number: "".to_string(),
-
-                    // Set our values.
-                    vanity_name: vanity_name.to_string(),
-                    use_pmi: true,
-                    dept: self.department.to_string(),
-                    first_name: self.first_name.to_string(),
-                    last_name: self.last_name.to_string(),
-                    manager: self.manager.to_string(),
-                    phone_numbers: Some(zoom_api::types::PhoneNumbers {
-                        // TODO: Make this work for people outside the US as well.
-                        code: "+1".to_string(),
-                        number: self.recovery_phone.to_string(),
-                        label: Some(zoom_api::types::Label::Mobile),
-                        // TODO: Make this work for people outside the US as well.
-                        country: "US".to_string(),
-                    }),
-                },
+                &update_user,
             )
             .await
     }
@@ -1593,7 +1597,6 @@ pub async fn sync_users(
             )
             .await
             .unwrap();
-        println!("pending users: {:?}", pending_users);
         for r in pending_users {
             zoom_users_pending.insert(r.email.to_string(), r);
         }
@@ -1888,7 +1891,6 @@ pub async fn sync_users(
                             )
                             .await
                             .unwrap();
-                        println!("zoom user: {:?}", zu);
                         // Check if the vanity URL is already either the username
                         // or the github handle.
                         if zu.user_response.vanity_url.is_empty()
@@ -1902,20 +1904,20 @@ pub async fn sync_users(
                             // First try their username.
                             // This should succeed _if_ we have a custom domain.
                             match new_user
-                                .update_zoom_vanity_name(zoom, &zoom_user.id, &zu, &new_user.username)
+                                .update_zoom_vanity_name(db, zoom, &zoom_user.id, &zu, &new_user.username)
                                 .await
                             {
                                 Ok(_) => (),
                                 Err(e) => {
                                     // Try their github username.
                                     println!(
-                                        "updating zoom vanity_url failed for username {} , will try with github handle {}: {}",
+                                        "updating zoom vanity_url failed for username {}, will try with github handle {}: {}",
                                         new_user.username, new_user.github, e
                                     );
 
                                     if !new_user.github.is_empty() {
                                         new_user
-                                            .update_zoom_vanity_name(zoom, &zoom_user.id, &zu, &new_user.github)
+                                            .update_zoom_vanity_name(db, zoom, &zoom_user.id, &zu, &new_user.github)
                                             .await
                                             .unwrap();
                                     }
