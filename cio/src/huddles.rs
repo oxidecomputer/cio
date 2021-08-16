@@ -244,7 +244,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                             // We need to impersonate the event owner.
                             let g_owner = GoogleCalendar::new(&organizer_email, &company.gsuite_domain, token.clone());
                             // Get the event under the right user.
-                            let mut event = gowner
+                            let mut event = g_owner
                                 .events()
                                 .calendar_get(
                                     &organizer_email,
