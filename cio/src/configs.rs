@@ -2036,7 +2036,8 @@ pub async fn sync_users(
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             // TODO: only deactivate/suspend them so someone can transfer their data.
             gsuite
-                .delete_user(&user.email)
+                .users()
+                .directory_delete(&user.email)
                 .await
                 .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
             println!("deleted user from gsuite: {}", username);
@@ -2102,7 +2103,8 @@ pub async fn sync_users(
                     // them from GSuite.
                     println!("deleting user {} from gsuite", username);
                     gsuite
-                        .delete_user(&format!("{}@{}", username, company.gsuite_domain))
+                        .users()
+                        .directory_delete(&format!("{}@{}", username, company.gsuite_domain))
                         .await
                         .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
 
@@ -2115,7 +2117,8 @@ pub async fn sync_users(
             let gsuite_user = update_gsuite_user(&u, &user, false, company).await;
 
             gsuite
-                .update_user(&gsuite_user)
+                .users()
+                .directory_update(&gsuite_user.id, &gsuite_user)
                 .await
                 .unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
 
@@ -2141,7 +2144,8 @@ pub async fn sync_users(
             let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
 
             let new_gsuite_user = gsuite
-                .create_user(&gsuite_user)
+                .users()
+                .directory_insert(&gsuite_user)
                 .await
                 .unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
             user.google_id = new_gsuite_user.id.to_string();
