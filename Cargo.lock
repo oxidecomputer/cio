@@ -1464,6 +1464,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "base64 0.12.3",
  "chrono",
  "http",
  "hyperx",
@@ -1475,6 +1476,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -1524,6 +1526,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "base64 0.12.3",
  "chrono",
  "http",
  "hyperx",
@@ -1535,6 +1538,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -1556,6 +1560,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "base64 0.12.3",
  "chrono",
  "http",
  "hyperx",
@@ -1567,6 +1572,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
+ "yup-oauth2",
 ]
 
 [[package]]

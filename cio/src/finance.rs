@@ -2,7 +2,6 @@ use std::{collections::HashMap, env, fs::File};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
-use gsuite_api::Client as GSuite;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -95,8 +94,7 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 
 /// Sync software vendors from Airtable.
 pub async fn refresh_software_vendors(db: &Database, company: &Company) {
-    let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gsuite = company.authenticate_google_admin(db).await;
 
     let github = company.authenticate_github();
 

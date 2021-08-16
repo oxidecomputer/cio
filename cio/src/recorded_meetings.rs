@@ -3,7 +3,6 @@ use std::str::from_utf8;
 
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
-use google_calendar::Client as GoogleCalendar;
 use google_drive::GoogleDrive;
 use inflector::cases::kebabcase::to_kebab_case;
 use macros::db;
@@ -273,8 +272,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) {
     RecordedMeetings::get_from_db(db, company.id).update_airtable(db).await;
 
-    let token = company.authenticate_google(db).await;
-    let mut gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let mut gcal = company.authenticate_google_calendar(db).await;
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -288,11 +286,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
-            gcal = GoogleCalendar::new(
-                &company.gsuite_account_id,
-                &company.gsuite_domain,
-                company.authenticate_google(db).await,
-            );
+            gcal = company.authenticate_google_calendar(db).await;
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.

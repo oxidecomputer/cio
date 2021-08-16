@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use airtable_api::{Airtable, Record};
 use chrono::{Duration, NaiveDate, Utc};
-use google_calendar::{types::Event, Client as GoogleCalendar};
+use google_calendar::types::Event;
 use handlebars::Handlebars;
 use sendgrid_api::SendGrid;
 
@@ -20,8 +20,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let token = company.authenticate_google(db).await;
-    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = company.authenticate_google_calendar(db).await;
 
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
@@ -111,9 +110,8 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                 if event.recurring_event_id != event.id {
                     let organizer_email = event.organizer.unwrap().email.to_string();
                     // Update the calendar event with the new description.
-                    let g_owner = GoogleCalendar::new(&organizer_email, &company.gsuite_domain, token.clone());
                     // Get the event under the right user.
-                    if let Ok(mut event) = g_owner
+                    if let Ok(mut event) = gcal
                         .events()
                         .calendar_get(
                             &organizer_email,
@@ -132,7 +130,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                             event.recurrence = vec![];
                         }
 
-                        match g_owner
+                        match gcal
                             .events()
                             .calendar_update(
                                 &organizer_email,
@@ -167,8 +165,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let token = company.authenticate_google(db).await;
-    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = company.authenticate_google_calendar(db).await;
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -242,9 +239,8 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                             let organizer_email = event.organizer.unwrap().email.to_string();
 
                             // We need to impersonate the event owner.
-                            let g_owner = GoogleCalendar::new(&organizer_email, &company.gsuite_domain, token.clone());
                             // Get the event under the right user.
-                            let mut event = g_owner
+                            let mut event = gcal
                                 .events()
                                 .calendar_get(
                                     &organizer_email,
@@ -265,8 +261,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                                 event.recurrence = vec![];
                             }
 
-                            g_owner
-                                .events()
+                            gcal.events()
                                 .calendar_update(
                                     &organizer_email,
                                     &event.id,
@@ -463,8 +458,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let token = company.authenticate_google(db).await;
-    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = company.authenticate_google_calendar(db).await;
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
@@ -499,7 +493,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
 
         // Iterate over all the events, searching for our search string.
         let mut recurring_events: Vec<String> = Vec::new();
-        for mut event in events {
+        for event in events {
             if !event
                 .summary
                 .to_lowercase()
@@ -512,7 +506,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
 
             if event.recurring_event_id.is_empty() || event.recurring_event_id != event.id {
                 // Let's add the event to our HashMap.
-                let date = event.start.unwrap().date_time.unwrap().date().naive_utc();
+                let date = event.start.as_ref().unwrap().date_time.unwrap().date().naive_utc();
                 gcal_events.insert(date, event.clone());
 
                 continue;
@@ -539,11 +533,11 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                 )
                 .await
                 .unwrap();
-            for mut instance in instances {
+            for instance in instances {
                 // Let's add the event to our HashMap.
-                if instance.start.unwrap().date_time.is_some() {
+                if instance.start.as_ref().unwrap().date_time.is_some() {
                     // Let's add the event to our HashMap.
-                    let date = instance.start.unwrap().date_time.unwrap().date().naive_utc();
+                    let date = instance.start.as_ref().unwrap().date_time.unwrap().date().naive_utc();
                     gcal_events.insert(date, instance.clone());
                 }
             }
@@ -560,7 +554,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
         );
 
         // Now let's get the Airtable records.
-        let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id, "");
+        let airtable = Airtable::new(&company.airtable_api_key, huddle.airtable_base_id.to_string(), "");
         let records: Vec<Record<Meeting>> = airtable
             .list_records(AIRTABLE_MEETING_SCHEDULE_TABLE, "All Meetings", vec![])
             .await

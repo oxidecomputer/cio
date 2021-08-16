@@ -8,7 +8,6 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
-use google_calendar::Client as GoogleCalendar;
 use google_drive::GoogleDrive;
 use lopdf::{Bookmark, Document, Object, ObjectId};
 use macros::db;
@@ -70,8 +69,7 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) {
-    let token = company.authenticate_google(db).await;
-    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = company.authenticate_google_calendar(db).await;
 
     // Get the list of our calendars.
     let calendars = gcal

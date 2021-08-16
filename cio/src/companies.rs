@@ -8,6 +8,8 @@ use cloudflare::framework::{
     async_api::Client as CloudflareClient, auth::Credentials as CloudflareCredentials, Environment, HttpApiClientConfig,
 };
 use docusign::DocuSign;
+use google_calendar::Client as GoogleCalendar;
+use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
 use macros::db;
 use mailchimp_api::MailChimp;
@@ -549,13 +551,16 @@ impl Company {
         None
     }
 
-    /// Get a Google token.
-    pub async fn authenticate_google(&self, db: &Database) -> String {
+    /// Authenticate Google Admin.
+    pub async fn authenticate_google_admin(&self, db: &Database) -> GoogleAdmin {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             if t.is_expired() {
+                // Initialize the client.
+                let mut g = GoogleAdmin::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+
                 // Only refresh the token if it is expired.
-                let nt = refresh_google_access_token(&t).await;
+                let nt = g.refresh_access_token(&t).await;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -577,6 +582,80 @@ impl Company {
 
         "".to_string()
     }
+
+    /// Authenticate Google Calendar.
+    pub async fn authenticate_google_calendar(&self, db: &Database) -> GoogleCalendar {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            if t.is_expired() {
+                // Initialize the client.
+                let mut g = GoogleCalendar::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+
+                // Only refresh the token if it is expired.
+                let nt = g.refresh_access_token(&t).await;
+                if !nt.access_token.is_empty() {
+                    t.access_token = nt.access_token.to_string();
+                }
+                if nt.expires_in > 0 {
+                    t.expires_in = nt.expires_in as i32;
+                }
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
+
+            return t.access_token;
+        }
+
+        "".to_string()
+    }
+
+    /// TODO: remove this after we fix drive. Authenticate Google Drive.
+    pub async fn authenticate_google(&self, db: &Database) -> String {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            return t.access_token;
+        }
+
+        "".to_string()
+    }
+
+    /* /// Authenticate Google Drive.
+    pub async fn authenticate_google_drive(&self, db: &Database) -> GoogleDrive {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            if t.is_expired() {
+                // Initialize the client.
+                let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+
+                // Only refresh the token if it is expired.
+                let nt = g.refresh_access_token(&t).await;
+                if !nt.access_token.is_empty() {
+                    t.access_token = nt.access_token.to_string();
+                }
+                if nt.expires_in > 0 {
+                    t.expires_in = nt.expires_in as i32;
+                }
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
+
+            return t.access_token;
+        }
+
+        "".to_string()
+    }*/
 
     /// Authenticate GitHub with JSON web token credentials, for an application installation.
     pub fn authenticate_github(&self) -> octorust::Client {
