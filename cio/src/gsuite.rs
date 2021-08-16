@@ -199,6 +199,32 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     gsuite_user
 }
 
+/// Suspend a GSuite user, this is better than deleting them since then we can
+/// transfer their data.
+pub async fn suspend_user(gsuite: &GSuite, email: &str) {
+    // First get the user.
+    let mut user = gsuite
+        .users()
+        .directory_get(
+            &email,
+            gsuite_api::types::DirectoryUsersListProjection::Full,
+            gsuite_api::types::ViewType::AdminView,
+        )
+        .await
+        .unwrap();
+
+    // Set them to be suspended.
+    user.suspended = true;
+    user.suspension_reason = "No longer in config file.".to_string();
+
+    // Update the user.
+    gsuite
+        .users()
+        .directory_update(&email, &user)
+        .await
+        .unwrap_or_else(|e| panic!("suspending user {} in gsuite failed: {}", email, e));
+}
+
 /// Update a user's aliases in GSuite to match our database.
 pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<String>, company: &Company) {
     if aliases.is_empty() {

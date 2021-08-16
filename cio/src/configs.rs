@@ -1531,7 +1531,6 @@ pub async fn sync_users(
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
-    let ggs = company.authenticate_google_groups_settings(db).await.unwrap();
     let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Initialize the Gusto client.
@@ -2070,12 +2069,8 @@ pub async fn sync_users(
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             // TODO: only deactivate/suspend them so someone can transfer their data.
-            gsuite
-                .users()
-                .directory_delete(&user.email)
-                .await
-                .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
-            println!("deleted user from gsuite: {}", username);
+            crate::gsuite::suspend_user(&gsuite, &user.email).await;
+            println!("suspended user in gsuite: {}", username);
 
             // If we have an enterprise airtable account, let's delete the user from
             // our Airtable.
@@ -2136,12 +2131,9 @@ pub async fn sync_users(
                 None => {
                     // If the user does not exist in our map we need to delete
                     // them from GSuite.
-                    println!("deleting user {} from gsuite", username);
-                    gsuite
-                        .users()
-                        .directory_delete(&format!("{}@{}", username, company.gsuite_domain))
-                        .await
-                        .unwrap_or_else(|e| panic!("deleting user {} from gsuite failed: {}", username, e));
+                    println!("suspending user {} in gsuite", username);
+                    crate::gsuite::suspend_user(&gsuite, &format!("{}@{}", username, company.gsuite_domain)).await;
+                    println!("suspended user in gsuite: {}", username);
 
                     println!("deleted user from gsuite: {}", username);
                     continue;
