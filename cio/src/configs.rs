@@ -1792,6 +1792,8 @@ pub async fn sync_users(
 
         let mut new_user = user.upsert(db).await;
 
+        let users_manager = new_user.manager(db);
+
         if existing.is_none() && !company.okta_domain.is_empty() {
             // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
             // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
@@ -1815,8 +1817,6 @@ pub async fn sync_users(
                 new_user.send_email_new_user(db).await;
             }
         }
-
-        let users_manager = new_user.manager(db);
 
         if let Some(ref ramp) = ramp_auth {
             if !new_user.is_consultant() && !new_user.is_system_account() {
@@ -2034,6 +2034,7 @@ pub async fn sync_users(
         if company.okta_domain.is_empty() {
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+            // TODO: only deactivate/suspend them so someone can transfer their data.
             gsuite
                 .delete_user(&user.email)
                 .await
@@ -2051,7 +2052,22 @@ pub async fn sync_users(
 
             // TODO: Delete the user from Slack.
 
-            // TODO: Delete the user from Zoom.
+            // Delete the user from Zoom.
+            if let Some(ref zoom) = zoom_auth {
+                if !user.zoom_id.is_empty() {
+                    zoom.users()
+                        .user_delete(
+                            &user.zoom_id, // ID of the user to delete.
+                            zoom_api::types::UserDeleteAction::Delete,
+                            &user.manager(db).email, // Email of the user's manager to transfer items to
+                            true,                    // Tranfer meetings
+                            true,                    // Transfer webinars
+                            true,                    // Transfer recordings
+                        )
+                        .await
+                        .unwrap();
+                }
+            }
         }
 
         // Delete the user from the database and Airtable.
