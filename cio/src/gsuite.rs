@@ -206,7 +206,7 @@ pub async fn suspend_user(gsuite: &GSuite, email: &str) {
     let mut user = gsuite
         .users()
         .directory_get(
-            &email,
+            email,
             gsuite_api::types::DirectoryUsersListProjection::Full,
             gsuite_api::types::ViewType::AdminView,
         )
@@ -220,7 +220,7 @@ pub async fn suspend_user(gsuite: &GSuite, email: &str) {
     // Update the user.
     gsuite
         .users()
-        .directory_update(&email, &user)
+        .directory_update(email, &user)
         .await
         .unwrap_or_else(|e| panic!("suspending user {} in gsuite failed: {}", email, e));
 }
@@ -380,7 +380,8 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
                     primary_email: Default::default(),
                 },
             )
-            .await;
+            .await
+            .unwrap();
     }
     println!("updated gsuite group aliases: {}", g.email);
 }
