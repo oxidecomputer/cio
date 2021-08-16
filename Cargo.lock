@@ -479,6 +479,7 @@ dependencies = [
  "google-calendar",
  "google-drive 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-groups-settings",
  "gsuite-api 0.2.0",
  "gusto-api",
  "handlebars",
@@ -1515,6 +1516,25 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "google-groups-settings"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]

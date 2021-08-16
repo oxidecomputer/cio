@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use airtable_api::{Airtable, Record};
 use chrono::{Duration, NaiveDate, Utc};
-use google_calendar::{types::Event, Client as GoogleCalendar};
+use google_calendar::{types::EventData, Client as GoogleCalendar};
 use handlebars::Handlebars;
 use sendgrid_api::SendGrid;
 
@@ -59,7 +59,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
                     record.fields.cancelled = true;
                 }
 
-                let date = event.start.date_time.unwrap();
+                let date = event.start.unwrap().date_time.unwrap();
                 let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
                 // Update the date of the meeting based on the calendar event.
                 record.fields.date = pacific_time.date().naive_utc();
@@ -109,10 +109,21 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                 );
 
                 if event.recurring_event_id != event.id {
+                    let organizer_email = event.organizer.unwrap().email.to_string();
                     // Update the calendar event with the new description.
-                    let g_owner = GoogleCalendar::new(&event.organizer.email, &company.gsuite_domain, token.clone());
+                    let g_owner = GoogleCalendar::new(&organizer_email, &company.gsuite_domain, token.clone());
                     // Get the event under the right user.
-                    if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
+                    if let Ok(mut event) = g_owner
+                        .events()
+                        .calendar_get(
+                            &organizer_email,
+                            &event.id,
+                            false, // Depreciated ignored
+                            0,     // max attendees, 0 to ignore
+                            "",    // time_zone
+                        )
+                        .await
+                    {
                         // Modify the properties of the event so we can update it.
                         event.description = description.trim().to_string();
                         if !event.recurring_event_id.is_empty() {
@@ -122,7 +133,18 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                         }
 
                         match g_owner
-                            .update_calendar_event(&event.organizer.email, &event.id, &event)
+                            .events()
+                            .calendar_update(
+                                &organizer_email,
+                                &event.id,
+                                false, // Depreciated ignored
+                                0,     // conference data version
+                                0,     // max attendees, 0 to ignore
+                                false, // send notifications
+                                google_calendar::types::SendUpdates::Noop,
+                                true, // supports_attachments
+                                &event,
+                            )
                             .await
                         {
                             Ok(_) => (),
@@ -173,19 +195,23 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
             }
 
             // Get the event from Google Calendar.
-            if let Ok(event) = gcal.events().calendar_get(
-                &record.fields.calendar_id,
-                &record.fields.calendar_event_id,
-                false, // Depreciated ignored
-                0,     // max attendees, 0 to ignore
-                "",    // time_zone
-            ) {
+            if let Ok(event) = gcal
+                .events()
+                .calendar_get(
+                    &record.fields.calendar_id,
+                    &record.fields.calendar_event_id,
+                    false, // Depreciated ignored
+                    0,     // max attendees, 0 to ignore
+                    "",    // time_zone
+                )
+                .await
+            {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
                     // The event was cancelled we want to just continue on our way.
                     continue;
                 }
-                let date = event.start.date_time.unwrap();
+                let date = event.start.unwrap().date_time.unwrap();
                 let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
 
                 // Compare the dates.
@@ -213,14 +239,15 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                         // Let's do it.
 
                         if event.recurring_event_id != event.id {
+                            let organizer_email = event.organizer.unwrap().email.to_string();
+
                             // We need to impersonate the event owner.
-                            let g_owner =
-                                GoogleCalendar::new(&event.organizer.email, &company.gsuite_domain, token.clone());
+                            let g_owner = GoogleCalendar::new(&organizer_email, &company.gsuite_domain, token.clone());
                             // Get the event under the right user.
                             let mut event = gowner
                                 .events()
                                 .calendar_get(
-                                    &event.organizer.email,
+                                    &organizer_email,
                                     &record.fields.calendar_event_id,
                                     false, // Depreciated ignored
                                     0,     // max attendees, 0 to ignore
@@ -248,7 +275,6 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                                     true,  // send notifications
                                     google_calendar::types::SendUpdates::All,
                                     true, // supports_attachments
-                                    "",   // time_zone
                                     &event,
                                 )
                                 .await
@@ -443,7 +469,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
     for (slug, huddle) in configs.huddles {
         // Collect all the calendar events that match this search string.
         // The first part of the map should match the date field in airtable.
-        let mut gcal_events: HashMap<NaiveDate, Event> = HashMap::new();
+        let mut gcal_events: HashMap<NaiveDate, EventData> = HashMap::new();
 
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
@@ -456,16 +482,16 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                 "",    // iCalID
                 0,     // Max attendees, set to 0 to ignore.
                 google_calendar::types::OrderBy::StartTime,
-                &[],                                // private_extended_property
-                huddle.calendar_event_fuzzy_search, // q
-                &[],                                // shared_extended_property
-                true,                               // show_deleted
-                true,                               // show_hidden_invitations
-                false,                              // single_events
-                "",                                 // time_max
-                "",                                 // time_min
-                "",                                 // time_zone
-                "",                                 // updated_min
+                &[],                                 // private_extended_property
+                &huddle.calendar_event_fuzzy_search, // q
+                &[],                                 // shared_extended_property
+                true,                                // show_deleted
+                true,                                // show_hidden_invitations
+                false,                               // single_events
+                "",                                  // time_max
+                "",                                  // time_min
+                "",                                  // time_zone
+                "",                                  // updated_min
             )
             .await
             .unwrap();
@@ -484,10 +510,8 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             }
 
             if event.recurring_event_id.is_empty() || event.recurring_event_id != event.id {
-                // This is a single event, we need to add it.
-                event.calendar_id = huddle.calendar_id(company);
                 // Let's add the event to our HashMap.
-                let date = event.start.date_time.unwrap().date().naive_utc();
+                let date = event.start.unwrap().date_time.unwrap().date().naive_utc();
                 gcal_events.insert(date, event.clone());
 
                 continue;
@@ -499,10 +523,6 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             }
 
             // Get all the recurring events.
-            let instances = gsuite
-                .list_recurring_event_instances(&huddle.calendar_id(company), &event.recurring_event_id)
-                .await
-                .unwrap();
             let instances = gcal
                 .events()
                 .get_all_calendar_instances(
@@ -520,10 +540,9 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                 .unwrap();
             for mut instance in instances {
                 // Let's add the event to our HashMap.
-                if instance.start.date_time.is_some() {
-                    instance.calendar_id = huddle.calendar_id(company);
+                if instance.start.unwrap().date_time.is_some() {
                     // Let's add the event to our HashMap.
-                    let date = instance.start.date_time.unwrap().date().naive_utc();
+                    let date = instance.start.unwrap().date_time.unwrap().date().naive_utc();
                     gcal_events.insert(date, instance.clone());
                 }
             }
@@ -555,7 +574,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                     // Set the calendar event id in Airtable.
                     record.fields.calendar_event_link = event.html_link.to_string();
                     // Set the calendar id.
-                    record.fields.calendar_id = event.calendar_id.to_string();
+                    record.fields.calendar_id = huddle.calendar_id(company);
                     // Set if the event was cancelled.
                     if event.status.to_lowercase().trim() == "cancelled" {
                         record.fields.cancelled = true;
@@ -632,7 +651,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                     recording: String::new(),
                     attendees: Vec::new(),
                     reminder_email_sent: false,
-                    calendar_id: event.calendar_id.to_string(),
+                    calendar_id: huddle.calendar_id(company),
                     calendar_event_id: event.id.to_string(),
                     calendar_event_link: event.html_link.to_string(),
                     cancelled: event.status == "cancelled",
