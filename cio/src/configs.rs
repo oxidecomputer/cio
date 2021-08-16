@@ -2171,7 +2171,11 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
 
     // Get the existing google buildings.
-    let gsuite_buildings = gsuite.list_buildings().await.unwrap();
+    let gsuite_buildings = gsuite
+        .resources()
+        .directory_buildings_list_resources(&company.gsuite_account_id)
+        .await
+        .unwrap();
 
     // Get all the buildings.
     let db_buildings = Buildings::get_from_db(db, company.id);
@@ -2199,7 +2203,8 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 
         // Delete the building from GSuite.
         gsuite
-            .delete_building(&name)
+            .resources()
+            .directory_buildings_delete(&company.gsuite_account_id, &name)
             .await
             .unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
         println!("deleted building from gsuite: {}", name);
@@ -2215,7 +2220,7 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
         building_map.insert(u.name.to_string(), u);
     }
     for b in gsuite_buildings {
-        let id = b.id.to_string();
+        let id = b.building_id.to_string();
 
         // Check if we have that building already in our database.
         let building: Building;
@@ -2226,7 +2231,8 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
                 // them from GSuite.
                 println!("deleting building {} from gsuite", id);
                 gsuite
-                    .delete_building(&id)
+                    .resources()
+                    .directory_buildings_delete(&company.gsuite_account_id, &id)
                     .await
                     .unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
 
@@ -2240,7 +2246,13 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 
         // Update the building with the given settings.
         gsuite
-            .update_building(&new_b)
+            .resources()
+            .directory_buildings_update(
+                &company.gsuite_account_id,
+                &new_b.building_id,
+                gsuite_api::types::CoordinatesSource::SourceUnspecified,
+                &new_b,
+            )
             .await
             .unwrap_or_else(|e| panic!("updating building {} in gsuite failed: {}", id, e));
 
@@ -2329,7 +2341,7 @@ pub async fn sync_conference_rooms(
         conference_room_map.insert(u.name.to_string(), u);
     }
     for r in g_suite_calendar_resources {
-        let id = r.name.to_string();
+        let id = r.resource_name.to_string();
 
         // Check if we have that resource already in our database.
         let resource: ConferenceRoom;

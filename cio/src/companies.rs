@@ -593,7 +593,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token(&t).await;
+                let nt = g.refresh_access_token().await.unwrap();
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -627,7 +627,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token(&t).await;
+                let nt = g.refresh_access_token().await.unwrap();
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -671,7 +671,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token(&t).await;
+                let nt = g.refresh_access_token().await.unwrap();
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -705,7 +705,7 @@ impl Company {
                 GoogleGroupsSettings::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token(&t).await;
+                let nt = g.refresh_access_token().await.unwrap();
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
