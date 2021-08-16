@@ -1337,8 +1337,16 @@ pub struct HuddleConfig {
     pub calendar_event_fuzzy_search: String,
     #[serde(default)]
     pub time_to_cancel: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub calendar_owner: String,
 }
 
+impl HuddleConfig {
+    // Return the full domain id for the calendar.
+    pub fn calendar_id(&self, company: &Company) -> String {
+        format!("{}@{}", self.calendar_owner, company.gsuite_domain)
+    }
+}
 /// Get the configs from the GitHub repository and parse them.
 pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company) -> Config {
     let owner = &company.github_org;

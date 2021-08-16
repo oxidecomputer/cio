@@ -416,73 +416,60 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
         // The first part of the map should match the date field in airtable.
         let mut gcal_events: HashMap<NaiveDate, CalendarEvent> = HashMap::new();
 
-        // Get the list of our calendars.
-        // We iterate over all of them since we don't know who owns the event.
-        let calendars = gsuite.list_calendars().await.unwrap();
+        // Let's get all the events on this calendar and try and see if they
+        // have a meeting recorded.
+        println!("Getting {} events for calendar: {}", huddle.name, huddle.calendar_owner);
+        let events = gsuite
+            .list_calendar_events_query(&huddle.calendar_id(company), &huddle.calendar_event_fuzzy_search)
+            .await
+            .unwrap();
 
-        // Iterate over the calendars.
-        for calendar in calendars {
-            if !calendar.id.ends_with(&company.gsuite_domain) {
-                // We don't care about this calendar.
+        // Iterate over all the events, searching for our search string.
+        let mut recurring_events: Vec<String> = Vec::new();
+        for mut event in events {
+            if !event
+                .summary
+                .to_lowercase()
+                .contains(&huddle.calendar_event_fuzzy_search.to_lowercase())
+            {
+                // This isn't one of the events we are looking for.
                 // Continue early.
                 continue;
             }
 
-            // Let's get all the events on this calendar and try and see if they
-            // have a meeting recorded.
-            println!("Getting events for calendar: {}", calendar.id);
-            let events = gsuite
-                .list_calendar_events_query(&calendar.id, &huddle.calendar_event_fuzzy_search)
+            if event.recurring_event_id.is_empty() || event.recurring_event_id != event.id {
+                // This is a single event, we need to add it.
+                event.calendar_id = huddle.calendar_id(company);
+                // Let's add the event to our HashMap.
+                let date = event.start.date_time.unwrap().date().naive_utc();
+                gcal_events.insert(date, event.clone());
+
+                continue;
+            }
+
+            if recurring_events.contains(&event.recurring_event_id) {
+                // We have already iterated over this event.
+                continue;
+            }
+
+            // Get all the recurring events.
+            let instances = gsuite
+                .list_recurring_event_instances(&huddle.calendar_id(company), &event.recurring_event_id)
                 .await
                 .unwrap();
-
-            // Iterate over all the events, searching for our search string.
-            let mut recurring_events: Vec<String> = Vec::new();
-            for mut event in events {
-                if !event
-                    .summary
-                    .to_lowercase()
-                    .contains(&huddle.calendar_event_fuzzy_search.to_lowercase())
-                {
-                    // This isn't one of the events we are looking for.
-                    // Continue early.
-                    continue;
-                }
-
-                if event.recurring_event_id.is_empty() || event.recurring_event_id != event.id {
-                    // This is a single event, we need to add it.
-                    event.calendar_id = calendar.id.to_string();
+            for mut instance in instances {
+                // Let's add the event to our HashMap.
+                if instance.start.date_time.is_some() {
+                    instance.calendar_id = huddle.calendar_id(company);
                     // Let's add the event to our HashMap.
-                    let date = event.start.date_time.unwrap().date().naive_utc();
-                    gcal_events.insert(date, event.clone());
-
-                    continue;
+                    let date = instance.start.date_time.unwrap().date().naive_utc();
+                    gcal_events.insert(date, instance.clone());
                 }
-
-                if recurring_events.contains(&event.recurring_event_id) {
-                    // We have already iterated over this event.
-                    continue;
-                }
-
-                // Get all the recurring events.
-                let instances = gsuite
-                    .list_recurring_event_instances(&calendar.id, &event.recurring_event_id)
-                    .await
-                    .unwrap();
-                for mut instance in instances {
-                    // Let's add the event to our HashMap.
-                    if instance.start.date_time.is_some() {
-                        instance.calendar_id = calendar.id.to_string();
-                        // Let's add the event to our HashMap.
-                        let date = instance.start.date_time.unwrap().date().naive_utc();
-                        gcal_events.insert(date, instance.clone());
-                    }
-                }
-
-                // Add it to our vector.
-                // So we don't repeat over it.
-                recurring_events.push(event.recurring_event_id);
             }
+
+            // Add it to our vector.
+            // So we don't repeat over it.
+            recurring_events.push(event.recurring_event_id);
         }
 
         println!(
