@@ -92,7 +92,6 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
             .events()
             .calendar_list_events(
                 &calendar.id, // Calendar id.
-                false,        // Deprecated and ignored.
                 "",           // iCalID
                 0,            // Max attendees, set to 0 to ignore.
                 google_calendar::types::OrderBy::StartTime,

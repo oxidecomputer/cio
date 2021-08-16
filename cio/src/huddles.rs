@@ -46,9 +46,8 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
                 .calendar_get(
                     &record.fields.calendar_id,
                     &record.fields.calendar_event_id,
-                    false, // Depreciated ignored
-                    0,     // max attendees, 0 to ignore
-                    "",    // time_zone
+                    0,  // max attendees, 0 to ignore
+                    "", // time_zone
                 )
                 .await
             {
@@ -116,9 +115,8 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                         .calendar_get(
                             &organizer_email,
                             &event.id,
-                            false, // Depreciated ignored
-                            0,     // max attendees, 0 to ignore
-                            "",    // time_zone
+                            0,  // max attendees, 0 to ignore
+                            "", // time_zone
                         )
                         .await
                     {
@@ -135,7 +133,6 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                             .calendar_update(
                                 &organizer_email,
                                 &event.id,
-                                false, // Depreciated ignored
                                 0,     // conference data version
                                 0,     // max attendees, 0 to ignore
                                 false, // send notifications
@@ -197,9 +194,8 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                 .calendar_get(
                     &record.fields.calendar_id,
                     &record.fields.calendar_event_id,
-                    false, // Depreciated ignored
-                    0,     // max attendees, 0 to ignore
-                    "",    // time_zone
+                    0,  // max attendees, 0 to ignore
+                    "", // time_zone
                 )
                 .await
             {
@@ -245,9 +241,8 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                                 .calendar_get(
                                     &organizer_email,
                                     &record.fields.calendar_event_id,
-                                    false, // Depreciated ignored
-                                    0,     // max attendees, 0 to ignore
-                                    "",    // time_zone
+                                    0,  // max attendees, 0 to ignore
+                                    "", // time_zone
                                 )
                                 .await
                                 .unwrap();
@@ -265,10 +260,9 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                                 .calendar_update(
                                     &organizer_email,
                                     &event.id,
-                                    false, // Depreciated ignored
-                                    0,     // conference data version
-                                    0,     // max attendees, 0 to ignore
-                                    true,  // send notifications
+                                    0,    // conference data version
+                                    0,    // max attendees, 0 to ignore
+                                    true, // send notifications
                                     google_calendar::types::SendUpdates::All,
                                     true, // supports_attachments
                                     &event,
@@ -473,9 +467,8 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             .events()
             .calendar_list_events(
                 &huddle.calendar_id(company),
-                false, // Deprecated and ignored.
-                "",    // iCalID
-                0,     // Max attendees, set to 0 to ignore.
+                "", // iCalID
+                0,  // Max attendees, set to 0 to ignore.
                 google_calendar::types::OrderBy::StartTime,
                 &[],                                 // private_extended_property
                 &huddle.calendar_event_fuzzy_search, // q
@@ -523,7 +516,6 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                 .get_all_calendar_instances(
                     &huddle.calendar_id(company),
                     &event.recurring_event_id,
-                    false,                                                                     // depreciated
                     0,    // max attendees, 0 to ignore
                     "",   // original_start
                     true, // show_deleted

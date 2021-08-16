@@ -10,17 +10,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
-use google_calendar::{
-    types::{Event, EventAttendee, EventDateTime},
-    Client as GoogleCalendar,
-};
+use google_calendar::types::{Event, EventAttendee, EventDateTime};
 use google_geocode::Geocode;
-use gsuite_api::{
-    types::{
-        Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup,
-        User as GSuiteUser,
-    },
-    Client as GSuite,
+use gsuite_api::types::{
+    Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup, User as GSuiteUser,
 };
 use gusto_api::Client as Gusto;
 use macros::db;
@@ -1537,8 +1530,8 @@ pub async fn sync_users(
 ) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
+    let gsuite = company.authenticate_google_admin(db).await;
+    let ggs = company.authenticate_google_groups_settings(db).await;
 
     // Initialize the Gusto client.
     let mut gusto_users: HashMap<String, gusto_api::types::Employee> = HashMap::new();
@@ -2680,17 +2673,18 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
 }
 
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
-    // Get everything we need to authenticate with GSuite.
-    // Initialize the GSuite client.
-    let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
+    let gcal = company.authenticate_google_calendar(db).await;
 
-    // Find the anniversary calendar.
     // Get the list of our calendars.
-    let calendars = gsuite.list_calendars().await.unwrap();
+    let calendars = gcal
+        .calendar_list()
+        .get_all(google_calendar::types::MinAccessRole::Noop, false, false)
+        .await
+        .unwrap();
 
     let mut anniversary_cal_id = "".to_string();
 
+    // Find the anniversary calendar.
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.summary.contains("Anniversaries") {
@@ -2746,12 +2740,22 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
             response_status: Default::default(),
             comment: Default::default(),
             additional_guests: 0,
+            self_: false,
         }];
 
         if user.google_anniversary_event_id.is_empty() {
             // Create the event.
-            let event = gsuite
-                .create_calendar_event(&anniversary_cal_id, &new_event)
+            let event = gcal
+                .events()
+                .calendar_insert(
+                    &anniversary_cal_id,
+                    0,                                        // conference data version, leave blank
+                    0,                                        // max attendees
+                    true,                                     // send notifications
+                    google_calendar::types::SendUpdates::All, // send updates
+                    true,                                     // supports_attachments
+                    &new_event,
+                )
                 .await
                 .unwrap();
             println!("created event for user {} anniversary: {:?}", user.username, event);
@@ -2759,22 +2763,38 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
             user.google_anniversary_event_id = event.id.to_string();
         } else {
             // Get the existing event.
-            let old_event = gsuite
-                .get_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id)
+            let old_event = gcal
+                .events()
+                .calendar_get(
+                    &anniversary_cal_id,
+                    &user.google_anniversary_event_id,
+                    0,  // max_attendees set to 0 to ignore
+                    "", // time_zone
+                )
                 .await
                 .unwrap();
 
             if old_event.description != new_event.description
                 || old_event.summary != new_event.summary
-                || old_event.start.date != new_event.start.date
+                || old_event.start.as_ref().unwrap().date != new_event.start.as_ref().unwrap().date
             {
                 // Only update it if it has changed.
 
                 // Set the correct sequence so we don't error out.
                 new_event.sequence = old_event.sequence;
                 // Update the event.
-                let event = gsuite
-                    .update_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id, &new_event)
+                let event = gcal
+                    .events()
+                    .calendar_update(
+                        &anniversary_cal_id,
+                        &user.google_anniversary_event_id,
+                        0,                                        // conference data version, set to 0 to ignore
+                        0,                                        // max_attendees set to 0 to ignore
+                        true,                                     // send_notifications
+                        google_calendar::types::SendUpdates::All, // send updates
+                        true,                                     // supports_attachments
+                        &new_event,
+                    )
                     .await
                     .unwrap();
                 println!("updated event for user {} anniversary: {:?}", user.username, event);
