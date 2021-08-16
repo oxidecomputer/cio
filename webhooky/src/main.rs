@@ -1580,6 +1580,8 @@ async fn listen_application_files_upload_requests(
 
     let data = body_param.into_inner();
 
+    sentry::capture_message(&format!("got application files: {:?}", data), sentry::Level::Info);
+
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
 
