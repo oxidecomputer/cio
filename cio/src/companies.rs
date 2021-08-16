@@ -569,8 +569,8 @@ impl Company {
                 if !nt.refresh_token.is_empty() {
                     t.refresh_token = nt.refresh_token.to_string();
                 }
-                if nt.refresh_token_expires_in > 0 {
-                    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                if nt.x_refresh_token_expires_in > 0 {
+                    t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
                 }
                 t.last_updated_at = Utc::now();
                 t.expand();
@@ -646,10 +646,10 @@ impl Company {
                 t.update(db).await;
             }
 
-            return t.access_token;
+            return Some(g);
         }
 
-        "".to_string()
+        None
     }
 
     /// TODO: remove this after we fix drive. Authenticate Google Drive.

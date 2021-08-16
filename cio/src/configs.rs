@@ -1532,6 +1532,7 @@ pub async fn sync_users(
     // Initialize the GSuite client.
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
     let ggs = company.authenticate_google_groups_settings(db).await.unwrap();
+    let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Initialize the Gusto client.
     let mut gusto_users: HashMap<String, gusto_api::types::Employee> = HashMap::new();
@@ -1615,7 +1616,21 @@ pub async fn sync_users(
     }
 
     // Get the existing GSuite users.
-    let gsuite_users = gsuite.list_users().await.unwrap();
+    let gsuite_users = gsuite
+        .users()
+        .directory_list_users(
+            &company.gsuite_account_id,
+            &company.gsuite_domain,
+            gsuite_api::types::Event::Noop,
+            gsuite_api::types::DirectoryUsersListOrderBy::Email,
+            gsuite_api::types::DirectoryUsersListProjection::Full,
+            "", // query
+            "", // show deleted
+            gsuite_api::types::SortOrder::Ascending,
+            gsuite_api::types::ViewType::AdminView,
+        )
+        .await
+        .unwrap();
     let mut gsuite_users_map: BTreeMap<String, GSuiteUser> = BTreeMap::new();
     for g in gsuite_users.clone() {
         // Add the group to our map.
@@ -1624,18 +1639,33 @@ pub async fn sync_users(
 
     // Get the GSuite groups.
     let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
-    let groups = gsuite.list_groups().await.unwrap();
+    let groups = gsuite
+        .groups()
+        .directory_list_groups(
+            &company.gsuite_account_id,
+            &company.gsuite_domain,
+            gsuite_api::types::DirectoryGroupsListOrderBy::Email,
+            "", // query
+            gsuite_api::types::SortOrder::Ascending,
+            "", // user_key
+        )
+        .await
+        .unwrap();
     for g in groups {
         // Add the group to our map.
         gsuite_groups.insert(g.name.to_string(), g);
     }
 
-    // Find the anniversary calendar.
     // Get the list of our calendars.
-    let calendars = gsuite.list_calendars().await.unwrap();
+    let calendars = gcal
+        .calendar_list()
+        .get_all(google_calendar::types::MinAccessRole::Noop, false, false)
+        .await
+        .unwrap();
 
     let mut anniversary_cal_id = "".to_string();
 
+    // Find the anniversary calendar.
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.summary.contains("Anniversaries") {
@@ -2019,8 +2049,13 @@ pub async fn sync_users(
 
         if !user.google_anniversary_event_id.is_empty() {
             // First delete the recurring event for their anniversary.
-            gsuite
-                .delete_calendar_event(&anniversary_cal_id, &user.google_anniversary_event_id)
+            gcal.events()
+                .calendar_delete(
+                    &anniversary_cal_id,
+                    &user.google_anniversary_event_id,
+                    true, // send_notifications
+                    google_calendar::types::SendUpdates::All,
+                )
                 .await
                 .unwrap();
             println!(
