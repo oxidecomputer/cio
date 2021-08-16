@@ -3,7 +3,7 @@ use barcoders::{
     generators::{image::Image, svg::SVG},
     sym::code39::Code39,
 };
-use google_drive::GoogleDrive;
+use google_drive::Client as GoogleDrive;
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
@@ -239,11 +239,8 @@ impl AssetItem {
 
 /// Sync asset items from Airtable.
 pub async fn refresh_asset_items(db: &Database, company: &Company) {
-    // Get gsuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
+    let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"

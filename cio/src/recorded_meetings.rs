@@ -3,7 +3,7 @@ use std::str::from_utf8;
 
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
-use google_drive::GoogleDrive;
+use google_drive::Client as GoogleDrive;
 use inflector::cases::kebabcase::to_kebab_case;
 use macros::db;
 use revai::RevAI;
@@ -105,11 +105,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
         return;
     }
 
-    // Get our Google token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive = GoogleDrive::new(token);
+    let drive = company.authenticate_google_drive(db).await.unwrap();
 
     // Get the shared drive.
     let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
@@ -342,8 +339,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     continue;
                 }
 
-                let delegated_token = company.authenticate_google(db).await;
-                let drive_client = GoogleDrive::new(delegated_token);
+                let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
                 // If we have a chat log, we should download it.
                 let mut chat_log = "".to_string();

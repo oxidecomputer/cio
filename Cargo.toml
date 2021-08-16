@@ -6,7 +6,6 @@ members = [
 	"cfcert",
 	"cio",
 	"docusign",
-	"drive",
 	"giphy",
 	"google-geocode",
 	"macros",

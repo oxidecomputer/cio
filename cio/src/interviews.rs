@@ -8,7 +8,7 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
-use google_drive::GoogleDrive;
+use google_drive::Client as GoogleDrive;
 use lopdf::{Bookmark, Document, Object, ObjectId};
 use macros::db;
 use pandoc::OutputKind;
@@ -260,11 +260,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
 /// Compile interview packets for each interviewee.
 #[allow(clippy::type_complexity)]
 pub async fn compile_packets(db: &Database, company: &Company) {
-    // Get gsuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
+    let drive_client = company.authenticate_google_drive(db).await.unwrap();
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
     let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();

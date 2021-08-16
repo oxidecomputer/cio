@@ -1,5 +1,4 @@
 use chrono::Utc;
-use google_drive::GoogleDrive;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -58,11 +57,8 @@ impl ApplicationForm {
 
         let company = Company::get_by_id(db, self.cio_company_id);
 
-        // Get the GSuite token.
-        let token = company.authenticate_google(db).await;
-
         // Initialize the GSuite sheets client.
-        let drive_client = GoogleDrive::new(token.clone());
+        let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
         // Expand the application.
         applicant.expand(db, &drive_client).await;

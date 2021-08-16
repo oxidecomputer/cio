@@ -38,8 +38,8 @@ flate2 = "1"
 futures-util = "0.3"
 #google-calendar = "^0.1.0"
 google-calendar = { path = "../../third-party-api-clients/google/calendar" }
-google-drive = "^0.1.23"
-#google-drive = { path = "../drive" }
+#google-drive = "^0.2.0"
+google-drive = { path = "../../third-party-api-clients/google/drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
 #google-groups-settings = "^0.1.0"

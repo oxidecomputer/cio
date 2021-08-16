@@ -6,7 +6,7 @@ use barcoders::{
     sym::code39::Code39,
 };
 use chrono::{DateTime, Utc};
-use google_drive::GoogleDrive;
+use google_drive::Client as GoogleDrive;
 use macros::db;
 use printpdf::{types::plugins::graphics::two_dimensional::image::Image as PdfImage, Mm, PdfDocument, Pt};
 use reqwest::StatusCode;
@@ -417,11 +417,8 @@ impl SwagInventoryItem {
 
 /// Sync swag inventory items from Airtable.
 pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) {
-    // Get gsuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
+    let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"

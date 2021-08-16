@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
-use google_drive::GoogleDrive;
+use google_drive::Client as GoogleDrive;
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -844,11 +844,8 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) {
     // Authenticate GitHub.
     let github = company.authenticate_github();
 
-    // Get gsuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
+    let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
     let rfds = get_rfds_from_repo(&github, company).await;
 

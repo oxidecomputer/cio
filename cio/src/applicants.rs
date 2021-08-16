@@ -12,7 +12,7 @@ use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
 use docusign::DocuSign;
 use flate2::read::GzDecoder;
-use google_drive::GoogleDrive;
+use google_drive::Client as GoogleDrive;
 use google_geocode::Geocode;
 use html2text::from_read;
 use macros::db;
@@ -2958,7 +2958,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
     let sheets_client = Sheets::new(token.clone());
 
     // Initialize the GSuite sheets client.
-    let drive_client = GoogleDrive::new(token.clone());
+    let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
@@ -4273,7 +4273,7 @@ Sincerely,
         let token = company.authenticate_google(db).await;
 
         // Initialize the Google Drive client.
-        let drive_client = GoogleDrive::new(token);
+        let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
         let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
@@ -4554,7 +4554,7 @@ Sincerely,
         let token = company.authenticate_google(db).await;
 
         // Initialize the Google Drive client.
-        let drive_client = GoogleDrive::new(token);
+        let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
         let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
@@ -4609,7 +4609,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
     let token = company.authenticate_google(db).await;
 
     // Initialize the GSuite sheets client.
-    let drive_client = GoogleDrive::new(token.clone());
+    let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
     let github = company.authenticate_github();
 

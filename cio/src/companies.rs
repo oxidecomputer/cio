@@ -9,6 +9,7 @@ use cloudflare::framework::{
 };
 use docusign::DocuSign;
 use google_calendar::Client as GoogleCalendar;
+use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
@@ -652,7 +653,7 @@ impl Company {
         None
     }
 
-    /// TODO: remove this after we fix drive. Authenticate Google Drive.
+    /// TODO: remove this after we fix google sheets. Authenticate Google Drive.
     pub async fn authenticate_google(&self, db: &Database) -> String {
         // Get the APIToken from the database.
         if let Some(t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
@@ -662,12 +663,12 @@ impl Company {
         "".to_string()
     }
 
-    /* /// Authenticate Google Drive.
+    /// Authenticate Google Drive.
     pub async fn authenticate_google_drive(&self, db: &Database) -> Option<GoogleDrive> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
-                // Initialize the client.
-                let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            // Initialize the client.
+            let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -694,7 +695,7 @@ impl Company {
         }
 
         None
-    }*/
+    }
 
     /// Authenticate Google Groups Settings.
     pub async fn authenticate_google_groups_settings(&self, db: &Database) -> Option<GoogleGroupsSettings> {
