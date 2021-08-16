@@ -476,9 +476,10 @@ dependencies = [
  "dropshot 0.5.1",
  "flate2",
  "futures-util",
+ "google-calendar",
  "google-drive 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.2.0",
  "gusto-api",
  "handlebars",
  "html2text",
@@ -549,7 +550,7 @@ dependencies = [
  "futures-util",
  "google-drive 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gsuite-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gsuite-api 0.1.33",
  "gusto-api",
  "handlebars",
  "html2text",
@@ -1457,6 +1458,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "google-calendar"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "google-drive"
 version = "0.1.25"
 dependencies = [
@@ -1500,18 +1520,6 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.1.33"
-dependencies = [
- "chrono",
- "rand 0.7.3",
- "reqwest",
- "serde",
- "serde_json",
- "yup-oauth2",
-]
-
-[[package]]
-name = "gsuite-api"
-version = "0.1.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaa740f0ef8a796ffd594467873f1347590fb13c2142ef629aa21e99d893d916"
 dependencies = [
@@ -1520,6 +1528,25 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "gsuite-api"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]

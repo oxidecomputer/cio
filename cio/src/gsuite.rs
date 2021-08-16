@@ -4,15 +4,19 @@ use std::{
 };
 
 use gsuite_api::{
-    generate_password, Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, GSuite,
-    Group as GSuiteGroup, User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender,
-    UserInstantMessenger, UserLocation, UserName, UserPhone, UserSSHKey,
+    types::{
+        Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup,
+        User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger,
+        UserLocation, UserName, UserPhone, UserSshPublicKey,
+    },
+    Client as GSuite,
 };
 use serde_json::Value;
 
 use crate::{
     companies::Company,
     configs::{Building, ConferenceRoom, Group, User},
+    utils::generate_password,
 };
 
 /// Update a GSuite user.
@@ -132,7 +136,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     // Clear out their existing keys first.
     gsuite_user.ssh_public_keys = Default::default();
     for k in &user.public_ssh_keys {
-        gsuite_user.ssh_public_keys.push(UserSSHKey {
+        gsuite_user.ssh_public_keys.push(UserSshPublicKey {
             key: k.to_string(),
             expiration_time_usec: None,
             // fingerprint is a read-only property so make sure it is empty
@@ -330,10 +334,10 @@ pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group, compan
 pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str) -> GSuiteBuilding {
     let mut gsuite_building = b.clone();
 
-    gsuite_building.id = id.to_string();
-    gsuite_building.name = building.name.to_string();
+    gsuite_building.building_id = id.to_string();
+    gsuite_building.building_name = building.name.to_string();
     gsuite_building.description = building.description.to_string();
-    gsuite_building.address = BuildingAddress {
+    gsuite_building.address = Some(BuildingAddress {
         address_lines: vec![building.street_address.to_string()],
         locality: building.city.to_string(),
         administrative_area: building.state.to_string(),
@@ -341,7 +345,7 @@ pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str)
         region_code: building.country.to_string(),
         language_code: "en".to_string(),
         sublocality: "".to_string(),
-    };
+    });
     gsuite_building.floor_names = building.floors.clone();
 
     gsuite_building
@@ -355,16 +359,16 @@ pub fn update_gsuite_calendar_resource(
 ) -> GSuiteCalendarResource {
     let mut gsuite_conference_room = c.clone();
 
-    gsuite_conference_room.id = id.to_string();
-    gsuite_conference_room.typev = resource.typev.to_string();
-    gsuite_conference_room.name = resource.name.to_string();
+    gsuite_conference_room.resource_id = id.to_string();
+    gsuite_conference_room.resource_type = resource.typev.to_string();
+    gsuite_conference_room.resource_name = resource.name.to_string();
     gsuite_conference_room.building_id = resource.building.to_string();
-    gsuite_conference_room.description = resource.description.to_string();
+    gsuite_conference_room.resource_description = resource.description.to_string();
     gsuite_conference_room.user_visible_description = resource.description.to_string();
-    gsuite_conference_room.capacity = Some(resource.capacity);
+    gsuite_conference_room.capacity = resource.capacity as i64;
     gsuite_conference_room.floor_name = resource.floor.to_string();
     gsuite_conference_room.floor_section = resource.section.to_string();
-    gsuite_conference_room.category = "CONFERENCE_ROOM".to_string();
+    gsuite_conference_room.resource_category = "CONFERENCE_ROOM".to_string();
 
     gsuite_conference_room
 }

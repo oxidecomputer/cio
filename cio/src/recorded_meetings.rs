@@ -3,8 +3,8 @@ use std::str::from_utf8;
 
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
+use google_calendar::Client as GoogleCalendar;
 use google_drive::GoogleDrive;
-use gsuite_api::GSuite;
 use inflector::cases::kebabcase::to_kebab_case;
 use macros::db;
 use revai::RevAI;
@@ -274,17 +274,21 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     RecordedMeetings::get_from_db(db, company.id).update_airtable(db).await;
 
     let token = company.authenticate_google(db).await;
-    let mut gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let mut gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
-    let calendars = gsuite.list_calendars().await.unwrap();
+    let calendars = gcal
+        .calendar_list()
+        .get_all(google_calendar::types::MinAccessRole::Noop, false, false)
+        .await
+        .unwrap();
 
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
-            gsuite = GSuite::new(
+            gcal = GoogleCalendar::new(
                 &company.gsuite_account_id,
                 &company.gsuite_domain,
                 company.authenticate_google(db).await,
@@ -293,7 +297,27 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
             println!("Getting events for {}", calendar.id);
-            let events = gsuite.list_past_calendar_events(&calendar.id).await.unwrap();
+            let events = gcal
+                .events()
+                .calendar_list_events(
+                    &calendar.id, // Calendar id.
+                    false,        // Deprecated and ignored.
+                    "",           // iCalID
+                    0,            // Max attendees, set to 0 to ignore.
+                    google_calendar::types::OrderBy::StartTime,
+                    &[],                      // private_extended_property
+                    "",                       // q
+                    &[],                      // shared_extended_property
+                    true,                     // show_deleted
+                    true,                     // show_hidden_invitations
+                    true,                     // single_events
+                    &Utc::now().to_rfc3339(), // time_max
+                    "",                       // time_min
+                    "",                       // time_zone
+                    "",                       // updated_min
+                )
+                .await
+                .unwrap();
 
             for event in events {
                 // Let's check if there are attachments. We only care if there are attachments.
@@ -364,8 +388,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 let mut meeting = NewRecordedMeeting {
                     name: event.summary.trim().to_string(),
                     description: event.description.trim().to_string(),
-                    start_time: event.start.date_time.unwrap(),
-                    end_time: event.end.date_time.unwrap(),
+                    start_time: event.start.unwrap().date_time.unwrap(),
+                    end_time: event.end.unwrap().date_time.unwrap(),
                     video,
                     chat_log_link,
                     chat_log,

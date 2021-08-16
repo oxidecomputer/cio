@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use airtable_api::{Airtable, Record};
 use chrono::{Duration, NaiveDate, Utc};
-use gsuite_api::{CalendarEvent, GSuite};
+use google_calendar::{types::Event, Client as GoogleCalendar};
 use handlebars::Handlebars;
 use sendgrid_api::SendGrid;
 
@@ -21,7 +21,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
     let configs = get_configs_from_repo(&github, company).await;
 
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
@@ -42,8 +42,15 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
             }
 
             // Get the event from Google Calendar.
-            if let Ok(event) = gsuite
-                .get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id)
+            if let Ok(event) = gcal
+                .events()
+                .calendar_get(
+                    &record.fields.calendar_id,
+                    &record.fields.calendar_event_id,
+                    false, // Depreciated ignored
+                    0,     // max attendees, 0 to ignore
+                    "",    // time_zone
+                )
                 .await
             {
                 // If the event is cancelled, we can just carry on our merry way.
@@ -103,7 +110,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
 
                 if event.recurring_event_id != event.id {
                     // Update the calendar event with the new description.
-                    let g_owner = GSuite::new(&event.organizer.email, &company.gsuite_domain, token.clone());
+                    let g_owner = GoogleCalendar::new(&event.organizer.email, &company.gsuite_domain, token.clone());
                     // Get the event under the right user.
                     if let Ok(mut event) = g_owner.get_calendar_event(&event.organizer.email, &event.id).await {
                         // Modify the properties of the event so we can update it.
@@ -139,7 +146,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
     let configs = get_configs_from_repo(&github, company).await;
 
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -166,10 +173,13 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
             }
 
             // Get the event from Google Calendar.
-            if let Ok(event) = gsuite
-                .get_calendar_event(&record.fields.calendar_id, &record.fields.calendar_event_id)
-                .await
-            {
+            if let Ok(event) = gcal.events().calendar_get(
+                &record.fields.calendar_id,
+                &record.fields.calendar_event_id,
+                false, // Depreciated ignored
+                0,     // max attendees, 0 to ignore
+                "",    // time_zone
+            ) {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
                     // The event was cancelled we want to just continue on our way.
@@ -204,11 +214,18 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
 
                         if event.recurring_event_id != event.id {
                             // We need to impersonate the event owner.
-                            let g_owner = GSuite::new(&event.organizer.email, &company.gsuite_domain, token.clone());
+                            let g_owner =
+                                GoogleCalendar::new(&event.organizer.email, &company.gsuite_domain, token.clone());
                             // Get the event under the right user.
-                            let mut event = g_owner
-                                .get_calendar_event(&event.organizer.email, &event.id)
-                                .await
+                            let mut event = gowner
+                                .events()
+                                .calendar_get(
+                                    &event.organizer.email,
+                                    &record.fields.calendar_event_id,
+                                    false, // Depreciated ignored
+                                    0,     // max attendees, 0 to ignore
+                                    "",    // time_zone
+                                )
                                 .unwrap();
                             // We need to update the event instance, not delete it, and set the status to
                             // cancelled.
@@ -221,7 +238,19 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                             }
 
                             g_owner
-                                .update_calendar_event(&event.organizer.email, &event.id, &event)
+                                .events()
+                                .calendar_update(
+                                    &event.organizer.email,
+                                    &event.id,
+                                    false, // Depreciated ignored
+                                    0,     // conference data version
+                                    0,     // max attendees, 0 to ignore
+                                    true,  // send notifications
+                                    google_calendar::types::SendUpdates::All,
+                                    true, // supports_attachments
+                                    "",   // time_zone
+                                    &event,
+                                )
                                 .await
                                 .unwrap();
                             println!(
@@ -408,19 +437,36 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
     let configs = get_configs_from_repo(&github, company).await;
 
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
         // Collect all the calendar events that match this search string.
         // The first part of the map should match the date field in airtable.
-        let mut gcal_events: HashMap<NaiveDate, CalendarEvent> = HashMap::new();
+        let mut gcal_events: HashMap<NaiveDate, Event> = HashMap::new();
 
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
         println!("Getting {} events for calendar: {}", huddle.name, huddle.calendar_owner);
-        let events = gsuite
-            .list_calendar_events_query(&huddle.calendar_id(company), &huddle.calendar_event_fuzzy_search)
+        let events = gcal
+            .events()
+            .calendar_list_events(
+                &huddle.calendar_id(company),
+                false, // Deprecated and ignored.
+                "",    // iCalID
+                0,     // Max attendees, set to 0 to ignore.
+                google_calendar::types::OrderBy::StartTime,
+                &[],                                // private_extended_property
+                huddle.calendar_event_fuzzy_search, // q
+                &[],                                // shared_extended_property
+                true,                               // show_deleted
+                true,                               // show_hidden_invitations
+                false,                              // single_events
+                "",                                 // time_max
+                "",                                 // time_min
+                "",                                 // time_zone
+                "",                                 // updated_min
+            )
             .await
             .unwrap();
 
@@ -455,6 +501,21 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             // Get all the recurring events.
             let instances = gsuite
                 .list_recurring_event_instances(&huddle.calendar_id(company), &event.recurring_event_id)
+                .await
+                .unwrap();
+            let instances = gcal
+                .events()
+                .get_all_calendar_instances(
+                    &huddle.calendar_id(company),
+                    &event.recurring_event_id,
+                    false,                                                                     // depreciated
+                    0,    // max attendees, 0 to ignore
+                    "",   // original_start
+                    true, // show_deleted
+                    &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339(), // time_max
+                    "",   // time_min
+                    "",   // time_zone
+                )
                 .await
                 .unwrap();
             for mut instance in instances {

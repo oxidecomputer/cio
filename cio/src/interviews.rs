@@ -8,8 +8,8 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
+use google_calendar::Client as GoogleCalendar;
 use google_drive::GoogleDrive;
-use gsuite_api::GSuite;
 use lopdf::{Bookmark, Document, Object, ObjectId};
 use macros::db;
 use pandoc::OutputKind;
@@ -71,10 +71,14 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) {
     let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
+    let gcal = GoogleCalendar::new(&company.gsuite_account_id, &company.gsuite_domain, token.clone());
 
     // Get the list of our calendars.
-    let calendars = gsuite.list_calendars().await.unwrap();
+    let calendars = gcal
+        .calendar_list()
+        .get_all(google_calendar::types::MinAccessRole::Noop, false, false)
+        .await
+        .unwrap();
 
     // Iterate over the calendars.
     for calendar in calendars {
@@ -86,7 +90,27 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
         println!("Getting events for {}", calendar.id);
-        let events = gsuite.list_calendar_events(&calendar.id, true).await.unwrap();
+        let events = gcal
+            .events()
+            .calendar_list_events(
+                &calendar.id, // Calendar id.
+                false,        // Deprecated and ignored.
+                "",           // iCalID
+                0,            // Max attendees, set to 0 to ignore.
+                google_calendar::types::OrderBy::StartTime,
+                &[],  // private_extended_property
+                "",   // q
+                &[],  // shared_extended_property
+                true, // show_deleted
+                true, // show_hidden_invitations
+                true, // single_events
+                "",   // time_max
+                "",   // time_min
+                "",   // time_zone
+                "",   // updated_min
+            )
+            .await
+            .unwrap();
 
         for event in events {
             // If the event has been cancelled, clear it out of the database.
@@ -102,8 +126,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
 
             // Create the interview event.
             let mut interview = NewApplicantInterview {
-                start_time: event.start.date_time.unwrap(),
-                end_time: event.end.date_time.unwrap(),
+                start_time: event.start.unwrap().date_time.unwrap(),
+                end_time: event.end.unwrap().date_time.unwrap(),
 
                 name: "".to_string(),
                 email: "".to_string(),

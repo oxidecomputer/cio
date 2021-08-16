@@ -10,10 +10,17 @@ use anyhow::Result;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
+use google_calendar::{
+    types::{Event, EventAttendee, EventDateTime},
+    Client as GoogleCalendar,
+};
 use google_geocode::Geocode;
 use gsuite_api::{
-    Attendee, Building as GSuiteBuilding, CalendarEvent, CalendarResource as GSuiteCalendarResource, Date, GSuite,
-    Group as GSuiteGroup, User as GSuiteUser,
+    types::{
+        Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup,
+        User as GSuiteUser,
+    },
+    Client as GSuite,
 };
 use gusto_api::Client as Gusto;
 use macros::db;
@@ -2708,14 +2715,14 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
         }
 
         // Create a new event.
-        let mut new_event: CalendarEvent = Default::default();
+        let mut new_event: Event = Default::default();
 
-        new_event.start = Date {
+        new_event.start = EventDateTime {
             time_zone: "America/Los_Angeles".to_string(),
             date: Some(user.start_date),
             date_time: None,
         };
-        new_event.end = Date {
+        new_event.end = EventDateTime {
             time_zone: "America/Los_Angeles".to_string(),
             date: Some(user.start_date),
             date_time: None,
@@ -2729,7 +2736,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
         );
         new_event.recurrence = vec!["RRULE:FREQ=YEARLY;".to_string()];
         new_event.transparency = "transparent".to_string();
-        new_event.attendees = vec![Attendee {
+        new_event.attendees = vec![EventAttendee {
             id: Default::default(),
             email: user.email.to_string(),
             display_name: Default::default(),

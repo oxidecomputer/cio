@@ -6,6 +6,7 @@ use std::{
     str::from_utf8,
 };
 
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
 use serde_json::Value;
 
@@ -290,4 +291,14 @@ pub fn decode_base64(c: &str) -> Vec<u8> {
 pub fn decode_base64_to_string(c: &str) -> String {
     let decoded = decode_base64(c);
     from_utf8(&decoded).unwrap().trim().to_string()
+}
+
+/// Generate a random string that we can use as a temporary password for new users
+/// when we set up their account.
+pub fn generate_password() -> String {
+    thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(30)
+        .map(char::from)
+        .collect()
 }

@@ -2,7 +2,7 @@ use std::{collections::HashMap, env, fs::File};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
-use gsuite_api::GSuite;
+use gsuite_api::Client as GSuite;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
