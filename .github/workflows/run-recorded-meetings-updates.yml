@@ -70,7 +70,7 @@ jobs:
           cargo test recorded_meetings -- --ignored
         shell: bash
         env:
-          GOOGLE_CIO_KEY_ENCODED: ${{ secrets.GOOGLE_CIO_KEY_ENCODED }}
+          GOOGLE_KEY_ENCODED: ${{ secrets.GOOGLE_CIO_KEY_ENCODED }}
           CIO_AUTH0_CLIENT_ID: ${{ secrets.CIO_AUTH0_CLIENT_ID }}
           CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}

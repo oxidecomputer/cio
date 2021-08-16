@@ -652,23 +652,6 @@ pub async fn get_google_consent_url() -> String {
     )
 }
 
-pub async fn get_google_credentials() -> yup_oauth2::ApplicationSecret {
-    let google_key = env::var("GOOGLE_CIO_KEY_ENCODED").unwrap_or_default();
-    let b = base64::decode(google_key).unwrap();
-    // Save the google key to a tmp file.
-    let mut file_path = env::temp_dir();
-    file_path.push("google_key.json");
-    // Create the file and write to it.
-    let mut file = fs::File::create(file_path.clone()).unwrap();
-    file.write_all(&b).unwrap();
-    // Set the Google credential file to the temp path.
-    let google_credential_file = file_path.to_str().unwrap().to_string();
-
-    yup_oauth2::read_application_secret(google_credential_file)
-        .await
-        .expect("failed to read google credential file")
-}
-
 pub fn get_google_scopes() -> Vec<String> {
     vec![
         "https://www.googleapis.com/auth/admin.directory.group".to_string(),
@@ -704,104 +687,6 @@ pub struct UserInfo {
     pub hd: String,
     #[serde(default)]
     pub verified_email: bool,
-}
-
-pub async fn get_google_access_token(db: &Database, code: &str) {
-    let secret = get_google_credentials().await;
-
-    let mut headers = header::HeaderMap::new();
-    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
-
-    let params = [
-        ("grant_type", "authorization_code"),
-        ("code", code),
-        ("redirect_uri", &secret.redirect_uris[0]),
-        ("client_id", &secret.client_id),
-        ("client_secret", &secret.client_secret),
-    ];
-    let client = Client::new();
-    let resp = client
-        .post("https://oauth2.googleapis.com/token")
-        .headers(headers)
-        .form(&params)
-        .send()
-        .await
-        .unwrap();
-
-    // Unwrap the response.
-    let t: ramp_api::AccessToken = resp.json().await.unwrap();
-
-    // Let's get the company from information about the user.
-    let mut headers = header::HeaderMap::new();
-    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
-    headers.append(
-        header::AUTHORIZATION,
-        header::HeaderValue::from_str(&format!("Bearer {}", t.access_token)).unwrap(),
-    );
-
-    let params = [("alt", "json")];
-    let resp = client
-        .get("https://www.googleapis.com/oauth2/v1/userinfo")
-        .headers(headers)
-        .query(&params)
-        .send()
-        .await
-        .unwrap();
-
-    // Unwrap the response.
-    let metadata: UserInfo = resp.json().await.unwrap();
-
-    let company = Company::get_from_domain(db, &metadata.hd);
-
-    // Save the token to the database.
-    let mut token = NewAPIToken {
-        product: "google".to_string(),
-        token_type: t.token_type.to_string(),
-        access_token: t.access_token.to_string(),
-        expires_in: t.expires_in as i32,
-        refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.refresh_token_expires_in as i32,
-        company_id: metadata.hd.to_string(),
-        item_id: "".to_string(),
-        user_email: metadata.email.to_string(),
-        last_updated_at: Utc::now(),
-        expires_date: None,
-        refresh_token_expires_date: None,
-        endpoint: "".to_string(),
-        auth_company_id: company.id,
-        company: Default::default(),
-        // THIS SHOULD ALWAYS BE OXIDE, NO 1.
-        cio_company_id: 1,
-    };
-    token.expand();
-
-    // Update it in the database.
-    token.upsert(db).await;
-}
-
-pub async fn refresh_google_access_token(t: &APIToken) -> ramp_api::AccessToken {
-    let secret = get_google_credentials().await;
-
-    let mut headers = header::HeaderMap::new();
-    headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
-
-    let params = [
-        ("grant_type", "refresh_token"),
-        ("refresh_token", &t.refresh_token),
-        ("client_id", &secret.client_id),
-        ("client_secret", &secret.client_secret),
-    ];
-    let client = Client::new();
-    let resp = client
-        .post("https://oauth2.googleapis.com/token")
-        .headers(headers)
-        .form(&params)
-        .send()
-        .await
-        .unwrap();
-
-    // Unwrap the response.
-    resp.json().await.unwrap()
 }
 
 #[cfg(test)]
