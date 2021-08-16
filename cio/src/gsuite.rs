@@ -3,11 +3,12 @@ use std::{
     thread, time,
 };
 
+use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::{
     types::{
         Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup,
-        User as GSuiteUser, UserAddress, UserCustomProperties, UserEmail, UserGender, UserInstantMessenger,
-        UserLocation, UserName, UserPhone, UserSshPublicKey,
+        Ims, User as GSuiteUser, UserAddress, UserEmail, UserGender, UserLocation, UserName, UserPhone,
+        UserSshPublicKey,
     },
     Client as GSuite,
 };
@@ -23,11 +24,11 @@ use crate::{
 pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool, company: &Company) -> GSuiteUser {
     let mut gsuite_user = gu.clone();
 
-    gsuite_user.name = UserName {
+    gsuite_user.name = Some(UserName {
         full_name: format!("{} {}", user.first_name, user.last_name),
         given_name: user.first_name.to_string(),
         family_name: user.last_name.to_string(),
-    };
+    });
 
     if !user.recovery_email.is_empty() {
         // Set the recovery email for the user.
@@ -36,7 +37,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
         // Check if we have a home email set for the user and update it.
         let mut has_home_email = false;
         for (index, email) in gsuite_user.emails.iter().enumerate() {
-            if email.typev == "home" {
+            if email.type_ == "home" {
                 // Update the set home email.
                 gsuite_user.emails[index].address = user.recovery_email.to_string();
                 // Break the loop early.
@@ -49,7 +50,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
             // Set the home email for the user.
             gsuite_user.emails.push(UserEmail {
                 custom_type: "".to_string(),
-                typev: "home".to_string(),
+                type_: "home".to_string(),
                 address: user.recovery_email.to_string(),
                 primary: false,
             });
@@ -63,7 +64,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
         // Set the home phone for the user.
         gsuite_user.phones = vec![UserPhone {
             custom_type: "".to_string(),
-            typev: "home".to_string(),
+            type_: "home".to_string(),
             value: user.recovery_phone.to_string(),
             primary: true,
         }];
@@ -105,7 +106,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
             // TODO: figure out when this is supported and what it means
             source_is_structured: false,
             street_address,
-            typev: "home".to_string(),
+            type_: "home".to_string(),
         }];
     }
 
@@ -116,7 +117,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
         gsuite_user.gender = Some(UserGender {
             address_me_as: "".to_string(),
             custom_gender: "".to_string(),
-            typev: user.gender.to_string(),
+            type_: user.gender.to_string(),
         });
     }
 
@@ -128,7 +129,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
             desk_code: "".to_string(),
             floor_name: "1".to_string(),
             floor_section: "".to_string(),
-            typev: "desk".to_string(),
+            type_: "desk".to_string(),
         }];
     }
 
@@ -138,7 +139,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     for k in &user.public_ssh_keys {
         gsuite_user.ssh_public_keys.push(UserSshPublicKey {
             key: k.to_string(),
-            expiration_time_usec: None,
+            expiration_time_usec: 0, // 0 will send empty
             // fingerprint is a read-only property so make sure it is empty
             fingerprint: "".to_string(),
         });
@@ -148,21 +149,21 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     // TODO: once we migrate to slack update or add to this.
     if !user.chat.is_empty() {
         gsuite_user.ims = vec![
-            UserInstantMessenger {
+            Ims {
                 custom_protocol: "matrix".to_string(),
                 custom_type: "".to_string(),
                 im: user.chat.to_string(),
                 primary: true,
                 protocol: "custom_protocol".to_string(),
-                typev: "work".to_string(),
+                type_: "work".to_string(),
             },
-            UserInstantMessenger {
+            Ims {
                 custom_protocol: "slack".to_string(),
                 custom_type: "".to_string(),
                 im: format!("@{}", user.github),
                 primary: false,
                 protocol: "custom_protocol".to_string(),
-                typev: "work".to_string(),
+                type_: "work".to_string(),
             },
         ];
     }
@@ -178,13 +179,9 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     }
     // Oxide got set up weird but all the rest should be under miscellaneous.
     if company.name == "Oxide" {
-        gsuite_user
-            .custom_schemas
-            .insert("Contact".to_string(), UserCustomProperties(Some(contact)));
+        gsuite_user.custom_schemas.insert("Contact".to_string(), contact);
     } else {
-        gsuite_user
-            .custom_schemas
-            .insert("Miscellaneous".to_string(), UserCustomProperties(Some(contact)));
+        gsuite_user.custom_schemas.insert("Miscellaneous".to_string(), contact);
     }
 
     // Get the AWS Role information.
@@ -196,7 +193,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
         aws_role.insert("Role".to_string(), json!(vec![aws_type]));
         gsuite_user
             .custom_schemas
-            .insert("Amazon_Web_Services".to_string(), UserCustomProperties(Some(aws_role)));
+            .insert("Amazon_Web_Services".to_string(), aws_role);
     }
 
     gsuite_user
@@ -215,7 +212,22 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
     }
 
     // Update the user's aliases.
-    gsuite.update_user_aliases(&u.primary_email, formatted_aliases).await;
+    for alias in formatted_aliases {
+        gsuite
+            .users()
+            .directory_aliases_insert(
+                &u.primary_email,
+                &gsuite_api::types::Alias {
+                    alias: alias.to_string(),
+                    etag: Default::default(),
+                    id: Default::default(),
+                    kind: Default::default(),
+                    primary_email: Default::default(),
+                },
+            )
+            .await
+            .unwrap();
+    }
     println!("updated gsuite user aliases: {}", u.primary_email);
 }
 
@@ -241,17 +253,54 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         }
 
         // Check if the user is already a member of the group.
-        let is_member = gsuite.group_has_member(&group.id, &user.email).await.unwrap();
-        if is_member {
+        let is_member = gsuite
+            .members()
+            .directory_has_member(&group.id, &user.email)
+            .await
+            .unwrap();
+        if is_member.is_member {
             // They are a member so we can just update their member status.
-            gsuite.group_update_member(&group.id, &user.email, role).await.unwrap();
+            gsuite
+                .members()
+                .directory_update(
+                    &group.id,
+                    &user.email,
+                    &gsuite_api::types::Member {
+                        role: role.to_string(),
+                        email: user.email.to_string(),
+                        delivery_settings: "ALL_MAIL".to_string(),
+                        etag: "".to_string(),
+                        id: "".to_string(),
+                        kind: "".to_string(),
+                        status: "".to_string(),
+                        type_: "".to_string(),
+                    },
+                )
+                .await
+                .unwrap();
 
             // Continue through the other groups.
             continue;
         }
 
         // Add the user to the group.
-        gsuite.group_insert_member(&group.id, &user.email, role).await.unwrap();
+        gsuite
+            .members()
+            .directory_insert(
+                &group.id,
+                &gsuite_api::types::Member {
+                    role: role.to_string(),
+                    email: user.email.to_string(),
+                    delivery_settings: "ALL_MAIL".to_string(),
+                    etag: "".to_string(),
+                    id: "".to_string(),
+                    kind: "".to_string(),
+                    status: "".to_string(),
+                    type_: "".to_string(),
+                },
+            )
+            .await
+            .unwrap();
 
         println!("added {} to gsuite group {} as {}", user.email, group.name, role);
     }
@@ -265,16 +314,20 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
 
         // Now we have a google group. The user should not be a member of it,
         // but we need to make sure they are not a member.
-        let is_member = gsuite.group_has_member(&group.id, &user.email).await.unwrap();
+        let is_member = gsuite
+            .members()
+            .directory_has_member(&group.id, &user.email)
+            .await
+            .unwrap();
 
-        if !is_member {
+        if !is_member.is_member {
             // They are not a member so we can continue early.
             continue;
         }
 
         // They are a member of the group.
         // We need to remove them.
-        gsuite.group_remove_member(&group.id, &user.email).await.unwrap();
+        gsuite.members().directory_delete(&group.id, &user.email).await.unwrap();
 
         println!("removed {} from gsuite group {}", user.email, group.name);
     }
@@ -288,24 +341,38 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
     }
 
     // Update the user's aliases.
-    gsuite.update_group_aliases(&g.email, g.aliases.clone()).await;
+    for alias in &g.aliases {
+        gsuite
+            .groups()
+            .directory_aliases_insert(
+                &g.email,
+                &gsuite_api::types::Alias {
+                    alias: alias.to_string(),
+                    etag: Default::default(),
+                    id: Default::default(),
+                    kind: Default::default(),
+                    primary_email: Default::default(),
+                },
+            )
+            .await;
+    }
     println!("updated gsuite group aliases: {}", g.email);
 }
 
 /// Update a group's settings in GSuite to match our configuration files.
-pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group, company: &Company) {
+pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Group, company: &Company) {
     // Get the current group settings.
     let email = format!("{}@{}", group.name, company.gsuite_domain);
-    let mut result = gsuite.get_group_settings(&email).await;
+    let mut result = ggs.groups().settings_get(&email).await;
     if result.is_err() {
         // Try again.
         thread::sleep(time::Duration::from_secs(1));
-        result = gsuite.get_group_settings(&email).await;
+        result = ggs.groups().settings_get(&email).await;
     }
     let mut settings = result.unwrap();
 
     // Update the groups settings.
-    settings.email = email;
+    settings.email = email.to_string();
     settings.name = group.name.to_string();
     settings.description = group.description.to_string();
     settings.allow_external_members = group.allow_external_members.to_string();
@@ -320,11 +387,11 @@ pub async fn update_google_group_settings(gsuite: &GSuite, group: &Group, compan
     settings.who_can_contact_owner = "ALL_IN_DOMAIN_CAN_CONTACT".to_string();
 
     // Update the group with the given settings.
-    let result2 = gsuite.update_group_settings(&settings).await;
+    let result2 = ggs.groups().settings_update(&email, &settings).await;
     if result2.is_err() {
         // Try again.
         thread::sleep(time::Duration::from_secs(1));
-        gsuite.update_group_settings(&settings).await.unwrap();
+        ggs.groups().settings_update(&email, &settings).await.unwrap();
     }
 
     println!("updated gsuite groups settings {}", group.name);

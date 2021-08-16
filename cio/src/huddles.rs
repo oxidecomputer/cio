@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use airtable_api::{Airtable, Record};
 use chrono::{Duration, NaiveDate, Utc};
-use google_calendar::{types::EventData, Client as GoogleCalendar};
+use google_calendar::{types::Event, Client as GoogleCalendar};
 use handlebars::Handlebars;
 use sendgrid_api::SendGrid;
 
@@ -253,6 +253,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                                     0,     // max attendees, 0 to ignore
                                     "",    // time_zone
                                 )
+                                .await
                                 .unwrap();
                             // We need to update the event instance, not delete it, and set the status to
                             // cancelled.
@@ -267,7 +268,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                             g_owner
                                 .events()
                                 .calendar_update(
-                                    &event.organizer.email,
+                                    &organizer_email,
                                     &event.id,
                                     false, // Depreciated ignored
                                     0,     // conference data version
@@ -282,7 +283,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                             println!(
                                 "Cancelled calendar event for {} {} since within {} hours, owner \
                                  {}",
-                                slug, date, huddle.time_to_cancel, event.organizer.email
+                                slug, date, huddle.time_to_cancel, organizer_email
                             );
                         }
 
@@ -469,7 +470,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
     for (slug, huddle) in configs.huddles {
         // Collect all the calendar events that match this search string.
         // The first part of the map should match the date field in airtable.
-        let mut gcal_events: HashMap<NaiveDate, EventData> = HashMap::new();
+        let mut gcal_events: HashMap<NaiveDate, Event> = HashMap::new();
 
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
