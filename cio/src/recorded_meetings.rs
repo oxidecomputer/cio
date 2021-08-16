@@ -272,7 +272,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) {
     RecordedMeetings::get_from_db(db, company.id).update_airtable(db).await;
 
-    let mut gcal = company.authenticate_google_calendar(db).await;
+    let mut gcal = company.authenticate_google_calendar(db).await.unwrap();
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -286,7 +286,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
-            gcal = company.authenticate_google_calendar(db).await;
+            gcal = company.authenticate_google_calendar(db).await.unwrap();
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.

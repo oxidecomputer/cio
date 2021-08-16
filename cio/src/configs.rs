@@ -1530,8 +1530,8 @@ pub async fn sync_users(
 ) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite = company.authenticate_google_admin(db).await;
-    let ggs = company.authenticate_google_groups_settings(db).await;
+    let gsuite = company.authenticate_google_admin(db).await.unwrap();
+    let ggs = company.authenticate_google_groups_settings(db).await.unwrap();
 
     // Initialize the Gusto client.
     let mut gusto_users: HashMap<String, gusto_api::types::Employee> = HashMap::new();
@@ -2168,7 +2168,7 @@ pub async fn sync_users(
 pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(db).await;
+    let token = company.authenticate_google(db).await.unwrap();
     let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
 
     // Get the existing google buildings.

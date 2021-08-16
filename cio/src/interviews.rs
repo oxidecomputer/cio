@@ -69,7 +69,7 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) {
-    let gcal = company.authenticate_google_calendar(db).await;
+    let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Get the list of our calendars.
     let calendars = gcal
