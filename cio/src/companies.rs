@@ -9,6 +9,7 @@ use cloudflare::framework::{
 };
 use docusign::DocuSign;
 use google_calendar::Client as GoogleCalendar;
+use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
 use macros::db;
@@ -587,10 +588,10 @@ impl Company {
     pub async fn authenticate_google_admin(&self, db: &Database) -> Option<GoogleAdmin> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
-            if t.is_expired() {
-                // Initialize the client.
-                let mut g = GoogleAdmin::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+            // Initialize the client.
+            let mut g = GoogleAdmin::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
+            if t.is_expired() {
                 // Only refresh the token if it is expired.
                 let nt = g.refresh_access_token(&t).await;
                 if !nt.access_token.is_empty() {
@@ -621,10 +622,10 @@ impl Company {
     pub async fn authenticate_google_calendar(&self, db: &Database) -> Option<GoogleCalendar> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
-            if t.is_expired() {
-                // Initialize the client.
-                let mut g = GoogleCalendar::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+            // Initialize the client.
+            let mut g = GoogleCalendar::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
+            if t.is_expired() {
                 // Only refresh the token if it is expired.
                 let nt = g.refresh_access_token(&t).await;
                 if !nt.access_token.is_empty() {
@@ -654,7 +655,7 @@ impl Company {
     /// TODO: remove this after we fix drive. Authenticate Google Drive.
     pub async fn authenticate_google(&self, db: &Database) -> String {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+        if let Some(t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             return t.access_token;
         }
 
@@ -665,10 +666,10 @@ impl Company {
     pub async fn authenticate_google_drive(&self, db: &Database) -> Option<GoogleDrive> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
-            if t.is_expired() {
                 // Initialize the client.
-                let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+                let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
+            if t.is_expired() {
                 // Only refresh the token if it is expired.
                 let nt = g.refresh_access_token(&t).await;
                 if !nt.access_token.is_empty() {
@@ -699,10 +700,10 @@ impl Company {
     pub async fn authenticate_google_groups_settings(&self, db: &Database) -> Option<GoogleGroupsSettings> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            // Initialize the client.
+            let mut g =
+                GoogleGroupsSettings::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
             if t.is_expired() {
-                // Initialize the client.
-                let mut g = GoogleGroupsSettings::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
-
                 // Only refresh the token if it is expired.
                 let nt = g.refresh_access_token(&t).await;
                 if !nt.access_token.is_empty() {

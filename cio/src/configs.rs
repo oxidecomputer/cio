@@ -2168,8 +2168,7 @@ pub async fn sync_users(
 pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(db).await.unwrap();
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
+    let gsuite = company.authenticate_google_admin(db).await.unwrap();
 
     // Get the existing google buildings.
     let gsuite_buildings = gsuite.list_buildings().await.unwrap();
@@ -2260,7 +2259,12 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
         let new_b = update_gsuite_building(&b, &building, &id);
 
         gsuite
-            .create_building(&new_b)
+            .resources()
+            .directory_buildings_insert(
+                &company.gsuite_account_id,
+                gsuite_api::types::CoordinatesSource::SourceUnspecified,
+                &new_b,
+            )
             .await
             .unwrap_or_else(|e| panic!("creating building {} in gsuite failed: {}", id, e));
 
@@ -2279,11 +2283,18 @@ pub async fn sync_conference_rooms(
 ) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
+    let gsuite = company.authenticate_google_admin(db).await.unwrap();
 
     // Get the existing GSuite calendar resources.
-    let g_suite_calendar_resources = gsuite.list_calendar_resources().await.unwrap();
+    let g_suite_calendar_resources = gsuite
+        .resources()
+        .directory_calendars_list_resources(
+            &company.gsuite_account_id,
+            "", // order by
+            "", // query
+        )
+        .await
+        .unwrap();
 
     // Get all the conference_rooms.
     let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id);
@@ -2328,12 +2339,16 @@ pub async fn sync_conference_rooms(
                 // If the conference room does not exist in our map we need to delete
                 // it from GSuite.
                 println!("deleting conference room {} from gsuite", id);
-                gsuite.delete_calendar_resource(&r.id).await.unwrap_or_else(|e| {
-                    panic!(
-                        "deleting conference room {} with id {} from gsuite failed: {}",
-                        id, r.id, e
-                    )
-                });
+                gsuite
+                    .resources()
+                    .directory_calendars_delete(&company.gsuite_account_id, &r.resource_id)
+                    .await
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "deleting conference room {} with id {} from gsuite failed: {}",
+                            id, r.resource_id, e
+                        )
+                    });
 
                 println!("deleted conference room from gsuite: {}", id);
                 continue;
@@ -2341,11 +2356,12 @@ pub async fn sync_conference_rooms(
         }
 
         // Update the resource with the settings from the database for the resource.
-        let new_r = update_gsuite_calendar_resource(&r, &resource, &r.id);
+        let new_r = update_gsuite_calendar_resource(&r, &resource, &r.resource_id);
 
         // Update the resource with the given settings.
         gsuite
-            .update_calendar_resource(&new_r)
+            .resources()
+            .directory_calendars_update(&company.gsuite_account_id, &new_r.resource_id, &new_r)
             .await
             .unwrap_or_else(|e| panic!("updating conference room {} in gsuite failed: {}", id, e));
 
@@ -2364,7 +2380,8 @@ pub async fn sync_conference_rooms(
         let new_r = update_gsuite_calendar_resource(&r, &resource, &id);
 
         gsuite
-            .create_calendar_resource(&new_r)
+            .resources()
+            .directory_calendars_insert(&company.gsuite_account_id, &new_r)
             .await
             .unwrap_or_else(|e| panic!("creating conference room {} in gsuite failed: {}", id, e));
 
@@ -2379,11 +2396,22 @@ pub async fn sync_conference_rooms(
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let token = company.authenticate_google(db).await;
-    let gsuite = GSuite::new(&company.gsuite_account_id, &company.gsuite_domain, token);
+    let gsuite = company.authenticate_google_admin(db).await.unwrap();
+    let ggs = company.authenticate_google_groups_settings(db).await.unwrap();
 
     // Get the GSuite groups.
-    let gsuite_groups = gsuite.list_groups().await.unwrap();
+    let gsuite_groups = gsuite
+        .groups()
+        .directory_list_groups(
+            &company.gsuite_account_id,
+            &company.gsuite_domain,
+            gsuite_api::types::DirectoryGroupsListOrderBy::Email,
+            "", // query
+            gsuite_api::types::SortOrder::Ascending,
+            "", // user_key
+        )
+        .await
+        .unwrap();
 
     // Get all the groups.
     let db_groups = Groups::get_from_db(db, company.id);
@@ -2412,7 +2440,8 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
 
         // Remove the group from GSuite.
         gsuite
-            .delete_group(&format!("{}@{}", name, &company.gsuite_domain))
+            .groups()
+            .directory_delete(&format!("{}@{}", name, &company.gsuite_domain))
             .await
             .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
         println!("deleted group from gsuite: {}", name);
@@ -2439,7 +2468,8 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
             // group from GSuite.
             println!("deleting group {} from gsuite", name);
             gsuite
-                .delete_group(&format!("{}@{}", name, &company.gsuite_domain))
+                .groups()
+                .directory_delete(&format!("{}@{}", name, &company.gsuite_domain))
                 .await
                 .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
             println!("deleted group from gsuite: {}", name);
@@ -2458,14 +2488,15 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         updated_group.aliases = aliases;
 
         gsuite
-            .update_group(&updated_group)
+            .groups()
+            .directory_update(&format!("{}@{}", name, company.gsuite_domain), &updated_group)
             .await
             .unwrap_or_else(|e| panic!("updating group {} in gsuite failed: {}", name, e));
 
         update_group_aliases(&gsuite, &updated_group).await;
 
         // Update the groups settings.
-        update_google_group_settings(&gsuite, group, company).await;
+        update_google_group_settings(&ggs, group, company).await;
 
         // Remove the group from the database map and continue.
         // This allows us to add all the remaining new groups after.
@@ -2492,14 +2523,15 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         g.aliases = aliases;
 
         let new_group: GSuiteGroup = gsuite
-            .create_group(&g)
+            .groups()
+            .directory_insert(&g)
             .await
             .unwrap_or_else(|e| panic!("creating group {} in gsuite failed: {}", name, e));
 
         update_group_aliases(&gsuite, &new_group).await;
 
         // Update the groups settings.
-        update_google_group_settings(&gsuite, &group, company).await;
+        update_google_group_settings(&ggs, &group, company).await;
 
         println!("created group in gsuite: {}", name);
     }
@@ -2673,7 +2705,7 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
 }
 
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
-    let gcal = company.authenticate_google_calendar(db).await;
+    let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Get the list of our calendars.
     let calendars = gcal
@@ -2711,16 +2743,16 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
         // Create a new event.
         let mut new_event: Event = Default::default();
 
-        new_event.start = EventDateTime {
+        new_event.start = Some(EventDateTime {
             time_zone: "America/Los_Angeles".to_string(),
             date: Some(user.start_date),
             date_time: None,
-        };
-        new_event.end = EventDateTime {
+        });
+        new_event.end = Some(EventDateTime {
             time_zone: "America/Los_Angeles".to_string(),
             date: Some(user.start_date),
             date_time: None,
-        };
+        });
         new_event.summary = format!("{} {}'s Anniversary", user.first_name, user.last_name);
         new_event.description = format!(
             "On {}, {} {} joined the company!",

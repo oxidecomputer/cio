@@ -20,7 +20,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let gcal = company.authenticate_google_calendar(db).await;
+    let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Iterate over the huddle meetings.
     for (slug, huddle) in configs.huddles {
@@ -162,7 +162,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let gcal = company.authenticate_google_calendar(db).await;
+    let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -452,7 +452,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
     let github = company.authenticate_github();
     let configs = get_configs_from_repo(&github, company).await;
 
-    let gcal = company.authenticate_google_calendar(db).await;
+    let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Iterate over the huddles.
     for (slug, huddle) in configs.huddles {
