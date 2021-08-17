@@ -43,7 +43,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
             // Get the event from Google Calendar.
             if let Ok(event) = gcal
                 .events()
-                .calendar_get(
+                .get(
                     &record.fields.calendar_id,
                     &record.fields.calendar_event_id,
                     0,  // max attendees, 0 to ignore
@@ -112,7 +112,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                     // Get the event under the right user.
                     if let Ok(mut event) = gcal
                         .events()
-                        .calendar_get(
+                        .get(
                             &organizer_email,
                             &event.id,
                             0,  // max attendees, 0 to ignore
@@ -130,7 +130,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
 
                         match gcal
                             .events()
-                            .calendar_update(
+                            .update(
                                 &organizer_email,
                                 &event.id,
                                 0,     // conference data version
@@ -191,7 +191,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
             // Get the event from Google Calendar.
             if let Ok(event) = gcal
                 .events()
-                .calendar_get(
+                .get(
                     &record.fields.calendar_id,
                     &record.fields.calendar_event_id,
                     0,  // max attendees, 0 to ignore
@@ -238,7 +238,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                             // Get the event under the right user.
                             let mut event = gcal
                                 .events()
-                                .calendar_get(
+                                .get(
                                     &organizer_email,
                                     &record.fields.calendar_event_id,
                                     0,  // max attendees, 0 to ignore
@@ -257,7 +257,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                             }
 
                             gcal.events()
-                                .calendar_update(
+                                .update(
                                     &organizer_email,
                                     &event.id,
                                     0,    // conference data version
@@ -465,7 +465,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
         println!("Getting {} events for calendar: {}", huddle.name, huddle.calendar_owner);
         let events = gcal
             .events()
-            .calendar_list_events(
+            .list_all(
                 &huddle.calendar_id(company),
                 "", // iCalID
                 0,  // Max attendees, set to 0 to ignore.
@@ -513,7 +513,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             // Get all the recurring events.
             let instances = gcal
                 .events()
-                .get_all_calendar_instances(
+                .get_all_instances(
                     &huddle.calendar_id(company),
                     &event.recurring_event_id,
                     0,    // max attendees, 0 to ignore

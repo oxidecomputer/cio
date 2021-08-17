@@ -2588,7 +2588,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     // Get information about the file.
     let drive_file = drive_client
         .files()
-        .drive_get(
+        .get(
             &id, false, // acknowledge_abuse
             "",    // include_permissions_for_view
             true,  // supports_all_drives

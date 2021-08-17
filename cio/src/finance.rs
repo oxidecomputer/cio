@@ -129,7 +129,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         if vendor.name == "Google Workspace" {
             let users = gsuite
                 .users()
-                .directory_list_users(
+                .list_all(
                     &company.gsuite_account_id,                             // customer
                     &company.gsuite_domain,                                 // domain
                     gsuite_api::types::Event::Noop,                         // event

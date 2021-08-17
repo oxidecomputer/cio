@@ -278,7 +278,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     // Get the list of our calendars.
     let calendars = gcal
         .calendar_list()
-        .get_all(google_calendar::types::MinAccessRole::Noop, false, false)
+        .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
         .await
         .unwrap();
 
@@ -293,7 +293,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             println!("Getting events for {}", calendar.id);
             let events = gcal
                 .events()
-                .calendar_list_events(
+                .list_all(
                     &calendar.id, // Calendar id.
                     "",           // iCalID
                     0,            // Max attendees, set to 0 to ignore.

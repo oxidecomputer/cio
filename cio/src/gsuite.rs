@@ -205,7 +205,7 @@ pub async fn suspend_user(gsuite: &GSuite, email: &str) {
     // First get the user.
     let mut user = gsuite
         .users()
-        .directory_get(
+        .get(
             email,
             gsuite_api::types::DirectoryUsersListProjection::Full,
             gsuite_api::types::ViewType::AdminView,
@@ -220,7 +220,7 @@ pub async fn suspend_user(gsuite: &GSuite, email: &str) {
     // Update the user.
     gsuite
         .users()
-        .directory_update(email, &user)
+        .update(email, &user)
         .await
         .unwrap_or_else(|e| panic!("suspending user {} in gsuite failed: {}", email, e));
 }
@@ -241,7 +241,7 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
     for alias in formatted_aliases {
         match gsuite
             .users()
-            .directory_aliases_insert(
+            .aliases_insert(
                 &u.primary_email,
                 &gsuite_api::types::Alias {
                     alias: alias.to_string(),
@@ -288,16 +288,12 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         }
 
         // Check if the user is already a member of the group.
-        let is_member = gsuite
-            .members()
-            .directory_has_member(&group.id, &user.email)
-            .await
-            .unwrap();
+        let is_member = gsuite.members().has_member(&group.id, &user.email).await.unwrap();
         if is_member.is_member {
             // They are a member so we can just update their member status.
             gsuite
                 .members()
-                .directory_update(
+                .update(
                     &group.id,
                     &user.email,
                     &gsuite_api::types::Member {
@@ -321,7 +317,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         // Add the user to the group.
         gsuite
             .members()
-            .directory_insert(
+            .insert(
                 &group.id,
                 &gsuite_api::types::Member {
                     role: role.to_string(),
@@ -349,11 +345,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
 
         // Now we have a google group. The user should not be a member of it,
         // but we need to make sure they are not a member.
-        let is_member = gsuite
-            .members()
-            .directory_has_member(&group.id, &user.email)
-            .await
-            .unwrap();
+        let is_member = gsuite.members().has_member(&group.id, &user.email).await.unwrap();
 
         if !is_member.is_member {
             // They are not a member so we can continue early.
@@ -362,7 +354,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
 
         // They are a member of the group.
         // We need to remove them.
-        gsuite.members().directory_delete(&group.id, &user.email).await.unwrap();
+        gsuite.members().delete(&group.id, &user.email).await.unwrap();
 
         println!("removed {} from gsuite group {}", user.email, group.name);
     }
@@ -379,7 +371,7 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
     for alias in &g.aliases {
         match gsuite
             .groups()
-            .directory_aliases_insert(
+            .aliases_insert(
                 &g.email,
                 &gsuite_api::types::Alias {
                     alias: alias.to_string(),
@@ -408,17 +400,11 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
 pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Group, company: &Company) {
     // Get the current group settings.
     let email = format!("{}@{}", group.name, company.gsuite_domain);
-    let mut result = ggs
-        .groups()
-        .settings_get(google_groups_settings::types::Alt::Json, &email)
-        .await;
+    let mut result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     if result.is_err() {
         // Try again.
         thread::sleep(time::Duration::from_secs(1));
-        result = ggs
-            .groups()
-            .settings_get(google_groups_settings::types::Alt::Json, &email)
-            .await;
+        result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     }
     let mut settings = result.unwrap();
 
@@ -440,13 +426,13 @@ pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Gr
     // Update the group with the given settings.
     let result2 = ggs
         .groups()
-        .settings_update(google_groups_settings::types::Alt::Json, &email, &settings)
+        .update(google_groups_settings::types::Alt::Json, &email, &settings)
         .await;
     if result2.is_err() {
         // Try again.
         thread::sleep(time::Duration::from_secs(1));
         ggs.groups()
-            .settings_update(google_groups_settings::types::Alt::Json, &email, &settings)
+            .update(google_groups_settings::types::Alt::Json, &email, &settings)
             .await
             .unwrap();
     }
