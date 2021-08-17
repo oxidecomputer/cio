@@ -368,7 +368,7 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
 
     // Update the user's aliases.
     for alias in &g.aliases {
-        gsuite
+        match gsuite
             .groups()
             .directory_aliases_insert(
                 &g.email,
@@ -381,7 +381,16 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
                 },
             )
             .await
-            .unwrap();
+        {
+            Ok(_) => (),
+            Err(e) => {
+                if e.to_string().contains("Entity already exists") {
+                    // Ignore the error.
+                    continue;
+                }
+                panic!("updating gsuite group aliases failed: {}", e);
+            }
+        }
     }
     println!("updated gsuite group aliases: {}", g.email);
 }
