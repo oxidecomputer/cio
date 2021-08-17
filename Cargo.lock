@@ -524,7 +524,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d5d8eae8b8481b37205ee139b60a42c8b8639a8a"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb8b6b51d8551a44bf1e7edd49a725d43d66cea"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -1462,9 +1462,9 @@ dependencies = [
 
 [[package]]
 name = "google-calendar"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b80e62750133a9af3d259d6896c1bca512614632a096074bd6ae8a86850cd404"
+checksum = "14068acd42cb9f799c4d88de19d2683490849c8598c754aa3c70ea00df9fce63"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1488,9 +1488,9 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b18af0ea56002b57bfbe01c41d75d70d733fd4bfd46260cf09be794139f7b40a"
+checksum = "7b5aaee07a9552a30cb7f7b0a77c382f1ca1ec763eb5743e9394b01925e30612"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1534,9 +1534,9 @@ dependencies = [
 
 [[package]]
 name = "google-groups-settings"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "723ac0dd04e650cc80682e20656c4e3a926252ffd4a5e28888d15dc9a3f66afa"
+checksum = "4d467a4e75a9a1c0a7641df73a57afbdc53ea138eb34073f19b58204a6cf1e7f"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1560,9 +1560,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdaf069b90c5f61cec249c76e857857d415c3135fb07370040881e3833577253"
+checksum = "fdc80ba8083bebd0773263cd904a616904279df6ad25288cc01955913563e70e"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2156,7 +2156,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#d5d8eae8b8481b37205ee139b60a42c8b8639a8a"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb8b6b51d8551a44bf1e7edd49a725d43d66cea"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -3884,6 +3884,8 @@ dependencies = [
 [[package]]
 name = "sheets"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e600f3c4323185f7eb54bd48e5ced4ad6e3c7b9d28366782c00017b30810fd3a"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4597,9 +4599,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9ff14f98b1a4b289c6248a023c1c2fa1491062964e9fed67ab29c4e4da4a052"
+checksum = "2ca517f43f0fb96e0c3072ed5c275fe5eece87e8cb52f4a77b69226d3b1c9df8"
 dependencies = [
  "lazy_static",
 ]

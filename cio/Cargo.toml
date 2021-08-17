@@ -77,8 +77,8 @@ schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "^0.1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-#sheets = "^0.2.0"
-sheets = { path = "../../third-party-api-clients/google/sheets" }
+sheets = "^0.2.0"
+#sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.16"
