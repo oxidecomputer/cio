@@ -239,7 +239,7 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
 
     // Update the user's aliases.
     for alias in formatted_aliases {
-        gsuite
+        match gsuite
             .users()
             .directory_aliases_insert(
                 &u.primary_email,
@@ -252,7 +252,16 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
                 },
             )
             .await
-            .unwrap();
+        {
+            Ok(_) => (),
+            Err(e) => {
+                if e.to_string().contains("Entity already exists") {
+                    // Ignore the error.
+                    continue;
+                }
+                panic!("updating gsuite user {} aliases failed: {}", u.primary_email, e);
+            }
+        }
     }
     println!("updated gsuite user aliases: {}", u.primary_email);
 }
@@ -388,7 +397,7 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
                     // Ignore the error.
                     continue;
                 }
-                panic!("updating gsuite group aliases failed: {}", e);
+                panic!("updating gsuite group {} aliases failed: {}", g.email, e);
             }
         }
     }
