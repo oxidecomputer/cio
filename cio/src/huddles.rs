@@ -520,7 +520,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                     "",   // original_start
                     true, // show_deleted
                     &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339(), // time_max
-                    "",   // time_min
+                    &Utc::now().to_string(), // time_min
                     "",   // time_zone
                 )
                 .await

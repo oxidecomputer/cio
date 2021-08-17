@@ -36,16 +36,16 @@ dropshot = "^0.5.0"
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
-#google-calendar = "^0.1.0"
-google-calendar = { path = "../../third-party-api-clients/google/calendar" }
-#google-drive = "^0.2.0"
-google-drive = { path = "../../third-party-api-clients/google/drive" }
+google-calendar = "^0.1.0"
+#google-calendar = { path = "../../third-party-api-clients/google/calendar" }
+google-drive = "^0.2.0"
+#google-drive = { path = "../../third-party-api-clients/google/drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
-#google-groups-settings = "^0.1.0"
-google-groups-settings = { path = "../../third-party-api-clients/google/groups-settings" }
-#gsuite-api = "^0.2.0"
-gsuite-api = { path = "../../third-party-api-clients/google/admin" }
+google-groups-settings = "^0.1.0"
+#google-groups-settings = { path = "../../third-party-api-clients/google/groups-settings" }
+gsuite-api = "^0.2.0"
+#gsuite-api = { path = "../../third-party-api-clients/google/admin" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "3.5.3"

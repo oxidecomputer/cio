@@ -477,7 +477,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive 0.1.0",
+ "google-drive 0.2.0",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api 0.2.0",
@@ -1461,30 +1461,8 @@ dependencies = [
 [[package]]
 name = "google-calendar"
 version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-recursion",
- "async-trait",
- "base64 0.12.3",
- "bytes",
- "chrono",
- "http",
- "hyperx",
- "jsonwebtoken",
- "mime 0.3.16",
- "percent-encoding 2.1.0",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "serde_urlencoded 0.7.0",
- "uuid",
- "yup-oauth2",
-]
-
-[[package]]
-name = "google-drive"
-version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b80e62750133a9af3d259d6896c1bca512614632a096074bd6ae8a86850cd404"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1518,6 +1496,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "google-drive"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b18af0ea56002b57bfbe01c41d75d70d733fd4bfd46260cf09be794139f7b40a"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "base64 0.12.3",
+ "bytes",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.0",
+ "uuid",
+ "yup-oauth2",
+]
+
+[[package]]
 name = "google-geocode"
 version = "0.1.5"
 dependencies = [
@@ -1540,6 +1544,8 @@ dependencies = [
 [[package]]
 name = "google-groups-settings"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "723ac0dd04e650cc80682e20656c4e3a926252ffd4a5e28888d15dc9a3f66afa"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1577,6 +1583,8 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fdaf069b90c5f61cec249c76e857857d415c3135fb07370040881e3833577253"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -5003,7 +5011,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive 0.1.0",
+ "google-drive 0.2.0",
  "gusto-api",
  "http",
  "hyper 0.10.16",
