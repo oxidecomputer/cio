@@ -1477,6 +1477,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded 0.7.0",
  "uuid",
  "yup-oauth2",
 ]
@@ -1500,6 +1501,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded 0.7.0",
  "uuid",
  "yup-oauth2",
 ]
@@ -1554,6 +1556,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded 0.7.0",
  "uuid",
  "yup-oauth2",
 ]
@@ -1590,6 +1593,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded 0.7.0",
  "uuid",
  "yup-oauth2",
 ]
