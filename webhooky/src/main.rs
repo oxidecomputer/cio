@@ -47,7 +47,10 @@ use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
-use google_drive::GoogleDrive;
+use google_drive::{
+    traits::{DriveOps, FileOps},
+    Client as GoogleDrive,
+};
 use gusto_api::Client as Gusto;
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use quickbooks::QuickBooks;
@@ -428,11 +431,8 @@ async fn trigger_rfd_update_by_number(
 
     let github = oxide.authenticate_github();
 
-    // Get gsuite token.
-    let token = oxide.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive_client = GoogleDrive::new(token);
+    let drive_client = oxide.authenticate_google_drive(db).await.unwrap();
 
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
@@ -834,14 +834,15 @@ async fn listen_google_sheets_row_create_webhooks(
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
+    // Initialize the Google Drive client.
+    let drive = oxide.authenticate_google_drive(db).await.unwrap();
+
     // Get gsuite token.
     // We re-get the token here since otherwise it will expire.
     let token = oxide.authenticate_google(db).await;
 
     // Initialize the GSuite sheets client.
     let sheets = Sheets::new(token.clone());
-    // Initialize the Google Drive client.
-    let drive = GoogleDrive::new(token);
 
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -1610,31 +1611,30 @@ async fn listen_application_files_upload_requests(
 
     let company = Company::get_by_id(db, data.cio_company_id);
 
-    // Get gsuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive = GoogleDrive::new(token);
+    let drive = company.authenticate_google_drive(db).await.unwrap();
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"application_content"
-    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await.unwrap();
 
     // Get the directory by the name.
-    let drive_dir = drive
-        .get_file_by_name(&shared_drive.id, "application_content")
+    let parent_id = drive
+        .files()
+        .create_folder(&shared_drive.id, "", "application_content")
         .await
         .unwrap();
-    let parent_id = drive_dir.get(0).unwrap().id.to_string();
 
     // Create the folder for our candidate with their email.
     let email_folder_id = drive
+        .files()
         .create_folder(&shared_drive.id, &parent_id, &data.email)
         .await
         .unwrap();
 
     // Create the folder for our candidate with the role.
     let role_folder_id = drive
+        .files()
         .create_folder(&shared_drive.id, &email_folder_id, &data.role)
         .await
         .unwrap();
@@ -1660,7 +1660,8 @@ async fn listen_application_files_upload_requests(
 
         // Upload our file to drive.
         let drive_file = drive
-            .create_or_update_file(
+            .files()
+            .create_or_update(
                 &shared_drive.id,
                 &role_folder_id,
                 &file_name,
@@ -1956,9 +1957,14 @@ async fn listen_auth_google_consent(
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
 
+    // Initialize the Google client.
+    // You can use any of the libs here, they all use the same endpoint
+    // for tokens and we will send all the scopes.
+    let g = GoogleDrive::new_from_env("", "").await;
+
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
-        url: cio_api::companies::get_google_consent_url().await,
+        url: g.user_consent_url(&cio_api::companies::get_google_scopes()),
     }))
 }
 
@@ -1976,7 +1982,65 @@ async fn listen_auth_google_callback(
 
     let api_context = rqctx.context();
 
-    cio_api::companies::get_google_access_token(&api_context.db, &event.code).await;
+    // Initialize the Google client.
+    // You can use any of the libs here, they all use the same endpoint
+    // for tokens and we will send all the scopes.
+    let mut g = GoogleDrive::new_from_env("", "").await;
+
+    // Let's get the token from the code.
+    let t = g.get_access_token(&event.code, &event.state).await.unwrap();
+
+    let client = reqwest::Client::new();
+
+    // Let's get the company from information about the user.
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.append(
+        reqwest::header::ACCEPT,
+        reqwest::header::HeaderValue::from_static("application/json"),
+    );
+    headers.append(
+        reqwest::header::AUTHORIZATION,
+        reqwest::header::HeaderValue::from_str(&format!("Bearer {}", t.access_token)).unwrap(),
+    );
+
+    let params = [("alt", "json")];
+    let resp = client
+        .get("https://www.googleapis.com/oauth2/v1/userinfo")
+        .headers(headers)
+        .query(&params)
+        .send()
+        .await
+        .unwrap();
+
+    // Unwrap the response.
+    let metadata: cio_api::companies::UserInfo = resp.json().await.unwrap();
+
+    let company = Company::get_from_domain(&api_context.db, &metadata.hd);
+
+    // Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "google".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.refresh_token_expires_in as i32,
+        company_id: metadata.hd.to_string(),
+        item_id: "".to_string(),
+        user_email: metadata.email.to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        auth_company_id: company.id,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE, NO 1.
+        cio_company_id: 1,
+    };
+    token.expand();
+
+    // Update it in the database.
+    token.upsert(&api_context.db).await;
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -3751,15 +3815,12 @@ async fn handle_rfd_push(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let db = &api_context.db;
 
-    // Get gsuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the Google Drive client.
-    let drive = GoogleDrive::new(token);
+    let drive = company.authenticate_google_drive(db).await.unwrap();
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await.unwrap();
 
     // Get the repo.
     let owner = &company.github_org;
@@ -4057,8 +4118,15 @@ async fn handle_rfd_push(
                         .unwrap();
                 }
 
+                // Get the directory by the name.
+                let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await.unwrap();
+
                 // Delete the old filename from drive.
-                drive.delete_file_by_name(&shared_drive.id, &old_rfd_pdf).await.unwrap();
+                drive
+                    .files()
+                    .delete_by_name(&shared_drive.id, &parent_id, &old_rfd_pdf)
+                    .await
+                    .unwrap();
             }
 
             println!("RFD {} `push` operations completed", new_rfd.number_string);
