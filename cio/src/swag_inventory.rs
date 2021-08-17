@@ -6,7 +6,10 @@ use barcoders::{
     sym::code39::Code39,
 };
 use chrono::{DateTime, Utc};
-use google_drive::Client as GoogleDrive;
+use google_drive::{
+    traits::{DriveOps, FileOps},
+    Client as GoogleDrive,
+};
 use macros::db;
 use printpdf::{types::plugins::graphics::two_dimensional::image::Image as PdfImage, Mm, PdfDocument, Pt};
 use reqwest::StatusCode;
@@ -239,7 +242,8 @@ impl NewSwagInventoryItem {
 
             // Create or update the file in the google drive.
             let png_file = drive_client
-                .create_or_update_file(drive_id, parent_id, &file_name, "image/png", &png_bytes)
+                .files()
+                .create_or_update(drive_id, parent_id, &file_name, "image/png", &png_bytes)
                 .await
                 .unwrap();
             self.barcode_png = format!("https://drive.google.com/uc?export=download&id={}", png_file.id);
@@ -253,7 +257,8 @@ impl NewSwagInventoryItem {
 
             // Create or update the file in the google drive.
             let svg_file = drive_client
-                .create_or_update_file(drive_id, parent_id, &file_name, "image/svg+xml", svg_bytes)
+                .files()
+                .create_or_update(drive_id, parent_id, &file_name, "image/svg+xml", svg_bytes)
                 .await
                 .unwrap();
             self.barcode_svg = format!("https://drive.google.com/uc?export=download&id={}", svg_file.id);
@@ -266,7 +271,8 @@ impl NewSwagInventoryItem {
             file_name = format!("{} - Barcode Label.pdf", self.name.replace('/', ""));
             // Create or update the file in the google drive.
             let label_file = drive_client
-                .create_or_update_file(drive_id, parent_id, &file_name, "application/pdf", &label_bytes)
+                .files()
+                .create_or_update(drive_id, parent_id, &file_name, "application/pdf", &label_bytes)
                 .await
                 .unwrap();
             self.barcode_pdf_label = format!("https://drive.google.com/uc?export=download&id={}", label_file.id);
@@ -422,11 +428,11 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) {
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await.unwrap();
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let drive_rfd_dir = drive_client.get_file_by_name(&drive_id, "swag").await.unwrap();
+    let drive_rfd_dir = drive_client.files().get_by_name(&drive_id, "swag").await.unwrap();
     let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
 
     // Get all the records from Airtable.

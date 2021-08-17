@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use airtable_api::{Airtable, Record};
 use chrono::{Duration, NaiveDate, Utc};
 use google_calendar::types::Event;
+use google_drive::traits::FileOps;
 use handlebars::Handlebars;
 use sendgrid_api::SendGrid;
 

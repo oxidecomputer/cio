@@ -12,7 +12,10 @@ use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
 use docusign::DocuSign;
 use flate2::read::GzDecoder;
-use google_drive::Client as GoogleDrive;
+use google_drive::{
+    traits::{DriveOps, FileOps},
+    Client as GoogleDrive,
+};
 use google_geocode::Geocode;
 use html2text::from_read;
 use macros::db;
@@ -2555,7 +2558,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
     if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.pdf", id));
 
@@ -2564,7 +2567,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
         result = read_pdf(&name, path.clone());
     } else if mime_type == "text/html" {
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         // Wrap lines at 80 characters.
         result = from_read(&contents[..], 80);
@@ -2572,7 +2575,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         result = drive_client.get_file_contents_by_id(&id).await.unwrap();
     } else if name.ends_with(".7z") {
         // Get the ip contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.7z", id));
 
@@ -2613,7 +2616,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         }
     } else if name.ends_with(".tgz") || name.ends_with(".tar.gz") {
         // Get the ip contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.tar.gz", id));
 
@@ -2649,7 +2652,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         }
     } else if name.ends_with(".tar") {
         // Get the ip contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.tar", id));
 
@@ -2685,7 +2688,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     } else if name.ends_with(".zip") {
         // This is patrick :)
         // Get the ip contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.zip", id));
 
@@ -2766,7 +2769,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         );
     } else if name.ends_with(".rtf") {
         // Get the RTF contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.rtf", id));
 
@@ -2776,7 +2779,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         result = read_rtf(path.clone());
     } else if name.ends_with(".doc") {
         // Get the RTF contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.doc", id));
 
@@ -2785,7 +2788,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
         result = read_doc(path.clone());
     } else {
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
         path.push(name.to_string());
 
         let mut file = fs::File::create(&path).unwrap();
@@ -4276,7 +4279,7 @@ Sincerely,
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await.unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -4298,6 +4301,7 @@ Sincerely,
 
             // Create the folder for our applicant with their name.
             let name_folder_id = drive_client
+                .files()
                 .create_folder(&shared_drive.id, "", &self.name)
                 .await
                 .unwrap();
@@ -4315,7 +4319,8 @@ Sincerely,
 
             // Create or update the file in the google_drive.
             drive_client
-                .create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
+                .files()
+                .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await
                 .unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);
@@ -4557,7 +4562,7 @@ Sincerely,
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.get_drive_by_name("Offer Letters").await.unwrap();
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await.unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -4579,6 +4584,7 @@ Sincerely,
 
             // Create the folder for our applicant with their name.
             let name_folder_id = drive_client
+                .files()
                 .create_folder(&shared_drive.id, "", &self.name)
                 .await
                 .unwrap();
@@ -4596,7 +4602,8 @@ Sincerely,
 
             // Create or update the file in the google_drive.
             drive_client
-                .create_or_update_file(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
+                .files()
+                .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await
                 .unwrap();
             println!("[docusign] uploaded completed file {} to drive", filename);

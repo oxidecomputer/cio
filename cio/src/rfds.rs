@@ -13,7 +13,10 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
-use google_drive::Client as GoogleDrive;
+use google_drive::{
+    traits::{DriveOps, FileOps},
+    Client as GoogleDrive,
+};
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -499,16 +502,17 @@ impl RFD {
 
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
+        let shared_drive = drive_client.drives().get_by_name("Automated Documents").await.unwrap();
         let drive_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let drive_rfd_dir = drive_client.get_file_by_name(&drive_id, "rfds").await.unwrap();
+        let drive_rfd_dir = drive_client.files().get_by_name(&drive_id, "rfds").await.unwrap();
         let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
 
         // Create or update the file in the google_drive.
         let drive_file = drive_client
-            .create_or_update_file(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
+            .files()
+            .create_or_update(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
             .await
             .unwrap();
         self.pdf_link_google_drive = format!("https://drive.google.com/open?id={}", drive_file.id);

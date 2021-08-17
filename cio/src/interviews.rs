@@ -8,7 +8,10 @@ use std::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
-use google_drive::Client as GoogleDrive;
+use google_drive::{
+    traits::{DriveOps, FileOps},
+    Client as GoogleDrive,
+};
 use lopdf::{Bookmark, Document, Object, ObjectId};
 use macros::db;
 use pandoc::OutputKind;
@@ -264,12 +267,13 @@ pub async fn compile_packets(db: &Database, company: &Company) {
     let drive_client = company.authenticate_google_drive(db).await.unwrap();
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await.unwrap();
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
     let drive_rfd_dir = drive_client
-        .get_file_by_name(&drive_id, "interview_packets")
+        .files()
+        .get_by_name(&drive_id, "interview_packets")
         .await
         .unwrap();
     let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
@@ -469,7 +473,8 @@ The Oxide Team
 
         // Create or update the file in the google_drive.
         let drive_file = drive_client
-            .create_or_update_file(&drive_id, &parent_id, &filename, "application/pdf", &buffer)
+            .files()
+            .create_or_update(&drive_id, &parent_id, &filename, "application/pdf", &buffer)
             .await
             .unwrap();
         applicant.interview_packet = format!("https://drive.google.com/open?id={}", drive_file.id);
@@ -491,7 +496,7 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
 
     if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.pdf", username));
 
@@ -501,7 +506,7 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
     } else if name.ends_with(".zip") {
         // This is patrick :)
         // Get the ip contents from Drive.
-        let contents = drive_client.download_file_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await.unwrap();
 
         path.push(format!("{}.zip", id));
 
@@ -565,7 +570,7 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
 
     // Anything else let's use pandoc to convert it to a pdf.
     println!("Converting `{}` to a PDF", name);
-    let contents = drive_client.download_file_by_id(&id).await.unwrap();
+    let contents = drive_client.files().download_by_id(&id).await.unwrap();
     path.push(name.to_string());
 
     let mut file = fs::File::create(&path).unwrap();

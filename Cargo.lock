@@ -1464,7 +1464,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "async-trait",
  "base64 0.12.3",
+ "bytes",
  "chrono",
  "http",
  "hyperx",
@@ -1485,7 +1487,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "async-trait",
  "base64 0.12.3",
+ "bytes",
  "chrono",
  "http",
  "hyperx",
@@ -1537,7 +1541,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "async-trait",
  "base64 0.12.3",
+ "bytes",
  "chrono",
  "http",
  "hyperx",
@@ -1571,7 +1577,9 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "async-trait",
  "base64 0.12.3",
+ "bytes",
  "chrono",
  "http",
  "hyperx",

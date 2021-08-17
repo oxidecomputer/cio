@@ -3,7 +3,7 @@ use std::str::from_utf8;
 
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
-use google_drive::Client as GoogleDrive;
+use google_drive::traits::{DriveOps, FileOps};
 use inflector::cases::kebabcase::to_kebab_case;
 use macros::db;
 use revai::RevAI;
@@ -109,10 +109,11 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
     let drive = company.authenticate_google_drive(db).await.unwrap();
 
     // Get the shared drive.
-    let shared_drive = drive.get_drive_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await.unwrap();
 
     // Create the folder for our zoom recordings.
     let recordings_folder_id = drive
+        .files()
         .create_folder(&shared_drive.id, "", "zoom_recordings")
         .await
         .unwrap();
@@ -129,6 +130,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
 
         // Create the folder for our zoom recordings.
         let start_folder_id = drive
+            .files()
             .create_folder(
                 &shared_drive.id,
                 &recordings_folder_id,
@@ -183,7 +185,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                 meeting.topic
             );
             let drive_file = drive
-                .create_or_update_file(
+                .files()
+                .create_or_update(
                     &shared_drive.id,
                     &start_folder_id,
                     &format!(
@@ -346,7 +349,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 if !chat_log_link.is_empty() {
                     // Download the file.
                     let contents = drive_client
-                        .download_file_by_id(
+                        .files()
+                        .download_by_id(
                             chat_log_link
                                 .trim_start_matches("https://drive.google.com/open?id=")
                                 .trim_start_matches("https://drive.google.com/file/d/")
@@ -359,7 +363,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
                 // Try to download the video.
                 let video_contents = drive_client
-                    .download_file_by_id(
+                    .files()
+                    .download_by_id(
                         video
                             .trim_start_matches("https://drive.google.com/open?id=")
                             .trim_start_matches("https://drive.google.com/file/d/")
