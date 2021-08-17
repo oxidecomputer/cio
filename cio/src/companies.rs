@@ -25,6 +25,7 @@ use ramp_api::Client as Ramp;
 use reqwest::Client;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use sheets::Client as GoogleSheets;
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
 use tripactions::TripActions;
@@ -653,22 +654,46 @@ impl Company {
         None
     }
 
-    /// TODO: remove this after we fix google sheets. Authenticate Google Drive.
-    pub async fn authenticate_google(&self, db: &Database) -> String {
-        // Get the APIToken from the database.
-        if let Some(t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
-            return t.access_token;
-        }
-
-        "".to_string()
-    }
-
     /// Authenticate Google Drive.
     pub async fn authenticate_google_drive(&self, db: &Database) -> Option<GoogleDrive> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             // Initialize the client.
             let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+
+            if t.is_expired() {
+                // Only refresh the token if it is expired.
+                let nt = g.refresh_access_token().await.unwrap();
+                if !nt.access_token.is_empty() {
+                    t.access_token = nt.access_token.to_string();
+                }
+                if nt.expires_in > 0 {
+                    t.expires_in = nt.expires_in as i32;
+                }
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                if nt.refresh_token_expires_in > 0 {
+                    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                }
+                t.last_updated_at = Utc::now();
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await;
+            }
+
+            return Some(g);
+        }
+
+        None
+    }
+
+    /// Authenticate Google Sheets.
+    pub async fn authenticate_google_sheets(&self, db: &Database) -> Option<GoogleSheets> {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+            // Initialize the client.
+            let mut g = GoogleSheets::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.

@@ -25,7 +25,7 @@ use schemars::JsonSchema;
 use sendgrid_api::SendGrid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sheets::Sheets;
+use sheets::Client as GoogleSheets;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tar::Archive;
 use walkdir::WalkDir;
@@ -1075,7 +1075,7 @@ The Oxide Team",
         &mut self,
         db: &Database,
         drive_client: &GoogleDrive,
-        sheets_client: &Sheets,
+        sheets_client: &GoogleSheets,
         sent_email_received_column_index: usize,
         sent_email_follow_up_index: usize,
         row_index: usize,
@@ -1094,7 +1094,20 @@ The Oxide Team",
             );
 
             sheets_client
-                .update_values(&self.sheet_id, &rng, "TRUE".to_string())
+                .spreadsheets()
+                .values_update(
+                    &self.sheet_id,
+                    &rng,
+                    false, // include_values_in_response
+                    sheets::types::DateTimeRenderOption::FormattedString,
+                    sheets::types::ValueRenderOption::FormattedValue,
+                    sheets::types::ValueInputOption::UserEntered,
+                    &sheets::types::ValueRange {
+                        range: rng.to_string(),
+                        values: vec![vec!["TRUE".to_string()]],
+                        major_dimension: None,
+                    },
+                )
                 .await
                 .unwrap();
 
@@ -1145,7 +1158,20 @@ The Oxide Team",
                 // Update the cell in the google sheet so we know we sent the email.
                 // Mark the column as true not false.
                 sheets_client
-                    .update_values(&self.sheet_id, &rng, "TRUE".to_string())
+                    .spreadsheets()
+                    .values_update(
+                        &self.sheet_id,
+                        &rng,
+                        false, // include_values_in_response
+                        sheets::types::DateTimeRenderOption::FormattedString,
+                        sheets::types::ValueRenderOption::FormattedValue,
+                        sheets::types::ValueInputOption::UserEntered,
+                        &sheets::types::ValueRange {
+                            range: rng.to_string(),
+                            values: vec![vec!["TRUE".to_string()]],
+                            major_dimension: None,
+                        },
+                    )
                     .await
                     .unwrap();
 
@@ -1160,7 +1186,20 @@ The Oxide Team",
                 // Update the cell in the google sheet so we know we sent the email.
                 // Mark the column as true not false.
                 sheets_client
-                    .update_values(&self.sheet_id, &rng, "TRUE".to_string())
+                    .spreadsheets()
+                    .values_update(
+                        &self.sheet_id,
+                        &rng,
+                        false, // include_values_in_response
+                        sheets::types::DateTimeRenderOption::FormattedString,
+                        sheets::types::ValueRenderOption::FormattedValue,
+                        sheets::types::ValueInputOption::UserEntered,
+                        &sheets::types::ValueRange {
+                            range: rng.to_string(),
+                            values: vec![vec!["TRUE".to_string()]],
+                            major_dimension: None,
+                        },
+                    )
                     .await
                     .unwrap();
 
@@ -2966,21 +3005,25 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
     // Initialize the GSuite sheets client.
     let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
-    // Get the GSuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token.clone());
+    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
     for (sheet_name, sheet_id) in get_sheets_map() {
         // Get the values in the sheet.
         let sheet_values = sheets_client
-            .get_values(sheet_id, "Form Responses 1!A1:Z1000".to_string())
+            .spreadsheets()
+            .values_get(
+                sheet_id,
+                "Form Responses 1!A1:Z1000",
+                sheets::types::DateTimeRenderOption::FormattedString,
+                sheets::types::Dimension::Rows,
+                sheets::types::ValueRenderOption::FormattedValue,
+            )
             .await
             .unwrap();
-        let values = sheet_values.values.unwrap();
+        let values = sheet_values.values;
 
         if values.is_empty() {
             panic!(
@@ -3075,18 +3118,23 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
 }
 
 pub async fn update_applications_with_scoring_forms(db: &Database, company: &Company) {
-    // Get the GSuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token.clone());
+    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
+
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
         let sheet_values = sheets_client
-            .get_values(sheet_id, "Applicants to review!A1:G1000".to_string())
+            .spreadsheets()
+            .values_get(
+                sheet_id,
+                "Applicants to review!A1:G1000",
+                sheets::types::DateTimeRenderOption::FormattedString,
+                sheets::types::Dimension::Rows,
+                sheets::types::ValueRenderOption::FormattedValue,
+            )
             .await
             .unwrap();
-        let values = sheet_values.values.unwrap();
+        let values = sheet_values.values;
 
         if values.is_empty() {
             panic!(
@@ -3219,18 +3267,23 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
 }
 
 pub async fn update_applications_with_scoring_results(db: &Database, company: &Company) {
-    // Get the GSuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token.clone());
+    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
+
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
         let sheet_values = sheets_client
-            .get_values(sheet_id, "Responses!A1:R1000".to_string())
+            .spreadsheets()
+            .values_get(
+                sheet_id,
+                "Responses!A1:R1000",
+                sheets::types::DateTimeRenderOption::FormattedString,
+                sheets::types::Dimension::Rows,
+                sheets::types::ValueRenderOption::FormattedValue,
+            )
             .await
             .unwrap();
-        let values = sheet_values.values.unwrap();
+        let values = sheet_values.values;
 
         if values.is_empty() {
             panic!(
@@ -3480,19 +3533,24 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
 }
 
 pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Company) {
-    // Get the GSuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the GSuite sheets client.
-    let sheets_client = Sheets::new(token.clone());
+    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
+
     let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
 
     // Get the values in the sheet.
     let sheet_values = sheets_client
-        .get_values(sheet_id, "Leaderboard!A1:R1000".to_string())
+        .spreadsheets()
+        .values_get(
+            sheet_id,
+            "Leaderboard!A1:R1000",
+            sheets::types::DateTimeRenderOption::FormattedString,
+            sheets::types::Dimension::Rows,
+            sheets::types::ValueRenderOption::FormattedValue,
+        )
         .await
         .unwrap();
-    let values = sheet_values.values.unwrap();
+    let values = sheet_values.values;
 
     if values.is_empty() {
         panic!(

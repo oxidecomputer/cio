@@ -476,7 +476,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                 true,                                // show_deleted
                 true,                                // show_hidden_invitations
                 false,                               // single_events
-                "",                                  // time_max
+                &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339(), // time_max
                 "",                                  // time_min
                 "",                                  // time_zone
                 "",                                  // updated_min

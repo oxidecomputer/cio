@@ -506,7 +506,7 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "sheets 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.2.0",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -579,7 +579,7 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "sheets 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.13",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3874,20 +3874,35 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 [[package]]
 name = "sheets"
 version = "0.1.13"
-dependencies = [
- "reqwest",
- "serde",
- "yup-oauth2",
-]
-
-[[package]]
-name = "sheets"
-version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ac4f7af85011aa2c3d52436d1cea0839671395b67e6557b1e845f57fcf4ffc"
 dependencies = [
  "reqwest",
  "serde",
+]
+
+[[package]]
+name = "sheets"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "base64 0.12.3",
+ "bytes",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.0",
+ "uuid",
+ "yup-oauth2",
 ]
 
 [[package]]
@@ -5007,7 +5022,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.8.4",
  "serde_urlencoded 0.7.0",
- "sheets 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sheets 0.1.13",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
