@@ -11,8 +11,8 @@ edition = "2018"
 checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
-#cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
-cio-api = { path = "../cio" }
+cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "new-google-libs" }
+#cio-api = { path = "../cio" }
 docusign = "^0.1.0"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
 #dropshot = "^0.5.0"

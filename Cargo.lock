@@ -593,6 +593,79 @@ dependencies = [
 ]
 
 [[package]]
+name = "cio-api"
+version = "0.2.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=new-google-libs#758217c0f48c4abc3333fcceb26cb9bfece03e15"
+dependencies = [
+ "Inflector",
+ "acme-lib",
+ "airtable-api 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "barcoders",
+ "base64 0.12.3",
+ "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono",
+ "chrono-humanize",
+ "chrono-tz",
+ "clap",
+ "cloudflare",
+ "comrak",
+ "csv",
+ "deunicode",
+ "diesel",
+ "diffy",
+ "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dropshot 0.5.1",
+ "flate2",
+ "futures-util",
+ "google-calendar",
+ "google-drive 0.2.0",
+ "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-groups-settings",
+ "gsuite-api 0.2.0",
+ "gusto-api",
+ "handlebars",
+ "html2text",
+ "image 0.23.14",
+ "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=new-google-libs)",
+ "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "names",
+ "nom_pem",
+ "octorust",
+ "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openssl",
+ "pandoc",
+ "phonenumber",
+ "printpdf",
+ "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ramp-api",
+ "rand 0.8.4",
+ "regex 1.5.4",
+ "reqwest",
+ "revai 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "schemars",
+ "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "sheets 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar",
+ "titlecase",
+ "tokio",
+ "toml",
+ "tripactions 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir",
+ "yup-oauth2",
+ "zip",
+ "zoom-api",
+]
+
+[[package]]
 name = "clap"
 version = "2.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2179,6 +2252,19 @@ dependencies = [
 name = "macros"
 version = "0.1.0"
 source = "git+https://github.com/oxidecomputer/cio?branch=master#f3134b2ef4af6f5ef453713a80ae3af43a49b0fe"
+dependencies = [
+ "Inflector",
+ "proc-macro2 1.0.28",
+ "quote 1.0.9",
+ "serde",
+ "serde_tokenstream",
+ "syn 1.0.74",
+]
+
+[[package]]
+name = "macros"
+version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=new-google-libs#758217c0f48c4abc3333fcceb26cb9bfece03e15"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -5005,7 +5091,7 @@ dependencies = [
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
- "cio-api 0.2.0",
+ "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=new-google-libs)",
  "diesel",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.2-dev",
