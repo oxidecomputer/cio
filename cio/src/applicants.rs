@@ -2547,7 +2547,16 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         .replace("/view", "");
 
     // Get information about the file.
-    let drive_file = drive_client.get_file_by_id(&id).await.unwrap();
+    let drive_file = drive_client
+        .files()
+        .drive_get(
+            &id, false, // acknowledge_abuse
+            "",    // include_permissions_for_view
+            true,  // supports_all_drives
+            true,  // supports_team_drives
+        )
+        .await
+        .unwrap();
     let mime_type = drive_file.mime_type;
     let name = drive_file.name;
 
@@ -2572,7 +2581,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         // Wrap lines at 80 characters.
         result = from_read(&contents[..], 80);
     } else if mime_type == "application/vnd.google-apps.document" {
-        result = drive_client.get_file_contents_by_id(&id).await.unwrap();
+        result = drive_client.files().get_contents_by_id(&id).await.unwrap();
     } else if name.ends_with(".7z") {
         // Get the ip contents from Drive.
         let contents = drive_client.files().download_by_id(&id).await.unwrap();
@@ -4272,9 +4281,6 @@ Sincerely,
             }
         }
 
-        // Get gsuite token.
-        let token = company.authenticate_google(db).await;
-
         // Initialize the Google Drive client.
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
@@ -4555,9 +4561,6 @@ Sincerely,
         // Let's update the database here since nothing else has to do with that.
         self.update(db).await;
 
-        // Get gsuite token.
-        let token = company.authenticate_google(db).await;
-
         // Initialize the Google Drive client.
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
@@ -4612,9 +4615,6 @@ Sincerely,
 }
 
 pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) {
-    // Get the GSuite token.
-    let token = company.authenticate_google(db).await;
-
     // Initialize the GSuite sheets client.
     let drive_client = company.authenticate_google_drive(db).await.unwrap();
 

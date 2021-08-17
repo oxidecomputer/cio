@@ -487,7 +487,16 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
     let id = url.replace("https://drive.google.com/open?id=", "");
 
     // Get information about the file.
-    let drive_file = drive_client.get_file_by_id(&id).await.unwrap();
+    let drive_file = drive_client
+        .files()
+        .drive_get(
+            &id, false, // acknowledge_abuse
+            "",    // include_permissions_for_view
+            true,  // supports_all_drives
+            true,  // supports_team_drives
+        )
+        .await
+        .unwrap();
     let mime_type = drive_file.mime_type;
     let name = drive_file.name;
 
