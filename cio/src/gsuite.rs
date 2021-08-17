@@ -399,11 +399,17 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
 pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Group, company: &Company) {
     // Get the current group settings.
     let email = format!("{}@{}", group.name, company.gsuite_domain);
-    let mut result = ggs.groups().settings_get(&email).await;
+    let mut result = ggs
+        .groups()
+        .settings_get(google_groups_settings::types::Alt::Json, &email)
+        .await;
     if result.is_err() {
         // Try again.
         thread::sleep(time::Duration::from_secs(1));
-        result = ggs.groups().settings_get(&email).await;
+        result = ggs
+            .groups()
+            .settings_get(google_groups_settings::types::Alt::Json, &email)
+            .await;
     }
     let mut settings = result.unwrap();
 
@@ -423,11 +429,17 @@ pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Gr
     settings.who_can_contact_owner = "ALL_IN_DOMAIN_CAN_CONTACT".to_string();
 
     // Update the group with the given settings.
-    let result2 = ggs.groups().settings_update(&email, &settings).await;
+    let result2 = ggs
+        .groups()
+        .settings_update(google_groups_settings::types::Alt::Json, &email, &settings)
+        .await;
     if result2.is_err() {
         // Try again.
         thread::sleep(time::Duration::from_secs(1));
-        ggs.groups().settings_update(&email, &settings).await.unwrap();
+        ggs.groups()
+            .settings_update(google_groups_settings::types::Alt::Json, &email, &settings)
+            .await
+            .unwrap();
     }
 
     println!("updated gsuite groups settings {}", group.name);
