@@ -2963,14 +2963,14 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
         .await
         .unwrap();
 
+    // Initialize the GSuite sheets client.
+    let drive_client = company.authenticate_google_drive(db).await.unwrap();
+
     // Get the GSuite token.
     let token = company.authenticate_google(db).await;
 
     // Initialize the GSuite sheets client.
     let sheets_client = Sheets::new(token.clone());
-
-    // Initialize the GSuite sheets client.
-    let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
