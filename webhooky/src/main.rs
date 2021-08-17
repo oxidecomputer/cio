@@ -60,7 +60,7 @@ use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
-use sheets::Sheets;
+use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
 use zoom_api::Client as Zoom;
 
@@ -517,11 +517,8 @@ async fn listen_google_sheets_edit_webhooks(
 
     let github = oxide.authenticate_github();
 
-    // Get gsuite token.
-    // We re-get the token here since otherwise it will expire.
-    let token = oxide.authenticate_google(db).await;
     // Initialize the GSuite sheets client.
-    let sheets = Sheets::new(token.clone());
+    let sheets = oxide.authenticate_google_sheets(db).await.unwrap();
 
     let event = body_param.into_inner();
     println!("{:?}", event);
@@ -540,7 +537,11 @@ async fn listen_google_sheets_edit_webhooks(
     //  - The name of the column that was updated.
     // Let's first get the email for this applicant. This is always in column B.
     let mut cell_name = format!("B{}", event.event.range.row_start);
-    let email = sheets.get_value(&event.spreadsheet.id, cell_name).await.unwrap();
+    let email = sheets
+        .spreadsheets()
+        .cell_get(&event.spreadsheet.id, &cell_name)
+        .await
+        .unwrap();
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
@@ -565,7 +566,8 @@ async fn listen_google_sheets_edit_webhooks(
             .to_string()
     );
     let column_header = sheets
-        .get_value(&event.spreadsheet.id, cell_name)
+        .spreadsheets()
+        .cell_get(&event.spreadsheet.id, &cell_name)
         .await
         .unwrap()
         .to_lowercase();
@@ -668,7 +670,8 @@ async fn listen_google_sheets_edit_webhooks(
             event.event.range.row_start
         );
         let value_in_tension_2 = sheets
-            .get_value(&event.spreadsheet.id, cell_name)
+            .spreadsheets()
+            .cell_get(&event.spreadsheet.id, &cell_name)
             .await
             .unwrap()
             .to_lowercase();
@@ -687,7 +690,8 @@ async fn listen_google_sheets_edit_webhooks(
             event.event.range.row_start
         );
         let value_in_tension_1 = sheets
-            .get_value(&event.spreadsheet.id, cell_name)
+            .spreadsheets()
+            .cell_get(&event.spreadsheet.id, &cell_name)
             .await
             .unwrap()
             .to_lowercase();
@@ -837,12 +841,8 @@ async fn listen_google_sheets_row_create_webhooks(
     // Initialize the Google Drive client.
     let drive = oxide.authenticate_google_drive(db).await.unwrap();
 
-    // Get gsuite token.
-    // We re-get the token here since otherwise it will expire.
-    let token = oxide.authenticate_google(db).await;
-
     // Initialize the GSuite sheets client.
-    let sheets = Sheets::new(token.clone());
+    let sheets = oxide.authenticate_google_sheets(db).await.unwrap();
 
     let event = body_param.into_inner();
     println!("{:?}", event);

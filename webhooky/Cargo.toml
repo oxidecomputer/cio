@@ -11,8 +11,8 @@ edition = "2018"
 checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
-cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
-#cio-api = { path = "../cio" }
+#cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
+cio-api = { path = "../cio" }
 docusign = "^0.1.0"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
 #dropshot = "^0.5.0"
@@ -40,7 +40,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.8"
 serde_urlencoded = "^0.7.0"
-sheets = "^0.1.0"
+#sheets = "^0.2.0"
+sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.12"
 slack-chat-api = "^0.1.16"
 tokio = { version = "1", features = ["full"] }
