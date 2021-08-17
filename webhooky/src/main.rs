@@ -86,7 +86,7 @@ async fn main() -> Result<(), String> {
      */
     let config_dropshot = ConfigDropshot {
         bind_address: service_address.parse().unwrap(),
-        request_body_max_bytes: 100000000,
+        request_body_max_bytes: 10737418240, // 10 Gigiabytes.
     };
 
     /*
@@ -1579,6 +1579,8 @@ async fn listen_application_files_upload_requests(
     sentry::start_session();
 
     let data = body_param.into_inner();
+
+    sentry::capture_message(&format!("got application files: {:?}", data), sentry::Level::Info);
 
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
