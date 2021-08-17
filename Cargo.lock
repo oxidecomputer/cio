@@ -506,7 +506,7 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "sheets 0.2.0",
+ "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -524,7 +524,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb8b6b51d8551a44bf1e7edd49a725d43d66cea"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7b1f573272527194836fccebd79f3999019e4507"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -579,7 +579,7 @@ dependencies = [
  "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "sheets 0.1.13",
+ "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2156,7 +2156,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb8b6b51d8551a44bf1e7edd49a725d43d66cea"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#7b1f573272527194836fccebd79f3999019e4507"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -3873,16 +3873,6 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 
 [[package]]
 name = "sheets"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90ac4f7af85011aa2c3d52436d1cea0839671395b67e6557b1e845f57fcf4ffc"
-dependencies = [
- "reqwest",
- "serde",
-]
-
-[[package]]
-name = "sheets"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e600f3c4323185f7eb54bd48e5ced4ad6e3c7b9d28366782c00017b30810fd3a"
@@ -5000,7 +4990,7 @@ dependencies = [
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
- "cio-api 0.2.0",
+ "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "diesel",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.2-dev",
@@ -5024,7 +5014,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.8.4",
  "serde_urlencoded 0.7.0",
- "sheets 0.2.0",
+ "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
