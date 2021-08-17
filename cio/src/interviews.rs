@@ -271,12 +271,11 @@ pub async fn compile_packets(db: &Database, company: &Company) {
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let drive_rfd_dir = drive_client
+    let parent_id = drive_client
         .files()
-        .get_by_name(&drive_id, "interview_packets")
+        .create_folder(&drive_id, "", "interview_packets")
         .await
         .unwrap();
-    let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
 
     // Iterate over each user we have in gsuite and download their materials
     // locally.

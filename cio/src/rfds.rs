@@ -506,8 +506,7 @@ impl RFD {
         let drive_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let drive_rfd_dir = drive_client.files().get_by_name(&drive_id, "rfds").await.unwrap();
-        let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
+        let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await.unwrap();
 
         // Create or update the file in the google_drive.
         let drive_file = drive_client

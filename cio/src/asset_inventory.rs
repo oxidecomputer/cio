@@ -254,8 +254,11 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) {
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let drive_assets_dir = drive_client.files().get_by_name(&drive_id, "assets").await.unwrap();
-    let parent_id = drive_assets_dir.get(0).unwrap().id.to_string();
+    let parent_id = drive_client
+        .files()
+        .create_folder(&drive_id, "", "assets")
+        .await
+        .unwrap();
 
     // Get all the records from Airtable.
     let mut generator = names::Generator::default();

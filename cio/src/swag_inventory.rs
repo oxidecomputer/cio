@@ -432,8 +432,7 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) {
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let drive_rfd_dir = drive_client.files().get_by_name(&drive_id, "swag").await.unwrap();
-    let parent_id = drive_rfd_dir.get(0).unwrap().id.to_string();
+    let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await.unwrap();
 
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SwagInventoryItem>> = company

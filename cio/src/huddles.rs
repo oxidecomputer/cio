@@ -469,7 +469,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
                 &huddle.calendar_id(company),
                 "", // iCalID
                 0,  // Max attendees, set to 0 to ignore.
-                google_calendar::types::OrderBy::StartTime,
+                google_calendar::types::OrderBy::Noop,
                 &[],                                 // private_extended_property
                 &huddle.calendar_event_fuzzy_search, // q
                 &[],                                 // shared_extended_property
