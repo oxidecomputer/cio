@@ -394,12 +394,17 @@ impl RFD {
         for commit in commits {
             let message: Vec<&str> = commit.commit.message.lines().collect();
             if !message.is_empty() {
-                changelog += &format!(
-                    "\t- \"{}\" by @{}\n\t\thttps://github.com/oxidecomputer/rfd/commit/{}\n",
-                    message[0],
-                    commit.author.unwrap().login,
-                    commit.sha
-                );
+                if let Some(author) = commit.author {
+                    changelog += &format!(
+                        "\t- \"{}\" by @{}\n\t\thttps://github.com/oxidecomputer/rfd/commit/{}\n",
+                        message[0], author.login, commit.sha
+                    );
+                } else {
+                    changelog += &format!(
+                        "\t- \"{}\"\n\t\thttps://github.com/oxidecomputer/rfd/commit/{}\n",
+                        message[0], commit.sha
+                    );
+                }
             }
         }
 
