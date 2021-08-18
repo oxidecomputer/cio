@@ -20,7 +20,7 @@ use google_drive::{
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
-use sendgrid_api::SendGrid;
+use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -897,13 +897,14 @@ pub async fn send_rfd_changelog(company: &Company) {
 
     // Send the message.
     sendgrid_client
-        .send_mail(
-            format!("RFD changelog for the week from {}", week_format),
-            changelog,
-            vec![format!("all@{}", company.gsuite_domain)],
-            vec![],
-            vec![],
-            format!("rfds@{}", company.gsuite_domain),
+        .mail_send()
+        .send_plain_text(
+            &format!("RFD changelog for the week from {}", week_format),
+            &changelog,
+            &[format!("all@{}", company.gsuite_domain)],
+            &[],
+            &[],
+            &format!("rfds@{}", company.gsuite_domain),
         )
         .await;
 }

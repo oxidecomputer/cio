@@ -18,7 +18,7 @@ use gsuite_api::types::{
 use gusto_api::Client as Gusto;
 use macros::db;
 use schemars::JsonSchema;
-use sendgrid_api::SendGrid;
+use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 use zoom_api::Client as Zoom;
 
@@ -670,9 +670,10 @@ impl User {
 
         // Send the message.
         sendgrid
-            .send_mail(
-                format!("Your New Email Account: {}", self.email),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Your New Email Account: {}", self.email),
+                &format!(
                     "Yoyoyo {},
 
 You should have an email from Okta about setting up your account with them.
@@ -699,10 +700,10 @@ xoxo,
   The Onboarding Bot",
                     self.first_name, company.domain, company.domain, self.email, aliases, company.gsuite_domain,
                 ),
-                vec![self.recovery_email.to_string()],
-                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
-                vec![],
-                format!("admin@{}", company.gsuite_domain),
+                &[self.recovery_email.to_string()],
+                &[self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
+                &[],
+                &format!("admin@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -719,9 +720,10 @@ xoxo,
 
         // Send the message.
         sendgrid
-            .send_mail(
-                format!("Your New Email Account: {}", self.email),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Your New Email Account: {}", self.email),
+                &format!(
                     "Yoyoyo {},
 
 We have set up your account on mail.corp.{}. Details for accessing
@@ -758,10 +760,10 @@ xoxo,
                     company.github_org,
                     company.gsuite_domain,
                 ),
-                vec![self.recovery_email.to_string()],
-                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
-                vec![],
-                format!("admin@{}", company.gsuite_domain),
+                &[self.recovery_email.to_string()],
+                &[self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
+                &[],
+                &format!("admin@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -798,9 +800,10 @@ let jess@{} know what your GitHub handle is.",
 
         // Send the message.
         sendgrid
-            .send_mail(
-                format!("Your New Email Account: {}", self.email),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Your New Email Account: {}", self.email),
+                &format!(
                     "Yoyoyo {},
 
 You should have an email from Okta about setting up your account with them.
@@ -863,10 +866,10 @@ xoxo,
                     company.github_org,
                     company.github_org,
                 ),
-                vec![self.recovery_email.to_string()],
-                vec![self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
-                vec![],
-                format!("admin@{}", company.gsuite_domain),
+                &[self.recovery_email.to_string()],
+                &[self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
+                &[],
+                &format!("admin@{}", company.gsuite_domain),
             )
             .await;
     }

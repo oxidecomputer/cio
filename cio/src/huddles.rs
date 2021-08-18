@@ -4,7 +4,7 @@ use airtable_api::{Airtable, Record};
 use chrono::{Duration, NaiveDate, Utc};
 use google_calendar::types::Event;
 use handlebars::Handlebars;
-use sendgrid_api::SendGrid;
+use sendgrid_api::{traits::MailOps, Client as SendGrid};
 
 use crate::{
     airtable::{AIRTABLE_DISCUSSION_TOPICS_TABLE, AIRTABLE_MEETING_SCHEDULE_TABLE},
@@ -326,13 +326,14 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                 let sendgrid = SendGrid::new_from_env();
                 // Send the email.
                 sendgrid
-                    .send_mail(
-                        format!("Reminder {} huddle tomorrow", slug),
-                        template.to_string(),
-                        vec![format!("{}@{}", huddle.email, company.gsuite_domain)],
-                        vec![],
-                        vec![],
-                        format!("huddle-reminders@{}", company.gsuite_domain),
+                    .mail_send()
+                    .send_plain_text(
+                        &format!("Reminder {} huddle tomorrow", slug),
+                        template,
+                        &[format!("{}@{}", huddle.email, company.gsuite_domain)],
+                        &[],
+                        &[],
+                        &format!("huddle-reminders@{}", company.gsuite_domain),
                     )
                     .await;
 

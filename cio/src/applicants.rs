@@ -22,7 +22,7 @@ use macros::db;
 use pandoc::OutputKind;
 use regex::Regex;
 use schemars::JsonSchema;
-use sendgrid_api::SendGrid;
+use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sheets::Client as GoogleSheets;
@@ -386,12 +386,13 @@ impl NewApplicant {
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!(
                     "Oxide Computer Company {} Application Received for {}",
                     self.role, self.name
                 ),
-                format!(
+                &format!(
                     "Dear {},
 
 Thank you for submitting your application materials! We really appreciate all
@@ -403,10 +404,10 @@ Sincerely,
   The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -419,9 +420,10 @@ Sincerely,
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("Thank you for your application, {}", self.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Thank you for your application, {}", self.name),
+                &format!(
                     "Dear {},
 
 Thank you for your application to join Oxide Computer Company. At this point
@@ -440,10 +442,10 @@ All the best,
 The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -456,9 +458,10 @@ The Oxide Team",
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("Thank you for your application, {}", self.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Thank you for your application, {}", self.name),
+                &format!(
                     "Dear {},
 
 Unfortunately, we cannot accept it at this time since you failed to provide the
@@ -468,10 +471,10 @@ All the best,
 The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -484,9 +487,10 @@ The Oxide Team",
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("Thank you for your application, {}", self.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Thank you for your application, {}", self.name),
+                &format!(
                     "Dear {},
 
 We are so humbled by your application to join Oxide Computer Company. At this
@@ -502,10 +506,10 @@ All the best,
 The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -518,13 +522,14 @@ The Oxide Team",
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("New {} Application: {}", self.role, self.name),
-                self.as_company_notification_email(),
-                vec![format!("applications@{}", company.gsuite_domain)],
-                vec![],
-                vec![],
-                format!("applications@{}", company.gsuite_domain),
+            .mail_send()
+            .send_plain_text(
+                &format!("New {} Application: {}", self.role, self.name),
+                &self.as_company_notification_email(),
+                &[format!("applications@{}", company.gsuite_domain)],
+                &[],
+                &[],
+                &format!("applications@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -2040,13 +2045,14 @@ impl Applicant {
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("[applicants] Reviewing applicant {}", self.name),
-                self.as_scorer_email(),
-                vec![scorer.to_string()],
-                vec![],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+            .mail_send()
+            .send_plain_text(
+                &format!("[applicants] Reviewing applicant {}", self.name),
+                &self.as_scorer_email(),
+                &[scorer.to_string()],
+                &[],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -2341,9 +2347,10 @@ Notes:
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("Thank you for your application, {}", self.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Thank you for your application, {}", self.name),
+                &format!(
                     "Dear {},
 
 Thank you for your application to join Oxide Computer Company. At this point
@@ -2362,10 +2369,10 @@ All the best,
 The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -2378,9 +2385,10 @@ The Oxide Team",
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("Thank you for your application, {}", self.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Thank you for your application, {}", self.name),
+                &format!(
                     "Dear {},
 
 Unfortunately, we cannot accept it at this time since you failed to provide the
@@ -2390,10 +2398,10 @@ All the best,
 The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -2406,9 +2414,10 @@ The Oxide Team",
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("Thank you for your application, {}", self.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Thank you for your application, {}", self.name),
+                &format!(
                     "Dear {},
 
 We are so humbled by your application to join Oxide Computer Company. At this
@@ -2424,10 +2433,10 @@ All the best,
 The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -3881,13 +3890,14 @@ The applicants Airtable \
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("New {} Application: {}", self.role, self.name),
-                self.as_company_notification_email(),
-                vec![format!("applications@{}", company.gsuite_domain)],
-                vec![],
-                vec![],
-                format!("applications@{}", company.gsuite_domain),
+            .mail_send()
+            .send_plain_text(
+                &format!("New {} Application: {}", self.role, self.name),
+                &self.as_company_notification_email(),
+                &[format!("applications@{}", company.gsuite_domain)],
+                &[],
+                &[],
+                &format!("applications@{}", company.gsuite_domain),
             )
             .await;
     }
@@ -3900,12 +3910,13 @@ The applicants Airtable \
 
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!(
                     "Oxide Computer Company {} Application Received for {}",
                     self.role, self.name
                 ),
-                format!(
+                &format!(
                     "Dear {},
 
 Thank you for submitting your application materials! We really appreciate all
@@ -3917,10 +3928,10 @@ Sincerely,
   The Oxide Team",
                     self.name
                 ),
-                vec![self.email.to_string()],
-                vec![format!("careers@{}", company.gsuite_domain)],
-                vec![],
-                format!("careers@{}", company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
             )
             .await;
     }

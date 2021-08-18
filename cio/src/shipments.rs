@@ -7,7 +7,7 @@ use google_geocode::Geocode;
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
-use sendgrid_api::SendGrid;
+use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
 
@@ -644,9 +644,10 @@ impl OutboundShipment {
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("{}, your order from {} has been received!", self.name, company.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("{}, your order from {} has been received!", self.name, company.name),
+                &format!(
                     "Below is the information for your order:
 
 **Contents:**
@@ -667,10 +668,10 @@ xoxo,
                     self.name,
                     self.format_address(),
                 ),
-                vec![self.email.to_string()],
-                vec![format!("packages@{}", &company.gsuite_domain)],
-                vec![],
-                format!("packages@{}", &company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("packages@{}", &company.gsuite_domain)],
+                &[],
+                &format!("packages@{}", &company.gsuite_domain),
             )
             .await;
     }
@@ -686,9 +687,10 @@ xoxo,
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("{}, your package from {} is on the way!", self.name, company.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("{}, your package from {} is on the way!", self.name, company.name),
+                &format!(
                     "Below is the information for your package:
 
 **Contents:**
@@ -711,10 +713,10 @@ xoxo,
                     self.format_address(),
                     self.oxide_tracking_link
                 ),
-                vec![self.email.to_string()],
-                vec![format!("packages@{}", &company.gsuite_domain)],
-                vec![],
-                format!("packages@{}", &company.gsuite_domain),
+                &[self.email.to_string()],
+                &[format!("packages@{}", &company.gsuite_domain)],
+                &[],
+                &format!("packages@{}", &company.gsuite_domain),
             )
             .await;
     }
@@ -726,9 +728,10 @@ xoxo,
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
         sendgrid_client
-            .send_mail(
-                format!("Shipment to {} is ready to be packaged", self.name),
-                format!(
+            .mail_send()
+            .send_plain_text(
+                &format!("Shipment to {} is ready to be packaged", self.name),
+                &format!(
                     "Below is the information the package:
 
 **Contents:**
@@ -738,36 +741,33 @@ xoxo,
 {}
 {}
 
-**Tracking \
-                     link:**
+**Tracking link:**
 {}
 
-The label should already be printed on the cart with the label printers. \
-                     Please
-take the label and affix it to the package with the specified contents. \
-                     It can
+The label should already be printed on the cart with the label printers. Please
+take the label and affix it to the package with the specified contents. It can
 then be dropped off for {}.
 
-You DO NOT need to scan the barcodes of the items \
-                     since they have already been
-deducted from inventory. DO NOT SCAN THE BARCODES \
-                     for the items since
+You DO NOT need to scan the barcodes of the items since they have already been
+deducted from inventory. DO NOT SCAN THE BARCODES for the items since
 they have already been deducted from inventory.
 
-As always, the \
-                     Airtable with all the shipments lives at:
-https://airtable-shipments.corp.oxide.computer.xoxo,The \
-                     Shipping Bot",
+As always, the Airtable with all the shipments lives at:
+https://airtable-shipments.corp.oxide.computer.
+
+xoxo,
+
+The Shipping Bot",
                     self.contents,
                     self.name,
                     self.format_address(),
                     self.oxide_tracking_link,
                     self.carrier,
                 ),
-                vec![format!("packages@{}", &company.gsuite_domain)],
-                vec![],
-                vec![],
-                format!("packages@{}", &company.gsuite_domain),
+                &[format!("packages@{}", &company.gsuite_domain)],
+                &[],
+                &[],
+                &format!("packages@{}", &company.gsuite_domain),
             )
             .await;
     }

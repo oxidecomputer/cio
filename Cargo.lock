@@ -503,7 +503,7 @@ dependencies = [
  "reqwest",
  "revai 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
- "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sendgrid-api 0.2.0",
  "serde",
  "serde_json",
  "sheets",
@@ -576,7 +576,7 @@ dependencies = [
  "reqwest",
  "revai 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
- "sendgrid-api 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sendgrid-api 0.1.6",
  "serde",
  "serde_json",
  "sheets",
@@ -1451,14 +1451,6 @@ name = "gimli"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0a01e0497841a3b2db4f8afa483cce65f7e96a3498bd6c541734792aeac8fe7"
-
-[[package]]
-name = "giphy-api"
-version = "0.1.7"
-dependencies = [
- "reqwest",
- "serde",
-]
 
 [[package]]
 name = "google-calendar"
@@ -3610,6 +3602,8 @@ dependencies = [
 [[package]]
 name = "sendgrid-api"
 version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8ae3b7bdc15e8675aef69f69644bd4cd6f5f2eebbc5b3cf636436c18c690ec6"
 dependencies = [
  "data-encoding",
  "reqwest",
@@ -3618,13 +3612,24 @@ dependencies = [
 
 [[package]]
 name = "sendgrid-api"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8ae3b7bdc15e8675aef69f69644bd4cd6f5f2eebbc5b3cf636436c18c690ec6"
+version = "0.2.0"
 dependencies = [
- "data-encoding",
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "bytes",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
  "reqwest",
+ "schemars",
  "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.0",
+ "uuid",
 ]
 
 [[package]]
