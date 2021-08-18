@@ -524,7 +524,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7b1f573272527194836fccebd79f3999019e4507"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#594575019f2b04268f97040dd6e878d7e7bccc5b"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -1462,9 +1462,9 @@ dependencies = [
 
 [[package]]
 name = "google-calendar"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14068acd42cb9f799c4d88de19d2683490849c8598c754aa3c70ea00df9fce63"
+checksum = "e4c2f89d04de89b6ecffd9f9251e76c2bf8503322e1193964432e93a2cf06204"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1488,9 +1488,9 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b5aaee07a9552a30cb7f7b0a77c382f1ca1ec763eb5743e9394b01925e30612"
+checksum = "bb783243fd048a8f1fcf4af043f65cead32d9fc7e435ae683b09d3d0fcbd6229"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1534,9 +1534,9 @@ dependencies = [
 
 [[package]]
 name = "google-groups-settings"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d467a4e75a9a1c0a7641df73a57afbdc53ea138eb34073f19b58204a6cf1e7f"
+checksum = "c5b7eac43136167e7e6b5ec142353900beb1b1b854b41f83149fb8131b104b21"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -1560,9 +1560,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdc80ba8083bebd0773263cd904a616904279df6ad25288cc01955913563e70e"
+checksum = "b7f58c74852b6c81d70b6c517dad690eaa3d6b6cee76e42c9097855f3a551348"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2156,7 +2156,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#7b1f573272527194836fccebd79f3999019e4507"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#594575019f2b04268f97040dd6e878d7e7bccc5b"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.28",
@@ -3873,9 +3873,9 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 
 [[package]]
 name = "sheets"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e600f3c4323185f7eb54bd48e5ced4ad6e3c7b9d28366782c00017b30810fd3a"
+checksum = "f41960d0e32e2ca24d8f4b3d8a4b9a57b74fb007a20fd27606e4e0cb46dd238f"
 dependencies = [
  "anyhow",
  "async-recursion",
