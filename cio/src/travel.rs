@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -94,34 +94,49 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) {
     let ta = company.authenticate_tripactions(db).await;
 
     // Let's get our bookings.
-    let bookings = ta.get_bookings().await.unwrap();
+    let bookings = ta
+        .booking_data()
+        .get_all_booking_report(
+            &Utc::now()
+                .checked_sub_signed(Duration::weeks(52))
+                .unwrap()
+                .timestamp()
+                .to_string(), // created from
+            &Utc::now().timestamp().to_string(), // created to
+            "",                                  // start_date_from
+            "",                                  // start_date_to
+            tripactions::types::BookingStatus::Noop,
+            tripactions::types::BookingType::Noop,
+        )
+        .await
+        .unwrap();
 
     for booking in bookings {
         // Create our list of passengers.
         let mut passengers: Vec<String> = Default::default();
         for passenger in &booking.passengers {
-            passengers.push(passenger.person.email.to_string());
+            passengers.push(passenger.person.as_ref().unwrap().email.to_string());
         }
 
         let b = NewBooking {
             booking_id: booking.uuid.to_string(),
-            created_at: booking.created,
-            last_modified_at: booking.last_modified,
+            created_at: booking.created.unwrap(),
+            last_modified_at: booking.last_modified.unwrap(),
             cancelled_at: booking.cancelled_at,
             // TODO: add the cancellation reason? we have it in tripactions.
-            type_: booking.booking_type.to_string(),
+            type_: booking.booking_type.unwrap().to_string(),
             status: booking.booking_status.to_string(),
             vendor: booking.vendor.to_string(),
             flight: booking.flight.to_string(),
             cabin: booking.cabin.to_string(),
             is_preferred_vendor: booking.preferred_vendor == "Y",
             used_corporate_discount: booking.corporate_discount_used == "Y",
-            start_date: booking.start_date,
+            start_date: booking.start_date.unwrap(),
             end_date: booking.end_date,
             passengers,
-            booker: booking.booker.email.to_string(),
-            origin: booking.origin.airport_code.to_string(),
-            destination: booking.destination.airport_code.to_string(),
+            booker: booking.booker.unwrap().email.to_string(),
+            origin: booking.origin.unwrap().airport_code.to_string(),
+            destination: booking.destination.unwrap().airport_code.to_string(),
             length: booking.trip_length.to_string(),
             description: booking.trip_description.to_string(),
             currency: booking.currency,

@@ -514,7 +514,7 @@ dependencies = [
  "titlecase",
  "tokio",
  "toml",
- "tripactions 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tripactions 0.2.0",
  "walkdir",
  "yup-oauth2",
  "zip",
@@ -587,7 +587,7 @@ dependencies = [
  "titlecase",
  "tokio",
  "toml",
- "tripactions 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tripactions 0.1.1",
  "walkdir",
  "yup-oauth2",
  "zip",
@@ -4621,6 +4621,8 @@ checksum = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 [[package]]
 name = "tripactions"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "543e379060a3ace7edb5769999ac58a249a5d9581d3cda59bbfded44ec17858a"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4632,15 +4634,23 @@ dependencies = [
 
 [[package]]
 name = "tripactions"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "543e379060a3ace7edb5769999ac58a249a5d9581d3cda59bbfded44ec17858a"
+version = "0.2.0"
 dependencies = [
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "bytes",
  "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
  "reqwest",
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded 0.7.0",
  "uuid",
 ]
 

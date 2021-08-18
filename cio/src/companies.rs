@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use sheets::Client as GoogleSheets;
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
-use tripactions::TripActions;
+use tripactions::Client as TripActions;
 use zoom_api::Client as Zoom;
 
 use crate::{

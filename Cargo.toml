@@ -16,6 +16,5 @@ members = [
 	"shippo",
 	"slack",
 	"tailscale",
-	"tripactions",
 	"webhooky",
 ]
