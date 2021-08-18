@@ -705,7 +705,8 @@ xoxo,
                 &[],
                 &format!("admin@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the GSuite user about their account.
@@ -765,7 +766,8 @@ xoxo,
                 &[],
                 &format!("admin@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the new user about their account.
@@ -871,7 +873,8 @@ xoxo,
                 &[],
                 &format!("admin@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     pub async fn update_zoom_vanity_name(

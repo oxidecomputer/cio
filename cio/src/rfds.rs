@@ -906,7 +906,8 @@ pub async fn send_rfd_changelog(company: &Company) {
             &[],
             &format!("rfds@{}", company.gsuite_domain),
         )
-        .await;
+        .await
+        .unwrap();
 }
 
 #[cfg(test)]

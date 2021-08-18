@@ -673,7 +673,8 @@ xoxo,
                 &[],
                 &format!("packages@{}", &company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the recipient with their tracking code and information.
@@ -718,7 +719,8 @@ xoxo,
                 &[],
                 &format!("packages@{}", &company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email internally that we need to package the shipment.
@@ -769,7 +771,8 @@ The Shipping Bot",
                 &[],
                 &format!("packages@{}", &company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Create or get a shipment in shippo that matches this shipment.

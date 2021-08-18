@@ -335,7 +335,8 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
                         &[],
                         &format!("huddle-reminders@{}", company.gsuite_domain),
                     )
-                    .await;
+                    .await
+                    .unwrap();
 
                 println!(
                     "successfully sent {} huddle reminder email to {}@{}",

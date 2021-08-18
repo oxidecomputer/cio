@@ -409,7 +409,8 @@ Sincerely,
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the applicant that we love them but they are too junior.
@@ -447,7 +448,8 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the applicant that they did not provide materials.
@@ -476,7 +478,8 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the applicant about timing.
@@ -511,7 +514,8 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email internally that we have a new application.
@@ -531,7 +535,8 @@ The Oxide Team",
                 &[],
                 &format!("applications@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Parse the applicant from a Google Sheets row, where we also happen to know the columns.
@@ -2054,7 +2059,8 @@ impl Applicant {
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Get the applicant's information in the form of the body of an email for a
@@ -2374,7 +2380,8 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the applicant that they did not provide materials.
@@ -2403,7 +2410,8 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the applicant about timing.
@@ -2438,7 +2446,8 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 }
 
@@ -3899,7 +3908,8 @@ The applicants Airtable \
                 &[],
                 &format!("applications@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Send an email to the applicant that we recieved their application.
@@ -3933,7 +3943,8 @@ Sincerely,
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await;
+            .await
+            .unwrap();
     }
 
     /// Parse the questions from the materials.
