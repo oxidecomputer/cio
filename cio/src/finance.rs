@@ -130,15 +130,15 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
             let users = gsuite
                 .users()
                 .list_all(
-                    &company.gsuite_account_id,                             // customer
-                    &company.gsuite_domain,                                 // domain
-                    gsuite_api::types::Event::Noop,                         // event
-                    gsuite_api::types::DirectoryUsersListOrderBy::Email,    // order by
-                    gsuite_api::types::DirectoryUsersListProjection::Basic, // projection
-                    "",                                                     // query
-                    "",                                                     // show deleted
-                    gsuite_api::types::SortOrder::Ascending,                // sort order
-                    gsuite_api::types::ViewType::AdminView,                 // view type
+                    &company.gsuite_account_id,                            // customer
+                    &company.gsuite_domain,                                // domain
+                    gsuite_api::types::Event::Noop,                        // event
+                    gsuite_api::types::DirectoryUsersListOrderBy::Email,   // order by
+                    gsuite_api::types::DirectoryUsersListProjection::Full, // projection
+                    "",                                                    // query
+                    "",                                                    // show deleted
+                    gsuite_api::types::SortOrder::Ascending,               // sort order
+                    gsuite_api::types::ViewType::AdminView,                // view type
                 )
                 .await
                 .unwrap();
