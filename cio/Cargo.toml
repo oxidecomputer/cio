@@ -86,8 +86,8 @@ slack-chat-api = "^0.1.16"
 #slack-chat-api = { path = "../slack" }
 tailscale-api = "^0.1.2"
 #tailscale-api = { path = "../tailscale" }
-#tripactions = "^0.2.0"
-tripactions = { path = "../../third-party-api-clients/tripactions" }
+tripactions = "^0.2.0"
+#tripactions = { path = "../../third-party-api-clients/tripactions" }
 tar = "^0.4"
 titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }

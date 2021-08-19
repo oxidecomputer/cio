@@ -4635,6 +4635,8 @@ dependencies = [
 [[package]]
 name = "tripactions"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2972900bb8553f854ee8c23a7a855128110050e8353536e6ba197f0d566d36d"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4651,6 +4653,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.0",
+ "urlencoding",
  "uuid",
 ]
 
