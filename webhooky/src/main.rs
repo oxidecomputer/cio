@@ -1460,6 +1460,8 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
                     .replace("status update", "")
                     .trim()
                     .to_string();
+            } else if value.contains("Coilcraft") {
+                i.name = "Coilcraft".to_string();
             } else {
                 i.name = format!("Email: {}", value);
             }
