@@ -750,9 +750,9 @@ pub struct Member {
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct Stats {
     #[serde(default)]
-    pub avg_open_rate: i32,
+    pub avg_open_rate: f32,
     #[serde(default)]
-    pub avg_click_rate: i32,
+    pub avg_click_rate: f32,
     #[serde(default)]
     pub ecommerce_data: EcommerceData,
 }
