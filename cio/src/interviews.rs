@@ -604,7 +604,14 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
     for pdf in pdfs {
         // Load the pdf as a file.
-        let mut doc = Document::load(&pdf).unwrap();
+        let docu = Document::load(&pdf);
+        if docu.is_err() {
+            // This happens if we have someone interviewing and for some reason
+            // we don't have materials for them.
+            continue;
+        }
+
+        let mut doc = docu.unwrap();
 
         let mut first = false;
         doc.renumber_objects_with(max_id);

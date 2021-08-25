@@ -337,7 +337,7 @@ impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
             city: address.city.to_string(),
             state: address.state.to_string(),
             zipcode: address.zip.to_string(),
-            country: address.country.to_string(),
+            country: address.country,
             address_formatted: Default::default(),
             phone: self.merge_fields.phone.to_string(),
             tags,
