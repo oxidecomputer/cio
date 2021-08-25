@@ -487,7 +487,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
  "macros 0.1.0",
- "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.14",
  "names",
  "nom_pem",
  "octorust",
@@ -560,7 +560,7 @@ dependencies = [
  "image 0.23.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
- "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.13",
  "names",
  "nom_pem",
  "octorust",
@@ -2161,20 +2161,6 @@ dependencies = [
 [[package]]
 name = "mailchimp-api"
 version = "0.1.13"
-dependencies = [
- "bytes",
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "serde_qs 0.7.2",
- "urlencoding",
-]
-
-[[package]]
-name = "mailchimp-api"
-version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6fffe1d1c16078c4761ae2659f4167a3f57a53bb1e6874dffc813bcfcdda10f"
 dependencies = [
@@ -2184,6 +2170,20 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "urlencoding",
+]
+
+[[package]]
+name = "mailchimp-api"
+version = "0.1.14"
+dependencies = [
+ "bytes",
+ "chrono",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_qs 0.7.2",
  "urlencoding",
 ]
 
@@ -5010,7 +5010,7 @@ dependencies = [
  "gusto-api",
  "http",
  "hyper 0.10.16",
- "mailchimp-api 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mailchimp-api 0.1.13",
  "mime_guess",
  "octorust",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",

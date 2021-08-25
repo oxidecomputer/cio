@@ -264,7 +264,9 @@ impl MailChimp {
                 }
             };
 
-            let mut r: ListMembersResponse = resp.json().await.unwrap();
+            let text = resp.text().await.unwrap();
+
+            let mut r: ListMembersResponse = serde_json::from_str(&text).unwrap();
 
             has_more_rows = !r.members.is_empty();
             offset += r.members.len();
@@ -379,6 +381,28 @@ pub struct MergeFields {
     pub interest: String,
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "NOTES")]
     pub notes: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "BIRTHDAY")]
+    pub birthday: String,
+    #[serde(default, skip_serializing_if = "String::is_empty", alias = "PHONE")]
+    pub phone: String,
+    #[serde(default, alias = "ADDRESS")]
+    pub address: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct Address {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub addr1: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub addr2: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub zip: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub country: String,
 }
 
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
@@ -677,15 +701,15 @@ pub struct Member {
     /// IP address the subscriber signed up from.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub ip_signup: String,
-    /*/// The date and time the subscriber signed up for the list in ISO 8601 format.
-    #[serde(default)]
-    pub timestamp_signup: Option<DateTime<Utc>>,*/
+    /// The date and time the subscriber signed up for the list in ISO 8601 format.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub timestamp_signup: String,
     /// The IP address the subscriber used to confirm their opt-in status.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub ip_opt: String,
     /// The date and time the subscribe confirmed their opt-in status in ISO 8601 format.
-    //#[serde(alias = "timestamp_signup")]
-    pub timestamp_opt: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub timestamp_opt: String,
     /// Star rating for this member, between 1 and 5.
     #[serde(default)]
     pub star_rating: i32,
@@ -719,6 +743,28 @@ pub struct Member {
     /// The list id.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub list_id: String,
+    #[serde(default)]
+    pub stats: Stats,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct Stats {
+    #[serde(default)]
+    pub avg_open_rate: i32,
+    #[serde(default)]
+    pub avg_click_rate: i32,
+    #[serde(default)]
+    pub ecommerce_data: EcommerceData,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct EcommerceData {
+    #[serde(default)]
+    pub total_revenue: f32,
+    #[serde(default)]
+    pub number_of_orders: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub currency_code: String,
 }
 
 #[cfg(test)]

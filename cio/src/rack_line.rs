@@ -2,7 +2,7 @@
 use std::env;
 
 use async_trait::async_trait;
-use chrono::{offset::Utc, DateTime};
+use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use macros::db;
 use schemars::JsonSchema;
@@ -221,6 +221,14 @@ impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
         for t in &self.tags {
             tags.push(t.name.to_string());
         }
+        let mut timestamp = Utc::now();
+
+        if !self.timestamp_opt.is_empty() {
+            timestamp = Utc.datetime_from_str(&self.timestamp_opt, "%+").unwrap();
+        }
+        if !self.timestamp_signup.is_empty() {
+            timestamp = Utc.datetime_from_str(&self.timestamp_signup, "%+").unwrap();
+        }
 
         NewRackLineSubscriber {
             email: self.email_address,
@@ -228,8 +236,8 @@ impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
             company: self.merge_fields.company,
             company_size: self.merge_fields.company_size,
             interest: self.merge_fields.notes,
-            date_added: self.timestamp_opt,
-            date_optin: self.timestamp_opt,
+            date_added: timestamp,
+            date_optin: timestamp,
             date_last_changed: self.last_changed,
             notes: self.last_note.note,
             tags,

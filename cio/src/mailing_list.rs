@@ -1,7 +1,7 @@
 #![allow(clippy::from_over_into)]
 
 use async_trait::async_trait;
-use chrono::{offset::Utc, DateTime};
+use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use macros::db;
 use schemars::JsonSchema;
@@ -49,6 +49,26 @@ pub struct NewMailingListSubscriber {
     pub date_last_changed: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source: String,
+    #[serde(default)]
+    pub revenue: f32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub street_1: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub street_2: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub city: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub zipcode: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub country: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub address_formatted: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phone: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
     /// link to another table in Airtable
@@ -60,6 +80,21 @@ pub struct NewMailingListSubscriber {
 }
 
 impl NewMailingListSubscriber {
+    fn populate_formatted_address(&mut self) {
+        let mut street_address = self.street_1.to_string();
+        if !self.street_2.is_empty() {
+            street_address = format!("{}\n{}", self.street_1, self.street_2,);
+        }
+        self.address_formatted = format!(
+            "{}\n{}, {} {} {}",
+            street_address, self.city, self.state, self.zipcode, self.country
+        )
+        .trim()
+        .trim_matches(',')
+        .trim()
+        .to_string();
+    }
+
     /// Get the human duration of time since the signup was fired.
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.date_added - Utc::now();
@@ -161,6 +196,16 @@ impl Default for NewMailingListSubscriber {
             date_optin: Utc::now(),
             date_last_changed: Utc::now(),
             notes: String::new(),
+            source: String::new(),
+            revenue: Default::default(),
+            street_1: Default::default(),
+            street_2: Default::default(),
+            city: Default::default(),
+            state: Default::default(),
+            zipcode: Default::default(),
+            country: Default::default(),
+            address_formatted: Default::default(),
+            phone: Default::default(),
             tags: Default::default(),
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
@@ -258,7 +303,18 @@ impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
             tags.push(t.name.to_string());
         }
 
-        NewMailingListSubscriber {
+        let mut timestamp = Utc::now();
+        if !self.timestamp_opt.is_empty() {
+            timestamp = Utc.datetime_from_str(&self.timestamp_opt, "%+").unwrap();
+        }
+        if !self.timestamp_signup.is_empty() {
+            timestamp = Utc.datetime_from_str(&self.timestamp_signup, "%+").unwrap();
+        }
+
+        let address: mailchimp_api::Address =
+            serde_json::from_str(&self.merge_fields.address.to_string()).unwrap_or_default();
+
+        let mut ns = NewMailingListSubscriber {
             email: self.email_address,
             first_name: self.merge_fields.first_name.to_string(),
             last_name: self.merge_fields.last_name.to_string(),
@@ -270,14 +326,28 @@ impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
             wants_podcast_updates: *self.interests.get("ff0295f7d1").unwrap_or(&default_bool),
             wants_newsletter: *self.interests.get("7f57718c10").unwrap_or(&default_bool),
             wants_product_updates: *self.interests.get("6a6cb58277").unwrap_or(&default_bool),
-            date_added: self.timestamp_opt,
-            date_optin: self.timestamp_opt,
+            date_added: timestamp,
+            date_optin: timestamp,
             date_last_changed: self.last_changed,
             notes: self.last_note.note,
+            source: self.source.to_string(),
+            revenue: self.stats.ecommerce_data.total_revenue as f32,
+            street_1: address.addr1.to_string(),
+            street_2: address.addr2.to_string(),
+            city: address.city.to_string(),
+            state: address.state.to_string(),
+            zipcode: address.zip.to_string(),
+            country: address.country.to_string(),
+            address_formatted: Default::default(),
+            phone: self.merge_fields.phone.to_string(),
             tags,
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
-        }
+        };
+
+        ns.populate_formatted_address();
+
+        ns
     }
 }
 
