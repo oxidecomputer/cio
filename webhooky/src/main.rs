@@ -1305,8 +1305,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let mut shipment =
-        OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Reprint the receipt.
     shipment.print_receipt(&api_context.db).await;
