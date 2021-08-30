@@ -92,6 +92,7 @@ tar = "^0.4"
 titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
+url = "2"
 walkdir = "^2.3.2"
 yup-oauth2 = "^5"
 zip = "0.5"

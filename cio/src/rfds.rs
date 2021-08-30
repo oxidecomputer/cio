@@ -115,7 +115,7 @@ impl NewRFD {
         let mut sha = String::new();
         if let Ok(f) = github.repos().get_content_file(owner, repo, file_path, branch).await {
             content = decode_base64_to_string(&f.content);
-            link = f.html_url.to_string();
+            link = f.html_url.unwrap().to_string();
             sha = f.sha;
         }
 

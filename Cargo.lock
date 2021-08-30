@@ -521,6 +521,7 @@ dependencies = [
  "tokio",
  "toml",
  "tripactions",
+ "url 2.2.2",
  "walkdir",
  "yup-oauth2",
  "zip",
