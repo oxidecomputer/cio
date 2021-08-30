@@ -588,6 +588,43 @@ impl OutboundShipment {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
+    /// Send the receipt to our printer.
+    pub async fn print_receipt(&self, db: &Database) {
+        if self.contents.trim().is_empty() {
+            // Return early.
+            return;
+        }
+
+        let company = self.company(db);
+
+        if company.printer_url.is_empty() {
+            // Return early.
+            return;
+        }
+
+        let printer_url = format!("{}/receipt", company.printer_url);
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(&printer_url)
+            .body(
+                json!(crate::swag_inventory::PrintRequest {
+                    content: format!("{}\n\n{}", self.name, self.contents),
+                    quantity: 1,
+                    url: String::new(),
+                })
+                .to_string(),
+            )
+            .send()
+            .await
+            .unwrap();
+        match resp.status() {
+            StatusCode::ACCEPTED => (),
+            s => {
+                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
+            }
+        };
+    }
+
     /// Send the label to our printer.
     pub async fn print_label(&self, db: &Database) {
         if self.label_link.trim().is_empty() {

@@ -281,28 +281,35 @@ fn save_content_to_file(body: &[u8], ext: &str) -> String {
 // Returns the filepath.
 fn print_file(printer: &str, file: &str, media: &str, copies: i32) {
     println!("Sending file `{}` to printer `{}`", file, printer);
-    let output = Command::new("lp")
-        .args(&[
-            "-d",
-            printer,
-            "-n",
-            &format!("{}", copies),
-            "-o",
-            "fit-to-page",
-            "-o",
-            &format!("media={}\"", media),
-            "-o",
-            "page-left=0",
-            "-o",
-            "page-right=0",
-            "-o",
-            "page-top=0",
-            "-o",
-            "page-bottom=0",
-            file,
-        ])
-        .output()
-        .expect("failed to execute process");
+    let output = if !media.is_empty() {
+        Command::new("lp")
+            .args(&[
+                "-d",
+                printer,
+                "-n",
+                &format!("{}", copies),
+                "-o",
+                "fit-to-page",
+                "-o",
+                &format!("media={}\"", media),
+                "-o",
+                "page-left=0",
+                "-o",
+                "page-right=0",
+                "-o",
+                "page-top=0",
+                "-o",
+                "page-bottom=0",
+                file,
+            ])
+            .output()
+            .expect("failed to execute process")
+    } else {
+        Command::new("lp")
+            .args(&["-d", printer, "-n", &format!("{}", copies), file])
+            .output()
+            .expect("failed to execute process")
+    };
     if !output.status.success() {
         let e = format!(
             "[lpstat] stderr: {}\nstdout: {}",
