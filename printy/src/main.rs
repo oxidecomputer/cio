@@ -211,7 +211,7 @@ async fn listen_print_receipt_requests(
     let printer = get_printer("receipt");
     println!("{:?}", printer);
 
-    if !r.url.trim().is_empty() && r.quantity > 0 {
+    if !r.content.trim().is_empty() && r.quantity > 0 {
         // Save the contents of our URL to a file.
         let file = save_content_to_file(r.content.as_bytes(), "txt");
 
