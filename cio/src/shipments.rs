@@ -1067,6 +1067,8 @@ The Shipping Bot",
 
                 // Print the label.
                 self.print_label(db).await;
+                // Print the receipt.
+                self.print_receipt(db).await;
                 self.status = "Label printed".to_string();
 
                 // Send an email to us that we need to package the shipment.

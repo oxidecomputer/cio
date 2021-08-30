@@ -126,6 +126,8 @@ async fn main() -> Result<(), String> {
         .unwrap();
     api.register(listen_airtable_shipments_outbound_reprint_label_webhooks)
         .unwrap();
+    api.register(listen_airtable_shipments_outbound_reprint_receipt_webhooks)
+        .unwrap();
     api.register(listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks)
         .unwrap();
     api.register(listen_airtable_shipments_outbound_schedule_pickup_webhooks)
@@ -1271,6 +1273,44 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
 
     // Update the field.
     shipment.status = "Label printed".to_string();
+
+    // Update Airtable.
+    shipment.update(&api_context.db).await;
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for a button pressed to reprint a receipt for an outbound shipment.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/shipments/outbound/reprint_receipt",
+}]
+async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let event = body_param.into_inner();
+    println!("{:?}", event);
+
+    if event.record_id.is_empty() {
+        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        sentry::end_session();
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
+
+    let api_context = rqctx.context();
+
+    // Get the row from airtable.
+    let mut shipment =
+        OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+
+    // Reprint the receipt.
+    //shipment.print_receipt(&api_context.db).await;
+    println!("shipment {} reprinted receipt", shipment.email);
 
     // Update Airtable.
     shipment.update(&api_context.db).await;
