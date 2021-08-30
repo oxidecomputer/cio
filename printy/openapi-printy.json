@@ -67,10 +67,13 @@
           "content": {
             "application/json": {
               "schema": {
-                "title": "PrintLabelsRequest",
+                "title": "PrintRequest",
                 "description": "A request to print labels.",
                 "type": "object",
                 "properties": {
+                  "content": {
+                    "type": "string"
+                  },
                   "quantity": {
                     "type": "integer",
                     "format": "int32"
