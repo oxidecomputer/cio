@@ -531,7 +531,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#8b149a2c8eacb39f3b153aed5115243a82a25ad3"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#407fb03858a9ab5fff77bcadee8b3736deee5a7b"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -595,6 +595,7 @@ dependencies = [
  "tokio",
  "toml",
  "tripactions",
+ "url 2.2.2",
  "walkdir",
  "yup-oauth2",
  "zip",
@@ -2156,7 +2157,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#8b149a2c8eacb39f3b153aed5115243a82a25ad3"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#407fb03858a9ab5fff77bcadee8b3736deee5a7b"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
