@@ -376,11 +376,13 @@ pub fn generate_pdf_barcode_label(
 
 /// A request to print labels.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
-pub struct PrintLabelsRequest {
+pub struct PrintRequest {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub url: String,
     #[serde(default)]
     pub quantity: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content: String,
 }
 
 impl SwagInventoryItem {
@@ -403,9 +405,10 @@ impl SwagInventoryItem {
         let resp = client
             .post(&printer_url)
             .body(
-                json!(PrintLabelsRequest {
+                json!(PrintRequest {
                     url: self.barcode_pdf_label.to_string(),
-                    quantity: self.print_barcode_label_quantity
+                    quantity: self.print_barcode_label_quantity,
+                    content: String::new(),
                 })
                 .to_string(),
             )

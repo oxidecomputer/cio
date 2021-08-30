@@ -1,6 +1,6 @@
 use std::{env, fs::File, io::Write, process::Command, str::from_utf8, sync::Arc};
 
-use cio_api::swag_inventory::PrintLabelsRequest;
+use cio_api::swag_inventory::PrintRequest;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseOk, HttpServerStarter, RequestContext, TypedBody,
@@ -158,7 +158,7 @@ async fn listen_print_rollo_requests(
 
     if !url.trim().is_empty() {
         // Save the contents of our URL to a file.
-        let file = save_url_to_file(url).await;
+        let file = save_url_to_file(&url, "pdf").await;
 
         // Print the file.
         print_file(&printer, &file, "4.00x6.00", 1);
@@ -176,7 +176,7 @@ async fn listen_print_rollo_requests(
 }]
 async fn listen_print_zebra_requests(
     _rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<PrintLabelsRequest>,
+    body_param: TypedBody<PrintRequest>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let r = body_param.into_inner();
@@ -185,10 +185,37 @@ async fn listen_print_zebra_requests(
 
     if !r.url.trim().is_empty() && r.quantity > 0 {
         // Save the contents of our URL to a file.
-        let file = save_url_to_file(r.url).await;
+        let file = save_url_to_file(&r.url, "pdf").await;
 
         // Print the file.
         print_file(&printer, &file, "3.00x2.00", r.quantity);
+    }
+
+    // Print the body to the rollo printer.
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Listen for print requests for the receipt printer */
+#[endpoint {
+    method = POST,
+    path = "/print/receipt",
+}]
+async fn listen_print_receipt_requests(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<PrintRequest>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+    let r = body_param.into_inner();
+    let printer = get_printer("receipt");
+    println!("{:?}", printer);
+
+    if !r.url.trim().is_empty() && r.quantity > 0 {
+        // Save the contents of our URL to a file.
+        let file = save_content_to_file(r.content.as_bytes(), "txt");
+
+        // Print the file.
+        print_file(&printer, &file, "", r.quantity);
     }
 
     // Print the body to the rollo printer.
@@ -227,16 +254,22 @@ fn get_printer(name: &str) -> String {
 
 // Save URL contents to a temporary file.
 // Returns the filepath.
-async fn save_url_to_file(url: String) -> String {
+async fn save_url_to_file(url: &str, ext: &str) -> String {
     println!("Getting contents of URL `{}` to print", url);
-    let body = reqwest::get(&url).await.unwrap().bytes().await.unwrap();
+    let body = reqwest::get(url).await.unwrap().bytes().await.unwrap();
 
+    save_content_to_file(&body, ext)
+}
+
+// Save content to a temporary file.
+// Returns the filepath.
+fn save_content_to_file(body: &[u8], ext: &str) -> String {
     let mut dir = env::temp_dir();
-    let file_name = format!("{}.pdf", Uuid::new_v4());
+    let file_name = format!("{}.{}", Uuid::new_v4(), ext);
     dir.push(file_name);
 
     let mut file = File::create(&dir).unwrap();
-    file.write_all(&body).unwrap();
+    file.write_all(body).unwrap();
 
     let path = dir.to_str().unwrap().to_string();
     println!("Saved contents of URL to `{}`", path);
