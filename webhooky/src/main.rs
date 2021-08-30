@@ -1309,7 +1309,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
         OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
 
     // Reprint the receipt.
-    //shipment.print_receipt(&api_context.db).await;
+    shipment.print_receipt(&api_context.db).await;
     println!("shipment {} reprinted receipt", shipment.email);
 
     // Update Airtable.
