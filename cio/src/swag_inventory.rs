@@ -211,7 +211,7 @@ impl NewSwagInventoryItem {
         // This makes sure the barcodes are all of uniform length.
         // To fit on the barcode label with the right DPI we CANNOT exceed this
         // legth.
-        let max_barcode_len = 39;
+        let max_barcode_len = 20;
         while barcode.len() < max_barcode_len {
             barcode = format!("0{}", barcode);
         }
