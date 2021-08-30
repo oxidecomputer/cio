@@ -608,7 +608,10 @@ impl OutboundShipment {
             .post(&printer_url)
             .body(
                 json!(crate::swag_inventory::PrintRequest {
-                    content: format!("{}\n\n{}", self.name, self.contents),
+                    content: format!(
+                        "{}\n{}\n\n{}\n{}\n\n{}\n\n",
+                        self.name, self.address_formatted, self.carrier, self.tracking_number, self.contents
+                    ),
                     quantity: 1,
                     url: String::new(),
                 })
