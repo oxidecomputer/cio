@@ -189,7 +189,7 @@ async fn listen_print_zebra_requests(
         let file = save_url_to_file(&r.url, "pdf").await;
 
         // Print the file.
-        print_file(&printer, &file, "3.00x2.00", r.quantity);
+        print_file(&printer, &file, "2.00x1.33", r.quantity);
     }
 
     // Print the body to the rollo printer.
