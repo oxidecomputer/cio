@@ -29,6 +29,49 @@
         }
       }
     },
+    "/print/receipt": {
+      "post": {
+        "description": "Listen for print requests for the receipt printer",
+        "operationId": "listen_print_receipt_requests",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "title": "PrintRequest",
+                "description": "A request to print labels.",
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/print/rollo": {
       "post": {
         "description": "Listen for print requests for the Rollo label printer",

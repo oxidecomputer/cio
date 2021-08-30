@@ -71,6 +71,7 @@ async fn main() -> Result<(), String> {
      * allowing this metadata to live right alongside the handler function.
      */
     api.register(ping).unwrap();
+    api.register(listen_print_receipt_requests).unwrap();
     api.register(listen_print_rollo_requests).unwrap();
     api.register(listen_print_zebra_requests).unwrap();
 
