@@ -4064,7 +4064,11 @@ async fn handle_rfd_push(
                         println!(
                             "RFD {} has moved from state {} -> {}, on branch {}, we already have \
                              a pull request: {}",
-                            rfd.number_string, old_rfd_state, rfd.state, branch, pull.html_url
+                            rfd.number_string,
+                            old_rfd_state,
+                            rfd.state,
+                            branch,
+                            pull.html_url.unwrap().to_string()
                         );
 
                         has_pull = true;
