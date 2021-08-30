@@ -202,6 +202,7 @@ impl NewSwagInventoryItem {
             .replace("DIGITALCOMPUTER", "DEC")
             .replace("TURBOBUTTON", "TURBO")
             .replace("HOODIE", "HOOD")
+            .replace("SWEATSHIRT", "SWS")
             .replace("RAMBLER", "R")
             .replace("RULED", "RULE")
             .trim()
