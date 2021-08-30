@@ -530,7 +530,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#97faf49dd82549e1dd21932c6aaf7b1be8a15a6e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8b149a2c8eacb39f3b153aed5115243a82a25ad3"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -2155,7 +2155,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#97faf49dd82549e1dd21932c6aaf7b1be8a15a6e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8b149a2c8eacb39f3b153aed5115243a82a25ad3"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -2508,9 +2508,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.26"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5470b9277a9ec051926f2b9f5c6ff2d2872a8687ccbdf3c7cc4bb328d6698e2a"
+checksum = "9e40f2782524241cfcb1563491e01525257a619e9fd6581377f075ba018845ec"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2526,6 +2526,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.0",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -3503,11 +3504,13 @@ version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc6ab463ae35acccb5cba66c0084c985257b797d288b6050cc2f6ac1b266cb78"
 dependencies = [
+ "bytes 1.1.0",
  "chrono",
  "dyn-clone",
  "schemars_derive",
  "serde",
  "serde_json",
+ "url 2.2.2",
  "uuid",
 ]
 
