@@ -4554,11 +4554,24 @@ Sincerely,
                     },
                 },
                 docusign::TemplateRole {
+                    name: "Steve Tuck".to_string(),
+                    role_name: "CEO (2)".to_string(),
+                    email: format!("steve@{}", company.gsuite_domain),
+                    signer_name: "Steve Tuck".to_string(),
+                    routing_order: "3".to_string(),
+                    // Make Steve's email notification different than the actual applicant.
+                    email_notification: docusign::EmailNotification {
+                        email_subject: format!("Sign the PIIA agreements for {}", self.name),
+                        email_body: "This is the last step before we send to HR.".to_string(),
+                        language: Default::default(),
+                    },
+                },
+                docusign::TemplateRole {
                     name: "Ruth Alexander".to_string(),
                     role_name: "HR".to_string(),
                     email: "ruth@mindsharegroup.com".to_string(),
                     signer_name: "Ruth Alexander".to_string(),
-                    routing_order: "3".to_string(),
+                    routing_order: "4".to_string(),
                     email_notification: docusign::EmailNotification {
                         email_subject: "Oxide Computer Company Employee Agreements Signed".to_string(),
                         email_body: "Attached are newly signed employee agreements. Thank you!".to_string(),
