@@ -3886,8 +3886,6 @@ async fn handle_rfd_push(
     // Get the branch name.
     let branch = event.refv.trim_start_matches("refs/heads/");
 
-    sentry::capture_message(&format!("got rfd push event {:#?}", event), sentry::Level::Info);
-
     // Iterate over the removed files and remove any images that we no longer
     // need for the HTML rendered RFD website.
     for file in commit.removed {
@@ -4029,13 +4027,6 @@ async fn handle_rfd_push(
             // TODO: see if we drop events, if we do, we might want to remove the check with
             // the old state and just do it everytime an RFD is in discussion.
             if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != event.repository.default_branch {
-                sentry::capture_message(
-                    &format!(
-                        "checking if we already have a pull request for rfd {}",
-                        new_rfd.number_string
-                    ),
-                    sentry::Level::Info,
-                );
                 // First, we need to make sure we don't already have a pull request open.
                 let pulls = github
                     .pulls()
@@ -4078,10 +4069,6 @@ async fn handle_rfd_push(
 
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
-                    sentry::capture_message(
-                        &format!("attempting to open a pull request for {}", new_rfd.number_string),
-                        sentry::Level::Info,
-                    );
                     github
                         .pulls()
                         .create(
