@@ -499,7 +499,6 @@ dependencies = [
  "octorust",
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
- "pandoc",
  "phonenumber",
  "printpdf",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -531,7 +530,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb9f28ff96c70308b464ae2aec5d9d70b0bb1a3"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8736f70e6407653cd58a6d0c71be7e4c91977874"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -2157,7 +2156,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb9f28ff96c70308b464ae2aec5d9d70b0bb1a3"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#8736f70e6407653cd58a6d0c71be7e4c91977874"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -2639,9 +2638,9 @@ dependencies = [
 
 [[package]]
 name = "pandoc"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84060e442eb742cdba4038302c9924aecd67434073b9785dd9a6cec8a3f4065a"
+checksum = "c02176ef71a25241c49e0b3dd3093e7ceb875b151ef8bbf0057ffcd985daad39"
 dependencies = [
  "itertools",
 ]

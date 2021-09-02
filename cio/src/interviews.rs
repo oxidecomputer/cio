@@ -3,6 +3,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     env, fs,
     io::{copy, Write},
+    process::Command,
 };
 
 use async_trait::async_trait;
@@ -14,7 +15,6 @@ use google_drive::{
 };
 use lopdf::{Bookmark, Document, Object, ObjectId};
 use macros::db;
-use pandoc::OutputKind;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -412,10 +412,14 @@ The Oxide Team
             let mut cover_output = env::temp_dir();
             cover_output.push(format!("{}.pdf", email.to_string()));
             // Convert it to a PDF with pandoc.
-            let mut pandoc = pandoc::new();
-            pandoc.add_input(&cover_path);
-            pandoc.set_output(OutputKind::File(cover_output.clone()));
-            pandoc.execute().unwrap();
+            Command::new("pandoc")
+                .args(&[
+                    "-o",
+                    cover_output.clone().to_str().unwrap(),
+                    cover_path.to_str().unwrap(),
+                ])
+                .output()
+                .unwrap();
 
             // Add the header to our strings.
             let mut args = vec![cover_output.to_str().unwrap().to_string()];
@@ -443,10 +447,14 @@ The Oxide Team
                 let mut header_output = env::temp_dir();
                 header_output.push(format!("{}-{}.pdf", email.to_string(), username));
                 // Convert it to a PDF with pandoc.
-                let mut pandoc = pandoc::new();
-                pandoc.add_input(&html_path);
-                pandoc.set_output(OutputKind::File(header_output.clone()));
-                pandoc.execute().unwrap();
+                Command::new("pandoc")
+                    .args(&[
+                        "-o",
+                        header_output.clone().to_str().unwrap(),
+                        html_path.to_str().unwrap(),
+                    ])
+                    .output()
+                    .unwrap();
 
                 // Add the header to our string.
                 args.push(header_output.to_str().unwrap().to_string());
@@ -586,10 +594,11 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
 
     output.push(format!("{}.pdf", username));
 
-    let mut pandoc = pandoc::new();
-    pandoc.add_input(&path);
-    pandoc.set_output(OutputKind::File(output.clone()));
-    pandoc.execute().unwrap();
+    // Convert it to a PDF with pandoc.
+    Command::new("pandoc")
+        .args(&["-o", output.to_str().unwrap(), path.to_str().unwrap()])
+        .output()
+        .unwrap();
 }
 
 /// Combine multiple pdfs into one pdf and return the byte stream of it.

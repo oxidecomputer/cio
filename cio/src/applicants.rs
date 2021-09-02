@@ -19,7 +19,6 @@ use google_drive::{
 use google_geocode::Geocode;
 use html2text::from_read;
 use macros::db;
-use pandoc::OutputKind;
 use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
@@ -2862,10 +2861,10 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
         output.push(format!("{}.txt", id));
 
-        let mut pandoc = pandoc::new();
-        pandoc.add_input(&path);
-        pandoc.set_output(OutputKind::File(output.clone()));
-        match pandoc.execute() {
+        match Command::new("pandoc")
+            .args(&["-o", output.clone().to_str().unwrap(), path.to_str().unwrap()])
+            .output()
+        {
             Ok(_) => (),
             Err(e) => {
                 println!("pandoc failed: {}", e);

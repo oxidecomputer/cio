@@ -433,9 +433,6 @@ async fn trigger_rfd_update_by_number(
 
     let github = oxide.authenticate_github();
 
-    // Initialize the Google Drive client.
-    let drive_client = oxide.authenticate_google_drive(db).await.unwrap();
-
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
@@ -448,7 +445,7 @@ async fn trigger_rfd_update_by_number(
     rfd.expand(&github, &oxide).await;
     println!("updated  RFD {}", rfd.number_string);
 
-    rfd.convert_and_upload_pdf(&github, &drive_client, &oxide).await;
+    rfd.convert_and_upload_pdf(db, &github, &oxide).await;
     println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
@@ -4010,7 +4007,7 @@ async fn handle_rfd_push(
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(github, &drive, company).await;
+            rfd.convert_and_upload_pdf(db, github, company).await;
             rfd.update(db).await;
             println!(
                 "updated pdf `{}` for RFD {}",
