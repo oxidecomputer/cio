@@ -2639,9 +2639,9 @@ dependencies = [
 
 [[package]]
 name = "pandoc"
-version = "0.8.5"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c02176ef71a25241c49e0b3dd3093e7ceb875b151ef8bbf0057ffcd985daad39"
+checksum = "84060e442eb742cdba4038302c9924aecd67434073b9785dd9a6cec8a3f4065a"
 dependencies = [
  "itertools",
 ]
