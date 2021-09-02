@@ -458,7 +458,6 @@ checksum = "fff857943da45f546682664a79488be82e69e43c1a7a2307679ab9afb3a66d2e"
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb9f28ff96c70308b464ae2aec5d9d70b0bb1a3"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -493,7 +492,7 @@ dependencies = [
  "html2text",
  "image 0.23.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
+ "macros 0.1.0",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
@@ -532,6 +531,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb9f28ff96c70308b464ae2aec5d9d70b0bb1a3"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -566,7 +566,7 @@ dependencies = [
  "html2text",
  "image 0.23.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
@@ -2091,6 +2091,22 @@ dependencies = [
 [[package]]
 name = "lopdf"
 version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b49a0272112719d0037ab63d4bb67f73ba659e1e90bc38f235f163a457ac16f3"
+dependencies = [
+ "dtoa",
+ "encoding",
+ "flate2",
+ "itoa",
+ "linked-hash-map",
+ "log 0.4.14",
+ "lzw",
+ "time 0.2.27",
+]
+
+[[package]]
+name = "lopdf"
+version = "0.26.0"
 source = "git+https://github.com/J-F-Liu/lopdf?branch=master#fec4729625312da00243b58db2169168fe4ed65d"
 dependencies = [
  "chrono",
@@ -2103,22 +2119,6 @@ dependencies = [
  "pom",
  "time 0.2.27",
  "weezl",
-]
-
-[[package]]
-name = "lopdf"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b49a0272112719d0037ab63d4bb67f73ba659e1e90bc38f235f163a457ac16f3"
-dependencies = [
- "dtoa",
- "encoding",
- "flate2",
- "itoa",
- "linked-hash-map",
- "log 0.4.14",
- "lzw",
- "time 0.2.27",
 ]
 
 [[package]]
@@ -2145,7 +2145,6 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb9f28ff96c70308b464ae2aec5d9d70b0bb1a3"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -2158,6 +2157,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#fdb9f28ff96c70308b464ae2aec5d9d70b0bb1a3"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
