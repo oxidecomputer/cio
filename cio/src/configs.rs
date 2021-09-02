@@ -240,6 +240,10 @@ pub struct UserConfig {
     /// This field is used by Airtable for mapping the location data.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub geocode_cache: String,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub working_on: Vec<String>,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,

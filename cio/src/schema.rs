@@ -883,6 +883,7 @@ table! {
         ramp_id -> Varchar,
         zoom_id -> Varchar,
         geocode_cache -> Varchar,
+        working_on -> Array<Text>,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }

@@ -49,5 +49,6 @@ CREATE TABLE users (
     ramp_id VARCHAR NOT NULL,
     zoom_id VARCHAR NOT NULL,
     geocode_cache VARCHAR NOT NULL,
+    working_on [] TEXT NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )
