@@ -13,10 +13,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
-use google_drive::{
-    traits::{DriveOps, FileOps},
-    Client as GoogleDrive,
-};
+use google_drive::traits::{DriveOps, FileOps};
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -434,12 +431,11 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    pub async fn convert_and_upload_pdf(
-        &mut self,
-        github: &octorust::Client,
-        drive_client: &GoogleDrive,
-        company: &Company,
-    ) {
+    pub async fn convert_and_upload_pdf(&mut self, db: &Database, github: &octorust::Client, company: &Company) {
+        // Initialize the Google Drive client.
+        // We do this here so we know the token is not expired.
+        let drive_client = company.authenticate_google_drive(db).await.unwrap();
+
         // Get the rfd repo client.
         let owner = &company.github_org;
         let rfd_repo = "rfd";
@@ -852,9 +848,6 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) {
     // Authenticate GitHub.
     let github = company.authenticate_github();
 
-    // Initialize the Google Drive client.
-    let drive_client = company.authenticate_google_drive(db).await.unwrap();
-
     let rfds = get_rfds_from_repo(&github, company).await;
 
     // Sync rfds.
@@ -865,7 +858,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) {
         new_rfd.expand(&github, company).await;
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(&github, &drive_client, company).await;
+        new_rfd.convert_and_upload_pdf(db, &github, company).await;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
