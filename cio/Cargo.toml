@@ -62,7 +62,7 @@ octorust = { version = "^0.1.16", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
 okta = "^0.0.6"
 openssl = "0.10"
-pandoc = "0.8.4"
+pandoc = "=0.8.4"
 phonenumber = "0.2"
 printpdf = { version = "^0.3.2" }
 quickbooks = "^0.1.12"
