@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use airtable_api::{Airtable, Record};
+use anyhow::Result;
 use chrono::{Duration, NaiveDate, Utc};
 use google_calendar::types::Event;
 use handlebars::Handlebars;
@@ -16,9 +17,9 @@ use crate::{
 };
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
-pub async fn sync_changes_to_google_events(db: &Database, company: &Company) {
+pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github();
-    let configs = get_configs_from_repo(&github, company).await;
+    let configs = get_configs_from_repo(&github, company).await?;
 
     let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
@@ -156,11 +157,13 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
             }
         }
     }
+
+    Ok(())
 }
 
-pub async fn send_huddle_reminders(db: &Database, company: &Company) {
+pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github();
-    let configs = get_configs_from_repo(&github, company).await;
+    let configs = get_configs_from_repo(&github, company).await?;
 
     let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
@@ -362,6 +365,8 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) {
             }
         }
     }
+
+    Ok(())
 }
 
 /// Email template for the meeting huddle reminders.
@@ -395,9 +400,9 @@ See you soon,
 The Airtable Huddle Bot"#;
 
 /// Sync the huddle meeting notes with the GitHub reports repository.
-pub async fn sync_huddle_meeting_notes(company: &Company) {
+pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
     let github = company.authenticate_github();
-    let configs = get_configs_from_repo(&github, company).await;
+    let configs = get_configs_from_repo(&github, company).await?;
 
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
@@ -448,11 +453,13 @@ pub async fn sync_huddle_meeting_notes(company: &Company) {
             .await;
         }
     }
+
+    Ok(())
 }
 
-pub async fn sync_huddles(db: &Database, company: &Company) {
+pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github();
-    let configs = get_configs_from_repo(&github, company).await;
+    let configs = get_configs_from_repo(&github, company).await?;
 
     let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
@@ -657,6 +664,8 @@ pub async fn sync_huddles(db: &Database, company: &Company) {
             }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -676,12 +685,12 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        sync_changes_to_google_events(&db, &oxide).await;
+        sync_changes_to_google_events(&db, &oxide).await.unwrap();
 
-        sync_huddles(&db, &oxide).await;
+        sync_huddles(&db, &oxide).await.unwrap();
 
-        send_huddle_reminders(&db, &oxide).await;
+        send_huddle_reminders(&db, &oxide).await.unwrap();
 
-        sync_huddle_meeting_notes(&oxide).await;
+        sync_huddle_meeting_notes(&oxide).await.unwrap();
     }
 }

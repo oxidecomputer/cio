@@ -1,3 +1,4 @@
+use anyhow::Result;
 use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
 use serde::{Deserialize, Serialize};
 
@@ -62,10 +63,14 @@ struct GitHubTeamMembers {
  *
  * This function uses the users.toml and the groups.toml file in the configs repo for information.
  */
-pub async fn generate_terraform_files_for_okta(github: &octorust::Client, db: &Database, company: &Company) {
+pub async fn generate_terraform_files_for_okta(
+    github: &octorust::Client,
+    db: &Database,
+    company: &Company,
+) -> Result<()> {
     if company.okta_domain.is_empty() {
         // Return early, the company does not use Okta.
-        return;
+        return Ok(());
     }
 
     let users = Users::get_from_db(db, company.id);
@@ -116,6 +121,8 @@ pub async fn generate_terraform_files_for_okta(github: &octorust::Client, db: &D
         groups_rendered.as_bytes().to_vec(),
     )
     .await;
+
+    Ok(())
 }
 
 /**
@@ -126,7 +133,11 @@ pub async fn generate_terraform_files_for_okta(github: &octorust::Client, db: &D
  *
  * This function uses the users.toml file in the configs repo for information.
  */
-pub async fn generate_terraform_files_for_aws_and_github(github: &octorust::Client, db: &Database, company: &Company) {
+pub async fn generate_terraform_files_for_aws_and_github(
+    github: &octorust::Client,
+    db: &Database,
+    company: &Company,
+) -> Result<()> {
     let users = Users::get_from_db(db, company.id);
 
     let owner = &company.github_org;
@@ -212,6 +223,8 @@ pub async fn generate_terraform_files_for_aws_and_github(github: &octorust::Clie
         )
         .await;
     }
+
+    Ok(())
 }
 
 /// Generate nginx and terraform files for shorturls.

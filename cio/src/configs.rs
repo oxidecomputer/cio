@@ -6,7 +6,7 @@ use std::{
     thread, time,
 };
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use clap::ArgMatches;
@@ -1358,7 +1358,7 @@ impl HuddleConfig {
     }
 }
 /// Get the configs from the GitHub repository and parse them.
-pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company) -> Config {
+pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company) -> Result<Config> {
     let owner = &company.github_org;
     let repo = "configs";
 
@@ -1370,8 +1370,7 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
             "/configs/",
             "", // leaving the branch blank gives us the default branch
         )
-        .await
-        .unwrap();
+        .await?;
 
     let mut file_contents = String::new();
     for file in files {
@@ -1383,16 +1382,16 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
         )
         .await;
 
-        let decoded = from_utf8(&contents).unwrap().trim().to_string();
+        let decoded = from_utf8(&contents)?.trim().to_string();
 
         // Append the body of the file to the rest of the contents.
         file_contents.push('\n');
         file_contents.push_str(&decoded);
     }
 
-    let config: Config = toml::from_str(&file_contents).unwrap();
+    let config: Config = toml::from_str(&file_contents)?;
 
-    config
+    Ok(config)
 }
 
 /// Sync GitHub outside collaborators with our configs.
@@ -1401,7 +1400,7 @@ pub async fn sync_github_outside_collaborators(
     github: &octorust::Client,
     outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
     company: &Company,
-) {
+) -> Result<()> {
     // We create a map of the collaborators per repo.
     // This way we can delete any collaborators that should no longer have access.
     let mut collaborators_map: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -1529,6 +1528,8 @@ pub async fn sync_github_outside_collaborators(
                 .unwrap();
         }
     }
+
+    Ok(())
 }
 
 /// Sync our users with our database and then update Airtable from the database.
@@ -1537,7 +1538,7 @@ pub async fn sync_users(
     github: &octorust::Client,
     users: BTreeMap<String, UserConfig>,
     company: &Company,
-) {
+) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
@@ -1841,7 +1842,7 @@ pub async fn sync_users(
             // they should have a Google account by then.
             // Sync okta users and group from the database.
             // Do this after we update the users and groups in the database.
-            generate_terraform_files_for_okta(github, db, company).await;
+            generate_terraform_files_for_okta(github, db, company).await?;
             // TODO: this is horrible, but we will sleep here to allow the terraform
             // job to run.
             // We also need a better way to ensure the terraform job passed...
@@ -2203,10 +2204,16 @@ pub async fn sync_users(
 
     // Update users in airtable.
     Users::get_from_db(db, company.id).update_airtable(db).await;
+
+    Ok(())
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
-pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingConfig>, company: &Company) {
+pub async fn sync_buildings(
+    db: &Database,
+    buildings: BTreeMap<String, BuildingConfig>,
+    company: &Company,
+) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
@@ -2326,6 +2333,8 @@ pub async fn sync_buildings(db: &Database, buildings: BTreeMap<String, BuildingC
 
     // Update buildings in airtable.
     Buildings::get_from_db(db, company.id).update_airtable(db).await;
+
+    Ok(())
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
@@ -2333,7 +2342,7 @@ pub async fn sync_conference_rooms(
     db: &Database,
     conference_rooms: BTreeMap<String, ResourceConfig>,
     company: &Company,
-) {
+) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
@@ -2443,10 +2452,12 @@ pub async fn sync_conference_rooms(
 
     // Update conference_rooms in airtable.
     ConferenceRooms::get_from_db(db, company.id).update_airtable(db).await;
+
+    Ok(())
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
-pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) {
+pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
@@ -2591,6 +2602,8 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
 
     // Update groups in airtable.
     Groups::get_from_db(db, company.id).update_airtable(db).await;
+
+    Ok(())
 }
 
 /// Sync our links with our database and then update Airtable from the database.
@@ -2599,7 +2612,7 @@ pub async fn sync_links(
     links: BTreeMap<String, LinkConfig>,
     huddles: BTreeMap<String, HuddleConfig>,
     company: &Company,
-) {
+) -> Result<()> {
     // Get all the links.
     let db_links = Links::get_from_db(db, company.id);
     // Create a BTreeMap
@@ -2659,6 +2672,8 @@ pub async fn sync_links(
 
     // Update links in airtable.
     Links::get_from_db(db, company.id).update_airtable(db).await;
+
+    Ok(())
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
@@ -2667,7 +2682,7 @@ pub async fn sync_certificates(
     github: &octorust::Client,
     certificates: BTreeMap<String, NewCertificate>,
     company: &Company,
-) {
+) -> Result<()> {
     // Get all the certificates.
     let db_certificates = Certificates::get_from_db(db, company.id);
     // Create a BTreeMap
@@ -2718,46 +2733,50 @@ pub async fn sync_certificates(
 
     // Update certificates in airtable.
     Certificates::get_from_db(db, company.id).update_airtable(db).await;
+
+    Ok(())
 }
 
-pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) {
+pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github();
 
-    let configs = get_configs_from_repo(&github, company).await;
+    let configs = get_configs_from_repo(&github, company).await?;
 
     // Sync buildings.
     // Syncing buildings must happen before we sync conference rooms.
-    sync_buildings(db, configs.buildings, company).await;
+    sync_buildings(db, configs.buildings, company).await?;
 
     // Sync conference rooms.
-    sync_conference_rooms(db, configs.resources, company).await;
+    sync_conference_rooms(db, configs.resources, company).await?;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.
-    sync_groups(db, configs.groups, company).await;
+    sync_groups(db, configs.groups, company).await?;
 
     // Sync users.
-    sync_users(db, &github, configs.users, company).await;
+    sync_users(db, &github, configs.users, company).await?;
 
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
-    generate_terraform_files_for_okta(&github, db, company).await;
+    generate_terraform_files_for_okta(&github, db, company).await?;
     // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(&github, db, company).await;
+    generate_terraform_files_for_aws_and_github(&github, db, company).await?;
 
     // Sync links.
-    sync_links(db, configs.links, configs.huddles, company).await;
+    sync_links(db, configs.links, configs.huddles, company).await?;
 
     // Sync certificates.
-    sync_certificates(db, &github, configs.certificates, company).await;
+    sync_certificates(db, &github, configs.certificates, company).await?;
 
     // Sync github outside collaborators.
-    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company).await;
+    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company).await?;
 
-    refresh_anniversary_events(db, company).await;
+    refresh_anniversary_events(db, company).await?;
+
+    Ok(())
 }
 
-pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
+pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Result<()> {
     let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Get the list of our calendars.
@@ -2781,7 +2800,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
 
     if anniversary_cal_id.is_empty() {
         // Return early we couldn't find the calendar.
-        return;
+        bail!("Couldn't find calendar named 'Anniversaries'!");
     }
 
     // Get our list of users from our database.
@@ -2889,6 +2908,8 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) {
         // Update the user in the database.
         user.update(db).await;
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -2903,7 +2924,7 @@ mod tests {
         let companies = Companys::get_from_db(&db, 1);
         // Iterate over the companies and update.
         for company in companies {
-            refresh_db_configs_and_airtable(&db, &company).await;
+            refresh_db_configs_and_airtable(&db, &company).await.unwrap();
         }
     }
 }

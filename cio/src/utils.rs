@@ -6,6 +6,7 @@ use std::{
     str::from_utf8,
 };
 
+use octorust::Client as GitHub;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
 use serde_json::Value;
@@ -20,6 +21,34 @@ pub fn write_file(file: &Path, contents: &[u8]) {
     f.write_all(contents).unwrap();
 
     println!("wrote file: {}", file.to_str().unwrap());
+}
+
+/// Create a comment on a commit for a repo.
+/// We use this a lot if a webhook was a success or errored.
+pub async fn add_comment_to_commit(
+    github: &GitHub,
+    owner: &str,
+    repo: &str,
+    commit_sha: &str,
+    message: &str,
+    path: &str,
+) {
+    // TODO: check if we already left a comment.
+    github
+        .repos()
+        .create_commit_comment(
+            owner,
+            repo,
+            commit_sha,
+            &octorust::types::ReposCreateCommitCommentRequest {
+                body: message.to_string(),
+                line: 0,
+                path: path.to_string(),
+                position: 0,
+            },
+        )
+        .await
+        .unwrap();
 }
 
 /// Check if a GitHub issue already exists.
