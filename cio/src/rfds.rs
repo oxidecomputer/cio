@@ -867,10 +867,17 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
         let mut new_rfd = rfd.upsert(db).await;
 
         // Expand the fields in the RFD.
-        new_rfd.expand(&github, company).await?;
+        if let Err(err) = new_rfd.expand(&github, company).await {
+            println!("Failed to expand RFD {}: {}", new_rfd.number_string, err);
+        }
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(db, &github, company).await?;
+        if let Err(err) = new_rfd.convert_and_upload_pdf(db, &github, company).await {
+            println!(
+                "Failed to convert and upload PDF for RFD {}: {}",
+                new_rfd.number_string, err
+            );
+        }
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
