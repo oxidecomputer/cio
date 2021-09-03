@@ -11,6 +11,7 @@ extern crate serde_json;
 
 use std::{collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc};
 
+use anyhow::Result;
 use chrono::{offset::Utc, DateTime, NaiveDate, TimeZone};
 use chrono_humanize::HumanTime;
 use cio_api::{
@@ -53,6 +54,7 @@ use google_drive::{
 };
 use gusto_api::Client as Gusto;
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
+use octorust::Client as GitHub;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -442,10 +444,10 @@ async fn trigger_rfd_update_by_number(
     }
     let mut rfd = result.unwrap();
     // Update the RFD.
-    rfd.expand(&github, &oxide).await;
+    rfd.expand(&github, &oxide).await.unwrap();
     println!("updated  RFD {}", rfd.number_string);
 
-    rfd.convert_and_upload_pdf(db, &github, &oxide).await;
+    rfd.convert_and_upload_pdf(db, &github, &oxide).await.unwrap();
     println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
@@ -3362,6 +3364,26 @@ pub struct GitHubWebhook {
     pub check_run: GitHubCheckRun,
 }
 
+impl GitHubWebhook {
+    pub async fn create_comment(&self, github: &GitHub, comment: &str) -> Result<()> {
+        if let Some(commit) = self.commits.get(0) {
+            cio_api::utils::add_comment_to_commit(
+                github,
+                &self.repository.owner.login,
+                &self.repository.name,
+                &commit.sha,
+                comment,
+                "",
+            )
+            .await;
+        }
+
+        // TODO: comment on pull request instead, etc.
+
+        Ok(())
+    }
+}
+
 /// A GitHub repository.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
 #[derive(Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize)]
@@ -3838,7 +3860,9 @@ async fn handle_rfd_pull_request(
 
     // Update the file in GitHub.
     // Keep in mind: this push will kick off another webhook.
-    create_or_update_file_in_github_repo(github, owner, repo, &branch, &path, rfd.content.as_bytes().to_vec()).await;
+    create_or_update_file_in_github_repo(github, owner, repo, &branch, &path, rfd.content.as_bytes().to_vec())
+        .await
+        .unwrap();
 
     println!("updated discussion link for RFD {}", rfd.number_string,);
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -3901,7 +3925,9 @@ async fn handle_rfd_push(
 
             // We need to get the current sha for the file we want to delete.
             let (_, gh_file_sha) =
-                get_file_content_from_repo(github, owner, &repo, &website_file, &event.repository.default_branch).await;
+                get_file_content_from_repo(github, owner, &repo, &website_file, &event.repository.default_branch)
+                    .await
+                    .unwrap();
 
             if !gh_file_sha.is_empty() {
                 github
@@ -3949,7 +3975,9 @@ async fn handle_rfd_push(
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let (gh_file_content, _) = get_file_content_from_repo(github, owner, &repo, &file, branch).await;
+            let (gh_file_content, _) = get_file_content_from_repo(github, owner, &repo, &file, branch)
+                .await
+                .unwrap();
 
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
@@ -3964,7 +3992,8 @@ async fn handle_rfd_push(
                 &website_file,
                 gh_file_content,
             )
-            .await;
+            .await
+            .unwrap();
             println!(
                 "updated file `{}` since it was modified in mose recent push for RFD {:?}",
                 website_file, event
@@ -3996,18 +4025,20 @@ async fn handle_rfd_push(
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(db).await;
             // Update all the fields for the RFD.
-            rfd.expand(github, company).await;
+            rfd.expand(github, company).await.unwrap();
             rfd.update(db).await;
             println!("updated RFD {} in the database", new_rfd.number_string);
             println!("updated airtable for RFD {}", new_rfd.number_string);
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(db, github, &company.github_org, "configs", company.id).await;
+            generate_shorturls_for_rfds(db, github, &company.github_org, "configs", company.id)
+                .await
+                .unwrap();
             println!("generated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(db, github, company).await;
+            rfd.convert_and_upload_pdf(db, github, company).await.unwrap();
             rfd.update(db).await;
             println!(
                 "updated pdf `{}` for RFD {}",
@@ -4119,7 +4150,8 @@ async fn handle_rfd_push(
                     &file,
                     rfd_mut.content.as_bytes().to_vec(),
                 )
-                .await;
+                .await
+                .unwrap();
                 println!("updated state to `published` for  RFD {}", new_rfd.number_string);
             }
 
@@ -4130,7 +4162,9 @@ async fn handle_rfd_push(
 
                 // First get the sha of the old pdf.
                 let (_, old_pdf_sha) =
-                    get_file_content_from_repo(github, owner, &repo, &pdf_path, &event.repository.default_branch).await;
+                    get_file_content_from_repo(github, owner, &repo, &pdf_path, &event.repository.default_branch)
+                        .await
+                        .unwrap();
 
                 if !old_pdf_sha.is_empty() {
                     // Delete the old filename from GitHub.
@@ -4185,7 +4219,17 @@ async fn handle_configs_push(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     // Get the repo.
     let owner = &company.github_org;
-    let repo = event.repository.name;
+    let repo = event.repository.name.to_string();
+
+    if event.commits.is_empty() {
+        // Return early that there are no commits.
+        // IDK how we got here.
+        sentry::capture_message(
+            &format!("configs push event had no commits: {:?}", event),
+            sentry::Level::Fatal,
+        );
+        return Ok(HttpResponseAccepted("ok".to_string()));
+    }
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -4197,7 +4241,7 @@ async fn handle_configs_push(
         // No files changed that we care about.
         // We can throw this out, log it and return early.
         println!(
-            "`push` event commit `{}` does not include any changes to the `{}` directory",
+            "`push` event commit `{}` did not include any changes to the `{}` directory",
             commit.id, dir
         );
         return Ok(HttpResponseAccepted("ok".to_string()));
@@ -4212,62 +4256,220 @@ async fn handle_configs_push(
     }
 
     // Get the configs from our repo.
-    let configs = get_configs_from_repo(github, company).await;
+    match get_configs_from_repo(github, company).await {
+        Ok(configs) => {
+            let mut success_message = String::new();
 
-    // Check if the links.toml file changed.
-    if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
-        // Update our links in the database.
-        sync_links(&api_context.db, configs.links, configs.huddles, company).await;
+            // Check if the links.toml file changed.
+            if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
+                // Update our links in the database.
+                match sync_links(&api_context.db, configs.links, configs.huddles, company).await {
+                    Ok(_) => success_message = format!("{}\nSynced links successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!("[FAILURE]: syncing links in configs failed: {}\n\ncc @jessfraz", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
 
-        // We need to update the short URLs for the links.
-        generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id).await;
-        println!("generated shorturls for the configs links");
-    }
+                // We need to update the short URLs for the links.
+                match generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id).await {
+                    Ok(_) => success_message = format!("{}\nGenerated shorturls successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!(
+                                    "[FAILURE]: generating shorturls for links in configs failed: {}\n\ncc @jessfraz",
+                                    e
+                                ),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    // Check if the groups.toml file changed.
-    // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
-    // added a new group to GSuite.
-    if commit.file_changed("configs/groups.toml") {
-        sync_groups(&api_context.db, configs.groups, company).await;
-    }
+            // Check if the groups.toml file changed.
+            // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
+            // added a new group to GSuite.
+            if commit.file_changed("configs/groups.toml") {
+                match sync_groups(&api_context.db, configs.groups, company).await {
+                    Ok(_) => success_message = format!("{}\nSynced groups successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!("[FAILURE]: syncing groups in configs failed: {}\n\ncc @jessfraz", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    // Check if the users.toml file changed.
-    if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.db, github, configs.users, company).await;
-    }
+            // Check if the users.toml file changed.
+            if commit.file_changed("configs/users.toml") {
+                match sync_users(&api_context.db, github, configs.users, company).await {
+                    Ok(_) => success_message = format!("{}\nSynced users successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!("[FAILURE]: syncing users in configs failed: {}\n\ncc @jessfraz", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
-        // Sync okta users and group from the database.
-        // Do this after we update the users and groups in the database.
-        generate_terraform_files_for_okta(github, &api_context.db, company).await;
-    }
+            if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
+                // Sync okta users and group from the database.
+                // Do this after we update the users and groups in the database.
+                match generate_terraform_files_for_okta(github, &api_context.db, company).await {
+                    Ok(_) => {
+                        success_message =
+                            format!("{}\nGenerated terraform files for okta successfully", success_message)
+                    }
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!("[FAILURE]: generating terraform files for okta in configs failed: {}\n\ncc @jessfraz", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    // Check if the buildings.toml file changed.
-    // Buildings needs to be synchronized _before_ we move on to conference rooms.
-    if commit.file_changed("configs/buildings.toml") {
-        sync_buildings(&api_context.db, configs.buildings, company).await;
-    }
+            // Check if the buildings.toml file changed.
+            // Buildings needs to be synchronized _before_ we move on to conference rooms.
+            if commit.file_changed("configs/buildings.toml") {
+                match sync_buildings(&api_context.db, configs.buildings, company).await {
+                    Ok(_) => success_message = format!("{}\nSynced buildings successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!("[FAILURE]: syncing buildings in configs failed: {}\n\ncc @jessfraz", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    // Check if the resources.toml file changed.
-    if commit.file_changed("configs/resources.toml") {
-        sync_conference_rooms(&api_context.db, configs.resources, company).await;
-    }
+            // Check if the resources.toml file changed.
+            if commit.file_changed("configs/resources.toml") {
+                match sync_conference_rooms(&api_context.db, configs.resources, company).await {
+                    Ok(_) => success_message = format!("{}\nSynced conference rooms successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!(
+                                    "[FAILURE]: syncing conference rooms in configs failed: {}\n\ncc @jessfraz",
+                                    e
+                                ),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    // Check if the certificates.toml file changed.
-    if commit.file_changed("configs/certificates.toml") {
-        sync_certificates(&api_context.db, github, configs.certificates, company).await;
-    }
+            // Check if the certificates.toml file changed.
+            if commit.file_changed("configs/certificates.toml") {
+                match sync_certificates(&api_context.db, github, configs.certificates, company).await {
+                    Ok(_) => success_message = format!("{}\nSynced certificates successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!(
+                                    "[FAILURE]: syncing certificates in configs failed: {}\n\ncc @jessfraz",
+                                    e
+                                ),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    // Check if the github-outside-collaborators.toml file changed.
-    if commit.file_changed("configs/github-outside-collaborators.toml") {
-        // Sync github outside collaborators.
-        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company).await;
-    }
+            // Check if the github-outside-collaborators.toml file changed.
+            if commit.file_changed("configs/github-outside-collaborators.toml") {
+                // Sync github outside collaborators.
+                match sync_github_outside_collaborators(
+                    &api_context.db,
+                    github,
+                    configs.github_outside_collaborators,
+                    company,
+                )
+                .await
+                {
+                    Ok(_) => {
+                        success_message =
+                            format!("{}\nSynced GitHub outside collaborators successfully", success_message)
+                    }
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!("[FAILURE]: syncing GitHub outside collaborators in configs failed: {}\n\ncc @jessfraz", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
 
-    // Check if the huddles file changed.
-    if commit.file_changed("configs/huddles.toml") {
-        // Sync github outside collaborators.
-        cio_api::huddles::sync_huddles(&api_context.db, company).await;
+            // Check if the huddles file changed.
+            if commit.file_changed("configs/huddles.toml") {
+                // Sync huddles.
+                match cio_api::huddles::sync_huddles(&api_context.db, company).await {
+                    Ok(_) => success_message = format!("{}\nSynced huddles successfully", success_message),
+                    Err(e) => {
+                        // We need to comment on the commit that there was an error.
+                        event
+                            .create_comment(
+                                github,
+                                &format!("[FAILURE]: syncing huddles in configs failed: {}\n\ncc @jessfraz", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
+
+            success_message = success_message.trim().to_string();
+            if !success_message.is_empty() {
+                // We need to comment on the commit that we succeeded.
+                event.create_comment(github, &success_message).await.unwrap();
+            }
+        }
+        Err(e) => {
+            // We need to comment on the commit that there was an error.
+            event
+                .create_comment(github, &format!("getting configs from repo failed: {}", e))
+                .await
+                .unwrap();
+        }
     }
 
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -4291,7 +4493,9 @@ async fn handle_repository_event(
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(&api_context.db, github, &company.github_org, "configs", company.id).await;
+    generate_shorturls_for_repos(&api_context.db, github, &company.github_org, "configs", company.id)
+        .await
+        .unwrap();
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.

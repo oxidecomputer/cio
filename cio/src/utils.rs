@@ -32,8 +32,7 @@ pub async fn add_comment_to_commit(
     repo: &str,
     commit_sha: &str,
     message: &str,
-    path: &str,
-) {
+) -> Result<()> {
     // TODO: check if we already left a comment.
     github
         .repos()
@@ -44,12 +43,13 @@ pub async fn add_comment_to_commit(
             &octorust::types::ReposCreateCommitCommentRequest {
                 body: message.to_string(),
                 line: 0,
-                path: path.to_string(),
+                path: String::new(),
                 position: 0,
             },
         )
-        .await
-        .unwrap();
+        .await?;
+
+    Ok(())
 }
 
 /// Check if a GitHub issue already exists.

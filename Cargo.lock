@@ -529,7 +529,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f90a010d026e0ccdbb60684b96d0766a32bc7a23"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#adab17dcdb4dfc570c815607361cab5ea9e79dae"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -543,7 +543,6 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
- "clap",
  "cloudflare",
  "comrak",
  "csv",
@@ -612,7 +611,6 @@ dependencies = [
  "textwrap",
  "unicode-width",
  "vec_map",
- "yaml-rust 0.3.5",
 ]
 
 [[package]]
@@ -2154,7 +2152,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f90a010d026e0ccdbb60684b96d0766a32bc7a23"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#adab17dcdb4dfc570c815607361cab5ea9e79dae"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -3847,7 +3845,7 @@ dependencies = [
  "dtoa",
  "indexmap",
  "serde",
- "yaml-rust 0.4.5",
+ "yaml-rust",
 ]
 
 [[package]]
@@ -4546,9 +4544,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.6.7"
+version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1caa0b0c8d94a049db56b5acf8cba99dc0623aab1b26d5b5f5e2d945846b3592"
+checksum = "08d3725d3efa29485e87311c5b699de63cde14b00ed4d256b8318aa30ca452cd"
 dependencies = [
  "bytes 1.1.0",
  "futures-core",
@@ -4983,6 +4981,7 @@ dependencies = [
 name = "webhooky"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
@@ -5108,12 +5107,6 @@ dependencies = [
  "markup5ever",
  "time 0.1.43",
 ]
-
-[[package]]
-name = "yaml-rust"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e66366e18dc58b46801afbf2ca7661a9f59cc8c5962c29892b6039b4f86fa992"
 
 [[package]]
 name = "yaml-rust"
