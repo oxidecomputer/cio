@@ -308,15 +308,15 @@ impl NewCertificate {
     }
 
     /// Saves the fullchain certificate and privkey to the configs github repo.
-    pub async fn save_to_github_repo(&self, github: &octorust::Client, company: &Company) {
+    pub async fn save_to_github_repo(&self, github: &octorust::Client, company: &Company) -> Result<()> {
         if self.certificate.is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         let owner = &company.github_org;
         let repo = "configs";
-        let r = github.repos().get(owner, repo).await.unwrap();
+        let r = github.repos().get(owner, repo).await?;
 
         // Write the files.
         create_or_update_file_in_github_repo(
@@ -327,7 +327,7 @@ impl NewCertificate {
             &self.get_github_path("fullchain.pem"),
             self.certificate.as_bytes().to_vec(),
         )
-        .await;
+        .await?;
         create_or_update_file_in_github_repo(
             github,
             owner,
@@ -336,7 +336,9 @@ impl NewCertificate {
             &self.get_github_path("privkey.pem"),
             self.private_key.as_bytes().to_vec(),
         )
-        .await;
+        .await?;
+
+        Ok(())
     }
 
     /// Inspect the certificate to count the number of (whole) valid days left.

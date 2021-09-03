@@ -105,9 +105,7 @@ pub async fn get_file_content_from_repo(
 
     // Try to get the content for the file from the repo.
     match github.repos().get_content_file(owner, repo, &file_path, branch).await {
-        Ok(file) => {
-            return Ok((decode_base64(&file.content), file.sha.to_string()));
-        }
+        Ok(file) => Ok((decode_base64(&file.content), file.sha.to_string())),
         Err(e) => {
             // TODO: better match on errors
             if e.to_string().contains("rate limit") {
@@ -237,7 +235,7 @@ pub async fn create_or_update_file_in_github_repo(
         )
         .await
     {
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
         Err(e) => {
             bail!(
                 "[github content] updating file at {} on branch {} failed: {}",

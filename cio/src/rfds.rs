@@ -865,7 +865,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
         let mut new_rfd = rfd.upsert(db).await;
 
         // Expand the fields in the RFD.
-        new_rfd.expand(&github, company).await;
+        new_rfd.expand(&github, company).await?;
 
         // Make and update the PDF versions.
         new_rfd.convert_and_upload_pdf(db, &github, company).await?;

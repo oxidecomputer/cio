@@ -450,7 +450,7 @@ pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
                 &notes_path,
                 notes.as_bytes().to_vec(),
             )
-            .await;
+            .await?;
         }
     }
 

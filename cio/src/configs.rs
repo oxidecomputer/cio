@@ -2666,7 +2666,7 @@ pub async fn sync_certificates(
     for (_, mut certificate) in certificates {
         certificate.cio_company_id = company.id;
 
-        certificate.populate_from_github(github, company).await;
+        certificate.populate_from_github(github, company).await?;
 
         // If the cert is going to expire in less than 7 days, renew it.
         // Otherwise, return early.
@@ -2680,7 +2680,7 @@ pub async fn sync_certificates(
             certificate.populate(company).await;
 
             // Save the certificate to disk.
-            certificate.save_to_github_repo(github, company).await;
+            certificate.save_to_github_repo(github, company).await?;
         }
 
         if certificate.certificate.is_empty() {
