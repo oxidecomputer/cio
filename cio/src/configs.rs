@@ -1464,8 +1464,7 @@ pub async fn sync_github_outside_collaborators(
         let github_collaborators = github
             .repos()
             .list_all_collaborators(&company.github_org, &repo, octorust::types::Affiliation::All)
-            .await
-            .unwrap();
+            .await?;
 
         // Iterate over the users added to the repo, and make sure they exist in our
         // vector.
@@ -1496,8 +1495,7 @@ pub async fn sync_github_outside_collaborators(
             github
                 .repos()
                 .remove_collaborator(&company.github_org, &repo, &existing_collaborator.login)
-                .await
-                .unwrap();
+                .await?;
         }
     }
 
@@ -1521,11 +1519,7 @@ pub async fn sync_users(
     let mut gusto_users_by_id: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
     if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
-        let gu = gusto
-            .employees()
-            .get_all_company(gusto_company_id, false, &[])
-            .await
-            .unwrap();
+        let gu = gusto.employees().get_all_company(gusto_company_id, false, &[]).await?;
         for g in gu {
             gusto_users.insert(g.email.to_string(), g.clone());
             gusto_users_by_id.insert(g.id.to_string(), g);
@@ -1536,7 +1530,7 @@ pub async fn sync_users(
     let mut okta_users: HashMap<String, okta::User> = HashMap::new();
     let okta_auth = company.authenticate_okta();
     if let Some(okta) = okta_auth {
-        let gu = okta.list_users().await.unwrap();
+        let gu = okta.list_users().await?;
         for g in gu {
             okta_users.insert(g.profile.email.to_string(), g);
         }
@@ -1553,12 +1547,11 @@ pub async fn sync_users(
                 "", // department id
                 "", // location id
             )
-            .await
-            .unwrap();
+            .await?;
         for r in ru {
             ramp_users.insert(r.email.to_string(), r);
         }
-        let rd = ramp.departments().get_all().await.unwrap();
+        let rd = ramp.departments().get_all().await?;
         for r in rd {
             ramp_departments.insert(r.name.to_string(), r);
         }
@@ -1576,8 +1569,7 @@ pub async fn sync_users(
                 "", // role id
                 zoom_api::types::UsersIncludeFields::HostKey,
             )
-            .await
-            .unwrap();
+            .await?;
         for r in active_users {
             zoom_users.insert(r.email.to_string(), r);
         }
@@ -1590,8 +1582,7 @@ pub async fn sync_users(
                 "", // role id
                 zoom_api::types::UsersIncludeFields::Noop,
             )
-            .await
-            .unwrap();
+            .await?;
         for r in pending_users {
             zoom_users_pending.insert(r.email.to_string(), r);
         }
@@ -1611,8 +1602,7 @@ pub async fn sync_users(
             gsuite_api::types::SortOrder::Ascending,
             gsuite_api::types::ViewType::AdminView,
         )
-        .await
-        .unwrap();
+        .await?;
     let mut gsuite_users_map: BTreeMap<String, GSuiteUser> = BTreeMap::new();
     for g in gsuite_users.clone() {
         // Add the group to our map.
@@ -1631,8 +1621,7 @@ pub async fn sync_users(
             gsuite_api::types::SortOrder::Ascending,
             "", // user_key
         )
-        .await
-        .unwrap();
+        .await?;
     for g in groups {
         // Add the group to our map.
         gsuite_groups.insert(g.name.to_string(), g);
@@ -1642,8 +1631,7 @@ pub async fn sync_users(
     let calendars = gcal
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
-        .await
-        .unwrap();
+        .await?;
 
     let mut anniversary_cal_id = "".to_string();
 
@@ -1709,8 +1697,7 @@ pub async fn sync_users(
                         );
                         airtable_auth
                             .add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create")
-                            .await
-                            .unwrap();
+                            .await?;
                     }
                     if !has_access_to_workspace_read_only && user.is_full_time() {
                         println!(
@@ -1726,8 +1713,7 @@ pub async fn sync_users(
                                 // https://support.airtable.com/hc/en-us/articles/202887099-Permissions-overview
                                 "comment",
                             )
-                            .await
-                            .unwrap();
+                            .await?;
                     }
                 }
                 Err(e) => {
@@ -1853,7 +1839,7 @@ pub async fn sync_users(
                                 location_id: ramp_user.location_id.to_string(),
                             };
 
-                            ramp.users().patch(&ramp_user.id, &updated_user).await.unwrap();
+                            ramp.users().patch(&ramp_user.id, &updated_user).await?;
                         }
                     }
                     None => {
@@ -1877,7 +1863,7 @@ pub async fn sync_users(
                         }
 
                         // Add the manager.
-                        let r = ramp.users().post_deferred(&ramp_user).await.unwrap();
+                        let r = ramp.users().post_deferred(&ramp_user).await?;
                         new_user.ramp_id = r.id.to_string();
 
                         // TODO: Create them a card.
@@ -1913,8 +1899,7 @@ pub async fn sync_users(
                                 zoom_api::types::LoginType::Noop, // We don't know their login type...
                                 false,
                             )
-                            .await
-                            .unwrap();
+                            .await?;
                         // Check if the vanity URL is already either the username
                         // or the github handle.
                         if zu.user_response.vanity_url.is_empty()
@@ -2006,8 +1991,7 @@ pub async fn sync_users(
                                         type_: 2,
                                     }),
                                 })
-                                .await
-                                .unwrap();
+                                .await?;
 
                             // Set the id of the new zoom user.
                             new_user.zoom_id = zoom_user.id.to_string();
@@ -2038,8 +2022,7 @@ pub async fn sync_users(
                     true, // send_notifications
                     google_calendar::types::SendUpdates::All,
                 )
-                .await
-                .unwrap();
+                .await?;
             println!(
                 "deleted user {} event {} from google",
                 username, user.google_anniversary_event_id
@@ -2060,7 +2043,7 @@ pub async fn sync_users(
             if !company.airtable_enterprise_account_id.is_empty() {
                 // We don't need a base id here since we are only using the enterprise api features.
                 let airtable_auth = company.authenticate_airtable("");
-                airtable_auth.delete_internal_user_by_email(&user.email).await.unwrap();
+                airtable_auth.delete_internal_user_by_email(&user.email).await?;
                 println!("deleted user from airtable: {}", username);
             }
 
@@ -2078,8 +2061,7 @@ pub async fn sync_users(
                             true,                    // Transfer webinars
                             true,                    // Transfer recordings
                         )
-                        .await
-                        .unwrap();
+                        .await?;
                 }
             }
         }
@@ -2126,11 +2108,7 @@ pub async fn sync_users(
             // Update the user with the settings from the config for the user.
             let gsuite_user = update_gsuite_user(&u, &user, false, company).await;
 
-            gsuite
-                .users()
-                .update(&gsuite_user.id, &gsuite_user)
-                .await
-                .unwrap_or_else(|e| panic!("updating user {} in gsuite failed: {}", username, e));
+            gsuite.users().update(&gsuite_user.id, &gsuite_user).await?;
 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
 
@@ -2153,11 +2131,7 @@ pub async fn sync_users(
             // Make sure it is set to true.
             let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
 
-            let new_gsuite_user = gsuite
-                .users()
-                .insert(&gsuite_user)
-                .await
-                .unwrap_or_else(|e| panic!("creating user {} in gsuite failed: {}", username, e));
+            let new_gsuite_user = gsuite.users().insert(&gsuite_user).await?;
             user.google_id = new_gsuite_user.id.to_string();
             // Update with any other changes we made to the user.
             user.update(db).await;
@@ -2194,8 +2168,7 @@ pub async fn sync_buildings(
     let gsuite_buildings = gsuite
         .resources()
         .buildings_list_all(&company.gsuite_account_id)
-        .await
-        .unwrap();
+        .await?;
 
     // Get all the buildings.
     let db_buildings = Buildings::get_from_db(db, company.id);
@@ -2225,8 +2198,7 @@ pub async fn sync_buildings(
         gsuite
             .resources()
             .buildings_delete(&company.gsuite_account_id, &name)
-            .await
-            .unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", name, e));
+            .await?;
         println!("deleted building from gsuite: {}", name);
     }
     println!("updated configs buildings in the database");
@@ -2253,8 +2225,7 @@ pub async fn sync_buildings(
                 gsuite
                     .resources()
                     .buildings_delete(&company.gsuite_account_id, &id)
-                    .await
-                    .unwrap_or_else(|e| panic!("deleting building {} from gsuite failed: {}", id, e));
+                    .await?;
 
                 println!("deleted building from gsuite: {}", id);
                 continue;
@@ -2273,8 +2244,7 @@ pub async fn sync_buildings(
                 gsuite_api::types::CoordinatesSource::SourceUnspecified,
                 &new_b,
             )
-            .await
-            .unwrap_or_else(|e| panic!("updating building {} in gsuite failed: {}", id, e));
+            .await?;
 
         // Remove the building from the database map and continue.
         // This allows us to add all the remaining new building after.
@@ -2297,8 +2267,7 @@ pub async fn sync_buildings(
                 gsuite_api::types::CoordinatesSource::SourceUnspecified,
                 &new_b,
             )
-            .await
-            .unwrap_or_else(|e| panic!("creating building {} in gsuite failed: {}", id, e));
+            .await?;
 
         println!("created building from gsuite: {}", id);
     }
@@ -2327,8 +2296,7 @@ pub async fn sync_conference_rooms(
             "", // order by
             "", // query
         )
-        .await
-        .unwrap();
+        .await?;
 
     // Get all the conference_rooms.
     let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id);
@@ -2376,13 +2344,7 @@ pub async fn sync_conference_rooms(
                 gsuite
                     .resources()
                     .calendars_delete(&company.gsuite_account_id, &r.resource_id)
-                    .await
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "deleting conference room {} with id {} from gsuite failed: {}",
-                            id, r.resource_id, e
-                        )
-                    });
+                    .await?;
 
                 println!("deleted conference room from gsuite: {}", id);
                 continue;
@@ -2396,8 +2358,7 @@ pub async fn sync_conference_rooms(
         gsuite
             .resources()
             .calendars_update(&company.gsuite_account_id, &new_r.resource_id, &new_r)
-            .await
-            .unwrap_or_else(|e| panic!("updating conference room {} in gsuite failed: {}", id, e));
+            .await?;
 
         // Remove the resource from the database map and continue.
         // This allows us to add all the remaining new resource after.
@@ -2416,8 +2377,7 @@ pub async fn sync_conference_rooms(
         gsuite
             .resources()
             .calendars_insert(&company.gsuite_account_id, &new_r)
-            .await
-            .unwrap_or_else(|e| panic!("creating conference room {} in gsuite failed: {}", id, e));
+            .await?;
 
         println!("created conference room in gsuite: {}", id);
     }
@@ -2446,8 +2406,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
             gsuite_api::types::SortOrder::Ascending,
             "", // user_key
         )
-        .await
-        .unwrap();
+        .await?;
 
     // Get all the groups.
     let db_groups = Groups::get_from_db(db, company.id);
@@ -2478,8 +2437,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         gsuite
             .groups()
             .delete(&format!("{}@{}", name, &company.gsuite_domain))
-            .await
-            .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
+            .await?;
         println!("deleted group from gsuite: {}", name);
     }
     println!("updated configs groups in the database");
@@ -2506,8 +2464,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
             gsuite
                 .groups()
                 .delete(&format!("{}@{}", name, &company.gsuite_domain))
-                .await
-                .unwrap_or_else(|e| panic!("deleting group {} from gsuite failed: {}", name, e));
+                .await?;
             println!("deleted group from gsuite: {}", name);
             continue;
         };
@@ -2526,8 +2483,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         gsuite
             .groups()
             .update(&format!("{}@{}", name, company.gsuite_domain), &updated_group)
-            .await
-            .unwrap_or_else(|e| panic!("updating group {} in gsuite failed: {}", name, e));
+            .await?;
 
         update_group_aliases(&gsuite, &updated_group).await;
 
@@ -2558,11 +2514,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         }
         g.aliases = aliases;
 
-        let new_group: GSuiteGroup = gsuite
-            .groups()
-            .insert(&g)
-            .await
-            .unwrap_or_else(|e| panic!("creating group {} in gsuite failed: {}", name, e));
+        let new_group: GSuiteGroup = gsuite.groups().insert(&g).await?;
 
         update_group_aliases(&gsuite, &new_group).await;
 
@@ -2755,8 +2707,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
     let calendars = gcal
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
-        .await
-        .unwrap();
+        .await?;
 
     let mut anniversary_cal_id = "".to_string();
 
@@ -2832,8 +2783,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
                     true,                                     // supports_attachments
                     &new_event,
                 )
-                .await
-                .unwrap();
+                .await?;
             println!("created event for user {} anniversary: {:?}", user.username, event);
 
             user.google_anniversary_event_id = event.id.to_string();
@@ -2847,8 +2797,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
                     0,  // max_attendees set to 0 to ignore
                     "", // time_zone
                 )
-                .await
-                .unwrap();
+                .await?;
 
             if old_event.description != new_event.description
                 || old_event.summary != new_event.summary
@@ -2871,8 +2820,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
                         true,                                     // supports_attachments
                         &new_event,
                     )
-                    .await
-                    .unwrap();
+                    .await?;
                 println!("updated event for user {} anniversary: {:?}", user.username, event);
             }
         }

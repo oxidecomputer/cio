@@ -3,6 +3,7 @@ use std::{
     thread, time,
 };
 
+use anyhow::Result;
 use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::{
     types::{
@@ -201,7 +202,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
 
 /// Suspend a GSuite user, this is better than deleting them since then we can
 /// transfer their data.
-pub async fn suspend_user(gsuite: &GSuite, email: &str) {
+pub async fn suspend_user(gsuite: &GSuite, email: &str) -> Result<()> {
     // First get the user.
     let mut user = gsuite
         .users()
@@ -210,19 +211,16 @@ pub async fn suspend_user(gsuite: &GSuite, email: &str) {
             gsuite_api::types::DirectoryUsersListProjection::Full,
             gsuite_api::types::ViewType::AdminView,
         )
-        .await
-        .unwrap();
+        .await?;
 
     // Set them to be suspended.
     user.suspended = true;
     user.suspension_reason = "No longer in config file.".to_string();
 
     // Update the user.
-    gsuite
-        .users()
-        .update(email, &user)
-        .await
-        .unwrap_or_else(|e| panic!("suspending user {} in gsuite failed: {}", email, e));
+    gsuite.users().update(email, &user).await?;
+
+    Ok(())
 }
 
 /// Update a user's aliases in GSuite to match our database.
@@ -267,7 +265,11 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
 }
 
 /// Update a user's groups in GSuite to match our database.
-pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_groups: BTreeMap<String, GSuiteGroup>) {
+pub async fn update_user_google_groups(
+    gsuite: &GSuite,
+    user: &User,
+    google_groups: BTreeMap<String, GSuiteGroup>,
+) -> Result<()> {
     // Iterate over the groups and add the user as a member to it.
     for g in &user.groups {
         // Make sure the group exists.
@@ -288,7 +290,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
         }
 
         // Check if the user is already a member of the group.
-        let is_member = gsuite.members().has_member(&group.id, &user.email).await.unwrap();
+        let is_member = gsuite.members().has_member(&group.id, &user.email).await?;
         if is_member.is_member {
             // They are a member so we can just update their member status.
             gsuite
@@ -307,8 +309,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
                         type_: "".to_string(),
                     },
                 )
-                .await
-                .unwrap();
+                .await?;
 
             // Continue through the other groups.
             continue;
@@ -330,8 +331,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
                     type_: "".to_string(),
                 },
             )
-            .await
-            .unwrap();
+            .await?;
 
         println!("added {} to gsuite group {} as {}", user.email, group.name, role);
     }
@@ -345,7 +345,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
 
         // Now we have a google group. The user should not be a member of it,
         // but we need to make sure they are not a member.
-        let is_member = gsuite.members().has_member(&group.id, &user.email).await.unwrap();
+        let is_member = gsuite.members().has_member(&group.id, &user.email).await?;
 
         if !is_member.is_member {
             // They are not a member so we can continue early.
@@ -354,10 +354,12 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, google_grou
 
         // They are a member of the group.
         // We need to remove them.
-        gsuite.members().delete(&group.id, &user.email).await.unwrap();
+        gsuite.members().delete(&group.id, &user.email).await?;
 
         println!("removed {} from gsuite group {}", user.email, group.name);
     }
+
+    Ok(())
 }
 
 /// Update a group's aliases in GSuite to match our configuration files.
@@ -397,7 +399,7 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
 }
 
 /// Update a group's settings in GSuite to match our configuration files.
-pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Group, company: &Company) {
+pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Group, company: &Company) -> Result<()> {
     // Get the current group settings.
     let email = format!("{}@{}", group.name, company.gsuite_domain);
     let mut result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
@@ -406,7 +408,7 @@ pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Gr
         thread::sleep(time::Duration::from_secs(1));
         result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     }
-    let mut settings = result.unwrap();
+    let mut settings = result?;
 
     // Update the groups settings.
     settings.email = email.to_string();
@@ -433,11 +435,12 @@ pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Gr
         thread::sleep(time::Duration::from_secs(1));
         ggs.groups()
             .update(google_groups_settings::types::Alt::Json, &email, &settings)
-            .await
-            .unwrap();
+            .await?;
     }
 
     println!("updated gsuite groups settings {}", group.name);
+
+    Ok(())
 }
 
 /// Update a building in GSuite.
