@@ -342,13 +342,13 @@ server {
 
 	# Add redirect.
 	location / {
-		return 301 {{this.link}}$request_uri;
+		return 302 {{this.link}}$request_uri;
 	}
 
 	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}
 	# Description: Discussion link for {{this.description}}
 	location /discussion {
-		return 301 {{this.discussion}};
+		return 302 {{this.discussion}};
 	}
 {{/if}}
 }
@@ -366,13 +366,13 @@ server {
 
 	# Add redirect.
 	location / {
-		return 301 {{this.link}}$request_uri;
+		return 302 {{this.link}}$request_uri;
 	}
 
 	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}
 	# Description: Discussion link for {{this.description}}
 	location /discussion {
-		return 301 {{this.discussion}};
+		return 302 {{this.discussion}};
 	}
 {{/if}}
 }
@@ -385,19 +385,19 @@ pub static TEMPLATE_NGINX_PATHS: &str = r#"server {
 	server_name {{this.0.subdomain}};
 
 	location = / {
-		return 301 https://119.rfd.{{this.0.domain}};
+		return 302 https://119.rfd.{{this.0.domain}};
 	}
 
 	{{#each this}}
 	# Redirect {{this.subdomain}}.{{this.domain}}/{{this.name}} to {{this.link}}
 	# Description: {{this.description}}
 	location = /{{this.name}} {
-		return 301 "{{this.link}}";
+		return 302 "{{this.link}}";
 	}
 {{#if this.discussion}}	# Redirect /{{this.name}}/discussion to {{this.discussion}}
 	# Description: Discussion link for {{this.name}}
 	location = /{{this.name}}/discussion {
-		return 301 {{this.discussion}};
+		return 302 {{this.discussion}};
 	}
 {{/if}}
 {{/each}}
@@ -416,19 +416,19 @@ server {
 	ssl_trusted_certificate	        /etc/nginx/ssl/{{this.0.subdomain}}.{{this.0.domain}}/fullchain.pem;
 
 	location = / {
-		return 301 https://119.rfd.{{this.0.domain}};
+		return 302 https://119.rfd.{{this.0.domain}};
 	}
 
 	{{#each this}}
 	# Redirect {{this.subdomain}}.{{this.domain}}/{{this.name}} to {{this.link}}
 	# Description: {{this.description}}
 	location = /{{this.name}} {
-		return 301 "{{this.link}}";
+		return 302 "{{this.link}}";
 	}
 {{#if this.discussion}}	# Redirect /{{this.name}}/discussion to {{this.discussion}}
 	# Description: Discussion link for {{this.name}}
 	location = /{{this.name}}/discussion {
-		return 301 {{this.discussion}};
+		return 302 {{this.discussion}};
 	}
 {{/if}}
 {{/each}}
