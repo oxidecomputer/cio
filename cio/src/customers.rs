@@ -1,11 +1,12 @@
 use std::str::from_utf8;
 
 use airtable_api::Record;
+use anyhow::Result;
 
 use crate::{companies::Company, core::CustomerInteraction, utils::get_file_content_from_repo};
 
 /// Sync meeting notes with the content from the notes.
-pub async fn sync_customer_meeting_notes(company: &Company) {
+pub async fn sync_customer_meeting_notes(company: &Company) -> Result<()> {
     // Initialize the Airtable client.
     let airtable = company.authenticate_airtable(&company.airtable_base_id_customer_leads);
 
@@ -18,8 +19,7 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
             crate::airtable::AIRTABLE_GRID_VIEW,
             vec![],
         )
-        .await
-        .unwrap();
+        .await?;
 
     // Iterate over the airtable records and update the notes where we have a link to notes in
     // GitHub.
@@ -35,8 +35,8 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
         );
 
         // Get the reports repo client.
-        let (content, _) = get_file_content_from_repo(&github, &company.github_org, "reports", "", &notes_path).await;
-        let decoded = from_utf8(&content).unwrap().trim().to_string();
+        let (content, _) = get_file_content_from_repo(&github, &company.github_org, "reports", "", &notes_path).await?;
+        let decoded = from_utf8(&content)?.trim().to_string();
         // Compare the notes and see if we need to update them.
         if record.fields.notes == decoded {
             // They are the same so we can continue through the loop.
@@ -53,14 +53,15 @@ pub async fn sync_customer_meeting_notes(company: &Company) {
                 crate::airtable::AIRTABLE_CUSTOMER_INTERACTIONS_TABLE,
                 vec![record.clone()],
             )
-            .await
-            .unwrap();
+            .await?;
 
         println!(
             "updated customer interaction record with notes for {} {} {}",
             record.fields.name, record.fields.company[0], record.fields.date
         );
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -76,6 +77,6 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        sync_customer_meeting_notes(&oxide).await;
+        sync_customer_meeting_notes(&oxide).await.unwrap();
     }
 }

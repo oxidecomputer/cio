@@ -1,6 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::str::from_utf8;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use macros::db;
@@ -281,7 +282,7 @@ impl Meeting {
 }
 
 /// Get the journal club meetings from the papers GitHub repo.
-pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company) -> Vec<Meeting> {
+pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company) -> Result<Vec<Meeting>> {
     let owner = &company.github_org;
     let repo = "papers";
 
@@ -294,18 +295,22 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
         "",
         "/.helpers/meetings.json",
     )
-    .await;
-    let meetings_json_string = from_utf8(&meetings_json_content).unwrap();
+    .await?;
+    let meetings_json_string = from_utf8(&meetings_json_content)?;
 
     // Parse the meetings from the json string.
-    let meetings: Vec<Meeting> = serde_json::from_str(meetings_json_string).unwrap();
+    let meetings: Vec<Meeting> = serde_json::from_str(meetings_json_string)?;
 
-    meetings
+    Ok(meetings)
 }
 
 // Sync the journal_club_meetings with our database.
-pub async fn refresh_db_journal_club_meetings(db: &Database, github: &octorust::Client, company: &Company) {
-    let journal_club_meetings = get_meetings_from_repo(github, company).await;
+pub async fn refresh_db_journal_club_meetings(
+    db: &Database,
+    github: &octorust::Client,
+    company: &Company,
+) -> Result<()> {
+    let journal_club_meetings = get_meetings_from_repo(github, company).await?;
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {
@@ -318,6 +323,8 @@ pub async fn refresh_db_journal_club_meetings(db: &Database, github: &octorust::
             journal_club_paper.upsert(db).await;
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -339,7 +346,7 @@ mod tests {
 
         let github = oxide.authenticate_github();
 
-        refresh_db_journal_club_meetings(&db, &github, &oxide).await;
+        refresh_db_journal_club_meetings(&db, &github, &oxide).await.unwrap();
 
         JournalClubPapers::get_from_db(&db, oxide.id).update_airtable(&db).await;
         JournalClubMeetings::get_from_db(&db, oxide.id)

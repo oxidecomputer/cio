@@ -27,7 +27,7 @@ fn terraform_name_helper(
     if first_char.is_digit(10) {
         out.write(&("_".to_owned() + &param.replace('.', "")))?;
     } else {
-        out.write(&param.replace(".", "")).unwrap();
+        out.write(&param.replace(".", ""))?;
     }
     Ok(())
 }
@@ -45,7 +45,7 @@ fn terraform_username_helper(
     let p = h.param(0).unwrap().value().to_string();
     let param = p.trim_matches('"');
 
-    out.write(&param.replace(".", "")).unwrap();
+    out.write(&param.replace(".", ""))?;
     Ok(())
 }
 
@@ -87,9 +87,7 @@ pub async fn generate_terraform_files_for_okta(
     handlebars.register_helper("terraformize", Box::new(terraform_username_helper));
 
     // Generate the members of the users file.
-    let users_rendered = handlebars
-        .render_template(TEMPLATE_TERRAFORM_OKTA_USER, &users)
-        .unwrap();
+    let users_rendered = handlebars.render_template(TEMPLATE_TERRAFORM_OKTA_USER, &users)?;
 
     // Join it with the directory to save the files in.
     let users_file = format!("{}/generated.users.tf", okta_path);
@@ -102,12 +100,10 @@ pub async fn generate_terraform_files_for_okta(
         &users_file,
         users_rendered.as_bytes().to_vec(),
     )
-    .await;
+    .await?;
 
     // Generate the members of the groups file.
-    let groups_rendered = handlebars
-        .render_template(TEMPLATE_TERRAFORM_OKTA_GROUP, &groups)
-        .unwrap();
+    let groups_rendered = handlebars.render_template(TEMPLATE_TERRAFORM_OKTA_GROUP, &groups)?;
 
     // Join it with the directory to save the files in.
     let groups_file = format!("{}/generated.groups.tf", okta_path);
@@ -120,7 +116,7 @@ pub async fn generate_terraform_files_for_okta(
         &groups_file,
         groups_rendered.as_bytes().to_vec(),
     )
-    .await;
+    .await?;
 
     Ok(())
 }
@@ -152,9 +148,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
     handlebars.register_helper("terraformize", Box::new(terraform_username_helper));
 
     // Generate the members of the GitHub org file.
-    let github_rendered = handlebars
-        .render_template(TEMPLATE_TERRAFORM_GITHUB_ORG_MEMBERSHIP, &users)
-        .unwrap();
+    let github_rendered = handlebars.render_template(TEMPLATE_TERRAFORM_GITHUB_ORG_MEMBERSHIP, &users)?;
 
     // Join it with the directory to save the files in.
     let github_file = format!("{}/generated.organization-members.tf", github_path);
@@ -167,12 +161,10 @@ pub async fn generate_terraform_files_for_aws_and_github(
         &github_file,
         github_rendered.as_bytes().to_vec(),
     )
-    .await;
+    .await?;
 
     // Generate the members of the AWS org file.
-    let aws_rendered = handlebars
-        .render_template(TEMPLATE_TERRAFORM_AWS_ORG_MEMBERSHIP, &users)
-        .unwrap();
+    let aws_rendered = handlebars.render_template(TEMPLATE_TERRAFORM_AWS_ORG_MEMBERSHIP, &users)?;
 
     // Join it with the directory to save the files in.
     let aws_file = format!("{}/generated.organization-members.tf", aws_path);
@@ -185,7 +177,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
         &aws_file,
         aws_rendered.as_bytes().to_vec(),
     )
-    .await;
+    .await?;
 
     // Generate the members of each GitHub team.
     // TODO: don't hard code these
@@ -200,15 +192,13 @@ pub async fn generate_terraform_files_for_aws_and_github(
         }
 
         // Generate the members of the team file.
-        let rendered = handlebars
-            .render_template(
-                TEMPLATE_TERRAFORM_GITHUB_TEAM_MEMBERSHIP,
-                &GitHubTeamMembers {
-                    team: team.to_string(),
-                    members,
-                },
-            )
-            .unwrap();
+        let rendered = handlebars.render_template(
+            TEMPLATE_TERRAFORM_GITHUB_TEAM_MEMBERSHIP,
+            &GitHubTeamMembers {
+                team: team.to_string(),
+                members,
+            },
+        )?;
 
         // Join it with the directory to save the files in.
         let file = format!("{}/generated.team-members-{}.tf", github_path, team.to_string());
@@ -221,7 +211,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
             &file,
             rendered.as_bytes().to_vec(),
         )
-        .await;
+        .await?;
     }
 
     Ok(())
@@ -239,10 +229,9 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
     owner: &str,
     repo: &str,
     shorturls: Vec<ShortUrl>,
-) {
+) -> Result<()> {
     if shorturls.is_empty() {
-        println!("no shorturls in array");
-        return;
+        return Ok(());
     }
 
     // Initialize handlebars.
@@ -257,8 +246,7 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
     let nginx_file = format!("/nginx/conf.d/generated.{}.{}.conf", subdomain, domain);
     // Add a warning to the top of the file that it should _never_
     // be edited by hand and generate it.
-    let mut nginx_rendered =
-        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_NGINX, &shorturls).unwrap();
+    let mut nginx_rendered = TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_NGINX, &shorturls)?;
     // Add the vim formating string.
     nginx_rendered += "# vi: ft=nginx";
 
@@ -270,14 +258,14 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
         &nginx_file,
         nginx_rendered.as_bytes().to_vec(),
     )
-    .await;
+    .await?;
 
     // Generate the paths nginx file.
     let nginx_paths_file = format!("/nginx/conf.d/generated.{}.paths.{}.conf", subdomain, domain);
     // Add a warning to the top of the file that it should _never_
     // be edited by hand and generate it.
     let mut nginx_paths_rendered =
-        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_NGINX_PATHS, &shorturls).unwrap();
+        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_NGINX_PATHS, &shorturls)?;
     // Add the vim formating string.
     nginx_paths_rendered += "# vi: ft=nginx";
 
@@ -289,9 +277,11 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
         &nginx_paths_file,
         nginx_paths_rendered.as_bytes().to_vec(),
     )
-    .await;
+    .await?;
 
-    generate_terraform_files_for_shorturls(github, owner, repo, shorturls).await;
+    generate_terraform_files_for_shorturls(github, owner, repo, shorturls).await?;
+
+    Ok(())
 }
 
 /// Generate terraform files for shorturls.
@@ -302,10 +292,9 @@ pub async fn generate_terraform_files_for_shorturls(
     owner: &str,
     repo: &str,
     shorturls: Vec<ShortUrl>,
-) {
+) -> Result<()> {
     if shorturls.is_empty() {
-        println!("no shorturls in array");
-        return;
+        return Ok(());
     }
 
     // Initialize handlebars.
@@ -320,10 +309,8 @@ pub async fn generate_terraform_files_for_shorturls(
     let terraform_file = format!("/terraform/cloudflare/generated.{}.{}.tf", subdomain, domain);
     // Add a warning to the top of the file that it should _never_
     // be edited by hand and generate it.
-    let terraform_rendered = TEMPLATE_WARNING.to_owned()
-        + &handlebars
-            .render_template(TEMPLATE_CLOUDFLARE_TERRAFORM, &shorturls)
-            .unwrap();
+    let terraform_rendered =
+        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_CLOUDFLARE_TERRAFORM, &shorturls)?;
 
     create_or_update_file_in_github_repo(
         github,
@@ -333,7 +320,9 @@ pub async fn generate_terraform_files_for_shorturls(
         &terraform_file,
         terraform_rendered.as_bytes().to_vec(),
     )
-    .await;
+    .await?;
+
+    Ok(())
 }
 
 /// The warning for files that we automatically generate so folks don't edit them

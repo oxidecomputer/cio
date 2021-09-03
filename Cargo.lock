@@ -471,7 +471,6 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
- "clap",
  "cloudflare",
  "comrak",
  "csv",

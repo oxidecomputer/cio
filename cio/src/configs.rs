@@ -1,7 +1,6 @@
 #![allow(clippy::from_over_into)]
 use std::{
     collections::{BTreeMap, HashMap},
-    fs,
     str::from_utf8,
     thread, time,
 };
@@ -9,7 +8,6 @@ use std::{
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
-use clap::ArgMatches;
 use google_calendar::types::{Event, EventAttendee, EventDateTime};
 use google_geocode::Geocode;
 use gsuite_api::types::{
@@ -67,35 +65,6 @@ pub struct Config {
 
     #[serde(default)]
     pub certificates: BTreeMap<String, NewCertificate>,
-}
-
-impl Config {
-    /// Read and decode the config from the files that are passed on the command line.
-    pub fn read(cli_matches: &ArgMatches) -> Self {
-        let files: Vec<String>;
-        match cli_matches.values_of("file") {
-            None => panic!("no configuration files specified"),
-            Some(val) => {
-                files = val.map(|s| s.to_string()).collect();
-            }
-        };
-
-        let mut contents = String::new();
-        for file in files.iter() {
-            println!("decoding {}", file);
-
-            // Read the file.
-            let body = fs::read_to_string(file).expect("reading the file failed");
-
-            // Append the body of the file to the rest of the contents.
-            contents.push_str(&body);
-        }
-
-        // Decode the contents.
-        let config: Config = toml::from_str(&contents).unwrap();
-
-        config
-    }
 }
 
 /// The data type for a user.
@@ -302,17 +271,17 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
-    pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto, gusto_company_id: &str) {
+    pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto, gusto_company_id: &str) -> Result<()> {
         // Only do this if we have a start date.
         if self.start_date == crate::utils::default_date() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         // If we don't know their address yet, return early.
         if self.home_address_street_1.is_empty() || self.home_address_country.is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         // If they are not in the US skip them.
@@ -321,18 +290,18 @@ impl UserConfig {
             && self.home_address_country != "USA"
         {
             // Return early.
-            return;
+            return Ok(());
         }
 
         // If they are not full-time, return early.
         if !self.is_full_time() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         if !self.gusto_id.is_empty() {
             // Return early, they already exist in Gusto.
-            return;
+            return Ok(());
         }
 
         // Create the applicant in Gusto.
@@ -349,8 +318,7 @@ impl UserConfig {
                     ssn: "".to_string(),
                 },
             )
-            .await
-            .unwrap();
+            .await?;
         // Set the gusto id.
         self.gusto_id = employee.id.to_string();
 
@@ -370,8 +338,9 @@ impl UserConfig {
                     zip: self.home_address_zipcode.to_string(),
                 },
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     fn update_from_gusto(&mut self, gusto_user: &gusto_api::types::Employee) {
@@ -663,7 +632,7 @@ impl User {
     }
 
     /// Send an email to the new consultant about their account.
-    async fn send_email_new_consultant(&self, db: &Database) {
+    async fn send_email_new_consultant(&self, db: &Database) -> Result<()> {
         let company = self.company(db);
 
         // Initialize the SendGrid client.
@@ -709,12 +678,13 @@ xoxo,
                 &[],
                 &format!("admin@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the GSuite user about their account.
-    async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) {
+    async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) -> Result<()> {
         let company = self.company(db);
 
         // Initialize the SendGrid client.
@@ -770,12 +740,13 @@ xoxo,
                 &[],
                 &format!("admin@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the new user about their account.
-    async fn send_email_new_user(&self, db: &Database) {
+    async fn send_email_new_user(&self, db: &Database) -> Result<()> {
         let company = self.company(db);
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -877,8 +848,9 @@ xoxo,
                 &[],
                 &format!("admin@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     pub async fn update_zoom_vanity_name(
@@ -1380,7 +1352,7 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
             github, owner, repo, "", // leaving the branch blank gives us the default branch
             &file.path,
         )
-        .await;
+        .await?;
 
         let decoded = from_utf8(&contents)?.trim().to_string();
 
@@ -1822,7 +1794,7 @@ pub async fn sync_users(
                 } else if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
                     user.populate_home_address().await;
                     // Create the user in Gusto if necessary.
-                    user.create_in_gusto_if_needed(gusto, gusto_company_id).await;
+                    user.create_in_gusto_if_needed(gusto, gusto_company_id).await?;
                 }
             }
         }
@@ -1852,9 +1824,9 @@ pub async fn sync_users(
             // We should send them an email about setting up their account.
             println!("sending email to new user: {}", new_user.username);
             if new_user.is_consultant() {
-                new_user.send_email_new_consultant(db).await;
+                new_user.send_email_new_consultant(db).await?;
             } else {
-                new_user.send_email_new_user(db).await;
+                new_user.send_email_new_user(db).await?;
             }
         }
 
@@ -2192,7 +2164,7 @@ pub async fn sync_users(
 
             // Send an email to the new user.
             // Do this here in case another step fails.
-            user.send_email_new_gsuite_user(db, &gsuite_user.password).await;
+            user.send_email_new_gsuite_user(db, &gsuite_user.password).await?;
             println!("created new user in gsuite: {}", username);
 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;

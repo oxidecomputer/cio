@@ -2,12 +2,13 @@
 use std::{
     collections::BTreeMap,
     env, fs,
-    io::{stderr, stdout, Write},
+    io::Write,
     path::{Path, PathBuf},
     process::Command,
     str::from_utf8,
 };
 
+use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -277,20 +278,26 @@ impl RFD {
         repo: &str,
         branch: &str,
         is_markdown: bool,
-    ) -> String {
+    ) -> Result<String> {
         let html: String;
         if is_markdown {
             // Parse the markdown.
             html = parse_markdown(&self.content);
         } else {
             // Parse the acsiidoc.
-            html = self.parse_asciidoc(github, owner, repo, branch).await;
+            html = self.parse_asciidoc(github, owner, repo, branch).await?;
         }
 
-        clean_rfd_html_links(&html, &self.number_string)
+        Ok(clean_rfd_html_links(&html, &self.number_string))
     }
 
-    pub async fn parse_asciidoc(&self, github: &octorust::Client, owner: &str, repo: &str, branch: &str) -> String {
+    pub async fn parse_asciidoc(
+        &self,
+        github: &octorust::Client,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+    ) -> Result<String> {
         let dir = format!("rfd/{}", self.number_string);
 
         // Create the temporary directory.
@@ -307,7 +314,7 @@ impl RFD {
         // TODO: we don't need to save all the images, only the inline ones, clean this up
         // eventually.
         if self.content.contains("[opts=inline]") {
-            let images = get_images_in_branch(github, owner, repo, &dir, branch).await;
+            let images = get_images_in_branch(github, owner, repo, &dir, branch).await?;
             for image in images {
                 // Save the image to our temporary directory.
                 let image_path = format!("{}/{}", parent, image.path.replace(&dir, "").trim_start_matches('/'));
@@ -323,22 +330,22 @@ impl RFD {
             .unwrap();
 
         let result = if cmd_output.status.success() {
-            from_utf8(&cmd_output.stdout).unwrap()
+            from_utf8(&cmd_output.stdout)?
         } else {
-            println!("[rfds] running asciidoctor failed:");
-            stdout().write_all(&cmd_output.stdout).unwrap();
-            stderr().write_all(&cmd_output.stderr).unwrap();
-
-            Default::default()
+            bail!(
+                "[rfds] running asciidoctor failed: {} {}",
+                from_utf8(&cmd_output.stdout)?,
+                from_utf8(&cmd_output.stderr)?
+            );
         };
 
         // Delete the parent directory.
         let pdir = Path::new(parent);
         if pdir.exists() && pdir.is_dir() {
-            fs::remove_dir_all(pdir).unwrap();
+            fs::remove_dir_all(pdir)?;
         }
 
-        result.to_string()
+        Ok(result.to_string())
     }
 
     /// Convert an RFD into JSON as Slack message.
@@ -431,7 +438,12 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
-    pub async fn convert_and_upload_pdf(&mut self, db: &Database, github: &octorust::Client, company: &Company) {
+    pub async fn convert_and_upload_pdf(
+        &mut self,
+        db: &Database,
+        github: &octorust::Client,
+        company: &Company,
+    ) -> Result<()> {
         // Initialize the Google Drive client.
         // We do this here so we know the token is not expired.
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
@@ -439,7 +451,7 @@ impl RFD {
         // Get the rfd repo client.
         let owner = &company.github_org;
         let rfd_repo = "rfd";
-        let repo = github.repos().get(owner, rfd_repo).await.unwrap();
+        let repo = github.repos().get(owner, rfd_repo).await?;
 
         let mut path = env::temp_dir();
         path.push(format!("pdfcontents{}.adoc", self.number_string));
@@ -447,8 +459,8 @@ impl RFD {
         let rfd_content = self.content.to_string();
 
         // Write the contents to a temporary file.
-        let mut file = fs::File::create(path.clone()).unwrap();
-        file.write_all(rfd_content.as_bytes()).unwrap();
+        let mut file = fs::File::create(path.clone())?;
+        file.write_all(rfd_content.as_bytes())?;
 
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
@@ -465,7 +477,7 @@ impl RFD {
         // We need to save the images locally as well.
         // This ensures that
         let old_dir = format!("rfd/{}", self.number_string);
-        let images = get_images_in_branch(github, owner, rfd_repo, &old_dir, &branch).await;
+        let images = get_images_in_branch(github, owner, rfd_repo, &old_dir, &branch).await?;
         for image in images {
             // Save the image to our temporary directory.
             let image_path = format!(
@@ -480,14 +492,14 @@ impl RFD {
         let cmd_output = Command::new("asciidoctor-pdf")
             .current_dir(env::temp_dir())
             .args(&["-o", "-", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
-            .output()
-            .unwrap();
+            .output()?;
 
         if !cmd_output.status.success() {
-            println!("[rfdpdf] running asciidoctor failed:");
-            stdout().write_all(&cmd_output.stdout).unwrap();
-            stderr().write_all(&cmd_output.stderr).unwrap();
-            return;
+            bail!(
+                "running asciidoctor failed: {} {}",
+                from_utf8(&cmd_output.stdout)?,
+                from_utf8(&cmd_output.stderr)?
+            );
         }
 
         // Create or update the file in the github repository.
@@ -499,36 +511,37 @@ impl RFD {
             &rfd_path,
             cmd_output.stdout.clone(),
         )
-        .await;
+        .await?;
 
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive_client.drives().get_by_name("Automated Documents").await.unwrap();
+        let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
         let drive_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await.unwrap();
+        let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await?;
 
         // Create or update the file in the google_drive.
         let drive_file = drive_client
             .files()
             .create_or_update(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
-            .await
-            .unwrap();
+            .await?;
         self.pdf_link_google_drive = format!("https://drive.google.com/open?id={}", drive_file.id);
 
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {
-            fs::remove_file(path).unwrap();
+            fs::remove_file(path)?;
         }
+
+        Ok(())
     }
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    pub async fn expand(&mut self, github: &octorust::Client, company: &Company) {
+    pub async fn expand(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
         let owner = &company.github_org;
         let repo = "rfd";
-        let r = github.repos().get(owner, repo).await.unwrap();
+        let r = github.repos().get(owner, repo).await?;
 
         // Trim the title.
         self.title = self.title.trim().to_string();
@@ -552,7 +565,7 @@ impl RFD {
         // Get the RFD contents from the branch.
         let rfd_dir = format!("/rfd/{}", self.number_string);
         let (rfd_content, is_markdown, sha) =
-            get_rfd_contents_from_repo(github, owner, repo, &branch, &rfd_dir, company).await;
+            get_rfd_contents_from_repo(github, owner, repo, &branch, &rfd_dir, company).await?;
         self.content = rfd_content;
         self.sha = sha;
 
@@ -563,11 +576,11 @@ impl RFD {
             .await
         {
             let commit = commits.get(0).unwrap();
-            self.commit_date = commit.commit.author.as_ref().unwrap().date.parse().unwrap();
+            self.commit_date = commit.commit.author.as_ref().unwrap().date.parse()?;
         }
 
         // Parse the HTML.
-        self.html = self.get_html(github, owner, repo, &branch, is_markdown).await;
+        self.html = self.get_html(github, owner, repo, &branch, is_markdown).await?;
 
         self.authors = NewRFD::get_authors(&self.content, is_markdown);
 
@@ -577,6 +590,8 @@ impl RFD {
         self.pdf_link_github = format!("https://github.com/{}/rfd/blob/master{}", company.github_org, rfd_path);
 
         self.cio_company_id = company.id;
+
+        Ok(())
     }
 }
 
@@ -595,15 +610,15 @@ impl UpdateAirtableRecord<RFD> for RFD {
 }
 
 /// Get the RFDs from the rfd GitHub repo.
-pub async fn get_rfds_from_repo(github: &octorust::Client, company: &Company) -> BTreeMap<i32, NewRFD> {
+pub async fn get_rfds_from_repo(github: &octorust::Client, company: &Company) -> Result<BTreeMap<i32, NewRFD>> {
     let owner = &company.github_org;
     let repo = "rfd";
-    let r = github.repos().get(owner, repo).await.unwrap();
+    let r = github.repos().get(owner, repo).await?;
 
     // Get the contents of the .helpers/rfd.csv file.
     let (rfd_csv_content, _) =
-        get_file_content_from_repo(github, owner, repo, &r.default_branch, "/.helpers/rfd.csv").await;
-    let rfd_csv_string = from_utf8(&rfd_csv_content).unwrap();
+        get_file_content_from_repo(github, owner, repo, &r.default_branch, "/.helpers/rfd.csv").await?;
+    let rfd_csv_string = from_utf8(&rfd_csv_content)?;
 
     // Create the csv reader.
     let mut csv_reader = ReaderBuilder::new()
@@ -614,7 +629,7 @@ pub async fn get_rfds_from_repo(github: &octorust::Client, company: &Company) ->
     // Create the BTreeMap of RFDs.
     let mut rfds: BTreeMap<i32, NewRFD> = Default::default();
     for r in csv_reader.deserialize() {
-        let mut rfd: NewRFD = r.unwrap();
+        let mut rfd: NewRFD = r?;
 
         // TODO: this whole thing is a mess jessfraz needs to cleanup
         rfd.number_string = NewRFD::generate_number_string(rfd.number);
@@ -625,7 +640,7 @@ pub async fn get_rfds_from_repo(github: &octorust::Client, company: &Company) ->
         rfds.insert(rfd.number, rfd);
     }
 
-    rfds
+    Ok(rfds)
 }
 
 /// Try to get the markdown or asciidoc contents from the repo.
@@ -636,10 +651,10 @@ pub async fn get_rfd_contents_from_repo(
     branch: &str,
     dir: &str,
     company: &Company,
-) -> (String, bool, String) {
+) -> Result<(String, bool, String)> {
     let owner = &company.github_org;
     let repo = "rfd";
-    let r = github.repos().get(owner, repo).await.unwrap();
+    let r = github.repos().get(owner, repo).await?;
     let mut is_markdown = false;
     let decoded: String;
     let sha: String;
@@ -662,8 +677,7 @@ pub async fn get_rfd_contents_from_repo(
             let f = github
                 .repos()
                 .get_content_file(owner, repo, &format!("{}/README.md", dir), branch)
-                .await
-                .unwrap();
+                .await?;
 
             decoded = decode_base64_to_string(&f.content);
             sha = f.sha;
@@ -671,7 +685,7 @@ pub async fn get_rfd_contents_from_repo(
     }
 
     // Get all the images in the branch and make sure they are in the images directory on master.
-    let images = get_images_in_branch(github, owner, repo, dir, branch).await;
+    let images = get_images_in_branch(github, owner, repo, dir, branch).await?;
     for image in images {
         let new_path = image.path.replace("rfd/", "src/public/static/images/");
 
@@ -684,10 +698,10 @@ pub async fn get_rfd_contents_from_repo(
             &new_path,
             decode_base64(&image.content),
         )
-        .await;
+        .await?;
     }
 
-    (deunicode::deunicode(&decoded), is_markdown, sha)
+    Ok((deunicode::deunicode(&decoded), is_markdown, sha))
 }
 
 // Get all the images in a specific directory of a GitHub branch.
@@ -698,20 +712,16 @@ pub async fn get_images_in_branch(
     repo: &str,
     dir: &str,
     branch: &str,
-) -> Vec<octorust::types::ContentFile> {
+) -> Result<Vec<octorust::types::ContentFile>> {
     let mut files: Vec<octorust::types::ContentFile> = Default::default();
 
     // Get all the images in the branch and make sure they are in the images directory on master.
-    let resp = github
-        .repos()
-        .get_content_vec_entries(owner, repo, dir, branch)
-        .await
-        .unwrap();
+    let resp = github.repos().get_content_vec_entries(owner, repo, dir, branch).await?;
     for file in resp {
         if file.type_ == "dir" {
             let path = file.path.trim_end_matches('/');
             // We have a directory. We need to get the file contents recursively.
-            let mut fs = get_images_in_branch(github, owner, repo, path, branch).await;
+            let mut fs = get_images_in_branch(github, owner, repo, path, branch).await?;
             files.append(&mut fs);
             continue;
         }
@@ -731,7 +741,7 @@ pub async fn get_images_in_branch(
                         // that.
                         // We have the sha we can see if the files match using the
                         // Git Data API.
-                        let blob = github.git().get_blob(owner, repo, &file.sha).await.unwrap();
+                        let blob = github.git().get_blob(owner, repo, &file.sha).await?;
 
                         // Push the new file.
                         files.push(octorust::types::ContentFile {
@@ -754,13 +764,13 @@ pub async fn get_images_in_branch(
                         continue;
                     }
 
-                    println!("[rfd] getting file contents for {} failed: {}", file.path, e);
+                    bail!("[rfd] getting file contents for {} failed: {}", file.path, e);
                 }
             }
         }
     }
 
-    files
+    Ok(files)
 }
 
 pub fn parse_markdown(content: &str) -> String {
@@ -844,11 +854,11 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
 }
 
 // Sync the rfds with our database.
-pub async fn refresh_db_rfds(db: &Database, company: &Company) {
+pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     // Authenticate GitHub.
     let github = company.authenticate_github();
 
-    let rfds = get_rfds_from_repo(&github, company).await;
+    let rfds = get_rfds_from_repo(&github, company).await?;
 
     // Sync rfds.
     for (_, rfd) in rfds {
@@ -858,12 +868,14 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) {
         new_rfd.expand(&github, company).await;
 
         // Make and update the PDF versions.
-        new_rfd.convert_and_upload_pdf(db, &github, company).await;
+        new_rfd.convert_and_upload_pdf(db, &github, company).await?;
 
         // Update the RFD again.
         // We do this so the expand functions are only one place.
         new_rfd.update(db).await;
     }
+
+    Ok(())
 }
 
 /// Create a changelog email for the RFDs.
@@ -929,7 +941,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_db_rfds(&db, &oxide).await;
+        refresh_db_rfds(&db, &oxide).await.unwrap();
 
         // Update rfds in airtable.
         RFDs::get_from_db(&db, oxide.id).update_airtable(&db).await;

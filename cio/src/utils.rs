@@ -6,6 +6,7 @@ use std::{
     str::from_utf8,
 };
 
+use anyhow::{bail, Result};
 use octorust::Client as GitHub;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
@@ -94,7 +95,7 @@ pub async fn get_file_content_from_repo(
     repo: &str,
     branch: &str,
     path: &str,
-) -> (Vec<u8>, String) {
+) -> Result<(Vec<u8>, String)> {
     // Add the starting "/" so this works.
     // TODO: figure out why it doesn't work without it.
     let mut file_path = path.to_string();
@@ -105,13 +106,13 @@ pub async fn get_file_content_from_repo(
     // Try to get the content for the file from the repo.
     match github.repos().get_content_file(owner, repo, &file_path, branch).await {
         Ok(file) => {
-            return (decode_base64(&file.content), file.sha.to_string());
+            return Ok((decode_base64(&file.content), file.sha.to_string()));
         }
         Err(e) => {
             // TODO: better match on errors
             if e.to_string().contains("rate limit") {
                 // We got a rate limit error.
-                println!("got rate limited: {}", e);
+                bail!("We got rate limited! {}", e);
             } else if e.to_string().contains("too large") {
                 // The file is too big for us to get it's contents through this API.
                 // The error suggests we use the Git Data API but we need the file sha for
@@ -138,24 +139,25 @@ pub async fn get_file_content_from_repo(
                     let blob = github.git().get_blob(owner, repo, &item.sha).await.unwrap();
                     // Base64 decode the contents.
 
-                    return (decode_base64(&blob.content), item.sha.to_string());
+                    return Ok((decode_base64(&blob.content), item.sha.to_string()));
                 }
 
-                println!(
+                bail!(
                     "[github content] Getting the file at {} on branch {} failed: {:?}",
-                    file_path, branch, e
+                    file_path,
+                    branch,
+                    e
                 );
             } else {
-                println!(
+                bail!(
                     "[github content] Getting the file at {} on branch {} failed: {:?}",
-                    file_path, branch, e
+                    file_path,
+                    branch,
+                    e
                 );
             }
         }
     }
-
-    // By default return nothing. This only happens if we could not get the file for some reason.
-    (vec![], "".to_string())
 }
 
 /// Create or update a file in a GitHub repository.
@@ -168,7 +170,7 @@ pub async fn create_or_update_file_in_github_repo(
     branch: &str,
     path: &str,
     new_content: Vec<u8>,
-) {
+) -> Result<()> {
     let content = new_content.trim();
     // Add the starting "/" so this works.
     // TODO: figure out why it doesn't work without it.
@@ -178,7 +180,7 @@ pub async fn create_or_update_file_in_github_repo(
     }
 
     // Try to get the content for the file from the repo.
-    let (existing_content, sha) = get_file_content_from_repo(github, owner, repo, branch, path).await;
+    let (existing_content, sha) = get_file_content_from_repo(github, owner, repo, branch, path).await?;
 
     if !existing_content.is_empty() || !sha.is_empty() {
         if content == existing_content {
@@ -188,7 +190,7 @@ pub async fn create_or_update_file_in_github_repo(
                 "[github content] File contents at {} are the same, no update needed",
                 file_path
             );
-            return;
+            return Ok(());
         }
 
         // When the pdfs are generated they change the modified time that is
@@ -209,7 +211,7 @@ pub async fn create_or_update_file_in_github_repo(
                 "[github content] File contents at {} are the same, no update needed",
                 file_path
             );
-            return;
+            return Ok(());
         }
     }
 
@@ -235,11 +237,13 @@ pub async fn create_or_update_file_in_github_repo(
         )
         .await
     {
-        Ok(_) => (),
+        Ok(_) => return Ok(()),
         Err(e) => {
-            println!(
+            bail!(
                 "[github content] updating file at {} on branch {} failed: {}",
-                file_path, branch, e
+                file_path,
+                branch,
+                e
             );
         }
     }

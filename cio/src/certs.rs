@@ -7,6 +7,7 @@ use std::{
 };
 
 use acme_lib::{create_p384_key, persist::FilePersist, Directory, DirectoryUrl};
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use cloudflare::{
@@ -231,19 +232,18 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// GitHub, then fill in the rest.
-    pub async fn populate_from_github(&mut self, github: &octorust::Client, company: &Company) {
+    pub async fn populate_from_github(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
         let owner = &company.github_org;
         let repo = "configs";
-        let r = github.repos().get(owner, repo).await.unwrap();
 
         let (cert, _) = get_file_content_from_repo(
             github,
             owner,
             repo,
-            &r.default_branch,
+            "", // if empty it uses the default branch
             &self.get_github_path("fullchain.pem"),
         )
-        .await;
+        .await?;
         if !cert.is_empty() {
             self.certificate = from_utf8(&cert).unwrap().to_string();
         }
@@ -252,10 +252,10 @@ impl NewCertificate {
             github,
             owner,
             repo,
-            &r.default_branch,
+            "", // if empty it uses the default branch
             &self.get_github_path("privkey.pem"),
         )
-        .await;
+        .await?;
         if !p.is_empty() {
             self.private_key = from_utf8(&p).unwrap().to_string();
         }
@@ -263,6 +263,8 @@ impl NewCertificate {
         let exp_date = self.expiration_date();
         self.expiration_date = exp_date.date().naive_utc();
         self.valid_days_left = self.valid_days_left();
+
+        Ok(())
     }
 
     /// For a certificate struct, populate the certificate and private_key fields from
