@@ -342,7 +342,7 @@ server {
 
 	# Add redirect.
 	location / {
-		return 302 {{this.link}}$request_uri;
+		return 302 {{this.link}}{{#if this.discussion}}$request_uri{{/if}};
 	}
 
 	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}
@@ -366,7 +366,7 @@ server {
 
 	# Add redirect.
 	location / {
-		return 302 {{this.link}}$request_uri;
+		return 302 {{this.link}}{{#if this.discussion}}$request_uri{{/if}};
 	}
 
 	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}
