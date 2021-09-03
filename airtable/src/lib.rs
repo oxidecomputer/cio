@@ -149,7 +149,7 @@ impl Airtable {
     ) -> Result<Vec<Record<T>>, APIError> {
         let mut params = vec![("pageSize", "100".to_string()), ("view", view.to_string())];
         for field in fields {
-            params.push(("fields", field.to_string()));
+            params.push(("fields[]", field.to_string()));
         }
 
         // Build the request.
