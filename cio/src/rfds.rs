@@ -811,6 +811,8 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
         .to_string();
 
     cleaned
+        .replace("link:", &format!("link:https://{}.rfd.oxide.computer/", num))
+        .replace(&format!("link:https://{}.rfd.oxide.computer/http", num), "link:http")
 }
 
 pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> String {
@@ -971,7 +973,9 @@ mod tests {
         <a href="\#_principles">
         <object data="thing.svg">
         <object type="image/svg+xml" data="thing.svg">
-        <a href="\#things" \>"#;
+        <a href="\#things" \>
+        link:thing.html[Our thing]
+        link:http://example.com[our example]"#;
 
         let cleaned = clean_rfd_html_links(content, "0032");
 
@@ -984,7 +988,9 @@ mod tests {
         <a href="/rfd/0032#_principles">
         <object data="/static/images/0032/thing.svg">
         <object type="image/svg+xml" data="/static/images/0032/thing.svg">
-        <a href="/rfd/0032#things" \>"#;
+        <a href="/rfd/0032#things" \>
+        link:https://0032.rfd.oxide.computer/thing.html[Our thing]
+        link:http://example.com[our example]"#;
 
         assert_eq!(expected, cleaned);
     }
