@@ -3,7 +3,7 @@ use std::{
     thread, time,
 };
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::{
     types::{
@@ -224,10 +224,15 @@ pub async fn suspend_user(gsuite: &GSuite, email: &str) -> Result<()> {
 }
 
 /// Update a user's aliases in GSuite to match our database.
-pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<String>, company: &Company) {
+pub async fn update_user_aliases(
+    gsuite: &GSuite,
+    u: &GSuiteUser,
+    aliases: Vec<String>,
+    company: &Company,
+) -> Result<()> {
     if aliases.is_empty() {
         // Return early.
-        return;
+        return Ok(());
     }
 
     let mut formatted_aliases: Vec<String> = Default::default();
@@ -257,11 +262,13 @@ pub async fn update_user_aliases(gsuite: &GSuite, u: &GSuiteUser, aliases: Vec<S
                     // Ignore the error.
                     continue;
                 }
-                panic!("updating gsuite user {} aliases failed: {}", u.primary_email, e);
+                bail!("updating gsuite user {} aliases failed: {}", u.primary_email, e);
             }
         }
     }
+
     println!("updated gsuite user aliases: {}", u.primary_email);
+    Ok(())
 }
 
 /// Update a user's groups in GSuite to match our database.
@@ -363,10 +370,10 @@ pub async fn update_user_google_groups(
 }
 
 /// Update a group's aliases in GSuite to match our configuration files.
-pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
+pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) -> Result<()> {
     if g.aliases.is_empty() {
         // return early
-        return;
+        return Ok(());
     }
 
     // Update the user's aliases.
@@ -391,11 +398,13 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) {
                     // Ignore the error.
                     continue;
                 }
-                panic!("updating gsuite group {} aliases failed: {}", g.email, e);
+                bail!("updating gsuite group {} aliases failed: {}", g.email, e);
             }
         }
     }
+
     println!("updated gsuite group aliases: {}", g.email);
+    Ok(())
 }
 
 /// Update a group's settings in GSuite to match our configuration files.

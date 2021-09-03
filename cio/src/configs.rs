@@ -2035,7 +2035,7 @@ pub async fn sync_users(
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             // TODO: only deactivate/suspend them so someone can transfer their data.
-            crate::gsuite::suspend_user(&gsuite, &user.email).await;
+            crate::gsuite::suspend_user(&gsuite, &user.email).await?;
             println!("suspended user in gsuite: {}", username);
 
             // If we have an enterprise airtable account, let's delete the user from
@@ -2097,7 +2097,7 @@ pub async fn sync_users(
                     // If the user does not exist in our map we need to delete
                     // them from GSuite.
                     println!("suspending user {} in gsuite", username);
-                    crate::gsuite::suspend_user(&gsuite, &format!("{}@{}", username, company.gsuite_domain)).await;
+                    crate::gsuite::suspend_user(&gsuite, &format!("{}@{}", username, company.gsuite_domain)).await?;
                     println!("suspended user in gsuite: {}", username);
 
                     println!("deleted user from gsuite: {}", username);
@@ -2110,10 +2110,10 @@ pub async fn sync_users(
 
             gsuite.users().update(&gsuite_user.id, &gsuite_user).await?;
 
-            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
+            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await?;
 
             // Add the user to their teams and groups.
-            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
+            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await?;
 
             // Remove the user from the user map and continue.
             // This allows us to add all the remaining new user after.
@@ -2141,10 +2141,10 @@ pub async fn sync_users(
             user.send_email_new_gsuite_user(db, &gsuite_user.password).await?;
             println!("created new user in gsuite: {}", username);
 
-            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await;
+            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await?;
 
             // Add the user to their teams and groups.
-            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await;
+            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await?;
         }
     }
 
@@ -2485,10 +2485,10 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
             .update(&format!("{}@{}", name, company.gsuite_domain), &updated_group)
             .await?;
 
-        update_group_aliases(&gsuite, &updated_group).await;
+        update_group_aliases(&gsuite, &updated_group).await?;
 
         // Update the groups settings.
-        update_google_group_settings(&ggs, group, company).await;
+        update_google_group_settings(&ggs, group, company).await?;
 
         // Remove the group from the database map and continue.
         // This allows us to add all the remaining new groups after.
@@ -2516,10 +2516,10 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
 
         let new_group: GSuiteGroup = gsuite.groups().insert(&g).await?;
 
-        update_group_aliases(&gsuite, &new_group).await;
+        update_group_aliases(&gsuite, &new_group).await?;
 
         // Update the groups settings.
-        update_google_group_settings(&ggs, &group, company).await;
+        update_google_group_settings(&ggs, &group, company).await?;
 
         println!("created group in gsuite: {}", name);
     }
