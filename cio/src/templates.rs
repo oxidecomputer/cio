@@ -342,7 +342,7 @@ server {
 
 	# Add redirect.
 	location / {
-		return 301 "{{this.link}}";
+		return 301 {{this.link}}$request_uri;
 	}
 
 	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}
@@ -366,7 +366,7 @@ server {
 
 	# Add redirect.
 	location / {
-		return 301 "{{this.link}}";
+		return 301 {{this.link}}$request_uri;
 	}
 
 	{{#if this.discussion}}# Redirect /discussion to {{this.discussion}}

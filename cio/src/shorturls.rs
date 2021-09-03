@@ -71,8 +71,8 @@ pub async fn generate_shorturls_for_rfds(
     for rfd in rfds {
         let mut link = ShortUrl {
             name: rfd.number.to_string(),
-            description: format!("RFD {} {}", rfd.number_string, rfd.title),
-            link: rfd.link,
+            description: format!("RFD {} {}", rfd.number_string, rfd.title).to_string(),
+            link: rfd.link.trim_end_matches("README.adoc").trim_end_matches("README.md"),
             ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),
             domain: company.domain.to_string(),
