@@ -376,9 +376,25 @@ async fn listen_github_webhooks(
         match repo_name {
             Repo::RFD => match event_type {
                 EventType::Push => {
-                    let resp = handle_rfd_push(&github, api_context, event, &company).await;
+                    match handle_rfd_push(&github, api_context, event.clone(), &company).await {
+                        Ok(message) => {
+                            event.create_comment(&github, &message).await.unwrap();
+                        }
+                        Err(e) => {
+                            event
+                                .create_comment(
+                                    &github,
+                                    &format!(
+                                        "updating RFD on push failed: {}\n\nevent: ```\n{:#?}\n```\n\ncc @jessfraz",
+                                        e, event,
+                                    ),
+                                )
+                                .await
+                                .unwrap();
+                        }
+                    }
                     sentry::end_session();
-                    return resp;
+                    return Ok(HttpResponseAccepted("ok".to_string()));
                 }
                 EventType::PullRequest => {
                     let resp = handle_rfd_pull_request(&github, api_context, event, &company).await;
@@ -3873,7 +3889,7 @@ async fn handle_rfd_push(
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
+) -> Result<String> {
     let db = &api_context.db;
 
     // Initialize the Google Drive client.
@@ -3886,6 +3902,16 @@ async fn handle_rfd_push(
     // Get the repo.
     let owner = &company.github_org;
     let repo = event.repository.name.to_string();
+
+    if event.commits.is_empty() {
+        // Return early that there are no commits.
+        // IDK how we got here.
+        sentry::capture_message(
+            &format!("rfd push event had no commits: {:?}", event),
+            sentry::Level::Fatal,
+        );
+        return Ok(String::new());
+    }
 
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
@@ -3900,11 +3926,18 @@ async fn handle_rfd_push(
             "`push` event commit `{}` does not include any changes to the `{}` directory",
             commit.id, dir
         );
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        return Ok(String::new());
     }
 
     // Get the branch name.
     let branch = event.refv.trim_start_matches("refs/heads/");
+
+    let mut message = String::new();
+
+    let mut a = |s: &str| {
+        message.push_str(s);
+        message.push('\n');
+    };
 
     // Iterate over the removed files and remove any images that we no longer
     // need for the HTML rendered RFD website.
@@ -3925,8 +3958,7 @@ async fn handle_rfd_push(
             // We need to get the current sha for the file we want to delete.
             let (_, gh_file_sha) =
                 get_file_content_from_repo(github, owner, &repo, &website_file, &event.repository.default_branch)
-                    .await
-                    .unwrap();
+                    .await?;
 
             if !gh_file_sha.is_empty() {
                 github
@@ -3947,12 +3979,11 @@ async fn handle_rfd_push(
                             branch: event.repository.default_branch.to_string(),
                         },
                     )
-                    .await
-                    .unwrap();
-                println!(
-                    "deleted file `{}` since it was removed in mose recent push for RFD {:?}",
-                    website_file, event
-                );
+                    .await?;
+                a(&format!(
+                    "[SUCCESS]: deleted file `{}` since it was removed in this push",
+                    website_file,
+                ));
             }
         }
     }
@@ -3974,9 +4005,7 @@ async fn handle_rfd_push(
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let (gh_file_content, _) = get_file_content_from_repo(github, owner, &repo, &file, branch)
-                .await
-                .unwrap();
+            let (gh_file_content, _) = get_file_content_from_repo(github, owner, &repo, &file, branch).await?;
 
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
@@ -3991,12 +4020,11 @@ async fn handle_rfd_push(
                 &website_file,
                 gh_file_content,
             )
-            .await
-            .unwrap();
-            println!(
-                "updated file `{}` since it was modified in mose recent push for RFD {:?}",
-                website_file, event
-            );
+            .await?;
+            a(&format!(
+                "[SUCCESS]: updated file `{}` since it was modified in this push",
+                website_file,
+            ));
             // We are done so we can continue throught the loop.
             continue;
         }
@@ -4024,26 +4052,30 @@ async fn handle_rfd_push(
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(db).await;
             // Update all the fields for the RFD.
-            rfd.expand(github, company).await.unwrap();
+            rfd.expand(github, company).await?;
             rfd.update(db).await;
-            println!("updated RFD {} in the database", new_rfd.number_string);
-            println!("updated airtable for RFD {}", new_rfd.number_string);
+            a(&format!(
+                "[SUCCESS]: updated RFD {} in the database",
+                new_rfd.number_string
+            ));
+            a(&format!(
+                "[SUCCESS]: updated airtable for RFD {}",
+                new_rfd.number_string
+            ));
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(db, github, &company.github_org, "configs", company.id)
-                .await
-                .unwrap();
-            println!("generated shorturls for the rfds");
+            generate_shorturls_for_rfds(db, github, &company.github_org, "configs", company.id).await?;
+            a("[SUCCESS]: updated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
-            rfd.convert_and_upload_pdf(db, github, company).await.unwrap();
+            rfd.convert_and_upload_pdf(db, github, company).await?;
             rfd.update(db).await;
-            println!(
-                "updated pdf `{}` for RFD {}",
+            a(&format!(
+                "[SUCCESS]: updated pdf `{}` for RFD {}",
+                rfd.get_pdf_filename(),
                 new_rfd.number_string,
-                rfd.get_pdf_filename()
-            );
+            ));
 
             // Check if the RFD state changed from what is currently in the
             // database.
@@ -4070,8 +4102,7 @@ async fn handle_rfd_push(
                         // direction
                         Default::default(),
                     )
-                    .await
-                    .unwrap();
+                    .await?;
                 // Check if any pull requests are from our branch.
                 let mut has_pull = false;
                 for pull in pulls {
@@ -4079,15 +4110,14 @@ async fn handle_rfd_push(
                     let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
 
                     if pull_branch == branch {
-                        println!(
-                            "RFD {} has moved from state {} -> {}, on branch {}, we already have \
-                             a pull request: {}",
+                        a(&format!(
+                            "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
                             rfd.number_string,
                             old_rfd_state,
                             rfd.state,
                             branch,
                             pull.html_url.unwrap().to_string()
-                        );
+                        ));
 
                         has_pull = true;
                         break;
@@ -4096,7 +4126,7 @@ async fn handle_rfd_push(
 
                 // Open a pull request, if we don't already have one.
                 if !has_pull {
-                    github
+                    let pull = github
                         .pulls()
                         .create(
                             owner,
@@ -4115,13 +4145,11 @@ async fn handle_rfd_push(
                                 issue: 0,
                             },
                         )
-                        .await
-                        .unwrap();
-                    println!("opened pull request for RFD {}", new_rfd.number_string);
-                    sentry::capture_message(
-                        &format!("successfully opened a pull request for {}", rfd.number_string),
-                        sentry::Level::Info,
-                    );
+                        .await?;
+                    a(&format!(
+                        "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, opened pull request {}",
+                        rfd.number_string, old_rfd_state, rfd.state, branch, pull.number,
+                    ));
 
                     // We could update the discussion link here, but we will already
                     // trigger a `pull_request` `opened` event, so we might as well let
@@ -4149,9 +4177,11 @@ async fn handle_rfd_push(
                     &file,
                     rfd_mut.content.as_bytes().to_vec(),
                 )
-                .await
-                .unwrap();
-                println!("updated state to `published` for  RFD {}", new_rfd.number_string);
+                .await?;
+                a(&format!(
+                    "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
+                    new_rfd.number_string, event.repository.default_branch
+                ));
             }
 
             // If the title of the RFD changed, delete the old PDF file so it
@@ -4162,8 +4192,7 @@ async fn handle_rfd_push(
                 // First get the sha of the old pdf.
                 let (_, old_pdf_sha) =
                     get_file_content_from_repo(github, owner, &repo, &pdf_path, &event.repository.default_branch)
-                        .await
-                        .unwrap();
+                        .await?;
 
                 if !old_pdf_sha.is_empty() {
                     // Delete the old filename from GitHub.
@@ -4185,28 +4214,38 @@ async fn handle_rfd_push(
                                 branch: event.repository.default_branch.to_string(),
                             },
                         )
-                        .await
-                        .unwrap();
+                        .await?;
+                    a(&format!(
+                        "[SUCCESS]: deleted old pdf file in GitHub {} since the new name is {}",
+                        old_rfd_pdf,
+                        rfd.get_pdf_filename()
+                    ));
                 }
 
                 // Get the directory by the name.
-                let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await.unwrap();
+                let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?;
 
                 // Delete the old filename from drive.
                 drive
                     .files()
                     .delete_by_name(&shared_drive.id, &parent_id, &old_rfd_pdf)
-                    .await
-                    .unwrap();
+                    .await?;
+                a(&format!(
+                    "[SUCCESS]: deleted old pdf file in Google Drive {} since the new name is {}",
+                    old_rfd_pdf,
+                    rfd.get_pdf_filename()
+                ));
             }
 
-            println!("RFD {} `push` operations completed", new_rfd.number_string);
+            a(&format!(
+                "[SUCCESS]: RFD {} `push` operations completed",
+                new_rfd.number_string
+            ));
         }
     }
 
     // TODO: should we do something if the file gets deleted (?)
-
-    Ok(HttpResponseAccepted("ok".to_string()))
+    Ok(message)
 }
 
 /// Handle a `push` event for the configs repo.
@@ -4259,18 +4298,23 @@ async fn handle_configs_push(
         Ok(configs) => {
             let mut message = String::new();
 
+            let mut a = |s: &str| {
+                message.push_str(s);
+                message.push('\n');
+            };
+
             // Check if the links.toml file changed.
             if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
                 // Update our links in the database.
                 match sync_links(&api_context.db, configs.links, configs.huddles, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS] links", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: links -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS] links"),
+                    Err(e) => a(&format!("[FAILURE]: links -> {}\n\tcc @jessfraz", e)),
                 }
 
                 // We need to update the short URLs for the links.
                 match generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: links shorturls", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: links shorturls -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS]: links shorturls"),
+                    Err(e) => a(&format!("[FAILURE]: links shorturls -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
@@ -4279,16 +4323,16 @@ async fn handle_configs_push(
             // added a new group to GSuite.
             if commit.file_changed("configs/groups.toml") {
                 match sync_groups(&api_context.db, configs.groups, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: groups", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: groups -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS]: groups"),
+                    Err(e) => a(&format!("[FAILURE]: groups -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
             // Check if the users.toml file changed.
             if commit.file_changed("configs/users.toml") {
                 match sync_users(&api_context.db, github, configs.users, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: users", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: users -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS]: users"),
+                    Err(e) => a(&format!("[FAILURE]: users -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
@@ -4296,13 +4340,8 @@ async fn handle_configs_push(
                 // Sync okta users and group from the database.
                 // Do this after we update the users and groups in the database.
                 match generate_terraform_files_for_okta(github, &api_context.db, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: terraform files for okta", message),
-                    Err(e) => {
-                        message = format!(
-                            "{}\n[FAILURE]: terraform files for okta -> {}\n\tcc @jessfraz",
-                            message, e
-                        )
-                    }
+                    Ok(_) => a("[SUCCESS]: terraform files for okta"),
+                    Err(e) => a(&format!("[FAILURE]: terraform files for okta -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
@@ -4310,24 +4349,24 @@ async fn handle_configs_push(
             // Buildings needs to be synchronized _before_ we move on to conference rooms.
             if commit.file_changed("configs/buildings.toml") {
                 match sync_buildings(&api_context.db, configs.buildings, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: buildings", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: buildings -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS]: buildings"),
+                    Err(e) => a(&format!("[FAILURE]: buildings -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
             // Check if the resources.toml file changed.
             if commit.file_changed("configs/resources.toml") {
                 match sync_conference_rooms(&api_context.db, configs.resources, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: conference rooms", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: conference rooms -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS]: conference rooms"),
+                    Err(e) => a(&format!("[FAILURE]: conference rooms -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
             // Check if the certificates.toml file changed.
             if commit.file_changed("configs/certificates.toml") {
                 match sync_certificates(&api_context.db, github, configs.certificates, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: certificates", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: certificates -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS]: certificates"),
+                    Err(e) => a(&format!("[FAILURE]: certificates -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
@@ -4342,13 +4381,11 @@ async fn handle_configs_push(
                 )
                 .await
                 {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: GitHub outside collaborators", message),
-                    Err(e) => {
-                        message = format!(
-                            "{}\n[FAILURE]: GitHub outside collaborators -> {}\n\tcc @jessfraz",
-                            message, e
-                        )
-                    }
+                    Ok(_) => a("[SUCCESS]: GitHub outside collaborators"),
+                    Err(e) => a(&format!(
+                        "[FAILURE]: GitHub outside collaborators -> {}\n\tcc @jessfraz",
+                        e
+                    )),
                 }
             }
 
@@ -4356,8 +4393,8 @@ async fn handle_configs_push(
             if commit.file_changed("configs/huddles.toml") {
                 // Sync huddles.
                 match cio_api::huddles::sync_huddles(&api_context.db, company).await {
-                    Ok(_) => message = format!("{}\n[SUCCESS]: huddles", message),
-                    Err(e) => message = format!("{}\n[FAILURE]: huddles -> {}\n\tcc @jessfraz", message, e),
+                    Ok(_) => a("[SUCCESS]: huddles"),
+                    Err(e) => a(&format!("[FAILURE]: huddles -> {}\n\tcc @jessfraz", e)),
                 }
             }
 
