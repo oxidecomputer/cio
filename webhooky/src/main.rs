@@ -9,7 +9,15 @@ pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
-use std::{collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    convert::TryInto,
+    env,
+    ffi::OsStr,
+    fs::File,
+    str::FromStr,
+    sync::Arc,
+};
 
 use anyhow::Result;
 use chrono::{offset::Utc, DateTime, NaiveDate, TimeZone};
@@ -311,6 +319,12 @@ async fn listen_github_webhooks(
         .unwrap()
         .to_string();
     let event_type = EventType::from_str(&event_type_string).unwrap();
+
+    // Add context to sentry.
+    sentry::configure_scope(|scope| {
+        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+        scope.set_tag("github.event.type", &event_type_string);
+    });
 
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
@@ -3405,6 +3419,29 @@ impl GitHubWebhook {
         // TODO: comment on pull request instead, etc.
 
         Ok(())
+    }
+}
+
+impl From<GitHubWebhook> for BTreeMap<String, serde_json::Value> {
+    fn from(from: GitHubWebhook) -> Self {
+        let mut map: BTreeMap<String, serde_json::Value> = Default::default();
+        map.insert("action".to_string(), json!(from.action));
+        map.insert("sender".to_string(), json!(from.sender));
+        map.insert("repository".to_string(), json!(from.repository));
+        map.insert("organization".to_string(), json!(from.organization));
+        map.insert("installation".to_string(), json!(from.installation));
+        map.insert("ref".to_string(), json!(from.refv));
+        map.insert("before".to_string(), json!(from.before));
+        map.insert("after".to_string(), json!(from.after));
+        map.insert("commits".to_string(), json!(from.commits));
+        map.insert("number".to_string(), json!(from.number));
+        map.insert("pull_request".to_string(), json!(from.pull_request));
+        map.insert("issue".to_string(), json!(from.issue));
+        map.insert("comment".to_string(), json!(from.comment));
+        map.insert("check_suite".to_string(), json!(from.check_suite));
+        map.insert("check_run".to_string(), json!(from.check_run));
+
+        map
     }
 }
 
