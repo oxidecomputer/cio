@@ -3373,9 +3373,8 @@ impl GitHubWebhook {
                 &self.repository.name,
                 &commit.sha,
                 comment,
-                "",
             )
-            .await;
+            .await?;
         }
 
         // TODO: comment on pull request instead, etc.
@@ -4258,41 +4257,20 @@ async fn handle_configs_push(
     // Get the configs from our repo.
     match get_configs_from_repo(github, company).await {
         Ok(configs) => {
-            let mut success_message = String::new();
+            let mut message = String::new();
 
             // Check if the links.toml file changed.
             if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
                 // Update our links in the database.
                 match sync_links(&api_context.db, configs.links, configs.huddles, company).await {
-                    Ok(_) => success_message = format!("{}\nSynced links successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!("[FAILURE]: syncing links in configs failed: {}\n\ncc @jessfraz", e),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS] links", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: links -> {}\n\tcc @jessfraz", message, e),
                 }
 
                 // We need to update the short URLs for the links.
                 match generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id).await {
-                    Ok(_) => success_message = format!("{}\nGenerated shorturls successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!(
-                                    "[FAILURE]: generating shorturls for links in configs failed: {}\n\ncc @jessfraz",
-                                    e
-                                ),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: links shorturls", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: links shorturls -> {}\n\tcc @jessfraz", message, e),
                 }
             }
 
@@ -4301,34 +4279,16 @@ async fn handle_configs_push(
             // added a new group to GSuite.
             if commit.file_changed("configs/groups.toml") {
                 match sync_groups(&api_context.db, configs.groups, company).await {
-                    Ok(_) => success_message = format!("{}\nSynced groups successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!("[FAILURE]: syncing groups in configs failed: {}\n\ncc @jessfraz", e),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: groups", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: groups -> {}\n\tcc @jessfraz", message, e),
                 }
             }
 
             // Check if the users.toml file changed.
             if commit.file_changed("configs/users.toml") {
                 match sync_users(&api_context.db, github, configs.users, company).await {
-                    Ok(_) => success_message = format!("{}\nSynced users successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!("[FAILURE]: syncing users in configs failed: {}\n\ncc @jessfraz", e),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: users", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: users -> {}\n\tcc @jessfraz", message, e),
                 }
             }
 
@@ -4336,19 +4296,12 @@ async fn handle_configs_push(
                 // Sync okta users and group from the database.
                 // Do this after we update the users and groups in the database.
                 match generate_terraform_files_for_okta(github, &api_context.db, company).await {
-                    Ok(_) => {
-                        success_message =
-                            format!("{}\nGenerated terraform files for okta successfully", success_message)
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: terraform files for okta", message),
                     Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!("[FAILURE]: generating terraform files for okta in configs failed: {}\n\ncc @jessfraz", e),
-                            )
-                            .await
-                            .unwrap();
+                        message = format!(
+                            "{}\n[FAILURE]: terraform files for okta -> {}\n\tcc @jessfraz",
+                            message, e
+                        )
                     }
                 }
             }
@@ -4357,57 +4310,24 @@ async fn handle_configs_push(
             // Buildings needs to be synchronized _before_ we move on to conference rooms.
             if commit.file_changed("configs/buildings.toml") {
                 match sync_buildings(&api_context.db, configs.buildings, company).await {
-                    Ok(_) => success_message = format!("{}\nSynced buildings successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!("[FAILURE]: syncing buildings in configs failed: {}\n\ncc @jessfraz", e),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: buildings", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: buildings -> {}\n\tcc @jessfraz", message, e),
                 }
             }
 
             // Check if the resources.toml file changed.
             if commit.file_changed("configs/resources.toml") {
                 match sync_conference_rooms(&api_context.db, configs.resources, company).await {
-                    Ok(_) => success_message = format!("{}\nSynced conference rooms successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!(
-                                    "[FAILURE]: syncing conference rooms in configs failed: {}\n\ncc @jessfraz",
-                                    e
-                                ),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: conference rooms", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: conference rooms -> {}\n\tcc @jessfraz", message, e),
                 }
             }
 
             // Check if the certificates.toml file changed.
             if commit.file_changed("configs/certificates.toml") {
                 match sync_certificates(&api_context.db, github, configs.certificates, company).await {
-                    Ok(_) => success_message = format!("{}\nSynced certificates successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!(
-                                    "[FAILURE]: syncing certificates in configs failed: {}\n\ncc @jessfraz",
-                                    e
-                                ),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: certificates", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: certificates -> {}\n\tcc @jessfraz", message, e),
                 }
             }
 
@@ -4422,19 +4342,12 @@ async fn handle_configs_push(
                 )
                 .await
                 {
-                    Ok(_) => {
-                        success_message =
-                            format!("{}\nSynced GitHub outside collaborators successfully", success_message)
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: GitHub outside collaborators", message),
                     Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!("[FAILURE]: syncing GitHub outside collaborators in configs failed: {}\n\ncc @jessfraz", e),
-                            )
-                            .await
-                            .unwrap();
+                        message = format!(
+                            "{}\n[FAILURE]: GitHub outside collaborators -> {}\n\tcc @jessfraz",
+                            message, e
+                        )
                     }
                 }
             }
@@ -4443,24 +4356,15 @@ async fn handle_configs_push(
             if commit.file_changed("configs/huddles.toml") {
                 // Sync huddles.
                 match cio_api::huddles::sync_huddles(&api_context.db, company).await {
-                    Ok(_) => success_message = format!("{}\nSynced huddles successfully", success_message),
-                    Err(e) => {
-                        // We need to comment on the commit that there was an error.
-                        event
-                            .create_comment(
-                                github,
-                                &format!("[FAILURE]: syncing huddles in configs failed: {}\n\ncc @jessfraz", e),
-                            )
-                            .await
-                            .unwrap();
-                    }
+                    Ok(_) => message = format!("{}\n[SUCCESS]: huddles", message),
+                    Err(e) => message = format!("{}\n[FAILURE]: huddles -> {}\n\tcc @jessfraz", message, e),
                 }
             }
 
-            success_message = success_message.trim().to_string();
-            if !success_message.is_empty() {
+            message = message.trim().to_string();
+            if !message.is_empty() {
                 // We need to comment on the commit that we succeeded.
-                event.create_comment(github, &success_message).await.unwrap();
+                event.create_comment(github, &message).await.unwrap();
             }
         }
         Err(e) => {
