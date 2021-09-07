@@ -11,6 +11,6 @@ edition = "2018"
 cio-api = { path = "../cio" }
 hidapi = "^1.2.6"
 keycode = "^0.3.0"
-sentry = "^0.22.0"
+sentry = "^0.23.0"
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "^0.8.1", features = ["serde", "v4"] }
