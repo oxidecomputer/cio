@@ -8,7 +8,7 @@ use std::{
     str::from_utf8,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -532,6 +532,74 @@ impl RFD {
         if path.exists() && !path.is_dir() {
             fs::remove_file(path)?;
         }
+
+        Ok(())
+    }
+
+    /// Update the pull request information for an RFD.
+    pub async fn update_pull_request(
+        &self,
+        github: &octorust::Client,
+        company: &Company,
+        pull_request: &GitHubPullRequest,
+    ) -> Result<()> {
+        let owner = company.github_org.to_string();
+        let repo = "rfd";
+
+        // Let's make sure the title of the pull request is what it should be.
+        // The pull request title should be equal to the name of the pull request.
+        if self.name != pull_request.title {
+            // Get the current set of settings for the pull request.
+            // We do this because we want to keep the current state for body.
+            let pull = github.pulls().get(&owner, repo, pull_request.number).await.unwrap();
+
+            // Update the title of the pull request.
+            match github
+                .pulls()
+                .update(
+                    &owner,
+                    repo,
+                    pull_request.number,
+                    &octorust::types::PullsUpdateRequest {
+                        title: self.name.to_string(),
+                        body: pull.body.to_string(),
+                        base: "".to_string(),
+                        maintainer_can_modify: None,
+                        state: None,
+                    },
+                )
+                .await
+            {
+                Ok(_) => (),
+                Err(e) => {
+                    return Err(anyhow!(
+                        "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
+                        pull_request.title,
+                        self.name,
+                        pull_request.number,
+                        e,
+                    ));
+                }
+            }
+        }
+
+        // Update the labels for the pull request.
+        let mut labels: Vec<String> = Default::default();
+        if self.state == "discussion" {
+            labels.push(":thought_balloon: discussion".to_string());
+        } else if self.state == "ideation" {
+            labels.push(":hatching_chick: ideation".to_string());
+        }
+        github
+            .issues()
+            .add_labels(
+                &owner,
+                repo,
+                pull_request.number,
+                &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
+            )
+            .await
+            .unwrap();
 
         Ok(())
     }
@@ -1229,4 +1297,204 @@ sdf
         title = NewRFD::get_title(content);
         assert_eq!(expected, title);
     }
+}
+
+/// A GitHub pull request.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
+#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubPullRequest {
+    #[serde(default)]
+    pub id: i64,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub url: String,
+    /// The HTML location of this pull request.
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub html_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub diff_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub patch_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub issue_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub commits_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub review_comments_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub review_comment_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub comments_url: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub statuses_url: String,
+    #[serde(default)]
+    pub number: i64,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub state: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub title: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub body: String,
+    /*pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,*/
+    #[serde(default)]
+    pub closed_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub merged_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub head: GitHubCommit,
+    #[serde(default)]
+    pub base: GitHubCommit,
+    // links
+    #[serde(default)]
+    pub user: crate::repos::GitHubUser,
+    #[serde(default)]
+    pub merged: bool,
+}
+
+/// A GitHub commit.
+/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
+#[derive(Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize)]
+pub struct GitHubCommit {
+    /// The SHA of the commit.
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub id: String,
+    /// The ISO 8601 timestamp of the commit.
+    pub timestamp: Option<DateTime<Utc>>,
+    /// The commit message.
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub message: String,
+    /// The git author of the commit.
+    #[serde(default, alias = "user")]
+    pub author: crate::repos::GitHubUser,
+    /// URL that points to the commit API resource.
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub url: String,
+    /// Whether this commit is distinct from any that have been pushed before.
+    #[serde(default)]
+    pub distinct: bool,
+    /// An array of files added in the commit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub added: Vec<String>,
+    /// An array of files modified by the commit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modified: Vec<String>,
+    /// An array of files removed in the commit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed: Vec<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub label: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "ref",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub commit_ref: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
+    pub sha: String,
+}
+
+impl GitHubCommit {
+    /// Filter the files that were added, modified, or removed by their prefix
+    /// including a specified directory or path.
+    pub fn filter_files_by_path(&mut self, dir: &str) {
+        self.added = filter(&self.added, dir);
+        self.modified = filter(&self.modified, dir);
+        self.removed = filter(&self.removed, dir);
+    }
+
+    /// Return if the commit has any files that were added, modified, or removed.
+    pub fn has_changed_files(&self) -> bool {
+        !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
+    }
+
+    /// Return if a specific file was added, modified, or removed in a commit.
+    pub fn file_changed(&self, file: &str) -> bool {
+        self.added.contains(&file.to_string())
+            || self.modified.contains(&file.to_string())
+            || self.removed.contains(&file.to_string())
+    }
+}
+
+fn filter(files: &[String], dir: &str) -> Vec<String> {
+    let mut in_dir: Vec<String> = Default::default();
+    for file in files {
+        if file.starts_with(dir) {
+            in_dir.push(file.to_string());
+        }
+    }
+
+    in_dir
 }
