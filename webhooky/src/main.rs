@@ -3420,7 +3420,7 @@ impl GitHubWebhook {
                     github,
                     &self.repository.owner.login,
                     &self.repository.name,
-                    &commit.sha,
+                    &commit.id,
                     comment,
                 )
                 .await
