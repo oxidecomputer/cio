@@ -3407,10 +3407,7 @@ impl GitHubWebhook {
             .await
             {
                 sentry::capture_message(
-                    &format!(
-                        "unable to create comment `{}` on commit event: {}\n{:#?}",
-                        comment, e, self
-                    ),
+                    &format!("unable to create comment `{}` on commit event: {}", comment, e),
                     sentry::Level::Fatal,
                 );
             }
