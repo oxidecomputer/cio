@@ -3396,6 +3396,11 @@ pub struct GitHubWebhook {
 
 impl GitHubWebhook {
     pub async fn create_comment(&self, github: &GitHub, comment: &str) -> Result<()> {
+        if comment.is_empty() {
+            // Return early.
+            return Ok(());
+        }
+
         if !self.commits.is_empty() {
             if let Some(commit) = self.commits.get(0) {
                 if let Err(e) = cio_api::utils::add_comment_to_commit(
