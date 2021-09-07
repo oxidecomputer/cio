@@ -26,6 +26,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
+    repos::FromUrl,
     schema::{rfds as r_f_ds, rfds},
     utils::{
         create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string, get_file_content_from_repo,
@@ -1401,6 +1402,34 @@ pub struct GitHubPullRequest {
     pub user: crate::repos::GitHubUser,
     #[serde(default)]
     pub merged: bool,
+}
+
+impl From<octorust::types::PullRequestSimple> for GitHubPullRequest {
+    fn from(item: octorust::types::PullRequestSimple) -> Self {
+        GitHubPullRequest {
+            id: item.id,
+            url: item.url.to_string(),
+            diff_url: item.diff_url.to_string(),
+            issue_url: item.issue_url.to_string(),
+            patch_url: item.patch_url.to_string(),
+            comments_url: item.comments_url.to_string(),
+            html_url: item.html_url.to_string(),
+            commits_url: item.commits_url.to_string(),
+            review_comments_url: item.review_comments_url.to_string(),
+            review_comment_url: item.review_comment_url.to_string(),
+            statuses_url: item.statuses_url.to_string(),
+            number: item.number,
+            state: item.state.to_string(),
+            title: item.title.to_string(),
+            body: item.body.to_string(),
+            closed_at: item.closed_at,
+            merged_at: item.merged_at,
+            head: Default::default(),
+            base: Default::default(),
+            user: Default::default(),
+            merged: item.merged_at.is_some(),
+        }
+    }
 }
 
 /// A GitHub commit.

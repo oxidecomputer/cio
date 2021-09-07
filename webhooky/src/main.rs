@@ -4100,6 +4100,25 @@ async fn handle_rfd_push(
                         ));
 
                         has_pull = true;
+
+                        // Let's update the pull request stuff tho just in case.
+                        /*match rfd.update_pull_request(github, company, &pull.into()).await {
+                            Ok(_) => {
+                                a("[SUCCESS]: update pull request title and labels");
+                            },
+                            Err(e) => {
+                                sentry::capture_message(
+                                    &format!(
+                                        "unable to update pull request for pr#{}: {}",
+                                        event.pull_request.number, e,
+                                    ),
+                                    sentry::Level::Fatal,
+                                );
+
+                                a(&format!("[ERROR]: update pull request title and labels: {} cc @jessfraz", e));
+                            }
+                        }*/
+
                         break;
                     }
                 }

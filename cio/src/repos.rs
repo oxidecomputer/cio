@@ -581,7 +581,7 @@ pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, compan
     }
 }
 
-trait FromUrl {
+pub trait FromUrl {
     fn to_string(&self) -> String;
 }
 
