@@ -3340,13 +3340,26 @@ pub struct GitHubWebhook {
     /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
     ///
     /// The full `git ref` that was pushed. Example: `refs/heads/main`.
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "ref")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        rename = "ref",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub refv: String,
     /// The SHA of the most recent commit on `ref` before the push.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub before: String,
     /// The SHA of the most recent commit on `ref` after the push.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub after: String,
     /// An array of commit objects describing the pushed commits.
     /// The array includes a maximum of 20 commits. If necessary, you can use
@@ -3483,18 +3496,30 @@ pub struct GitHubRepo {
 #[derive(Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubCommit {
     /// The SHA of the commit.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub id: String,
     /// The ISO 8601 timestamp of the commit.
     pub timestamp: Option<DateTime<Utc>>,
     /// The commit message.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub message: String,
     /// The git author of the commit.
     #[serde(default, alias = "user")]
     pub author: GitHubUser,
     /// URL that points to the commit API resource.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub url: String,
     /// Whether this commit is distinct from any that have been pushed before.
     #[serde(default)]
@@ -3508,11 +3533,24 @@ pub struct GitHubCommit {
     /// An array of files removed in the commit.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub removed: Vec<String>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub label: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "ref")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "ref",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub commit_ref: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub sha: String,
 }
 
@@ -3544,34 +3582,86 @@ impl GitHubCommit {
 pub struct GitHubPullRequest {
     #[serde(default)]
     pub id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub url: String,
     /// The HTML location of this pull request.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub html_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub diff_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub patch_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub issue_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub commits_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub review_comments_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub review_comment_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub comments_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub statuses_url: String,
     #[serde(default)]
     pub number: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub title: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub body: String,
     /*pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,*/
@@ -3596,21 +3686,45 @@ pub struct GitHubPullRequest {
 pub struct GitHubIssue {
     #[serde(default)]
     pub id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub url: String,
     pub labels_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub comments_url: String,
     pub events_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub html_url: String,
     #[serde(default)]
     pub number: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub state: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub title: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub body: String,
     #[serde(default)]
     pub user: GitHubUser,
@@ -3635,13 +3749,29 @@ pub struct GitHubIssue {
 /// A reference to a pull request.
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubPullRef {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub html_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub diff_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub patch_url: String,
 }
 
@@ -3651,11 +3781,23 @@ pub struct GitHubPullRef {
 pub struct GitHubComment {
     #[serde(default)]
     pub id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub html_url: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub body: String,
     #[serde(default)]
     pub user: GitHubUser,
@@ -3669,11 +3811,23 @@ pub struct GitHubComment {
 pub struct GitHubCheckSuite {
     #[serde(default)]
     pub id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub head_branch: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub head_sha: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub status: String,
     #[serde(
         default,
@@ -3689,9 +3843,17 @@ pub struct GitHubCheckSuite {
 #[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubApp {
     pub id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub slug: String,
 }
 
@@ -3701,9 +3863,17 @@ pub struct GitHubApp {
 pub struct GitHubCheckRun {
     #[serde(default)]
     pub id: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub head_sha: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub status: String,
     #[serde(
         default,
@@ -3711,7 +3881,11 @@ pub struct GitHubCheckRun {
         deserialize_with = "deserialize_null_string::deserialize"
     )]
     pub conclusion: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub name: String,
     #[serde(default)]
     pub check_suite: GitHubCheckSuite,
