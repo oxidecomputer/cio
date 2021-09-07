@@ -37,7 +37,7 @@ use cio_api::{
     journal_clubs::JournalClubMeeting,
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
-    repos::{GitHubUser, NewRepo},
+    repos::{FromUrl, GitHubUser, NewRepo},
     rfds::{is_image, GitHubCommit, GitHubPullRequest, NewRFD, RFD},
     schema::{api_tokens, applicants, journal_club_meetings, rfds},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
@@ -4097,7 +4097,7 @@ async fn handle_rfd_push(
                             old_rfd_state,
                             rfd.state,
                             branch,
-                            pull.html_url.as_ref().unwrap().to_string()
+                            pull.html_url.to_string()
                         ));
 
                         has_pull = true;
