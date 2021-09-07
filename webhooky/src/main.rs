@@ -399,7 +399,7 @@ async fn listen_github_webhooks(
                                 .create_comment(
                                     &github,
                                     &format!(
-                                        "updating RFD on push failed: {}\n\nevent: ```\n{:#?}\n```\n\ncc @jessfraz",
+                                        "updating RFD on push failed: {}\n\n<details>\n<summary>event:</summary>\n```\n{:#?}\n```\n</details>\ncc @jessfraz",
                                         e, event,
                                     ),
                                 )
