@@ -1424,6 +1424,7 @@ impl From<octorust::types::PullRequestSimple> for GitHubPullRequest {
             body: item.body.to_string(),
             closed_at: item.closed_at,
             merged_at: item.merged_at,
+            // TODO: actually do these.
             head: Default::default(),
             base: Default::default(),
             user: Default::default(),

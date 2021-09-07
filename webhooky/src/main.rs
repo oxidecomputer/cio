@@ -4067,6 +4067,7 @@ async fn handle_rfd_push(
             // the old state and just do it everytime an RFD is in discussion.
             if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != event.repository.default_branch {
                 // First, we need to make sure we don't already have a pull request open.
+                // TODO: actually filter by the base or branch.
                 let pulls = github
                     .pulls()
                     .list_all(
@@ -4096,16 +4097,16 @@ async fn handle_rfd_push(
                             old_rfd_state,
                             rfd.state,
                             branch,
-                            pull.html_url.unwrap().to_string()
+                            pull.html_url.as_ref().unwrap().to_string()
                         ));
 
                         has_pull = true;
 
                         // Let's update the pull request stuff tho just in case.
-                        /*match rfd.update_pull_request(github, company, &pull.into()).await {
+                        match rfd.update_pull_request(github, company, &pull.into()).await {
                             Ok(_) => {
                                 a("[SUCCESS]: update pull request title and labels");
-                            },
+                            }
                             Err(e) => {
                                 sentry::capture_message(
                                     &format!(
@@ -4115,9 +4116,12 @@ async fn handle_rfd_push(
                                     sentry::Level::Fatal,
                                 );
 
-                                a(&format!("[ERROR]: update pull request title and labels: {} cc @jessfraz", e));
+                                a(&format!(
+                                    "[ERROR]: update pull request title and labels: {} cc @jessfraz",
+                                    e
+                                ));
                             }
-                        }*/
+                        }
 
                         break;
                     }
