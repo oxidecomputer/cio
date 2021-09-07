@@ -3396,20 +3396,25 @@ pub struct GitHubWebhook {
 
 impl GitHubWebhook {
     pub async fn create_comment(&self, github: &GitHub, comment: &str) -> Result<()> {
-        if let Some(commit) = self.commits.get(0) {
-            if let Err(e) = cio_api::utils::add_comment_to_commit(
-                github,
-                &self.repository.owner.login,
-                &self.repository.name,
-                &commit.sha,
-                comment,
-            )
-            .await
-            {
-                sentry::capture_message(
-                    &format!("unable to create comment `{}` on commit event: {}", comment, e),
-                    sentry::Level::Fatal,
-                );
+        if !self.commits.is_empty() {
+            if let Some(commit) = self.commits.get(0) {
+                if let Err(e) = cio_api::utils::add_comment_to_commit(
+                    github,
+                    &self.repository.owner.login,
+                    &self.repository.name,
+                    &commit.sha,
+                    comment,
+                )
+                .await
+                {
+                    sentry::capture_message(
+                        &format!(
+                            "unable to create comment `{}` on commit event: {}\n{:#?}",
+                            comment, e, self.commits
+                        ),
+                        sentry::Level::Fatal,
+                    );
+                }
             }
         }
 
