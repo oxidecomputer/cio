@@ -1013,9 +1013,14 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
             .await?;
         // Iterate over the files and if the name does not equal our name, then nuke it.
         for df in drive_files {
-            println!("drive file: {:#?}", df);
+            if df.name == pdf_file_name {
+                println!("[{}] Keeping Google Drive PDF: {}", rfd.number_string, df.name);
+                continue;
+            }
+
+            println!("[{}] Deleting Google Drive PDF: {}", rfd.number_string, df.name);
             // Delete the file from our drive.
-            //drive_client.files().delete(&df.id, true, true).await?;
+            drive_client.files().delete(&df.id, true, true).await?;
         }
 
         // Now let's do GitHub.
