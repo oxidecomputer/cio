@@ -407,10 +407,20 @@ impl GithubRepo {
         let default_teams = vec!["all".to_string(), "eng".to_string()];
 
         // Get the branch protection for the repo.
-        let default_branch = github
+        let branch = github
             .repos()
             .get_branch(&company.github_org, &self.name, &self.default_branch)
-            .await?;
+            .await;
+        if let Err(e) = branch {
+            if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
+                bail!("could not get branch {} repo {}: {}", self.default_branch, self.name, e);
+            } else {
+                // Return early. Likely the repo no longer exists.
+                return Ok(());
+            }
+        }
+        let default_branch = branch?;
+
         // Add branch protection to disallow force pushing to the default branch.
         // Only do this if it is not already protected.
         if !default_branch.protected {
