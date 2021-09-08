@@ -324,18 +324,17 @@ async fn listen_github_webhooks(
         scope.set_tag("github.event.type", &event_type_string);
     });
 
+    let mut ok_to_continue = true;
+
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
         EventType::Push => {
-            println!("`{}` {:?}", event_type.name(), event);
-
             // Ensure we have commits.
             if event.commits.is_empty() {
                 // `push` event has no commits.
                 // We can throw this out, log it and return early.
-                println!("`push` event has no commits: {:?}", event);
-                sentry::end_session();
-                return Ok(HttpResponseAccepted("ok".to_string()));
+                sentry::capture_message("`push` event has no commits", sentry::Level::Fatal);
+                ok_to_continue = false;
             }
 
             let commit = event.commits.get(0).unwrap().clone();
@@ -343,9 +342,11 @@ async fn listen_github_webhooks(
             if !commit.distinct {
                 // The commit is not distinct.
                 // We can throw this out, log it and return early.
-                println!("`push` event commit `{}` is not distinct", commit.id);
-                sentry::end_session();
-                return Ok(HttpResponseAccepted("ok".to_string()));
+                sentry::capture_message(
+                    &format!("`push` event commit `{}` is not distinct", commit.id),
+                    sentry::Level::Fatal,
+                );
+                ok_to_continue = false;
             }
 
             // Get the branch name.
@@ -355,12 +356,8 @@ async fn listen_github_webhooks(
                 // The branch name is empty.
                 // We can throw this out, log it and return early.
                 // This should never happen, but we won't rule it out because computers.
-                sentry::capture_message(
-                    &format!("`push` event branch name is empty: {:?}", event),
-                    sentry::Level::Fatal,
-                );
-                sentry::end_session();
-                return Ok(HttpResponseAccepted("ok".to_string()));
+                sentry::capture_message("`push` event branch name is empty", sentry::Level::Fatal);
+                ok_to_continue = false;
             }
         }
         EventType::Repository => {
@@ -370,15 +367,15 @@ async fn listen_github_webhooks(
             let github = company.authenticate_github();
 
             // Now let's handle the event.
-            let resp = handle_repository_event(&github, api_context, event, &company).await;
-            sentry::end_session();
-            return resp;
+            handle_repository_event(&github, api_context, event.clone(), &company)
+                .await
+                .unwrap();
         }
         _ => (),
     }
 
     // Run the correct handler function based on the event type and repo.
-    if !event.repository.name.is_empty() {
+    if !event.repository.name.is_empty() && ok_to_continue {
         let repo = &event.repository;
         let repo_name = Repo::from_str(&repo.name).unwrap();
 
@@ -4514,27 +4511,19 @@ async fn handle_repository_event(
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let repo = github
-        .repos()
-        .get(&company.github_org, &event.repository.name)
-        .await
-        .unwrap();
+) -> Result<String> {
+    let repo = github.repos().get(&company.github_org, &event.repository.name).await?;
     let nr = NewRepo::new_from_full(repo.clone(), company.id);
     nr.upsert(&api_context.db).await;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(&api_context.db, github, &company.github_org, "configs", company.id)
-        .await
-        .unwrap();
+    generate_shorturls_for_repos(&api_context.db, github, &company.github_org, "configs", company.id).await?;
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     cio_api::repos::sync_repo_settings(&api_context.db, github, company).await;
 
-    println!("generated shorturls for all the GitHub repos");
-
-    Ok(HttpResponseAccepted("ok".to_string()))
+    Ok(format!("generated shorturls for all the GitHub repos"))
 }

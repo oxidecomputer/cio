@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, io::Write};
 
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime};
 use diesel::{
@@ -379,6 +380,135 @@ impl NewRepo {
     }
 }
 
+impl GithubRepo {
+    /**
+     * Set default configurations for the repo in the GitHub organization.
+     *
+     * The defaults are as follows:
+     *
+     * - Give the GitHub teams: "eng" and "all", push access to every repository.
+     * - Turns off the wiki.
+     * - Adds protection to the default branch to disallow force pushes.
+     * - Adds outside collaborators to their specified repositories.
+     */
+    pub async fn sync_settings(&self, github: &octorust::Client, company: &Company) -> Result<()> {
+        // Skip archived repositories.
+        if self.archived {
+            return Ok(());
+        }
+
+        // Skip "fluffy-tribble"
+        if self.name == "fluffy-tribble" {
+            return Ok(());
+        }
+
+        // Set the array of default teams to add to the repo.
+        // TODO: do not hard code these.
+        let default_teams = vec!["all".to_string(), "eng".to_string()];
+
+        // Get the branch protection for the repo.
+        let default_branch = github
+            .repos()
+            .get_branch(&company.github_org, &self.name, &self.default_branch)
+            .await?;
+        // Add branch protection to disallow force pushing to the default branch.
+        // Only do this if it is not already protected.
+        if !default_branch.protected {
+            match github
+                .repos()
+                .update_branch_protection(
+                    &company.github_org,
+                    &self.name,
+                    &self.default_branch,
+                    &octorust::types::ReposUpdateBranchProtectionRequest {
+                        allow_deletions: Default::default(),
+                        allow_force_pushes: Default::default(),
+                        enforce_admins: Some(true),
+                        required_conversation_resolution: Default::default(),
+                        required_linear_history: Default::default(),
+                        required_pull_request_reviews: None,
+                        required_status_checks: None,
+                        restrictions: None,
+                    },
+                )
+                .await
+            {
+                Ok(_) => (),
+                Err(e) => {
+                    if !e.to_string().contains("empty repository") {
+                        bail!("could not update protection for repo {}: {}", self.name, e);
+                    }
+                }
+            }
+        }
+
+        // Get this repository's teams.
+        let mut ts: Vec<octorust::types::Team> = Default::default();
+        match github.repos().list_all_teams(&company.github_org, &self.name).await {
+            Ok(v) => (ts = v),
+            Err(e) => {
+                // If we get a 404 for teams then likely the repo is new, we can just move on and
+                // add the teams.
+                if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
+                    bail!("could not list teams for repo {}: {}", self.name, e);
+                }
+            }
+        }
+        // Create the BTreeMap of teams.
+        let mut teams: BTreeMap<String, octorust::types::Team> = Default::default();
+        for t in ts {
+            teams.insert(t.name.to_string(), t);
+        }
+
+        // For each team id, add the team to the permissions.
+        for team_name in &default_teams {
+            let perms = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
+
+            // Check if the team already has the permission.
+            if let Some(val) = teams.get(team_name) {
+                if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin" {
+                    // Continue since they already have permission.
+                    println!(
+                        "team {} already has push access to {}/{}",
+                        team_name, company.github_org, self.name
+                    );
+
+                    continue;
+                }
+            }
+
+            match github
+                .teams()
+                .add_or_update_repo_permissions_in_org(
+                    &company.github_org,
+                    team_name,
+                    &company.github_org,
+                    &self.name,
+                    &octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequest {
+                        permission: Some(perms),
+                    },
+                )
+                .await
+            {
+                Ok(_) => (),
+                Err(e) => bail!(
+                    "adding repo permission for team {} in repo {} failed: {}",
+                    team_name,
+                    self.name,
+                    e
+                ),
+            }
+
+            println!(
+                "gave team {} push access to {}/{}",
+                team_name, company.github_org, self.name
+            );
+        }
+
+        Ok(())
+    }
+}
+
 /// List all the GitHub repositories for our org.
 pub async fn list_all_github_repos(github: &octorust::Client, company: &Company) -> Vec<NewRepo> {
     let github_repos = github
@@ -459,126 +589,15 @@ pub mod deserialize_null_string {
  * - Adds protection to the default branch to disallow force pushes.
  * - Adds outside collaborators to their specified repositories.
  */
-pub async fn sync_repo_settings(db: &Database, github: &octorust::Client, company: &Company) {
+pub async fn sync_all_repo_settings(db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
     let repos = GithubRepos::get_from_db(db, company.id);
-
-    // Set the array of default teams to add to the repo.
-    // TODO: do not hard code these.
-    let default_teams = vec!["all".to_string(), "eng".to_string()];
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {
-        // Skip archived repositories.
-        if r.archived {
-            continue;
-        }
-
-        // Skip "fluffy-tribble"
-        if r.name == "fluffy-tribble" {
-            continue;
-        }
-
-        // Get the branch protection for the repo.
-        if let Ok(default_branch) = github
-            .repos()
-            .get_branch(&company.github_org, &r.name, &r.default_branch)
-            .await
-        {
-            // Add branch protection to disallow force pushing to the default branch.
-            // Only do this if it is not already protected.
-            if !default_branch.protected {
-                match github
-                    .repos()
-                    .update_branch_protection(
-                        &company.github_org,
-                        &r.name,
-                        &r.default_branch,
-                        &octorust::types::ReposUpdateBranchProtectionRequest {
-                            allow_deletions: Default::default(),
-                            allow_force_pushes: Default::default(),
-                            enforce_admins: Some(true),
-                            required_conversation_resolution: Default::default(),
-                            required_linear_history: Default::default(),
-                            required_pull_request_reviews: None,
-                            required_status_checks: None,
-                            restrictions: None,
-                        },
-                    )
-                    .await
-                {
-                    Ok(_) => (),
-                    Err(e) => {
-                        if !e.to_string().contains("empty repository") {
-                            println!("could not update protection for repo {}: {}", r.name, e);
-                        }
-                    }
-                }
-            }
-        } else {
-            println!("could not get default branch for repo {}", r.name);
-        }
-
-        // Get this repository's teams.
-        let mut ts: Vec<octorust::types::Team> = Default::default();
-        match github.repos().list_all_teams(&company.github_org, &r.name).await {
-            Ok(v) => (ts = v),
-            Err(e) => {
-                // If we get a 404 for teams then likely the repo is new, we can just move on and
-                // add the teams.
-                if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
-                    println!("could not list teams for repo {}: {}", r.name, e);
-                }
-            }
-        }
-        // Create the BTreeMap of teams.
-        let mut teams: BTreeMap<String, octorust::types::Team> = Default::default();
-        for t in ts {
-            teams.insert(t.name.to_string(), t);
-        }
-
-        // For each team id, add the team to the permissions.
-        for team_name in &default_teams {
-            let perms = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
-
-            // Check if the team already has the permission.
-            if let Some(val) = teams.get(team_name) {
-                if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin" {
-                    // Continue since they already have permission.
-                    println!(
-                        "team {} already has push access to {}/{}",
-                        team_name, company.github_org, r.name
-                    );
-
-                    continue;
-                }
-            }
-
-            match github
-                .teams()
-                .add_or_update_repo_permissions_in_org(
-                    &company.github_org,
-                    team_name,
-                    &company.github_org,
-                    &r.name,
-                    &octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequest {
-                        permission: Some(perms),
-                    },
-                )
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => println!(
-                    "adding repo permission for team {} in repo {} failed: {}",
-                    team_name, r.name, e
-                ),
-            }
-
-            println!(
-                "gave team {} push access to {}/{}",
-                team_name, company.github_org, r.name
-            );
-        }
+        r.sync_settings(github, company).await?;
     }
+
+    Ok(())
 }
 
 pub trait FromUrl {
@@ -600,7 +619,7 @@ mod tests {
     use crate::{
         companies::Companys,
         db::Database,
-        repos::{refresh_db_github_repos, sync_repo_settings, GithubRepos},
+        repos::{refresh_db_github_repos, sync_all_repo_settings, GithubRepos},
     };
 
     #[ignore]
@@ -613,7 +632,7 @@ mod tests {
         for company in companies {
             let github = company.authenticate_github();
 
-            sync_repo_settings(&db, &github, &company).await;
+            sync_all_repo_settings(&db, &github, &company).await.unwrap();
             refresh_db_github_repos(&db, &github, &company).await;
 
             GithubRepos::get_from_db(&db, company.id).update_airtable(&db).await;
