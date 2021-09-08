@@ -19,7 +19,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{offset::Utc, DateTime, NaiveDate, TimeZone};
 use chrono_humanize::HumanTime;
 use cio_api::{
@@ -409,18 +409,24 @@ async fn listen_github_webhooks(
                     return Ok(HttpResponseAccepted("ok".to_string()));
                 }
                 EventType::PullRequest => {
+                    // Let's create the check run.
+                    let check_run_id = event.create_check_run(&github).await.unwrap();
+
                     match handle_rfd_pull_request(&github, api_context, event.clone(), &company).await {
-                        Ok(message) => {
-                            event.create_comment(&github, &message).await.unwrap();
+                        Ok((conclusion, message)) => {
+                            event
+                                .update_check_run(&github, check_run_id, &message, conclusion)
+                                .await
+                                .unwrap();
                         }
                         Err(e) => {
                             event
-                                .create_comment(
-                                    &github,
+                                .update_check_run(&github, check_run_id,
                                     &format!(
                                         "updating RFD on pull request failed: {}\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
                                         e, event,
                                     ),
+                                    octorust::types::ChecksCreateRequestConclusion::Failure,
                                 )
                                 .await
                                 .unwrap();
@@ -3360,7 +3366,12 @@ impl GitHubWebhook {
             self.pull_request.head.sha.to_string()
         };
 
-        let check = github
+        if sha.is_empty() {
+            // Return early.
+            return Ok(0);
+        }
+
+        match github
             .checks()
             .create(
                 &self.repository.owner.login,
@@ -3378,8 +3389,21 @@ impl GitHubWebhook {
                     status: Some(octorust::types::JobStatus::InProgress),
                 },
             )
-            .await?;
-        Ok(check.id)
+            .await
+        {
+            Ok(check) => return Ok(check.id),
+            Err(e) => {
+                sentry::capture_message(
+                    &format!(
+                        "unable to create check run on pull request event: {}\n{:#?}",
+                        e, self.pull_request
+                    ),
+                    sentry::Level::Fatal,
+                );
+            }
+        }
+
+        Ok(0)
     }
 
     // Updates the check run after it has completed.
@@ -3390,13 +3414,23 @@ impl GitHubWebhook {
         message: &str,
         conclusion: octorust::types::ChecksCreateRequestConclusion,
     ) -> Result<()> {
+        if id <= 0 {
+            // Return early.
+            return Ok(());
+        }
+
         let sha = if self.pull_request.head.sha.is_empty() {
             self.pull_request.head.id.to_string()
         } else {
             self.pull_request.head.sha.to_string()
         };
 
-        github
+        if sha.is_empty() {
+            // Return early.
+            return Ok(());
+        }
+
+        if let Err(e) = github
             .checks()
             .update(
                 &self.repository.owner.login,
@@ -3420,7 +3454,17 @@ impl GitHubWebhook {
                     status: Some(octorust::types::JobStatus::Completed),
                 },
             )
-            .await?;
+            .await
+        {
+            sentry::capture_message(
+                &format!(
+                    "unable to update check run {} on pull request event: {}\n{:#?}",
+                    id, e, self.pull_request
+                ),
+                sentry::Level::Fatal,
+            );
+        }
+
         Ok(())
     }
 
@@ -3437,6 +3481,11 @@ impl GitHubWebhook {
                 } else {
                     commit.sha.to_string()
                 };
+
+                if sha.is_empty() {
+                    // Return early.
+                    return Ok(());
+                }
 
                 if let Err(e) = cio_api::utils::add_comment_to_commit(
                     github,
@@ -3754,7 +3803,7 @@ async fn handle_rfd_pull_request(
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
-) -> Result<String> {
+) -> Result<(octorust::types::ChecksCreateRequestConclusion, String)> {
     let db = &api_context.db;
 
     let owner = &company.github_org;
@@ -3767,10 +3816,10 @@ async fn handle_rfd_pull_request(
     // This should never happen, but let's check regardless.
     if branch == event.repository.default_branch {
         // Return early.
-        return Err(anyhow!(
+        return Ok((octorust::types::ChecksCreateRequestConclusion::Skipped, format!(
             "event was to the default branch `{}`, we don't care, but also this would be pretty weird to have a pull request opened from the default branch",
             event.repository.default_branch,
-        ));
+        )));
     }
 
     // The branch should be equivalent to the number in the database.
@@ -3779,16 +3828,22 @@ async fn handle_rfd_pull_request(
     // Make sure we actually have a number.
     if number == 0 {
         // Return early.
-        return Err(anyhow!(
-            "event was to the branch `{}`, which is not a number so it cannot be an RFD",
-            branch,
+        return Ok((
+            octorust::types::ChecksCreateRequestConclusion::Skipped,
+            format!(
+                "event was to the branch `{}`, which is not a number so it cannot be an RFD",
+                branch,
+            ),
         ));
     }
 
     // Try to get the RFD from the database.
     let result = RFD::get_from_db(db, number);
     if result.is_none() {
-        return Err(anyhow!("could not find RFD with number `{}` in the database", number));
+        return Ok((
+            octorust::types::ChecksCreateRequestConclusion::Skipped,
+            format!("could not find RFD with number `{}` in the database", number),
+        ));
     }
     let mut rfd = result.unwrap();
 
@@ -3800,6 +3855,7 @@ async fn handle_rfd_pull_request(
         message.push('\n');
     };
 
+    let mut has_errors = false;
     match rfd.update_pull_request(github, company, &event.pull_request).await {
         Ok(_) => {
             a("[SUCCESS]: update pull request title and labels");
@@ -3817,6 +3873,8 @@ async fn handle_rfd_pull_request(
                 "[ERROR]: update pull request title and labels: {} cc @jessfraz",
                 e
             ));
+
+            has_errors = true;
         }
     }
 
@@ -3827,7 +3885,7 @@ async fn handle_rfd_pull_request(
             "[SUCCESS]: completed automations for `{}` action",
             event.action
         ));
-        return Ok(message);
+        return Ok((octorust::types::ChecksCreateRequestConclusion::Success, message));
     }
 
     // Okay, now we finally have the RFD.
@@ -3899,7 +3957,12 @@ async fn handle_rfd_pull_request(
         "[SUCCESS]: completed automations for `{}` action",
         event.action
     ));
-    Ok(message)
+
+    if has_errors {
+        return Ok((octorust::types::ChecksCreateRequestConclusion::Failure, message));
+    }
+
+    Ok((octorust::types::ChecksCreateRequestConclusion::Success, message))
 }
 
 /// Handle a `push` event for the rfd repo.
