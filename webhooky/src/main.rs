@@ -3936,9 +3936,15 @@ async fn handle_rfd_push(
             let website_file = file.replace("rfd/", "src/public/static/images/");
 
             // We need to get the current sha for the file we want to delete.
-            let (_, gh_file_sha) =
-                get_file_content_from_repo(github, owner, &repo, &website_file, &event.repository.default_branch)
-                    .await?;
+            let (_, gh_file_sha) = if let Ok((v, s)) =
+                get_file_content_from_repo(github, owner, &repo, &event.repository.default_branch, &website_file).await
+            {
+                (v, s)
+            } else {
+                // If there was an error, likely the file does not exist, so we can continue
+                // anyways.
+                (vec![], "".to_string())
+            };
 
             if !gh_file_sha.is_empty() {
                 github
@@ -3985,7 +3991,7 @@ async fn handle_rfd_push(
             // Some image for an RFD updated. Let's make sure we have that image in the right place
             // for the RFD shared site.
             // First, let's read the file contents.
-            let (gh_file_content, _) = get_file_content_from_repo(github, owner, &repo, &file, branch).await?;
+            let (gh_file_content, _) = get_file_content_from_repo(github, owner, &repo, branch, &file).await?;
 
             // Let's write the file contents to the location for the static website.
             // We replace the `rfd/` path with the `src/public/static/images/` path since
@@ -4194,7 +4200,7 @@ async fn handle_rfd_push(
 
                 // First get the sha of the old pdf.
                 let (_, old_pdf_sha) =
-                    get_file_content_from_repo(github, owner, &repo, &pdf_path, &event.repository.default_branch)
+                    get_file_content_from_repo(github, owner, &repo, &event.repository.default_branch, &pdf_path)
                         .await?;
 
                 if !old_pdf_sha.is_empty() {
