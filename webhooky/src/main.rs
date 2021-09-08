@@ -399,7 +399,7 @@ async fn listen_github_webhooks(
                                 .create_comment(
                                     &github,
                                     &format!(
-                                        "updating RFD on push failed: {}\n\n<details>\n<summary>event:</summary>\n```\n{:#?}\n```\n</details>\ncc @jessfraz",
+                                        "updating RFD on push failed: {}\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
                                         e, event,
                                     ),
                                 )
@@ -4418,7 +4418,7 @@ async fn handle_configs_push(
         Err(e) => {
             // We need to comment on the commit that there was an error.
             event
-                .create_comment(github, &format!("getting configs from repo failed: {}", e))
+                .create_comment(github, &format!("getting configs from repo failed: `{}`", e))
                 .await
                 .unwrap();
         }
