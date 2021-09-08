@@ -439,9 +439,25 @@ async fn listen_github_webhooks(
             },
             Repo::Configs => {
                 if let EventType::Push = event_type {
-                    let resp = handle_configs_push(&github, api_context, event, &company).await;
+                    match handle_configs_push(&github, api_context, event.clone(), &company).await {
+                        Ok(message) => {
+                            event.create_comment(&github, &message).await.unwrap();
+                        }
+                        Err(e) => {
+                            event
+                                .create_comment(
+                                    &github,
+                                    &format!(
+                                        "updating configs on push failed: {}\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
+                                        e, event,
+                                    ),
+                                )
+                                .await
+                                .unwrap();
+                        }
+                    }
                     sentry::end_session();
-                    return resp;
+                    return Ok(HttpResponseAccepted("ok".to_string()));
                 }
             }
             _ => {
@@ -3910,8 +3926,7 @@ async fn handle_rfd_pull_request(
         }
         Err(e) => {
             println!(
-                "[rfd] getting file contents for {} on branch {} failed: {}, trying markdown \
-                 instead...",
+                "[rfd] getting file contents for {} on branch {} failed: {}, trying markdown instead...",
                 path, branch, e
             );
 
@@ -4366,7 +4381,7 @@ async fn handle_configs_push(
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
+) -> Result<String> {
     // Get the repo.
     let owner = &company.github_org;
     let repo = event.repository.name.to_string();
@@ -4378,7 +4393,7 @@ async fn handle_configs_push(
             &format!("configs push event had no commits: {:?}", event),
             sentry::Level::Fatal,
         );
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        return Ok("".to_string());
     }
 
     // Get the commit.
@@ -4394,7 +4409,7 @@ async fn handle_configs_push(
             "`push` event commit `{}` did not include any changes to the `{}` directory",
             commit.id, dir
         );
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        return Ok("".to_string());
     }
 
     // Get the branch name.
@@ -4402,131 +4417,89 @@ async fn handle_configs_push(
     // Make sure this is to the default branch, we don't care about anything else.
     if branch != event.repository.default_branch {
         // We can throw this out, log it and return early.
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        return Ok("".to_string());
     }
+
+    let mut message = String::new();
+
+    let mut a = |s: &str| {
+        message.push_str(&format!("[{}] ", Utc::now().format("%+")));
+        message.push_str(s);
+        message.push('\n');
+    };
 
     // Get the configs from our repo.
-    match get_configs_from_repo(github, company).await {
-        Ok(configs) => {
-            let mut message = String::new();
+    let configs = get_configs_from_repo(github, company).await?;
 
-            let mut a = |s: &str| {
-                message.push_str(&format!("[{}] ", Utc::now().format("%+")));
-                message.push_str(s);
-                message.push('\n');
-            };
+    // Check if the links.toml file changed.
+    if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
+        // Update our links in the database.
+        sync_links(&api_context.db, configs.links, configs.huddles, company).await?;
+        a("[SUCCESS]: links");
 
-            // Check if the links.toml file changed.
-            if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
-                // Update our links in the database.
-                match sync_links(&api_context.db, configs.links, configs.huddles, company).await {
-                    Ok(_) => a("[SUCCESS] links"),
-                    Err(e) => a(&format!("[FAILURE]: links -> {}\n\tcc @jessfraz", e)),
-                }
-
-                // We need to update the short URLs for the links.
-                match generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id).await {
-                    Ok(_) => a("[SUCCESS]: links shorturls"),
-                    Err(e) => a(&format!("[FAILURE]: links shorturls -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            // Check if the groups.toml file changed.
-            // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
-            // added a new group to GSuite.
-            if commit.file_changed("configs/groups.toml") {
-                match sync_groups(&api_context.db, configs.groups, company).await {
-                    Ok(_) => a("[SUCCESS]: groups"),
-                    Err(e) => a(&format!("[FAILURE]: groups -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            // Check if the users.toml file changed.
-            if commit.file_changed("configs/users.toml") {
-                match sync_users(&api_context.db, github, configs.users, company).await {
-                    Ok(_) => a("[SUCCESS]: users"),
-                    Err(e) => a(&format!("[FAILURE]: users -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
-                // Sync okta users and group from the database.
-                // Do this after we update the users and groups in the database.
-                match generate_terraform_files_for_okta(github, &api_context.db, company).await {
-                    Ok(_) => a("[SUCCESS]: terraform files for okta"),
-                    Err(e) => a(&format!("[FAILURE]: terraform files for okta -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            // Check if the buildings.toml file changed.
-            // Buildings needs to be synchronized _before_ we move on to conference rooms.
-            if commit.file_changed("configs/buildings.toml") {
-                match sync_buildings(&api_context.db, configs.buildings, company).await {
-                    Ok(_) => a("[SUCCESS]: buildings"),
-                    Err(e) => a(&format!("[FAILURE]: buildings -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            // Check if the resources.toml file changed.
-            if commit.file_changed("configs/resources.toml") {
-                match sync_conference_rooms(&api_context.db, configs.resources, company).await {
-                    Ok(_) => a("[SUCCESS]: conference rooms"),
-                    Err(e) => a(&format!("[FAILURE]: conference rooms -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            // Check if the certificates.toml file changed.
-            if commit.file_changed("configs/certificates.toml") {
-                match sync_certificates(&api_context.db, github, configs.certificates, company).await {
-                    Ok(_) => a("[SUCCESS]: certificates"),
-                    Err(e) => a(&format!("[FAILURE]: certificates -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            // Check if the github-outside-collaborators.toml file changed.
-            if commit.file_changed("configs/github-outside-collaborators.toml") {
-                // Sync github outside collaborators.
-                match sync_github_outside_collaborators(
-                    &api_context.db,
-                    github,
-                    configs.github_outside_collaborators,
-                    company,
-                )
-                .await
-                {
-                    Ok(_) => a("[SUCCESS]: GitHub outside collaborators"),
-                    Err(e) => a(&format!(
-                        "[FAILURE]: GitHub outside collaborators -> {}\n\tcc @jessfraz",
-                        e
-                    )),
-                }
-            }
-
-            // Check if the huddles file changed.
-            if commit.file_changed("configs/huddles.toml") {
-                // Sync huddles.
-                match cio_api::huddles::sync_huddles(&api_context.db, company).await {
-                    Ok(_) => a("[SUCCESS]: huddles"),
-                    Err(e) => a(&format!("[FAILURE]: huddles -> {}\n\tcc @jessfraz", e)),
-                }
-            }
-
-            message = message.trim().to_string();
-            if !message.is_empty() {
-                // We need to comment on the commit that we succeeded.
-                event.create_comment(github, &message).await.unwrap();
-            }
-        }
-        Err(e) => {
-            // We need to comment on the commit that there was an error.
-            event
-                .create_comment(github, &format!("getting configs from repo failed: `{}`", e))
-                .await
-                .unwrap();
-        }
+        // We need to update the short URLs for the links.
+        generate_shorturls_for_configs_links(&api_context.db, github, owner, &repo, company.id).await?;
+        a("[SUCCESS]: links shorturls");
     }
 
-    Ok(HttpResponseAccepted("ok".to_string()))
+    // Check if the groups.toml file changed.
+    // IMPORTANT: we need to sync the groups _before_ we sync the users in case we
+    // added a new group to GSuite.
+    if commit.file_changed("configs/groups.toml") {
+        sync_groups(&api_context.db, configs.groups, company).await?;
+        a("[SUCCESS]: groups");
+    }
+
+    // Check if the users.toml file changed.
+    if commit.file_changed("configs/users.toml") {
+        sync_users(&api_context.db, github, configs.users, company).await?;
+        a("[SUCCESS]: users");
+    }
+
+    if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
+        // Sync okta users and group from the database.
+        // Do this after we update the users and groups in the database.
+        generate_terraform_files_for_okta(github, &api_context.db, company).await?;
+        a("[SUCCESS]: terraform files for okta");
+    }
+
+    // Check if the buildings.toml file changed.
+    // Buildings needs to be synchronized _before_ we move on to conference rooms.
+    if commit.file_changed("configs/buildings.toml") {
+        sync_buildings(&api_context.db, configs.buildings, company).await?;
+        a("[SUCCESS]: buildings");
+    }
+
+    // Check if the resources.toml file changed.
+    if commit.file_changed("configs/resources.toml") {
+        sync_conference_rooms(&api_context.db, configs.resources, company).await?;
+        a("[SUCCESS]: conference rooms");
+    }
+
+    // Check if the certificates.toml file changed.
+    if commit.file_changed("configs/certificates.toml") {
+        sync_certificates(&api_context.db, github, configs.certificates, company).await?;
+        a("[SUCCESS]: certificates");
+    }
+
+    // Check if the github-outside-collaborators.toml file changed.
+    if commit.file_changed("configs/github-outside-collaborators.toml") {
+        // Sync github outside collaborators.
+        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company)
+            .await?;
+        a("[SUCCESS]: GitHub outside collaborators");
+    }
+
+    // Check if the huddles file changed.
+    if commit.file_changed("configs/huddles.toml") {
+        // Sync huddles.
+        cio_api::huddles::sync_huddles(&api_context.db, company).await?;
+        a("[SUCCESS]: huddles");
+    }
+
+    message = message.trim().to_string();
+
+    Ok(message)
 }
 
 /// Handle the `repository` event for all repos.
