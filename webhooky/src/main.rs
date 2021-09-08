@@ -4512,18 +4512,31 @@ async fn handle_repository_event(
     event: GitHubWebhook,
     company: &Company,
 ) -> Result<String> {
+    let mut message = String::new();
+
+    let mut a = |s: &str| {
+        message.push_str(&format!("[{}] ", Utc::now().format("%+")));
+        message.push_str(s);
+        message.push('\n');
+    };
+
     let repo = github.repos().get(&company.github_org, &event.repository.name).await?;
     let nr = NewRepo::new_from_full(repo.clone(), company.id);
-    nr.upsert(&api_context.db).await;
+    let new_repo = nr.upsert(&api_context.db).await;
+    a(&format!(
+        "[SUCCESS]: added repo `{}` to the database",
+        new_repo.full_name
+    ));
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
     generate_shorturls_for_repos(&api_context.db, github, &company.github_org, "configs", company.id).await?;
+    a("[SUCCESS]: generated short urls");
 
-    // TODO: since we know only one repo changed we don't need to refresh them all,
-    // make this a bit better.
-    cio_api::repos::sync_repo_settings(&api_context.db, github, company).await;
+    // Sync the settings for this repo.
+    new_repo.sync_settings(github, company).await?;
+    a("[SUCCESS]: synced settings");
 
-    Ok(format!("generated shorturls for all the GitHub repos"))
+    Ok(message)
 }
