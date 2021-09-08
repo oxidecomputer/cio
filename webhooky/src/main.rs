@@ -3915,6 +3915,7 @@ async fn handle_rfd_push(
     let mut message = String::new();
 
     let mut a = |s: &str| {
+        message.push_str(&format!("[{}] ", Utc::now().format("%+")));
         message.push_str(s);
         message.push('\n');
     };
@@ -4308,6 +4309,7 @@ async fn handle_configs_push(
             let mut message = String::new();
 
             let mut a = |s: &str| {
+                message.push_str(&format!("[{}] ", Utc::now().format("%+")));
                 message.push_str(s);
                 message.push('\n');
             };
