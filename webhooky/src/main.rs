@@ -428,10 +428,10 @@ async fn listen_github_webhooks(
                             }
                         }
                         EventType::CheckRun => {
-                            sentry::capture_message(&format!("CheckRun event:\n{:#?}", event), sentry::Level::Info);
+                            sentry::capture_message("CheckRun event", sentry::Level::Info);
                         }
                         EventType::CheckSuite => {
-                            sentry::capture_message(&format!("CheckSuite event:\n{:#?}", event), sentry::Level::Info);
+                            sentry::capture_message("CheckSuite event", sentry::Level::Info);
                         }
                         _ => (),
                     },
