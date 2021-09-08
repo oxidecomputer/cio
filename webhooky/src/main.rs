@@ -435,6 +435,12 @@ async fn listen_github_webhooks(
                     sentry::end_session();
                     return Ok(HttpResponseAccepted("ok".to_string()));
                 }
+                EventType::CheckRun => {
+                    sentry::capture_message(&format!("CheckRun event:\n{:#?}", event), sentry::Level::Info);
+                }
+                EventType::CheckSuite => {
+                    sentry::capture_message(&format!("CheckSuite event:\n{:#?}", event), sentry::Level::Info);
+                }
                 _ => (),
             },
             Repo::Configs => {
