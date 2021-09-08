@@ -19,7 +19,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{offset::Utc, DateTime, NaiveDate, TimeZone};
 use chrono_humanize::HumanTime;
 use cio_api::{
@@ -409,9 +409,25 @@ async fn listen_github_webhooks(
                     return Ok(HttpResponseAccepted("ok".to_string()));
                 }
                 EventType::PullRequest => {
-                    let resp = handle_rfd_pull_request(&github, api_context, event, &company).await;
+                    match handle_rfd_pull_request(&github, api_context, event.clone(), &company).await {
+                        Ok(message) => {
+                            event.create_comment(&github, &message).await.unwrap();
+                        }
+                        Err(e) => {
+                            event
+                                .create_comment(
+                                    &github,
+                                    &format!(
+                                        "updating RFD on pull request failed: {}\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
+                                        e, event,
+                                    ),
+                                )
+                                .await
+                                .unwrap();
+                        }
+                    }
                     sentry::end_session();
-                    return resp;
+                    return Ok(HttpResponseAccepted("ok".to_string()));
                 }
                 _ => (),
             },
@@ -3336,6 +3352,78 @@ pub struct GitHubWebhook {
 }
 
 impl GitHubWebhook {
+    // Returns the check_run id so we can update it later.
+    pub async fn create_check_run(&self, github: &octorust::Client) -> Result<i64> {
+        let sha = if self.pull_request.head.sha.is_empty() {
+            self.pull_request.head.id.to_string()
+        } else {
+            self.pull_request.head.sha.to_string()
+        };
+
+        let check = github
+            .checks()
+            .create(
+                &self.repository.owner.login,
+                &self.repository.name,
+                &octorust::types::ChecksCreateRequest {
+                    actions: vec![],
+                    completed_at: None, // We have not completed the run yet, we are merely putting it as in-progress.
+                    conclusion: None,   // We don't have a conclusion yet.
+                    details_url: "".to_string(), // TODO: maybe let's provide one? with running logs?
+                    external_id: "".to_string(), // We don't have these, but we should maybe?
+                    head_sha: sha.to_string(), // Sha of the commit.
+                    name: "CIO bot".to_string(), // Name of the check.
+                    output: None,       // We don't have any output yet.
+                    started_at: Some(Utc::now()),
+                    status: Some(octorust::types::JobStatus::InProgress),
+                },
+            )
+            .await?;
+        Ok(check.id)
+    }
+
+    // Updates the check run after it has completed.
+    pub async fn update_check_run(
+        &self,
+        github: &octorust::Client,
+        id: i64,
+        message: &str,
+        conclusion: octorust::types::ChecksCreateRequestConclusion,
+    ) -> Result<()> {
+        let sha = if self.pull_request.head.sha.is_empty() {
+            self.pull_request.head.id.to_string()
+        } else {
+            self.pull_request.head.sha.to_string()
+        };
+
+        github
+            .checks()
+            .update(
+                &self.repository.owner.login,
+                &self.repository.name,
+                id,
+                &octorust::types::ChecksUpdateRequest {
+                    actions: vec![],
+                    completed_at: Some(Utc::now()),
+                    conclusion: Some(conclusion),
+                    details_url: "".to_string(), // TODO: maybe let's provide one? with running logs?
+                    external_id: "".to_string(), // We don't have these, but we should maybe?
+                    name: "CIO bot".to_string(), // Name of the check.
+                    output: Some(octorust::types::ChecksUpdateRequestOutput {
+                        annotations: vec![],
+                        images: vec![],
+                        summary: message.to_string(),
+                        text: String::new(),
+                        title: format!("CIO bot: {}", sha),
+                    }),
+                    started_at: None, // Keep the original start time.
+                    status: Some(octorust::types::JobStatus::Completed),
+                },
+            )
+            .await?;
+        Ok(())
+    }
+
     pub async fn create_comment(&self, github: &GitHub, comment: &str) -> Result<()> {
         if comment.is_empty() {
             // Return early.
@@ -3344,11 +3432,17 @@ impl GitHubWebhook {
 
         if !self.commits.is_empty() {
             if let Some(commit) = self.commits.get(0) {
+                let sha = if commit.sha.is_empty() {
+                    commit.id.to_string()
+                } else {
+                    commit.sha.to_string()
+                };
+
                 if let Err(e) = cio_api::utils::add_comment_to_commit(
                     github,
                     &self.repository.owner.login,
                     &self.repository.name,
-                    &commit.id,
+                    &sha,
                     comment,
                 )
                 .await
@@ -3660,7 +3754,7 @@ async fn handle_rfd_pull_request(
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
+) -> Result<String> {
     let db = &api_context.db;
 
     let owner = &company.github_org;
@@ -3673,11 +3767,10 @@ async fn handle_rfd_pull_request(
     // This should never happen, but let's check regardless.
     if branch == event.repository.default_branch {
         // Return early.
-        println!(
-            "event was to the default branch `{}`, we don't care: {:?}",
-            event.repository.default_branch, event
-        );
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        return Err(anyhow!(
+            "event was to the default branch `{}`, we don't care, but also this would be pretty weird to have a pull request opened from the default branch",
+            event.repository.default_branch,
+        ));
     }
 
     // The branch should be equivalent to the number in the database.
@@ -3686,42 +3779,55 @@ async fn handle_rfd_pull_request(
     // Make sure we actually have a number.
     if number == 0 {
         // Return early.
-        println!(
-            "event was to the branch `{}`, which is not a number so it cannot be an RFD: {:?}",
-            branch, event
-        );
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        return Err(anyhow!(
+            "event was to the branch `{}`, which is not a number so it cannot be an RFD",
+            branch,
+        ));
     }
 
     // Try to get the RFD from the database.
     let result = RFD::get_from_db(db, number);
     if result.is_none() {
-        println!(
-            "could not find RFD with number `{}` in the database: {:?}",
-            number, event
-        );
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        return Err(anyhow!("could not find RFD with number `{}` in the database", number));
     }
     let mut rfd = result.unwrap();
 
+    let mut message = String::new();
+
+    let mut a = |s: &str| {
+        message.push_str(&format!("[{}] ", Utc::now().format("%+")));
+        message.push_str(s);
+        message.push('\n');
+    };
+
     match rfd.update_pull_request(github, company, &event.pull_request).await {
-        Ok(_) => (),
+        Ok(_) => {
+            a("[SUCCESS]: update pull request title and labels");
+        }
         Err(e) => {
             sentry::capture_message(
                 &format!(
-                    "unable to update pull request for pr#{}: {}",
+                    "unable to update pull request tile and labels for pr#{}: {}",
                     event.pull_request.number, e,
                 ),
                 sentry::Level::Fatal,
             );
+
+            a(&format!(
+                "[ERROR]: update pull request title and labels: {} cc @jessfraz",
+                e
+            ));
         }
     }
 
     // We only care if the pull request was `opened`.
     if event.action != "opened" {
         // We can throw this out, log it and return early.
-        println!("no automations are set up for action `{}` yet", event.action);
-        return Ok(HttpResponseAccepted("ok".to_string()));
+        a(&format!(
+            "[SUCCESS]: completed automations for `{}` action",
+            event.action
+        ));
+        return Ok(message);
     }
 
     // Okay, now we finally have the RFD.
@@ -3753,11 +3859,7 @@ async fn handle_rfd_pull_request(
 
             // Try to get the markdown instead.
             path = format!("{}/README.md", dir);
-            let contents = github
-                .repos()
-                .get_content_file(owner, repo, &path, &branch)
-                .await
-                .unwrap_or_else(|e| panic!("getting file contents for {} on branch {} failed: {}", path, branch, e));
+            let contents = github.repos().get_content_file(owner, repo, &path, &branch).await?;
 
             rfd.content = decode_base64_to_string(&contents.content);
             rfd.sha = contents.sha;
@@ -3767,6 +3869,10 @@ async fn handle_rfd_pull_request(
     // Update the discussion link.
     let discussion_link = event.pull_request.html_url;
     rfd.update_discussion(&discussion_link, path.ends_with(".md"));
+    a(&format!(
+        "[SUCCESS]: ensured RFD discussion link is `{}`",
+        discussion_link
+    ));
 
     // A pull request can be open for an RFD if it is in the following states:
     //  - published: a already published RFD is being updated in a pull request.
@@ -3776,19 +3882,24 @@ async fn handle_rfd_pull_request(
     if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
         //  Update the state of the RFD in GitHub to show it as `discussion`.
         rfd.update_state("discussion", path.ends_with(".md"));
+        a("[SUCCESS]: updated RFD state to `discussion`");
     }
 
     // Update the RFD to show the new state and link in the database.
     rfd.update(db).await;
+    a("[SUCCESS]: updated RFD in the database");
+    a("[SUCCESS]: updated RFD in Airtable");
 
     // Update the file in GitHub.
     // Keep in mind: this push will kick off another webhook.
-    create_or_update_file_in_github_repo(github, owner, repo, &branch, &path, rfd.content.as_bytes().to_vec())
-        .await
-        .unwrap();
+    create_or_update_file_in_github_repo(github, owner, repo, &branch, &path, rfd.content.as_bytes().to_vec()).await?;
+    a("[SUCCESS]: updated RFD file in GitHub with any changes");
 
-    println!("updated discussion link for RFD {}", rfd.number_string,);
-    Ok(HttpResponseAccepted("ok".to_string()))
+    a(&format!(
+        "[SUCCESS]: completed automations for `{}` action",
+        event.action
+    ));
+    Ok(message)
 }
 
 /// Handle a `push` event for the rfd repo.
@@ -3805,7 +3916,7 @@ async fn handle_rfd_push(
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive.drives().get_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
 
     // Get the repo.
     let owner = &company.github_org;
