@@ -25,7 +25,6 @@ use chrono_humanize::HumanTime;
 use cio_api::{
     analytics::NewPageView,
     api_tokens::{APIToken, NewAPIToken},
-    applicant_reviews::{ApplicantReview, NewApplicantReview},
     applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
     asset_inventory::AssetItem,
     companies::Company,
@@ -125,7 +124,6 @@ async fn main() -> Result<(), String> {
     api.register(github_rate_limit).unwrap();
     api.register(listen_airtable_applicants_request_background_check_webhooks)
         .unwrap();
-    api.register(listen_airtable_applicants_review_create_webhooks).unwrap();
     api.register(listen_airtable_applicants_update_webhooks).unwrap();
     api.register(listen_airtable_assets_items_print_barcode_label_webhooks)
         .unwrap();
@@ -1073,76 +1071,6 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
         println!("sent background check invitation to applicant: {}", applicant.email);
     }
 
-    sentry::end_session();
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
-
-/**
- * Listen for rows created in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/applicants/review/create",
-}]
-async fn listen_airtable_applicants_review_create_webhooks(
-    rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
-    let event = body_param.into_inner();
-    println!("{:?}", event);
-
-    let api_context = rqctx.context();
-
-    if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Get the row from airtable.
-    let mut review = ApplicantReview::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
-
-    if review.applicant.is_empty() || review.reviewer.is_empty() {
-        sentry::capture_message(
-            &format!("Applicant and reviewer cannot be empty for {:?}", review),
-            sentry::Level::Fatal,
-        );
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    if review.id == 0 {
-        // We don't have it in the databse.
-        // Add it to the database.
-        let r: NewApplicantReview = review.into();
-        let mut new_review = r.upsert_in_db(&api_context.db);
-        if new_review.airtable_record_id.is_empty() {
-            new_review.airtable_record_id = event.record_id.to_string();
-        }
-        new_review.cio_company_id = event.cio_company_id;
-        new_review.expand(&api_context.db);
-        review = new_review.update(&api_context.db).await;
-    }
-
-    // Get the applicant for the review.
-    let mut applicant = Applicant::get_from_airtable(
-        // Get the record id for the applicant.
-        review.applicant.get(0).unwrap(),
-        &api_context.db,
-        event.cio_company_id,
-    )
-    .await;
-
-    // Update the scores for the applicant.
-    // This will also update the database after.
-    applicant.update_reviews_scoring(&api_context.db).await;
-
-    println!(
-        "applicant {} with review by {} updated successfully",
-        applicant.email, review.reviewer
-    );
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
