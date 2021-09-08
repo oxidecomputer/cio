@@ -510,7 +510,7 @@ impl GithubRepo {
 }
 
 /// List all the GitHub repositories for our org.
-pub async fn list_all_github_repos(github: &octorust::Client, company: &Company) -> Vec<NewRepo> {
+pub async fn list_all_github_repos(github: &octorust::Client, company: &Company) -> Result<Vec<NewRepo>> {
     let github_repos = github
         .repos()
         .list_all_for_org(
@@ -519,20 +519,19 @@ pub async fn list_all_github_repos(github: &octorust::Client, company: &Company)
             octorust::types::ReposListOrgSort::Created,
             octorust::types::Order::Desc,
         )
-        .await
-        .unwrap();
+        .await?;
 
     let mut repos: Vec<NewRepo> = Default::default();
     for r in github_repos {
         repos.push(NewRepo::new(r, company.id));
     }
 
-    repos
+    Ok(repos)
 }
 
 /// Sync the repos with our database.
-pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, company: &Company) {
-    let github_repos = list_all_github_repos(github, company).await;
+pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
+    let github_repos = list_all_github_repos(github, company).await?;
 
     // Get all the repos.
     let db_repos = GithubRepos::get_from_db(db, company.id);
@@ -557,6 +556,8 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
     for (_, repo) in repo_map {
         repo.delete(db).await;
     }
+
+    Ok(())
 }
 
 pub mod deserialize_null_string {
@@ -633,7 +634,7 @@ mod tests {
             let github = company.authenticate_github();
 
             sync_all_repo_settings(&db, &github, &company).await.unwrap();
-            refresh_db_github_repos(&db, &github, &company).await;
+            refresh_db_github_repos(&db, &github, &company).await.unwrap();
 
             GithubRepos::get_from_db(&db, company.id).update_airtable(&db).await;
         }
