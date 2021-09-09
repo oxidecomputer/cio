@@ -334,3 +334,7 @@ pub fn generate_password() -> String {
         .map(char::from)
         .collect()
 }
+
+pub fn setup_logger() {
+    pretty_env_logger::init();
+}

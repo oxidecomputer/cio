@@ -99,3 +99,4 @@ jobs:
           ZOOM_CLIENT_ID: ${{ secrets.ZOOM_CLIENT_ID }}
           ZOOM_CLIENT_SECRET: ${{ secrets.ZOOM_CLIENT_SECRET }}
           ZOOM_REDIRECT_URI: ${{ secrets.ZOOM_REDIRECT_URI }}
+          RUST_LOG: trace
