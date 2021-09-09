@@ -479,7 +479,7 @@ The Oxide Team
 
         let filename = format!("Interview Packet - {}.pdf", applicant.name);
 
-        let buffer = combine_pdfs(packet_args.to_vec());
+        let buffer = combine_pdfs(packet_args.to_vec())?;
 
         // Create or update the file in the google_drive.
         let drive_file = drive_client
@@ -602,7 +602,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
 }
 
 /// Combine multiple pdfs into one pdf and return the byte stream of it.
-pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
+pub fn combine_pdfs(pdfs: Vec<String>) -> Result<Vec<u8>> {
     // Define a starting max_id (will be used as start index for object_ids)
     let mut max_id = 1;
     let mut pagenum = 1;
@@ -620,7 +620,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
             continue;
         }
 
-        let mut doc = docu.unwrap();
+        let mut doc = docu?;
 
         let mut first = false;
         doc.renumber_objects_with(max_id);
@@ -699,7 +699,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
     if pages_object.is_none() {
         warn!("merge-pdfs pages root not found");
 
-        return Default::default();
+        return Ok(Default::default());
     }
 
     // Iter over all "Page" and collect with the parent "Pages" created before
@@ -716,7 +716,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
     if catalog_object.is_none() {
         warn!("merge-pdfs catalog root not found");
 
-        return Default::default();
+        return Ok(Default::default());
     }
 
     let catalog_object = catalog_object.unwrap();
@@ -774,8 +774,8 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
     // Save the merged PDF
     let mut buffer = Vec::new();
-    document.save_to(&mut buffer).unwrap();
-    buffer
+    document.save_to(&mut buffer)?;
+    Ok(buffer)
 }
 
 #[cfg(test)]

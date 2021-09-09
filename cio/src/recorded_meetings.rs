@@ -95,7 +95,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
         bail!("authenticating zoom failed: {}", e);
     }
 
-    let mut zoom = zoom_auth.unwrap();
+    let mut zoom = zoom_auth?;
 
     // List all the recorded meetings.
     let recordings = zoom
@@ -207,9 +207,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
                     video = format!("https://drive.google.com/open?id={}", drive_file.id);
                     // TODO: get a better link
                     video_html_link = video.to_string();
-                    end_time = DateTime::parse_from_rfc3339(&recording.recording_end)
-                        .unwrap()
-                        .with_timezone(&Utc);
+                    end_time = DateTime::parse_from_rfc3339(&recording.recording_end)?.with_timezone(&Utc);
                 }
                 GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => {
                     transcript = from_utf8(&b)?.to_string();
