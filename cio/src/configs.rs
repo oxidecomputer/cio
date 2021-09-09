@@ -392,7 +392,7 @@ impl UserConfig {
         Ok(())
     }
 
-    async fn populate_home_address(&mut self) {
+    async fn populate_home_address(&mut self) -> Result<()> {
         let mut street_address = self.home_address_street_1.to_string();
         if !self.home_address_street_2.is_empty() {
             street_address = format!("{}\n{}", self.home_address_street_1, self.home_address_street_2,);
@@ -424,11 +424,13 @@ impl UserConfig {
             // Create the geocode client.
             let geocode = Geocode::new_from_env();
             // Get the latitude and longitude.
-            let result = geocode.get(&self.home_address_formatted).await.unwrap();
+            let result = geocode.get(&self.home_address_formatted).await?;
             let location = result.geometry.location;
             self.home_address_latitude = location.lat as f32;
             self.home_address_longitude = location.lng as f32;
         }
+
+        Ok(())
     }
 
     async fn populate_work_address(&mut self, db: &Database) {
@@ -564,7 +566,7 @@ impl UserConfig {
 
         self.populate_ssh_keys().await?;
 
-        self.populate_home_address().await;
+        self.populate_home_address().await?;
         self.populate_work_address(db).await;
 
         self.populate_start_date(db);
@@ -1794,7 +1796,7 @@ pub async fn sync_users(
                         user.update_from_gusto(gusto_user);
                     }
                 } else if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
-                    user.populate_home_address().await;
+                    user.populate_home_address().await?;
                     // Create the user in Gusto if necessary.
                     user.create_in_gusto_if_needed(gusto, gusto_company_id).await?;
                 }

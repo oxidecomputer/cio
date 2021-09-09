@@ -108,34 +108,34 @@ impl NewRFD {
         branch: &str,
         file_path: &str,
         commit_date: DateTime<Utc>,
-    ) -> Self {
+    ) -> Result<Self> {
         // Get the file from GitHub.
         let mut content = String::new();
         let mut link = String::new();
         let mut sha = String::new();
         if let Ok(f) = github.repos().get_content_file(owner, repo, file_path, branch).await {
             content = decode_base64_to_string(&f.content);
-            link = f.html_url.unwrap().to_string();
+            link = f.html_url.to_string();
             sha = f.sha;
         }
 
         // Parse the RFD directory as an int.
         let (dir, _) = file_path.trim_start_matches("rfd/").split_once('/').unwrap();
-        let number = dir.trim_start_matches('0').parse::<i32>().unwrap();
+        let number = dir.trim_start_matches('0').parse::<i32>()?;
 
         let number_string = NewRFD::generate_number_string(number);
 
         // Parse the RFD title from the contents.
-        let title = NewRFD::get_title(&content);
+        let title = NewRFD::get_title(&content)?;
         let name = NewRFD::generate_name(number, &title);
 
         // Parse the state from the contents.
-        let state = NewRFD::get_state(&content);
+        let state = NewRFD::get_state(&content)?;
 
         // Parse the discussion from the contents.
-        let discussion = NewRFD::get_discussion(&content);
+        let discussion = NewRFD::get_discussion(&content)?;
 
-        NewRFD {
+        Ok(NewRFD {
             number,
             number_string,
             title,
@@ -158,11 +158,11 @@ impl NewRFD {
             pdf_link_github: Default::default(),
             pdf_link_google_drive: Default::default(),
             cio_company_id: company.id,
-        }
+        })
     }
 
-    pub fn get_title(content: &str) -> String {
-        let mut re = Regex::new(r"(?m)(RFD .*$)").unwrap();
+    pub fn get_title(content: &str) -> Result<String> {
+        let mut re = Regex::new(r"(?m)(RFD .*$)")?;
         match re.find(content) {
             Some(v) => {
                 // TODO: find less horrible way to do this.
@@ -180,36 +180,37 @@ impl NewRFD {
                 // title.
                 if s.is_empty() {}
 
-                s.to_string()
+                Ok(s.to_string())
             }
             None => {
                 // There is no "RFD" in our title. This is the case for RFD 31.
-                re = Regex::new(r"(?m)(^= .*$)").unwrap();
+                re = Regex::new(r"(?m)(^= .*$)")?;
                 let results = re.find(content).unwrap();
-                results
+
+                Ok(results
                     .as_str()
                     .replace("RFD", "")
                     .replace("# ", "")
                     .replace("= ", " ")
                     .trim()
-                    .to_string()
+                    .to_string())
             }
         }
     }
 
-    pub fn get_state(content: &str) -> String {
-        let re = Regex::new(r"(?m)(state:.*$)").unwrap();
+    pub fn get_state(content: &str) -> Result<String> {
+        let re = Regex::new(r"(?m)(state:.*$)")?;
         match re.find(content) {
-            Some(v) => return v.as_str().replace("state:", "").trim().to_string(),
-            None => Default::default(),
+            Some(v) => return Ok(v.as_str().replace("state:", "").trim().to_string()),
+            None => Ok(Default::default()),
         }
     }
 
-    pub fn get_discussion(content: &str) -> String {
-        let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
+    pub fn get_discussion(content: &str) -> Result<String> {
+        let re = Regex::new(r"(?m)(discussion:.*$)")?;
         match re.find(content) {
-            Some(v) => return v.as_str().replace("discussion:", "").trim().to_string(),
-            None => Default::default(),
+            Some(v) => return Ok(v.as_str().replace("discussion:", "").trim().to_string()),
+            None => Ok(Default::default()),
         }
     }
 
@@ -235,39 +236,39 @@ impl NewRFD {
         format!("https://rfd.shared.oxide.computer/rfd/{}", number_string)
     }
 
-    pub fn get_authors(content: &str, is_markdown: bool) -> String {
+    pub fn get_authors(content: &str, is_markdown: bool) -> Result<String> {
         if is_markdown {
             // TODO: make work w asciidoc.
-            let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
+            let re = Regex::new(r"(?m)(^authors.*$)")?;
             match re.find(content) {
-                Some(v) => return v.as_str().replace("authors:", "").trim().to_string(),
-                None => Default::default(),
+                Some(v) => return Ok(v.as_str().replace("authors:", "").trim().to_string()),
+                None => return Ok(Default::default()),
             }
         }
 
         // We must have asciidoc content.
         // We want to find the line under the first "=" line (which is the title), authors is under
         // that.
-        let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
+        let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)")?;
         match re.find(content) {
             Some(v) => {
                 let val = v.as_str().trim().to_string();
                 let parts: Vec<&str> = val.split('\n').collect();
                 if parts.len() < 2 {
-                    Default::default()
+                    Ok(Default::default())
                 } else {
                     let mut authors = parts[1].to_string();
                     if authors == "{authors}" {
                         // Do the traditional check.
-                        let re = Regex::new(r"(?m)(^:authors.*$)").unwrap();
+                        let re = Regex::new(r"(?m)(^:authors.*$)")?;
                         if let Some(v) = re.find(content) {
                             authors = v.as_str().replace(":authors:", "").trim().to_string();
                         }
                     }
-                    authors
+                    Ok(authors)
                 }
             }
-            None => Default::default(),
+            None => Ok(Default::default()),
         }
     }
 }
@@ -290,7 +291,7 @@ impl RFD {
             html = self.parse_asciidoc(github, owner, repo, branch).await?;
         }
 
-        Ok(clean_rfd_html_links(&html, &self.number_string))
+        clean_rfd_html_links(&html, &self.number_string)
     }
 
     pub async fn parse_asciidoc(
@@ -328,8 +329,7 @@ impl RFD {
         let cmd_output = Command::new("asciidoctor")
             .current_dir(parent)
             .args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()])
-            .output()
-            .unwrap();
+            .output()?;
 
         let result = if cmd_output.status.success() {
             from_utf8(&cmd_output.stdout)?
@@ -371,10 +371,10 @@ impl RFD {
         github: &octorust::Client,
         since: DateTime<Utc>,
         company: &Company,
-    ) -> String {
+    ) -> Result<String> {
         let owner = &company.github_org;
         let repo = "rfd";
-        let r = github.repos().get(owner, repo).await.unwrap();
+        let r = github.repos().get(owner, repo).await?;
         let mut changelog = String::new();
 
         let mut branch = self.number_string.to_string();
@@ -394,8 +394,7 @@ impl RFD {
                 Some(since),
                 None,
             )
-            .await
-            .unwrap();
+            .await?;
 
         for commit in commits {
             let message: Vec<&str> = commit.commit.message.lines().collect();
@@ -414,7 +413,7 @@ impl RFD {
             }
         }
 
-        changelog
+        Ok(changelog)
     }
 
     /// Get the filename for the PDF of the RFD.
@@ -427,15 +426,19 @@ impl RFD {
     }
 
     /// Update an RFDs state.
-    pub fn update_state(&mut self, state: &str, is_markdown: bool) {
-        self.content = update_state(&self.content, state, is_markdown);
+    pub fn update_state(&mut self, state: &str, is_markdown: bool) -> Result<()> {
+        self.content = update_state(&self.content, state, is_markdown)?;
         self.state = state.to_string();
+
+        Ok(())
     }
 
     /// Update an RFDs discussion link.
-    pub fn update_discussion(&mut self, link: &str, is_markdown: bool) {
-        self.content = update_discussion_link(&self.content, link, is_markdown);
+    pub fn update_discussion(&mut self, link: &str, is_markdown: bool) -> Result<()> {
+        self.content = update_discussion_link(&self.content, link, is_markdown)?;
         self.discussion = link.to_string();
+
+        Ok(())
     }
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
@@ -553,7 +556,7 @@ impl RFD {
         if self.name != pull_request.title {
             // Get the current set of settings for the pull request.
             // We do this because we want to keep the current state for body.
-            let pull = github.pulls().get(&owner, repo, pull_request.number).await.unwrap();
+            let pull = github.pulls().get(&owner, repo, pull_request.number).await?;
 
             // Update the title of the pull request.
             match github
@@ -600,8 +603,7 @@ impl RFD {
                 pull_request.number,
                 &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
             )
-            .await
-            .unwrap();
+            .await?;
 
         Ok(())
     }
@@ -652,7 +654,7 @@ impl RFD {
         // Parse the HTML.
         self.html = self.get_html(github, owner, repo, &branch, is_markdown).await?;
 
-        self.authors = NewRFD::get_authors(&self.content, is_markdown);
+        self.authors = NewRFD::get_authors(&self.content, is_markdown)?;
 
         // Set the pdf link
         let file_name = self.get_pdf_filename();
@@ -854,7 +856,7 @@ pub fn is_image(file: &str) -> bool {
     file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
 }
 
-pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
+pub fn clean_rfd_html_links(content: &str, num: &str) -> Result<String> {
     let mut cleaned = content
         .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
         .replace("href=\"#", &format!("href=\"/rfd/{}#", num))
@@ -865,37 +867,37 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> String {
             &format!(r#"object type="image/svg+xml" data="/static/images/{}/"#, num),
         );
 
-    let mut re = Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer").unwrap();
+    let mut re = Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer")?;
     cleaned = re
         .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/000$num")
         .to_string();
-    re = Regex::new(r"https://(?P<num>[0-9][0-9]).rfd.oxide.computer").unwrap();
+    re = Regex::new(r"https://(?P<num>[0-9][0-9]).rfd.oxide.computer")?;
     cleaned = re
         .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/00$num")
         .to_string();
-    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
+    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer")?;
     cleaned = re
         .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/0$num")
         .to_string();
-    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
+    re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer")?;
     cleaned = re
         .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/$num")
         .to_string();
 
-    cleaned
+    Ok(cleaned
         .replace("link:", &format!("link:https://{}.rfd.oxide.computer/", num))
-        .replace(&format!("link:https://{}.rfd.oxide.computer/http", num), "link:http")
+        .replace(&format!("link:https://{}.rfd.oxide.computer/http", num), "link:http"))
 }
 
-pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> String {
+pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> Result<String> {
     // TODO: there is probably a better way to do these regexes.
-    let mut re = Regex::new(r"(?m)(:discussion:.*$)").unwrap();
+    let mut re = Regex::new(r"(?m)(:discussion:.*$)")?;
     // Asciidoc starts with a colon.
     let mut pre = ":";
     if is_markdown {
         // Markdown does not start with a colon.
         pre = "";
-        re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
+        re = Regex::new(r"(?m)(discussion:.*$)")?;
     }
 
     let replacement = if let Some(v) = re.find(content) {
@@ -904,18 +906,18 @@ pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> S
         String::new()
     };
 
-    content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1)
+    Ok(content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1))
 }
 
-pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
+pub fn update_state(content: &str, state: &str, is_markdown: bool) -> Result<String> {
     // TODO: there is probably a better way to do these regexes.
-    let mut re = Regex::new(r"(?m)(:state:.*$)").unwrap();
+    let mut re = Regex::new(r"(?m)(:state:.*$)")?;
     // Asciidoc starts with a colon.
     let mut pre = ":";
     if is_markdown {
         // Markdown does not start with a colon.
         pre = "";
-        re = Regex::new(r"(?m)(state:.*$)").unwrap();
+        re = Regex::new(r"(?m)(state:.*$)")?;
     }
 
     let replacement = if let Some(v) = re.find(content) {
@@ -924,7 +926,7 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
         String::new()
     };
 
-    content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1)
+    Ok(content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1))
 }
 
 // Sync the rfds with our database.
@@ -1084,7 +1086,7 @@ pub async fn send_rfd_changelog(company: &Company) -> Result<()> {
     // Iterate over the RFDs.
     let rfds = RFDs::get_from_db(&db, company.id)?;
     for rfd in rfds {
-        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, company).await;
+        let changes = rfd.get_weekly_changelog(&github, seven_days_ago, company).await?;
         if !changes.is_empty() {
             changelog += &format!("\n{} {}\n{}", rfd.name, rfd.short_link, changes);
         }
@@ -1189,7 +1191,7 @@ mod tests {
         link:thing.html[Our thing]
         link:http://example.com[our example]"#;
 
-        let cleaned = clean_rfd_html_links(content, "0032");
+        let cleaned = clean_rfd_html_links(content, "0032").unwrap();
 
         let expected = r#"https://rfd.shared.oxide.computer/rfd/0003
         https://rfd.shared.oxide.computer/rfd/0041
@@ -1217,7 +1219,7 @@ authors: things, joe
 dsfsdf
 sdf
 authors: nope"#;
-        let mut authors = NewRFD::get_authors(content, true);
+        let mut authors = NewRFD::get_authors(content, true).unwrap();
         let mut expected = "things, joe".to_string();
         assert_eq!(expected, authors);
 
@@ -1227,7 +1229,8 @@ things, joe
 dsfsdf
 sdf
 :authors: nope"#;
-        authors = NewRFD::get_authors(content, true);
+        authors = NewRFD::get_authors(content, true).unwrap();
+        expected = "".to_string();
         assert_eq!(expected, authors);
 
         content = r#"sdfsdf
@@ -1236,7 +1239,7 @@ things <things@email.com>, joe <joe@email.com>
 dsfsdf
 sdf
 authors: nope"#;
-        authors = NewRFD::get_authors(content, false);
+        authors = NewRFD::get_authors(content, false).unwrap();
         expected = r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
 
@@ -1246,7 +1249,7 @@ authors: nope"#;
 {authors}
 dsfsdf
 sdf"#;
-        authors = NewRFD::get_authors(content, false);
+        authors = NewRFD::get_authors(content, false).unwrap();
         expected = r#"Jess <jess@thing.com>"#.to_string();
         assert_eq!(expected, authors);
     }
@@ -1261,7 +1264,7 @@ state: discussion
 dsfsdf
 sdf
 authors: nope"#;
-        let mut state = NewRFD::get_state(content);
+        let mut state = NewRFD::get_state(content).unwrap();
         let mut expected = "discussion".to_string();
         assert_eq!(expected, state);
 
@@ -1271,7 +1274,7 @@ authors: nope"#;
 dsfsdf
 sdf
 :state: nope"#;
-        state = NewRFD::get_state(content);
+        state = NewRFD::get_state(content).unwrap();
         expected = "prediscussion".to_string();
         assert_eq!(expected, state);
     }
@@ -1286,7 +1289,7 @@ discussion: https://github.com/oxidecomputer/rfd/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
-        let mut discussion = NewRFD::get_discussion(content);
+        let mut discussion = NewRFD::get_discussion(content).unwrap();
         let expected = "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
         assert_eq!(expected, discussion);
 
@@ -1296,7 +1299,7 @@ authors: nope"#;
 dsfsdf
 sdf
 :discussion: nope"#;
-        discussion = NewRFD::get_discussion(content);
+        discussion = NewRFD::get_discussion(content).unwrap();
         assert_eq!(expected, discussion);
     }
 
@@ -1311,7 +1314,7 @@ discussion:   https://github.com/oxidecomputer/rfd/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
-        let mut result = update_discussion_link(content, link, true);
+        let mut result = update_discussion_link(content, link, true).unwrap();
         let mut expected = r#"sdfsdf
 sdfsdf
 discussion: https://github.com/oxidecomputer/rfd/pulls/2019
@@ -1327,7 +1330,7 @@ discussion: fgsdfg
 dsfsdf
 sdf
 :discussion: nope"#;
-        result = update_discussion_link(content, link, false);
+        result = update_discussion_link(content, link, false).unwrap();
         expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
@@ -1344,7 +1347,7 @@ discussion: fgsdfg
 dsfsdf
 sdf
 :discussion: nope"#;
-        result = update_discussion_link(content, link, false);
+        result = update_discussion_link(content, link, false).unwrap();
         expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
@@ -1366,7 +1369,7 @@ state:   sdfsdfsdf
 dsfsdf
 sdf
 authors: nope"#;
-        let mut result = update_state(content, state, true);
+        let mut result = update_state(content, state, true).unwrap();
         let mut expected = r#"sdfsdf
 sdfsdf
 state: discussion
@@ -1382,7 +1385,7 @@ state: fgsdfg
 dsfsdf
 sdf
 :state: nope"#;
-        result = update_state(content, state, false);
+        result = update_state(content, state, false).unwrap();
         expected = r#"sdfsdf
 = sdfgsd
 state: fgsdfg
@@ -1399,7 +1402,7 @@ state: fgsdfg
 dsfsdf
 sdf
 :state: nope"#;
-        result = update_state(content, state, false);
+        result = update_state(content, state, false).unwrap();
         expected = r#"sdfsdf
 = sdfgsd
 state: fgsdfg
@@ -1421,7 +1424,7 @@ title: https://github.com/oxidecomputer/rfd/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
-        let mut title = NewRFD::get_title(content);
+        let mut title = NewRFD::get_title(content).unwrap();
         let expected = "Identity and Access Management (IAM)".to_string();
         assert_eq!(expected, title);
 
@@ -1432,7 +1435,7 @@ dsfsdf
 = RFD 53 Bye
 sdf
 :title: nope"#;
-        title = NewRFD::get_title(content);
+        title = NewRFD::get_title(content).unwrap();
         assert_eq!(expected, title);
 
         // Add a test to show what happens for rfd 31 where there is no "RFD" in
@@ -1443,7 +1446,7 @@ sdf
 dsfsdf
 sdf
 :title: nope"#;
-        title = NewRFD::get_title(content);
+        title = NewRFD::get_title(content).unwrap();
         assert_eq!(expected, title);
     }
 }

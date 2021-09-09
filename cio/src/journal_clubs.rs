@@ -350,7 +350,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        let github = oxide.authenticate_github()?;
+        let github = oxide.authenticate_github().unwrap();
 
         refresh_db_journal_club_meetings(&db, &github, &oxide).await.unwrap();
 

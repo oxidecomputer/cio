@@ -3948,7 +3948,7 @@ async fn handle_rfd_pull_request(
 
     // Update the discussion link.
     let discussion_link = event.pull_request.html_url;
-    rfd.update_discussion(&discussion_link, path.ends_with(".md"));
+    rfd.update_discussion(&discussion_link, path.ends_with(".md"))?;
     a(&format!(
         "[SUCCESS]: ensured RFD discussion link is `{}`",
         discussion_link
@@ -3961,7 +3961,7 @@ async fn handle_rfd_pull_request(
     // We can update the state if it is not currently in an acceptable state.
     if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
         //  Update the state of the RFD in GitHub to show it as `discussion`.
-        rfd.update_state("discussion", path.ends_with(".md"));
+        rfd.update_state("discussion", path.ends_with(".md"))?;
         a("[SUCCESS]: updated RFD state to `discussion`");
     }
 
@@ -4144,7 +4144,8 @@ async fn handle_rfd_push(
             info!("`push` event -> file {} was modified on branch {}", file, branch,);
             // Parse the RFD.
             let new_rfd =
-                NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap()).await;
+                NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap())
+                    .await?;
 
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
@@ -4290,7 +4291,7 @@ async fn handle_rfd_push(
             if branch == event.repository.default_branch && rfd.state != "published" {
                 //  Update the state of the RFD in GitHub to show it as `published`.
                 let mut rfd_mut = rfd.clone();
-                rfd_mut.update_state("published", file.ends_with(".md"));
+                rfd_mut.update_state("published", file.ends_with(".md"))?;
 
                 // Update the RFD to show the new state in the database.
                 rfd_mut.update(db).await?;

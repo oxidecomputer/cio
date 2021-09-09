@@ -946,7 +946,7 @@ The Shipping Bot",
                 ci.description = line.to_string();
                 let (prefix, _suffix) = line.split_once(" x ").unwrap_or(("1", ""));
                 // TODO: this will break if more than 9, fix for the future.
-                ci.quantity = prefix.parse().unwrap();
+                ci.quantity = prefix.parse()?;
                 ci.net_weight = "0.25".to_string();
                 ci.mass_unit = "lb".to_string();
                 ci.value_amount = "100.00".to_string();
@@ -1040,7 +1040,7 @@ The Shipping Bot",
 
                 // Set the additional fields.
                 self.carrier = clean_provider_name(&rate.provider);
-                self.cost = rate.amount_local.parse().unwrap();
+                self.cost = rate.amount_local.parse()?;
                 self.tracking_number = label.tracking_number.to_string();
                 self.tracking_link = label.tracking_url_provider.to_string();
                 self.tracking_status = label.tracking_status.to_string();
@@ -1155,7 +1155,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 
         // The rate will give us the carrier and the cost.
         let rate = shippo.get_rate(&label.rate).await?;
-        ns.cost = rate.amount_local.parse().unwrap();
+        ns.cost = rate.amount_local.parse()?;
         ns.carrier = clean_provider_name(&rate.provider);
 
         // Only add the shipment if it doesn't already exist. Since we update it

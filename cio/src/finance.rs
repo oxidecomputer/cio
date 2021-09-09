@@ -270,7 +270,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
         bail!("authenticating ramp failed: {}", e);
     }
 
-    let ramp = r.unwrap();
+    let ramp = r?;
 
     // List all our users.
     let users = ramp
@@ -308,7 +308,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
         let mut attachments = Vec::new();
         // Get the reciept for the transaction, if they exist.
         for receipt_id in transaction.receipts {
-            let receipt = ramp.receipts().get_receipt(&receipt_id).await.unwrap();
+            let receipt = ramp.receipts().get_receipt(&receipt_id).await?;
             attachments.push(receipt.receipt_url.to_string());
         }
 
@@ -372,7 +372,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         bail!("authenticating ramp failed: {}", e);
     }
 
-    let ramp = r.unwrap();
+    let ramp = r?;
 
     // List all our users.
     let users = ramp
@@ -744,7 +744,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
     }
 
     info!("reading csv from {}", path.to_str().unwrap());
-    let f = File::open(&path).unwrap();
+    let f = File::open(&path)?;
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
         let mut record: NewCreditCardTransaction = result?;
@@ -1178,7 +1178,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
 
         bail!("authenticating quickbooks failed: {}", e);
     }
-    let qb = qba.unwrap();
+    let qb = qba?;
 
     let bill_payments = qb.list_bill_payments().await?;
     for bill_payment in bill_payments {
