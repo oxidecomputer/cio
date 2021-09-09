@@ -432,8 +432,8 @@ table! {
         time -> Timestamptz,
         receipts -> Array<Text>,
         link_to_vendor -> Array<Text>,
-        airtable_record_id -> Varchar,
         cio_company_id -> Int4,
+        airtable_record_id -> Varchar,
     }
 }
 
@@ -442,20 +442,11 @@ table! {
         id -> Int4,
         name -> Varchar,
         status -> Varchar,
+        conclusion -> Varchar,
         created_at -> Timestamptz,
         completed_at -> Nullable<Timestamptz>,
         logs -> Text,
         cio_company_id -> Int4,
-        airtable_record_id -> Varchar,
-    }
-}
-
-table! {
-    github_labels (id) {
-        id -> Int4,
-        name -> Varchar,
-        description -> Varchar,
-        color -> Varchar,
         airtable_record_id -> Varchar,
     }
 }
@@ -930,6 +921,7 @@ allow_tables_to_appear_in_same_query!(
     conference_rooms,
     credit_card_transactions,
     expensed_items,
+    functions,
     github_repos,
     groups,
     inbound_shipments,

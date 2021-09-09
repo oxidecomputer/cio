@@ -22,6 +22,8 @@ pub struct NewFunction {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub conclusion: String,
     pub created_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub completed_at: Option<DateTime<Utc>>,
