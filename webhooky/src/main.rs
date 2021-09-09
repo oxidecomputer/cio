@@ -4330,7 +4330,7 @@ async fn handle_rfd_push(
                         .delete_file(
                             owner,
                             &repo,
-                            &pdf_path,
+                            pdf_path.trim_start_matches('/'),
                             &octorust::types::ReposDeleteFileRequest {
                                 message: format!(
                                     "Deleting file content {} programatically\n\nThis is done \
