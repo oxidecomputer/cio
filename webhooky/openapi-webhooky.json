@@ -58,6 +58,35 @@
         }
       }
     },
+    "/airtable/applicants/update": {
+      "post": {
+        "description": "Listen for rows updated in our Airtable workspace. These are set up with an Airtable script on the workspaces themselves.",
+        "operationId": "listen_airtable_applicants_update_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/airtable/assets/items/print_barcode_label": {
       "post": {
         "description": "Listen for a button pressed to print a barcode label for an asset item.",
@@ -203,6 +232,35 @@
         }
       }
     },
+    "/airtable/shipments/outbound/reprint_receipt": {
+      "post": {
+        "description": "Listen for a button pressed to reprint a receipt for an outbound shipment.",
+        "operationId": "listen_airtable_shipments_outbound_reprint_receipt_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/airtable/shipments/outbound/resend_shipment_status_email_to_recipient": {
       "post": {
         "description": "Listen for a button pressed to resend a shipment status email to the recipient for an outbound shipment.",
@@ -299,6 +357,35 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/NewPageView"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/applicant/review/submit": {
+      "post": {
+        "description": "Listen for applicant reviews being submitted for job applicants",
+        "operationId": "listen_applicant_review_requests",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewApplicantReview"
               }
             }
           },
@@ -873,6 +960,97 @@
         }
       }
     },
+    "/auth/zoom/callback": {
+      "get": {
+        "description": "Listen for callbacks to Zoom auth.",
+        "operationId": "listen_auth_zoom_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "realmId",
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state that we had passed in through the user consent URL.",
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/zoom/consent": {
+      "get": {
+        "description": "Get the consent URL for Zoom auth.",
+        "operationId": "listen_auth_zoom_consent",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserConsentURL"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/zoom/deauthorization": {
+      "get": {
+        "description": "Listen to deauthorization requests for our Zoom app.",
+        "operationId": "listen_auth_zoom_deauthorization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/checkr/background/update": {
       "post": {
         "description": "Listen for updates to our checkr background checks.",
@@ -954,6 +1132,110 @@
                 "schema": {
                   "title": "String",
                   "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/function/{uuid}": {
+      "get": {
+        "description": "Get information about a function by its uuid.",
+        "operationId": "listen_get_function_by_uuid",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Function"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/function/{uuid}/logs": {
+      "get": {
+        "description": "Get a functions logs by its uuid.",
+        "operationId": "listen_get_function_logs_by_uuid",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/functions/sagas": {
+      "get": {
+        "description": "List all the current sagas.",
+        "operationId": "listen_get_current_sagas",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_SagaView",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SagaView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/functions/sync-repos": {
+      "post": {
+        "description": "Listen for triggering a function run of sync repos.",
+        "operationId": "trigger_sync_repos_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_Uuid",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
                 }
               }
             }
@@ -1451,10 +1733,7 @@
             "type": "integer",
             "format": "int32"
           }
-        },
-        "required": [
-          "count"
-        ]
+        }
       },
       "CustomFields": {
         "type": "object",
@@ -1812,6 +2091,49 @@
             "type": "string"
           }
         }
+      },
+      "Function": {
+        "type": "object",
+        "properties": {
+          "airtable_record_id": {
+            "type": "string"
+          },
+          "cio_company_id": {
+            "description": "The CIO company ID.",
+            "type": "integer",
+            "format": "int32"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "logs": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "saga_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at"
+        ]
       },
       "GitHubApp": {
         "description": "A GitHub app.",
@@ -2239,12 +2561,7 @@
           "reset": {
             "type": "string"
           }
-        },
-        "required": [
-          "limit",
-          "remaining",
-          "reset"
-        ]
+        }
       },
       "GitHubRepo": {
         "description": "A GitHub repository. FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push",
@@ -2533,6 +2850,58 @@
       "LockedByUser": {
         "type": "object"
       },
+      "NewApplicantReview": {
+        "type": "object",
+        "properties": {
+          "Any additional evaluation (not to be shared with applicant)": {
+            "type": "string"
+          },
+          "Applicant": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Evaluation": {
+            "type": "string"
+          },
+          "If \"Pass\" or \"No\", rationale if applicable (check all that apply)": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Link to Leaderboard": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Name": {
+            "type": "string"
+          },
+          "Reviewer": {
+            "type": "string"
+          },
+          "Value Reflected (from Questionnaire)": {
+            "type": "string"
+          },
+          "Value Violated (from Questionnaire)": {
+            "type": "string"
+          },
+          "Values in Tension (from Questionnaire)": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cio_company_id": {
+            "description": "The CIO company ID.",
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "NewPageView": {
         "type": "object",
         "properties": {
@@ -2674,6 +3043,21 @@
             }
           }
         }
+      },
+      "SagaView": {
+        "description": "External consumer's view of a saga",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "params": {}
+        },
+        "required": [
+          "id",
+          "params"
+        ]
       },
       "TemplateRole": {
         "type": "object",

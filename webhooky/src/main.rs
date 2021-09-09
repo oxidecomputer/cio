@@ -14,7 +14,7 @@ extern crate serde_json;
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::Result;
-use cio_api::{analytics::NewPageView, db::Database, swag_store::Order};
+use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
@@ -155,6 +155,9 @@ async fn main() -> Result<(), String> {
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_sync_repos_create).unwrap();
+    api.register(listen_get_function_by_uuid).unwrap();
+    api.register(listen_get_function_logs_by_uuid).unwrap();
+    api.register(listen_get_current_sagas).unwrap();
     api.register(api_get_schema).unwrap();
 
     // Print the OpenAPI Spec to stdout.
@@ -1497,17 +1500,23 @@ async fn listen_slack_commands_webhooks(
     }
 }
 
-/** Listen for triggering a saga run of sync repos. */
+#[derive(Deserialize, Debug, JsonSchema)]
+pub struct FunctionPathParams {
+    uuid: String,
+}
+
+/** Get information about a function by its uuid. */
 #[endpoint {
-    method = POST,
-    path = "/sagas/sync-repos",
+    method = GET,
+    path = "/function/{uuid}",
 }]
-async fn trigger_sync_repos_create(
+async fn listen_get_function_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<uuid::Uuid>>, HttpError> {
+    path_params: Path<FunctionPathParams>,
+) -> Result<HttpResponseOk<Function>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_sync_repos_create(rqctx).await {
+    match crate::handlers_cron::handle_get_function_by_uuid(rqctx, path_params).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseOk(r))
@@ -1518,6 +1527,72 @@ async fn trigger_sync_repos_create(
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
+}
+
+/** Get a functions logs by its uuid. */
+#[endpoint {
+    method = GET,
+    path = "/function/{uuid}/logs",
+}]
+async fn listen_get_function_logs_by_uuid(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<FunctionPathParams>,
+) -> Result<HttpResponseOk<String>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_get_function_logs_by_uuid(rqctx, path_params).await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseOk(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync repos. */
+#[endpoint {
+    method = POST,
+    path = "/functions/sync-repos",
+}]
+async fn trigger_sync_repos_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<Vec<uuid::Uuid>>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_sync_repos_create(rqctx).await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** List all the current sagas. */
+#[endpoint {
+    method = GET,
+    path = "/functions/sagas",
+}]
+async fn listen_get_current_sagas(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<Vec<steno::SagaView>>, HttpError> {
+    sentry::start_session();
+    let api_context = rqctx.context();
+
+    let sagas = api_context
+        .sec
+        .saga_list(None, std::num::NonZeroU32::new(10000).unwrap())
+        .await;
+    sentry::end_session();
+    Ok(HttpResponseOk(sagas))
 }
 
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
