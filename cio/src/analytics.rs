@@ -66,15 +66,17 @@ impl NewPageView {
         self.page_link = format!("https://{}/{}", self.domain, self.path.trim_start_matches('/'));
     }
 
-    pub fn set_company_id(&mut self, db: &Database) {
+    pub fn set_company_id(&mut self, db: &Database) -> Result<()> {
         // Match the company ID with the link.
         // All the companies are owned by Oxide.
-        let companies = Companys::get_from_db(db, 1);
+        let companies = Companys::get_from_db(db, 1)?;
         for company in companies {
             if self.domain.ends_with(&company.domain) {
                 self.cio_company_id = company.id;
             }
         }
+
+        Ok(())
     }
 }
 

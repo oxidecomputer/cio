@@ -1,7 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::convert::From;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
 use google_geocode::Geocode;
@@ -401,7 +401,7 @@ impl OutboundShipments {
 
         if shipments.is_empty() {
             // We can return early.
-            return;
+            return Ok(());
         }
 
         // Get the transaction ids, these should be the same as the shippo_id.
@@ -415,7 +415,7 @@ impl OutboundShipments {
 
         if transaction_ids.is_empty() {
             // We can return early.
-            return;
+            return Ok(());
         }
 
         // Get the carrier ID for USPS.
@@ -849,7 +849,7 @@ The Shipping Bot",
             self.status = "Picked up".to_string();
             self.update(db).await;
             // Return early.
-            return;
+            return Ok(());
         }
 
         // If we already have a shippo id, get the information for the label.
@@ -876,11 +876,7 @@ The Shipping Bot",
             // Register a tracking webhook for this shipment.
             let status = shippo_client
                 .register_tracking_webhook(&self.carrier, &self.tracking_number)
-                .await
-                .unwrap_or_else(|e| {
-                    bail!("registering the tracking webhook failed: {:?}", e);
-                    Default::default()
-                });
+                .await?;
 
             let tracking_status = status.tracking_status.unwrap_or_default();
             if self.messages.is_empty() {
@@ -1063,11 +1059,7 @@ The Shipping Bot",
                 // Register a tracking webhook for this shipment.
                 shippo_client
                     .register_tracking_webhook(&self.carrier, &self.tracking_number)
-                    .await
-                    .unwrap_or_else(|e| {
-                        bail!("registering the tracking webhook failed: {:?}", e);
-                        Default::default()
-                    });
+                    .await?;
 
                 // Print the label.
                 self.print_label(db).await;
@@ -1089,12 +1081,12 @@ The Shipping Bot",
 }
 
 // Sync the outbound shipments.
-pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
+pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Result<()> {
     // Iterate over all the shipments in the database and update them.
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
     // we do not.
-    let shipments = OutboundShipments::get_from_db(db, company.id);
+    let shipments = OutboundShipments::get_from_db(db, company.id)?;
     for mut s in shipments {
         if let Some(existing) = s.get_existing_airtable_record(db).await {
             // Take the field from Airtable.
@@ -1102,7 +1094,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         }
 
         // Update the shipment from shippo.
-        s.create_or_get_shippo_shipment(db).await;
+        s.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
         s.update(db).await;
     }
@@ -1112,7 +1104,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
 
     // Get each of the shippo orders and create or update it in our set.
     // These are typically one off labels made from the UI.
-    let orders = shippo.list_orders().await.unwrap();
+    let orders = shippo.list_orders().await?;
     for order in orders {
         let mut ns = NewOutboundShipment {
             created_time: order.placed_at,
@@ -1152,11 +1144,11 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
 
         // We need to get the carrier and tracking number so we don't create
         // duplicates every single time.
-        let label = shippo.get_shipping_label(&ns.shippo_id).await.unwrap();
+        let label = shippo.get_shipping_label(&ns.shippo_id).await?;
         ns.tracking_number = label.tracking_number.to_string();
 
         // The rate will give us the carrier and the cost.
-        let rate = shippo.get_rate(&label.rate).await.unwrap();
+        let rate = shippo.get_rate(&label.rate).await?;
         ns.cost = rate.amount_local.parse().unwrap();
         ns.carrier = clean_provider_name(&rate.provider);
 
@@ -1171,15 +1163,18 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) {
         }
 
         // Upsert the record in the database.
-        let mut s = ns.upsert_in_db(db);
+        let mut s = ns.upsert_in_db(db)?;
 
         // Update the shipment from shippo.
-        s.create_or_get_shippo_shipment(db).await;
+        s.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
         s.update(db).await;
     }
 
-    OutboundShipments::get_from_db(db, company.id).update_airtable(db).await;
+    OutboundShipments::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+    Ok(())
 }
 
 pub fn clean_provider_name(s: &str) -> String {
@@ -1198,12 +1193,11 @@ pub fn clean_provider_name(s: &str) -> String {
 }
 
 // Sync the inbound shipments.
-pub async fn refresh_inbound_shipments(db: &Database, company: &Company) {
+pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Result<()> {
     let is: Vec<airtable_api::Record<InboundShipment>> = company
         .authenticate_airtable(&company.airtable_base_id_shipments)
         .list_records(&InboundShipment::airtable_table(), "Grid view", vec![])
-        .await
-        .unwrap();
+        .await?;
 
     for record in is {
         if record.fields.carrier.is_empty() || record.fields.tracking_number.is_empty() {
@@ -1214,14 +1208,18 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) {
         let mut new_shipment: NewInboundShipment = record.fields.into();
         new_shipment.expand().await;
         new_shipment.cio_company_id = company.id;
-        let mut shipment = new_shipment.upsert_in_db(db);
+        let mut shipment = new_shipment.upsert_in_db(db)?;
         if shipment.airtable_record_id.is_empty() {
             shipment.airtable_record_id = record.id;
         }
         shipment.update(db).await;
     }
 
-    InboundShipments::get_from_db(db, company.id).update_airtable(db).await;
+    InboundShipments::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
+    Ok(())
 }
 
 pub fn clean_address_string(s: &str) -> String {
@@ -1249,7 +1247,7 @@ mod tests {
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_inbound_shipments(&db, &oxide).await;
+        refresh_inbound_shipments(&db, &oxide).await.unwrap();
     }
 
     #[ignore]
@@ -1259,6 +1257,6 @@ mod tests {
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_outbound_shipments(&db, &oxide).await;
+        refresh_outbound_shipments(&db, &oxide).await.unwrap();
     }
 }

@@ -960,7 +960,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
 
 pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
     // Get all the rfds from the database.
-    let rfds = RFDs::get_from_db(db, company.id);
+    let rfds = RFDs::get_from_db(db, company.id)?;
     let github = company.authenticate_github();
 
     // Get all the PDF files.
@@ -1068,7 +1068,7 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
 }
 
 /// Create a changelog email for the RFDs.
-pub async fn send_rfd_changelog(company: &Company) {
+pub async fn send_rfd_changelog(company: &Company) -> Result<()> {
     // Initialize our database.
     let db = Database::new();
 
@@ -1083,7 +1083,7 @@ pub async fn send_rfd_changelog(company: &Company) {
     let mut changelog = format!("Changes to RFDs for the week {}:\n", week_format);
 
     // Iterate over the RFDs.
-    let rfds = RFDs::get_from_db(&db, company.id);
+    let rfds = RFDs::get_from_db(&db, company.id)?;
     for rfd in rfds {
         let changes = rfd.get_weekly_changelog(&github, seven_days_ago, company).await;
         if !changes.is_empty() {
@@ -1105,8 +1105,7 @@ pub async fn send_rfd_changelog(company: &Company) {
             &[],
             &format!("rfds@{}", company.gsuite_domain),
         )
-        .await
-        .unwrap();
+        .await?;
 }
 
 #[cfg(test)]
@@ -1159,7 +1158,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        send_rfd_changelog(&oxide).await;
+        send_rfd_changelog(&oxide).await.unwrap();
     }
 
     #[test]

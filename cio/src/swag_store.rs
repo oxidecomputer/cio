@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -59,20 +60,22 @@ impl Order {
         contents.trim().to_string()
     }
 
-    pub async fn create_shipment_for_order(&self, db: &Database) {
+    pub async fn create_shipment_for_order(&self, db: &Database) -> Result<()> {
         // Convert the shipment to an order.
         let shipment: NewOutboundShipment = self.clone().into();
 
         // Add the shipment to the database.
-        let mut new_shipment = shipment.upsert_in_db(db);
+        let mut new_shipment = shipment.upsert_in_db(db)?;
         // Create or update the shipment from shippo.
-        new_shipment.create_or_get_shippo_shipment(db).await;
+        new_shipment.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
         new_shipment.update(db).await;
 
         // Send an email to the person that we recieved their order and what they are
         // getting.
         new_shipment.send_email_to_recipient_pre_shipping(db).await;
+
+        Ok(())
     }
 
     pub async fn subtract_order_from_inventory(&self, db: &Database) {
