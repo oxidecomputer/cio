@@ -318,12 +318,6 @@ async fn listen_github_webhooks(
         .to_string();
     let event_type = EventType::from_str(&event_type_string).unwrap();
 
-    // Add context to sentry.
-    sentry::configure_scope(|scope| {
-        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-        scope.set_tag("github.event.type", &event_type_string);
-    });
-
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
         EventType::Push => {
@@ -331,7 +325,16 @@ async fn listen_github_webhooks(
             if event.commits.is_empty() {
                 // `push` event has no commits.
                 // We can throw this out, log it and return early.
-                sentry::capture_message("`push` event has no commits", sentry::Level::Fatal);
+                // Add context to sentry.
+                sentry::with_scope(
+                    |scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    },
+                    || {
+                        sentry::capture_message("`push` event has no commits", sentry::Level::Fatal);
+                    },
+                );
             }
 
             let commit = event.commits.get(0).unwrap().clone();
@@ -339,9 +342,17 @@ async fn listen_github_webhooks(
             if !commit.distinct {
                 // The commit is not distinct.
                 // We can throw this out, log it and return early.
-                sentry::capture_message(
-                    &format!("`push` event commit `{}` is not distinct", commit.id),
-                    sentry::Level::Fatal,
+                sentry::with_scope(
+                    |scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    },
+                    || {
+                        sentry::capture_message(
+                            &format!("`push` event commit `{}` is not distinct", commit.id),
+                            sentry::Level::Fatal,
+                        );
+                    },
                 );
             }
 
@@ -352,7 +363,15 @@ async fn listen_github_webhooks(
                 // The branch name is empty.
                 // We can throw this out, log it and return early.
                 // This should never happen, but we won't rule it out because computers.
-                sentry::capture_message("`push` event branch name is empty", sentry::Level::Fatal);
+                sentry::with_scope(
+                    |scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    },
+                    || {
+                        sentry::capture_message("`push` event branch name is empty", sentry::Level::Fatal);
+                    },
+                );
             }
         }
         EventType::Repository => {
@@ -360,6 +379,11 @@ async fn listen_github_webhooks(
 
             let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
             let github = company.authenticate_github();
+
+            sentry::configure_scope(|scope| {
+                scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                scope.set_tag("github.event.type", &event_type_string);
+            });
 
             // Now let's handle the event.
             handle_repository_event(&github, api_context, event.clone(), &company)
@@ -379,12 +403,17 @@ async fn listen_github_webhooks(
 
         match repo_name {
             Repo::RFD => match event_type {
-                EventType::Push => match handle_rfd_push(&github, api_context, event.clone(), &company).await {
-                    Ok(message) => {
-                        event.create_comment(&github, &message).await.unwrap();
-                    }
-                    Err(e) => {
-                        event
+                EventType::Push => {
+                    sentry::configure_scope(|scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    });
+                    match handle_rfd_push(&github, api_context, event.clone(), &company).await {
+                        Ok(message) => {
+                            event.create_comment(&github, &message).await.unwrap();
+                        }
+                        Err(e) => {
+                            event
                                 .create_comment(
                                     &github,
                                     &format!(
@@ -394,9 +423,14 @@ async fn listen_github_webhooks(
                                 )
                                 .await
                                 .unwrap();
+                        }
                     }
-                },
+                }
                 EventType::PullRequest => {
+                    sentry::configure_scope(|scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    });
                     // Let's create the check run.
                     let check_run_id = event.create_check_run(&github).await.unwrap();
 
@@ -422,15 +456,36 @@ async fn listen_github_webhooks(
                     }
                 }
                 EventType::CheckRun => {
-                    sentry::capture_message("CheckRun event", sentry::Level::Info);
+                    sentry::with_scope(
+                        |scope| {
+                            scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                            scope.set_tag("github.event.type", &event_type_string);
+                        },
+                        || {
+                            sentry::capture_message("CheckRun event", sentry::Level::Info);
+                        },
+                    );
                 }
                 EventType::CheckSuite => {
-                    sentry::capture_message("CheckSuite event", sentry::Level::Info);
+                    sentry::with_scope(
+                        |scope| {
+                            scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                            scope.set_tag("github.event.type", &event_type_string);
+                        },
+                        || {
+                            sentry::capture_message("CheckSuite event", sentry::Level::Info);
+                        },
+                    );
                 }
                 _ => (),
             },
             Repo::Configs => {
                 if let EventType::Push = event_type {
+                    sentry::configure_scope(|scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    });
+
                     match handle_configs_push(&github, api_context, event.clone(), &company).await {
                         Ok(message) => {
                             event.create_comment(&github, &message).await.unwrap();
