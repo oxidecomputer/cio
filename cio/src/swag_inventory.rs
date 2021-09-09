@@ -1,6 +1,6 @@
 use std::io::BufWriter;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use barcoders::{
     generators::{image::Image, svg::SVG},
@@ -403,12 +403,12 @@ pub struct PrintRequest {
 
 impl SwagInventoryItem {
     /// Send the label to our printer.
-    pub async fn print_label(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn print_label(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
 
         if company.printer_url.is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         let url = if self.barcode_pdf_label.trim().is_empty() {
@@ -418,11 +418,11 @@ impl SwagInventoryItem {
 
             // Figure out where our directory is.
             // It should be in the shared drive : "Automated Documents"/"rfds"
-            let shared_drive = drive_client.drives().get_by_name("Automated Documents").await.unwrap();
+            let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
             let drive_id = shared_drive.id.to_string();
 
             // Get the directory by the name.
-            let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await.unwrap();
+            let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await?;
 
             let mut sw: NewSwagInventoryItem = From::from(self.clone());
             sw.expand(&drive_client, &drive_id, &parent_id).await
@@ -443,14 +443,15 @@ impl SwagInventoryItem {
                 .to_string(),
             )
             .send()
-            .await
-            .unwrap();
+            .await?;
         match resp.status() {
             StatusCode::ACCEPTED => (),
             s => {
-                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
+                bail!("[print]: status_code: {}, body: {}", s, resp.text().await?);
             }
         };
+
+        Ok(())
     }
 }
 

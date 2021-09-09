@@ -635,7 +635,7 @@ impl User {
 
     /// Send an email to the new consultant about their account.
     async fn send_email_new_consultant(&self, db: &Database) -> Result<()> {
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -687,7 +687,7 @@ xoxo,
 
     /// Send an email to the GSuite user about their account.
     async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) -> Result<()> {
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -749,7 +749,7 @@ xoxo,
 
     /// Send an email to the new user about their account.
     async fn send_email_new_user(&self, db: &Database) -> Result<()> {
-        let company = self.company(db);
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 

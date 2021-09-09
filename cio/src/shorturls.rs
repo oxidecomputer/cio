@@ -18,7 +18,7 @@ pub async fn generate_shorturls_for_repos(
     repo: &str,
     cio_company_id: i32,
 ) -> Result<()> {
-    let company = Company::get_by_id(db, cio_company_id);
+    let company = Company::get_by_id(db, cio_company_id)?;
     let subdomain = "git";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -61,7 +61,7 @@ pub async fn generate_shorturls_for_rfds(
     repo: &str,
     cio_company_id: i32,
 ) -> Result<()> {
-    let company = Company::get_by_id(db, cio_company_id);
+    let company = Company::get_by_id(db, cio_company_id)?;
     let subdomain = "rfd";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -106,7 +106,7 @@ pub async fn generate_shorturls_for_configs_links(
     repo: &str,
     cio_company_id: i32,
 ) -> Result<()> {
-    let company = Company::get_by_id(db, cio_company_id);
+    let company = Company::get_by_id(db, cio_company_id)?;
     let subdomain = "corp";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();

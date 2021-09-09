@@ -45,19 +45,19 @@ pub struct OrderItem {
 }
 
 impl Order {
-    pub fn format_contents(&self) -> String {
+    pub fn format_contents(&self) -> Result<String> {
         let db = Database::new();
         let mut contents = String::new();
         for item in &self.items {
             // Get the swag item from the database.
-            let swag_inventory_item = SwagInventoryItem::get_by_id(&db, item.id);
+            let swag_inventory_item = SwagInventoryItem::get_by_id(&db, item.id)?;
             contents = format!(
                 "{} x {}, Size: {}\n{}",
                 item.quantity, swag_inventory_item.item, swag_inventory_item.size, contents
             );
         }
 
-        contents.trim().to_string()
+        Ok(contents.trim().to_string())
     }
 
     pub async fn create_shipment_for_order(&self, db: &Database) -> Result<()> {
@@ -78,10 +78,10 @@ impl Order {
         Ok(())
     }
 
-    pub async fn subtract_order_from_inventory(&self, db: &Database) {
+    pub async fn subtract_order_from_inventory(&self, db: &Database) -> Result<()> {
         for item in &self.items {
             // Get the swag item from the database.
-            let mut swag_inventory_item = SwagInventoryItem::get_by_id(db, item.id);
+            let mut swag_inventory_item = SwagInventoryItem::get_by_id(db, item.id)?;
             swag_inventory_item.current_stock -= item.quantity;
             if swag_inventory_item.current_stock < 0 {
                 // TODO: Hopefully this never happens. The store code _should_ only allow people
@@ -95,9 +95,11 @@ impl Order {
             );
             swag_inventory_item.update(db).await;
         }
+
+        Ok(())
     }
 
-    pub async fn do_order(&self, db: &Database) {
+    pub async fn do_order(&self, db: &Database) -> Result<()> {
         // If their email is empty return early.
         if self.email.is_empty()
             || self.street_1.is_empty()
@@ -110,18 +112,20 @@ impl Order {
         {
             // This should not happen since we verify on the client side we have these
             // things.
-            return;
+            return Ok(());
         }
 
-        self.create_shipment_for_order(db).await;
-        self.subtract_order_from_inventory(db).await;
+        self.create_shipment_for_order(db).await?;
+        self.subtract_order_from_inventory(db).await?;
+
+        Ok(())
     }
 }
 
 impl From<Order> for NewOutboundShipment {
     fn from(order: Order) -> Self {
         let db = Database::new();
-        let company = Company::get_by_id(&db, order.cio_company_id);
+        let company = Company::get_by_id(&db, order.cio_company_id).unwrap();
 
         NewOutboundShipment {
             created_time: Utc::now(),
@@ -142,7 +146,7 @@ impl From<Order> for NewOutboundShipment {
             address_formatted: Default::default(),
             latitude: Default::default(),
             longitude: Default::default(),
-            contents: order.format_contents(),
+            contents: order.format_contents().unwrap(),
             // The rest will be populated when we update shippo and create a label.
             carrier: Default::default(),
             pickup_date: None,

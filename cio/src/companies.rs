@@ -176,7 +176,7 @@ impl Company {
         }
     }
 
-    pub fn get_from_slack_team_id(db: &Database, team_id: &str) -> Self {
+    pub fn get_from_slack_team_id(db: &Database, team_id: &str) -> Result<Self> {
         // We need to get the token first with the matching team id.
         let token = api_tokens::dsl::api_tokens
             .filter(
@@ -184,8 +184,7 @@ impl Company {
                     .eq(team_id.to_string())
                     .and(api_tokens::dsl::product.eq("slack".to_lowercase())),
             )
-            .first::<APIToken>(&db.conn())
-            .unwrap_or_else(|e| panic!("could not find slack api token matching team id {}: {}", team_id, e));
+            .first::<APIToken>(&db.conn())?;
 
         // Now we can get the company.
         Company::get_by_id(db, token.auth_company_id)

@@ -1,7 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::convert::From;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
 use google_geocode::Geocode;
@@ -595,17 +595,17 @@ impl OutboundShipment {
     }
 
     /// Send the receipt to our printer.
-    pub async fn print_receipt(&self, db: &Database) {
+    pub async fn print_receipt(&self, db: &Database) -> Result<()> {
         if self.contents.trim().is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         if company.printer_url.is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         let printer_url = format!("{}/receipt", company.printer_url);
@@ -624,28 +624,29 @@ impl OutboundShipment {
                 .to_string(),
             )
             .send()
-            .await
-            .unwrap();
+            .await?;
         match resp.status() {
             StatusCode::ACCEPTED => (),
             s => {
-                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
+                bail!("[print]: status_code: {}, body: {}", s, resp.text().await?);
             }
         };
+
+        Ok(())
     }
 
     /// Send the label to our printer.
-    pub async fn print_label(&self, db: &Database) {
+    pub async fn print_label(&self, db: &Database) -> Result<()> {
         if self.label_link.trim().is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         if company.printer_url.is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         let printer_url = format!("{}/rollo", company.printer_url);
@@ -654,14 +655,15 @@ impl OutboundShipment {
             .post(&printer_url)
             .body(json!(self.label_link).to_string())
             .send()
-            .await
-            .unwrap();
+            .await?;
         match resp.status() {
             StatusCode::ACCEPTED => (),
             s => {
-                panic!("[print]: status_code: {}, body: {}", s, resp.text().await.unwrap());
+                bail!("[print]: status_code: {}, body: {}", s, resp.text().await?);
             }
         };
+
+        Ok(())
     }
 
     /// Format address.
@@ -679,12 +681,12 @@ impl OutboundShipment {
 
     /// Send an email to the recipient with their order information.
     /// This should happen before they get the email that it has been shipped.
-    pub async fn send_email_to_recipient_pre_shipping(&self, db: &Database) {
+    pub async fn send_email_to_recipient_pre_shipping(&self, db: &Database) -> Result<()> {
         if self.email.is_empty() {
-            return;
+            return Ok(());
         }
 
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -719,17 +721,18 @@ xoxo,
                 &[],
                 &format!("packages@{}", &company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the recipient with their tracking code and information.
-    pub async fn send_email_to_recipient(&self, db: &Database) {
+    pub async fn send_email_to_recipient(&self, db: &Database) -> Result<()> {
         if self.email.is_empty() {
-            return;
+            return Ok(());
         }
 
-        let company = self.company(db);
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -765,13 +768,14 @@ xoxo,
                 &[],
                 &format!("packages@{}", &company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email internally that we need to package the shipment.
-    pub async fn send_email_internally(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_internally(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -817,13 +821,14 @@ The Shipping Bot",
                 &[],
                 &format!("packages@{}", &company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
     pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) -> Result<()> {
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         // Update the formatted address.
         self.populate_formatted_address();
