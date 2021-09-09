@@ -21,15 +21,13 @@ use cio_api::{
     companies::Company,
     configs::User,
     db::Database,
-    journal_clubs::JournalClubMeeting,
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
-    rfds::RFD,
-    schema::{api_tokens, applicants, journal_club_meetings, rfds},
+    schema::{api_tokens, applicants},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
     swag_inventory::SwagInventoryItem,
     swag_store::Order,
-    utils::{decode_base64, merge_json},
+    utils::decode_base64,
 };
 use diesel::prelude::*;
 use docusign::DocuSign;
@@ -46,15 +44,14 @@ use log::{info, warn};
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
-use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
+use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::{github_types::GitHubWebhook, slack_commands::SlackCommand};
+use crate::github_types::GitHubWebhook;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -2533,199 +2530,18 @@ async fn listen_slack_commands_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let db = &api_context.db;
 
-    // We should have a string, which we will then parse into our args.
-    // Parse the request body as a Slack BotCommand.
-    let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes()).unwrap();
-
-    // Get the company from the Slack team id.
-    let company = Company::get_from_slack_team_id(db, &bot_command.team_id).unwrap();
-
-    // Get the command type.
-    let command = SlackCommand::from_str(&bot_command.command).unwrap();
-    let text = bot_command.text.trim();
-
-    // Filter by command type and do the command.
-    let response = match command {
-        SlackCommand::RFD => {
-            let num = text.parse::<i32>().unwrap_or(0);
-            if num > 0 {
-                if let Ok(rfd) = rfds::dsl::rfds
-                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num)))
-                    .first::<RFD>(&db.conn())
-                {
-                    json!(MessageResponse {
-                        response_type: MessageResponseType::InChannel,
-                        text: rfd.as_slack_msg(),
-                    })
-                } else if let Ok(rfd) = rfds::dsl::rfds
-                    .filter(
-                        rfds::dsl::cio_company_id
-                            .eq(company.id)
-                            .and(rfds::dsl::name.ilike(format!("%{}%", text))),
-                    )
-                    .first::<RFD>(&db.conn())
-                {
-                    json!(MessageResponse {
-                        response_type: MessageResponseType::InChannel,
-                        text: rfd.as_slack_msg(),
-                    })
-                } else {
-                    json!(MessageResponse {
-                        response_type: MessageResponseType::InChannel,
-                        text: format!(
-                            "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
-                            bot_command.user_id, text
-                        ),
-                    })
-                }
-            } else if let Ok(rfd) = rfds::dsl::rfds
-                .filter(
-                    rfds::dsl::cio_company_id
-                        .eq(company.id)
-                        .and(rfds::dsl::name.ilike(format!("%{}%", text))),
-                )
-                .first::<RFD>(&db.conn())
-            {
-                json!(MessageResponse {
-                    response_type: MessageResponseType::InChannel,
-                    text: rfd.as_slack_msg(),
-                })
-            } else {
-                json!(MessageResponse {
-                    response_type: MessageResponseType::InChannel,
-                    text: format!(
-                        "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
-                        bot_command.user_id, text
-                    ),
-                })
-            }
+    let mut resp: serde_json::Value = Default::default();
+    match crate::handlers::handle_slack_commands(rqctx, body_param).await {
+        Ok(r) => {
+            resp = r;
         }
-        SlackCommand::Meet => {
-            let mut name = text.replace(" ", "-");
-            if name.is_empty() {
-                // Generate a new random string.
-                name = thread_rng()
-                    .sample_iter(&Alphanumeric)
-                    .take(6)
-                    .map(char::from)
-                    .collect();
-            }
-
-            json!(MessageResponse {
-                response_type: MessageResponseType::InChannel,
-                text: format!("https://g.co/meet/oxide-{}", name.to_lowercase()),
-            })
+        // Send the error to sentry.
+        Err(e) => {
+            sentry_anyhow::capture_anyhow(&e);
         }
-        SlackCommand::Applicants => {
-            // Get the applicants that need to be triaged.
-            let applicants =
-                applicants::dsl::applicants
-                    .filter(applicants::dsl::cio_company_id.eq(company.id).and(
-                        applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
-                    ))
-                    .load::<Applicant>(&db.conn())
-                    .unwrap();
-
-            let mut msg: serde_json::Value = Default::default();
-            for (i, a) in applicants.into_iter().enumerate() {
-                if i > 0 {
-                    // Merge a divider onto the stack.
-                    let object = json!({
-                        "blocks": [{
-                            "type": "divider"
-                        }]
-                    });
-
-                    merge_json(&mut msg, object);
-                }
-
-                let obj = a.as_slack_msg();
-                merge_json(&mut msg, obj);
-            }
-
-            msg
-        }
-        SlackCommand::Applicant => {
-            if let Ok(applicant) = applicants::dsl::applicants
-                .filter(
-                    applicants::dsl::cio_company_id
-                        .eq(company.id)
-                        .and(applicants::dsl::name.ilike(format!("%{}%", text))),
-                )
-                .first::<Applicant>(&db.conn())
-            {
-                applicant.as_slack_msg()
-            } else {
-                json!(MessageResponse {
-                    response_type: MessageResponseType::InChannel,
-                    text: format!(
-                        "Sorry <@{}> :scream: I could not find an applicant matching `{}`",
-                        bot_command.user_id, text
-                    ),
-                })
-            }
-        }
-        SlackCommand::Papers => {
-            // If we asked for the closed meetings then only show those, otherwise
-            // default to the open meetings.
-            let mut state = "open";
-            if text == "closed" {
-                state = "closed";
-            }
-            let meetings = journal_club_meetings::dsl::journal_club_meetings
-                .filter(
-                    journal_club_meetings::dsl::cio_company_id
-                        .eq(company.id)
-                        .and(journal_club_meetings::dsl::state.eq(state.to_string())),
-                )
-                .load::<JournalClubMeeting>(&db.conn())
-                .unwrap();
-
-            let mut msg: serde_json::Value = Default::default();
-            for (i, m) in meetings.into_iter().enumerate() {
-                if i > 0 {
-                    // Merge a divider onto the stack.
-                    let object = json!({
-                        "blocks": [{
-                            "type": "divider"
-                        }]
-                    });
-
-                    merge_json(&mut msg, object);
-                }
-
-                let obj = m.as_slack_msg();
-                merge_json(&mut msg, obj);
-            }
-
-            msg
-        }
-        SlackCommand::Paper => {
-            if let Ok(meeting) = journal_club_meetings::dsl::journal_club_meetings
-                .filter(
-                    journal_club_meetings::dsl::cio_company_id
-                        .eq(company.id)
-                        .and(journal_club_meetings::dsl::title.ilike(format!("%{}%", text))),
-                )
-                .first::<JournalClubMeeting>(&db.conn())
-            {
-                meeting.as_slack_msg()
-            } else {
-                json!(MessageResponse {
-                    response_type: MessageResponseType::InChannel,
-                    text: format!(
-                        "Sorry <@{}> :scream: I could not find a journal club meeting matching \
-                         `{}`",
-                        bot_command.user_id, text
-                    ),
-                })
-            }
-        }
-    };
+    }
 
     sentry::end_session();
-    Ok(HttpResponseOk(response))
+    Ok(HttpResponseOk(resp))
 }

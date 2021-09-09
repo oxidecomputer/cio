@@ -6,17 +6,21 @@ use chrono_humanize::HumanTime;
 use cio_api::{
     applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
     companies::Company,
+    journal_clubs::JournalClubMeeting,
     rfds::RFD,
-    schema::applicants,
+    schema::{applicants, journal_club_meetings, rfds},
+    utils::merge_json,
 };
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{Path, RequestContext, TypedBody};
+use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{Path, RequestContext, TypedBody, UntypedBody};
 use log::{info, warn};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sheets::traits::SpreadsheetOps;
+use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType};
 
 use crate::{
-    Context, CounterResponse, GitHubRateLimit, GoogleSpreadsheetEditEvent, GoogleSpreadsheetRowCreateEvent,
-    RFDPathParams,
+    slack_commands::SlackCommand, Context, CounterResponse, GitHubRateLimit, GoogleSpreadsheetEditEvent,
+    GoogleSpreadsheetRowCreateEvent, RFDPathParams,
 };
 
 pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
@@ -151,7 +155,7 @@ pub async fn handle_google_sheets_edit(
         "{}1",
         column_letters
             .chars()
-            .nth(event.event.range.column_start.try_into().unwrap())
+            .nth(event.event.range.column_start.try_into()?)
             .unwrap()
             .to_string()
     );
@@ -238,7 +242,7 @@ pub async fn handle_google_sheets_edit(
             "{}{}",
             column_letters
                 .chars()
-                .nth(value_column.try_into().unwrap())
+                .nth(value_column.try_into()?)
                 .unwrap()
                 .to_string(),
             event.event.range.row_start
@@ -257,7 +261,7 @@ pub async fn handle_google_sheets_edit(
             "{}{}",
             column_letters
                 .chars()
-                .nth(value_column.try_into().unwrap())
+                .nth(value_column.try_into()?)
                 .unwrap()
                 .to_string(),
             event.event.range.row_start
@@ -359,9 +363,9 @@ pub async fn handle_google_sheets_row_create(
             db,
             &drive,
             &sheets,
-            sent_email_received_column_index.try_into().unwrap(),
-            sent_email_follow_up_index.try_into().unwrap(),
-            event.event.range.row_start.try_into().unwrap(),
+            sent_email_received_column_index.try_into()?,
+            sent_email_follow_up_index.try_into()?,
+            event.event.range.row_start.try_into()?,
         )
         .await?;
 
@@ -379,4 +383,202 @@ pub async fn handle_google_sheets_row_create(
 
     info!("applicant {} created successfully", a.email);
     Ok(())
+}
+
+pub async fn handle_slack_commands(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<serde_json::Value> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // We should have a string, which we will then parse into our args.
+    // Parse the request body as a Slack BotCommand.
+    let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes())?;
+
+    // Get the company from the Slack team id.
+    let company = Company::get_from_slack_team_id(db, &bot_command.team_id)?;
+
+    // Get the command type.
+    let command = SlackCommand::from_str(&bot_command.command).unwrap();
+    let text = bot_command.text.trim();
+
+    // Filter by command type and do the command.
+    let response = match command {
+        SlackCommand::RFD => {
+            let num = text.parse::<i32>().unwrap_or(0);
+            if num > 0 {
+                if let Ok(rfd) = rfds::dsl::rfds
+                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num)))
+                    .first::<RFD>(&db.conn())
+                {
+                    json!(MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: rfd.as_slack_msg(),
+                    })
+                } else if let Ok(rfd) = rfds::dsl::rfds
+                    .filter(
+                        rfds::dsl::cio_company_id
+                            .eq(company.id)
+                            .and(rfds::dsl::name.ilike(format!("%{}%", text))),
+                    )
+                    .first::<RFD>(&db.conn())
+                {
+                    json!(MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: rfd.as_slack_msg(),
+                    })
+                } else {
+                    json!(MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: format!(
+                            "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
+                            bot_command.user_id, text
+                        ),
+                    })
+                }
+            } else if let Ok(rfd) = rfds::dsl::rfds
+                .filter(
+                    rfds::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(rfds::dsl::name.ilike(format!("%{}%", text))),
+                )
+                .first::<RFD>(&db.conn())
+            {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: rfd.as_slack_msg(),
+                })
+            } else {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!(
+                        "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
+                        bot_command.user_id, text
+                    ),
+                })
+            }
+        }
+        SlackCommand::Meet => {
+            let mut name = text.replace(" ", "-");
+            if name.is_empty() {
+                // Generate a new random string.
+                name = thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(6)
+                    .map(char::from)
+                    .collect();
+            }
+
+            json!(MessageResponse {
+                response_type: MessageResponseType::InChannel,
+                text: format!("https://g.co/meet/oxide-{}", name.to_lowercase()),
+            })
+        }
+        SlackCommand::Applicants => {
+            // Get the applicants that need to be triaged.
+            let applicants =
+                applicants::dsl::applicants
+                    .filter(applicants::dsl::cio_company_id.eq(company.id).and(
+                        applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
+                    ))
+                    .load::<Applicant>(&db.conn())?;
+
+            let mut msg: serde_json::Value = Default::default();
+            for (i, a) in applicants.into_iter().enumerate() {
+                if i > 0 {
+                    // Merge a divider onto the stack.
+                    let object = json!({
+                        "blocks": [{
+                            "type": "divider"
+                        }]
+                    });
+
+                    merge_json(&mut msg, object);
+                }
+
+                let obj = a.as_slack_msg();
+                merge_json(&mut msg, obj);
+            }
+
+            msg
+        }
+        SlackCommand::Applicant => {
+            if let Ok(applicant) = applicants::dsl::applicants
+                .filter(
+                    applicants::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(applicants::dsl::name.ilike(format!("%{}%", text))),
+                )
+                .first::<Applicant>(&db.conn())
+            {
+                applicant.as_slack_msg()
+            } else {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!(
+                        "Sorry <@{}> :scream: I could not find an applicant matching `{}`",
+                        bot_command.user_id, text
+                    ),
+                })
+            }
+        }
+        SlackCommand::Papers => {
+            // If we asked for the closed meetings then only show those, otherwise
+            // default to the open meetings.
+            let mut state = "open";
+            if text == "closed" {
+                state = "closed";
+            }
+            let meetings = journal_club_meetings::dsl::journal_club_meetings
+                .filter(
+                    journal_club_meetings::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(journal_club_meetings::dsl::state.eq(state.to_string())),
+                )
+                .load::<JournalClubMeeting>(&db.conn())?;
+
+            let mut msg: serde_json::Value = Default::default();
+            for (i, m) in meetings.into_iter().enumerate() {
+                if i > 0 {
+                    // Merge a divider onto the stack.
+                    let object = json!({
+                        "blocks": [{
+                            "type": "divider"
+                        }]
+                    });
+
+                    merge_json(&mut msg, object);
+                }
+
+                let obj = m.as_slack_msg();
+                merge_json(&mut msg, obj);
+            }
+
+            msg
+        }
+        SlackCommand::Paper => {
+            if let Ok(meeting) = journal_club_meetings::dsl::journal_club_meetings
+                .filter(
+                    journal_club_meetings::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(journal_club_meetings::dsl::title.ilike(format!("%{}%", text))),
+                )
+                .first::<JournalClubMeeting>(&db.conn())
+            {
+                meeting.as_slack_msg()
+            } else {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!(
+                        "Sorry <@{}> :scream: I could not find a journal club meeting matching \
+                         `{}`",
+                        bot_command.user_id, text
+                    ),
+                })
+            }
+        }
+    };
+
+    Ok(response)
 }
