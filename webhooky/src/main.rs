@@ -295,11 +295,13 @@ async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
     if let Err(e) = handle_github(rqctx, body_param).await {
         // Send the error to sentry.
         sentry_anyhow::capture_anyhow(&e);
     }
 
+    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
