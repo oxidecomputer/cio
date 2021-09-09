@@ -379,8 +379,8 @@ impl NewApplicant {
     }
 
     /// Send an email to the applicant that we recieved their application.
-    pub async fn send_email_recieved_application_to_applicant(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_recieved_application_to_applicant(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -409,13 +409,14 @@ Sincerely,
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the applicant that we love them but they are too junior.
-    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -448,13 +449,14 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the applicant that they did not provide materials.
-    pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -478,13 +480,14 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the applicant about timing.
-    pub async fn send_email_rejection_timing(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_rejection_timing(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -514,13 +517,14 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email internally that we have a new application.
-    pub async fn send_email_internally(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_internally(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -535,8 +539,9 @@ The Oxide Team",
                 &[],
                 &format!("applications@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Parse the applicant from a Google Sheets row, where we also happen to know the columns.
@@ -1709,13 +1714,13 @@ impl Applicant {
     }
 
     /// Update applicant reviews counts.
-    pub async fn update_reviews_scoring(&mut self, db: &Database) {
+    pub async fn update_reviews_scoring(&mut self, db: &Database) -> Result<()> {
         self.keep_fields_from_airtable(db).await;
 
         // If they have no reviews, eff it.
         if self.link_to_reviews.is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         // Zero out the values for the scores.
@@ -1731,7 +1736,7 @@ impl Applicant {
         self.scoring_underwhelming_materials_count = 0;
 
         // Create the Airtable client.
-        let company = Company::get_by_id(db, self.cio_company_id);
+        let company = Company::get_by_id(db, self.cio_company_id)?;
         let airtable = company.authenticate_airtable(&company.airtable_base_id_hiring);
 
         if self.status == crate::applicant_status::Status::Onboarding.to_string()
@@ -1743,8 +1748,7 @@ impl Applicant {
                 // TODO: get these from the database.
                 let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
                     .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
-                    .await
-                    .unwrap();
+                    .await?;
 
                 // Set the values if they are not empty.
                 // TODO: actually do the majority if they differ in value but for now YOLO.
@@ -1761,14 +1765,13 @@ impl Applicant {
                 // Delete the record from the reviews Airtable.
                 airtable
                     .delete_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
-                    .await
-                    .unwrap();
+                    .await?;
             }
 
             // We already zero-ed out the values for the scores, now we return early.
             // We don't want people who join to know their scores.
             self.update(db).await;
-            return;
+            return Ok(());
         }
 
         // Let's iterate over the reviews.
@@ -1861,6 +1864,8 @@ impl Applicant {
 
         // Update the record.
         self.update(db).await;
+
+        Ok(())
     }
 
     /// Get the human duration of time since the application was submitted.
@@ -1874,30 +1879,27 @@ impl Applicant {
     }
 
     /// Send an invite to the applicant to do a background check.
-    pub async fn send_background_check_invitation(&mut self, db: &Database) {
+    pub async fn send_background_check_invitation(&mut self, db: &Database) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
-        let company = self.company(db);
+        let company = self.company(db)?;
         let checkr_auth = company.authenticate_checkr();
         if checkr_auth.is_none() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         let checkr = checkr_auth.unwrap();
 
         // Check if we already sent them an invitation.
-        let candidates = checkr.list_candidates().await.unwrap();
+        let candidates = checkr.list_candidates().await?;
         for candidate in candidates {
             if candidate.email == self.email {
                 // Check if we already have sent their invitation.
                 if self.criminal_background_check_status.is_empty() {
                     // Create an invitation for the candidate.
-                    checkr
-                        .create_invitation(&candidate.id, "premium_criminal")
-                        .await
-                        .unwrap();
+                    checkr.create_invitation(&candidate.id, "premium_criminal").await?;
 
                     // Update the database.
                     self.criminal_background_check_status = "requested".to_string();
@@ -1907,18 +1909,15 @@ impl Applicant {
                     println!("[applicant] sent background check invitation to: {}", self.email);
                 }
                 // We can return early they already exist as a candidate.
-                return;
+                return Ok(());
             }
         }
 
         // Create a new candidate for the applicant in checkr.
-        let candidate = checkr.create_candidate(&self.email).await.unwrap();
+        let candidate = checkr.create_candidate(&self.email).await?;
 
         // Create an invitation for the candidate.
-        checkr
-            .create_invitation(&candidate.id, "premium_criminal")
-            .await
-            .unwrap();
+        checkr.create_invitation(&candidate.id, "premium_criminal").await?;
 
         // Update the database.
         self.criminal_background_check_status = "requested".to_string();
@@ -1926,6 +1925,8 @@ impl Applicant {
         self.update(db).await;
 
         println!("[applicant] sent background check invitation to: {}", self.email);
+
+        Ok(())
     }
 
     /// Convert the applicant into JSON for a Slack message.
@@ -2131,13 +2132,13 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         db: &Database,
         github: &octorust::Client,
         configs_issues: &[octorust::types::IssueSimple],
-    ) {
-        let company = self.company(db);
+    ) -> Result<()> {
+        let company = self.company(db)?;
 
         // Make sure they have a start date.
         if self.start_date.is_none() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         let owner = &company.github_org;
@@ -2217,7 +2218,7 @@ manager = ''
             if let Some(i) = issue {
                 if i.state != "open" {
                     // We only care if the issue is still opened.
-                    return;
+                    return Ok(());
                 }
 
                 // Comment on the issue that this person is now set to a different status and we no
@@ -2238,8 +2239,7 @@ Notes:
                             ),
                         },
                     )
-                    .await
-                    .unwrap_or_else(|e| panic!("could comment on issue {}: {}", i.number, e));
+                    .await?;
 
                 // Close the issue.
                 github
@@ -2258,17 +2258,16 @@ Notes:
                             state: Some(octorust::types::State::Closed),
                         },
                     )
-                    .await
-                    .unwrap_or_else(|e| panic!("could not close issue {}: {}", i.number, e));
+                    .await?;
             }
 
             // Return early.
-            return;
+            return Ok(());
         }
 
         // If we don't have a start date, return early.
         if self.start_date.is_none() {
-            return;
+            return Ok(());
         }
 
         // Create an issue for the applicant.
@@ -2291,8 +2290,7 @@ Notes:
                             state: Some(octorust::types::State::Open),
                         },
                     )
-                    .await
-                    .unwrap_or_else(|e| panic!("could not open issue {}: {}", i.number, e));
+                    .await?;
             } else {
                 // If the issue does not have any check marks.
                 // Update it.
@@ -2314,14 +2312,13 @@ Notes:
                                 state: Some(octorust::types::State::Open),
                             },
                         )
-                        .await
-                        .unwrap_or_else(|e| panic!("could not edit issue {}: {}", i.number, e));
+                        .await?;
                 }
             }
 
             // Return early we don't want to update the issue because it will overwrite
             // any changes we made.
-            return;
+            return Ok(());
         }
 
         // Create the issue.
@@ -2339,15 +2336,16 @@ Notes:
                     milestone: Default::default(),
                 },
             )
-            .await
-            .unwrap();
+            .await?;
 
         println!("[applicant]: created onboarding issue for {}", self.email);
+
+        Ok(())
     }
 
     /// Send an email to the applicant that we love them but they are too junior.
-    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -2380,13 +2378,14 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the applicant that they did not provide materials.
-    pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -2410,13 +2409,14 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the applicant about timing.
-    pub async fn send_email_rejection_timing(&self, db: &Database) {
-        let company = self.company(db);
+    pub async fn send_email_rejection_timing(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -2446,8 +2446,9 @@ The Oxide Team",
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 }
 
@@ -3898,8 +3899,8 @@ The applicants Airtable \
     }
 
     /// Send an email internally that we have a new application.
-    async fn send_email_internally(&self, db: &Database) {
-        let company = self.company(db);
+    async fn send_email_internally(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -3914,13 +3915,14 @@ The applicants Airtable \
                 &[],
                 &format!("applications@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Send an email to the applicant that we recieved their application.
-    async fn send_email_recieved_application_to_applicant(&self, db: &Database) {
-        let company = self.company(db);
+    async fn send_email_recieved_application_to_applicant(&self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -3949,8 +3951,9 @@ Sincerely,
                 &[],
                 &format!("careers@{}", company.gsuite_domain),
             )
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
     /// Parse the questions from the materials.
@@ -4334,11 +4337,11 @@ Sincerely,
         db: &Database,
         ds: &DocuSign,
         envelope: docusign::Envelope,
-    ) {
+    ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
@@ -4348,7 +4351,7 @@ Sincerely,
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
             self.update(db).await;
-            return;
+            return Ok(());
         }
 
         // Set the completed time.
@@ -4371,7 +4374,7 @@ Sincerely,
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await.unwrap();
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -4384,19 +4387,14 @@ Sincerely,
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
                 //thread::sleep(std::time::Duration::from_secs(15));
-                bytes = ds
-                    .get_document(&envelope.envelope_id, &document.id)
-                    .await
-                    .unwrap()
-                    .to_vec();
+                bytes = ds.get_document(&envelope.envelope_id, &document.id).await?.to_vec();
             }
 
             // Create the folder for our applicant with their name.
             let name_folder_id = drive_client
                 .files()
                 .create_folder(&shared_drive.id, "", &self.name)
-                .await
-                .unwrap();
+                .await?;
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
@@ -4413,8 +4411,7 @@ Sincerely,
             drive_client
                 .files()
                 .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
-                .await
-                .unwrap();
+                .await?;
             println!("[docusign] uploaded completed file {} to drive", filename);
         }
 
@@ -4422,7 +4419,7 @@ Sincerely,
         // min before getting each of the documents.
         // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
         //thread::sleep(std::time::Duration::from_secs(900));
-        let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await.unwrap();
+        let form_data = ds.get_envelope_form_data(&self.docusign_envelope_id).await?;
 
         // Let's get the employee for the applicant.
         // We will match on their recovery email.
@@ -4434,7 +4431,7 @@ Sincerely,
             )
             .first::<User>(&db.conn());
         if result.is_ok() {
-            let mut employee = result.unwrap();
+            let mut employee = result?;
             // Only do this if we don't have the employee's home address or start date.
             // This will help us to not override any changes then that are later made in gusto.
             if employee.home_address_street_1.is_empty() || employee.start_date == crate::utils::default_date() {
@@ -4479,6 +4476,8 @@ Sincerely,
         }
 
         self.update(db).await;
+
+        Ok(())
     }
 
     pub async fn do_docusign_piia(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
@@ -4633,11 +4632,11 @@ Sincerely,
         db: &Database,
         ds: &DocuSign,
         envelope: docusign::Envelope,
-    ) {
+    ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
-        let company = self.company(db);
+        let company = self.company(db)?;
 
         // Set the status in the database and airtable.
         self.docusign_piia_envelope_status = envelope.status.to_string();
@@ -4647,7 +4646,7 @@ Sincerely,
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
             self.update(db).await;
-            return;
+            return Ok(());
         }
 
         // Set the completed time.
@@ -4664,7 +4663,7 @@ Sincerely,
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await.unwrap();
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -4677,19 +4676,14 @@ Sincerely,
                 // min before getting each of the documents.
                 // https://developers.docusign.com/docs/esign-rest-api/esign101/rules-and-limits/
                 //thread::sleep(std::time::Duration::from_secs(15));
-                bytes = ds
-                    .get_document(&envelope.envelope_id, &document.id)
-                    .await
-                    .unwrap()
-                    .to_vec();
+                bytes = ds.get_document(&envelope.envelope_id, &document.id).await?.to_vec();
             }
 
             // Create the folder for our applicant with their name.
             let name_folder_id = drive_client
                 .files()
                 .create_folder(&shared_drive.id, "", &self.name)
-                .await
-                .unwrap();
+                .await?;
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {
@@ -4706,10 +4700,11 @@ Sincerely,
             drive_client
                 .files()
                 .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
-                .await
-                .unwrap();
+                .await?;
             println!("[docusign] uploaded completed file {} to drive", filename);
         }
+
+        Ok(())
     }
 }
 
