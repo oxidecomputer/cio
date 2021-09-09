@@ -432,7 +432,30 @@ table! {
         time -> Timestamptz,
         receipts -> Array<Text>,
         link_to_vendor -> Array<Text>,
+        airtable_record_id -> Varchar,
         cio_company_id -> Int4,
+    }
+}
+
+table! {
+    functions (id) {
+        id -> Int4,
+        name -> Varchar,
+        status -> Varchar,
+        created_at -> Timestamptz,
+        completed_at -> Nullable<Timestamptz>,
+        logs -> Text,
+        cio_company_id -> Int4,
+        airtable_record_id -> Varchar,
+    }
+}
+
+table! {
+    github_labels (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        color -> Varchar,
         airtable_record_id -> Varchar,
     }
 }

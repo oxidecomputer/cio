@@ -18,6 +18,7 @@ pub mod core;
 pub mod customers;
 pub mod db;
 pub mod finance;
+pub mod functions;
 pub mod gsuite;
 pub mod huddles;
 pub mod interviews;

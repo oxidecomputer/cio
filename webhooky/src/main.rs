@@ -3,6 +3,7 @@ pub mod event_types;
 pub mod github_types;
 mod handlers;
 mod handlers_auth;
+mod handlers_cron;
 mod handlers_github;
 pub mod repos;
 pub mod slack_commands;

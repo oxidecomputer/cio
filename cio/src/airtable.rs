@@ -44,6 +44,7 @@ pub static AIRTABLE_ASSET_ITEMS_TABLE: &str = "Items";
 
 pub static AIRTABLE_API_TOKENS_TABLE: &str = "API Tokens";
 pub static AIRTABLE_COMPANIES_TABLE: &str = "Companies";
+pub static AIRTABLE_FUNCTIONS_TABLE: &str = "Functions";
 
 pub static AIRTABLE_BOOKINGS_TABLE: &str = "Bookings";
 
