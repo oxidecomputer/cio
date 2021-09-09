@@ -1275,3 +1275,67 @@ pub async fn handle_checkr_background_update(
 
     Ok(())
 }
+
+pub async fn handle_docusign_envelope_update(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<docusign::Envelope>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    let event = body_param.into_inner();
+
+    // We need to get the applicant for the envelope.
+    // Check their offer first.
+    let result = applicants::dsl::applicants
+        .filter(applicants::dsl::docusign_envelope_id.eq(event.envelope_id.to_string()))
+        .first::<Applicant>(&db.conn());
+    match result {
+        Ok(mut applicant) => {
+            let company = applicant.company(db)?;
+
+            // Create our docusign client.
+            let dsa = company.authenticate_docusign(db).await;
+            if let Ok(ds) = dsa {
+                applicant
+                    .update_applicant_from_docusign_offer_envelope(db, &ds, event.clone())
+                    .await?;
+            }
+        }
+        Err(e) => {
+            bail!(
+                "database could not find applicant with docusign offer envelope id {}: {}",
+                event.envelope_id,
+                e
+            );
+        }
+    }
+
+    // We need to get the applicant for the envelope.
+    // Now do PIIA.
+    let result = applicants::dsl::applicants
+        .filter(applicants::dsl::docusign_piia_envelope_id.eq(event.envelope_id.to_string()))
+        .first::<Applicant>(&db.conn());
+    match result {
+        Ok(mut applicant) => {
+            let company = applicant.company(db)?;
+
+            // Create our docusign client.
+            let dsa = company.authenticate_docusign(db).await;
+            if let Ok(ds) = dsa {
+                applicant
+                    .update_applicant_from_docusign_piia_envelope(db, &ds, event)
+                    .await?;
+            }
+        }
+        Err(e) => {
+            bail!(
+                "database could not find applicant with docusign piia envelope id {}: {}",
+                event.envelope_id,
+                e
+            );
+        }
+    }
+
+    Ok(())
+}

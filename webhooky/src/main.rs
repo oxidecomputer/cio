@@ -14,10 +14,9 @@ use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::Result;
 use cio_api::{
-    analytics::NewPageView, applicants::Applicant, db::Database, mailing_list::MailingListSubscriber,
-    rack_line::RackLineSubscriber, schema::applicants, swag_store::Order,
+    analytics::NewPageView, db::Database, mailing_list::MailingListSubscriber, rack_line::RackLineSubscriber,
+    swag_store::Order,
 };
-use diesel::prelude::*;
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
@@ -1370,61 +1369,10 @@ async fn listen_docusign_envelope_update_webhooks(
     body_param: TypedBody<docusign::Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let db = &api_context.db;
 
-    let event = body_param.into_inner();
-
-    // We need to get the applicant for the envelope.
-    // Check their offer first.
-    let result = applicants::dsl::applicants
-        .filter(applicants::dsl::docusign_envelope_id.eq(event.envelope_id.to_string()))
-        .first::<Applicant>(&db.conn());
-    match result {
-        Ok(mut applicant) => {
-            let company = applicant.company(db).unwrap();
-
-            // Create our docusign client.
-            let dsa = company.authenticate_docusign(db).await;
-            if let Ok(ds) = dsa {
-                applicant
-                    .update_applicant_from_docusign_offer_envelope(db, &ds, event.clone())
-                    .await
-                    .unwrap();
-            }
-        }
-        Err(e) => {
-            warn!(
-                "database could not find applicant with docusign offer envelope id {}: {}",
-                event.envelope_id, e
-            );
-        }
-    }
-
-    // We need to get the applicant for the envelope.
-    // Now do PIIA.
-    let result = applicants::dsl::applicants
-        .filter(applicants::dsl::docusign_piia_envelope_id.eq(event.envelope_id.to_string()))
-        .first::<Applicant>(&db.conn());
-    match result {
-        Ok(mut applicant) => {
-            let company = applicant.company(db).unwrap();
-
-            // Create our docusign client.
-            let dsa = company.authenticate_docusign(db).await;
-            if let Ok(ds) = dsa {
-                applicant
-                    .update_applicant_from_docusign_piia_envelope(db, &ds, event)
-                    .await
-                    .unwrap();
-            }
-        }
-        Err(e) => {
-            warn!(
-                "database could not find applicant with docusign piia envelope id {}: {}",
-                event.envelope_id, e
-            );
-        }
+    if let Err(e) = crate::handlers::handle_docusign_envelope_update(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
