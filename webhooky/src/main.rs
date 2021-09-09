@@ -9,7 +9,7 @@ pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
-use std::{collections::HashMap, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc};
+use std::{collections::HashMap, env, ffi::OsStr, fs::File, sync::Arc};
 
 use anyhow::Result;
 use chrono::offset::Utc;
@@ -582,46 +582,12 @@ async fn listen_airtable_applicants_update_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
 
-    let api_context = rqctx.context();
-
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_applicants_update(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
 
-    // Get the row from airtable.
-    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    if applicant.status.is_empty() {
-        warn!("got an empty applicant status for row: {}", applicant.email);
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Grab our old applicant from the database.
-    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id).unwrap();
-
-    // Grab the status and the status raw.
-    let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
-    db_applicant.status = status.to_string();
-    if !applicant.raw_status.is_empty() {
-        // Update the raw status if it had changed.
-        db_applicant.raw_status = applicant.raw_status.to_string();
-    }
-
-    // TODO: should we also update the start date if set in airtable?
-    // If we do this, we need to update the airtable webhook settings to include it as
-    // well.
-
-    // Update the row in our database.
-    db_applicant.update(&api_context.db).await.unwrap();
-
-    info!("applicant {} updated successfully", applicant.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }

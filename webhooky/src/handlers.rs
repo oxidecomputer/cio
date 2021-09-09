@@ -678,3 +678,46 @@ pub async fn handle_airtable_applicants_request_background_check(
 
     Ok(())
 }
+
+pub async fn handle_airtable_applicants_update(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let event = body_param.into_inner();
+
+    let api_context = rqctx.context();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    // Get the row from airtable.
+    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    if applicant.status.is_empty() {
+        warn!("got an empty applicant status for row: {}", applicant.email);
+        return Ok(());
+    }
+
+    // Grab our old applicant from the database.
+    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id)?;
+
+    // Grab the status and the status raw.
+    let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
+    db_applicant.status = status.to_string();
+    if !applicant.raw_status.is_empty() {
+        // Update the raw status if it had changed.
+        db_applicant.raw_status = applicant.raw_status.to_string();
+    }
+
+    // TODO: should we also update the start date if set in airtable?
+    // If we do this, we need to update the airtable webhook settings to include it as
+    // well.
+
+    // Update the row in our database.
+    db_applicant.update(&api_context.db).await?;
+
+    info!("applicant {} updated successfully", applicant.email);
+    Ok(())
+}
