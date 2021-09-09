@@ -420,13 +420,7 @@ async fn listen_github_webhooks(
                         }
                         Err(e) => {
                             event
-                                .create_comment(
-                                    &github,
-                                    &format!(
-                                        "updating RFD on push failed:\n\n```\n{:?}\n```\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
-                                        e, event,
-                                    ),
-                                )
+                                .create_comment(&github, &event.get_error_string("updating RFD on `push`", e))
                                 .await
                                 .unwrap();
                         }
@@ -449,11 +443,10 @@ async fn listen_github_webhooks(
                         }
                         Err(e) => {
                             event
-                                .update_check_run(&github, check_run_id,
-                                    &format!(
-                                        "updating RFD on pull request failed:\n\n```\n{:?}\n```\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
-                                        e, event,
-                                    ),
+                                .update_check_run(
+                                    &github,
+                                    check_run_id,
+                                    &event.get_error_string("updating RFD on `pull_request`", e),
                                     octorust::types::ChecksCreateRequestConclusion::Failure,
                                 )
                                 .await
@@ -498,13 +491,7 @@ async fn listen_github_webhooks(
                         }
                         Err(e) => {
                             event
-                                .create_comment(
-                                    &github,
-                                    &format!(
-                                        "updating configs on push failed:\n\n```\n{:?}\n```\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
-                                        e, event,
-                                    ),
-                                )
+                                .create_comment(&github, &event.get_error_string("updating configs on `push`", e))
                                 .await
                                 .unwrap();
                         }
@@ -3442,6 +3429,35 @@ impl GitHubWebhook {
         }
 
         Ok(0)
+    }
+
+    pub fn get_error_string(&self, msg: &str, e: anyhow::Error) -> String {
+        let err = format!(
+            r#"{} failed:
+
+```
+{:?}
+```
+
+<details>
+<summary>event:</summary>
+
+```
+{:#?}
+```
+
+</details>
+
+cc @jessfraz"#,
+            msg,
+            e, // We use the {:?} debug output for the error so we get the stack as well.
+            self,
+        );
+
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
+
+        err
     }
 
     // Updates the check run after it has completed.

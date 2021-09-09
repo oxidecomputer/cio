@@ -536,7 +536,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4d5930cf6c6ad56796ad242b39e78c0f1c1d7a31"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#139ecd1f0130e9d001a10b6899f58334fc7dbbf0"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -2192,7 +2192,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#4d5930cf6c6ad56796ad242b39e78c0f1c1d7a31"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#139ecd1f0130e9d001a10b6899f58334fc7dbbf0"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -5088,6 +5088,7 @@ dependencies = [
  "reqwest",
  "schemars",
  "sentry",
+ "sentry-anyhow",
  "sentry-log",
  "serde",
  "serde_json",
