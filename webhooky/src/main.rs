@@ -1,6 +1,7 @@
 #![allow(clippy::field_reassign_with_default)]
 pub mod event_types;
 pub mod github_types;
+mod handlers;
 mod handlers_github;
 pub mod repos;
 pub mod slack_commands;
