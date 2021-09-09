@@ -2679,7 +2679,7 @@ pub async fn sync_certificates(
 }
 
 pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -> Result<()> {
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
 
     let configs = get_configs_from_repo(&github, company).await?;
 

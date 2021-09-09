@@ -2984,7 +2984,7 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 
 // Sync the applicants with our database.
 pub async fn refresh_db_applicants(db: &Database, company: &Company) -> Result<()> {
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
@@ -4721,7 +4721,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
     // Initialize the GSuite sheets client.
     let drive_client = company.authenticate_google_drive(db).await?;
 
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github

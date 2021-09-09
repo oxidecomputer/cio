@@ -226,7 +226,7 @@ pub async fn refresh_shorturls() -> Result<()> {
 
     // Iterate over the companies and update.
     for company in companies {
-        let github = company.authenticate_github();
+        let github = company.authenticate_github()?;
         generate_shorturls_for_repos(&db, &github, &company.github_org, "configs", company.id).await?;
         generate_shorturls_for_rfds(&db, &github, &company.github_org, "configs", company.id).await?;
         generate_shorturls_for_configs_links(&db, &github, &company.github_org, "configs", company.id).await?;

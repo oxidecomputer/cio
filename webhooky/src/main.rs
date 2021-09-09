@@ -380,8 +380,8 @@ async fn listen_github_webhooks(
             }
         }
         EventType::Repository => {
-            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
-            let github = company.authenticate_github();
+            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login).unwrap();
+            let github = company.authenticate_github().unwrap();
 
             sentry::configure_scope(|scope| {
                 scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
@@ -404,8 +404,8 @@ async fn listen_github_webhooks(
         let repo = &event.repository;
         let repo_name = Repo::from_str(&repo.name).unwrap();
 
-        let company = Company::get_from_github_org(&api_context.db, &repo.owner.login);
-        let github = company.authenticate_github();
+        let company = Company::get_from_github_org(&api_context.db, &repo.owner.login).unwrap();
+        let github = company.authenticate_github().unwrap();
 
         match repo_name {
             Repo::RFD => match event_type {
@@ -550,7 +550,7 @@ async fn trigger_rfd_update_by_number(
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
-    let github = oxide.authenticate_github();
+    let github = oxide.authenticate_github().unwrap();
 
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
@@ -589,7 +589,7 @@ async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
-    let github = oxide.authenticate_github();
+    let github = oxide.authenticate_github().unwrap();
 
     let response = github.rate_limit().get().await.unwrap();
     let reset_time = Utc.timestamp(response.resources.core.reset, 0);
@@ -633,7 +633,7 @@ async fn listen_google_sheets_edit_webhooks(
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
 
-    let github = oxide.authenticate_github();
+    let github = oxide.authenticate_github().unwrap();
 
     // Initialize the GSuite sheets client.
     let sheets = oxide.authenticate_google_sheets(db).await.unwrap();
@@ -2085,7 +2085,7 @@ async fn listen_auth_google_callback(
     // Unwrap the response.
     let metadata: cio_api::companies::UserInfo = resp.json().await.unwrap();
 
-    let company = Company::get_from_domain(&api_context.db, &metadata.hd);
+    let company = Company::get_from_domain(&api_context.db, &metadata.hd).unwrap();
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -2199,7 +2199,7 @@ async fn listen_auth_mailchimp_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain);
+    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -2287,7 +2287,7 @@ async fn listen_auth_gusto_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain);
+    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -2395,7 +2395,7 @@ async fn listen_auth_zoom_callback(
         }
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain);
+    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -2490,7 +2490,7 @@ async fn listen_auth_ramp_callback(
         }
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain);
+    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -2569,7 +2569,7 @@ async fn listen_auth_slack_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain);
+    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
 
     let mut webhook = "".to_string();
     if let Some(wh) = t.incoming_webhook {
@@ -2715,7 +2715,7 @@ async fn listen_auth_quickbooks_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain);
+    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -2812,7 +2812,7 @@ async fn listen_auth_docusign_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain);
+    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -2977,7 +2977,7 @@ async fn listen_mailchimp_mailing_list_webhooks(
     }
 
     // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db);
+    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db).unwrap();
 
     let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {

@@ -73,8 +73,7 @@ pub fn check_if_github_issue_exists(
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
 pub async fn get_github_user_public_ssh_keys(handle: &str) -> Result<Vec<String>> {
     let body = get(&format!("https://github.com/{}.keys", handle))
-        .await
-        .unwrap()
+        .await?
         .text()
         .await?;
 

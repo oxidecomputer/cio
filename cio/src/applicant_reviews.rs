@@ -110,11 +110,13 @@ impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
 }
 
 impl ApplicantReview {
-    pub fn expand(&mut self, db: &Database) {
+    pub fn expand(&mut self, db: &Database) -> Result<()> {
         // We need to get the person from the leaderboard that matches this reviewer.
         let reviewer = ApplicantReviewer::get_from_db(db, self.reviewer.to_string()).unwrap();
         // Set this to the link to leaderboard.
         self.link_to_leaderboard = vec![reviewer.airtable_record_id];
+
+        Ok(())
     }
 }
 
@@ -138,7 +140,7 @@ pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
         }
         review.cio_company_id = company.id;
 
-        review.expand(db);
+        review.expand(db)?;
 
         review.update(db).await?;
     }

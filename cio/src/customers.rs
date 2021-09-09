@@ -11,7 +11,7 @@ pub async fn sync_customer_meeting_notes(company: &Company) -> Result<()> {
     // Initialize the Airtable client.
     let airtable = company.authenticate_airtable(&company.airtable_base_id_customer_leads);
 
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
 
     // Get the current customer interactions list from airtable.
     let records: Vec<Record<CustomerInteraction>> = airtable

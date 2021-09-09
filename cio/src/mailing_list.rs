@@ -257,13 +257,13 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
 }
 
 /// Convert to a signup data type.
-pub fn as_mailing_list_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> NewMailingListSubscriber {
+pub fn as_mailing_list_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> Result<NewMailingListSubscriber> {
     let mut signup: NewMailingListSubscriber = Default::default();
 
     let list_id = webhook.data.list_id.as_ref().unwrap();
 
     // Get the company from the list id.
-    let company = Company::get_from_mailchimp_list_id(db, list_id);
+    let company = Company::get_from_mailchimp_list_id(db, list_id)?;
 
     if webhook.data.merges.is_some() {
         let merges = webhook.data.merges.as_ref().unwrap();
@@ -300,7 +300,7 @@ pub fn as_mailing_list_subscriber(webhook: mailchimp_api::Webhook, db: &Database
 
     signup.cio_company_id = company.id;
 
-    signup
+    Ok(signup)
 }
 
 impl Into<NewMailingListSubscriber> for mailchimp_api::Member {

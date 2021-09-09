@@ -930,7 +930,7 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> String {
 // Sync the rfds with our database.
 pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     // Authenticate GitHub.
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
 
     let rfds = get_rfds_from_repo(&github, company).await?;
 
@@ -960,7 +960,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
 pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
     // Get all the rfds from the database.
     let rfds = RFDs::get_from_db(db, company.id)?;
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
 
     // Get all the PDF files.
     let files = github
@@ -1071,7 +1071,7 @@ pub async fn send_rfd_changelog(company: &Company) -> Result<()> {
     // Initialize our database.
     let db = Database::new();
 
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
     let seven_days_ago = Utc::now() - Duration::days(7);
     let week_format = format!(
         "from {} to {}",

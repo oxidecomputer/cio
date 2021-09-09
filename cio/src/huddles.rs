@@ -19,7 +19,7 @@ use crate::{
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
 pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> Result<()> {
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
 
     let gcal = company.authenticate_google_calendar(db).await?;
@@ -161,7 +161,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
 }
 
 pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<()> {
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
 
     let gcal = company.authenticate_google_calendar(db).await?;
@@ -393,7 +393,7 @@ The Airtable Huddle Bot"#;
 
 /// Sync the huddle meeting notes with the GitHub reports repository.
 pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
 
     // Define the date format.
@@ -449,7 +449,7 @@ pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
 }
 
 pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
-    let github = company.authenticate_github();
+    let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
 
     let gcal = company.authenticate_google_calendar(db).await?;

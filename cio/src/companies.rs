@@ -192,33 +192,30 @@ impl Company {
         Company::get_by_id(db, token.auth_company_id)
     }
 
-    pub fn get_from_github_org(db: &Database, org: &str) -> Self {
-        companys::dsl::companys
+    pub fn get_from_github_org(db: &Database, org: &str) -> Result<Self> {
+        Ok(companys::dsl::companys
             .filter(
                 companys::dsl::github_org
                     .eq(org.to_string())
                     .or(companys::dsl::github_org.eq(org.to_lowercase())),
             )
-            .first::<Company>(&db.conn())
-            .unwrap_or_else(|e| panic!("could not find company matching github org {}: {}", org, e))
+            .first::<Company>(&db.conn())?)
     }
 
-    pub fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Self {
-        companys::dsl::companys
+    pub fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Result<Self> {
+        Ok(companys::dsl::companys
             .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
-            .first::<Company>(&db.conn())
-            .unwrap()
+            .first::<Company>(&db.conn())?)
     }
 
-    pub fn get_from_domain(db: &Database, domain: &str) -> Self {
-        companys::dsl::companys
+    pub fn get_from_domain(db: &Database, domain: &str) -> Result<Self> {
+        Ok(companys::dsl::companys
             .filter(
                 companys::dsl::domain
                     .eq(domain.to_string())
                     .or(companys::dsl::gsuite_domain.eq(domain.to_string())),
             )
-            .first::<Company>(&db.conn())
-            .unwrap()
+            .first::<Company>(&db.conn())?)
     }
 
     /// Authenticate with Cloudflare.
@@ -760,35 +757,35 @@ impl Company {
     }
 
     /// Authenticate GitHub with JSON web token credentials, for an application installation.
-    pub fn authenticate_github(&self) -> octorust::Client {
+    pub fn authenticate_github(&self) -> Result<octorust::Client> {
         // Parse our env variables.
-        let app_id_str = env::var("GH_APP_ID").unwrap();
-        let app_id = app_id_str.parse::<u64>().unwrap();
+        let app_id_str = env::var("GH_APP_ID")?;
+        let app_id = app_id_str.parse::<u64>()?;
 
-        let encoded_private_key = env::var("GH_PRIVATE_KEY").unwrap();
-        let private_key = base64::decode(encoded_private_key).unwrap();
+        let encoded_private_key = env::var("GH_PRIVATE_KEY")?;
+        let private_key = base64::decode(encoded_private_key)?;
 
         // Decode the key.
-        let key = nom_pem::decode_block(&private_key).unwrap();
+        let key = match nom_pem::decode_block(&private_key) {
+            Ok(k) => k,
+            Err(e) => bail!("nom_pem decode_block failed: {:?}", e),
+        };
 
         // Get the JWT credentials.
-        let jwt = JWTCredentials::new(app_id, key.data).unwrap();
+        let jwt = JWTCredentials::new(app_id, key.data)?;
 
         // Create the HTTP cache.
-        let http_cache = Box::new(FileBasedCache::new(format!(
-            "{}/.cache/github",
-            env::var("HOME").unwrap()
-        )));
+        let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME")?)));
 
-        let token_generator = InstallationTokenGenerator::new(self.github_app_installation_id.try_into().unwrap(), jwt);
+        let token_generator = InstallationTokenGenerator::new(self.github_app_installation_id.try_into()?, jwt);
 
-        octorust::Client::custom(
+        Ok(octorust::Client::custom(
             "https://api.github.com",
             concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
             Credentials::InstallationToken(token_generator),
-            Client::builder().build().unwrap(),
+            Client::builder().build()?,
             http_cache,
-        )
+        ))
     }
 }
 

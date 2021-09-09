@@ -70,13 +70,13 @@ pub struct GitHubUser {
 impl FromSql<Jsonb, Pg> for GitHubUser {
     fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
         let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
-        Ok(serde_json::from_value(value).unwrap())
+        Ok(serde_json::from_value(value)?)
     }
 }
 
 impl ToSql<Jsonb, Pg> for GitHubUser {
     fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
-        let value = serde_json::to_value(self).unwrap();
+        let value = serde_json::to_value(self)?;
         <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&value, out)
     }
 }
@@ -646,7 +646,7 @@ mod tests {
         let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
-            let github = company.authenticate_github();
+            let github = company.authenticate_github().unwrap();
 
             sync_all_repo_settings(&db, &github, &company).await.unwrap();
             refresh_db_github_repos(&db, &github, &company).await.unwrap();
