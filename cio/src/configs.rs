@@ -2646,7 +2646,7 @@ pub async fn sync_certificates(
             );
         } else {
             // Populate the certificate.
-            certificate.populate(company).await;
+            certificate.populate(company).await?;
 
             // Save the certificate to disk.
             certificate.save_to_github_repo(github, company).await?;
