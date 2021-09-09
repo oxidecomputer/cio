@@ -344,8 +344,7 @@ pub fn setup_logger() {
 
     let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
 
-    #[cfg(not(test))]
-    log::set_boxed_logger(Box::new(logger)).unwrap();
+    log::set_boxed_logger(Box::new(logger)).unwrap_or_default();
 
     log::set_max_level(log::LevelFilter::Info);
 
