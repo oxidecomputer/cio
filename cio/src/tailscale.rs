@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::{Duration, Utc};
 use log::info;
 
@@ -6,12 +7,12 @@ use crate::companies::Company;
 /// When we generate VMs for the console repo on every branch we get lingering
 /// Tailscale devices that need to cleaned up when they are no longer active.
 /// This function does that.
-pub async fn cleanup_old_tailscale_devices(company: &Company) {
+pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
     // Initialize the Tailscale API.
     let tailscale = company.authenticate_tailscale();
 
     // Get the devices.
-    let devices = tailscale.list_devices().await.unwrap();
+    let devices = tailscale.list_devices().await?;
 
     // Create the array of links.
     for device in devices {
@@ -28,9 +29,11 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) {
                 "deleting tailscale device {}, last seen duration {:?}",
                 device.name, last_seen_duration
             );
-            tailscale.delete_device(&device.id).await.unwrap();
+            tailscale.delete_device(&device.id).await?;
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -48,6 +51,6 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        cleanup_old_tailscale_devices(&oxide).await;
+        cleanup_old_tailscale_devices(&oxide).await.unwrap();
     }
 }

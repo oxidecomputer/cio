@@ -309,7 +309,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         }
 
         // Let's download the contents of their materials locally.
-        download_materials(&drive_client, &materials_url, &employee.username).await;
+        download_materials_as_pdf(&drive_client, &materials_url, &employee.username).await?;
     }
 
     let interviews = ApplicantInterviews::get_from_db(db, company.id)?;
@@ -494,7 +494,7 @@ The Oxide Team
 }
 
 /// Download materials file from Google drive and save it as a pdf under the persons username.
-pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username: &str) {
+pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, username: &str) -> Result<()> {
     let id = url.replace("https://drive.google.com/open?id=", "");
 
     // Get information about the file.
@@ -506,8 +506,7 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
             true,  // supports_all_drives
             true,  // supports_team_drives
         )
-        .await
-        .unwrap();
+        .await?;
     let mime_type = drive_file.mime_type;
     let name = drive_file.name;
 
@@ -516,28 +515,28 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
 
     if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.pdf", username));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
-        return;
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
+        return Ok(());
     } else if name.ends_with(".zip") {
         // This is patrick :)
         // Get the ip contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.zip", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
-        file = fs::File::open(&path).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
+        file = fs::File::open(&path)?;
 
         // Unzip the file.
-        let mut archive = zip::ZipArchive::new(file).unwrap();
+        let mut archive = zip::ZipArchive::new(file)?;
         for i in 0..archive.len() {
-            let mut file = archive.by_index(i).unwrap();
+            let mut file = archive.by_index(i)?;
             output = env::temp_dir();
             output.push("zip/");
             output.push(file.name());
@@ -551,7 +550,7 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
 
             if (&*file.name()).ends_with('/') {
                 info!("zip file {} extracted to \"{}\"", i, output.as_path().display());
-                fs::create_dir_all(&output).unwrap();
+                fs::create_dir_all(&output)?;
             } else {
                 info!(
                     "zip file {} extracted to \"{}\" ({} bytes)",
@@ -562,11 +561,11 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
 
                 if let Some(p) = output.parent() {
                     if !p.exists() {
-                        fs::create_dir_all(&p).unwrap();
+                        fs::create_dir_all(&p)?;
                     }
                 }
-                let mut outfile = fs::File::create(&output).unwrap();
-                copy(&mut file, &mut outfile).unwrap();
+                let mut outfile = fs::File::create(&output)?;
+                copy(&mut file, &mut outfile)?;
 
                 let file_name = output.to_str().unwrap();
                 if (!output.is_dir())
@@ -577,28 +576,29 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
                     let mut new_path = env::temp_dir();
                     new_path.push(format!("{}.pdf", username));
                     // Move the file to what we really want the output file to be.
-                    fs::rename(&output, &new_path).unwrap();
+                    fs::rename(&output, &new_path)?;
                 }
             }
         }
-        return;
+        return Ok(());
     }
 
     // Anything else let's use pandoc to convert it to a pdf.
     info!("converting `{}` to a PDF", name);
-    let contents = drive_client.files().download_by_id(&id).await.unwrap();
+    let contents = drive_client.files().download_by_id(&id).await?;
     path.push(name.to_string());
 
-    let mut file = fs::File::create(&path).unwrap();
-    file.write_all(&contents).unwrap();
+    let mut file = fs::File::create(&path)?;
+    file.write_all(&contents)?;
 
     output.push(format!("{}.pdf", username));
 
     // Convert it to a PDF with pandoc.
     Command::new("pandoc")
         .args(&["-o", output.to_str().unwrap(), path.to_str().unwrap()])
-        .output()
-        .unwrap();
+        .output()?;
+
+    Ok(())
 }
 
 /// Combine multiple pdfs into one pdf and return the byte stream of it.
