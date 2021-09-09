@@ -8,6 +8,7 @@ use google_drive::{
     traits::{DriveOps, FileOps},
     Client as GoogleDrive,
 };
+use log::warn;
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
@@ -126,7 +127,7 @@ impl NewAssetItem {
             barcode = format!("0{}", barcode);
         }
         if barcode.len() > max_barcode_len {
-            println!(
+            warn!(
                 "len too long {} {}, needs to be {} or under",
                 barcode,
                 barcode.len(),

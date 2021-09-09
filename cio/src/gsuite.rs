@@ -13,6 +13,7 @@ use gsuite_api::{
     },
     Client as GSuite,
 };
+use log::{info, warn};
 use serde_json::Value;
 
 use crate::{
@@ -267,7 +268,7 @@ pub async fn update_user_aliases(
         }
     }
 
-    println!("updated gsuite user aliases: {}", u.primary_email);
+    info!("updated gsuite user aliases: {}", u.primary_email);
     Ok(())
 }
 
@@ -285,8 +286,7 @@ pub async fn update_user_google_groups(
             Some(val) => group = val,
             // Continue through the loop and we will add the user later.
             None => {
-                println!("google group {} does not exist so cannot add user {}", g, user.email);
-                println!("google group {} does not exist so cannot add user {}", g, user.email);
+                warn!("google group {} does not exist so cannot add user {}", g, user.email);
                 continue;
             }
         }
@@ -340,7 +340,7 @@ pub async fn update_user_google_groups(
             )
             .await?;
 
-        println!("added {} to gsuite group {} as {}", user.email, group.name, role);
+        info!("added {} to gsuite group {} as {}", user.email, group.name, role);
     }
 
     // Iterate over all the groups and if the user is a member and should not
@@ -363,7 +363,7 @@ pub async fn update_user_google_groups(
         // We need to remove them.
         gsuite.members().delete(&group.id, &user.email).await?;
 
-        println!("removed {} from gsuite group {}", user.email, group.name);
+        info!("removed {} from gsuite group {}", user.email, group.name);
     }
 
     Ok(())
@@ -403,7 +403,7 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) -> Result<()
         }
     }
 
-    println!("updated gsuite group aliases: {}", g.email);
+    info!("updated gsuite group aliases: {}", g.email);
     Ok(())
 }
 
@@ -447,7 +447,7 @@ pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Gr
             .await?;
     }
 
-    println!("updated gsuite groups settings {}", group.name);
+    info!("updated gsuite groups settings {}", group.name);
 
     Ok(())
 }

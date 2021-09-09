@@ -159,7 +159,7 @@ impl Company {
         })
     }
 
-    pub async fn post_to_slack_channel(&self, db: &Database, value: serde_json::Value) {
+    pub async fn post_to_slack_channel(&self, db: &Database, value: serde_json::Value) -> Result<()> {
         // We need to get the url from the api tokens.
         // Only do this if we have a token and the token is not empty.
         if let Ok(token) = api_tokens::dsl::api_tokens
@@ -171,9 +171,11 @@ impl Company {
             .first::<APIToken>(&db.conn())
         {
             if !token.endpoint.is_empty() {
-                Slack::post_to_channel(token.endpoint, value).await.unwrap();
+                Slack::post_to_channel(token.endpoint, value).await?;
             }
         }
+
+        Ok(())
     }
 
     pub fn get_from_slack_team_id(db: &Database, team_id: &str) -> Result<Self> {
@@ -220,10 +222,10 @@ impl Company {
     }
 
     /// Authenticate with Cloudflare.
-    pub fn authenticate_cloudflare(&self) -> Option<CloudflareClient> {
+    pub fn authenticate_cloudflare(&self) -> Result<CloudflareClient> {
         if self.cloudflare_api_key.is_empty() || self.gsuite_subject.is_empty() {
             // Return early.
-            return None;
+            bail!("no token");
         }
 
         // Create the Cloudflare client.
@@ -231,9 +233,8 @@ impl Company {
             email: self.gsuite_subject.to_string(),
             key: self.cloudflare_api_key.to_string(),
         };
-        let api_client =
-            CloudflareClient::new(cf_creds, HttpApiClientConfig::default(), Environment::Production).unwrap();
-        Some(api_client)
+        let api_client = CloudflareClient::new(cf_creds, HttpApiClientConfig::default(), Environment::Production)?;
+        Ok(api_client)
     }
 
     /// Authenticate with Checkr.
@@ -274,7 +275,7 @@ impl Company {
             // But just in case in the future they do, we will leave this here.
             // https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/
             if !t.refresh_token.is_empty() && t.is_expired() {
-                let nt = mailchimp.refresh_access_token().await.unwrap();
+                let nt = mailchimp.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -345,7 +346,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = ramp.refresh_access_token().await.unwrap();
+                let nt = ramp.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -379,7 +380,7 @@ impl Company {
 
             if t.is_expired() {
                 // Update the token if it is expired.
-                let nt = zoom.refresh_access_token().await.unwrap();
+                let nt = zoom.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -418,7 +419,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = ds.refresh_access_token().await.unwrap();
+                let nt = ds.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -452,7 +453,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = gusto.refresh_access_token().await.unwrap();
+                let nt = gusto.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -495,7 +496,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = ta.get_access_token().await.unwrap();
+                let nt = ta.get_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -522,7 +523,7 @@ impl Company {
             self.tripactions_client_secret.to_string(),
             "",
         );
-        let t = ta.get_access_token().await.unwrap();
+        let t = ta.get_access_token().await?;
 
         let mut token = NewAPIToken {
             product: "tripactions".to_string(),
@@ -563,7 +564,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = qb.refresh_access_token().await.unwrap();
+                let nt = qb.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -597,7 +598,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token().await.unwrap();
+                let nt = g.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -631,7 +632,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token().await.unwrap();
+                let nt = g.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -665,7 +666,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token().await.unwrap();
+                let nt = g.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -699,7 +700,7 @@ impl Company {
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token().await.unwrap();
+                let nt = g.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }
@@ -733,7 +734,7 @@ impl Company {
                 GoogleGroupsSettings::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
             if t.is_expired() {
                 // Only refresh the token if it is expired.
-                let nt = g.refresh_access_token().await.unwrap();
+                let nt = g.refresh_access_token().await?;
                 if !nt.access_token.is_empty() {
                     t.access_token = nt.access_token.to_string();
                 }

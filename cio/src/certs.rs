@@ -30,23 +30,23 @@ use crate::{
 
 /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
 /// The DNS Challenge TXT record is added to Cloudflare automatically.
-pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCertificate {
-    let api_client = company.authenticate_cloudflare().unwrap();
+pub async fn create_ssl_certificate(domain: &str, company: &Company) -> Result<NewCertificate> {
+    let api_client = company.authenticate_cloudflare()?;
 
     // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
     let persist = FilePersist::new(env::temp_dir());
 
     // Create a directory entrypoint.
     // Use DirectoryUrl::LetsEncrypStaging for dev/testing.
-    let dir = Directory::from_url(persist, DirectoryUrl::LetsEncrypt).unwrap();
+    let dir = Directory::from_url(persist, DirectoryUrl::LetsEncrypt)?;
 
     // Reads the private account key from persistence, or
     // creates a new one before accessing the API to establish
     // that it's there.
-    let acc = dir.account(&company.gsuite_subject).unwrap();
+    let acc = dir.account(&company.gsuite_subject)?;
 
     // Order a new TLS certificate for a domain.
-    let mut ord_new = acc.new_order(domain, &[]).unwrap();
+    let mut ord_new = acc.new_order(domain, &[])?;
 
     // If the ownership of the domain(s) have already been
     // authorized in a previous order, you might be able to
@@ -59,7 +59,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
 
         // Get the possible authorizations (for a single domain
         // this will only be one element).
-        let auths = ord_new.authorizations().unwrap();
+        let auths = ord_new.authorizations()?;
 
         // Get the proff we need for the TXT record:
         // _acme-challenge.<domain-to-be-proven>.  TXT  <proof>
@@ -85,8 +85,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                     ..Default::default()
                 },
             })
-            .await
-            .unwrap()
+            .await?
             .result;
 
         // Our zone identifier should be the first record's ID.
@@ -102,8 +101,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                     ..Default::default()
                 },
             })
-            .await
-            .unwrap()
+            .await?
             .result;
 
         // If we have a dns record already, update it. If not, create it.
@@ -122,8 +120,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                         priority: None,
                     },
                 })
-                .await
-                .unwrap()
+                .await?
                 .result;
 
             info!("created dns record: {:#?}", dns_record);
@@ -142,8 +139,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                         proxied: None,
                     },
                 })
-                .await
-                .unwrap()
+                .await?
                 .result;
 
             info!("updated dns record: {:#?}", dns_record);
@@ -162,10 +158,10 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
         // confirm ownership of the domain, or fail due to the
         // not finding the proof. To see the change, we poll
         // the API with 5000 milliseconds wait between.
-        challenge.validate(5000).unwrap();
+        challenge.validate(5000)?;
 
         // Update the state against the ACME API.
-        ord_new.refresh().unwrap();
+        ord_new.refresh()?;
     };
 
     // Ownership is proven. Create a private key for
@@ -177,20 +173,20 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
     // state of "processing" that must be polled until the
     // certificate is either issued or rejected. Again we poll
     // for the status change.
-    let ord_cert = ord_csr.finalize_pkey(pkey_pri, 5000).unwrap();
+    let ord_cert = ord_csr.finalize_pkey(pkey_pri, 5000)?;
 
     // Now download the certificate. Also stores the cert in
     // the persistence.
-    let cert = ord_cert.download_and_save_cert().unwrap();
+    let cert = ord_cert.download_and_save_cert()?;
 
-    NewCertificate {
+    Ok(NewCertificate {
         private_key: cert.private_key().to_string(),
         certificate: cert.certificate().to_string(),
         domain: domain.to_string(),
         valid_days_left: cert.valid_days_left() as i32,
         expiration_date: crate::utils::default_date(),
         cio_company_id: company.id,
-    }
+    })
 }
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
@@ -227,8 +223,10 @@ impl NewCertificate {
     /// For a certificate struct, populate the certificate fields for the domain.
     /// This will create the cert from Let's Encrypt and update Cloudflare TXT records for the
     /// verification.
-    pub async fn populate(&mut self, company: &Company) {
-        *self = create_ssl_certificate(&self.domain, company).await;
+    pub async fn populate(&mut self, company: &Company) -> Result<()> {
+        *self = create_ssl_certificate(&self.domain, company).await?;
+
+        Ok(())
     }
 
     /// For a certificate struct, populate the certificate and private_key fields from
@@ -246,7 +244,7 @@ impl NewCertificate {
         )
         .await?;
         if !cert.is_empty() {
-            self.certificate = from_utf8(&cert).unwrap().to_string();
+            self.certificate = from_utf8(&cert)?.to_string();
         }
 
         let (p, _) = get_file_content_from_repo(
@@ -258,7 +256,7 @@ impl NewCertificate {
         )
         .await?;
         if !p.is_empty() {
-            self.private_key = from_utf8(&p).unwrap().to_string();
+            self.private_key = from_utf8(&p)?.to_string();
         }
 
         let exp_date = self.expiration_date();
@@ -292,20 +290,22 @@ impl NewCertificate {
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
-    pub fn save_to_directory(&self, dir: &str) {
+    pub fn save_to_directory(&self, dir: &str) -> Result<()> {
         if self.certificate.is_empty() {
             // Return early.
-            return;
+            return Ok(());
         }
 
         let path = self.get_path(dir);
 
         // Create the directory if it does not exist.
-        fs::create_dir_all(path.clone()).unwrap();
+        fs::create_dir_all(path.clone())?;
 
         // Write the files.
-        fs::write(path.join("fullchain.pem"), self.certificate.as_bytes()).unwrap();
-        fs::write(path.join("privkey.pem"), self.private_key.as_bytes()).unwrap();
+        fs::write(path.join("fullchain.pem"), self.certificate.as_bytes())?;
+        fs::write(path.join("privkey.pem"), self.private_key.as_bytes())?;
+
+        Ok(())
     }
 
     /// Saves the fullchain certificate and privkey to the configs github repo.
