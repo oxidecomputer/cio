@@ -112,7 +112,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
     }
 
     // Initialize the Google Drive client.
-    let drive = company.authenticate_google_drive(db).await.unwrap();
+    let drive = company.authenticate_google_drive(db).await?;
 
     // Get the shared drive.
     let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
@@ -275,7 +275,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
         .update_airtable(db)
         .await?;
 
-    let mut gcal = company.authenticate_google_calendar(db).await.unwrap();
+    let mut gcal = company.authenticate_google_calendar(db).await?;
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -288,7 +288,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
-            gcal = company.authenticate_google_calendar(db).await.unwrap();
+            gcal = company.authenticate_google_calendar(db).await?;
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
@@ -343,7 +343,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     continue;
                 }
 
-                let drive_client = company.authenticate_google_drive(db).await.unwrap();
+                let drive_client = company.authenticate_google_drive(db).await?;
 
                 // If we have a chat log, we should download it.
                 let mut chat_log = "".to_string();

@@ -75,7 +75,7 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> {
-    let gcal = company.authenticate_google_calendar(db).await.unwrap();
+    let gcal = company.authenticate_google_calendar(db).await?;
 
     // Get the list of our calendars.
     let calendars = gcal
@@ -267,7 +267,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 #[allow(clippy::type_complexity)]
 pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
     // Initialize the Google Drive client.
-    let drive_client = company.authenticate_google_drive(db).await.unwrap();
+    let drive_client = company.authenticate_google_drive(db).await?;
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
     let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;

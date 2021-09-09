@@ -59,7 +59,7 @@ impl ApplicationForm {
         let company = Company::get_by_id(db, self.cio_company_id)?;
 
         // Initialize the GSuite sheets client.
-        let drive_client = company.authenticate_google_drive(db).await.unwrap();
+        let drive_client = company.authenticate_google_drive(db).await?;
 
         // Expand the application.
         applicant.expand(db, &drive_client).await?;

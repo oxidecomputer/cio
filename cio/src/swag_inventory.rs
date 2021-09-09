@@ -414,7 +414,7 @@ impl SwagInventoryItem {
         let url = if self.barcode_pdf_label.trim().is_empty() {
             // Get the URL to the google item directly.
             // Initialize the Google Drive client.
-            let drive_client = company.authenticate_google_drive(db).await.unwrap();
+            let drive_client = company.authenticate_google_drive(db).await?;
 
             // Figure out where our directory is.
             // It should be in the shared drive : "Automated Documents"/"rfds"
@@ -458,7 +458,7 @@ impl SwagInventoryItem {
 /// Sync swag inventory items from Airtable.
 pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> Result<()> {
     // Initialize the Google Drive client.
-    let drive_client = company.authenticate_google_drive(db).await.unwrap();
+    let drive_client = company.authenticate_google_drive(db).await?;
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"

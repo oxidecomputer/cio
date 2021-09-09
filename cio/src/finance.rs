@@ -97,7 +97,7 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 
 /// Sync software vendors from Airtable.
 pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Result<()> {
-    let gsuite = company.authenticate_google_admin(db).await.unwrap();
+    let gsuite = company.authenticate_google_admin(db).await?;
 
     let github = company.authenticate_github();
 

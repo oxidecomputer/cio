@@ -447,7 +447,7 @@ impl RFD {
     ) -> Result<()> {
         // Initialize the Google Drive client.
         // We do this here so we know the token is not expired.
-        let drive_client = company.authenticate_google_drive(db).await.unwrap();
+        let drive_client = company.authenticate_google_drive(db).await?;
 
         // Get the rfd repo client.
         let owner = &company.github_org;
@@ -979,7 +979,7 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
         github_pdf_files.insert(file.name.to_string(), file.sha.to_string());
     }
 
-    let drive_client = company.authenticate_google_drive(db).await.unwrap();
+    let drive_client = company.authenticate_google_drive(db).await?;
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"

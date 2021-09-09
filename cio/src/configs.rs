@@ -1522,8 +1522,8 @@ pub async fn sync_users(
 ) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite = company.authenticate_google_admin(db).await.unwrap();
-    let gcal = company.authenticate_google_calendar(db).await.unwrap();
+    let gsuite = company.authenticate_google_admin(db).await?;
+    let gcal = company.authenticate_google_calendar(db).await?;
 
     // Initialize the Gusto client.
     let mut gusto_users: HashMap<String, gusto_api::types::Employee> = HashMap::new();
@@ -2173,7 +2173,7 @@ pub async fn sync_buildings(
 ) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite = company.authenticate_google_admin(db).await.unwrap();
+    let gsuite = company.authenticate_google_admin(db).await?;
 
     // Get the existing google buildings.
     let gsuite_buildings = gsuite
@@ -2297,7 +2297,7 @@ pub async fn sync_conference_rooms(
 ) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite = company.authenticate_google_admin(db).await.unwrap();
+    let gsuite = company.authenticate_google_admin(db).await?;
 
     // Get the existing GSuite calendar resources.
     let g_suite_calendar_resources = gsuite
@@ -2405,8 +2405,8 @@ pub async fn sync_conference_rooms(
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
-    let gsuite = company.authenticate_google_admin(db).await.unwrap();
-    let ggs = company.authenticate_google_groups_settings(db).await.unwrap();
+    let gsuite = company.authenticate_google_admin(db).await?;
+    let ggs = company.authenticate_google_groups_settings(db).await?;
 
     // Get the GSuite groups.
     let gsuite_groups = gsuite
@@ -2714,7 +2714,7 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
 }
 
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Result<()> {
-    let gcal = company.authenticate_google_calendar(db).await.unwrap();
+    let gcal = company.authenticate_google_calendar(db).await?;
 
     // Get the list of our calendars.
     let calendars = gcal
