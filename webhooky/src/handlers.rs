@@ -721,3 +721,44 @@ pub async fn handle_airtable_applicants_update(
     info!("applicant {} updated successfully", applicant.email);
     Ok(())
 }
+
+pub async fn listen_airtable_shipments_outbound_create_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let event = body_param.into_inner();
+
+    let api_context = rqctx.context();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    // Get the row from airtable.
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    // If it is a row we created from our internal store do nothing.
+    if shipment.notes.contains("Oxide store")
+        || shipment.notes.contains("Google sheet")
+        || shipment.notes.contains("Internal")
+        || !shipment.shippo_id.is_empty()
+    {
+        return Ok(());
+    }
+
+    if shipment.email.is_empty() {
+        warn!("got an empty email for row");
+        return Ok(());
+    }
+
+    // Update the row in our database.
+    let mut new_shipment = shipment.update(&api_context.db).await?;
+    // Create the shipment in shippo.
+    new_shipment.create_or_get_shippo_shipment(&api_context.db).await?;
+    // Update airtable again.
+    new_shipment.update(&api_context.db).await?;
+
+    info!("shipment {} created successfully", shipment.email);
+    Ok(())
+}
