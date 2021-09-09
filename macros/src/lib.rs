@@ -188,7 +188,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                     return Some(r);
                 }
                 Err(e) => {
-                    println!("[db] we don't have the record in the database: {}", e);
+                    log::info!("[db] we don't have the record in the database: {}", e);
                     return None;
                 }
             }
@@ -279,7 +279,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 .await
                 ?;
 
-            println!("[airtable] created new row: {:?}", self);
+            log::info!("[airtable] created new row: {:?}", self);
 
             // Return the first record back.
             Ok(records.get(0).unwrap().clone())
@@ -298,7 +298,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // We do this after we update the record so that any fields that are links to other
             // tables match as well and this can return true even if we have linked records.
             if mut_self == existing_record.fields {
-                println!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
+                log::info!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
                 return Ok(existing_record.clone());
             }
 
@@ -310,7 +310,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 vec![existing_record.clone()],
             ).await?;
 
-            println!("[airtable] id={} updated", self.id);
+            log::info!("[airtable] id={} updated", self.id);
 
             if records.is_empty() {
                 return Ok(existing_record.clone());
@@ -330,7 +330,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                         .await {
                             Ok(v) => return Some(v),
                             Err(e) => {
-                                println!("getting airtable record failed: {}", self.airtable_record_id);
+                                log::warn!("getting airtable record failed: {}", self.airtable_record_id);
                                 return None;
                             }
                         }

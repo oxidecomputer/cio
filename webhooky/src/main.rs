@@ -3427,7 +3427,7 @@ impl GitHubWebhook {
                     details_url: "".to_string(), // TODO: maybe let's provide one? with running logs?
                     external_id: "".to_string(), // We don't have these, but we should maybe?
                     head_sha: sha.to_string(), // Sha of the commit.
-                    name: "CIO bot".to_string(), // Name of the check.
+                    name: format!("CIO bot: {}", self.repository.name), // Name of the check.
                     output: None,       // We don't have any output yet.
                     started_at: Some(Utc::now()),
                     status: Some(octorust::types::JobStatus::InProgress),
@@ -3480,13 +3480,13 @@ impl GitHubWebhook {
                     conclusion: Some(conclusion),
                     details_url: "".to_string(), // TODO: maybe let's provide one? with running logs?
                     external_id: "".to_string(), // We don't have these, but we should maybe?
-                    name: "CIO bot".to_string(), // Name of the check.
+                    name: format!("CIO bot: {}", self.repository.name), // Name of the check.
                     output: Some(octorust::types::ChecksUpdateRequestOutput {
                         annotations: vec![],
                         images: vec![],
                         summary: message.to_string(),
                         text: String::new(),
-                        title: format!("CIO bot: {}", sha),
+                        title: format!("CIO bot: {}", self.repository.name),
                     }),
                     started_at: None, // Keep the original start time.
                     status: Some(octorust::types::JobStatus::Completed),
