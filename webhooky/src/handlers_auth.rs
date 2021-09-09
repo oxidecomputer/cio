@@ -12,6 +12,7 @@ use dropshot::{Query, RequestContext};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use mailchimp_api::MailChimp;
+use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
@@ -389,8 +390,7 @@ pub async fn handle_auth_slack_callback(
     {
         diesel::update(&existing)
             .set(token)
-            .get_result::<APIToken>(&api_context.db.conn())
-            .unwrap_or_else(|e| panic!("unable to update record {}: {}", existing.id, e))
+            .get_result::<APIToken>(&api_context.db.conn())?
     } else {
         token.create_in_db(&api_context.db)?
     };
@@ -432,13 +432,66 @@ pub async fn handle_auth_slack_callback(
         {
             diesel::update(&existing)
                 .set(user_token)
-                .get_result::<APIToken>(&api_context.db.conn())
-                .unwrap_or_else(|e| panic!("unable to update record {}: {}", existing.id, e))
+                .get_result::<APIToken>(&api_context.db.conn())?
         } else {
             user_token.create_in_db(&api_context.db)?
         };
         new_user_token.upsert_in_airtable(&api_context.db).await?;
     }
+
+    Ok(())
+}
+
+pub async fn handle_auth_quickbooks_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+    let event = query_args.into_inner();
+
+    // Initialize the QuickBooks client.
+    let mut qb = QuickBooks::new_from_env("", "", "");
+
+    // Let's get the token from the code.
+    let t = qb.get_access_token(&event.code).await?;
+
+    // Get the company info.
+    let company_info = qb.company_info(&event.realm_id).await?;
+
+    // Let's get the domain from the email.
+    let split = company_info.email.address.split('@');
+    let vec: Vec<&str> = split.collect();
+    let mut domain = "".to_string();
+    if vec.len() > 1 {
+        domain = vec.get(1).unwrap().to_string();
+    }
+
+    let company = Company::get_from_domain(&api_context.db, &domain)?;
+
+    // Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "quickbooks".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
+        company_id: event.realm_id.to_string(),
+        item_id: "".to_string(),
+        user_email: company_info.email.address.to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        auth_company_id: company.id,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
+        cio_company_id: 1,
+    };
+    token.expand();
+
+    // Update it in the database.
+    token.upsert(&api_context.db).await?;
 
     Ok(())
 }
