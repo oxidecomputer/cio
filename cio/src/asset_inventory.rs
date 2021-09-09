@@ -1,3 +1,4 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use barcoders::{
     generators::{image::Image, svg::SVG},
@@ -97,7 +98,9 @@ pub struct NewAssetItem {
 /// Implement updating the Airtable record for a AssetItem.
 #[async_trait]
 impl UpdateAirtableRecord<AssetItem> for AssetItem {
-    async fn update_airtable_record(&mut self, _record: AssetItem) {}
+    async fn update_airtable_record(&mut self, _record: AssetItem) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl NewAssetItem {

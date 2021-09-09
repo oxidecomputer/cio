@@ -1,4 +1,5 @@
 #![allow(clippy::from_over_into)]
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use macros::db;
@@ -39,11 +40,11 @@ pub struct NewPageView {
 /// Implement updating the Airtable record for a PageView.
 #[async_trait]
 impl UpdateAirtableRecord<PageView> for PageView {
-    async fn update_airtable_record(&mut self, _record: PageView) {
+    async fn update_airtable_record(&mut self, _record: PageView) -> Result<()> {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
         let db = Database::new();
-        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await;
+        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await?;
 
         // Iterate over the auth_users and see if we find a match.
         for (_id, auth_user_record) in auth_users {
@@ -54,6 +55,8 @@ impl UpdateAirtableRecord<PageView> for PageView {
                 break;
             }
         }
+
+        Ok(())
     }
 }
 

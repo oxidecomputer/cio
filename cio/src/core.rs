@@ -1,4 +1,5 @@
 use airtable_api::User as AirtableUser;
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -6,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Define the trait for doing logic in updating Airtable.
 #[async_trait]
 pub trait UpdateAirtableRecord<T> {
-    async fn update_airtable_record(&mut self, _: T);
+    async fn update_airtable_record(&mut self, _: T) -> Result<()>;
 }
 
 /// The data type for customer interactions.

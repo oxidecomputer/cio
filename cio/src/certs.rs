@@ -376,5 +376,7 @@ impl NewCertificate {
 /// Implement updating the Airtable record for a Certificate.
 #[async_trait]
 impl UpdateAirtableRecord<Certificate> for Certificate {
-    async fn update_airtable_record(&mut self, _record: Certificate) {}
+    async fn update_airtable_record(&mut self, _record: Certificate) -> Result<()> {
+        Ok(())
+    }
 }

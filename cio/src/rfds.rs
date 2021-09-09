@@ -667,7 +667,7 @@ impl RFD {
 /// Implement updating the Airtable record for an RFD.
 #[async_trait]
 impl UpdateAirtableRecord<RFD> for RFD {
-    async fn update_airtable_record(&mut self, record: RFD) {
+    async fn update_airtable_record(&mut self, record: RFD) -> Result<()> {
         // Set the Link to People from the original so it stays intact.
         self.milestones = record.milestones.clone();
         self.relevant_components = record.relevant_components;
@@ -675,6 +675,8 @@ impl UpdateAirtableRecord<RFD> for RFD {
         // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
         self.content = truncate(&self.content, 100000);
         self.html = truncate(&self.html, 100000);
+
+        Ok(())
     }
 }
 

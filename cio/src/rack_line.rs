@@ -1,6 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::env;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
@@ -146,9 +147,11 @@ impl Default for NewRackLineSubscriber {
 /// Implement updating the Airtable record for a RackLineSubscriber.
 #[async_trait]
 impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
-    async fn update_airtable_record(&mut self, record: RackLineSubscriber) {
+    async fn update_airtable_record(&mut self, record: RackLineSubscriber) -> Result<()> {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
+
+        Ok(())
     }
 }
 

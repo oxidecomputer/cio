@@ -7,6 +7,7 @@ use std::{
     str::FromStr,
 };
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
@@ -2481,13 +2482,15 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 /// Implement updating the Airtable record for an Applicant.
 #[async_trait]
 impl UpdateAirtableRecord<Applicant> for Applicant {
-    async fn update_airtable_record(&mut self, record: Applicant) {
+    async fn update_airtable_record(&mut self, record: Applicant) -> Result<()> {
         self.interviews = record.interviews;
         self.geocode_cache = record.geocode_cache;
         self.link_to_reviews = record.link_to_reviews;
         self.resume_contents = truncate(&self.resume_contents, 100000);
         self.materials_contents = truncate(&self.materials_contents, 100000);
         self.question_why_oxide = truncate(&self.question_why_oxide, 100000);
+
+        Ok(())
     }
 }
 
@@ -3116,8 +3119,8 @@ impl ApplicantFormSheetColumns {
     }
 }
 
-pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
-    let users = Users::get_from_db(db, company.id);
+pub fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>> {
+    let users = Users::get_from_db(db, company.id)?;
 
     let mut reviewers: Vec<String> = Default::default();
     for user in users {
@@ -3131,7 +3134,7 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Vec<String> {
             reviewers.push(user.email);
         }
     }
-    reviewers
+    Ok(reviewers)
 }
 
 pub async fn update_applications_with_scoring_forms(db: &Database, company: &Company) {
@@ -3163,7 +3166,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
         // Parse the sheet columns.
         let columns = ApplicantFormSheetColumns::new();
 
-        /*let mut reviewer_pool = get_reviewer_pool(db, company);
+        /*let mut reviewer_pool = get_reviewer_pool(db, company)?;
 
         // We'll assign reviewers randomly but attempt to produce roughly even loads
         // across reviewers. To do this, we shuffle the list of reviewers, and then
@@ -3546,7 +3549,9 @@ pub struct NewApplicantReviewer {
 /// Implement updating the Airtable record for an ApplicantReviewer.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
-    async fn update_airtable_record(&mut self, _record: ApplicantReviewer) {}
+    async fn update_airtable_record(&mut self, _record: ApplicantReviewer) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Company) {

@@ -6,6 +6,7 @@ use std::{
     process::Command,
 };
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
@@ -67,7 +68,9 @@ pub struct NewApplicantInterview {
 /// Implement updating the Airtable record for a ApplicantInterview.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
-    async fn update_airtable_record(&mut self, _record: ApplicantInterview) {}
+    async fn update_airtable_record(&mut self, _record: ApplicantInterview) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Sync interviews.

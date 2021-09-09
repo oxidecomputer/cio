@@ -1,5 +1,6 @@
 #![allow(clippy::from_over_into)]
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime};
 use macros::db;
@@ -80,11 +81,13 @@ pub struct NewAuthUser {
 /// Implement updating the Airtable record for a AuthUser.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUser> for AuthUser {
-    async fn update_airtable_record(&mut self, record: AuthUser) {
+    async fn update_airtable_record(&mut self, record: AuthUser) -> Result<()> {
         // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
         self.link_to_people = record.link_to_people.clone();
         self.link_to_auth_user_logins = record.link_to_auth_user_logins;
         self.link_to_page_views = record.link_to_page_views;
+
+        Ok(())
     }
 }
 
@@ -160,11 +163,11 @@ pub struct NewAuthUserLogin {
 /// Implement updating the Airtable record for a AuthUserLogin.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
-    async fn update_airtable_record(&mut self, _record: AuthUserLogin) {
+    async fn update_airtable_record(&mut self, _record: AuthUserLogin) -> Result<()> {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
         let db = Database::new();
-        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await;
+        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await?;
 
         // Iterate over the auth_users and see if we find a match.
         for (_id, auth_user_record) in auth_users {
@@ -175,6 +178,8 @@ impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
                 break;
             }
         }
+
+        Ok(())
     }
 }
 

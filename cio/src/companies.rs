@@ -1,6 +1,7 @@
 use std::{convert::TryInto, env};
 
 use airtable_api::Airtable;
+use anyhow::Result;
 use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::Utc;
@@ -125,20 +126,22 @@ pub struct NewCompany {
 /// Implement updating the Airtable record for a Company.
 #[async_trait]
 impl UpdateAirtableRecord<Company> for Company {
-    async fn update_airtable_record(&mut self, _record: Company) {}
+    async fn update_airtable_record(&mut self, _record: Company) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl Company {
     /// Returns the shippo data structure for the address at the office
     /// for the company.
-    pub fn hq_shipping_address(&self, db: &Database) -> shippo::Address {
+    pub fn hq_shipping_address(&self, db: &Database) -> Result<shippo::Address> {
         // Get the buildings from the company.
-        let buildings: Vec<Building> = Buildings::get_from_db(db, self.cio_company_id).into();
+        let buildings: Vec<Building> = Buildings::get_from_db(db, self.cio_company_id)?.into();
         // Get the first one.
         // TODO: when there is more than one building, figure this out.
         let building = buildings.get(0).unwrap();
 
-        shippo::Address {
+        Ok(shippo::Address {
             company: self.name.to_string(),
             name: "The Shipping Bot".to_string(),
             street1: building.street_address.to_string(),
@@ -153,7 +156,7 @@ impl Company {
             test: Default::default(),
             street2: Default::default(),
             validation_results: None,
-        }
+        })
     }
 
     pub async fn post_to_slack_channel(&self, db: &Database, value: serde_json::Value) {

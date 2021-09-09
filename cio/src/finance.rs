@@ -1,5 +1,6 @@
 use std::{collections::HashMap, env, fs::File};
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use macros::db;
@@ -80,7 +81,7 @@ fn is_zero(num: &f32) -> bool {
 /// Implement updating the Airtable record for a SoftwareVendor.
 #[async_trait]
 impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
-    async fn update_airtable_record(&mut self, record: SoftwareVendor) {
+    async fn update_airtable_record(&mut self, record: SoftwareVendor) -> Result<()> {
         // This is a function so we can't change it through the API.
         self.total_cost_per_month = 0.0;
         // Keep this the same, we update it from the transactions.
@@ -89,6 +90,8 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
         self.link_to_accounts_payable = record.link_to_accounts_payable;
         // Keep this the same, we update it from the expensed items.
         self.link_to_expensed_items = record.link_to_expensed_items;
+
+        Ok(())
     }
 }
 
@@ -247,7 +250,9 @@ pub struct NewCreditCardTransaction {
 /// Implement updating the Airtable record for a CreditCardTransaction.
 #[async_trait]
 impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
-    async fn update_airtable_record(&mut self, _record: CreditCardTransaction) {}
+    async fn update_airtable_record(&mut self, _record: CreditCardTransaction) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
@@ -846,7 +851,9 @@ pub struct NewAccountsPayable {
 /// Implement updating the Airtable record for a AccountsPayable.
 #[async_trait]
 impl UpdateAirtableRecord<AccountsPayable> for AccountsPayable {
-    async fn update_airtable_record(&mut self, _record: AccountsPayable) {}
+    async fn update_airtable_record(&mut self, _record: AccountsPayable) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub mod bill_com_date_format {
@@ -967,7 +974,9 @@ pub struct NewExpensedItem {
 /// Implement updating the Airtable record for a ExpensedItem.
 #[async_trait]
 impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
-    async fn update_airtable_record(&mut self, _record: ExpensedItem) {}
+    async fn update_airtable_record(&mut self, _record: ExpensedItem) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Read the Expensify transactions from a csv.

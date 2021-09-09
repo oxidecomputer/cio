@@ -1,6 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::str::from_utf8;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
 use google_drive::traits::{DriveOps, FileOps};
@@ -67,7 +68,7 @@ pub struct NewRecordedMeeting {
 /// Implement updating the Airtable record for a RecordedMeeting.
 #[async_trait]
 impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
-    async fn update_airtable_record(&mut self, record: RecordedMeeting) {
+    async fn update_airtable_record(&mut self, record: RecordedMeeting) -> Result<()> {
         if !record.transcript_id.is_empty() {
             self.transcript_id = record.transcript_id;
         }
@@ -76,6 +77,8 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
         }
 
         self.transcript = truncate(&self.transcript, 100000);
+
+        Ok(())
     }
 }
 

@@ -1,5 +1,6 @@
 use std::io::BufWriter;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use barcoders::{
     generators::{image::Image, svg::SVG},
@@ -70,13 +71,15 @@ pub struct NewSwagItem {
 /// Implement updating the Airtable record for a SwagItem.
 #[async_trait]
 impl UpdateAirtableRecord<SwagItem> for SwagItem {
-    async fn update_airtable_record(&mut self, record: SwagItem) {
+    async fn update_airtable_record(&mut self, record: SwagItem) -> Result<()> {
         if !record.link_to_inventory.is_empty() {
             self.link_to_inventory = record.link_to_inventory;
         }
         if !record.link_to_barcode_scans.is_empty() {
             self.link_to_barcode_scans = record.link_to_barcode_scans;
         }
+
+        Ok(())
     }
 }
 
@@ -161,7 +164,7 @@ pub struct NewSwagInventoryItem {
 /// Implement updating the Airtable record for a SwagInventoryItem.
 #[async_trait]
 impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
-    async fn update_airtable_record(&mut self, record: SwagInventoryItem) {
+    async fn update_airtable_record(&mut self, record: SwagInventoryItem) -> Result<()> {
         if !record.link_to_item.is_empty() {
             self.link_to_item = record.link_to_item;
         }
@@ -171,6 +174,8 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 
         // This is set in airtable so we need to keep it.
         self.print_barcode_label_quantity = record.print_barcode_label_quantity;
+
+        Ok(())
     }
 }
 
@@ -516,7 +521,9 @@ pub struct NewBarcodeScan {
 /// Implement updating the Airtable record for a BarcodeScan.
 #[async_trait]
 impl UpdateAirtableRecord<BarcodeScan> for BarcodeScan {
-    async fn update_airtable_record(&mut self, _record: BarcodeScan) {}
+    async fn update_airtable_record(&mut self, _record: BarcodeScan) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl BarcodeScan {

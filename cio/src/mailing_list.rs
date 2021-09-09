@@ -1,5 +1,6 @@
 #![allow(clippy::from_over_into)]
 
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
@@ -216,9 +217,11 @@ impl Default for NewMailingListSubscriber {
 /// Implement updating the Airtable record for a MailingListSubscriber.
 #[async_trait]
 impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
-    async fn update_airtable_record(&mut self, record: MailingListSubscriber) {
+    async fn update_airtable_record(&mut self, record: MailingListSubscriber) -> Result<()> {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
+
+        Ok(())
     }
 }
 

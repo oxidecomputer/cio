@@ -231,7 +231,9 @@ pub struct NewRepo {
 /// Implement updating the Airtable record for a GithubRepo.
 #[async_trait]
 impl UpdateAirtableRecord<GithubRepo> for GithubRepo {
-    async fn update_airtable_record(&mut self, _record: GithubRepo) {}
+    async fn update_airtable_record(&mut self, _record: GithubRepo) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl NewRepo {

@@ -919,11 +919,11 @@ xoxo,
 /// Implement updating the Airtable record for a User.
 #[async_trait]
 impl UpdateAirtableRecord<User> for User {
-    async fn update_airtable_record(&mut self, record: User) {
+    async fn update_airtable_record(&mut self, record: User) -> Result<()> {
         // Get the current groups in Airtable so we can link to them.
         // TODO: make this more dry so we do not call it every single damn time.
         let db = Database::new();
-        let groups = Groups::get_from_airtable(&db, self.cio_company_id).await;
+        let groups = Groups::get_from_airtable(&db, self.cio_company_id).await?;
 
         let mut links: Vec<String> = Default::default();
         // Iterate over the group names in our record and match it against the
@@ -955,7 +955,7 @@ impl UpdateAirtableRecord<User> for User {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await;
+        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await?;
         // Iterate over the buildings to get the ID.
         for building in buildings.values() {
             if self.building == building.fields.name {
@@ -967,6 +967,8 @@ impl UpdateAirtableRecord<User> for User {
         }
 
         self.work_address_formatted = self.work_address_formatted.replace("\\n", "\n");
+
+        Ok(())
     }
 }
 
@@ -1130,9 +1132,10 @@ impl GroupConfig {
 /// Implement updating the Airtable record for a Group.
 #[async_trait]
 impl UpdateAirtableRecord<Group> for Group {
-    async fn update_airtable_record(&mut self, record: Group) {
+    async fn update_airtable_record(&mut self, record: Group) -> Result<()> {
         // Make sure we don't mess with the members since that is populated by the Users table.
         self.members = record.members;
+        Ok(())
     }
 }
 
@@ -1196,13 +1199,15 @@ impl BuildingConfig {
 /// Implement updating the Airtable record for a Building.
 #[async_trait]
 impl UpdateAirtableRecord<Building> for Building {
-    async fn update_airtable_record(&mut self, record: Building) {
+    async fn update_airtable_record(&mut self, record: Building) -> Result<()> {
         // Make sure we don't mess with the employees since that is populated by the Users table.
         self.employees = record.employees.clone();
         // Make sure we don't mess with the conference_rooms since that is populated by the Conference Rooms table.
         self.conference_rooms = record.conference_rooms;
 
         self.geocode_cache = record.geocode_cache;
+
+        Ok(())
     }
 }
 
@@ -1242,12 +1247,12 @@ pub struct ResourceConfig {
 /// Implement updating the Airtable record for a ConferenceRoom.
 #[async_trait]
 impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
-    async fn update_airtable_record(&mut self, _record: ConferenceRoom) {
+    async fn update_airtable_record(&mut self, _record: ConferenceRoom) -> Result<()> {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
         let db = Database::new();
-        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await;
+        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await?;
         // Iterate over the buildings to get the ID.
         for building in buildings.values() {
             if self.building == building.fields.name {
@@ -1257,6 +1262,8 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
                 break;
             }
         }
+
+        Ok(())
     }
 }
 
@@ -1291,7 +1298,9 @@ pub struct LinkConfig {
 /// Implement updating the Airtable record for a Link.
 #[async_trait]
 impl UpdateAirtableRecord<Link> for Link {
-    async fn update_airtable_record(&mut self, _record: Link) {}
+    async fn update_airtable_record(&mut self, _record: Link) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// The data type for GitHub outside collaborators to repositories.

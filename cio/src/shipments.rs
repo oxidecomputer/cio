@@ -1,6 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::convert::From;
 
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
 use google_geocode::Geocode;
@@ -68,7 +69,7 @@ pub struct NewInboundShipment {
 /// Implement updating the Airtable record for an InboundShipment.
 #[async_trait]
 impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
-    async fn update_airtable_record(&mut self, record: InboundShipment) {
+    async fn update_airtable_record(&mut self, record: InboundShipment) -> Result<()> {
         if self.carrier.is_empty() {
             self.carrier = record.carrier;
         }
@@ -93,6 +94,8 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
         if self.notes.is_empty() {
             self.notes = record.notes;
         }
+
+        Ok(())
     }
 }
 
@@ -376,14 +379,16 @@ pub struct NewPackagePickup {
 /// Implement updating the Airtable record for an PackagePickup.
 #[async_trait]
 impl UpdateAirtableRecord<PackagePickup> for PackagePickup {
-    async fn update_airtable_record(&mut self, _record: PackagePickup) {}
+    async fn update_airtable_record(&mut self, _record: PackagePickup) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl OutboundShipments {
     // Always schedule the pickup for the next business day.
     // It will create a pickup for all the shipments that have "Label printed"
     // status and no pickup date currently.
-    pub async fn create_pickup(db: &Database, company: &Company) {
+    pub async fn create_pickup(db: &Database, company: &Company) -> Result<()> {
         // We should only do this for USPS, OR if we use DHL in the future.
         let shipments = outbound_shipments::dsl::outbound_shipments
             .filter(
@@ -392,8 +397,7 @@ impl OutboundShipments {
                     .and(outbound_shipments::dsl::carrier.eq("USPS".to_string()))
                     .and(outbound_shipments::dsl::pickup_date.is_null()),
             )
-            .load::<OutboundShipment>(&db.conn())
-            .unwrap();
+            .load::<OutboundShipment>(&db.conn())?;
 
         if shipments.is_empty() {
             // We can return early.
@@ -417,7 +421,7 @@ impl OutboundShipments {
         // Get the carrier ID for USPS.
         // Create the shippo client.
         let shippo_client = Shippo::new_from_env();
-        let carrier_accounts = shippo_client.list_carrier_accounts().await.unwrap();
+        let carrier_accounts = shippo_client.list_carrier_accounts().await?;
         let mut carrier_account_id = "".to_string();
         for ca in carrier_accounts {
             if ca.carrier.to_lowercase() == "usps" {
@@ -445,7 +449,7 @@ impl OutboundShipments {
                 building_location_type: "Office".to_string(),
                 building_type: "building".to_string(),
                 instructions: "Knock on the glass door and someone will come open it.".to_string(),
-                address: company.hq_shipping_address(db),
+                address: company.hq_shipping_address(db)?,
             },
             transactions: transaction_ids.clone(),
             requested_start_time: start_time,
@@ -453,10 +457,8 @@ impl OutboundShipments {
             metadata: "".to_string(),
             is_test: false,
         };
-        println!("{}", json!(new_pickup).to_string());
 
-        let pickup = shippo_client.create_pickup(&new_pickup).await.unwrap();
-        println!("{:?}", pickup);
+        let pickup = shippo_client.create_pickup(&new_pickup).await?;
 
         let mut messages = "".to_string();
         if let Some(msg) = pickup.messages {
@@ -493,6 +495,8 @@ impl OutboundShipments {
             shipment.status = "Waiting for pickup".to_string();
             shipment.update(db).await;
         }
+
+        Ok(())
     }
 }
 
@@ -521,7 +525,7 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
 /// Implement updating the Airtable record for an OutboundShipment.
 #[async_trait]
 impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
-    async fn update_airtable_record(&mut self, record: OutboundShipment) {
+    async fn update_airtable_record(&mut self, record: OutboundShipment) -> Result<()> {
         self.link_to_package_pickup = record.link_to_package_pickup;
 
         self.geocode_cache = record.geocode_cache;
@@ -565,6 +569,8 @@ impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
         if self.notes.is_empty() {
             self.notes = record.notes;
         }
+
+        Ok(())
     }
 }
 
@@ -816,7 +822,7 @@ The Shipping Bot",
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
-    pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) {
+    pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) -> Result<()> {
         let company = self.company(db);
 
         // Update the formatted address.
@@ -830,10 +836,7 @@ The Shipping Bot",
         // If we don't already have the latitude and longitude for the shipment
         // let's update that first.
         if self.latitude == 0.0 || self.longitude == 0.0 {
-            let result = geocode
-                .get(&clean_address_string(&self.address_formatted))
-                .await
-                .unwrap();
+            let result = geocode.get(&clean_address_string(&self.address_formatted)).await?;
             let location = result.geometry.location;
             self.latitude = location.lat as f32;
             self.longitude = location.lng as f32;
@@ -851,7 +854,7 @@ The Shipping Bot",
 
         // If we already have a shippo id, get the information for the label.
         if !self.shippo_id.is_empty() {
-            let label = shippo_client.get_shipping_label(&self.shippo_id).await.unwrap();
+            let label = shippo_client.get_shipping_label(&self.shippo_id).await?;
 
             // Set the additional fields.
             self.tracking_number = label.tracking_number;
@@ -875,7 +878,7 @@ The Shipping Bot",
                 .register_tracking_webhook(&self.carrier, &self.tracking_number)
                 .await
                 .unwrap_or_else(|e| {
-                    println!("registering the tracking webhook failed: {:?}", e);
+                    bail!("registering the tracking webhook failed: {:?}", e);
                     Default::default()
                 });
 
@@ -924,11 +927,11 @@ The Shipping Bot",
             }
 
             // Return early.
-            return;
+            return Ok(());
         }
 
         // We need to create the label since we don't have one already.
-        let address_from = company.hq_shipping_address(db);
+        let address_from = company.hq_shipping_address(db)?;
 
         // If this is an international shipment, we need to define our customs
         // declarations.
@@ -947,7 +950,7 @@ The Shipping Bot",
                 ci.value_amount = "100.00".to_string();
                 ci.value_currency = "USD".to_string();
                 ci.origin_country = "US".to_string();
-                let c = shippo_client.create_customs_item(ci).await.unwrap();
+                let c = shippo_client.create_customs_item(ci).await?;
 
                 // Add the item to our array of items.
                 cd_inner.items.push(c.object_id);
@@ -1016,8 +1019,7 @@ The Shipping Bot",
                 }],
                 customs_declaration: cd,
             })
-            .await
-            .unwrap();
+            .await?;
 
         // Now we can create our label from the available rates.
         // Try to find the rate that is "BESTVALUE" or "CHEAPEST".
@@ -1032,8 +1034,7 @@ The Shipping Bot",
                         label_file_type: "".to_string(),
                         metadata: "".to_string(),
                     })
-                    .await
-                    .unwrap();
+                    .await?;
 
                 // Set the additional fields.
                 self.carrier = clean_provider_name(&rate.provider);
@@ -1064,7 +1065,7 @@ The Shipping Bot",
                     .register_tracking_webhook(&self.carrier, &self.tracking_number)
                     .await
                     .unwrap_or_else(|e| {
-                        println!("registering the tracking webhook failed: {:?}", e);
+                        bail!("registering the tracking webhook failed: {:?}", e);
                         Default::default()
                     });
 
@@ -1083,6 +1084,7 @@ The Shipping Bot",
 
         // TODO: do something if we don't find a rate.
         // However we should always find a rate.
+        Ok(())
     }
 }
 

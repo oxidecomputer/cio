@@ -175,11 +175,11 @@ pub struct NewJournalClubPaper {
 /// Implement updating the Airtable record for a JournalClubPaper.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
-    async fn update_airtable_record(&mut self, _record: JournalClubPaper) {
+    async fn update_airtable_record(&mut self, _record: JournalClubPaper) -> Result<()> {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
         let db = Database::new();
-        let journal_club_meetings = JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await;
+        let journal_club_meetings = JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await?;
 
         // Iterate over the journal_club_meetings and see if we find a match.
         for (_id, meeting_record) in journal_club_meetings {
@@ -190,6 +190,8 @@ impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
                 break;
             }
         }
+
+        Ok(())
     }
 }
 

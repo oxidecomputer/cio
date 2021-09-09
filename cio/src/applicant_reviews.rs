@@ -1,3 +1,4 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use macros::db;
 use schemars::JsonSchema;
@@ -100,9 +101,11 @@ pub struct NewApplicantReview {
 /// Implement updating the Airtable record for a ApplicantReview.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
-    async fn update_airtable_record(&mut self, _record: ApplicantReview) {
+    async fn update_airtable_record(&mut self, _record: ApplicantReview) -> Result<()> {
         // Set name to empty since it is a function we cannot update it.
         self.name = "".to_string();
+
+        Ok(())
     }
 }
 

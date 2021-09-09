@@ -1,3 +1,4 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use macros::db;
@@ -86,7 +87,9 @@ pub struct NewBooking {
 /// Implement updating the Airtable record for a Booking.
 #[async_trait]
 impl UpdateAirtableRecord<Booking> for Booking {
-    async fn update_airtable_record(&mut self, _record: Booking) {}
+    async fn update_airtable_record(&mut self, _record: Booking) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub async fn refresh_trip_actions(db: &Database, company: &Company) {
