@@ -1094,11 +1094,11 @@ The Oxide Team",
         sent_email_received_column_index: usize,
         sent_email_follow_up_index: usize,
         row_index: usize,
-    ) {
+    ) -> Result<()> {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
-            self.send_email_recieved_application_to_applicant(db).await;
+            self.send_email_recieved_application_to_applicant(db).await?;
 
             // Mark the column as true not false.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
@@ -1123,8 +1123,7 @@ The Oxide Team",
                         major_dimension: None,
                     },
                 )
-                .await
-                .unwrap();
+                .await?;
 
             println!(
                 "[applicant] sent email to {} that we received their application",
@@ -1149,7 +1148,7 @@ The Oxide Team",
                 // Check if we have sent the follow up email to them.unwrap_or_default().
                 if self.raw_status.contains("did not do materials") {
                     // Send the email.
-                    self.send_email_rejection_did_not_provide_materials(db).await;
+                    self.send_email_rejection_did_not_provide_materials(db).await?;
 
                     println!(
                         "[applicant] sent email to {} tell them they did not do the materials",
@@ -1157,7 +1156,7 @@ The Oxide Team",
                     );
                 } else if self.raw_status.contains("junior") {
                     // Send the email.
-                    self.send_email_rejection_junior_but_we_love_you(db).await;
+                    self.send_email_rejection_junior_but_we_love_you(db).await?;
 
                     println!(
                         "[applicant] sent email to {} tell them we can't hire them at this stage",
@@ -1165,7 +1164,7 @@ The Oxide Team",
                     );
                 } else {
                     // Send the email.
-                    self.send_email_rejection_timing(db).await;
+                    self.send_email_rejection_timing(db).await?;
 
                     println!("[applicant] sent email to {} tell them about timing", self.email);
                 }
@@ -1187,8 +1186,7 @@ The Oxide Team",
                             major_dimension: None,
                         },
                     )
-                    .await
-                    .unwrap();
+                    .await?;
 
                 // Mark the time we sent the email.
                 self.rejection_sent_date_time = Some(Utc::now());
@@ -1215,8 +1213,7 @@ The Oxide Team",
                             major_dimension: None,
                         },
                     )
-                    .await
-                    .unwrap();
+                    .await?;
 
                 self.sent_email_follow_up = true;
             }
@@ -1238,6 +1235,8 @@ The Oxide Team",
             self.materials_contents = get_file_contents(drive_client, &self.materials).await;
             self.parse_materials();
         }
+
+        Ok(())
     }
 
     /// Parse the questions from the materials.
@@ -1770,7 +1769,7 @@ impl Applicant {
 
             // We already zero-ed out the values for the scores, now we return early.
             // We don't want people who join to know their scores.
-            self.update(db).await;
+            self.update(db).await?;
             return Ok(());
         }
 
@@ -1863,7 +1862,7 @@ impl Applicant {
         }
 
         // Update the record.
-        self.update(db).await;
+        self.update(db).await?;
 
         Ok(())
     }
@@ -1904,7 +1903,7 @@ impl Applicant {
                     // Update the database.
                     self.criminal_background_check_status = "requested".to_string();
 
-                    self.update(db).await;
+                    self.update(db).await?;
 
                     println!("[applicant] sent background check invitation to: {}", self.email);
                 }
@@ -1922,7 +1921,7 @@ impl Applicant {
         // Update the database.
         self.criminal_background_check_status = "requested".to_string();
 
-        self.update(db).await;
+        self.update(db).await?;
 
         println!("[applicant] sent background check invitation to: {}", self.email);
 
@@ -3023,10 +3022,10 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) -> Result<(
         .await?;
 
     // Initialize the GSuite sheets client.
-    let drive_client = company.authenticate_google_drive(db).await.unwrap();
+    let drive_client = company.authenticate_google_drive(db).await?;
 
     // Initialize the GSuite sheets client.
-    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
+    let sheets_client = company.authenticate_google_sheets(db).await?;
 
     // Iterate over the Google sheets and create or update GitHub issues
     // depending on the application status.
@@ -3077,18 +3076,18 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) -> Result<(
                     columns.sent_email_follow_up,
                     row_index + 1,
                 )
-                .await;
+                .await?;
 
             if !applicant.sent_email_received {
                 // Send a company-wide email.
-                applicant.send_email_internally(db).await;
+                applicant.send_email_internally(db).await?;
             }
 
             let new_applicant = applicant.upsert(db).await?;
 
             new_applicant
                 .create_github_onboarding_issue(db, &github, &configs_issues)
-                .await;
+                .await?;
         }
     }
 
@@ -3138,9 +3137,9 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>
     Ok(reviewers)
 }
 
-pub async fn update_applications_with_scoring_forms(db: &Database, company: &Company) {
+pub async fn update_applications_with_scoring_forms(db: &Database, company: &Company) -> Result<()> {
     // Initialize the GSuite sheets client.
-    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
+    let sheets_client = company.authenticate_google_sheets(db).await?;
 
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
@@ -3153,12 +3152,11 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
                 sheets::types::Dimension::Rows,
                 sheets::types::ValueRenderOption::FormattedValue,
             )
-            .await
-            .unwrap();
+            .await?;
         let values = sheet_values.values;
 
         if values.is_empty() {
-            panic!(
+            bail!(
                 "unable to retrieve any data values from Google sheet for applicant forms {}",
                 sheet_id
             );
@@ -3243,7 +3241,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
                     let status = crate::applicant_status::Status::from_str(&applicant.status);
                     if status != Ok(crate::applicant_status::Status::NeedsToBeTriaged) {
                         // Update the applicant in the database.
-                        applicant.update(db).await;
+                        applicant.update(db).await?;
 
                         // Continue we don't care.
                         continue;
@@ -3280,16 +3278,18 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
                      }*/
 
                     // Update the applicant in the database.
-                    applicant.update(db).await;
+                    applicant.update(db).await?;
                 }
             }
         }
     }
+
+    Ok(())
 }
 
-pub async fn update_applications_with_scoring_results(db: &Database, company: &Company) {
+pub async fn update_applications_with_scoring_results(db: &Database, company: &Company) -> Result<()> {
     // Initialize the GSuite sheets client.
-    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
+    let sheets_client = company.authenticate_google_sheets(db).await?;
 
     for sheet_id in get_tracking_sheets() {
         // Get the values in the sheet.
@@ -3302,12 +3302,11 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
                 sheets::types::Dimension::Rows,
                 sheets::types::ValueRenderOption::FormattedValue,
             )
-            .await
-            .unwrap();
+            .await?;
         let values = sheet_values.values;
 
         if values.is_empty() {
-            panic!(
+            bail!(
                 "unable to retrieve any data values from Google sheet for applicant form \
                  responses {}",
                 sheet_id
@@ -3407,7 +3406,7 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
                     applicant.values_in_tension = values_in_tension.clone();
 
                     // Update the applicant in the database.
-                    applicant.update(db).await;
+                    applicant.update(db).await?;
                 }
             }
         }
@@ -3420,8 +3419,7 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
                 .eq(crate::applicant_status::Status::Onboarding.to_string())
                 .or(applicants::dsl::status.eq(crate::applicant_status::Status::Hired.to_string())),
         )
-        .load::<Applicant>(&db.conn())
-        .unwrap();
+        .load::<Applicant>(&db.conn())?;
     for mut applicant in applicants {
         // Zero out the values for the scores.
         applicant.scoring_evaluations_count = 0;
@@ -3436,8 +3434,10 @@ pub async fn update_applications_with_scoring_results(db: &Database, company: &C
         applicant.scoring_underwhelming_materials_count = 0;
 
         // Update the applicant in the database.
-        applicant.update(db).await;
+        applicant.update(db).await?;
     }
+
+    Ok(())
 }
 
 fn is_materials(file_name: &str) -> bool {
@@ -3455,18 +3455,18 @@ fn is_materials(file_name: &str) -> bool {
         || file_name.ends_with("README.md")
 }
 
-pub async fn refresh_background_checks(db: &Database, company: &Company) {
+pub async fn refresh_background_checks(db: &Database, company: &Company) -> Result<()> {
     // Initialize the Checker client.
     let checkr_auth = company.authenticate_checkr();
     if checkr_auth.is_none() {
         // Return early.
-        return;
+        return Ok(());
     }
 
     let checkr = checkr_auth.unwrap();
 
     // List the candidates.
-    let candidates = checkr.list_candidates().await.unwrap();
+    let candidates = checkr.list_candidates().await?;
     for candidate in candidates {
         // Try to match the candidate based on their email.
         // Try for all the sheet_ids.
@@ -3497,7 +3497,7 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) {
                     }
 
                     // Update the applicant.
-                    applicant.update(db).await;
+                    applicant.update(db).await?;
                 }
             } else {
                 println!(
@@ -3507,6 +3507,8 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) {
             }
         }
     }
+
+    Ok(())
 }
 
 /// The data type for a ApplicantReviewer.
@@ -3555,9 +3557,9 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
     }
 }
 
-pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Company) {
+pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Company) -> Result<()> {
     // Initialize the GSuite sheets client.
-    let sheets_client = company.authenticate_google_sheets(db).await.unwrap();
+    let sheets_client = company.authenticate_google_sheets(db).await?;
 
     let sheet_id = "1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM";
 
@@ -3571,12 +3573,11 @@ pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Com
             sheets::types::Dimension::Rows,
             sheets::types::ValueRenderOption::FormattedValue,
         )
-        .await
-        .unwrap();
+        .await?;
     let values = sheet_values.values;
 
     if values.is_empty() {
-        panic!(
+        bail!(
             "unable to retrieve any data values from Google sheet for reviewer leaderboard {}",
             sheet_id
         );
@@ -3625,13 +3626,15 @@ pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Com
                 };
 
                 // Upsert the applicant reviewer in the database.
-                reviewer.upsert(db).await;
+                reviewer.upsert(db).await?;
             }
             None => {
                 println!("could not find user with email: {}", email);
             }
         }
     }
+
+    Ok(())
 }
 
 pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -> Result<()> {
@@ -3656,9 +3659,11 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant.do_docusign_offer(db, &ds, &offer_template_id, company).await;
+        applicant
+            .do_docusign_offer(db, &ds, &offer_template_id, company)
+            .await?;
 
-        applicant.do_docusign_piia(db, &ds, &piia_template_id, company).await;
+        applicant.do_docusign_piia(db, &ds, &piia_template_id, company).await?;
     }
 
     Ok(())
@@ -4775,7 +4780,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         applicant.keep_fields_from_airtable(db).await;
 
         // Expand the application.
-        applicant.expand(db, &drive_client).await;
+        applicant.expand(db, &drive_client).await?;
 
         // Update the applicant's status based on other criteria.
         applicant.update_status();
@@ -4785,7 +4790,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         applicant.update(db).await?;
 
         // Send the follow up email if we need to, this will also update the database.
-        applicant.send_email_follow_up_if_necessary(db).await;
+        applicant.send_email_follow_up_if_necessary(db).await?;
 
         // Create the GitHub onboarding issue if we need to.
         applicant

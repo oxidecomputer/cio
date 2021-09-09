@@ -140,7 +140,7 @@ pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
 
         review.expand(db);
 
-        review.update(db).await;
+        review.update(db).await?;
     }
 
     // Update them all from the database.

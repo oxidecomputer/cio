@@ -62,7 +62,7 @@ impl ApplicationForm {
         let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
         // Expand the application.
-        applicant.expand(db, &drive_client).await;
+        applicant.expand(db, &drive_client).await?;
 
         // Update airtable and the database again.
         applicant.update(db).await?;
