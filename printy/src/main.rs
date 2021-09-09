@@ -243,12 +243,11 @@ fn get_printer(name: &str) -> String {
         .expect("failed to execute process");
     if !output.status.success() {
         let e = format!(
-            "[lpstat] stderr: {}\nstdout: {}",
+            "lpstat stderr: {}\nstdout: {}",
             from_utf8(&output.stderr).unwrap(),
             from_utf8(&output.stdout).unwrap()
         );
-        info!("printers output: {}", e);
-        sentry::capture_message(&e, sentry::Level::Fatal);
+        warn!("{}", e);
         return "".to_string();
     }
 

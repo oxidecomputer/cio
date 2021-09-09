@@ -352,10 +352,7 @@ async fn listen_github_webhooks(
                         scope.set_tag("github.event.type", &event_type_string);
                     },
                     || {
-                        sentry::capture_message(
-                            &format!("`push` event commit `{}` is not distinct", commit.id),
-                            sentry::Level::Fatal,
-                        );
+                        warn!("`push` event commit `{}` is not distinct", commit.id);
                     },
                 );
                 sentry::end_session();
@@ -375,7 +372,7 @@ async fn listen_github_webhooks(
                         scope.set_tag("github.event.type", &event_type_string);
                     },
                     || {
-                        sentry::capture_message("`push` event branch name is empty", sentry::Level::Fatal);
+                        warn!("`push` event branch name is empty");
                     },
                 );
                 sentry::end_session();
@@ -558,7 +555,7 @@ async fn trigger_rfd_update_by_number(
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
-        sentry::capture_message(&format!("No RFD was found with number `{}`", num), sentry::Level::Fatal);
+        warn!("No RFD was found with number `{}`", num);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -665,10 +662,7 @@ async fn listen_google_sheets_edit_webhooks(
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
-        sentry::capture_message(
-            &format!("email cell returned empty for event: {:?}", event),
-            sentry::Level::Fatal,
-        );
+        warn!("email cell returned empty for event: {:?}", event);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -698,12 +692,9 @@ async fn listen_google_sheets_edit_webhooks(
         .filter(applicants::dsl::sheet_id.eq(event.spreadsheet.id.to_string()))
         .first::<Applicant>(&db.conn());
     if result.is_err() {
-        sentry::capture_message(
-            &format!(
-                "could not find applicant with email `{}`, sheet_id `{}` in the database",
-                email, event.spreadsheet.id
-            ),
-            sentry::Level::Fatal,
+        warn!(
+            "could not find applicant with email `{}`, sheet_id `{}` in the database",
+            email, event.spreadsheet.id
         );
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
@@ -758,13 +749,10 @@ async fn listen_google_sheets_edit_webhooks(
             match NaiveDate::parse_from_str(event.event.value.trim(), "%m/%d/%Y") {
                 Ok(v) => a.start_date = Some(v),
                 Err(e) => {
-                    sentry::capture_message(
-                        &format!(
-                            "error parsing start date from spreadsheet {}: {}",
-                            event.event.value.trim(),
-                            e
-                        ),
-                        sentry::Level::Info,
+                    warn!(
+                        "error parsing start date from spreadsheet {}: {}",
+                        event.event.value.trim(),
+                        e
                     );
                     a.start_date = None
                 }
@@ -980,10 +968,7 @@ async fn listen_google_sheets_row_create_webhooks(
     let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
 
     if applicant.email.is_empty() {
-        sentry::capture_message(
-            &format!("applicant has an empty email: {:?}", applicant),
-            sentry::Level::Fatal,
-        );
+        warn!("applicant has an empty email: {:?}", applicant);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1047,7 +1032,7 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1081,7 +1066,7 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1116,7 +1101,7 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1152,7 +1137,7 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1192,7 +1177,7 @@ async fn listen_airtable_applicants_update_webhooks(
     let api_context = rqctx.context();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1203,10 +1188,7 @@ async fn listen_airtable_applicants_update_webhooks(
         .unwrap();
 
     if applicant.status.is_empty() {
-        sentry::capture_message(
-            &format!("Got an empty applicant status for row: {}", applicant.email),
-            sentry::Level::Fatal,
-        );
+        warn!("got an empty applicant status for row: {}", applicant.email);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1252,7 +1234,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     let api_context = rqctx.context();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1272,7 +1254,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     }
 
     if shipment.email.is_empty() {
-        sentry::capture_message("Got an empty email for row", sentry::Level::Fatal);
+        warn!("got an empty email for row");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1316,7 +1298,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1357,7 +1339,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1395,7 +1377,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1430,7 +1412,7 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1579,12 +1561,9 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     i.cio_company_id = 1;
 
     if i.carrier.is_empty() {
-        sentry::capture_message(
-            &format!(
-                "could not find shipment for email:shipment: {:?}\nfields: {:?}\nfiles: {:?}",
-                i, form_data.fields, form_data.files
-            ),
-            sentry::Level::Info,
+        warn!(
+            "could not find shipment for email:shipment: {:?}\nfields: {:?}\nfiles: {:?}",
+            i, form_data.fields, form_data.files
         );
 
         // Return early.
@@ -1615,7 +1594,7 @@ async fn listen_applicant_review_requests(
     let event = body_param.into_inner();
 
     if event.name.is_empty() || event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
-        sentry::capture_message(&format!("review is empty: {:?}", event), sentry::Level::Fatal);
+        warn!("review is empty: {:?}", event);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1686,8 +1665,6 @@ async fn listen_application_files_upload_requests(
 
     let data = body_param.into_inner();
 
-    //sentry::capture_message(&format!("got application files: {:?}", data), sentry::Level::Info);
-
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
 
@@ -1700,10 +1677,7 @@ async fn listen_application_files_upload_requests(
         || data.resume_contents.is_empty()
         || data.user_name.is_empty()
     {
-        sentry::capture_message(
-            &format!("could not get applicant information for: {:?}", data),
-            sentry::Level::Info,
-        );
+        warn!("could not get applicant information for: {:?}", data);
 
         // Return early.
         sentry::end_session();
@@ -1806,7 +1780,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        sentry::capture_message("Record id is empty", sentry::Level::Fatal);
+        warn!("record id is empty");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1821,7 +1795,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
-        sentry::capture_message("tracking_number and carrier are empty, ignoring", sentry::Level::Fatal);
+        warn!("tracking_number and carrier are empty, ignoring");
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -1879,10 +1853,7 @@ async fn listen_shippo_tracking_update_webhooks(
 
     let event = body_param.into_inner();
     let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
-        sentry::capture_message(
-            &format!("decoding event body for shippo `{}` failed: {}", event.to_string(), e),
-            sentry::Level::Info,
-        );
+        warn!("decoding event body for shippo `{}` failed: {}", event.to_string(), e);
 
         Default::default()
     });
@@ -1983,10 +1954,7 @@ async fn listen_checkr_background_update_webhooks(
         || event.data.object.status.is_empty()
     {
         // Return early we don't care.
-        sentry::capture_message(
-            &format!("checkr candidate id is empty for event: {:?}", event),
-            sentry::Level::Info,
-        );
+        warn!("checkr candidate id is empty for event: {:?}", event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -1996,10 +1964,7 @@ async fn listen_checkr_background_update_webhooks(
     let checkr_auth = oxide.authenticate_checkr();
     if checkr_auth.is_none() {
         // Return early.
-        sentry::capture_message(
-            &format!("this company {:?} does not have a checkr api key: {:?}", oxide, event),
-            sentry::Level::Info,
-        );
+        warn!("this company {:?} does not have a checkr api key: {:?}", oxide, event);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -2179,7 +2144,7 @@ async fn listen_auth_github_callback(
     sentry::start_session();
     let event = body_param.into_inner();
 
-    sentry::capture_message(&format!("github callback: {:?}", event), sentry::Level::Info);
+    warn!("github callback: {:?}", event);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2365,7 +2330,7 @@ async fn listen_auth_zoom_deauthorization(
 
     let event = body_param.into_inner();
 
-    sentry::capture_message(&format!("zoom deauthorization: {:?}", event), sentry::Level::Info);
+    warn!("zoom deauthorization: {:?}", event);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2793,7 +2758,7 @@ async fn listen_auth_plaid_callback(
     sentry::start_session();
     let event = body_args.into_inner();
 
-    sentry::capture_message(&format!("plaid callback: {:?}", event), sentry::Level::Info);
+    warn!("plaid callback: {:?}", event);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -3210,8 +3175,6 @@ async fn listen_slack_commands_webhooks(
                 merge_json(&mut msg, obj);
             }
 
-            sentry::capture_message(&format!("applicants -> {}", msg.to_string()), sentry::Level::Info);
-
             msg
         }
         SlackCommand::Applicant => {
@@ -3267,7 +3230,6 @@ async fn listen_slack_commands_webhooks(
                 merge_json(&mut msg, obj);
             }
 
-            sentry::capture_message(&format!("papers -> {}", msg.to_string()), sentry::Level::Info);
             msg
         }
         SlackCommand::Paper => {
@@ -3475,13 +3437,7 @@ impl GitHubWebhook {
         {
             Ok(check) => return Ok(check.id),
             Err(e) => {
-                sentry::capture_message(
-                    &format!(
-                        "unable to create check run on pull request event: {}\n{:#?}",
-                        e, self.pull_request
-                    ),
-                    sentry::Level::Fatal,
-                );
+                warn!("unable to create check run on pull request event: {}", e,);
             }
         }
 
@@ -3538,13 +3494,7 @@ impl GitHubWebhook {
             )
             .await
         {
-            sentry::capture_message(
-                &format!(
-                    "unable to update check run {} on pull request event: {}\n{:#?}",
-                    id, e, self.pull_request
-                ),
-                sentry::Level::Fatal,
-            );
+            warn!("unable to update check run {} on pull request event: {}", id, e);
         }
 
         Ok(())
@@ -3578,13 +3528,7 @@ impl GitHubWebhook {
                 )
                 .await
                 {
-                    sentry::capture_message(
-                        &format!(
-                            "unable to create comment `{}` on commit event: {}\n{:#?}",
-                            comment, e, self.commits
-                        ),
-                        sentry::Level::Fatal,
-                    );
+                    warn!("unable to create comment `{}` on commit event: {}", comment, e);
                 }
             }
         }
@@ -3943,12 +3887,9 @@ async fn handle_rfd_pull_request(
             a("[SUCCESS]: update pull request title and labels");
         }
         Err(e) => {
-            sentry::capture_message(
-                &format!(
-                    "unable to update pull request tile and labels for pr#{}: {}",
-                    event.pull_request.number, e,
-                ),
-                sentry::Level::Fatal,
+            warn!(
+                "unable to update pull request tile and labels for pr#{}: {}",
+                event.pull_request.number, e,
             );
 
             a(&format!(
@@ -4068,11 +4009,8 @@ async fn handle_rfd_push(
 
     if event.commits.is_empty() {
         // Return early that there are no commits.
-        // IDK how we got here.
-        sentry::capture_message(
-            &format!("rfd push event had no commits: {:?}", event),
-            sentry::Level::Fatal,
-        );
+        // IDK how we got here, since we check this above in the main github handler.
+        warn!("rfd `push` event had no commits");
         return Ok(String::new());
     }
 
@@ -4298,12 +4236,9 @@ async fn handle_rfd_push(
                                 a("[SUCCESS]: update pull request title and labels");
                             }
                             Err(e) => {
-                                sentry::capture_message(
-                                    &format!(
-                                        "unable to update pull request for pr#{}: {}",
-                                        event.pull_request.number, e,
-                                    ),
-                                    sentry::Level::Fatal,
+                                warn!(
+                                    "unable to update pull request for pr#{}: {}",
+                                    event.pull_request.number, e,
                                 );
 
                                 a(&format!(
@@ -4455,10 +4390,8 @@ async fn handle_configs_push(
     if event.commits.is_empty() {
         // Return early that there are no commits.
         // IDK how we got here.
-        sentry::capture_message(
-            &format!("configs push event had no commits: {:?}", event),
-            sentry::Level::Fatal,
-        );
+        // We should never get here since we check this above in the main loop.
+        warn!("configs `push` event had no commits");
         return Ok("".to_string());
     }
 
