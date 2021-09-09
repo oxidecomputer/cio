@@ -5,7 +5,9 @@ use chrono::{NaiveDate, TimeZone, Utc};
 use chrono_humanize::HumanTime;
 use cio_api::{
     applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
+    asset_inventory::AssetItem,
     companies::Company,
+    configs::User,
     journal_clubs::JournalClubMeeting,
     rfds::RFD,
     schema::{applicants, journal_club_meetings, rfds},
@@ -19,8 +21,8 @@ use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType};
 
 use crate::{
-    slack_commands::SlackCommand, Context, CounterResponse, GitHubRateLimit, GoogleSpreadsheetEditEvent,
-    GoogleSpreadsheetRowCreateEvent, RFDPathParams,
+    slack_commands::SlackCommand, AirtableRowEvent, Context, CounterResponse, GitHubRateLimit,
+    GoogleSpreadsheetEditEvent, GoogleSpreadsheetRowCreateEvent, RFDPathParams,
 };
 
 pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
@@ -581,4 +583,49 @@ pub async fn handle_slack_commands(
     };
 
     Ok(response)
+}
+
+pub async fn handle_airtable_employees_print_home_address_label(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    // Get the row from airtable.
+    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    // Create a new shipment for the employee and print the label.
+    user.create_shipment_to_home_address(&api_context.db).await?;
+
+    Ok(())
+}
+
+pub async fn handle_airtable_assets_items_print_barcode_label(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    // Get the row from airtable.
+    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    // Print the barcode label(s).
+    asset_item.print_label(&api_context.db).await?;
+    info!("asset item {} printed label", asset_item.name);
+
+    Ok(())
 }

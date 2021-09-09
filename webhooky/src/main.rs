@@ -17,9 +17,7 @@ use cio_api::{
     analytics::NewPageView,
     api_tokens::{APIToken, NewAPIToken},
     applicants::Applicant,
-    asset_inventory::AssetItem,
     companies::Company,
-    configs::User,
     db::Database,
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
@@ -495,23 +493,11 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
-    let event = body_param.into_inner();
-
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_employees_print_home_address_label(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    // Get the row from airtable.
-    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    // Create a new shipment for the employee and print the label.
-    user.create_shipment_to_home_address(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -529,24 +515,11 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
-    let event = body_param.into_inner();
-
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_assets_items_print_barcode_label(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    // Get the row from airtable.
-    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    // Print the barcode label(s).
-    asset_item.print_label(&api_context.db).await.unwrap();
-    info!("asset item {} printed label", asset_item.name);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
