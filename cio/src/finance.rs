@@ -1354,7 +1354,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        sync_quickbooks(&db, &oxide).await;
+        sync_quickbooks(&db, &oxide).await.unwrap();
     }
 
     #[ignore]
@@ -1366,7 +1366,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_bill_com_transactions(&db, &oxide).await;
+        refresh_bill_com_transactions(&db, &oxide).await.unwrap();
     }
 
     #[ignore]
@@ -1378,7 +1378,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_expensify_transactions(&db, &oxide).await;
+        refresh_expensify_transactions(&db, &oxide).await.unwrap();
     }
 
     #[ignore]

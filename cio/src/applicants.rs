@@ -4856,7 +4856,7 @@ mod tests {
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        update_applicant_reviewers_leaderboard(&db, &oxide).await;
+        update_applicant_reviewers_leaderboard(&db, &oxide).await.unwrap();
     }
 
     #[ignore]
@@ -4866,7 +4866,7 @@ mod tests {
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_background_checks(&db, &oxide).await;
+        refresh_background_checks(&db, &oxide).await.unwrap();
     }
 
     #[ignore]
@@ -4903,10 +4903,10 @@ mod tests {
 
         // These come from the sheet at:
         // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-        update_applications_with_scoring_forms(&db, &oxide).await;
+        update_applications_with_scoring_forms(&db, &oxide).await.unwrap();
 
         // This must be after update_applications_with_scoring_forms, so that if someone
         // has done the application then we remove them from the scorers.
-        update_applications_with_scoring_results(&db, &oxide).await;
+        update_applications_with_scoring_results(&db, &oxide).await.unwrap();
     }
 }
