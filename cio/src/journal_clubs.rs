@@ -141,9 +141,11 @@ impl JournalClubMeeting {
 /// Implement updating the Airtable record for a JournalClubMeeting.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
-    async fn update_airtable_record(&mut self, record: JournalClubMeeting) {
+    async fn update_airtable_record(&mut self, record: JournalClubMeeting) -> Result<()> {
         // Set the papers field, since it is pre-populated as table links.
         self.papers = record.papers;
+
+        Ok(())
     }
 }
 

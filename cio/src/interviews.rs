@@ -74,15 +74,14 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 }
 
 /// Sync interviews.
-pub async fn refresh_interviews(db: &Database, company: &Company) {
+pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> {
     let gcal = company.authenticate_google_calendar(db).await.unwrap();
 
     // Get the list of our calendars.
     let calendars = gcal
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
-        .await
-        .unwrap();
+        .await?;
 
     // Iterate over the calendars.
     for calendar in calendars {
@@ -112,8 +111,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
                 "",   // time_zone
                 "",   // updated_min
             )
-            .await
-            .unwrap();
+            .await?;
 
         for event in events {
             // If the event has been cancelled, clear it out of the database.
@@ -258,31 +256,32 @@ pub async fn refresh_interviews(db: &Database, company: &Company) {
         }
     }
 
-    ApplicantInterviews::get_from_db(db, company.id)
+    ApplicantInterviews::get_from_db(db, company.id)?
         .update_airtable(db)
-        .await;
+        .await?;
+
+    Ok(())
 }
 
 /// Compile interview packets for each interviewee.
 #[allow(clippy::type_complexity)]
-pub async fn compile_packets(db: &Database, company: &Company) {
+pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
     // Initialize the Google Drive client.
     let drive_client = company.authenticate_google_drive(db).await.unwrap();
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
     let parent_id = drive_client
         .files()
         .create_folder(&drive_id, "", "interview_packets")
-        .await
-        .unwrap();
+        .await?;
 
     // Iterate over each user we have in gsuite and download their materials
     // locally.
-    let employees = Users::get_from_db(db, company.id);
+    let employees = Users::get_from_db(db, company.id)?;
     for employee in employees {
         if employee.is_system_account() {
             continue;
@@ -309,7 +308,7 @@ pub async fn compile_packets(db: &Database, company: &Company) {
         download_materials(&drive_client, &materials_url, &employee.username).await;
     }
 
-    let interviews = ApplicantInterviews::get_from_db(db, company.id);
+    let interviews = ApplicantInterviews::get_from_db(db, company.id)?;
 
     // Let's group the interviewers into each interview.
     let mut interviewers: HashMap<String, Vec<(User, DateTime<Tz>, DateTime<Tz>)>> = HashMap::new();
@@ -410,8 +409,8 @@ The Oxide Team
             // Generate a cover for the packet.
             let mut cover_path = env::temp_dir();
             cover_path.push(format!("{}.html", email.to_string()));
-            let mut file = fs::File::create(&cover_path).unwrap();
-            file.write_all(cover_html.as_bytes()).unwrap();
+            let mut file = fs::File::create(&cover_path)?;
+            file.write_all(cover_html.as_bytes())?;
             let mut cover_output = env::temp_dir();
             cover_output.push(format!("{}.pdf", email.to_string()));
             // Convert it to a PDF with pandoc.
@@ -421,8 +420,7 @@ The Oxide Team
                     cover_output.clone().to_str().unwrap(),
                     cover_path.to_str().unwrap(),
                 ])
-                .output()
-                .unwrap();
+                .output()?;
 
             // Add the header to our strings.
             let mut args = vec![cover_output.to_str().unwrap().to_string()];
@@ -434,7 +432,7 @@ The Oxide Team
                 // Generate a header for the interviewee.
                 let mut html_path = env::temp_dir();
                 html_path.push(format!("{}-{}.html", email.to_string(), username));
-                let mut file = fs::File::create(&html_path).unwrap();
+                let mut file = fs::File::create(&html_path)?;
                 // TODO: add the date and time and the real name here.
                 file.write_all(
                     format!(
@@ -445,8 +443,7 @@ The Oxide Team
                         end_time.format("%l:%M%P %Z")
                     )
                     .as_bytes(),
-                )
-                .unwrap();
+                )?;
                 let mut header_output = env::temp_dir();
                 header_output.push(format!("{}-{}.pdf", email.to_string(), username));
                 // Convert it to a PDF with pandoc.
@@ -456,8 +453,7 @@ The Oxide Team
                         header_output.clone().to_str().unwrap(),
                         html_path.to_str().unwrap(),
                     ])
-                    .output()
-                    .unwrap();
+                    .output()?;
 
                 // Add the header to our string.
                 args.push(header_output.to_str().unwrap().to_string());
@@ -485,11 +481,12 @@ The Oxide Team
         let drive_file = drive_client
             .files()
             .create_or_update(&drive_id, &parent_id, &filename, "application/pdf", &buffer)
-            .await
-            .unwrap();
+            .await?;
         applicant.interview_packet = format!("https://drive.google.com/open?id={}", drive_file.id);
         applicant.update(db).await;
     }
+
+    Ok(())
 }
 
 /// Download materials file from Google drive and save it as a pdf under the persons username.
@@ -796,7 +793,7 @@ mod tests {
         // Get the company id for Oxide.
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-        refresh_interviews(&db, &oxide).await;
-        compile_packets(&db, &oxide).await;
+        refresh_interviews(&db, &oxide).await.unwrap();
+        compile_packets(&db, &oxide).await.unwrap();
     }
 }

@@ -255,7 +255,7 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
     }
 }
 
-pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
+pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
     if r.is_none() {
@@ -272,8 +272,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
             "", // department id
             "", // location id
         )
-        .await
-        .unwrap();
+        .await?;
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
         ramp_users.insert(format!("{}{}", user.first_name, user.last_name), user.email.to_string());
@@ -297,8 +296,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
             0.0,   // max amount
             false, // requires memo
         )
-        .await
-        .unwrap();
+        .await?;
     for transaction in transactions {
         let mut attachments = Vec::new();
         // Get the reciept for the transaction, if they exist.
@@ -308,12 +306,10 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
         }
 
         // Get the user's email for the transaction.
-        let email = ramp_users
-            .get(&format!(
-                "{}{}",
-                transaction.card_holder.first_name, transaction.card_holder.last_name
-            ))
-            .unwrap();
+        let email = ramp_users.get(&format!(
+            "{}{}",
+            transaction.card_holder.first_name, transaction.card_holder.last_name
+        ))?;
 
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&transaction.merchant_name);
@@ -345,20 +341,22 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) {
             cio_company_id: company.id,
         };
 
-        nt.upsert(db).await;
+        nt.upsert(db).await?;
     }
 
-    CreditCardTransactions::get_from_db(db, company.id)
+    CreditCardTransactions::get_from_db(db, company.id)?
         .update_airtable(db)
-        .await;
+        .await?;
+
+    Ok(())
 }
 
-pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
+pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
     if r.is_none() {
         // Return early.
-        return;
+        return Ok(());
     }
 
     let ramp = r.unwrap();
@@ -370,24 +368,23 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
             "", // department id
             "", // location id
         )
-        .await
-        .unwrap();
+        .await?;
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
         ramp_users.insert(user.id.to_string(), user.email.to_string());
     }
 
-    let reimbursements = ramp.reimbursements().get_all().await.unwrap();
+    let reimbursements = ramp.reimbursements().get_all().await?;
     for reimbursement in reimbursements {
         let mut attachments = Vec::new();
         // Get the reciepts for the reimbursement, if they exist.
         for receipt_id in reimbursement.receipts {
-            let receipt = ramp.receipts().get_receipt(&receipt_id).await.unwrap();
+            let receipt = ramp.receipts().get_receipt(&receipt_id).await?;
             attachments.push(receipt.receipt_url.to_string());
         }
 
         // Get the user's email for the reimbursement.
-        let email = ramp_users.get(&reimbursement.user_id).unwrap();
+        let email = ramp_users.get(&reimbursement.user_id)?;
 
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&reimbursement.merchant);
@@ -419,10 +416,12 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) {
             cio_company_id: company.id,
         };
 
-        nt.upsert(db).await;
+        nt.upsert(db).await?;
     }
 
-    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
+    ExpensedItems::get_from_db(db, company.id)?.update_airtable(db).await?;
+
+    Ok(())
 }
 
 // Changes the vendor name to one that matches our existing list.
@@ -799,7 +798,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
         record.cio_company_id = company.id;
 
         // Let's add the record to our database.
-        record.upsert(db).await;
+        record.upsert(db).await?;
     }
 }
 
@@ -879,13 +878,12 @@ pub mod bill_com_date_format {
 }
 
 /// Sync accounts payable.
-pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
+pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Result<()> {
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<AccountsPayable>> = company
         .authenticate_airtable(&company.airtable_base_id_finance)
         .list_records(&AccountsPayable::airtable_table(), "Grid view", vec![])
-        .await
-        .unwrap();
+        .await?;
     for bill_record in results {
         let mut bill: NewAccountsPayable = bill_record.fields.into();
 
@@ -901,7 +899,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
         }
 
         // Upsert the record in our database.
-        let mut db_bill = bill.upsert_in_db(db);
+        let mut db_bill = bill.upsert_in_db(db)?;
 
         db_bill.cio_company_id = company.id;
 
@@ -912,7 +910,11 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) {
         db_bill.update(db).await;
     }
 
-    AccountsPayables::get_from_db(db, company.id).update_airtable(db).await;
+    AccountsPayables::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
+    Ok(())
 }
 
 #[db {
@@ -981,10 +983,10 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
-pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
-    ExpensedItems::get_from_db(db, company.id).update_airtable(db).await;
+pub async fn refresh_expensify_transactions(db: &Database, company: &Company) -> Result<()> {
+    ExpensedItems::get_from_db(db, company.id)?.update_airtable(db).await?;
 
-    let mut path = env::current_dir().unwrap();
+    let mut path = env::current_dir()?;
     path.push("expensify.csv");
 
     if !path.exists() {
@@ -993,14 +995,14 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
             "Expensify csv at {} does not exist, returning early",
             path.to_str().unwrap()
         );
-        return;
+        return Ok(());
     }
 
     println!("Reading csv from {}", path.to_str().unwrap());
-    let f = File::open(&path).unwrap();
+    let f = File::open(&path)?;
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
-        let mut record: NewExpensedItem = result.unwrap();
+        let mut record: NewExpensedItem = result?;
         record.expenses_vendor = "Expensify".to_string();
         record.state = "CLEARED".to_string();
         record.cio_company_id = company.id;
@@ -1047,7 +1049,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         // Grab the card_id and set it as part of receipts.
         if !record.card_id.is_empty() && record.employee_email != "allison@oxidecomputer.com" {
             // Get the URL.
-            let body = reqwest::get(&record.card_id).await.unwrap().text().await.unwrap();
+            let body = reqwest::get(&record.card_id).await?.text().await?;
             let split = body.split(' ');
             let vec: Vec<&str> = split.collect();
 
@@ -1091,14 +1093,16 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) {
         }
 
         // Let's add the record to our database.
-        record.upsert(db).await;
+        record.upsert(db).await?;
     }
+
+    Ok(())
 }
 
 /// Read the Bill.com payments from a csv.
 /// We don't run this except locally.
-pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
-    let mut path = env::current_dir().unwrap();
+pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> Result<()> {
+    let mut path = env::current_dir()?;
     path.push("bill.com.csv");
 
     if !path.exists() {
@@ -1107,14 +1111,14 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
             "Bill.com csv at {} does not exist, returning early",
             path.to_str().unwrap()
         );
-        return;
+        return Ok(());
     }
 
     println!("Reading csv from {}", path.to_str().unwrap());
     let f = File::open(&path).unwrap();
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
-        let mut record: NewAccountsPayable = result.unwrap();
+        let mut record: NewAccountsPayable = result?;
 
         // Get the amount from the notes.
         let sa = record.notes.replace('$', "").replace(',', "");
@@ -1143,8 +1147,10 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) {
         record.cio_company_id = company.id;
 
         // Let's add the record to our database.
-        record.upsert(db).await;
+        record.upsert(db).await?;
     }
+
+    Ok(())
 }
 
 pub async fn sync_quickbooks(db: &Database, company: &Company) {
@@ -1364,7 +1370,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_brex_transactions(&db, &oxide).await;
+        refresh_brex_transactions(&db, &oxide).await.unwrap();
     }
 
     #[ignore]
@@ -1372,10 +1378,10 @@ mod tests {
     async fn test_finance_ramp_reimbursements() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
-            refresh_ramp_reimbursements(&db, &company).await;
+            refresh_ramp_reimbursements(&db, &company).await.unwrap();
         }
     }
 
@@ -1384,10 +1390,10 @@ mod tests {
     async fn test_finance_ramp_transactions() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
-            refresh_ramp_transactions(&db, &company).await;
+            refresh_ramp_transactions(&db, &company).await.unwrap();
         }
     }
 
@@ -1396,10 +1402,10 @@ mod tests {
     async fn test_accounts_payable() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
-            refresh_accounts_payable(&db, &company).await;
+            refresh_accounts_payable(&db, &company).await.unwrap();
         }
     }
 
@@ -1408,10 +1414,10 @@ mod tests {
     async fn test_vendors() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
-            refresh_software_vendors(&db, &company).await;
+            refresh_software_vendors(&db, &company).await.unwrap();
         }
     }
 }

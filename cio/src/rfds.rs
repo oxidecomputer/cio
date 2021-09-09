@@ -935,7 +935,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
 
     // Sync rfds.
     for (_, rfd) in rfds {
-        let mut new_rfd = rfd.upsert(db).await;
+        let mut new_rfd = rfd.upsert(db).await?;
 
         // Expand the fields in the RFD.
         if let Err(err) = new_rfd.expand(&github, company).await {
@@ -1106,6 +1106,8 @@ pub async fn send_rfd_changelog(company: &Company) -> Result<()> {
             &format!("rfds@{}", company.gsuite_domain),
         )
         .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -83,11 +83,11 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 }
 
 /// Sync the recorded meetings from zoom.
-pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
+pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
     let zoom_auth = company.authenticate_zoom(db).await;
     if zoom_auth.is_none() {
         // Return early, this company does not use Zoom.
-        return;
+        return Ok(());
     }
 
     let mut zoom = zoom_auth.unwrap();
@@ -100,26 +100,24 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             Some(Utc::now().checked_sub_signed(Duration::days(30)).unwrap()), // from: the max date range is a month.
             Some(Utc::now()), // to
         )
-        .await
-        .unwrap();
+        .await?;
 
     if recordings.is_empty() {
         // Return early.
-        return;
+        return Ok(());
     }
 
     // Initialize the Google Drive client.
     let drive = company.authenticate_google_drive(db).await.unwrap();
 
     // Get the shared drive.
-    let shared_drive = drive.drives().get_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
 
     // Create the folder for our zoom recordings.
     let recordings_folder_id = drive
         .files()
         .create_folder(&shared_drive.id, "", "zoom_recordings")
-        .await
-        .unwrap();
+        .await?;
 
     // We need the zoom token to download the URL.
     let at = zoom.refresh_access_token().await.unwrap();
@@ -139,8 +137,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                 &recordings_folder_id,
                 &meeting.start_time.unwrap().to_string(),
             )
-            .await
-            .unwrap();
+            .await?;
 
         let mut transcript = String::new();
         let mut transcript_id = String::new();
@@ -174,10 +171,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                 "[zoom] meeting {} -> downloading recording {}... This might take a bit...",
                 meeting.topic, recording.download_url,
             );
-            let resp = reqwest::get(&format!("{}?access_token={}", recording.download_url, at.access_token))
-                .await
-                .unwrap();
-            let b = resp.bytes().await.unwrap();
+            let resp = reqwest::get(&format!("{}?access_token={}", recording.download_url, at.access_token)).await?;
+            let b = resp.bytes().await?;
 
             // Get the mime type.
             let mime_type = file_type.get_mime_type();
@@ -200,8 +195,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                     &mime_type,
                     &b,
                 )
-                .await
-                .unwrap();
+                .await?;
 
             match *file_type {
                 GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => {
@@ -213,12 +207,12 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                         .with_timezone(&Utc);
                 }
                 GetAccountCloudRecordingResponseMeetingsFilesFileType::Transcript => {
-                    transcript = from_utf8(&b).unwrap().to_string();
+                    transcript = from_utf8(&b)?.to_string();
                     transcript_id = recording.id.to_string();
                 }
                 GetAccountCloudRecordingResponseMeetingsFilesFileType::Chat => {
                     chat_log_link = format!("https://drive.google.com/open?id={}", drive_file.id);
-                    chat_log = from_utf8(&b).unwrap().to_string();
+                    chat_log = from_utf8(&b)?.to_string();
                 }
                 _ => (),
             }
@@ -229,8 +223,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                     &recording.id,
                     zoom_api::types::RecordingDeleteAction::Trash,
                 )
-                .await
-                .unwrap();
+                .await?;
             println!(
             "[zoom] deleted meeting {} recording in Zoom since they are now in Google drive at https://drive.google.com/open?id={}",
                 meeting.topic,
@@ -244,8 +237,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
                     .eq(meeting.host_id.to_string())
                     .and(users::dsl::cio_company_id.eq(company.id)),
             )
-            .first::<User>(&db.conn())
-            .unwrap();
+            .first::<User>(&db.conn())?;
 
         // Create the meeting in the database.
         let m = NewRecordedMeeting {
@@ -267,13 +259,17 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) {
             event_link: video_html_link,
             cio_company_id: company.id,
         };
-        m.upsert(db).await;
+        m.upsert(db).await?;
     }
+
+    Ok(())
 }
 
 /// Sync the recorded meetings from Google.
-pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) {
-    RecordedMeetings::get_from_db(db, company.id).update_airtable(db).await;
+pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
+    RecordedMeetings::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
 
     let mut gcal = company.authenticate_google_calendar(db).await.unwrap();
     let revai = RevAI::new_from_env();
@@ -282,8 +278,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     let calendars = gcal
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
-        .await
-        .unwrap();
+        .await?;
 
     // Iterate over the calendars.
     for calendar in calendars {
@@ -312,8 +307,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     "",                       // time_zone
                     "",                       // updated_min
                 )
-                .await
-                .unwrap();
+                .await?;
 
             for event in events {
                 // Let's check if there are attachments. We only care if there are attachments.
@@ -419,7 +413,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 }
 
                 // Upsert the meeting in the database.
-                let mut db_meeting = meeting.upsert(db).await;
+                let mut db_meeting = meeting.upsert(db).await?;
 
                 if !video_contents.is_empty() {
                     // Only do this if we have the video contents.
@@ -428,7 +422,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         // If we don't have a transcript ID, let's post the video to be
                         // transcribed.
                         // Now let's upload it to rev.ai so it can start a job.
-                        let job = revai.create_job(video_contents).await.unwrap();
+                        let job = revai.create_job(video_contents).await?;
                         // Set the transcript id.
                         db_meeting.transcript_id = job.id.to_string();
                         db_meeting.update(db).await;
@@ -449,6 +443,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             }
         }
     }
+
+    Ok(())
 }
 
 trait FileInfo {
@@ -499,10 +495,10 @@ mod tests {
     async fn test_zoom_recorded_meetings() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
-            refresh_zoom_recorded_meetings(&db, &company).await;
+            refresh_zoom_recorded_meetings(&db, &company).await.unwrap();
         }
     }
 
@@ -511,10 +507,10 @@ mod tests {
     async fn test_google_recorded_meetings() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
-            refresh_google_recorded_meetings(&db, &company).await;
+            refresh_google_recorded_meetings(&db, &company).await.unwrap();
         }
     }
 }

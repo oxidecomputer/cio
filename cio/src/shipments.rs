@@ -435,7 +435,7 @@ impl OutboundShipments {
             // We can return early.
             // This should not happen.
             println!("[create_pickup] carrier account id for usps cannot be empty.");
-            return;
+            return Ok(());
         }
 
         // Get the next buisness day for pickup.

@@ -546,7 +546,7 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
     let github_repos = list_all_github_repos(github, company).await?;
 
     // Get all the repos.
-    let db_repos = GithubRepos::get_from_db(db, company.id);
+    let db_repos = GithubRepos::get_from_db(db, company.id)?;
 
     // Create a BTreeMap
     let mut repo_map: BTreeMap<String, GithubRepo> = Default::default();
@@ -556,7 +556,7 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
 
     // Sync github_repos.
     for github_repo in github_repos {
-        github_repo.upsert(db).await;
+        github_repo.upsert(db).await?;
 
         // Remove the repo from the map.
         repo_map.remove(&github_repo.name);
@@ -566,7 +566,7 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
     // This is found by the remaining repos that are in the map since we removed
     // the existing repos from the map above.
     for (_, repo) in repo_map {
-        repo.delete(db).await;
+        repo.delete(db).await?;
     }
 
     Ok(())
@@ -603,7 +603,7 @@ pub mod deserialize_null_string {
  * - Adds outside collaborators to their specified repositories.
  */
 pub async fn sync_all_repo_settings(db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
-    let repos = GithubRepos::get_from_db(db, company.id);
+    let repos = GithubRepos::get_from_db(db, company.id)?;
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {
