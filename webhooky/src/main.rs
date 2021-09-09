@@ -13,10 +13,7 @@ extern crate serde_json;
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::Result;
-use cio_api::{
-    analytics::NewPageView, db::Database, mailing_list::MailingListSubscriber, rack_line::RackLineSubscriber,
-    swag_store::Order,
-};
+use cio_api::{analytics::NewPageView, db::Database, swag_store::Order};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
@@ -25,13 +22,12 @@ use dropshot::{
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use log::{info, warn};
-use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
+use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
-use serde_qs::Config as QSConfig;
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
@@ -1389,19 +1385,12 @@ async fn listen_analytics_page_view_webhooks(
     body_param: TypedBody<NewPageView>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let db = &api_context.db;
 
-    let mut event = body_param.into_inner();
+    if let Err(e) = crate::handlers::handle_analytics_page_view(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
 
-    // Expand the page_view.
-    event.set_page_link();
-    event.set_company_id(db).unwrap();
-
-    // Add the page_view to the database and Airttable.
-    let pv = event.create(db).await.unwrap();
-
-    info!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1427,31 +1416,10 @@ async fn listen_mailchimp_mailing_list_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let db = &api_context.db;
 
-    // We should have a string, which we will then parse into our args.
-    let event_string = body_param.as_str().unwrap().to_string();
-    let qs_non_strict = QSConfig::new(10, false);
-
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
-
-    if event.webhook_type != *"subscribe" {
-        info!("not a `subscribe` event, got `{}`", event.webhook_type);
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db).unwrap();
-
-    let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
-    if existing.is_none() {
-        // Update the subscriber in the database.
-        let subscriber = new_subscriber.upsert(db).await.unwrap();
-
-        info!("subscriber {} created successfully", subscriber.email);
-    } else {
-        info!("subscriber {} already exists", new_subscriber.email);
+    if let Err(e) = crate::handlers::handle_mailchimp_mailing_list(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -1479,38 +1447,10 @@ async fn listen_mailchimp_rack_line_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let db = &api_context.db;
 
-    // We should have a string, which we will then parse into our args.
-    let event_string = body_param.as_str().unwrap().to_string();
-    let qs_non_strict = QSConfig::new(10, false);
-
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
-
-    if event.webhook_type != *"subscribe" {
-        info!("not a `subscribe` event, got `{}`", event.webhook_type);
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Parse the webhook as a new rack line subscriber.
-    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db);
-
-    // let company = Company::get_by_id(db, new_subscriber.cio_company_id);
-
-    let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
-    if existing.is_none() {
-        // Update the subscriber in the database.
-        let subscriber = new_subscriber.upsert(db).await.unwrap();
-
-        // Parse the signup into a slack message.
-        // Send the message to the slack channel.
-        //company.post_to_slack_channel(db, new_subscriber.as_slack_msg()).await;
-        info!("subscriber {} posted to Slack", subscriber.email);
-
-        info!("subscriber {} created successfully", subscriber.email);
-    } else {
-        info!("subscriber {} already exists", new_subscriber.email);
+    if let Err(e) = crate::handlers::handle_mailchimp_rack_line(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();

@@ -4,11 +4,14 @@ use anyhow::{bail, Result};
 use chrono::{NaiveDate, TimeZone, Utc};
 use chrono_humanize::HumanTime;
 use cio_api::{
+    analytics::NewPageView,
     applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
     asset_inventory::AssetItem,
     companies::Company,
     configs::User,
     journal_clubs::JournalClubMeeting,
+    mailing_list::MailingListSubscriber,
+    rack_line::RackLineSubscriber,
     rfds::RFD,
     schema::{applicants, journal_club_meetings, rfds},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
@@ -20,7 +23,9 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, 
 use dropshot::{Path, RequestContext, TypedBody, UntypedBody};
 use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
+use mailchimp_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType};
 
@@ -71,8 +76,7 @@ pub async fn handle_rfd_update_by_number(
     let result = RFD::get_from_db(db, num);
     if result.is_none() {
         // Return early, we couldn't find an RFD.
-        warn!("no RFD was found with number `{}`", num);
-        return Ok(());
+        bail!("no RFD was found with number `{}`", num);
     }
     let mut rfd = result.unwrap();
 
@@ -150,8 +154,7 @@ pub async fn handle_google_sheets_edit(
 
     if email.is_empty() {
         // We can return early, the row does not have an email.
-        warn!("email cell returned empty for event: {:?}", event);
-        return Ok(());
+        bail!("email cell returned empty for event: {:?}", event);
     }
 
     // Now let's get the header for the column of the cell that changed.
@@ -357,8 +360,7 @@ pub async fn handle_google_sheets_row_create(
     let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
 
     if applicant.email.is_empty() {
-        warn!("applicant has an empty email: {:?}", applicant);
-        return Ok(());
+        bail!("applicant has an empty email: {:?}", applicant);
     }
 
     // We do not need to add one to the end of the columns to get the column where the email sent verification is
@@ -599,8 +601,7 @@ pub async fn handle_airtable_employees_print_home_address_label(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     // Get the row from airtable.
@@ -621,8 +622,7 @@ pub async fn handle_airtable_assets_items_print_barcode_label(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     // Get the row from airtable.
@@ -644,8 +644,7 @@ pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     // Get the row from airtable.
@@ -668,8 +667,7 @@ pub async fn handle_airtable_applicants_request_background_check(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     // Get the row from airtable.
@@ -692,16 +690,14 @@ pub async fn handle_airtable_applicants_update(
     let api_context = rqctx.context();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     // Get the row from airtable.
     let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
 
     if applicant.status.is_empty() {
-        warn!("got an empty applicant status for row: {}", applicant.email);
-        return Ok(());
+        bail!("got an empty applicant status for row: {}", applicant.email);
     }
 
     // Grab our old applicant from the database.
@@ -735,8 +731,7 @@ pub async fn handle_airtable_shipments_outbound_create(
     let api_context = rqctx.context();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     // Get the row from airtable.
@@ -752,8 +747,7 @@ pub async fn handle_airtable_shipments_outbound_create(
     }
 
     if shipment.email.is_empty() {
-        warn!("got an empty email for row");
-        return Ok(());
+        bail!("got an empty email for row");
     }
 
     // Update the row in our database.
@@ -774,8 +768,7 @@ pub async fn handle_airtable_shipments_outbound_reprint_label(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("got an empty email for row");
     }
 
     let api_context = rqctx.context();
@@ -804,8 +797,7 @@ pub async fn handle_airtable_shipments_outbound_reprint_receipt(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("got an empty email for row");
     }
 
     let api_context = rqctx.context();
@@ -830,8 +822,7 @@ pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     let api_context = rqctx.context();
@@ -853,8 +844,7 @@ pub async fn handle_airtable_shipments_outbound_schedule_pickup(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     // Schedule the pickup.
@@ -947,13 +937,12 @@ pub async fn handle_emails_incoming_sendgrid_parse(
     i.cio_company_id = 1;
 
     if i.carrier.is_empty() {
-        warn!(
+        bail!(
             "could not find shipment for email:shipment: {:?}\nfields: {:?}\nfiles: {:?}",
-            i, form_data.fields, form_data.files
+            i,
+            form_data.fields,
+            form_data.files
         );
-
-        // Return early.
-        return Ok(());
     }
 
     // Add the shipment to our database.
@@ -971,8 +960,7 @@ pub async fn handle_applicant_review(
     let event = body_param.into_inner();
 
     if event.name.is_empty() || event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
-        warn!("review is empty: {:?}", event);
-        return Ok(());
+        bail!("review is empty");
     }
 
     // Add them to the database.
@@ -1100,8 +1088,7 @@ pub async fn handle_airtable_shipments_inbound_create(
     let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
-        warn!("record id is empty");
-        return Ok(());
+        bail!("record id is empty");
     }
 
     let api_context = rqctx.context();
@@ -1112,8 +1099,7 @@ pub async fn handle_airtable_shipments_inbound_create(
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
-        warn!("tracking_number and carrier are empty, ignoring");
-        return Ok(());
+        bail!("tracking_number and carrier are empty, ignoring");
     }
 
     let mut new_shipment: NewInboundShipment = record.into();
@@ -1159,8 +1145,7 @@ pub async fn handle_shippo_tracking_update(
     if ts.tracking_number.is_empty() || ts.carrier.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
-        warn!("tracking_number and carrier are empty, ignoring");
-        return Ok(());
+        bail!("tracking_number and carrier are empty, ignoring");
     }
 
     // Update the inbound shipment, if it exists.
@@ -1335,6 +1320,96 @@ pub async fn handle_docusign_envelope_update(
                 e
             );
         }
+    }
+
+    Ok(())
+}
+
+pub async fn handle_analytics_page_view(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<NewPageView>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    let mut event = body_param.into_inner();
+
+    // Expand the page_view.
+    event.set_page_link();
+    event.set_company_id(db).unwrap();
+
+    // Add the page_view to the database and Airttable.
+    let pv = event.create(db).await?;
+
+    info!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
+    Ok(())
+}
+
+pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // We should have a string, which we will then parse into our args.
+    let event_string = body_param.as_str().unwrap().to_string();
+    let qs_non_strict = QSConfig::new(10, false);
+
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string)?;
+
+    if event.webhook_type != *"subscribe" {
+        info!("not a `subscribe` event, got `{}`", event.webhook_type);
+        return Ok(());
+    }
+
+    // Parse the webhook as a new mailing list subscriber.
+    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db)?;
+
+    let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
+    if existing.is_none() {
+        // Update the subscriber in the database.
+        let subscriber = new_subscriber.upsert(db).await?;
+
+        info!("subscriber {} created successfully", subscriber.email);
+    } else {
+        info!("subscriber {} already exists", new_subscriber.email);
+    }
+
+    Ok(())
+}
+
+pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // We should have a string, which we will then parse into our args.
+    let event_string = body_param.as_str().unwrap().to_string();
+    let qs_non_strict = QSConfig::new(10, false);
+
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string)?;
+
+    if event.webhook_type != *"subscribe" {
+        info!("not a `subscribe` event, got `{}`", event.webhook_type);
+        return Ok(());
+    }
+
+    // Parse the webhook as a new rack line subscriber.
+    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db);
+
+    //let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
+
+    let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
+    if existing.is_none() {
+        // Update the subscriber in the database.
+        let subscriber = new_subscriber.upsert(db).await?;
+
+        // Parse the signup into a slack message.
+        // Send the message to the slack channel.
+        //company.post_to_slack_channel(db, new_subscriber.as_slack_msg()).await;
+        // TODO: this causes a weird compile time error, figure it out.
+        // info!("subscriber {} posted to Slack", subscriber.email);
+
+        info!("subscriber {} created successfully", subscriber.email);
+    } else {
+        info!("subscriber {} already exists", new_subscriber.email);
     }
 
     Ok(())
