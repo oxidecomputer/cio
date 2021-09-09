@@ -324,17 +324,10 @@ async fn listen_github_webhooks(
             // Ensure we have commits.
             if event.commits.is_empty() {
                 // `push` event has no commits.
-                // We can throw this out, log it and return early.
-                // Add context to sentry.
-                sentry::with_scope(
-                    |scope| {
-                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                        scope.set_tag("github.event.type", &event_type_string);
-                    },
-                    || {
-                        sentry::capture_message("`push` event has no commits", sentry::Level::Fatal);
-                    },
-                );
+                // This happens on bot commits, tags etc.
+                // Just throw it away.
+                sentry::end_session();
+                return Ok(HttpResponseAccepted("ok".to_string()));
             }
 
             let commit = event.commits.get(0).unwrap().clone();
@@ -354,6 +347,8 @@ async fn listen_github_webhooks(
                         );
                     },
                 );
+                sentry::end_session();
+                return Ok(HttpResponseAccepted("ok".to_string()));
             }
 
             // Get the branch name.
@@ -372,6 +367,8 @@ async fn listen_github_webhooks(
                         sentry::capture_message("`push` event branch name is empty", sentry::Level::Fatal);
                     },
                 );
+                sentry::end_session();
+                return Ok(HttpResponseAccepted("ok".to_string()));
             }
         }
         EventType::Repository => {
@@ -389,6 +386,9 @@ async fn listen_github_webhooks(
             handle_repository_event(&github, api_context, event.clone(), &company)
                 .await
                 .unwrap();
+
+            sentry::end_session();
+            return Ok(HttpResponseAccepted("ok".to_string()));
         }
         _ => (),
     }
