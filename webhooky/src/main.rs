@@ -13,10 +13,9 @@ extern crate serde_json;
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::Result;
-use chrono::offset::Utc;
 use cio_api::{
-    analytics::NewPageView, api_tokens::NewAPIToken, applicants::Applicant, companies::Company, db::Database,
-    mailing_list::MailingListSubscriber, rack_line::RackLineSubscriber, schema::applicants, swag_store::Order,
+    analytics::NewPageView, applicants::Applicant, db::Database, mailing_list::MailingListSubscriber,
+    rack_line::RackLineSubscriber, schema::applicants, swag_store::Order,
 };
 use diesel::prelude::*;
 use docusign::DocuSign;
@@ -1351,51 +1350,11 @@ async fn listen_auth_docusign_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let event = query_args.into_inner();
 
-    // Initialize the DocuSign client.
-    let mut d = DocuSign::new_from_env("", "", "", "");
-    // Let's get the token from the code.
-    let t = d.get_access_token(&event.code).await.unwrap();
-
-    // Let's get the user's info as well.
-    let user_info = d.get_user_info().await.unwrap();
-
-    // Let's get the domain from the email.
-    let split = user_info.email.split('@');
-    let vec: Vec<&str> = split.collect();
-    let mut domain = "".to_string();
-    if vec.len() > 1 {
-        domain = vec.get(1).unwrap().to_string();
+    if let Err(e) = crate::handlers_auth::handle_auth_docusign_callback(rqctx, query_args).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
     }
-
-    let company = Company::get_from_domain(&api_context.db, &domain).unwrap();
-
-    // Save the token to the database.
-    let mut token = NewAPIToken {
-        product: "docusign".to_string(),
-        token_type: t.token_type.to_string(),
-        access_token: t.access_token.to_string(),
-        expires_in: t.expires_in as i32,
-        refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.x_refresh_token_expires_in as i32,
-        company_id: user_info.accounts[0].account_id.to_string(),
-        endpoint: user_info.accounts[0].base_uri.to_string(),
-        item_id: "".to_string(),
-        user_email: user_info.email.to_string(),
-        last_updated_at: Utc::now(),
-        expires_date: None,
-        refresh_token_expires_date: None,
-        auth_company_id: company.id,
-        company: Default::default(),
-        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
-        cio_company_id: 1,
-    };
-    token.expand();
-
-    // Update it in the database.
-    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
