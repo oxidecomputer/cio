@@ -376,7 +376,8 @@ pub fn setup_logger() {
             scope.set_tag("github.event.name", env::var("GITHUB_EVENT_NAME").unwrap_or_default());
             scope.set_tag("github.ref", env::var("GITHUB_REF").unwrap_or_default());
             scope.set_tag("github.sha", env::var("GITHUB_SHA").unwrap_or_default());
-            scope.set_tag("github.runner.os", env::var("RUNNER_OS").unwrap_or_default());
+            scope.set_tag("runner.os", env::var("RUNNER_OS").unwrap_or_default());
+            scope.set_tag("ci", env::var("CI").unwrap_or_default());
         });
     }
 }
