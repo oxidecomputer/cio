@@ -1218,3 +1218,60 @@ pub async fn handle_shippo_tracking_update(
     info!("shipment {} tracking status updated successfully", ts.tracking_number);
     Ok(())
 }
+
+pub async fn handle_checkr_background_update(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<checkr::WebhookEvent>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+    let event = body_param.into_inner();
+
+    // Run the update of the background checks.
+    // If we have a candidate ID let's get them from checkr.
+    if event.data.object.candidate_id.is_empty()
+        || event.data.object.package.is_empty()
+        || event.data.object.status.is_empty()
+    {
+        // Return early we don't care.
+        bail!("checkr candidate id is empty for event: {:?}", event);
+    }
+
+    // TODO: change this to the real company name.
+    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+
+    let checkr_auth = oxide.authenticate_checkr();
+    if checkr_auth.is_none() {
+        // Return early.
+        bail!("this company {:?} does not have a checkr api key: {:?}", oxide, event);
+    }
+
+    let checkr = checkr_auth.unwrap();
+    let candidate = checkr.get_candidate(&event.data.object.candidate_id).await?;
+    let result = applicants::dsl::applicants
+        .filter(
+            applicants::dsl::email
+                .eq(candidate.email.to_string())
+                // TODO: matching on name might be a bad idea here.
+                .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
+        )
+        .filter(applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()))
+        .first::<Applicant>(&api_context.db.conn());
+    if result.is_ok() {
+        let mut applicant = result?;
+        // Keep the fields from Airtable we need just in case they changed.
+        applicant.keep_fields_from_airtable(&api_context.db).await;
+
+        // Set the status for the report.
+        if event.data.object.package.contains("premium_criminal") {
+            applicant.criminal_background_check_status = event.data.object.status.to_string();
+        }
+        if event.data.object.package.contains("motor_vehicle") {
+            applicant.motor_vehicle_background_check_status = event.data.object.status.to_string();
+        }
+
+        // Update the applicant.
+        applicant.update(&api_context.db).await?;
+    }
+
+    Ok(())
+}

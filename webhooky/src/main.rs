@@ -946,56 +946,10 @@ async fn listen_checkr_background_update_webhooks(
     body_param: TypedBody<checkr::WebhookEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let event = body_param.into_inner();
 
-    // Run the update of the background checks.
-    // If we have a candidate ID let's get them from checkr.
-    if event.data.object.candidate_id.is_empty()
-        || event.data.object.package.is_empty()
-        || event.data.object.status.is_empty()
-    {
-        // Return early we don't care.
-        warn!("checkr candidate id is empty for event: {:?}", event);
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // TODO: change this to the real company name.
-    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
-
-    let checkr_auth = oxide.authenticate_checkr();
-    if checkr_auth.is_none() {
-        // Return early.
-        warn!("this company {:?} does not have a checkr api key: {:?}", oxide, event);
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    let checkr = checkr_auth.unwrap();
-    let candidate = checkr.get_candidate(&event.data.object.candidate_id).await.unwrap();
-    let result = applicants::dsl::applicants
-        .filter(
-            applicants::dsl::email
-                .eq(candidate.email.to_string())
-                // TODO: matching on name might be a bad idea here.
-                .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
-        )
-        .filter(applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()))
-        .first::<Applicant>(&api_context.db.conn());
-    if result.is_ok() {
-        let mut applicant = result.unwrap();
-        // Keep the fields from Airtable we need just in case they changed.
-        applicant.keep_fields_from_airtable(&api_context.db).await;
-
-        // Set the status for the report.
-        if event.data.object.package.contains("premium_criminal") {
-            applicant.criminal_background_check_status = event.data.object.status.to_string();
-        }
-        if event.data.object.package.contains("motor_vehicle") {
-            applicant.motor_vehicle_background_check_status = event.data.object.status.to_string();
-        }
-
-        // Update the applicant.
-        applicant.update(&api_context.db).await.unwrap();
+    if let Err(e) = crate::handlers::handle_checkr_background_update(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -2081,6 +2035,7 @@ async fn listen_slack_commands_webhooks(
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     // Send to sentry.
     sentry_anyhow::capture_anyhow(&err);
+    sentry::end_session();
 
     // We use the debug formatting here so we get the stack trace.
     return HttpError::for_internal_error(format!("{:?}", err));
