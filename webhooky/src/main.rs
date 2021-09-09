@@ -423,7 +423,7 @@ async fn listen_github_webhooks(
                                 .create_comment(
                                     &github,
                                     &format!(
-                                        "updating RFD on push failed: {}\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
+                                        "updating RFD on push failed:\n\n```\n{:?}\n```\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
                                         e, event,
                                     ),
                                 )
@@ -451,7 +451,7 @@ async fn listen_github_webhooks(
                             event
                                 .update_check_run(&github, check_run_id,
                                     &format!(
-                                        "updating RFD on pull request failed: {}\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
+                                        "updating RFD on pull request failed:\n\n```\n{:?}\n```\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
                                         e, event,
                                     ),
                                     octorust::types::ChecksCreateRequestConclusion::Failure,
@@ -501,7 +501,7 @@ async fn listen_github_webhooks(
                                 .create_comment(
                                     &github,
                                     &format!(
-                                        "updating configs on push failed: {}\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
+                                        "updating configs on push failed:\n\n```\n{:?}\n```\n\n<details>\n<summary>event:</summary>\n\n```\n{:#?}\n```\n\n</details>\ncc @jessfraz",
                                         e, event,
                                     ),
                                 )
