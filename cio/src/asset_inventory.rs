@@ -294,7 +294,7 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()>
 
         let mut db_item = item.upsert_in_db(db)?;
         db_item.airtable_record_id = item_record.id.to_string();
-        db_item.update(db).await;
+        db_item.update(db).await?;
     }
 
     Ok(())

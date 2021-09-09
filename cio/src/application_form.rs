@@ -65,7 +65,7 @@ impl ApplicationForm {
         applicant.expand(db, &drive_client).await;
 
         // Update airtable and the database again.
-        applicant.update(db).await;
+        applicant.update(db).await?;
 
         Ok(())
     }

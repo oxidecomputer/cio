@@ -119,7 +119,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             if record.airtable_record_id.is_empty(){
                 // Now we have the id we need to update the database.
                 record.airtable_record_id = new_airtable_record.id.to_string();
-                return Ok(record.update_in_db(db)?);
+                return record.update_in_db(db);
             }
 
             Ok(record)
@@ -145,7 +145,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         /// Get the company object for a record.
         pub fn company(&self, db: &crate::db::Database) -> anyhow::Result<crate::companies::Company> {
-            Ok(crate::companies::Company::get_by_id(db, self.cio_company_id)?)
+            crate::companies::Company::get_by_id(db, self.cio_company_id)
         }
     }
 
@@ -168,7 +168,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             // Now we have the id we need to update the database.
             record.airtable_record_id = new_airtable_record.id.to_string();
-            Ok(record.update_in_db(db)?)
+            record.update_in_db(db)
         }
 
         /// Update the record in the database.
@@ -204,7 +204,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         /// Get the company object for a record.
         pub fn company(&self, db: &crate::db::Database) -> anyhow::Result<crate::companies::Company> {
-            Ok(crate::companies::Company::get_by_id(db, self.cio_company_id)?)
+            crate::companies::Company::get_by_id(db, self.cio_company_id)
         }
 
         /// Get the row in our airtable workspace.
@@ -349,7 +349,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                 if let Some(mut existing_record) = er {
                     // Return the result from the update.
-                    return Ok(self.update_in_airtable(db, &mut existing_record).await?);
+                    return self.update_in_airtable(db, &mut existing_record).await;
                 }
                 // Otherwise we need to continue through the other loop.
             }
@@ -362,7 +362,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             let records = #new_struct_name_plural::get_from_airtable(db,self.cio_company_id).await?;
             for (id, record) in records {
                 if self.id == id {
-                    return Ok(self.update_in_airtable(db, &mut record.clone()).await?);
+                    return self.update_in_airtable(db, &mut record.clone()).await;
                 }
             }
 

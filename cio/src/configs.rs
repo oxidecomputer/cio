@@ -2013,7 +2013,7 @@ pub async fn sync_users(
         }
 
         // Update with any other changes we made to the user.
-        new_user.update(db).await;
+        new_user.update(db).await?;
 
         // Remove the user from the BTreeMap.
         user_map.remove(&user.username);

@@ -3721,12 +3721,12 @@ impl Applicant {
     }
 
     /// Send a rejection email if we need to.
-    pub async fn send_email_follow_up_if_necessary(&mut self, db: &Database) {
+    pub async fn send_email_follow_up_if_necessary(&mut self, db: &Database) -> Result<()> {
         // Send an email follow up if we should.
         if self.sent_email_follow_up {
             // We have already followed up with the candidate.
             // Let's return early.
-            return;
+            return Ok(());
         }
 
         // Get the status for the applicant.
@@ -3743,23 +3743,23 @@ impl Applicant {
 
             self.sent_email_follow_up = true;
             // Update the database.
-            self.update(db).await;
+            self.update(db).await?;
             // Return early, we don't actually want to send something, likely a member
             // of the Oxide team reached out directly.
-            return;
+            return Ok(());
         }
 
         if status != crate::applicant_status::Status::Declined && status != crate::applicant_status::Status::Deferred {
             // We want to return early, we only care about people who were deferred or declined.
             // So sent the folks in the triage home.
             // Above we sent home everyone else.
-            return;
+            return Ok(());
         }
 
         // Check if we have sent the follow up email to them.unwrap_or_default().
         if self.raw_status.contains("did not do materials") {
             // Send the email.
-            self.send_email_rejection_did_not_provide_materials(db).await;
+            self.send_email_rejection_did_not_provide_materials(db).await?;
 
             println!(
                 "[applicant] sent email to {} tell them they did not do the materials",
@@ -3767,7 +3767,7 @@ impl Applicant {
             );
         } else if self.raw_status.contains("junior") {
             // Send the email.
-            self.send_email_rejection_junior_but_we_love_you(db).await;
+            self.send_email_rejection_junior_but_we_love_you(db).await?;
 
             println!(
                 "[applicant] sent email to {} tell them we can't hire them at this stage",
@@ -3775,7 +3775,7 @@ impl Applicant {
             );
         } else {
             // Send the email.
-            self.send_email_rejection_timing(db).await;
+            self.send_email_rejection_timing(db).await?;
 
             println!("[applicant] sent email to {} tell them about timing", self.email);
         }
@@ -3785,11 +3785,13 @@ impl Applicant {
 
         self.sent_email_follow_up = true;
         // Update the database.
-        self.update(db).await;
+        self.update(db).await?;
+
+        Ok(())
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) {
+    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) -> Result<()> {
         self.cleanup_phone();
         self.parse_github_gitlab();
         self.cleanup_linkedin();
@@ -3803,17 +3805,17 @@ impl Applicant {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
-            self.send_email_recieved_application_to_applicant(db).await;
+            self.send_email_recieved_application_to_applicant(db).await?;
             self.sent_email_received = true;
             // Update it in the database just in case.
-            self.update(db).await;
+            self.update(db).await?;
 
             println!(
                 "[applicant] sent email to {} that we received their application",
                 self.email
             );
             // Send the email internally.
-            self.send_email_internally(db).await;
+            self.send_email_internally(db).await?;
         }
 
         // Set the latitude and longitude if we don't already have it.
@@ -3833,6 +3835,8 @@ impl Applicant {
             self.materials_contents = get_file_contents(drive_client, &self.materials).await;
             self.parse_materials();
         }
+
+        Ok(())
     }
 
     /// Get the applicant's information in the form of the body of an email for a
@@ -4225,7 +4229,13 @@ Sincerely,
         self.country_code = country_code;
     }
 
-    pub async fn do_docusign_offer(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
+    pub async fn do_docusign_offer(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        template_id: &str,
+        company: &Company,
+    ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
@@ -4236,7 +4246,7 @@ Sincerely,
             && self.status != crate::applicant_status::Status::Hired.to_string()
         {
             // We can return early.
-            return;
+            return Ok(());
         }
 
         if self.docusign_envelope_id.is_empty()
@@ -4317,7 +4327,7 @@ Sincerely,
             ];
 
             // Let's create the envelope.
-            let envelope = ds.create_envelope(new_envelope.clone()).await.unwrap();
+            let envelope = ds.create_envelope(new_envelope.clone()).await?;
 
             // Set the id of the envelope.
             self.docusign_envelope_id = envelope.envelope_id.to_string();
@@ -4325,15 +4335,17 @@ Sincerely,
             self.docusign_envelope_status = envelope.status.to_string();
 
             // Update the applicant in the database.
-            self.update(db).await;
+            self.update(db).await?;
         } else if !self.docusign_envelope_id.is_empty() {
             // We have sent their offer.
             // Let's get the status of the envelope in Docusign.
-            let envelope = ds.get_envelope(&self.docusign_envelope_id).await.unwrap();
+            let envelope = ds.get_envelope(&self.docusign_envelope_id).await?;
 
             self.update_applicant_from_docusign_offer_envelope(db, ds, envelope)
-                .await;
+                .await?;
         }
+
+        Ok(())
     }
 
     pub async fn update_applicant_from_docusign_offer_envelope(
@@ -4354,7 +4366,7 @@ Sincerely,
         // If the document is completed, let's save it to Google Drive.
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
-            self.update(db).await;
+            self.update(db).await?;
             return Ok(());
         }
 
@@ -4365,17 +4377,17 @@ Sincerely,
             // Only do this if they are not already hired.
             self.status = crate::applicant_status::Status::Onboarding.to_string();
             // Update them in case something fails.
-            self.update(db).await;
+            self.update(db).await?;
 
             // Request their background check, if we have not already.
             if self.criminal_background_check_status.is_empty() {
                 // Request the background check, since we previously have not requested one.
-                self.send_background_check_invitation(db).await;
+                self.send_background_check_invitation(db).await?;
             }
         }
 
         // Initialize the Google Drive client.
-        let drive_client = company.authenticate_google_drive(db).await.unwrap();
+        let drive_client = company.authenticate_google_drive(db).await?;
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
         let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
@@ -4467,7 +4479,7 @@ Sincerely,
             }
 
             // Update the employee.
-            employee.update(db).await;
+            employee.update(db).await?;
         }
 
         for fd in form_data {
@@ -4479,12 +4491,18 @@ Sincerely,
             }
         }
 
-        self.update(db).await;
+        self.update(db).await?;
 
         Ok(())
     }
 
-    pub async fn do_docusign_piia(&mut self, db: &Database, ds: &DocuSign, template_id: &str, company: &Company) {
+    pub async fn do_docusign_piia(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        template_id: &str,
+        company: &Company,
+    ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
@@ -4495,7 +4513,7 @@ Sincerely,
             && self.status != crate::applicant_status::Status::Hired.to_string()
         {
             // We can return early.
-            return;
+            return Ok(());
         }
 
         if self.docusign_piia_envelope_id.is_empty()
@@ -4590,7 +4608,7 @@ Sincerely,
             ];
 
             // Let's create the envelope.
-            let envelope = ds.create_envelope(new_envelope.clone()).await.unwrap();
+            let envelope = ds.create_envelope(new_envelope.clone()).await?;
 
             // Set the id of the envelope.
             self.docusign_piia_envelope_id = envelope.envelope_id.to_string();
@@ -4598,15 +4616,17 @@ Sincerely,
             self.docusign_piia_envelope_status = envelope.status.to_string();
 
             // Update the applicant in the database.
-            self.update(db).await;
+            self.update(db).await?;
         } else if !self.docusign_piia_envelope_id.is_empty() {
             // We have sent their employee agreements.
             // Let's get the status of the envelope in Docusign.
-            let envelope = ds.get_envelope(&self.docusign_piia_envelope_id).await.unwrap();
+            let envelope = ds.get_envelope(&self.docusign_piia_envelope_id).await?;
 
             self.update_applicant_from_docusign_piia_envelope(db, ds, envelope)
-                .await;
+                .await?;
         }
+
+        Ok(())
     }
 
     pub async fn keep_fields_from_airtable(&mut self, db: &Database) {
@@ -4649,7 +4669,7 @@ Sincerely,
         // If the document is completed, let's save it to Google Drive.
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
-            self.update(db).await;
+            self.update(db).await?;
             return Ok(());
         }
 
@@ -4661,10 +4681,10 @@ Sincerely,
         // complete these documents before their start date.
 
         // Let's update the database here since nothing else has to do with that.
-        self.update(db).await;
+        self.update(db).await?;
 
         // Initialize the Google Drive client.
-        let drive_client = company.authenticate_google_drive(db).await.unwrap();
+        let drive_client = company.authenticate_google_drive(db).await?;
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
         let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
@@ -4712,9 +4732,9 @@ Sincerely,
     }
 }
 
-pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) {
+pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) -> Result<()> {
     // Initialize the GSuite sheets client.
-    let drive_client = company.authenticate_google_drive(db).await.unwrap();
+    let drive_client = company.authenticate_google_drive(db).await?;
 
     let github = company.authenticate_github();
 
@@ -4742,15 +4762,13 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
             // since
             None,
         )
-        .await
-        .unwrap();
+        .await?;
 
     // We want all the applicants without a sheet id, since this is the list of applicants we care
     // about. Everything else came from Google Sheets and therefore uses the old system.
     let applicants = applicants::dsl::applicants
         .filter(applicants::dsl::sheet_id.eq("".to_string()))
-        .load::<Applicant>(&db.conn())
-        .unwrap();
+        .load::<Applicant>(&db.conn())?;
 
     // Iterate over the applicants and update them.
     for mut applicant in applicants {
@@ -4764,7 +4782,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
 
         // Update airtable and the database again, we want to save our status just in
         // case there is an error.
-        applicant.update(db).await;
+        applicant.update(db).await?;
 
         // Send the follow up email if we need to, this will also update the database.
         applicant.send_email_follow_up_if_necessary(db).await;
@@ -4772,21 +4790,23 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         // Create the GitHub onboarding issue if we need to.
         applicant
             .create_github_onboarding_issue(db, &github, &configs_issues)
-            .await;
+            .await?;
 
         // Update the interviews start and end time if we have interviews.
         applicant.update_interviews_start_end_time(db);
 
         // Update airtable and the database again, we want to save our status just in
         // case there is an error.
-        applicant.update(db).await;
+        applicant.update(db).await?;
 
         // Update the reviews for the applicant.
         // This function will update the database so we don't have to.
-        applicant.update_reviews_scoring(db).await;
+        applicant.update_reviews_scoring(db).await?;
 
         // TODO: we could move docusign stuff here as well, and out of its own function.
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -4852,7 +4872,7 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         // Do the new applicants.
-        refresh_new_applicants_and_reviews(&db, &oxide).await;
+        refresh_new_applicants_and_reviews(&db, &oxide).await.unwrap();
 
         // Do the old applicants from Google sheets.
         // TODO: eventually remove this.
