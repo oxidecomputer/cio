@@ -763,3 +763,33 @@ pub async fn handle_airtable_shipments_outbound_create(
     info!("shipment {} created successfully", shipment.email);
     Ok(())
 }
+
+pub async fn handle_airtable_shipments_outbound_reprint_label(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let event = body_param.into_inner();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    let api_context = rqctx.context();
+
+    // Get the row from airtable.
+    let mut shipment =
+        OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    // Reprint the label.
+    shipment.print_label(&api_context.db).await?;
+    info!("shipment {} reprinted label", shipment.email);
+
+    // Update the field.
+    shipment.status = "Label printed".to_string();
+
+    // Update Airtable.
+    shipment.update(&api_context.db).await?;
+
+    Ok(())
+}

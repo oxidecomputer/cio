@@ -636,30 +636,11 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
 
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_label(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    let api_context = rqctx.context();
-
-    // Get the row from airtable.
-    let mut shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    // Reprint the label.
-    shipment.print_label(&api_context.db).await.unwrap();
-    info!("shipment {} reprinted label", shipment.email);
-
-    // Update the field.
-    shipment.status = "Label printed".to_string();
-
-    // Update Airtable.
-    shipment.update(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
