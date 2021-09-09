@@ -60,6 +60,7 @@ use google_drive::{
     Client as GoogleDrive,
 };
 use gusto_api::Client as Gusto;
+use log::{info, warn};
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
 use octorust::Client as GitHub;
 use quickbooks::QuickBooks;
@@ -75,6 +76,16 @@ use zoom_api::Client as Zoom;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    // Initialize our logger.
+    let mut log_builder = pretty_env_logger::formatted_builder();
+    log_builder.parse_filters("info");
+
+    let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
+
+    log::set_boxed_logger(Box::new(logger)).unwrap();
+
+    log::set_max_level(log::LevelFilter::Info);
+
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
@@ -190,7 +201,7 @@ async fn main() -> Result<(), String> {
         .contact_url("https://oxide.computer")
         .contact_email("webhooks@oxide.computer");
     let api_file = "openapi-webhooky.json";
-    println!("Writing OpenAPI spec to {}...", api_file);
+    info!("writing OpenAPI spec to {}...", api_file);
     let mut buffer = File::create(api_file).unwrap();
     let schema = api_definition.json().unwrap().to_string();
     api_definition.write(&mut buffer).unwrap();
@@ -372,8 +383,6 @@ async fn listen_github_webhooks(
             }
         }
         EventType::Repository => {
-            println!("`{}` {:?}", event_type.name(), event);
-
             let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login);
             let github = company.authenticate_github();
 
@@ -507,7 +516,7 @@ async fn listen_github_webhooks(
             }
             _ => {
                 // We can throw this out, log it and return early.
-                println!(
+                info!(
                     "`{}` event was to the {} repo, no automations are set up for this repo yet",
                     event_type, repo_name
                 );
@@ -535,7 +544,7 @@ async fn trigger_rfd_update_by_number(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let num = path_params.into_inner().num;
-    println!("Triggering an update for RFD number `{}`", num);
+    info!("triggering an update for RFD number `{}`", num);
 
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -556,10 +565,10 @@ async fn trigger_rfd_update_by_number(
     let mut rfd = result.unwrap();
     // Update the RFD.
     rfd.expand(&github, &oxide).await.unwrap();
-    println!("updated  RFD {}", rfd.number_string);
+    info!("updated  RFD {}", rfd.number_string);
 
     rfd.convert_and_upload_pdf(db, &github, &oxide).await.unwrap();
-    println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
+    info!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
     rfd.update(db).await.unwrap();
@@ -633,12 +642,11 @@ async fn listen_google_sheets_edit_webhooks(
     let sheets = oxide.authenticate_google_sheets(db).await.unwrap();
 
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
-        println!("event is not for an application spreadsheet: {:?}", event);
+        info!("event is not for an application spreadsheet: {:?}", event);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -810,7 +818,7 @@ async fn listen_google_sheets_edit_webhooks(
         a.values_in_tension = vec![value_in_tension_1, event.event.value.to_lowercase()];
     } else {
         // If this is a field wehipmentdon't care about, return early.
-        println!(
+        info!(
             "column updated was `{}`, no automations set up for that column yet",
             column_header
         );
@@ -854,7 +862,7 @@ async fn listen_google_sheets_edit_webhooks(
         .await
         .unwrap();
 
-    println!("applicant {} updated successfully", new_applicant.email);
+    info!("applicant {} updated successfully", new_applicant.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -958,13 +966,12 @@ async fn listen_google_sheets_row_create_webhooks(
     let sheets = oxide.authenticate_google_sheets(db).await.unwrap();
 
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     // Ensure this was an applicant and not some other google form!!
     let role = get_role_from_sheet_id(&event.spreadsheet.id);
     if role.is_empty() {
         // Return early if not
-        println!("event is not for an application spreadsheet: {:?}", event);
+        info!("event is not for an application spreadsheet: {:?}", event);
         sentry::end_session();
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
@@ -998,7 +1005,7 @@ async fn listen_google_sheets_row_create_webhooks(
         .unwrap();
 
     if !applicant.sent_email_received {
-        println!("applicant is new, sending internal notifications: {:?}", applicant);
+        info!("applicant is new, sending internal notifications: {:?}", applicant);
 
         // Send a company-wide email.
         applicant.send_email_internally(db).await.unwrap();
@@ -1009,7 +1016,7 @@ async fn listen_google_sheets_row_create_webhooks(
     // Send the applicant to the database and Airtable.
     let a = applicant.upsert(db).await.unwrap();
 
-    println!("applicant {} created successfully", a.email);
+    info!("applicant {} created successfully", a.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1038,7 +1045,6 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1073,7 +1079,6 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1088,7 +1093,7 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
 
     // Print the barcode label(s).
     asset_item.print_label(&api_context.db).await.unwrap();
-    println!("asset item {} printed label", asset_item.name);
+    info!("asset item {} printed label", asset_item.name);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1109,7 +1114,6 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1125,7 +1129,7 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
 
     // Print the barcode label(s).
     swag_inventory_item.print_label(&api_context.db).await.unwrap();
-    println!("swag inventory item {} printed label", swag_inventory_item.name);
+    info!("swag inventory item {} printed label", swag_inventory_item.name);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1146,7 +1150,6 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1164,7 +1167,7 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
             .send_background_check_invitation(&api_context.db)
             .await
             .unwrap();
-        println!("sent background check invitation to applicant: {}", applicant.email);
+        info!("sent background check invitation to applicant: {}", applicant.email);
     }
 
     sentry::end_session();
@@ -1185,7 +1188,6 @@ async fn listen_airtable_applicants_update_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     let api_context = rqctx.context();
 
@@ -1227,7 +1229,7 @@ async fn listen_airtable_applicants_update_webhooks(
     // Update the row in our database.
     db_applicant.update(&api_context.db).await.unwrap();
 
-    println!("applicant {} updated successfully", applicant.email);
+    info!("applicant {} updated successfully", applicant.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1246,7 +1248,6 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     let api_context = rqctx.context();
 
@@ -1286,7 +1287,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     // Update airtable again.
     new_shipment.update(&api_context.db).await.unwrap();
 
-    println!("shipment {} created successfully", shipment.email);
+    info!("shipment {} created successfully", shipment.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1313,7 +1314,6 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1330,7 +1330,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
 
     // Reprint the label.
     shipment.print_label(&api_context.db).await.unwrap();
-    println!("shipment {} reprinted label", shipment.email);
+    info!("shipment {} reprinted label", shipment.email);
 
     // Update the field.
     shipment.status = "Label printed".to_string();
@@ -1355,7 +1355,6 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1372,7 +1371,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
 
     // Reprint the receipt.
     shipment.print_receipt(&api_context.db).await.unwrap();
-    println!("shipment {} reprinted receipt", shipment.email);
+    info!("shipment {} reprinted receipt", shipment.email);
 
     // Update Airtable.
     shipment.update(&api_context.db).await.unwrap();
@@ -1394,7 +1393,6 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1411,7 +1409,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
 
     // Resend the email to the recipient.
     shipment.send_email_to_recipient(&api_context.db).await.unwrap();
-    println!("resent the shipment email to the recipient {}", shipment.email);
+    info!("resent the shipment email to the recipient {}", shipment.email);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1430,7 +1428,6 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("pickup shipment {:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1626,7 +1623,7 @@ async fn listen_applicant_review_requests(
     // Add them to the database.
     event.upsert(&api_context.db).await.unwrap();
 
-    println!("applicant review created successfully: {:?}", event);
+    info!("applicant review created successfully: {:?}", event);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1648,7 +1645,7 @@ async fn listen_application_submit_requests(
 
     event.do_form(&api_context.db).await.unwrap();
 
-    println!("application for {} {} created successfully", event.email, event.role);
+    info!("application for {} {} created successfully", event.email, event.role);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1807,7 +1804,6 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
     let event = body_param.into_inner();
-    println!("{:?}", event);
 
     if event.record_id.is_empty() {
         sentry::capture_message("Record id is empty", sentry::Level::Fatal);
@@ -1840,7 +1836,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     shipment.cio_company_id = event.cio_company_id;
     shipment.update(db).await.unwrap();
 
-    println!("inbound shipment {} updated successfully", shipment.tracking_number);
+    info!("inbound shipment {} updated successfully", shipment.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1860,10 +1856,9 @@ async fn listen_store_order_create(
     let api_context = rqctx.context();
 
     let event = body_param.into_inner();
-    println!("order {:?}", event);
     event.do_order(&api_context.db).await.unwrap();
 
-    println!("order for {} created successfully", event.email);
+    info!("order for {} created successfully", event.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1952,7 +1947,7 @@ async fn listen_shippo_tracking_update_webhooks(
         shipment.update(&api_context.db).await.unwrap();
     }
 
-    println!("shipment {} tracking status updated successfully", ts.tracking_number);
+    info!("shipment {} tracking status updated successfully", ts.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -2917,7 +2912,7 @@ async fn listen_docusign_envelope_update_webhooks(
             }
         }
         Err(e) => {
-            println!(
+            warn!(
                 "database could not find applicant with docusign offer envelope id {}: {}",
                 event.envelope_id, e
             );
@@ -2943,7 +2938,7 @@ async fn listen_docusign_envelope_update_webhooks(
             }
         }
         Err(e) => {
-            println!(
+            warn!(
                 "database could not find applicant with docusign piia envelope id {}: {}",
                 event.envelope_id, e
             );
@@ -2968,7 +2963,6 @@ async fn listen_analytics_page_view_webhooks(
     let db = &api_context.db;
 
     let mut event = body_param.into_inner();
-    println!("{:?}", event);
 
     // Expand the page_view.
     event.set_page_link();
@@ -2977,7 +2971,7 @@ async fn listen_analytics_page_view_webhooks(
     // Add the page_view to the database and Airttable.
     let pv = event.create(db).await.unwrap();
 
-    println!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
+    info!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -3008,14 +3002,12 @@ async fn listen_mailchimp_mailing_list_webhooks(
 
     // We should have a string, which we will then parse into our args.
     let event_string = body_param.as_str().unwrap().to_string();
-    println!("{}", event_string);
     let qs_non_strict = QSConfig::new(10, false);
 
     let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
-    println!("mailchimp {:?}", event);
 
     if event.webhook_type != *"subscribe" {
-        println!("not a `subscribe` event, got `{}`", event.webhook_type);
+        info!("not a `subscribe` event, got `{}`", event.webhook_type);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -3027,9 +3019,9 @@ async fn listen_mailchimp_mailing_list_webhooks(
         // Update the subscriber in the database.
         let subscriber = new_subscriber.upsert(db).await.unwrap();
 
-        println!("subscriber {} created successfully", subscriber.email);
+        info!("subscriber {} created successfully", subscriber.email);
     } else {
-        println!("subscriber {} already exists", new_subscriber.email);
+        info!("subscriber {} already exists", new_subscriber.email);
     }
 
     sentry::end_session();
@@ -3062,14 +3054,12 @@ async fn listen_mailchimp_rack_line_webhooks(
 
     // We should have a string, which we will then parse into our args.
     let event_string = body_param.as_str().unwrap().to_string();
-    println!("{}", event_string);
     let qs_non_strict = QSConfig::new(10, false);
 
     let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).unwrap();
-    println!("mailchimp {:?}", event);
 
     if event.webhook_type != *"subscribe" {
-        println!("not a `subscribe` event, got `{}`", event.webhook_type);
+        info!("not a `subscribe` event, got `{}`", event.webhook_type);
         return Ok(HttpResponseAccepted("ok".to_string()));
     }
 
@@ -3086,11 +3076,11 @@ async fn listen_mailchimp_rack_line_webhooks(
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
         //company.post_to_slack_channel(db, new_subscriber.as_slack_msg()).await;
-        println!("subscriber {} posted to Slack", subscriber.email);
+        info!("subscriber {} posted to Slack", subscriber.email);
 
-        println!("subscriber {} created successfully", subscriber.email);
+        info!("subscriber {} created successfully", subscriber.email);
     } else {
-        println!("subscriber {} already exists", new_subscriber.email);
+        info!("subscriber {} already exists", new_subscriber.email);
     }
 
     sentry::end_session();
@@ -4001,7 +3991,7 @@ async fn handle_rfd_pull_request(
             rfd.sha = contents.sha;
         }
         Err(e) => {
-            println!(
+            info!(
                 "[rfd] getting file contents for {} on branch {} failed: {}, trying markdown instead...",
                 path, branch, e
             );
@@ -4095,7 +4085,7 @@ async fn handle_rfd_push(
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        println!(
+        info!(
             "`push` event commit `{}` does not include any changes to the `{}` directory",
             commit.id, dir
         );
@@ -4213,7 +4203,7 @@ async fn handle_rfd_push(
         if file.ends_with("README.md") || file.ends_with("README.adoc") {
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
-            println!("`push` event -> file {} was modified on branch {}", file, branch,);
+            info!("`push` event -> file {} was modified on branch {}", file, branch,);
             // Parse the RFD.
             let new_rfd =
                 NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap()).await;
@@ -4481,7 +4471,7 @@ async fn handle_configs_push(
     if !commit.has_changed_files() {
         // No files changed that we care about.
         // We can throw this out, log it and return early.
-        println!(
+        info!(
             "`push` event commit `{}` did not include any changes to the `{}` directory",
             commit.id, dir
         );

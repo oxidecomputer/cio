@@ -26,9 +26,11 @@ gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 http = "0.2.0"
 hyper = { version = "0.10" }
+log = { version = "0.4", features = ["serde"] }
 mailchimp-api = "^0.1.11"
 mime_guess = "2"
 octorust = { version = "^0.1.16", features = ["httpcache"] }
+pretty_env_logger = "0.4"
 quickbooks = "^0.1.12"
 ramp-api = "^0.2.2"
 #ramp-api = { path = "../../third-party-api-clients/ramp" }
@@ -37,6 +39,7 @@ regex = "^1.5.4"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sentry = { version = "^0.23.0", features = ["anyhow", "log"] }
+sentry-log = "^0.23.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.8"

@@ -533,7 +533,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#512a571c0f55fcbc1ed6c519f89d46a70db2f36e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#60e6f1bb137353a162b3178c849e2e7fc3f97da1"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -566,6 +566,7 @@ dependencies = [
  "handlebars",
  "html2text",
  "image 0.23.14",
+ "log 0.4.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -575,6 +576,7 @@ dependencies = [
  "okta 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "phonenumber",
+ "pretty_env_logger",
  "printpdf",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api",
@@ -584,6 +586,8 @@ dependencies = [
  "revai 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
  "sendgrid-api",
+ "sentry",
+ "sentry-log",
  "serde",
  "serde_json",
  "sheets",
@@ -2185,7 +2189,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#512a571c0f55fcbc1ed6c519f89d46a70db2f36e"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#60e6f1bb137353a162b3178c849e2e7fc3f97da1"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -5066,9 +5070,11 @@ dependencies = [
  "gusto-api",
  "http",
  "hyper 0.10.16",
+ "log 0.4.14",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
  "octorust",
+ "pretty_env_logger",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api",
  "rand 0.8.4",
@@ -5076,6 +5082,7 @@ dependencies = [
  "reqwest",
  "schemars",
  "sentry",
+ "sentry-log",
  "serde",
  "serde_json",
  "serde_qs 0.8.4",
