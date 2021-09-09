@@ -1249,6 +1249,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_inbound_shipments() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
@@ -1259,6 +1261,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_outbound_shipments() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();

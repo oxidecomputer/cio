@@ -868,6 +868,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_companies() {
+        crate::utils::setup_logger();
+
         refresh_companies().await.unwrap();
     }
 }

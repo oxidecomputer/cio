@@ -266,6 +266,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_rack_line_subscribers() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
 

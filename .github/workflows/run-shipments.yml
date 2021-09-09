@@ -88,3 +88,4 @@ jobs:
           QUICKBOOKS_CLIENT_SECRET: ${{ secrets.QUICKBOOKS_CLIENT_SECRET }}
           QUICKBOOKS_REDIRECT_URI: ${{ secrets.QUICKBOOKS_REDIRECT_URI }}
           RUST_LOG: trace
+          SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}

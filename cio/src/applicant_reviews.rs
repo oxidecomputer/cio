@@ -158,6 +158,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_applicant_reviews() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();

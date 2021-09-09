@@ -162,6 +162,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_travel() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.

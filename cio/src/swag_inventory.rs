@@ -593,6 +593,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_swag_items() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.
@@ -610,6 +612,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_swag_inventory_items() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.
@@ -627,6 +631,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_swag_inventory_refresh_barcode_scans() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.

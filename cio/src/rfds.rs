@@ -1123,6 +1123,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_rfds_cleanup_pdfs() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
 
@@ -1136,6 +1138,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_rfds() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
 
@@ -1156,6 +1160,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_monday_cron_rfds_changelog() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
 
@@ -1168,6 +1174,8 @@ mod tests {
 
     #[test]
     fn test_clean_rfd_html_links() {
+        crate::utils::setup_logger();
+
         let content = r#"https://3.rfd.oxide.computer
         https://41.rfd.oxide.computer
         https://543.rfd.oxide.computer#-some-link
@@ -1201,6 +1209,8 @@ mod tests {
 
     #[test]
     fn test_get_authors() {
+        crate::utils::setup_logger();
+
         let mut content = r#"sdfsdf
 sdfsdf
 authors: things, joe
@@ -1243,6 +1253,8 @@ sdf"#;
 
     #[test]
     fn test_get_state() {
+        crate::utils::setup_logger();
+
         let mut content = r#"sdfsdf
 sdfsdf
 state: discussion
@@ -1266,6 +1278,8 @@ sdf
 
     #[test]
     fn test_get_discussion() {
+        crate::utils::setup_logger();
+
         let mut content = r#"sdfsdf
 sdfsdf
 discussion: https://github.com/oxidecomputer/rfd/pulls/1
@@ -1288,6 +1302,8 @@ sdf
 
     #[test]
     fn test_update_discussion_link() {
+        crate::utils::setup_logger();
+
         let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
         let mut content = r#"sdfsdf
 sdfsdf
@@ -1341,6 +1357,8 @@ sdf
 
     #[test]
     fn test_update_state() {
+        crate::utils::setup_logger();
+
         let state = "discussion";
         let mut content = r#"sdfsdf
 sdfsdf
@@ -1394,6 +1412,8 @@ sdf
 
     #[test]
     fn test_get_title() {
+        crate::utils::setup_logger();
+
         let mut content = r#"things
 # RFD 43 Identity and Access Management (IAM)
 sdfsdf

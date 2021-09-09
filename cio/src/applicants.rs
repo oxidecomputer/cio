@@ -4812,6 +4812,8 @@ mod tests {
 
     #[test]
     fn test_serialize_deserialize_applicants() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
         let applicant = applicants::dsl::applicants
             .filter(applicants::dsl::id.eq(318))
@@ -4832,6 +4834,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants_reviewer_leaderboard() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
@@ -4842,6 +4846,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants_background_checks() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
@@ -4852,6 +4858,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_applicants() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
@@ -4877,6 +4885,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_reviewers() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();

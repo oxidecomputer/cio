@@ -342,6 +342,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_journal_club_meetings_and_papers() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.

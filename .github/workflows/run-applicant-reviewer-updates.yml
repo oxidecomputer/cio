@@ -83,3 +83,4 @@ jobs:
           SHIPPO_API_TOKEN: ${{ secrets.SHIPPO_API_TOKEN }}
           REVAI_API_KEY: ${{ secrets.REVAI_API_KEY }}
           RUST_LOG: trace
+          SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}

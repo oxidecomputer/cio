@@ -63,3 +63,4 @@ jobs:
         env:
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
           RUST_LOG: trace
+          SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}

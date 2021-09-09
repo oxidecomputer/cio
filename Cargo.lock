@@ -510,6 +510,8 @@ dependencies = [
  "revai 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
  "sendgrid-api",
+ "sentry",
+ "sentry-log",
  "serde",
  "serde_json",
  "sheets",

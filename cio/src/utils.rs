@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs,
+    env, fs,
     io::Write,
     path::{Path, PathBuf},
     str::from_utf8,
@@ -11,6 +11,7 @@ use log::info;
 use octorust::Client as GitHub;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
+use sentry::IntoDsn;
 use serde_json::Value;
 
 /// Write a file.
@@ -336,5 +337,29 @@ pub fn generate_password() -> String {
 }
 
 pub fn setup_logger() {
-    pretty_env_logger::init();
+    // Initialize our logger.
+    let mut log_builder = pretty_env_logger::formatted_builder();
+    log_builder.parse_filters("info");
+
+    let logger = sentry_log::SentryLogger::with_dest(log_builder.is_test(true).build());
+
+    log::set_boxed_logger(Box::new(logger)).unwrap();
+    log::set_max_level(log::LevelFilter::Info);
+
+    // Initialize sentry.
+    let sentry_dsn = env::var("SENTRY_DSN").unwrap_or_default();
+
+    if !sentry_dsn.is_empty() {
+        let _guard = sentry::init(sentry::ClientOptions {
+            dsn: sentry_dsn.into_dsn().unwrap(),
+
+            release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+            environment: Some(
+                env::var("SENTRY_ENV")
+                    .unwrap_or_else(|_| "rust_test".to_string())
+                    .into(),
+            ),
+            ..Default::default()
+        });
+    }
 }

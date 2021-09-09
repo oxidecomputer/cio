@@ -265,6 +265,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_shorturls() {
+        crate::utils::setup_logger();
+
         refresh_shorturls().await.unwrap();
     }
 }

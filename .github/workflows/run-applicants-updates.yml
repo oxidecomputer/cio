@@ -91,3 +91,4 @@ jobs:
           DOCUSIGN_WEBHOOK_ENDPOINT: ${{ secrets.DOCUSIGN_WEBHOOK_ENDPOINT }}
           DOCUSIGN_CLIENT_SECRET: ${{ secrets.DOCUSIGN_CLIENT_SECRET }}
           RUST_LOG: trace
+          SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}

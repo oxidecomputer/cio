@@ -498,6 +498,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_zoom_recorded_meetings() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1).unwrap();
@@ -510,6 +512,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_google_recorded_meetings() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1).unwrap();

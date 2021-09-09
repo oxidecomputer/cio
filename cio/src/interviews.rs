@@ -789,6 +789,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_interviews() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
         // Get the company id for Oxide.
         // TODO: split this out per company.

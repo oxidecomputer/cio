@@ -1343,6 +1343,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_quickbooks() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.
@@ -1355,6 +1357,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_bill_com() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.
@@ -1367,6 +1371,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_expensify() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.
@@ -1379,6 +1385,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_brex() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // Get the company id for Oxide.
@@ -1391,6 +1399,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_ramp_reimbursements() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1).unwrap();
@@ -1403,6 +1413,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_finance_ramp_transactions() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1).unwrap();
@@ -1415,6 +1427,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_accounts_payable() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1).unwrap();
@@ -1427,6 +1441,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_vendors() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1).unwrap();

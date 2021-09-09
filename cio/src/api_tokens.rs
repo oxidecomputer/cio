@@ -142,6 +142,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_api_tokens() {
+        crate::utils::setup_logger();
+
         let db = Database::new();
 
         // This should always be Oxide.

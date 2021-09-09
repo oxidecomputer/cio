@@ -194,6 +194,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_auth_users_and_logins_refresh() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
 

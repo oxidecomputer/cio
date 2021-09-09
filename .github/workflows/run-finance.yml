@@ -92,3 +92,4 @@ jobs:
           SLACK_CLIENT_SECRET: ${{ secrets.SLACK_CLIENT_SECRET }}
           SLACK_REDIRECT_URI: ${{ secrets.SLACK_REDIRECT_URI }}
           RUST_LOG: trace
+          SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}

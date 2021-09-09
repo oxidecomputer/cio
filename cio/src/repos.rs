@@ -639,6 +639,8 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_github_repos() {
+        crate::utils::setup_logger();
+
         // Initialize our database.
         let db = Database::new();
         let companies = Companys::get_from_db(&db, 1).unwrap();
