@@ -81,7 +81,6 @@ shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.16"
 #slack-chat-api = { path = "../slack" }
-slog = "2"
 tailscale-api = "^0.1.2"
 #tailscale-api = { path = "../tailscale" }
 tripactions = "^0.2.0"
