@@ -157,7 +157,7 @@ async fn main() -> Result<(), String> {
     api.register(trigger_sync_repos_create).unwrap();
     api.register(listen_get_function_by_uuid).unwrap();
     api.register(listen_get_function_logs_by_uuid).unwrap();
-    api.register(listen_get_current_sagas).unwrap();
+    // api.register(listen_get_current_sagas).unwrap();
     api.register(api_get_schema).unwrap();
 
     // Print the OpenAPI Spec to stdout.
