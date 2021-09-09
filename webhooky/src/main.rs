@@ -605,47 +605,12 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
 
-    let api_context = rqctx.context();
-
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_create(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
 
-    // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    // If it is a row we created from our internal store do nothing.
-    if shipment.notes.contains("Oxide store")
-        || shipment.notes.contains("Google sheet")
-        || shipment.notes.contains("Internal")
-        || !shipment.shippo_id.is_empty()
-    {
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    if shipment.email.is_empty() {
-        warn!("got an empty email for row");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Update the row in our database.
-    let mut new_shipment = shipment.update(&api_context.db).await.unwrap();
-    // Create the shipment in shippo.
-    new_shipment
-        .create_or_get_shippo_shipment(&api_context.db)
-        .await
-        .unwrap();
-    // Update airtable again.
-    new_shipment.update(&api_context.db).await.unwrap();
-
-    info!("shipment {} created successfully", shipment.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }

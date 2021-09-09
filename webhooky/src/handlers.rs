@@ -11,6 +11,7 @@ use cio_api::{
     journal_clubs::JournalClubMeeting,
     rfds::RFD,
     schema::{applicants, journal_club_meetings, rfds},
+    shipments::OutboundShipment,
     swag_inventory::SwagInventoryItem,
     utils::merge_json,
 };
@@ -722,7 +723,7 @@ pub async fn handle_airtable_applicants_update(
     Ok(())
 }
 
-pub async fn listen_airtable_shipments_outbound_create_webhooks(
+pub async fn handle_airtable_shipments_outbound_create(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<()> {
