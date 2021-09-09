@@ -1,7 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::env;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
@@ -156,11 +156,15 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 }
 
 /// Sync the rack_line_subscribers from Mailchimp with our database.
-pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) {
+pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) -> Result<()> {
     let mailchimp_auth = company.authenticate_mailchimp(db).await;
-    if mailchimp_auth.is_none() {
-        // Return early.
-        return;
+    if let Err(e) = mailchimp_auth {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use Zoom.
+            return Ok(());
+        }
+
+        bail!("authenticating mailchimp failed: {}", e);
     }
 
     let mailchimp = mailchimp_auth.unwrap();
@@ -168,15 +172,16 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
     // TODO: remove this env variable.
     let members = mailchimp
         .get_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE").unwrap_or_default())
-        .await
-        .unwrap();
+        .await?;
 
     // Sync subscribers.
     for member in members {
         let mut ns: NewRackLineSubscriber = member.into();
         ns.cio_company_id = company.id;
-        ns.upsert(db).await;
+        ns.upsert(db).await?;
     }
+
+    Ok(())
 }
 
 /// Convert to a signup data type.
@@ -268,9 +273,11 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_db_rack_line_subscribers(&db, &oxide).await;
+        refresh_db_rack_line_subscribers(&db, &oxide).await.unwrap();
         RackLineSubscribers::get_from_db(&db, oxide.id)
+            .unwrap()
             .update_airtable(&db)
-            .await;
+            .await
+            .unwrap();
     }
 }

@@ -96,7 +96,7 @@ pub async fn refresh_swag_items(db: &Database, company: &Company) -> Result<()> 
 
         let mut db_item = item.upsert_in_db(db)?;
         db_item.airtable_record_id = item_record.id.to_string();
-        db_item.update(db).await;
+        db_item.update(db).await?;
     }
 
     Ok(())
@@ -480,7 +480,7 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> R
 
         let mut db_inventory_item = inventory_item.upsert_in_db(db)?;
         db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
-        db_inventory_item.update(db).await;
+        db_inventory_item.update(db).await?;
     }
 
     Ok(())
@@ -532,7 +532,7 @@ impl UpdateAirtableRecord<BarcodeScan> for BarcodeScan {
 impl BarcodeScan {
     // Takes a scanned barcode and updates the inventory count for the item
     // as well as adds the scan to the barcodes_scan table for tracking.
-    pub async fn scan(b: String) {
+    pub async fn scan(b: String) -> Result<()> {
         let time = Utc::now();
 
         // Make sure the barcode is formatted correctly.
@@ -552,7 +552,7 @@ impl BarcodeScan {
                 // in the database.
                 swag_inventory_item.current_stock -= 1;
                 // Update the database.
-                swag_inventory_item.update(&db).await;
+                swag_inventory_item.update(&db).await?;
                 println!(
                     "Subtracted one from {} stock, we now have {}",
                     swag_inventory_item.name, swag_inventory_item.current_stock
@@ -570,10 +570,12 @@ impl BarcodeScan {
                 };
 
                 // Add our barcode scan to the database.
-                new_barcode_scan.upsert(&db).await;
+                new_barcode_scan.upsert(&db).await?;
             }
-            Err(e) => println!("could not find inventory item with barcode {}: {}", barcode, e),
+            Err(e) => bail!("could not find inventory item with barcode {}: {}", barcode, e),
         }
+
+        Ok(())
     }
 }
 

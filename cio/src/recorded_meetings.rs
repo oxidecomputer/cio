@@ -1,7 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::str::from_utf8;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
 use google_drive::traits::{DriveOps, FileOps};
@@ -85,9 +85,13 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 /// Sync the recorded meetings from zoom.
 pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
     let zoom_auth = company.authenticate_zoom(db).await;
-    if zoom_auth.is_none() {
-        // Return early, this company does not use Zoom.
-        return Ok(());
+    if let Err(e) = zoom_auth {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use Zoom.
+            return Ok(());
+        }
+
+        bail!("authenticating zoom failed: {}", e);
     }
 
     let mut zoom = zoom_auth.unwrap();
@@ -425,7 +429,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         let job = revai.create_job(video_contents).await?;
                         // Set the transcript id.
                         db_meeting.transcript_id = job.id.to_string();
-                        db_meeting.update(db).await;
+                        db_meeting.update(db).await?;
                     } else {
                         // We have a transcript id, let's try and get the transcript if we don't have
                         // it already.
@@ -436,7 +440,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                                 .await
                                 .unwrap_or_default();
                             db_meeting.transcript = transcript.trim().to_string();
-                            db_meeting.update(db).await;
+                            db_meeting.update(db).await?;
                         }
                     }
                 }

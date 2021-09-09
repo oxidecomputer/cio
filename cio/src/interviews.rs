@@ -118,7 +118,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
             if event.status == "cancelled" {
                 // See if we have the event.
                 if let Some(db_event) = ApplicantInterview::get_from_db(db, event.id.to_string()) {
-                    db_event.delete(db).await;
+                    db_event.delete(db).await?;
                 }
 
                 // Continue since we don't want to save this event again.
@@ -252,7 +252,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                 // We only care about interviews where the candidate has interviewers.
                 continue;
             }
-            interview.upsert(db).await;
+            interview.upsert(db).await?;
         }
     }
 
@@ -483,7 +483,7 @@ The Oxide Team
             .create_or_update(&drive_id, &parent_id, &filename, "application/pdf", &buffer)
             .await?;
         applicant.interview_packet = format!("https://drive.google.com/open?id={}", drive_file.id);
-        applicant.update(db).await;
+        applicant.update(db).await?;
     }
 
     Ok(())

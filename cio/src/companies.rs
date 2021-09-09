@@ -1,7 +1,7 @@
 use std::{convert::TryInto, env};
 
 use airtable_api::Airtable;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::Utc;
@@ -260,7 +260,7 @@ impl Company {
     }
 
     /// Authenticate with MailChimp.
-    pub async fn authenticate_mailchimp(&self, db: &Database) -> Option<MailChimp> {
+    pub async fn authenticate_mailchimp(&self, db: &Database) -> Result<MailChimp> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()) {
             // Initialize the MailChimp client.
@@ -290,17 +290,17 @@ impl Company {
                 }
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(mailchimp);
+            return Ok(mailchimp);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate with Slack.
-    pub fn authenticate_slack(&self, db: &Database) -> Option<Slack> {
+    pub fn authenticate_slack(&self, db: &Database) -> Result<Slack> {
         // Get the bot token and user token from the database.
         if let Ok(bot_token) = api_tokens::dsl::api_tokens
             .filter(
@@ -329,15 +329,15 @@ impl Company {
                 // Slack does not give you refresh tokens.
                 // So we don't need to do any song and dance to refresh.
 
-                return Some(slack);
+                return Ok(slack);
             }
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate with Ramp.
-    pub async fn authenticate_ramp(&self, db: &Database) -> Option<Ramp> {
+    pub async fn authenticate_ramp(&self, db: &Database) -> Result<Ramp> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "ramp".to_string()) {
             // Initialize the Ramp client.
@@ -361,17 +361,17 @@ impl Company {
                 }
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(ramp);
+            return Ok(ramp);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate with Zoom.
-    pub async fn authenticate_zoom(&self, db: &Database) -> Option<Zoom> {
+    pub async fn authenticate_zoom(&self, db: &Database) -> Result<Zoom> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoom".to_string()) {
             // Initialize the Zoom client.
@@ -395,17 +395,17 @@ impl Company {
                 }
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(zoom);
+            return Ok(zoom);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate with DocuSign.
-    pub async fn authenticate_docusign(&self, db: &Database) -> Option<DocuSign> {
+    pub async fn authenticate_docusign(&self, db: &Database) -> Result<DocuSign> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "docusign".to_string()) {
             // Initialize the DocuSign client.
@@ -434,17 +434,17 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(ds);
+            return Ok(ds);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate with Gusto.
-    pub async fn authenticate_gusto(&self, db: &Database) -> Option<(Gusto, String)> {
+    pub async fn authenticate_gusto(&self, db: &Database) -> Result<(Gusto, String)> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()) {
             // Initialize the Gusto client.
@@ -468,13 +468,13 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some((gusto, t.company_id.to_string()));
+            return Ok((gusto, t.company_id.to_string()));
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate with Tailscale.
@@ -483,7 +483,7 @@ impl Company {
     }
 
     /// Authenticate with TripActions.
-    pub async fn authenticate_tripactions(&self, db: &Database) -> TripActions {
+    pub async fn authenticate_tripactions(&self, db: &Database) -> Result<TripActions> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "tripactions".to_string()) {
             // Initialize the TripActions client.
@@ -511,10 +511,10 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return ta;
+            return Ok(ta);
         }
 
         let mut ta = TripActions::new(
@@ -545,13 +545,13 @@ impl Company {
         };
 
         token.expand();
-        token.upsert(db).await;
+        token.upsert(db).await?;
 
-        ta
+        Ok(ta)
     }
 
     /// Authenticate with QuickBooks.
-    pub async fn authenticate_quickbooks(&self, db: &Database) -> Option<QuickBooks> {
+    pub async fn authenticate_quickbooks(&self, db: &Database) -> Result<QuickBooks> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "quickbooks".to_string()) {
             // Initialize the QuickBooks client.
@@ -579,17 +579,17 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(qb);
+            return Ok(qb);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate Google Admin.
-    pub async fn authenticate_google_admin(&self, db: &Database) -> Option<GoogleAdmin> {
+    pub async fn authenticate_google_admin(&self, db: &Database) -> Result<GoogleAdmin> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             // Initialize the client.
@@ -613,17 +613,17 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(g);
+            return Ok(g);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate Google Calendar.
-    pub async fn authenticate_google_calendar(&self, db: &Database) -> Option<GoogleCalendar> {
+    pub async fn authenticate_google_calendar(&self, db: &Database) -> Result<GoogleCalendar> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             // Initialize the client.
@@ -647,17 +647,17 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(g);
+            return Ok(g);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate Google Drive.
-    pub async fn authenticate_google_drive(&self, db: &Database) -> Option<GoogleDrive> {
+    pub async fn authenticate_google_drive(&self, db: &Database) -> Result<GoogleDrive> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             // Initialize the client.
@@ -681,17 +681,17 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(g);
+            return Ok(g);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate Google Sheets.
-    pub async fn authenticate_google_sheets(&self, db: &Database) -> Option<GoogleSheets> {
+    pub async fn authenticate_google_sheets(&self, db: &Database) -> Result<GoogleSheets> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             // Initialize the client.
@@ -715,17 +715,17 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(g);
+            return Ok(g);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate Google Groups Settings.
-    pub async fn authenticate_google_groups_settings(&self, db: &Database) -> Option<GoogleGroupsSettings> {
+    pub async fn authenticate_google_groups_settings(&self, db: &Database) -> Result<GoogleGroupsSettings> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
             // Initialize the client.
@@ -749,13 +749,13 @@ impl Company {
                 t.last_updated_at = Utc::now();
                 t.expand();
                 // Update the token in the database.
-                t.update(db).await;
+                t.update(db).await?;
             }
 
-            return Some(g);
+            return Ok(g);
         }
 
-        None
+        bail!("no token");
     }
 
     /// Authenticate GitHub with JSON web token credentials, for an application installation.
@@ -815,7 +815,7 @@ pub async fn refresh_companies() -> Result<()> {
             company.airtable_record_id = record.id;
         }
         company.cio_company_id = oxide.id;
-        company.update(&db).await;
+        company.update(&db).await?;
     }
     // Companies are only stored with Oxide.
     Companys::get_from_db(&db, 1)?.update_airtable(&db).await?;

@@ -318,13 +318,13 @@ pub async fn refresh_db_journal_club_meetings(
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {
-        journal_club_meeting.to_model(company).upsert(db).await;
+        journal_club_meeting.to_model(company).upsert(db).await?;
 
         // Upsert the papers.
         for mut journal_club_paper in journal_club_meeting.papers {
             journal_club_paper.meeting = journal_club_meeting.issue.to_string();
             journal_club_paper.cio_company_id = company.id;
-            journal_club_paper.upsert(db).await;
+            journal_club_paper.upsert(db).await?;
         }
     }
 

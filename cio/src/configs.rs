@@ -628,7 +628,7 @@ impl User {
         // Create the shipment in shippo.
         shipment.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
-        shipment.update(db).await;
+        shipment.update(db).await?;
 
         Ok(())
     }
@@ -1529,7 +1529,7 @@ pub async fn sync_users(
     let mut gusto_users: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let mut gusto_users_by_id: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
-    if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
+    if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
         let gu = gusto.employees().get_all_company(gusto_company_id, false, &[]).await?;
         for g in gu {
             gusto_users.insert(g.email.to_string(), g.clone());
@@ -1551,7 +1551,7 @@ pub async fn sync_users(
     let mut ramp_users: HashMap<String, ramp_api::types::User> = HashMap::new();
     let mut ramp_departments: HashMap<String, ramp_api::types::Department> = HashMap::new();
     let ramp_auth = company.authenticate_ramp(db).await;
-    if let Some(ref ramp) = ramp_auth {
+    if let Ok(ref ramp) = ramp_auth {
         let ru = ramp
             .users()
             .get_all(
@@ -1572,7 +1572,7 @@ pub async fn sync_users(
     let mut zoom_users: HashMap<String, zoom_api::types::UsersResponse> = HashMap::new();
     let mut zoom_users_pending: HashMap<String, zoom_api::types::UsersResponse> = HashMap::new();
     let zoom_auth = company.authenticate_zoom(db).await;
-    if let Some(ref zoom) = zoom_auth {
+    if let Ok(ref zoom) = zoom_auth {
         let active_users = zoom
             .users()
             .get_all(
@@ -1788,7 +1788,7 @@ pub async fn sync_users(
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
                         user.update_from_gusto(gusto_user);
                     }
-                } else if let Some((ref gusto, ref gusto_company_id)) = gusto_auth {
+                } else if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
                     user.populate_home_address().await;
                     // Create the user in Gusto if necessary.
                     user.create_in_gusto_if_needed(gusto, gusto_company_id).await?;
@@ -1827,7 +1827,7 @@ pub async fn sync_users(
             }
         }
 
-        if let Some(ref ramp) = ramp_auth {
+        if let Ok(ref ramp) = ramp_auth {
             if !new_user.is_consultant() && !new_user.is_system_account() {
                 // Check if we have a Ramp user for the user.
                 match ramp_users.get(&new_user.email) {
@@ -1886,7 +1886,7 @@ pub async fn sync_users(
         // Create a zoom account for the user, if we have zoom credentials and
         // we cannot find the zoom user.
         // Otherwise update the zoom user.
-        if let Some(ref zoom) = zoom_auth {
+        if let Ok(ref zoom) = zoom_auth {
             if !new_user.is_consultant()
                 && !new_user.is_system_account()
             // We don't want to create Zoom users if we are already using okta.
@@ -2061,7 +2061,7 @@ pub async fn sync_users(
             // TODO: Delete the user from Slack.
 
             // Delete the user from Zoom.
-            if let Some(ref zoom) = zoom_auth {
+            if let Ok(ref zoom) = zoom_auth {
                 if !user.zoom_id.is_empty() {
                     zoom.users()
                         .user_delete(
@@ -2078,7 +2078,7 @@ pub async fn sync_users(
         }
 
         // Delete the user from the database and Airtable.
-        user.delete(db).await;
+        user.delete(db).await?;
     }
     println!("updated configs users in the database");
 
@@ -2145,7 +2145,7 @@ pub async fn sync_users(
             let new_gsuite_user = gsuite.users().insert(&gsuite_user).await?;
             user.google_id = new_gsuite_user.id.to_string();
             // Update with any other changes we made to the user.
-            user.update(db).await;
+            user.update(db).await?;
 
             // Send an email to the new user.
             // Do this here in case another step fails.
@@ -2203,7 +2203,7 @@ pub async fn sync_buildings(
     for (name, building) in building_map {
         println!("deleting building {} from the database, gsuite, etc", name);
 
-        building.delete(db).await;
+        building.delete(db).await?;
 
         // Delete the building from GSuite.
         gsuite
@@ -2329,7 +2329,7 @@ pub async fn sync_conference_rooms(
     // the existing repos from the map above.
     for (name, room) in conference_room_map {
         println!("deleting conference room {} from the database", name);
-        room.delete(db).await;
+        room.delete(db).await?;
     }
     println!("updated configs conference_rooms in the database");
 
@@ -2444,7 +2444,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         println!("deleting group {} from the database, gsuite, etc", name);
 
         // Delete the group from the database and Airtable.
-        group.delete(db).await;
+        group.delete(db).await?;
 
         // Remove the group from GSuite.
         gsuite
@@ -2603,7 +2603,7 @@ pub async fn sync_links(
     // This is found by the remaining links that are in the map since we removed
     // the existing repos from the map above.
     for (_, link) in link_map {
-        link.delete(db).await;
+        link.delete(db).await?;
     }
     println!("updated configs links in the database");
 
@@ -2664,7 +2664,7 @@ pub async fn sync_certificates(
     // This is found by the remaining certificates that are in the map since we removed
     // the existing repos from the map above.
     for (_, cert) in certificate_map {
-        cert.delete(db).await;
+        cert.delete(db).await?;
     }
     println!("updated configs certificates in the database");
 
@@ -2839,7 +2839,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
         }
 
         // Update the user in the database.
-        user.update(db).await;
+        user.update(db).await?;
     }
 
     Ok(())

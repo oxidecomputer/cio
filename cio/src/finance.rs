@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, fs::File};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use macros::db;
@@ -146,7 +146,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
             vendor.users = users.len() as i32;
         }
 
-        if vendor.name == "Slack" && slack_auth.is_some() {
+        if vendor.name == "Slack" && slack_auth.is_ok() {
             let slack = slack_auth.as_ref().unwrap();
             let users = slack.billable_info().await?;
             let mut count = 0;
@@ -183,7 +183,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
         db_vendor.total_cost_per_month =
             (db_vendor.cost_per_user_per_month * db_vendor.users as f32) + db_vendor.flat_cost_per_month;
 
-        db_vendor.update(db).await;
+        db_vendor.update(db).await?;
     }
 
     SoftwareVendors::get_from_db(db, company.id)?
@@ -260,9 +260,13 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
 pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
-    if r.is_none() {
-        // Return early.
-        return Ok(());
+    if let Err(e) = r {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use Zoom.
+            return Ok(());
+        }
+
+        bail!("authenticating ramp failed: {}", e);
     }
 
     let ramp = r.unwrap();
@@ -358,9 +362,13 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
 pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
-    if r.is_none() {
-        // Return early.
-        return Ok(());
+    if let Err(e) = r {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use Zoom.
+            return Ok(());
+        }
+
+        bail!("authenticating ramp failed: {}", e);
     }
 
     let ramp = r.unwrap();
@@ -913,7 +921,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
             db_bill.airtable_record_id = bill_record.id;
         }
 
-        db_bill.update(db).await;
+        db_bill.update(db).await?;
     }
 
     AccountsPayables::get_from_db(db, company.id)?
@@ -1162,9 +1170,13 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
 pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
     // Authenticate QuickBooks.
     let qba = company.authenticate_quickbooks(db).await;
-    if qba.is_none() {
-        // Return early.
-        return Ok(());
+    if let Err(e) = qba {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use Zoom.
+            return Ok(());
+        }
+
+        bail!("authenticating quickbooks failed: {}", e);
     }
     let qb = qba.unwrap();
 
@@ -1208,7 +1220,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                 }
                 transaction.cio_company_id = company.id;
 
-                transaction.update(db).await;
+                transaction.update(db).await?;
                 continue;
             }
             Err(e) => {
@@ -1261,7 +1273,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                     for attachment in attachments {
                         transaction.receipts.push(attachment.temp_download_uri.to_string());
                     }
-                    transaction.update(db).await;
+                    transaction.update(db).await?;
                     continue;
                 }
                 Err(e) => {

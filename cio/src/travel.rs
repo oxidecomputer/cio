@@ -92,9 +92,9 @@ impl UpdateAirtableRecord<Booking> for Booking {
     }
 }
 
-pub async fn refresh_trip_actions(db: &Database, company: &Company) {
+pub async fn refresh_trip_actions(db: &Database, company: &Company) -> Result<()> {
     // Authenticate with TripActions.
-    let ta = company.authenticate_tripactions(db).await;
+    let ta = company.authenticate_tripactions(db).await?;
 
     // Let's get our bookings.
     let bookings = ta
@@ -111,8 +111,7 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) {
             tripactions::types::BookingStatus::Noop,
             tripactions::types::BookingType::Noop,
         )
-        .await
-        .unwrap();
+        .await?;
 
     for booking in bookings {
         // Create our list of passengers.
@@ -150,8 +149,10 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) {
             confirmation_id: booking.booking_id.to_string(),
             cio_company_id: company.id,
         };
-        b.upsert(db).await;
+        b.upsert(db).await?;
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -167,6 +168,6 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_trip_actions(&db, &oxide).await;
+        refresh_trip_actions(&db, &oxide).await.unwrap();
     }
 }

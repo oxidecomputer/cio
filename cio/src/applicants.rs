@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
@@ -3637,9 +3637,13 @@ pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Com
 pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -> Result<()> {
     // Authenticate DocuSign.
     let dsa = company.authenticate_docusign(db).await;
-    if dsa.is_none() {
-        // Return early.
-        return Ok(());
+    if let Err(e) = dsa {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use Zoom.
+            return Ok(());
+        }
+
+        bail!("authenticating docusign failed: {}", e);
     }
     let ds = dsa.unwrap();
 

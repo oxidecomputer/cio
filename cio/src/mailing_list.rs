@@ -1,6 +1,6 @@
 #![allow(clippy::from_over_into)]
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
@@ -226,28 +226,34 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 }
 
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
-pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Company) {
+pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Company) -> Result<()> {
     if company.mailchimp_list_id.is_empty() {
         // Return early.
-        return;
+        return Ok(());
     }
 
     let mailchimp_auth = company.authenticate_mailchimp(db).await;
-    if mailchimp_auth.is_none() {
-        // Return early.
-        return;
+    if let Err(e) = mailchimp_auth {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use Zoom.
+            return Ok(());
+        }
+
+        bail!("authenticating mailchimp failed: {}", e);
     }
 
     let mailchimp = mailchimp_auth.unwrap();
 
-    let members = mailchimp.get_subscribers(&company.mailchimp_list_id).await.unwrap();
+    let members = mailchimp.get_subscribers(&company.mailchimp_list_id).await?;
 
     // Sync subscribers.
     for member in members {
         let mut ns: NewMailingListSubscriber = member.into();
         ns.cio_company_id = company.id;
-        ns.upsert(db).await;
+        ns.upsert(db).await?;
     }
+
+    Ok(())
 }
 
 /// Convert to a signup data type.
@@ -370,10 +376,12 @@ mod tests {
         let companies = Companys::get_from_db(&db, 1);
         // Iterate over the companies and update the mailing list subscribers for both.
         for company in companies {
-            refresh_db_mailing_list_subscribers(&db, &company).await;
+            refresh_db_mailing_list_subscribers(&db, &company).await.unwrap();
             MailingListSubscribers::get_from_db(&db, company.id)
+                .unwrap()
                 .update_airtable(&db)
-                .await;
+                .await
+                .unwrap();
         }
     }
 }

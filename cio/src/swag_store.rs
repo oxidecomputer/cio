@@ -69,11 +69,11 @@ impl Order {
         // Create or update the shipment from shippo.
         new_shipment.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
-        new_shipment.update(db).await;
+        new_shipment.update(db).await?;
 
         // Send an email to the person that we recieved their order and what they are
         // getting.
-        new_shipment.send_email_to_recipient_pre_shipping(db).await;
+        new_shipment.send_email_to_recipient_pre_shipping(db).await?;
 
         Ok(())
     }
@@ -93,7 +93,7 @@ impl Order {
                 "subtracted {} from current stock of {} making the total now {}",
                 item.quantity, swag_inventory_item.name, swag_inventory_item.current_stock
             );
-            swag_inventory_item.update(db).await;
+            swag_inventory_item.update(db).await?;
         }
 
         Ok(())

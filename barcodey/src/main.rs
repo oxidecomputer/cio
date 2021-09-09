@@ -184,7 +184,7 @@ async fn main() -> Result<(), String> {
             println!("Got barcode: {}", barcode);
 
             // We got a barcode scan, lets add it to our database.
-            BarcodeScan::scan(barcode.trim().to_string()).await;
+            BarcodeScan::scan(barcode.trim().to_string()).await.unwrap();
 
             // Clear out the vector so we can scan again.
             chars = vec![];

@@ -487,13 +487,13 @@ impl OutboundShipments {
         };
 
         // Insert the new pickup into the database.
-        np.upsert(db).await;
+        np.upsert(db).await?;
 
         // For each of the shipments, let's set the pickup date.
         for mut shipment in shipments {
             shipment.pickup_date = Some(pickup_date);
             shipment.status = "Waiting for pickup".to_string();
-            shipment.update(db).await;
+            shipment.update(db).await?;
         }
 
         Ok(())
@@ -846,13 +846,13 @@ The Shipping Bot",
             self.latitude = location.lat as f32;
             self.longitude = location.lng as f32;
             // Update here just in case something goes wrong later.
-            self.update(db).await;
+            self.update(db).await?;
         }
 
         // If we did local_pickup, we can return early here.
         if self.local_pickup {
             self.status = "Picked up".to_string();
-            self.update(db).await;
+            self.update(db).await?;
             // Return early.
             return Ok(());
         }
@@ -893,7 +893,7 @@ The Shipping Bot",
                 if self.status != *"Shipped" {
                     // Send an email to the recipient with their tracking link.
                     // Wait until it is in transit to do this.
-                    self.send_email_to_recipient(db).await;
+                    self.send_email_to_recipient(db).await?;
                     // We make sure it only does this one time.
                     // Set the shipped date as this first date.
                     self.shipped_time = tracking_status.status_date;
@@ -1059,7 +1059,7 @@ The Shipping Bot",
                 self.oxide_tracking_link = self.oxide_tracking_link();
 
                 // Save it in Airtable here, in case one of the below steps fails.
-                self.update(db).await;
+                self.update(db).await?;
 
                 // Register a tracking webhook for this shipment.
                 shippo_client
@@ -1067,13 +1067,13 @@ The Shipping Bot",
                     .await?;
 
                 // Print the label.
-                self.print_label(db).await;
+                self.print_label(db).await?;
                 // Print the receipt.
-                self.print_receipt(db).await;
+                self.print_receipt(db).await?;
                 self.status = "Label printed".to_string();
 
                 // Send an email to us that we need to package the shipment.
-                self.send_email_internally(db).await;
+                self.send_email_internally(db).await?;
 
                 break;
             }
@@ -1101,7 +1101,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
         // Update the shipment from shippo.
         s.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
-        s.update(db).await;
+        s.update(db).await?;
     }
 
     // Create the shippo client.
@@ -1173,7 +1173,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
         // Update the shipment from shippo.
         s.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
-        s.update(db).await;
+        s.update(db).await?;
     }
 
     OutboundShipments::get_from_db(db, company.id)?
@@ -1217,7 +1217,7 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Resu
         if shipment.airtable_record_id.is_empty() {
             shipment.airtable_record_id = record.id;
         }
-        shipment.update(db).await;
+        shipment.update(db).await?;
     }
 
     InboundShipments::get_from_db(db, company.id)?
