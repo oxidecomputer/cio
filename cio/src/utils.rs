@@ -7,21 +7,24 @@ use std::{
 };
 
 use anyhow::{bail, Result};
+use log::info;
 use octorust::Client as GitHub;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
 use serde_json::Value;
 
 /// Write a file.
-pub fn write_file(file: &Path, contents: &[u8]) {
+pub fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
     // create each directory.
-    fs::create_dir_all(file.parent().unwrap()).unwrap();
+    fs::create_dir_all(file.parent().unwrap())?;
 
     // Write to the file.
-    let mut f = fs::File::create(file.to_path_buf()).unwrap();
-    f.write_all(contents).unwrap();
+    let mut f = fs::File::create(file.to_path_buf())?;
+    f.write_all(contents)?;
 
-    println!("wrote file: {}", file.to_str().unwrap());
+    info!("wrote file: {}", file.to_str().unwrap());
+
+    Ok(())
 }
 
 /// Create a comment on a commit for a repo.
@@ -67,15 +70,15 @@ pub fn check_if_github_issue_exists(
 }
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
-pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
+pub async fn get_github_user_public_ssh_keys(handle: &str) -> Result<Vec<String>> {
     let body = get(&format!("https://github.com/{}.keys", handle))
         .await
         .unwrap()
         .text()
-        .await
-        .unwrap();
+        .await?;
 
-    body.lines()
+    Ok(body
+        .lines()
         .filter_map(|key| {
             let kt = key.trim();
             if !kt.is_empty() {
@@ -84,7 +87,7 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Vec<String> {
                 None
             }
         })
-        .collect()
+        .collect())
 }
 
 /// Get a files content from a repo.
@@ -123,8 +126,7 @@ pub async fn get_file_content_from_repo(
                 let files = github
                     .repos()
                     .get_content_vec_entries(owner, repo, p.to_str().unwrap(), branch)
-                    .await
-                    .unwrap();
+                    .await?;
                 for item in files {
                     if file_path.trim_start_matches('/') != item.path {
                         // Continue early.
@@ -134,7 +136,7 @@ pub async fn get_file_content_from_repo(
                     // Otherwise, this is our file.
                     // We have the sha we can see if the files match using the
                     // Git Data API.
-                    let blob = github.git().get_blob(owner, repo, &item.sha).await.unwrap();
+                    let blob = github.git().get_blob(owner, repo, &item.sha).await?;
                     // Base64 decode the contents.
 
                     return Ok((decode_base64(&blob.content), item.sha.to_string()));
@@ -189,10 +191,7 @@ pub async fn create_or_update_file_in_github_repo(
         if content == existing_content {
             // They are the same so we can return early, we do not need to update the
             // file.
-            println!(
-                "[github content] File contents at {} are the same, no update needed",
-                file_path
-            );
+            info!("github file contents at {} are the same, no update needed", file_path);
             return Ok(());
         }
 
@@ -210,10 +209,7 @@ pub async fn create_or_update_file_in_github_repo(
         {
             // The binary contents are the same so we can return early.
             // The only thing that changed was the modified time and creation date.
-            println!(
-                "[github content] File contents at {} are the same, no update needed",
-                file_path
-            );
+            info!("github file contents at {} are the same, no update needed", file_path);
             return Ok(());
         }
     }

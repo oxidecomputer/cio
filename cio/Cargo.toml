@@ -51,6 +51,7 @@ html2text = "0.1"
 image = "^0.23.14"
 Inflector = "^0.11.4"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
+log = { version = "0.4", features = ["serde"] }
 macros = { path = "../macros" }
 mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }

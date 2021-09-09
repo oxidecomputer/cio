@@ -14,6 +14,7 @@ use cloudflare::{
     endpoints::{dns, zone},
     framework::async_api::ApiClient,
 };
+use log::info;
 use macros::db;
 use openssl::x509::X509;
 use schemars::JsonSchema;
@@ -125,7 +126,7 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                 .unwrap()
                 .result;
 
-            println!("[certs] created dns record: {:?}", dns_record);
+            info!("created dns record: {:#?}", dns_record);
         } else {
             // Update the DNS record.
             let dns_record = api_client
@@ -145,11 +146,11 @@ pub async fn create_ssl_certificate(domain: &str, company: &Company) -> NewCerti
                 .unwrap()
                 .result;
 
-            println!("[certs] updated dns record: {:?}", dns_record);
+            info!("updated dns record: {:#?}", dns_record);
         }
 
         // TODO: make this less awful than a sleep.
-        println!("validating the proof...");
+        info!("validating the proof...");
         let dur = time::Duration::from_secs(10);
         thread::sleep(dur);
 

@@ -3,6 +3,7 @@ use std::{collections::HashMap, env, fs::File};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
+use log::{info, warn};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -327,7 +328,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                println!("could not find vendor that matches {}", vendor);
+                warn!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -406,7 +407,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                println!("could not find vendor that matches {}", vendor);
+                warn!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -738,11 +739,11 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
 
     if !path.exists() {
         // Return early the path does not exist.
-        println!("Brex csv at {} does not exist, returning early", path.to_str().unwrap());
+        info!("brex csv at {} does not exist, returning early", path.to_str().unwrap());
         return Ok(());
     }
 
-    println!("Reading csv from {}", path.to_str().unwrap());
+    info!("reading csv from {}", path.to_str().unwrap());
     let f = File::open(&path).unwrap();
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
@@ -780,7 +781,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
                 } else if last_name == "Randal" {
                     record.employee_email = "allison@oxidecomputer.com".to_string();
                 } else {
-                    println!(
+                    warn!(
                         "could not find user with name `{}` last name `{}`: {}",
                         name, last_name, e
                     );
@@ -790,7 +791,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
 
         // Make sure we have a transaction id.
         if record.transaction_id.is_empty() {
-            println!("transaction_id is missing: {:?}", record);
+            warn!("transaction_id is missing: {:?}", record);
             // We don't want to save it to our database.
             continue;
         }
@@ -803,7 +804,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                println!("could not find vendor that matches {}", vendor);
+                warn!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -908,7 +909,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
                 bill.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                println!("could not find vendor that matches {}", vendor);
+                warn!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -1005,14 +1006,14 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
 
     if !path.exists() {
         // Return early the path does not exist.
-        println!(
-            "Expensify csv at {} does not exist, returning early",
+        info!(
+            "expensify csv at {} does not exist, returning early",
             path.to_str().unwrap()
         );
         return Ok(());
     }
 
-    println!("Reading csv from {}", path.to_str().unwrap());
+    info!("reading csv from {}", path.to_str().unwrap());
     let f = File::open(&path)?;
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
@@ -1052,7 +1053,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
                 } else if last_name == "Randal" || last_name == "allison" {
                     record.employee_email = "allison@oxidecomputer.com".to_string();
                 } else {
-                    println!(
+                    warn!(
                         "could not find user with name `{}` last name `{}`: {}",
                         name, last_name, e
                     );
@@ -1075,7 +1076,6 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
                         .trim_start_matches("href=\"")
                         .trim_end_matches("\">Download")
                         .to_string();
-                    println!("{}", receipt);
                     record.receipts = vec![receipt.to_string()];
 
                     // Stop the loop.
@@ -1089,7 +1089,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
 
         // Make sure we have a transaction id.
         if record.transaction_id.is_empty() {
-            println!("transaction_id is missing: {:?}", record);
+            warn!("transaction_id is missing: {:?}", record);
             // We don't want to save it to our database.
             continue;
         }
@@ -1102,7 +1102,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                println!("could not find vendor that matches {}", vendor);
+                warn!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -1121,14 +1121,14 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
 
     if !path.exists() {
         // Return early the path does not exist.
-        println!(
-            "Bill.com csv at {} does not exist, returning early",
+        info!(
+            "bill.com csv at {} does not exist, returning early",
             path.to_str().unwrap()
         );
         return Ok(());
     }
 
-    println!("Reading csv from {}", path.to_str().unwrap());
+    info!("reading csv from {}", path.to_str().unwrap());
     let f = File::open(&path)?;
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
@@ -1141,7 +1141,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
 
         // Make sure we have a transaction id.
         if record.confirmation_number.is_empty() {
-            println!("transaction_id is missing: {:?}", record);
+            warn!("transaction_id is missing: {:?}", record);
             // We don't want to save it to our database.
             continue;
         }
@@ -1154,7 +1154,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                println!("could not find vendor that matches {}", vendor);
+                warn!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -1224,9 +1224,8 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                 continue;
             }
             Err(e) => {
-                println!(
-                    "WARN: could not find transaction with merchant_name `{}` -> `{}` amount `{}` \
-                     date `{}`: {}",
+                warn!(
+                    "could not find transaction with merchant_name `{}` -> `{}` amount `{}`  date `{}`: {}",
                     bill_payment.vendor_ref.name, merchant_name, bill_payment.total_amt, bill_payment.txn_date, e
                 );
             }
@@ -1277,18 +1276,14 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                     continue;
                 }
                 Err(e) => {
-                    println!(
-                        "WARN: could not find transaction with merchant_name `{}` -> `{}` amount \
-                         `{}` date `{}` --> less than `{}` greater than `{}`: {}",
+                    warn!(
+                        "could not find transaction with merchant_name `{}` -> `{}` amount `{}` date `{}` --> less than `{}` greater than `{}`: {}",
                         purchase.entity_ref.name, merchant_name, purchase.total_amt, purchase.txn_date, sdt, edt, e
                     );
                 }
             }
-        } else {
-            println!("got transaction type: {}", purchase.account_ref.name);
         }
     }
-    println!("len: {}", purchases.len());
 
     Ok(())
 }

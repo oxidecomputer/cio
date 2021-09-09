@@ -14,6 +14,7 @@ use gsuite_api::types::{
     Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup, User as GSuiteUser,
 };
 use gusto_api::Client as Gusto;
+use log::{info, warn};
 use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
@@ -380,13 +381,15 @@ impl UserConfig {
         }
     }
 
-    async fn populate_ssh_keys(&mut self) {
+    async fn populate_ssh_keys(&mut self) -> Result<()> {
         if self.github.is_empty() {
             // Return early if we don't know their github handle.
-            return;
+            return Ok(());
         }
 
-        self.public_ssh_keys = get_github_user_public_ssh_keys(&self.github).await;
+        self.public_ssh_keys = get_github_user_public_ssh_keys(&self.github).await?;
+
+        Ok(())
     }
 
     async fn populate_home_address(&mut self) {
@@ -548,7 +551,7 @@ impl UserConfig {
         }
     }
 
-    pub async fn expand(&mut self, db: &Database, company: &Company) {
+    pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
         self.cio_company_id = company.id;
 
         self.email = format!("{}@{}", self.username, company.gsuite_domain);
@@ -559,7 +562,7 @@ impl UserConfig {
         self.ensure_all_aliases();
         self.ensure_all_groups();
 
-        self.populate_ssh_keys().await;
+        self.populate_ssh_keys().await?;
 
         self.populate_home_address().await;
         self.populate_work_address(db).await;
@@ -573,6 +576,8 @@ impl UserConfig {
 
         // Title case the department.
         self.department = titlecase::titlecase(&self.department);
+
+        Ok(())
     }
 }
 
@@ -614,7 +619,7 @@ impl User {
         // First let's check if the user even has an address.
         // If not we can return early.
         if self.home_address_formatted.is_empty() {
-            println!(
+            warn!(
                 "cannot create shipping label for user {} since we don't know their home address",
                 self.username
             );
@@ -1357,7 +1362,7 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
 
     let mut file_contents = String::new();
     for file in files {
-        println!("decoding {}", file.name);
+        info!("decoding {}", file.name);
         // Get the contents of the file.
         let (contents, _) = get_file_content_from_repo(
             github, owner, repo, "", // leaving the branch blank gives us the default branch
@@ -1390,7 +1395,7 @@ pub async fn sync_github_outside_collaborators(
 
     // Add the outside contributors to the specified repos.
     for (name, outside_collaborators_config) in outside_collaborators {
-        println!("Running configuration for outside collaborators: {}", name);
+        info!("running configuration for outside collaborators: {}", name);
         for repo in &outside_collaborators_config.repos {
             // Push the collaborators to our map, so we can use it later.
             match collaborators_map.get(repo) {
@@ -1435,18 +1440,18 @@ pub async fn sync_github_outside_collaborators(
                         .await
                     {
                         Ok(_) => {
-                            println!(
+                            info!(
                                 "[{}] added user {} as a collaborator ({}) on repo {}",
                                 name, user, perm, repo
                             );
                         }
-                        Err(e) => println!(
+                        Err(e) => info!(
                             "[{}] adding user {} as a collaborator ({}) on repo {} FAILED: {}",
                             name, user, perm, repo, e
                         ),
                     }
                 } else {
-                    println!(
+                    info!(
                         "[{}] user {} is already a collaborator ({}) on repo {}",
                         name, user, perm, repo
                     );
@@ -1454,7 +1459,7 @@ pub async fn sync_github_outside_collaborators(
             }
         }
 
-        println!("Successfully ran configuration for outside collaborators: {}", name);
+        info!("successfully ran configuration for outside collaborators: {}", name);
     }
 
     // Get all the internal to the company collaborators.
@@ -1499,7 +1504,7 @@ pub async fn sync_github_outside_collaborators(
             }
 
             // Remove the user.
-            println!(
+            info!(
                 "REPO: {} USER: {} should not have access! Removing!",
                 repo, existing_collaborator.login
             );
@@ -1702,7 +1707,7 @@ pub async fn sync_users(
                     // Add the user, if we found out they did not already have permissions
                     // to the workspace.
                     if !has_access_to_workspace && user.is_full_time() {
-                        println!(
+                        info!(
                             "giving {} access to airtable workspace {}",
                             user.email, company.airtable_workspace_id
                         );
@@ -1711,7 +1716,7 @@ pub async fn sync_users(
                             .await?;
                     }
                     if !has_access_to_workspace_read_only && user.is_full_time() {
-                        println!(
+                        info!(
                             "giving {} comment access to airtable workspace read only {}",
                             user.email, company.airtable_workspace_read_only_id
                         );
@@ -1728,7 +1733,7 @@ pub async fn sync_users(
                     }
                 }
                 Err(e) => {
-                    println!("getting airtable enterprise user for {} failed: {}", user.email, e);
+                    warn!("getting airtable enterprise user for {} failed: {}", user.email, e);
                 }
             }
         }
@@ -1797,7 +1802,7 @@ pub async fn sync_users(
         }
 
         // Expand the user.
-        user.expand(db, company).await;
+        user.expand(db, company).await?;
 
         let mut new_user = user.upsert(db).await?;
 
@@ -1819,7 +1824,7 @@ pub async fn sync_users(
 
             // The user did not already exist in the database.
             // We should send them an email about setting up their account.
-            println!("sending email to new user: {}", new_user.username);
+            info!("sending email to new user: {}", new_user.username);
             if new_user.is_consultant() {
                 new_user.send_email_new_consultant(db).await?;
             } else {
@@ -1854,7 +1859,7 @@ pub async fn sync_users(
                         }
                     }
                     None => {
-                        println!("inviting new ramp user {}", new_user.username);
+                        info!("inviting new ramp user {}", new_user.username);
                         // Invite the new ramp user.
                         let mut ramp_user = ramp_api::types::PostUsersDeferredRequest {
                             email: new_user.email.to_string(),
@@ -1935,7 +1940,7 @@ pub async fn sync_users(
                                 Ok(_) => (),
                                 Err(e) => {
                                     // Try their github username.
-                                    println!(
+                                    info!(
                                         "updating zoom vanity_url failed for username {}, will try with github handle {}: {}",
                                         new_user.username, new_user.github, e
                                     );
@@ -1948,7 +1953,7 @@ pub async fn sync_users(
                                             Ok(_) => (),
                                             Err(e) => {
                                                 // Try their {first_name}.{last_name}.
-                                                println!(
+                                                info!(
                                         "updating zoom vanity_url failed for github handle {}, will try with {}.{}: {}",
                                         new_user.github, new_user.first_name, new_user.last_name, e
                                     );
@@ -1967,7 +1972,7 @@ pub async fn sync_users(
                                                     )
                                                     .await
                                                 {
-                                                    println!(
+                                                    info!(
                                                         "updating zoom vanity_url failed for {}.{}: {}",
                                                         new_user.first_name, new_user.last_name, e
                                                     );
@@ -1983,7 +1988,7 @@ pub async fn sync_users(
                         // Only create the user if we don't already have a pending user.
                         // We can know this if the zoom_id is empty.
                         if new_user.zoom_id.is_empty() {
-                            println!("creating new zoom user {}", new_user.username);
+                            info!("creating new zoom user {}", new_user.username);
 
                             let zoom_user = zoom
                                 .users()
@@ -2022,7 +2027,7 @@ pub async fn sync_users(
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, user) in user_map {
-        println!("deleting user {} from the database", username);
+        info!("deleting user {} from the database", username);
 
         if !user.google_anniversary_event_id.is_empty() {
             // First delete the recurring event for their anniversary.
@@ -2034,7 +2039,7 @@ pub async fn sync_users(
                     google_calendar::types::SendUpdates::All,
                 )
                 .await?;
-            println!(
+            info!(
                 "deleted user {} event {} from google",
                 username, user.google_anniversary_event_id
             );
@@ -2047,7 +2052,7 @@ pub async fn sync_users(
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             // TODO: only deactivate/suspend them so someone can transfer their data.
             crate::gsuite::suspend_user(&gsuite, &user.email).await?;
-            println!("suspended user in gsuite: {}", username);
+            info!("suspended user in gsuite: {}", username);
 
             // If we have an enterprise airtable account, let's delete the user from
             // our Airtable.
@@ -2055,7 +2060,7 @@ pub async fn sync_users(
                 // We don't need a base id here since we are only using the enterprise api features.
                 let airtable_auth = company.authenticate_airtable("");
                 airtable_auth.delete_internal_user_by_email(&user.email).await?;
-                println!("deleted user from airtable: {}", username);
+                info!("deleted user from airtable: {}", username);
             }
 
             // TODO: Delete the user from Slack.
@@ -2080,7 +2085,7 @@ pub async fn sync_users(
         // Delete the user from the database and Airtable.
         user.delete(db).await?;
     }
-    println!("updated configs users in the database");
+    info!("updated configs users in the database");
 
     if company.okta_domain.is_empty() {
         // Update the users in GSuite.
@@ -2107,11 +2112,10 @@ pub async fn sync_users(
                 None => {
                     // If the user does not exist in our map we need to delete
                     // them from GSuite.
-                    println!("suspending user {} in gsuite", username);
+                    info!("suspending user {} in gsuite", username);
                     crate::gsuite::suspend_user(&gsuite, &format!("{}@{}", username, company.gsuite_domain)).await?;
-                    println!("suspended user in gsuite: {}", username);
+                    info!("suspended user in gsuite: {}", username);
 
-                    println!("deleted user from gsuite: {}", username);
                     continue;
                 }
             }
@@ -2130,7 +2134,7 @@ pub async fn sync_users(
             // This allows us to add all the remaining new user after.
             user_map.remove(&username);
 
-            println!("updated user in gsuite: {}", username);
+            info!("updated user in gsuite: {}", username);
         }
 
         // Create any remaining users from the database that we do not have in GSuite.
@@ -2150,7 +2154,7 @@ pub async fn sync_users(
             // Send an email to the new user.
             // Do this here in case another step fails.
             user.send_email_new_gsuite_user(db, &gsuite_user.password).await?;
-            println!("created new user in gsuite: {}", username);
+            info!("created new user in gsuite: {}", username);
 
             update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await?;
 
@@ -2201,7 +2205,7 @@ pub async fn sync_buildings(
     // This is found by the remaining buildings that are in the map since we removed
     // the existing repos from the map above.
     for (name, building) in building_map {
-        println!("deleting building {} from the database, gsuite, etc", name);
+        info!("deleting building {} from the database, gsuite, etc", name);
 
         building.delete(db).await?;
 
@@ -2210,9 +2214,9 @@ pub async fn sync_buildings(
             .resources()
             .buildings_delete(&company.gsuite_account_id, &name)
             .await?;
-        println!("deleted building from gsuite: {}", name);
+        info!("deleted building from gsuite: {}", name);
     }
-    println!("updated configs buildings in the database");
+    info!("updated configs buildings in the database");
 
     // Update the buildings in GSuite.
     // Get all the buildings.
@@ -2232,13 +2236,13 @@ pub async fn sync_buildings(
             None => {
                 // If the building does not exist in our map we need to delete
                 // them from GSuite.
-                println!("deleting building {} from gsuite", id);
+                info!("deleting building {} from gsuite", id);
                 gsuite
                     .resources()
                     .buildings_delete(&company.gsuite_account_id, &id)
                     .await?;
 
-                println!("deleted building from gsuite: {}", id);
+                info!("deleted building from gsuite: {}", id);
                 continue;
             }
         }
@@ -2261,7 +2265,7 @@ pub async fn sync_buildings(
         // This allows us to add all the remaining new building after.
         building_map.remove(&id);
 
-        println!("updated building from gsuite: {}", id);
+        info!("updated building from gsuite: {}", id);
     }
 
     // Create any remaining buildings from the database that we do not have in GSuite.
@@ -2280,7 +2284,7 @@ pub async fn sync_buildings(
             )
             .await?;
 
-        println!("created building from gsuite: {}", id);
+        info!("created building from gsuite: {}", id);
     }
 
     // Update buildings in airtable.
@@ -2328,10 +2332,10 @@ pub async fn sync_conference_rooms(
     // This is found by the remaining conference_rooms that are in the map since we removed
     // the existing repos from the map above.
     for (name, room) in conference_room_map {
-        println!("deleting conference room {} from the database", name);
+        info!("deleting conference room {} from the database", name);
         room.delete(db).await?;
     }
-    println!("updated configs conference_rooms in the database");
+    info!("updated configs conference_rooms in the database");
 
     // Update the conference_rooms in GSuite.
     // Get all the conference_rooms.
@@ -2351,13 +2355,13 @@ pub async fn sync_conference_rooms(
             None => {
                 // If the conference room does not exist in our map we need to delete
                 // it from GSuite.
-                println!("deleting conference room {} from gsuite", id);
+                info!("deleting conference room {} from gsuite", id);
                 gsuite
                     .resources()
                     .calendars_delete(&company.gsuite_account_id, &r.resource_id)
                     .await?;
 
-                println!("deleted conference room from gsuite: {}", id);
+                info!("deleted conference room from gsuite: {}", id);
                 continue;
             }
         }
@@ -2375,7 +2379,7 @@ pub async fn sync_conference_rooms(
         // This allows us to add all the remaining new resource after.
         conference_room_map.remove(&id);
 
-        println!("updated conference room in gsuite: {}", id);
+        info!("updated conference room in gsuite: {}", id);
     }
 
     // Create any remaining resources from the database that we do not have in GSuite.
@@ -2390,7 +2394,7 @@ pub async fn sync_conference_rooms(
             .calendars_insert(&company.gsuite_account_id, &new_r)
             .await?;
 
-        println!("created conference room in gsuite: {}", id);
+        info!("created conference room in gsuite: {}", id);
     }
 
     // Update conference_rooms in airtable.
@@ -2441,7 +2445,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
     for (name, group) in group_map {
-        println!("deleting group {} from the database, gsuite, etc", name);
+        info!("deleting group {} from the database, gsuite, etc", name);
 
         // Delete the group from the database and Airtable.
         group.delete(db).await?;
@@ -2451,9 +2455,9 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
             .groups()
             .delete(&format!("{}@{}", name, &company.gsuite_domain))
             .await?;
-        println!("deleted group from gsuite: {}", name);
+        info!("deleted group from gsuite: {}", name);
     }
-    println!("updated configs groups in the database");
+    info!("updated configs groups in the database");
 
     // Update the groups in GSuite.
     // Get all the groups.
@@ -2473,12 +2477,12 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         } else {
             // If the group does not exist in our map we need to delete
             // group from GSuite.
-            println!("deleting group {} from gsuite", name);
+            info!("deleting group {} from gsuite", name);
             gsuite
                 .groups()
                 .delete(&format!("{}@{}", name, &company.gsuite_domain))
                 .await?;
-            println!("deleted group from gsuite: {}", name);
+            info!("deleted group from gsuite: {}", name);
             continue;
         };
 
@@ -2507,7 +2511,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         // This allows us to add all the remaining new groups after.
         group_map.remove(&name);
 
-        println!("updated group in gsuite: {}", name);
+        info!("updated group in gsuite: {}", name);
     }
 
     // Create any remaining groups from the database  that we do not have in GSuite.
@@ -2534,7 +2538,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         // Update the groups settings.
         update_google_group_settings(&ggs, &group, company).await?;
 
-        println!("created group in gsuite: {}", name);
+        info!("created group in gsuite: {}", name);
     }
 
     // Update groups in airtable.
@@ -2605,7 +2609,7 @@ pub async fn sync_links(
     for (_, link) in link_map {
         link.delete(db).await?;
     }
-    println!("updated configs links in the database");
+    info!("updated configs links in the database");
 
     // Update links in airtable.
     Links::get_from_db(db, company.id)?.update_airtable(db).await?;
@@ -2636,7 +2640,7 @@ pub async fn sync_certificates(
         // If the cert is going to expire in less than 7 days, renew it.
         // Otherwise, return early.
         if certificate.valid_days_left > 7 {
-            println!(
+            info!(
                 "cert {} is valid for {} more days, skipping",
                 certificate.domain, certificate.valid_days_left
             );
@@ -2666,7 +2670,7 @@ pub async fn sync_certificates(
     for (_, cert) in certificate_map {
         cert.delete(db).await?;
     }
-    println!("updated configs certificates in the database");
+    info!("updated configs certificates in the database");
 
     // Update certificates in airtable.
     Certificates::get_from_db(db, company.id)?.update_airtable(db).await?;
@@ -2797,7 +2801,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
                     &new_event,
                 )
                 .await?;
-            println!("created event for user {} anniversary: {:?}", user.username, event);
+            info!("created event for user {} anniversary: {:?}", user.username, event);
 
             user.google_anniversary_event_id = event.id.to_string();
         } else {
@@ -2834,7 +2838,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
                         &new_event,
                     )
                     .await?;
-                println!("updated event for user {} anniversary: {:?}", user.username, event);
+                info!("updated event for user {} anniversary: {:?}", user.username, event);
             }
         }
 

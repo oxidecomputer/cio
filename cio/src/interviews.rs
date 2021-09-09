@@ -14,6 +14,7 @@ use google_drive::{
     traits::{DriveOps, FileOps},
     Client as GoogleDrive,
 };
+use log::{info, warn};
 use lopdf::{Bookmark, Document, Object, ObjectId};
 use macros::db;
 use schemars::JsonSchema;
@@ -92,7 +93,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
-        println!("Getting events for {}", calendar.id);
+        info!("getting events for {}", calendar.id);
         let events = gcal
             .events()
             .list_all(
@@ -178,7 +179,10 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                                 }
                             }
                             Err(e) => {
-                                println!("[db] we don't have the record in the database: {}", e);
+                                warn!(
+                                    "we don't have the record in the database where recovery email `{}`: {}",
+                                    email, e
+                                );
                             }
                         }
                     } else {
@@ -206,7 +210,10 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                                 }
                             }
                             Err(e) => {
-                                println!("[db] we don't have the record in the database: {}", e);
+                                warn!(
+                                    "we don't have the record in the database where username `{}`: {}",
+                                    username, e
+                                );
                             }
                         }
                     }
@@ -297,10 +304,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         }
 
         if materials_url.is_empty() {
-            println!(
-                "[interviews] could not find applicant with email {}",
-                employee.recovery_email
-            );
+            warn!("could not find applicant with email {}", employee.recovery_email);
             continue;
         }
 
@@ -342,7 +346,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
                 existing.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
                 interviewers.insert(interview.email.to_string(), existing.clone());
             } else {
-                println!("[interviews] {} not found in database", username);
+                warn!("interviewer {} not found in database", username);
             }
         }
     }
@@ -541,20 +545,16 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
             {
                 let comment = file.comment();
                 if !comment.is_empty() {
-                    println!("[applicants] zip file {} comment: {}", i, comment);
+                    info!("zip file {} comment: {}", i, comment);
                 }
             }
 
             if (&*file.name()).ends_with('/') {
-                println!(
-                    "[applicants] zip file {} extracted to \"{}\"",
-                    i,
-                    output.as_path().display()
-                );
+                info!("zip file {} extracted to \"{}\"", i, output.as_path().display());
                 fs::create_dir_all(&output).unwrap();
             } else {
-                println!(
-                    "[applicants] zip file {} extracted to \"{}\" ({} bytes)",
+                info!(
+                    "zip file {} extracted to \"{}\" ({} bytes)",
                     i,
                     output.as_path().display(),
                     file.size()
@@ -585,7 +585,7 @@ pub async fn download_materials(drive_client: &GoogleDrive, url: &str, username:
     }
 
     // Anything else let's use pandoc to convert it to a pdf.
-    println!("Converting `{}` to a PDF", name);
+    info!("converting `{}` to a PDF", name);
     let contents = drive_client.files().download_by_id(&id).await.unwrap();
     path.push(name.to_string());
 
@@ -697,7 +697,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
     // If no "Pages" found abort
     if pages_object.is_none() {
-        println!("[merge-pdfs] pages root not found.");
+        warn!("merge-pdfs pages root not found");
 
         return Default::default();
     }
@@ -714,7 +714,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Vec<u8> {
 
     // If no "Catalog" found abort
     if catalog_object.is_none() {
-        println!("[merge-pdfs] catalog root not found.");
+        warn!("merge-pdfs catalog root not found");
 
         return Default::default();
     }

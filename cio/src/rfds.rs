@@ -15,6 +15,7 @@ use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
 use google_drive::traits::{DriveOps, FileOps};
+use log::{info, warn};
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -309,7 +310,7 @@ impl RFD {
         path.push("contents.adoc");
 
         // Write the contents to a temporary file.
-        write_file(&path, deunicode::deunicode(&self.content).as_bytes());
+        write_file(&path, deunicode::deunicode(&self.content).as_bytes())?;
 
         // If the file contains inline images, we need to save those images locally.
         // TODO: we don't need to save all the images, only the inline ones, clean this up
@@ -320,7 +321,7 @@ impl RFD {
                 // Save the image to our temporary directory.
                 let image_path = format!("{}/{}", parent, image.path.replace(&dir, "").trim_start_matches('/'));
 
-                write_file(&PathBuf::from(image_path), &decode_base64(&image.content));
+                write_file(&PathBuf::from(image_path), &decode_base64(&image.content))?;
             }
         }
 
@@ -487,7 +488,7 @@ impl RFD {
                 image.path.replace(&old_dir, "").trim_start_matches('/')
             );
 
-            write_file(&PathBuf::from(image_path), &decode_base64(&image.content));
+            write_file(&PathBuf::from(image_path), &decode_base64(&image.content))?;
         }
 
         let cmd_output = Command::new("asciidoctor-pdf")
@@ -738,8 +739,8 @@ pub async fn get_rfd_contents_from_repo(
             sha = f.sha;
         }
         Err(e) => {
-            println!(
-                "[rfd] getting file contents for {} failed: {}, trying markdown instead...",
+            info!(
+                "getting file contents for {} failed: {}, trying markdown instead...",
                 path, e
             );
 
@@ -942,8 +943,8 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
 
         // Make and update the PDF versions.
         if let Err(err) = new_rfd.convert_and_upload_pdf(db, &github, company).await {
-            println!(
-                "Failed to convert and upload PDF for RFD {}: {}",
+            warn!(
+                "failed to convert and upload PDF for RFD {}: {}",
                 new_rfd.number_string, err
             );
         }
@@ -1014,11 +1015,11 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
         // Iterate over the files and if the name does not equal our name, then nuke it.
         for df in drive_files {
             if df.name == pdf_file_name {
-                println!("[{}] Keeping Google Drive PDF: {}", rfd.number_string, df.name);
+                info!("keeping Google Drive PDF of RFD `{}`: {}", rfd.number_string, df.name);
                 continue;
             }
 
-            println!("[{}] Deleting Google Drive PDF: {}", rfd.number_string, df.name);
+            info!("deleting Google Drive PDF of RFD `{}`: {}", rfd.number_string, df.name);
             // Delete the file from our drive.
             drive_client.files().delete(&df.id, true, true).await?;
         }
@@ -1027,7 +1028,7 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
         // Iterate over our github_pdf_files and delete any that do not match.
         for (gf_name, sha) in github_pdf_files.clone() {
             if gf_name == pdf_file_name {
-                println!("[{}] Keeping GitHub PDF: {}", rfd.number_string, gf_name);
+                info!("keeping GitHub PDF of RFD `{}`: {}", rfd.number_string, gf_name);
                 // Remove it from our btree map.
                 github_pdf_files.remove(&gf_name);
                 continue;
@@ -1035,7 +1036,7 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
 
             if gf_name.contains(&rfd.number_string) {
                 // Remove it from GitHub.
-                println!("[{}] Deleting GitHub PDF: {}", rfd.number_string, gf_name);
+                info!("deleting GitHub PDF of RFD `{}`: {}", rfd.number_string, gf_name);
                 github
                     .repos()
                     .delete_file(

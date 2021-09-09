@@ -11,6 +11,7 @@ use google_drive::{
     traits::{DriveOps, FileOps},
     Client as GoogleDrive,
 };
+use log::{info, warn};
 use macros::db;
 use printpdf::{types::plugins::graphics::two_dimensional::image::Image as PdfImage, Mm, PdfDocument, Pt};
 use reqwest::StatusCode;
@@ -223,7 +224,7 @@ impl NewSwagInventoryItem {
             barcode = format!("0{}", barcode);
         }
         if barcode.len() > max_barcode_len {
-            println!(
+            warn!(
                 "len too long {} {}, needs to be {} or under",
                 barcode,
                 barcode.len(),
@@ -553,8 +554,8 @@ impl BarcodeScan {
                 swag_inventory_item.current_stock -= 1;
                 // Update the database.
                 swag_inventory_item.update(&db).await?;
-                println!(
-                    "Subtracted one from {} stock, we now have {}",
+                info!(
+                    "subtracted one from {} stock, we now have {}",
                     swag_inventory_item.name, swag_inventory_item.current_stock
                 );
 

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use chrono::Utc;
+use log::info;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -89,7 +90,7 @@ impl Order {
                 // go negative.
                 swag_inventory_item.current_stock = 0;
             }
-            println!(
+            info!(
                 "subtracted {} from current stock of {} making the total now {}",
                 item.quantity, swag_inventory_item.name, swag_inventory_item.current_stock
             );

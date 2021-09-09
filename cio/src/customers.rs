@@ -2,6 +2,7 @@ use std::str::from_utf8;
 
 use airtable_api::Record;
 use anyhow::Result;
+use log::info;
 
 use crate::{companies::Company, core::CustomerInteraction, utils::get_file_content_from_repo};
 
@@ -55,7 +56,7 @@ pub async fn sync_customer_meeting_notes(company: &Company) -> Result<()> {
             )
             .await?;
 
-        println!(
+        info!(
             "updated customer interaction record with notes for {} {} {}",
             record.fields.name, record.fields.company[0], record.fields.date
         );

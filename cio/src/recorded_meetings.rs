@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
 use google_drive::traits::{DriveOps, FileOps};
 use inflector::cases::kebabcase::to_kebab_case;
+use log::{info, warn};
 use macros::db;
 use revai::RevAI;
 use schemars::JsonSchema;
@@ -124,12 +125,12 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
         .await?;
 
     // We need the zoom token to download the URL.
-    let at = zoom.refresh_access_token().await.unwrap();
+    let at = zoom.refresh_access_token().await?;
 
     for meeting in recordings {
         if meeting.topic.is_empty() {
             // Continue early.
-            println!("Meeting must have a topic!! {:?}", meeting);
+            warn!("meeting must have a topic: {:?}", meeting);
             continue;
         }
 
@@ -158,21 +159,21 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
                 || *file_type == GetAccountCloudRecordingResponseMeetingsFilesFileType::FallthroughString
             {
                 // Continue early.
-                println!("[zoom] got bad recording file type: {:?}", recording);
+                warn!("zoom got bad recording file type: {:?}", recording);
                 continue;
             }
 
             if let Some(status) = &recording.status {
                 if *status != zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesStatus::Completed {
                     // Continue early.
-                    println!("[zoom] got bad recording status: {:?}", recording);
+                    warn!("zoom got bad recording status: {:?}", recording);
                     continue;
                 }
             }
 
             // Download the file to memory.
-            println!(
-                "[zoom] meeting {} -> downloading recording {}... This might take a bit...",
+            info!(
+                "zoom meeting {} -> downloading recording {}... This might take a bit...",
                 meeting.topic, recording.download_url,
             );
             let resp = reqwest::get(&format!("{}?access_token={}", recording.download_url, at.access_token)).await?;
@@ -182,8 +183,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
             let mime_type = file_type.get_mime_type();
 
             // Upload the recording to Google drive.
-            println!(
-                "[zoom] uploading meeting {} recording to Google drive... This might take a bit...",
+            info!(
+                "zoom uploading meeting {} recording to Google drive... This might take a bit...",
                 meeting.topic
             );
             let drive_file = drive
@@ -228,8 +229,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
                     zoom_api::types::RecordingDeleteAction::Trash,
                 )
                 .await?;
-            println!(
-            "[zoom] deleted meeting {} recording in Zoom since they are now in Google drive at https://drive.google.com/open?id={}",
+            info!(
+            "zoom deleted meeting {} recording in Zoom since they are now in Google drive at https://drive.google.com/open?id={}",
                 meeting.topic,
             drive_file.id
         );
@@ -292,7 +293,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
-            println!("Getting events for {}", calendar.id);
+            info!("getting events for {}", calendar.id);
             let events = gcal
                 .events()
                 .list_all(

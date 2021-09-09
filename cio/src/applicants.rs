@@ -19,6 +19,7 @@ use google_drive::{
 };
 use google_geocode::Geocode;
 use html2text::from_read;
+use log::{info, warn};
 use macros::db;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -295,7 +296,7 @@ impl NewApplicant {
                 longitude = location.lng as f32;
             }
             Err(e) => {
-                println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
+                warn!("could not get lat lng for location `{}`: {}", location, e);
             }
         }
 
@@ -921,7 +922,7 @@ The Oxide Team",
                     longitude = location.lng as f32;
                 }
                 Err(e) => {
-                    println!("[applicants] could not get lat lng for location `{}`: {}", location, e);
+                    warn!("could not get lat lng for location `{}`: {}", location, e);
                 }
             }
         }
@@ -1125,10 +1126,7 @@ The Oxide Team",
                 )
                 .await?;
 
-            println!(
-                "[applicant] sent email to {} that we received their application",
-                self.email
-            );
+            info!("sent email to {} that we received their application", self.email);
         }
 
         // Send an email follow up if we should.
@@ -1150,23 +1148,20 @@ The Oxide Team",
                     // Send the email.
                     self.send_email_rejection_did_not_provide_materials(db).await?;
 
-                    println!(
-                        "[applicant] sent email to {} tell them they did not do the materials",
-                        self.email
-                    );
+                    info!("sent email to {} tell them they did not do the materials", self.email);
                 } else if self.raw_status.contains("junior") {
                     // Send the email.
                     self.send_email_rejection_junior_but_we_love_you(db).await?;
 
-                    println!(
-                        "[applicant] sent email to {} tell them we can't hire them at this stage",
+                    info!(
+                        "sent email to {} tell them we can't hire them at this stage",
                         self.email
                     );
                 } else {
                     // Send the email.
                     self.send_email_rejection_timing(db).await?;
 
-                    println!("[applicant] sent email to {} tell them about timing", self.email);
+                    info!("sent email to {} tell them about timing", self.email);
                 }
 
                 // Update the cell in the google sheet so we know we sent the email.
@@ -1447,7 +1442,7 @@ The Oxide Team",
         // Get the last ten character of the string.
         if let Ok(phone_number) = phonenumber::parse(Some(country), phone.to_string()) {
             if !phone_number.is_valid() {
-                println!("[applicants] phone number is invalid: {}", phone);
+                warn!("phone number is invalid: `{}`", phone);
             }
 
             phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
@@ -1905,7 +1900,7 @@ impl Applicant {
 
                     self.update(db).await?;
 
-                    println!("[applicant] sent background check invitation to: {}", self.email);
+                    info!("sent background check invitation to: {}", self.email);
                 }
                 // We can return early they already exist as a candidate.
                 return Ok(());
@@ -1923,7 +1918,7 @@ impl Applicant {
 
         self.update(db).await?;
 
-        println!("[applicant] sent background check invitation to: {}", self.email);
+        info!("sent background check invitation to: {}", self.email);
 
         Ok(())
     }
@@ -2337,7 +2332,7 @@ Notes:
             )
             .await?;
 
-        println!("[applicant]: created onboarding issue for {}", self.email);
+        info!("created onboarding issue for {}", self.email);
 
         Ok(())
     }
@@ -2660,7 +2655,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
             .args(&["x", &format!("-o{}", output.to_str().unwrap()), path.to_str().unwrap()])
             .output()
             .unwrap();
-        println!("pz7ip output: {}", String::from_utf8(cmd_out.stdout).unwrap());
+        info!("pz7ip output: {}", String::from_utf8(cmd_out.stdout).unwrap());
 
         // Walk the output directory trying to find our file.
         for entry in WalkDir::new(&output).min_depth(1) {
@@ -2695,7 +2690,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);
         output.push(id);
-        println!("unpacking tar gz: {:?} -> {:?}", path, output);
+        info!("unpacking tar gz: {:?} -> {:?}", path, output);
         archive.unpack(&output).unwrap();
 
         // Walk the output directory trying to find our file.
@@ -2730,7 +2725,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         // Unpack the tarball.
         let mut tar = Archive::new(fs::File::open(&path).unwrap());
         output.push(id);
-        println!("unpacking tarball: {:?} -> {:?}", path, output);
+        info!("unpacking tarball: {:?} -> {:?}", path, output);
         tar.unpack(&output).unwrap();
 
         // Walk the output directory trying to find our file.
@@ -2775,19 +2770,15 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
                     let comment = file.comment();
                     if !comment.is_empty() {
-                        println!("[applicants] zip file {} comment: {}", i, comment);
+                        info!("zip file {} comment: {}", i, comment);
                     }
 
                     if (&*file.name()).ends_with('/') {
-                        println!(
-                            "[applicants] zip file {} extracted to \"{}\"",
-                            i,
-                            output.as_path().display()
-                        );
+                        info!("zip file {} extracted to \"{}\"", i, output.as_path().display());
                         fs::create_dir_all(&output).unwrap();
                     } else {
-                        println!(
-                            "[applicants] zip file {} extracted to \"{}\" ({} bytes)",
+                        info!(
+                            "zip file {} extracted to \"{}\" ({} bytes)",
                             i,
                             output.as_path().display(),
                             file.size()
@@ -2822,15 +2813,15 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                     }
                 }
                 Err(e) => {
-                    println!("[applicants] error unwrapping materials name {}: {}", name, e);
+                    warn!("error unwrapping materials name {}: {}", name, e);
                 }
             }
         }
     } else if name.ends_with(".pptx") || name.ends_with(".jpg")
     // TODO: handle these formats
     {
-        println!(
-            "[applicants] unsupported doc format -- mime type: {}, name: {}, path: {}",
+        warn!(
+            "unsupported doc format -- mime type: {}, name: {}, path: {}",
             mime_type,
             name,
             path.to_str().unwrap()
@@ -2870,7 +2861,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         {
             Ok(_) => (),
             Err(e) => {
-                println!("pandoc failed: {}", e);
+                warn!("pandoc failed: {}", e);
                 return "".to_string();
             }
         }
@@ -2935,8 +2926,8 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
     let result = match fs::read_to_string(output.clone()) {
         Ok(r) => r,
         Err(e) => {
-            println!(
-                "[applicants] running pdf2text failed: {} | name: {}, path: {}",
+            warn!(
+                "running pdf2text failed: {} | name: {}, path: {}",
                 e,
                 name,
                 path.as_path().display()
@@ -3203,7 +3194,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
                             scorers_completed.push(user.email);
                         }
                         None => {
-                            println!("could not find user with email: {}", email);
+                            warn!("could not find user with email: {}", email);
                         }
                     }
                 }
@@ -3500,8 +3491,8 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) -> Resu
                     applicant.update(db).await?;
                 }
             } else {
-                println!(
-                    "[checkr] could not find applicant with email {} in sheet_id {}",
+                warn!(
+                    "could not find applicant with email {} in sheet_id {}",
                     candidate.email, sheet_id
                 );
             }
@@ -3629,7 +3620,7 @@ pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Com
                 reviewer.upsert(db).await?;
             }
             None => {
-                println!("could not find user with email: {}", email);
+                warn!("could not find user with email: {}", email);
             }
         }
     }
@@ -3717,10 +3708,7 @@ impl Applicant {
                 self.longitude = location.lng as f32;
             }
             Err(e) => {
-                println!(
-                    "[applicants] could not get lat lng for location `{}`: {}",
-                    self.location, e
-                );
+                warn!("could not get lat lng for location `{}`: {}", self.location, e);
             }
         }
     }
@@ -3766,23 +3754,20 @@ impl Applicant {
             // Send the email.
             self.send_email_rejection_did_not_provide_materials(db).await?;
 
-            println!(
-                "[applicant] sent email to {} tell them they did not do the materials",
-                self.email
-            );
+            info!("sent email to {} tell them they did not do the materials", self.email);
         } else if self.raw_status.contains("junior") {
             // Send the email.
             self.send_email_rejection_junior_but_we_love_you(db).await?;
 
-            println!(
-                "[applicant] sent email to {} tell them we can't hire them at this stage",
+            info!(
+                "sent email to {} tell them we can't hire them at this stage",
                 self.email
             );
         } else {
             // Send the email.
             self.send_email_rejection_timing(db).await?;
 
-            println!("[applicant] sent email to {} tell them about timing", self.email);
+            info!("sent email to {} tell them about timing", self.email);
         }
 
         // Mark the time we sent the email.
@@ -3815,10 +3800,7 @@ impl Applicant {
             // Update it in the database just in case.
             self.update(db).await?;
 
-            println!(
-                "[applicant] sent email to {} that we received their application",
-                self.email
-            );
+            info!("sent email to {} that we received their application", self.email);
             // Send the email internally.
             self.send_email_internally(db).await?;
         }
@@ -4225,7 +4207,7 @@ Sincerely,
         // Get the last ten character of the string.
         if let Ok(phone_number) = phonenumber::parse(Some(country), phone.to_string()) {
             if !phone_number.is_valid() {
-                println!("[applicants] phone number is invalid: {}", phone);
+                warn!("phone number is invalid: {}", phone);
             }
 
             phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
@@ -4257,9 +4239,8 @@ Sincerely,
         if self.docusign_envelope_id.is_empty()
             && self.status == crate::applicant_status::Status::GivingOffer.to_string()
         {
-            println!(
-                "[docusign] applicant has status giving offer: {}, generating offer in docusign \
-                 for them!",
+            info!(
+                "applicant has status giving offer: {}, generating offer in docusign for them!",
                 self.name
             );
             // We haven't sent their offer yet, so let's do that.
@@ -4433,7 +4414,7 @@ Sincerely,
                 .files()
                 .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await?;
-            println!("[docusign] uploaded completed file {} to drive", filename);
+            info!("uploaded completed file `{}` to drive", filename);
         }
 
         // In order to not "over excessively poll the API here, we need to sleep for 15
@@ -4524,9 +4505,8 @@ Sincerely,
         if self.docusign_piia_envelope_id.is_empty()
             && self.status == crate::applicant_status::Status::GivingOffer.to_string()
         {
-            println!(
-                "[docusign] applicant has status giving offer: {}, generating employee agreements \
-                 in docusign for them!",
+            info!(
+                "applicant has status giving offer: {}, generating employee agreements in docusign for them!",
                 self.name
             );
             // We haven't sent their employee agreements yet, so let's do that.
@@ -4730,7 +4710,7 @@ Sincerely,
                 .files()
                 .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await?;
-            println!("[docusign] uploaded completed file {} to drive", filename);
+            info!("uploaded completed file `{}` to drive", filename);
         }
 
         Ok(())

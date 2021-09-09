@@ -5,6 +5,7 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
 use google_geocode::Geocode;
+use log::{info, warn};
 use macros::db;
 use reqwest::StatusCode;
 use schemars::JsonSchema;
@@ -408,7 +409,7 @@ impl OutboundShipments {
         let mut transaction_ids: Vec<String> = Default::default();
         let mut link_to_outbound_shipments: Vec<String> = Default::default();
         for shipment in shipments.clone() {
-            println!("Adding {} shipment to our pickup", shipment.name);
+            info!("adding {} shipment to our pickup", shipment.name);
             transaction_ids.push(shipment.shippo_id.to_string());
             link_to_outbound_shipments.push(shipment.airtable_record_id.to_string());
         }
@@ -434,7 +435,7 @@ impl OutboundShipments {
         if carrier_account_id.is_empty() {
             // We can return early.
             // This should not happen.
-            println!("[create_pickup] carrier account id for usps cannot be empty.");
+            warn!("create pickup carrier account id for usps cannot be empty.");
             return Ok(());
         }
 

@@ -9,6 +9,7 @@ use diesel::{
     serialize::{self, Output, ToSql},
     sql_types::Jsonb,
 };
+use log::info;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -480,7 +481,7 @@ impl GithubRepo {
             if let Some(val) = teams.get(team_name) {
                 if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin" {
                     // Continue since they already have permission.
-                    println!(
+                    info!(
                         "team {} already has push access to {}/{}",
                         team_name, company.github_org, self.name
                     );
@@ -511,7 +512,7 @@ impl GithubRepo {
                 ),
             }
 
-            println!(
+            info!(
                 "gave team {} push access to {}/{}",
                 team_name, company.github_org, self.name
             );

@@ -1,4 +1,5 @@
 use chrono::{Duration, Utc};
+use log::info;
 
 use crate::companies::Company;
 
@@ -23,7 +24,10 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) {
 
         let last_seen_duration = Utc::now() - device.last_seen;
         if last_seen_duration > Duration::days(1) {
-            println!("Deleting tailscale device {}", device.name);
+            info!(
+                "deleting tailscale device {}, last seen duration {:?}",
+                device.name, last_seen_duration
+            );
             tailscale.delete_device(&device.id).await.unwrap();
         }
     }
