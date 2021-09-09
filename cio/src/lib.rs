@@ -43,3 +43,6 @@ extern crate diesel;
 
 #[macro_use]
 extern crate serde_json;
+
+#[macro_use]
+extern crate slog;
