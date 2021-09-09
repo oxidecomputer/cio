@@ -221,7 +221,10 @@ dependencies = [
  "cio-api 0.2.0",
  "hidapi",
  "keycode",
+ "log 0.4.14",
+ "pretty_env_logger",
  "sentry",
+ "sentry-log",
  "tokio",
  "uuid",
 ]
@@ -2952,8 +2955,11 @@ dependencies = [
  "cio-api 0.2.0",
  "dropshot 0.5.1",
  "http",
+ "log 0.4.14",
+ "pretty_env_logger",
  "reqwest",
  "sentry",
+ "sentry-log",
  "tokio",
  "uuid",
 ]

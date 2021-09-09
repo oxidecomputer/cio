@@ -5,11 +5,22 @@ use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseOk, HttpServerStarter, RequestContext, TypedBody,
 };
+use log::{info, warn};
 use sentry::IntoDsn;
 use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    // Initialize our logger.
+    let mut log_builder = pretty_env_logger::formatted_builder();
+    log_builder.parse_filters("info");
+
+    let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
+
+    log::set_boxed_logger(Box::new(logger)).unwrap();
+
+    log::set_max_level(log::LevelFilter::Info);
+
     // Try to get the current git hash.
     let git_hash = if let Ok(gh) = env::var("GIT_HASH") {
         gh
@@ -23,7 +34,7 @@ async fn main() -> Result<(), String> {
         let o = std::str::from_utf8(&output.stdout).unwrap();
         o[0..8].to_string()
     };
-    println!("git hash: {}", git_hash);
+    info!("git hash: {}", git_hash);
 
     // Initialize sentry.
     let sentry_dsn = env::var("PRINTY_SENTRY_DSN").unwrap_or_default();
@@ -81,7 +92,7 @@ async fn main() -> Result<(), String> {
         .contact_url("https://oxide.computer")
         .contact_email("printy@oxide.computer");
     let api_file = "openapi-printy.json";
-    println!("Writing OpenAPI spec to {}...", api_file);
+    info!("writing OpenAPI spec to {}...", api_file);
     let mut buffer = File::create(api_file).unwrap();
     let schema = api_definition.json().unwrap().to_string();
     api_definition.write(&mut buffer).unwrap();
@@ -155,7 +166,7 @@ async fn listen_print_rollo_requests(
     sentry::start_session();
     let url = body_param.into_inner();
     let printer = get_printer("rollo");
-    println!("{:?}", printer);
+    info!("printer {:?}", printer);
 
     if !url.trim().is_empty() {
         // Save the contents of our URL to a file.
@@ -182,7 +193,7 @@ async fn listen_print_zebra_requests(
     sentry::start_session();
     let r = body_param.into_inner();
     let printer = get_printer("zebra");
-    println!("{:?}", printer);
+    info!("printer {:?}", printer);
 
     if !r.url.trim().is_empty() && r.quantity > 0 {
         // Save the contents of our URL to a file.
@@ -209,7 +220,7 @@ async fn listen_print_receipt_requests(
     sentry::start_session();
     let r = body_param.into_inner();
     let printer = get_printer("receipt");
-    println!("{:?}", printer);
+    info!("printer {:?}", printer);
 
     if !r.content.trim().is_empty() && r.quantity > 0 {
         // Save the contents of our URL to a file.
@@ -236,7 +247,7 @@ fn get_printer(name: &str) -> String {
             from_utf8(&output.stderr).unwrap(),
             from_utf8(&output.stdout).unwrap()
         );
-        println!("{}", e);
+        info!("printers output: {}", e);
         sentry::capture_message(&e, sentry::Level::Fatal);
         return "".to_string();
     }
@@ -256,7 +267,7 @@ fn get_printer(name: &str) -> String {
 // Save URL contents to a temporary file.
 // Returns the filepath.
 async fn save_url_to_file(url: &str, ext: &str) -> String {
-    println!("Getting contents of URL `{}` to print", url);
+    info!("getting contents of URL `{}` to print", url);
     let body = reqwest::get(url).await.unwrap().bytes().await.unwrap();
 
     save_content_to_file(&body, ext)
@@ -273,7 +284,7 @@ fn save_content_to_file(body: &[u8], ext: &str) -> String {
     file.write_all(body).unwrap();
 
     let path = dir.to_str().unwrap().to_string();
-    println!("Saved contents of URL to `{}`", path);
+    info!("saved contents of URL to `{}`", path);
 
     path
 }
@@ -281,7 +292,7 @@ fn save_content_to_file(body: &[u8], ext: &str) -> String {
 // Save URL contents to a temporary file.
 // Returns the filepath.
 fn print_file(printer: &str, file: &str, media: &str, copies: i32) {
-    println!("Sending file `{}` to printer `{}`", file, printer);
+    info!("sending file `{}` to printer `{}`", file, printer);
     let output = if !media.is_empty() {
         Command::new("lp")
             .args(&[
@@ -313,14 +324,13 @@ fn print_file(printer: &str, file: &str, media: &str, copies: i32) {
     };
     if !output.status.success() {
         let e = format!(
-            "[lpstat] stderr: {}\nstdout: {}",
+            "lpstat stderr: {}\nstdout: {}",
             from_utf8(&output.stderr).unwrap(),
             from_utf8(&output.stdout).unwrap()
         );
-        println!("{}", e);
-        sentry::capture_message(&e, sentry::Level::Fatal);
+        warn!("{}", e);
         return;
     }
 
-    println!("Printing: {}", from_utf8(&output.stdout).unwrap());
+    info!("printing: {}", from_utf8(&output.stdout).unwrap());
 }

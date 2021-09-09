@@ -2,10 +2,21 @@ use std::{env, process::Command};
 
 use cio_api::swag_inventory::BarcodeScan;
 use hidapi::HidApi;
+use log::info;
 use sentry::IntoDsn;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    // Initialize our logger.
+    let mut log_builder = pretty_env_logger::formatted_builder();
+    log_builder.parse_filters("info");
+
+    let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
+
+    log::set_boxed_logger(Box::new(logger)).unwrap();
+
+    log::set_max_level(log::LevelFilter::Info);
+
     // Try to get the current git hash.
     let git_hash = if let Ok(gh) = env::var("GIT_HASH") {
         gh
@@ -19,7 +30,7 @@ async fn main() -> Result<(), String> {
         let o = std::str::from_utf8(&output.stdout).unwrap();
         o[0..8].to_string()
     };
-    println!("git hash: {}", git_hash);
+    info!("git hash: {}", git_hash);
 
     // Initialize sentry.
     // In addition to all the sentry env variables, you will also need to set
@@ -45,7 +56,7 @@ async fn main() -> Result<(), String> {
     // Try and find the barcode scanner.
     let search = "";
     for device in api.device_list() {
-        println!(
+        info!(
             "VID: {:04x}, PID: {:04x}, Serial: {}, Product name: {}",
             device.vendor_id(),
             device.product_id(),
@@ -74,8 +85,8 @@ async fn main() -> Result<(), String> {
 
     // Open the scanner device and listen for events to read.
     let scanner = api.open(vendor_id, product_id).expect("Failed to open device");
-    println!(
-        "Listening for events from (vendor ID: {} {:04x}) (product ID: {} {:04x}) in a loop...",
+    info!(
+        "listening for events from (vendor ID: {} {:04x}) (product ID: {} {:04x}) in a loop...",
         vendor_id, vendor_id, product_id, product_id
     );
 
@@ -181,7 +192,7 @@ async fn main() -> Result<(), String> {
             // If its a new line character we are at the end of a code.
             // Combine all the characters together into a string.
             let barcode: String = chars.into_iter().collect();
-            println!("Got barcode: {}", barcode);
+            info!("got barcode: {}", barcode);
 
             // We got a barcode scan, lets add it to our database.
             BarcodeScan::scan(barcode.trim().to_string()).await.unwrap();
