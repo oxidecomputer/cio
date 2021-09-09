@@ -13,6 +13,7 @@ use cio_api::{
     schema::{applicants, journal_club_meetings, rfds},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
     swag_inventory::SwagInventoryItem,
+    swag_store::Order,
     utils::{decode_base64, merge_json},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl, RunQueryDsl};
@@ -26,6 +27,7 @@ use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType};
 use crate::{
     slack_commands::SlackCommand, AirtableRowEvent, ApplicationFileUploadData, Context, CounterResponse,
     GitHubRateLimit, GoogleSpreadsheetEditEvent, GoogleSpreadsheetRowCreateEvent, RFDPathParams,
+    ShippoTrackingUpdateEvent,
 };
 
 pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
@@ -1125,5 +1127,94 @@ pub async fn handle_airtable_shipments_inbound_create(
     shipment.update(db).await?;
 
     info!("inbound shipment {} updated successfully", shipment.tracking_number);
+    Ok(())
+}
+
+pub async fn handle_store_order_create(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<Order>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+    event.do_order(&api_context.db).await?;
+
+    info!("order for {} created successfully", event.email);
+    Ok(())
+}
+
+pub async fn handle_shippo_tracking_update(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<serde_json::Value>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+    let body: ShippoTrackingUpdateEvent = match serde_json::from_str(&event.to_string()) {
+        Ok(b) => b,
+        Err(e) => bail!("decoding event body for shippo `{}` failed: {}", event.to_string(), e),
+    };
+
+    let ts = body.data;
+    if ts.tracking_number.is_empty() || ts.carrier.is_empty() {
+        // We can reaturn early.
+        // It's too early to get anything good from this event.
+        warn!("tracking_number and carrier are empty, ignoring");
+        return Ok(());
+    }
+
+    // Update the inbound shipment, if it exists.
+    if let Some(mut shipment) =
+        InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
+    {
+        // Get the tracking status for the shipment and fill in the details.
+        shipment.tracking_number = ts.tracking_number.to_string();
+        let tracking_status = ts.tracking_status.unwrap_or_default();
+        shipment.tracking_status = tracking_status.status.to_string();
+        shipment.tracking_link();
+        shipment.eta = ts.eta;
+
+        shipment.oxide_tracking_link = shipment.oxide_tracking_link();
+
+        shipment.messages = tracking_status.status_details;
+
+        // Iterate over the tracking history and set the shipped_time.
+        // Get the first date it was maked as in transit and use that as the shipped
+        // time.
+        for h in ts.tracking_history {
+            if h.status == *"TRANSIT" {
+                if let Some(shipped_time) = h.status_date {
+                    let current_shipped_time = if let Some(s) = shipment.shipped_time {
+                        s
+                    } else {
+                        Utc::now()
+                    };
+
+                    if shipped_time < current_shipped_time {
+                        shipment.shipped_time = Some(shipped_time);
+                    }
+                }
+            }
+        }
+
+        if tracking_status.status == *"DELIVERED" {
+            shipment.delivered_time = tracking_status.status_date;
+        }
+
+        shipment.update(&api_context.db).await?;
+    }
+
+    // Update the outbound shipment if it exists.
+    if let Some(mut shipment) =
+        OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
+    {
+        // Update the shipment in shippo.
+        // TODO: we likely don't need the extra request here, but it makes the code more DRY.
+        // Clean this up eventually.
+        shipment.create_or_get_shippo_shipment(&api_context.db).await?;
+        shipment.update(&api_context.db).await?;
+    }
+
+    info!("shipment {} tracking status updated successfully", ts.tracking_number);
     Ok(())
 }

@@ -22,7 +22,6 @@ use cio_api::{
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
     schema::{api_tokens, applicants},
-    shipments::{InboundShipment, OutboundShipment},
     swag_store::Order,
 };
 use diesel::prelude::*;
@@ -894,12 +893,12 @@ async fn listen_store_order_create(
     body_param: TypedBody<Order>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
-    let event = body_param.into_inner();
-    event.do_order(&api_context.db).await.unwrap();
+    if let Err(e) = crate::handlers::handle_store_order_create(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
 
-    info!("order for {} created successfully", event.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -916,76 +915,12 @@ async fn listen_shippo_tracking_update_webhooks(
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
-    let event = body_param.into_inner();
-    let body: ShippoTrackingUpdateEvent = serde_json::from_str(&event.to_string()).unwrap_or_else(|e| {
-        warn!("decoding event body for shippo `{}` failed: {}", event.to_string(), e);
-
-        Default::default()
-    });
-
-    let ts = body.data;
-    if ts.tracking_number.is_empty() || ts.carrier.is_empty() {
-        // We can reaturn early.
-        // It's too early to get anything good from this event.
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_shippo_tracking_update(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
-    // Update the inbound shipment, if it exists.
-    if let Some(mut shipment) =
-        InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
-    {
-        // Get the tracking status for the shipment and fill in the details.
-        shipment.tracking_number = ts.tracking_number.to_string();
-        let tracking_status = ts.tracking_status.unwrap_or_default();
-        shipment.tracking_status = tracking_status.status.to_string();
-        shipment.tracking_link();
-        shipment.eta = ts.eta;
-
-        shipment.oxide_tracking_link = shipment.oxide_tracking_link();
-
-        shipment.messages = tracking_status.status_details;
-
-        // Iterate over the tracking history and set the shipped_time.
-        // Get the first date it was maked as in transit and use that as the shipped
-        // time.
-        for h in ts.tracking_history {
-            if h.status == *"TRANSIT" {
-                if let Some(shipped_time) = h.status_date {
-                    let current_shipped_time = if let Some(s) = shipment.shipped_time {
-                        s
-                    } else {
-                        Utc::now()
-                    };
-
-                    if shipped_time < current_shipped_time {
-                        shipment.shipped_time = Some(shipped_time);
-                    }
-                }
-            }
-        }
-
-        if tracking_status.status == *"DELIVERED" {
-            shipment.delivered_time = tracking_status.status_date;
-        }
-
-        shipment.update(&api_context.db).await.unwrap();
-    }
-
-    // Update the outbound shipment if it exists.
-    if let Some(mut shipment) =
-        OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
-    {
-        // Update the shipment in shippo.
-        // TODO: we likely don't need the extra request here, but it makes the code more DRY.
-        // Clean this up eventually.
-        shipment.create_or_get_shippo_shipment(&api_context.db).await.unwrap();
-        shipment.update(&api_context.db).await.unwrap();
-    }
-
-    info!("shipment {} tracking status updated successfully", ts.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -2144,6 +2079,9 @@ async fn listen_slack_commands_webhooks(
 }
 
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
+    // Send to sentry.
+    sentry_anyhow::capture_anyhow(&err);
+
     // We use the debug formatting here so we get the stack trace.
     return HttpError::for_internal_error(format!("{:?}", err));
 }
