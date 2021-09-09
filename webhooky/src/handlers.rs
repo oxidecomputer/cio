@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use chrono::{TimeZone, Utc};
+use chrono_humanize::HumanTime;
 use cio_api::{applicants::Applicant, companies::Company, rfds::RFD, schema::applicants};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{Path, RequestContext};
 use log::{info, warn};
 
-use crate::{Context, CounterResponse, RFDPathParams};
+use crate::{Context, CounterResponse, GitHubRateLimit, RFDPathParams};
 
 pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
     let api_context = rqctx.context();
@@ -65,4 +67,27 @@ pub async fn handle_rfd_update_by_number(
     rfd.update(db).await?;
 
     Ok(())
+}
+
+pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<GitHubRateLimit> {
+    let api_context = rqctx.context();
+
+    let db = &api_context.db;
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
+    let github = oxide.authenticate_github()?;
+
+    let response = github.rate_limit().get().await?;
+    let reset_time = Utc.timestamp(response.resources.core.reset, 0);
+
+    let dur = reset_time - Utc::now();
+
+    Ok(GitHubRateLimit {
+        limit: response.resources.core.limit as u32,
+        remaining: response.resources.core.remaining as u32,
+        reset: HumanTime::from(dur).to_string(),
+    })
 }

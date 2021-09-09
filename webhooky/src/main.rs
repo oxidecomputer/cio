@@ -12,8 +12,7 @@ extern crate serde_json;
 use std::{collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc};
 
 use anyhow::Result;
-use chrono::{offset::Utc, NaiveDate, TimeZone};
-use chrono_humanize::HumanTime;
+use chrono::{offset::Utc, NaiveDate};
 use cio_api::{
     analytics::NewPageView,
     api_tokens::{APIToken, NewAPIToken},
@@ -335,34 +334,30 @@ async fn trigger_rfd_update_by_number(
 }]
 async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
-    let db = &api_context.db;
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github().unwrap();
-
-    let response = github.rate_limit().get().await.unwrap();
-    let reset_time = Utc.timestamp(response.resources.core.reset, 0);
-
-    let dur = reset_time - Utc::now();
+    let mut resp: GitHubRateLimit = Default::default();
+    match crate::handlers::handle_github_rate_limit(rqctx).await {
+        Ok(r) => {
+            resp = r;
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry_anyhow::capture_anyhow(&e);
+        }
+    }
 
     sentry::end_session();
-    Ok(HttpResponseOk(GitHubRateLimit {
-        limit: response.resources.core.limit as u32,
-        remaining: response.resources.core.remaining as u32,
-        reset: HumanTime::from(dur).to_string(),
-    }))
+    Ok(HttpResponseOk(resp))
 }
 
 /// A GitHub RateLimit
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct GitHubRateLimit {
+    #[serde(default)]
     pub limit: u32,
+    #[serde(default)]
     pub remaining: u32,
+    #[serde(default)]
     pub reset: String,
 }
 
