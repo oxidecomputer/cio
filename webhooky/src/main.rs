@@ -9,7 +9,7 @@ pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
-use std::{collections::HashMap, env, ffi::OsStr, fs::File, sync::Arc};
+use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::Result;
 use chrono::offset::Utc;
@@ -22,9 +22,8 @@ use cio_api::{
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
     schema::{api_tokens, applicants},
-    shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
+    shipments::{InboundShipment, NewInboundShipment, OutboundShipment},
     swag_store::Order,
-    utils::decode_base64,
 };
 use diesel::prelude::*;
 use docusign::DocuSign;
@@ -32,10 +31,7 @@ use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
-use google_drive::{
-    traits::{DriveOps, FileOps},
-    Client as GoogleDrive,
-};
+use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use log::{info, warn};
 use mailchimp_api::{MailChimp, Webhook as MailChimpWebhook};
@@ -658,27 +654,11 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
 
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    let api_context = rqctx.context();
-
-    // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    // Reprint the receipt.
-    shipment.print_receipt(&api_context.db).await.unwrap();
-    info!("shipment {} reprinted receipt", shipment.email);
-
-    // Update Airtable.
-    shipment.update(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -696,24 +676,14 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
 
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) =
+        crate::handlers::handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(rqctx, body_param)
+            .await
+    {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    let api_context = rqctx.context();
-
-    // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    // Resend the email to the recipient.
-    shipment.send_email_to_recipient(&api_context.db).await.unwrap();
-    info!("resent the shipment email to the recipient {}", shipment.email);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -731,20 +701,11 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
 
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    // Schedule the pickup.
-    let api_context = rqctx.context();
-    let company = Company::get_by_id(&api_context.db, event.cio_company_id).unwrap();
-    OutboundShipments::create_pickup(&api_context.db, &company)
-        .await
-        .unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -805,97 +766,10 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
-    // Parse the body as bytes.
-    let mut b = body_param.as_bytes();
-
-    // Get the headers and parse the form data.
-    let headers = rqctx.request.lock().await.headers().clone();
-
-    let content_type = headers.get("content-type").unwrap();
-    let content_length = headers.get("content-length").unwrap();
-    let mut h = hyper::header::Headers::new();
-    h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
-    h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
-
-    let form_data = formdata::read_formdata(&mut b, &h).unwrap();
-
-    // Start creating the new shipment.
-    let mut i: NewInboundShipment = Default::default();
-    let mut from = "".to_string();
-    // Parse the form body.
-    for (name, value) in &form_data.fields {
-        if i.carrier.is_empty() && (name == "html" || name == "text" || name == "email") {
-            let (carrier, tracking_number) = crate::tracking_numbers::parse_tracking_information(value);
-            if !carrier.is_empty() {
-                i.carrier = carrier.to_string();
-                i.tracking_number = tracking_number.to_string();
-                i.notes = value.to_string();
-            }
-        }
-
-        if name == "subject" {
-            if value.contains("from Mouser Electronics") {
-                i.name = "Mouser".to_string();
-                i.order_number = value
-                    .replace("Fwd:", "")
-                    .replace("Shipment Notification on Your Purchase Order", "")
-                    .replace("from Mouser Electronics, Inc. Invoice Attached", "")
-                    .trim()
-                    .to_string();
-            } else if value.contains("Arrow Order") {
-                i.name = "Arrow".to_string();
-                i.order_number = value
-                    .replace("Fwd:", "")
-                    .replace("Arrow Order #", "")
-                    .trim()
-                    .to_string();
-            } else if value.contains("Microchip Order #") {
-                i.name = "Microchip".to_string();
-                i.order_number = value
-                    .replace("Fwd:", "")
-                    .replace("Your Microchip Order #", "")
-                    .replace("Has Been Shipped", "")
-                    .trim()
-                    .to_string();
-            } else if value.contains("TI.com order") {
-                i.name = "Texas Instruments".to_string();
-                i.order_number = value
-                    .replace("Fwd:", "")
-                    .replace("TI.com order", "")
-                    .replace("- DO NOT REPLY - Order", "")
-                    .replace("fulfilled", "")
-                    .replace("status update", "")
-                    .trim()
-                    .to_string();
-            } else if value.contains("Coilcraft") {
-                i.name = "Coilcraft".to_string();
-            } else {
-                i.name = format!("Email: {}", value);
-            }
-        }
-
-        if name == "from" {
-            from = value.to_string();
-        }
+    if let Err(e) = crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    i.notes = format!("Parsed email from {}:\n{}", from, i.notes);
-    i.cio_company_id = 1;
-
-    if i.carrier.is_empty() {
-        warn!(
-            "could not find shipment for email:shipment: {:?}\nfields: {:?}\nfiles: {:?}",
-            i, form_data.fields, form_data.files
-        );
-
-        // Return early.
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Add the shipment to our database.
-    let api_context = rqctx.context();
-    i.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -912,19 +786,11 @@ async fn listen_applicant_review_requests(
     body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let event = body_param.into_inner();
 
-    if event.name.is_empty() || event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
-        warn!("review is empty: {:?}", event);
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_applicant_review(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    // Add them to the database.
-    event.upsert(&api_context.db).await.unwrap();
-
-    info!("applicant review created successfully: {:?}", event);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -941,12 +807,11 @@ async fn listen_application_submit_requests(
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
-    let event = body_param.into_inner();
 
-    event.do_form(&api_context.db).await.unwrap();
-
-    info!("application for {} {} created successfully", event.email, event.role);
+    if let Err(e) = crate::handlers::handle_application_submit(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
+    }
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -985,105 +850,19 @@ async fn listen_application_files_upload_requests(
 ) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
     sentry::start_session();
 
-    let data = body_param.into_inner();
-
-    // We will return a key value of the name of file and the link in google drive.
-    let mut response: HashMap<String, String> = Default::default();
-
-    if data.email.is_empty()
-        || data.role.is_empty()
-        || data.cio_company_id <= 0
-        || data.materials.is_empty()
-        || data.resume.is_empty()
-        || data.materials_contents.is_empty()
-        || data.resume_contents.is_empty()
-        || data.user_name.is_empty()
-    {
-        warn!("could not get applicant information for: {:?}", data);
-
-        // Return early.
-        sentry::end_session();
-        return Ok(HttpResponseOk(response));
-    }
-
-    // TODO: Add the files to google drive.
-    let api_context = rqctx.context();
-    let db = &api_context.db;
-
-    let company = Company::get_by_id(db, data.cio_company_id).unwrap();
-
-    // Initialize the Google Drive client.
-    let drive = company.authenticate_google_drive(db).await.unwrap();
-
-    // Figure out where our directory is.
-    // It should be in the shared drive : "Automated Documents"/"application_content"
-    let shared_drive = drive.drives().get_by_name("Automated Documents").await.unwrap();
-
-    // Get the directory by the name.
-    let parent_id = drive
-        .files()
-        .create_folder(&shared_drive.id, "", "application_content")
-        .await
-        .unwrap();
-
-    // Create the folder for our candidate with their email.
-    let email_folder_id = drive
-        .files()
-        .create_folder(&shared_drive.id, &parent_id, &data.email)
-        .await
-        .unwrap();
-
-    // Create the folder for our candidate with the role.
-    let role_folder_id = drive
-        .files()
-        .create_folder(&shared_drive.id, &email_folder_id, &data.role)
-        .await
-        .unwrap();
-
-    let mut files: HashMap<String, (String, String)> = HashMap::new();
-    files.insert(
-        "resume".to_string(),
-        (data.resume.to_string(), data.resume_contents.to_string()),
-    );
-    files.insert(
-        "materials".to_string(),
-        (data.materials.to_string(), data.materials_contents.to_string()),
-    );
-
-    // Iterate over our files and create them in google drive.
-    // Create or update the file in the google_drive.
-    for (name, (file_path, contents)) in files {
-        // Get the extension from the content type.
-        let ext = get_extension_from_filename(&file_path).unwrap();
-        let ct = mime_guess::from_ext(ext).first().unwrap();
-        let content_type = ct.essence_str().to_string();
-        let file_name = format!("{} - {}.{}", data.user_name, name, ext);
-
-        // Upload our file to drive.
-        let drive_file = drive
-            .files()
-            .create_or_update(
-                &shared_drive.id,
-                &role_folder_id,
-                &file_name,
-                &content_type,
-                &decode_base64(&contents),
-            )
-            .await
-            .unwrap();
-        // Add the file to our links.
-        response.insert(
-            name.to_string(),
-            format!("https://drive.google.com/open?id={}", drive_file.id),
-        );
+    let mut resp: HashMap<String, String> = Default::default();
+    match crate::handlers::handle_application_files_upload(rqctx, body_param).await {
+        Ok(r) => {
+            resp = r;
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry_anyhow::capture_anyhow(&e);
+        }
     }
 
     sentry::end_session();
-    Ok(HttpResponseOk(response))
-}
-
-fn get_extension_from_filename(filename: &str) -> Option<&str> {
-    std::path::Path::new(filename).extension().and_then(OsStr::to_str)
+    Ok(HttpResponseOk(resp))
 }
 
 /**
