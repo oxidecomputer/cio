@@ -352,16 +352,31 @@ pub fn setup_logger() {
     let sentry_dsn = env::var("SENTRY_DSN").unwrap_or_default();
 
     if !sentry_dsn.is_empty() {
+        let mut sha = env::var("GITHUB_SHA").unwrap_or_default();
+        if !sha.is_empty() {
+            sha = sha.chars().take(8).collect();
+        }
+
         let _guard = sentry::init(sentry::ClientOptions {
             dsn: sentry_dsn.into_dsn().unwrap(),
 
-            release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+            release: Some(sha.into()),
             environment: Some(
                 env::var("SENTRY_ENV")
                     .unwrap_or_else(|_| "rust_test".to_string())
                     .into(),
             ),
             ..Default::default()
+        });
+
+        // Identify some items about the run here.
+        sentry::configure_scope(|scope| {
+            scope.set_tag("github.workflow", env::var("GITHUB_WORKFLOW").unwrap_or_default());
+            scope.set_tag("github.actions", env::var("GITHUB_ACTIONS").unwrap_or_default());
+            scope.set_tag("github.event.name", env::var("GITHUB_EVENT_NAME").unwrap_or_default());
+            scope.set_tag("github.ref", env::var("GITHUB_REF").unwrap_or_default());
+            scope.set_tag("github.sha", env::var("GITHUB_SHA").unwrap_or_default());
+            scope.set_tag("github.runner.os", env::var("RUNNER_OS").unwrap_or_default());
         });
     }
 }
