@@ -56,7 +56,10 @@ use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
 use zoom_api::Client as Zoom;
 
-use crate::{github_types::GitHubWebhook, handlers_github::handle_github, slack_commands::SlackCommand};
+use crate::{
+    github_types::GitHubWebhook, handlers::handle_products_sold_count, handlers_github::handle_github,
+    slack_commands::SlackCommand,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -252,8 +255,9 @@ async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Str
     Ok(HttpResponseOk("pong".to_string()))
 }
 
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
-struct CounterResponse {
+#[derive(Deserialize, Serialize, Default, Clone, Debug, JsonSchema)]
+pub struct CounterResponse {
+    #[serde(default)]
     count: i32,
 }
 
@@ -265,26 +269,21 @@ struct CounterResponse {
 async fn listen_products_sold_count_requests(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
-    let api_context = rqctx.context();
+    sentry::start_session();
 
-    // TODO: find a better way to do this.
-    let company = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+    let mut resp: CounterResponse = Default::default();
+    match handle_products_sold_count(rqctx).await {
+        Ok(r) => {
+            resp = r;
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry_anyhow::capture_anyhow(&e);
+        }
+    }
 
-    // TODO: change this one day to be the number of racks sold.
-    // For now, use it as number of applications that need to be triaged.
-    // Get the applicants that need to be triaged.
-    let applicants = applicants::dsl::applicants
-        .filter(
-            applicants::dsl::cio_company_id
-                .eq(company.id)
-                .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
-        )
-        .load::<Applicant>(&api_context.db.conn())
-        .unwrap();
-
-    Ok(HttpResponseOk(CounterResponse {
-        count: applicants.len() as i32,
-    }))
+    sentry::end_session();
+    Ok(HttpResponseOk(resp))
 }
 
 /** Listen for GitHub webhooks. */
@@ -297,6 +296,7 @@ async fn listen_github_webhooks(
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+
     if let Err(e) = handle_github(rqctx, body_param).await {
         // Send the error to sentry.
         sentry_anyhow::capture_anyhow(&e);
