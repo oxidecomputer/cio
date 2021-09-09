@@ -340,10 +340,13 @@ pub fn setup_logger() {
     // Initialize our logger.
     let mut log_builder = pretty_env_logger::formatted_builder();
     log_builder.parse_filters("info");
+    log_builder.is_test(true);
 
-    let logger = sentry_log::SentryLogger::with_dest(log_builder.is_test(true).build());
+    let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
 
+    #[cfg(not(test))]
     log::set_boxed_logger(Box::new(logger)).unwrap();
+
     log::set_max_level(log::LevelFilter::Info);
 
     // Initialize sentry.
