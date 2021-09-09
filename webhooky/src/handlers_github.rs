@@ -1,3 +1,5 @@
+use std::{str::FromStr, sync::Arc};
+
 use anyhow::Result;
 use chrono::offset::Utc;
 use cio_api::{
@@ -12,10 +14,204 @@ use cio_api::{
     templates::generate_terraform_files_for_okta,
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
+use dropshot::{RequestContext, TypedBody};
 use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
 
-use crate::{github_types::GitHubWebhook, Context};
+use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, Context};
+
+/// Handle a request to the /github endpoint.
+pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+
+    // Parse the `X-GitHub-Event` header.
+    // TODO: make this nicer when supported as a first class method in dropshot.
+    let req = rqctx.request.lock().await;
+    let req_headers = req.headers();
+    let event_type_string = req_headers
+        .get("X-GitHub-Event")
+        .unwrap_or(&http::header::HeaderValue::from_str("")?)
+        .to_str()
+        .unwrap()
+        .to_string();
+    let event_type = EventType::from_str(&event_type_string).unwrap();
+
+    // Filter by event type any actions we can rule out for all repos.
+    match event_type {
+        EventType::Push => {
+            // Ensure we have commits.
+            if event.commits.is_empty() {
+                // `push` event has no commits.
+                // This happens on bot commits, tags etc.
+                // Just throw it away.
+                return Ok(());
+            }
+
+            let commit = event.commits.get(0).unwrap().clone();
+            // We only care about distinct commits.
+            if !commit.distinct {
+                // The commit is not distinct.
+                // We can throw this out, log it and return early.
+                sentry::with_scope(
+                    |scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    },
+                    || {
+                        warn!("`push` event commit `{}` is not distinct", commit.id);
+                    },
+                );
+                return Ok(());
+            }
+
+            // Get the branch name.
+            let branch = event.refv.trim_start_matches("refs/heads/");
+            // Make sure we have a branch.
+            if branch.is_empty() {
+                // The branch name is empty.
+                // We can throw this out, log it and return early.
+                // This should never happen, but we won't rule it out because computers.
+                sentry::with_scope(
+                    |scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    },
+                    || {
+                        warn!("`push` event branch name is empty");
+                    },
+                );
+                return Ok(());
+            }
+        }
+        EventType::Repository => {
+            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login)?;
+            let github = company.authenticate_github()?;
+
+            sentry::configure_scope(|scope| {
+                scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                scope.set_tag("github.event.type", &event_type_string);
+            });
+
+            // Now let's handle the event.
+            if let Err(e) = handle_repository_event(&github, api_context, event.clone(), &company).await {
+                // Send the error to sentry.
+                sentry_anyhow::capture_anyhow(&e);
+            }
+
+            return Ok(());
+        }
+        _ => (),
+    }
+
+    // Run the correct handler function based on the event type and repo.
+    if !event.repository.name.is_empty() {
+        let repo = &event.repository;
+        let repo_name = Repo::from_str(&repo.name).unwrap();
+
+        let company = Company::get_from_github_org(&api_context.db, &repo.owner.login)?;
+        let github = company.authenticate_github()?;
+
+        match repo_name {
+            Repo::RFD => match event_type {
+                EventType::Push => {
+                    sentry::configure_scope(|scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    });
+                    match handle_rfd_push(&github, api_context, event.clone(), &company).await {
+                        Ok(message) => {
+                            event.create_comment(&github, &message).await?;
+                        }
+                        Err(e) => {
+                            event
+                                .create_comment(&github, &event.get_error_string("updating RFD on `push`", e))
+                                .await?;
+                        }
+                    }
+                }
+                EventType::PullRequest => {
+                    sentry::configure_scope(|scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    });
+                    // Let's create the check run.
+                    let check_run_id = event.create_check_run(&github).await?;
+
+                    match handle_rfd_pull_request(&github, api_context, event.clone(), &company).await {
+                        Ok((conclusion, message)) => {
+                            event
+                                .update_check_run(&github, check_run_id, &message, conclusion)
+                                .await?;
+                        }
+                        Err(e) => {
+                            event
+                                .update_check_run(
+                                    &github,
+                                    check_run_id,
+                                    &event.get_error_string("updating RFD on `pull_request`", e),
+                                    octorust::types::ChecksCreateRequestConclusion::Failure,
+                                )
+                                .await?;
+                        }
+                    }
+                }
+                EventType::CheckRun => {
+                    sentry::with_scope(
+                        |scope| {
+                            scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                            scope.set_tag("github.event.type", &event_type_string);
+                        },
+                        || {
+                            sentry::capture_message("CheckRun event", sentry::Level::Info);
+                        },
+                    );
+                }
+                EventType::CheckSuite => {
+                    sentry::with_scope(
+                        |scope| {
+                            scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                            scope.set_tag("github.event.type", &event_type_string);
+                        },
+                        || {
+                            sentry::capture_message("CheckSuite event", sentry::Level::Info);
+                        },
+                    );
+                }
+                _ => (),
+            },
+            Repo::Configs => {
+                if let EventType::Push = event_type {
+                    sentry::configure_scope(|scope| {
+                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
+                        scope.set_tag("github.event.type", &event_type_string);
+                    });
+
+                    match handle_configs_push(&github, api_context, event.clone(), &company).await {
+                        Ok(message) => {
+                            event.create_comment(&github, &message).await?;
+                        }
+                        Err(e) => {
+                            event
+                                .create_comment(&github, &event.get_error_string("updating configs on `push`", e))
+                                .await?;
+                        }
+                    }
+                }
+            }
+            _ => {
+                // We can throw this out, log it and return early.
+                info!(
+                    "`{}` event was to the {} repo, no automations are set up for this repo yet",
+                    event_type, repo_name
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
 
 /// Handle a `pull_request` event for the rfd repo.
 pub async fn handle_rfd_pull_request(
