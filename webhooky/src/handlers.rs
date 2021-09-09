@@ -4,7 +4,7 @@ use anyhow::Result;
 use chrono::{NaiveDate, TimeZone, Utc};
 use chrono_humanize::HumanTime;
 use cio_api::{
-    applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant},
+    applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
     companies::Company,
     rfds::RFD,
     schema::applicants,
@@ -14,7 +14,10 @@ use dropshot::{Path, RequestContext, TypedBody};
 use log::{info, warn};
 use sheets::traits::SpreadsheetOps;
 
-use crate::{Context, CounterResponse, GitHubRateLimit, GoogleSpreadsheetEditEvent, RFDPathParams};
+use crate::{
+    Context, CounterResponse, GitHubRateLimit, GoogleSpreadsheetEditEvent, GoogleSpreadsheetRowCreateEvent,
+    RFDPathParams,
+};
 
 pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
     let api_context = rqctx.context();
@@ -309,5 +312,71 @@ pub async fn handle_google_sheets_edit(
         .await?;
 
     info!("applicant {} updated successfully", new_applicant.email);
+    Ok(())
+}
+
+pub async fn handle_google_sheets_row_create(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<GoogleSpreadsheetRowCreateEvent>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // Get the company id for Oxide.
+    // TODO: split this out per company.
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+
+    // Initialize the Google Drive client.
+    let drive = oxide.authenticate_google_drive(db).await?;
+
+    // Initialize the GSuite sheets client.
+    let sheets = oxide.authenticate_google_sheets(db).await?;
+
+    let event = body_param.into_inner();
+
+    // Ensure this was an applicant and not some other google form!!
+    let role = get_role_from_sheet_id(&event.spreadsheet.id);
+    if role.is_empty() {
+        // Return early if not
+        info!("event is not for an application spreadsheet: {:?}", event);
+        return Ok(());
+    }
+
+    // Parse the applicant out of the row information.
+    let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
+
+    if applicant.email.is_empty() {
+        warn!("applicant has an empty email: {:?}", applicant);
+        return Ok(());
+    }
+
+    // We do not need to add one to the end of the columns to get the column where the email sent verification is
+    // because google sheets index's at 0, so adding one would put us over, we are just right here.
+    let sent_email_received_column_index = event.event.range.column_end;
+    let sent_email_follow_up_index = event.event.range.column_end + 6;
+    applicant
+        .expand(
+            db,
+            &drive,
+            &sheets,
+            sent_email_received_column_index.try_into().unwrap(),
+            sent_email_follow_up_index.try_into().unwrap(),
+            event.event.range.row_start.try_into().unwrap(),
+        )
+        .await?;
+
+    if !applicant.sent_email_received {
+        info!("applicant is new, sending internal notifications: {:?}", applicant);
+
+        // Send a company-wide email.
+        applicant.send_email_internally(db).await?;
+
+        applicant.sent_email_received = true;
+    }
+
+    // Send the applicant to the database and Airtable.
+    let a = applicant.upsert(db).await?;
+
+    info!("applicant {} created successfully", a.email);
     Ok(())
 }

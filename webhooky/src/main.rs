@@ -9,14 +9,14 @@ pub mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
-use std::{collections::HashMap, convert::TryInto, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc};
+use std::{collections::HashMap, env, ffi::OsStr, fs::File, str::FromStr, sync::Arc};
 
 use anyhow::Result;
 use chrono::offset::Utc;
 use cio_api::{
     analytics::NewPageView,
     api_tokens::{APIToken, NewAPIToken},
-    applicants::{get_role_from_sheet_id, Applicant, NewApplicant},
+    applicants::Applicant,
     asset_inventory::AssetItem,
     companies::Company,
     configs::User,
@@ -468,68 +468,11 @@ async fn listen_google_sheets_row_create_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
-    let api_context = rqctx.context();
-    let db = &api_context.db;
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
-    // Initialize the Google Drive client.
-    let drive = oxide.authenticate_google_drive(db).await.unwrap();
-
-    // Initialize the GSuite sheets client.
-    let sheets = oxide.authenticate_google_sheets(db).await.unwrap();
-
-    let event = body_param.into_inner();
-
-    // Ensure this was an applicant and not some other google form!!
-    let role = get_role_from_sheet_id(&event.spreadsheet.id);
-    if role.is_empty() {
-        // Return early if not
-        info!("event is not for an application spreadsheet: {:?}", event);
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_google_sheets_row_create(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
 
-    // Parse the applicant out of the row information.
-    let mut applicant = NewApplicant::parse_from_row(&event.spreadsheet.id, &event.event.named_values).await;
-
-    if applicant.email.is_empty() {
-        warn!("applicant has an empty email: {:?}", applicant);
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // We do not need to add one to the end of the columns to get the column where the email sent verification is
-    // because google sheets index's at 0, so adding one would put us over, we are just right here.
-    let sent_email_received_column_index = event.event.range.column_end;
-    let sent_email_follow_up_index = event.event.range.column_end + 6;
-    applicant
-        .expand(
-            db,
-            &drive,
-            &sheets,
-            sent_email_received_column_index.try_into().unwrap(),
-            sent_email_follow_up_index.try_into().unwrap(),
-            event.event.range.row_start.try_into().unwrap(),
-        )
-        .await
-        .unwrap();
-
-    if !applicant.sent_email_received {
-        info!("applicant is new, sending internal notifications: {:?}", applicant);
-
-        // Send a company-wide email.
-        applicant.send_email_internally(db).await.unwrap();
-
-        applicant.sent_email_received = true;
-    }
-
-    // Send the applicant to the database and Airtable.
-    let a = applicant.upsert(db).await.unwrap();
-
-    info!("applicant {} created successfully", a.email);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
