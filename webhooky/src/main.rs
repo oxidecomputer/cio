@@ -22,7 +22,7 @@ use cio_api::{
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
     schema::{api_tokens, applicants},
-    shipments::{InboundShipment, NewInboundShipment, OutboundShipment},
+    shipments::{InboundShipment, OutboundShipment},
     swag_store::Order,
 };
 use diesel::prelude::*;
@@ -256,19 +256,17 @@ async fn listen_products_sold_count_requests(
 ) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
     sentry::start_session();
 
-    let mut resp: CounterResponse = Default::default();
     match crate::handlers::handle_products_sold_count(rqctx).await {
         Ok(r) => {
-            resp = r;
+            sentry::end_session();
+            Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry_anyhow::capture_anyhow(&e);
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
         }
     }
-
-    sentry::end_session();
-    Ok(HttpResponseOk(resp))
 }
 
 /** Listen for GitHub webhooks. */
@@ -284,7 +282,7 @@ async fn listen_github_webhooks(
 
     if let Err(e) = crate::handlers_github::handle_github(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -309,7 +307,7 @@ async fn trigger_rfd_update_by_number(
 
     if let Err(e) = crate::handlers::handle_rfd_update_by_number(rqctx, path_params).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -324,19 +322,17 @@ async fn trigger_rfd_update_by_number(
 async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     sentry::start_session();
 
-    let mut resp: GitHubRateLimit = Default::default();
     match crate::handlers::handle_github_rate_limit(rqctx).await {
         Ok(r) => {
-            resp = r;
+            sentry::end_session();
+            Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry_anyhow::capture_anyhow(&e);
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
         }
     }
-
-    sentry::end_session();
-    Ok(HttpResponseOk(resp))
 }
 
 /// A GitHub RateLimit
@@ -366,7 +362,7 @@ async fn listen_google_sheets_edit_webhooks(
 
     if let Err(e) = crate::handlers::handle_google_sheets_edit(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -460,7 +456,7 @@ async fn listen_google_sheets_row_create_webhooks(
 
     if let Err(e) = crate::handlers::handle_google_sheets_row_create(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -491,7 +487,7 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_employees_print_home_address_label(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -513,7 +509,7 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_assets_items_print_barcode_label(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -536,7 +532,7 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     if let Err(e) = crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(rqctx, body_param).await
     {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -558,7 +554,7 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_applicants_request_background_check(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -581,7 +577,7 @@ async fn listen_airtable_applicants_update_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_applicants_update(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -604,7 +600,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_create(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -635,7 +631,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_label(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -657,7 +653,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -682,7 +678,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
             .await
     {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -704,7 +700,7 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -768,7 +764,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
 
     if let Err(e) = crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -789,7 +785,7 @@ async fn listen_applicant_review_requests(
 
     if let Err(e) = crate::handlers::handle_applicant_review(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -810,7 +806,7 @@ async fn listen_application_submit_requests(
 
     if let Err(e) = crate::handlers::handle_application_submit(rqctx, body_param).await {
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
     sentry::end_session();
@@ -850,19 +846,17 @@ async fn listen_application_files_upload_requests(
 ) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
     sentry::start_session();
 
-    let mut resp: HashMap<String, String> = Default::default();
     match crate::handlers::handle_application_files_upload(rqctx, body_param).await {
         Ok(r) => {
-            resp = r;
+            sentry::end_session();
+            Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry_anyhow::capture_anyhow(&e);
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
         }
     }
-
-    sentry::end_session();
-    Ok(HttpResponseOk(resp))
 }
 
 /**
@@ -878,40 +872,12 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let event = body_param.into_inner();
 
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_shipments_inbound_create(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
     }
 
-    let api_context = rqctx.context();
-    let db = &api_context.db;
-
-    // Get the row from airtable.
-    let record = InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id)
-        .await
-        .unwrap();
-
-    if record.tracking_number.is_empty() || record.carrier.is_empty() {
-        // Return early, we don't care.
-        warn!("tracking_number and carrier are empty, ignoring");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    let mut new_shipment: NewInboundShipment = record.into();
-
-    new_shipment.expand().await;
-    let mut shipment = new_shipment.upsert_in_db(db).unwrap();
-    if shipment.airtable_record_id.is_empty() {
-        shipment.airtable_record_id = event.record_id;
-    }
-    shipment.cio_company_id = event.cio_company_id;
-    shipment.update(db).await.unwrap();
-
-    info!("inbound shipment {} updated successfully", shipment.tracking_number);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -2164,17 +2130,20 @@ async fn listen_slack_commands_webhooks(
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     sentry::start_session();
 
-    let mut resp: serde_json::Value = Default::default();
     match crate::handlers::handle_slack_commands(rqctx, body_param).await {
         Ok(r) => {
-            resp = r;
+            sentry::end_session();
+            Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry_anyhow::capture_anyhow(&e);
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
         }
     }
+}
 
-    sentry::end_session();
-    Ok(HttpResponseOk(resp))
+fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
+    // We use the debug formatting here so we get the stack trace.
+    return HttpError::for_internal_error(format!("{:?}", err));
 }

@@ -11,7 +11,7 @@ use cio_api::{
     journal_clubs::JournalClubMeeting,
     rfds::RFD,
     schema::{applicants, journal_club_meetings, rfds},
-    shipments::{NewInboundShipment, OutboundShipment, OutboundShipments},
+    shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
     swag_inventory::SwagInventoryItem,
     utils::{decode_base64, merge_json},
 };
@@ -1089,4 +1089,41 @@ pub async fn handle_application_files_upload(
 
 fn get_extension_from_filename(filename: &str) -> Option<&str> {
     std::path::Path::new(filename).extension().and_then(OsStr::to_str)
+}
+
+pub async fn handle_airtable_shipments_inbound_create(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let event = body_param.into_inner();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    // Get the row from airtable.
+    let record = InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id).await?;
+
+    if record.tracking_number.is_empty() || record.carrier.is_empty() {
+        // Return early, we don't care.
+        warn!("tracking_number and carrier are empty, ignoring");
+        return Ok(());
+    }
+
+    let mut new_shipment: NewInboundShipment = record.into();
+
+    new_shipment.expand().await;
+    let mut shipment = new_shipment.upsert_in_db(db)?;
+    if shipment.airtable_record_id.is_empty() {
+        shipment.airtable_record_id = event.record_id;
+    }
+    shipment.cio_company_id = event.cio_company_id;
+    shipment.update(db).await?;
+
+    info!("inbound shipment {} updated successfully", shipment.tracking_number);
+    Ok(())
 }
