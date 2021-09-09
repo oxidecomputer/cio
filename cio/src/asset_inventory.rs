@@ -269,29 +269,24 @@ impl AssetItem {
 }
 
 /// Sync asset items from Airtable.
-pub async fn refresh_asset_items(db: &Database, company: &Company) {
+pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()> {
     // Initialize the Google Drive client.
     let drive_client = company.authenticate_google_drive(db).await.unwrap();
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await.unwrap();
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let parent_id = drive_client
-        .files()
-        .create_folder(&drive_id, "", "assets")
-        .await
-        .unwrap();
+    let parent_id = drive_client.files().create_folder(&drive_id, "", "assets").await?;
 
     // Get all the records from Airtable.
     let mut generator = names::Generator::default();
     let results: Vec<airtable_api::Record<AssetItem>> = company
         .authenticate_airtable(&company.airtable_base_id_assets)
         .list_records(&AssetItem::airtable_table(), "Grid view", vec![])
-        .await
-        .unwrap();
+        .await?;
     for item_record in results {
         let mut item: NewAssetItem = item_record.fields.into();
         if item.name.is_empty() {
@@ -300,10 +295,12 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) {
         item.expand(&drive_client, &drive_id, &parent_id).await;
         item.cio_company_id = company.id;
 
-        let mut db_item = item.upsert_in_db(db);
+        let mut db_item = item.upsert_in_db(db)?;
         db_item.airtable_record_id = item_record.id.to_string();
         db_item.update(db).await;
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -323,7 +320,11 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_asset_items(&db, &oxide).await;
-        AssetItems::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        refresh_asset_items(&db, &oxide).await.unwrap();
+        AssetItems::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 }

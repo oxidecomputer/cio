@@ -2992,7 +2992,7 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 }
 
 // Sync the applicants with our database.
-pub async fn refresh_db_applicants(db: &Database, company: &Company) {
+pub async fn refresh_db_applicants(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github();
 
     // Get all the hiring issues on the configs repository.
@@ -3019,8 +3019,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
             // since
             None,
         )
-        .await
-        .unwrap();
+        .await?;
 
     // Initialize the GSuite sheets client.
     let drive_client = company.authenticate_google_drive(db).await.unwrap();
@@ -3041,8 +3040,7 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
                 sheets::types::Dimension::Rows,
                 sheets::types::ValueRenderOption::FormattedValue,
             )
-            .await
-            .unwrap();
+            .await?;
         let values = sheet_values.values;
 
         if values.is_empty() {
@@ -3085,13 +3083,15 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) {
                 applicant.send_email_internally(db).await;
             }
 
-            let new_applicant = applicant.upsert(db).await;
+            let new_applicant = applicant.upsert(db).await?;
 
             new_applicant
                 .create_github_onboarding_issue(db, &github, &configs_issues)
                 .await;
         }
     }
+
+    Ok(())
 }
 
 /// The data type for a Google Sheet applicant form columns, we use this when
@@ -3633,12 +3633,12 @@ pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Com
     }
 }
 
-pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
+pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -> Result<()> {
     // Authenticate DocuSign.
     let dsa = company.authenticate_docusign(db).await;
     if dsa.is_none() {
         // Return early.
-        return;
+        return Ok(());
     }
     let ds = dsa.unwrap();
 
@@ -3647,7 +3647,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
     let piia_template_id = get_docusign_template_id(&ds, DOCUSIGN_PIIA_TEMPLATE).await;
 
     // TODO: we could actually query the DB by status, but whatever.
-    let applicants = Applicants::get_from_db(db, company.id);
+    let applicants = Applicants::get_from_db(db, company.id)?;
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
@@ -3655,6 +3655,8 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) {
 
         applicant.do_docusign_piia(db, &ds, &piia_template_id, company).await;
     }
+
+    Ok(())
 }
 
 pub async fn get_docusign_template_id(ds: &DocuSign, name: &str) -> String {
@@ -4855,13 +4857,13 @@ mod tests {
 
         // Do the old applicants from Google sheets.
         // TODO: eventually remove this.
-        refresh_db_applicants(&db, &oxide).await;
+        refresh_db_applicants(&db, &oxide).await.unwrap();
 
         // Update Airtable.
         Applicants::get_from_db(&db, oxide.id).update_airtable(&db).await;
 
         // Refresh DocuSign for the applicants.
-        refresh_docusign_for_applicants(&db, &oxide).await;
+        refresh_docusign_for_applicants(&db, &oxide).await.unwrap();
     }
 
     #[ignore]

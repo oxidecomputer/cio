@@ -792,7 +792,7 @@ impl Company {
     }
 }
 
-pub async fn refresh_companies() {
+pub async fn refresh_companies() -> Result<()> {
     let db = Database::new();
 
     // This should forever only be oxide.
@@ -801,8 +801,7 @@ pub async fn refresh_companies() {
     let is: Vec<airtable_api::Record<Company>> = oxide
         .authenticate_airtable(&oxide.airtable_base_id_cio)
         .list_records(&Company::airtable_table(), "Grid view", vec![])
-        .await
-        .unwrap();
+        .await?;
 
     for record in is {
         if record.fields.name.is_empty() || record.fields.website.is_empty() {
@@ -812,7 +811,7 @@ pub async fn refresh_companies() {
 
         let new_company: NewCompany = record.fields.into();
 
-        let mut company = new_company.upsert_in_db(&db);
+        let mut company = new_company.upsert_in_db(&db)?;
         if company.airtable_record_id.is_empty() {
             company.airtable_record_id = record.id;
         }
@@ -820,7 +819,9 @@ pub async fn refresh_companies() {
         company.update(&db).await;
     }
     // Companies are only stored with Oxide.
-    Companys::get_from_db(&db, 1).update_airtable(&db).await;
+    Companys::get_from_db(&db, 1)?.update_airtable(&db).await?;
+
+    Ok(())
 }
 
 pub fn get_google_scopes() -> Vec<String> {
@@ -867,6 +868,6 @@ mod tests {
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_cron_companies() {
-        refresh_companies().await;
+        refresh_companies().await.unwrap();
     }
 }

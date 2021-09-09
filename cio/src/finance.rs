@@ -96,7 +96,7 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 }
 
 /// Sync software vendors from Airtable.
-pub async fn refresh_software_vendors(db: &Database, company: &Company) {
+pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Result<()> {
     let gsuite = company.authenticate_google_admin(db).await.unwrap();
 
     let github = company.authenticate_github();
@@ -109,8 +109,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
     let results: Vec<airtable_api::Record<SoftwareVendor>> = company
         .authenticate_airtable(&company.airtable_base_id_finance)
         .list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![])
-        .await
-        .unwrap();
+        .await?;
     for vendor_record in results {
         let mut vendor: NewSoftwareVendor = vendor_record.fields.into();
 
@@ -119,13 +118,13 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
 
         if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
-            let org = github.orgs().get(&company.github_org).await.unwrap();
+            let org = github.orgs().get(&company.github_org).await?;
             vendor.users = org.plan.unwrap().filled_seats as i32;
         }
 
         if vendor.name == "Okta" && okta_auth.is_some() {
             let okta = okta_auth.as_ref().unwrap();
-            let users = okta.list_users().await.unwrap();
+            let users = okta.list_users().await?;
             vendor.users = users.len() as i32;
         }
 
@@ -143,14 +142,13 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
                     gsuite_api::types::SortOrder::Ascending,               // sort order
                     gsuite_api::types::ViewType::AdminView,                // view type
                 )
-                .await
-                .unwrap();
+                .await?;
             vendor.users = users.len() as i32;
         }
 
         if vendor.name == "Slack" && slack_auth.is_some() {
             let slack = slack_auth.as_ref().unwrap();
-            let users = slack.billable_info().await.unwrap();
+            let users = slack.billable_info().await?;
             let mut count = 0;
             for (_, user) in users {
                 if user.billing_active {
@@ -175,7 +173,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         }
 
         // Upsert the record in our database.
-        let mut db_vendor = vendor.upsert_in_db(db);
+        let mut db_vendor = vendor.upsert_in_db(db)?;
 
         if db_vendor.airtable_record_id.is_empty() {
             db_vendor.airtable_record_id = vendor_record.id;
@@ -188,7 +186,11 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) {
         db_vendor.update(db).await;
     }
 
-    SoftwareVendors::get_from_db(db, company.id).update_airtable(db).await
+    SoftwareVendors::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
+    Ok(())
 }
 
 #[db {
@@ -260,7 +262,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
     let r = company.authenticate_ramp(db).await;
     if r.is_none() {
         // Return early.
-        return;
+        return Ok(());
     }
 
     let ramp = r.unwrap();
@@ -306,10 +308,12 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
         }
 
         // Get the user's email for the transaction.
-        let email = ramp_users.get(&format!(
-            "{}{}",
-            transaction.card_holder.first_name, transaction.card_holder.last_name
-        ))?;
+        let email = ramp_users
+            .get(&format!(
+                "{}{}",
+                transaction.card_holder.first_name, transaction.card_holder.last_name
+            ))
+            .unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&transaction.merchant_name);
@@ -384,7 +388,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         }
 
         // Get the user's email for the reimbursement.
-        let email = ramp_users.get(&reimbursement.user_id)?;
+        let email = ramp_users.get(&reimbursement.user_id).unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&reimbursement.merchant);
@@ -720,21 +724,21 @@ fn clean_vendor_name(s: &str) -> String {
 
 /// Read the Brex transactions from a csv.
 /// We don't run this except locally.
-pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
-    let mut path = env::current_dir().unwrap();
+pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Result<()> {
+    let mut path = env::current_dir()?;
     path.push("brex.csv");
 
     if !path.exists() {
         // Return early the path does not exist.
         println!("Brex csv at {} does not exist, returning early", path.to_str().unwrap());
-        return;
+        return Ok(());
     }
 
     println!("Reading csv from {}", path.to_str().unwrap());
     let f = File::open(&path).unwrap();
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
-        let mut record: NewCreditCardTransaction = result.unwrap();
+        let mut record: NewCreditCardTransaction = result?;
         record.card_vendor = "Brex".to_string();
         record.state = "CLEARED".to_string();
 
@@ -800,6 +804,8 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) {
         // Let's add the record to our database.
         record.upsert(db).await?;
     }
+
+    Ok(())
 }
 
 #[db {
@@ -1115,7 +1121,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
     }
 
     println!("Reading csv from {}", path.to_str().unwrap());
-    let f = File::open(&path).unwrap();
+    let f = File::open(&path)?;
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
         let mut record: NewAccountsPayable = result?;
@@ -1153,19 +1159,19 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
     Ok(())
 }
 
-pub async fn sync_quickbooks(db: &Database, company: &Company) {
+pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
     // Authenticate QuickBooks.
     let qba = company.authenticate_quickbooks(db).await;
     if qba.is_none() {
         // Return early.
-        return;
+        return Ok(());
     }
     let qb = qba.unwrap();
 
-    let bill_payments = qb.list_bill_payments().await.unwrap();
+    let bill_payments = qb.list_bill_payments().await?;
     for bill_payment in bill_payments {
         // Let's check if there are any attachments.
-        let attachments = qb.list_attachments_for_bill_payment(&bill_payment.id).await.unwrap();
+        let attachments = qb.list_attachments_for_bill_payment(&bill_payment.id).await?;
 
         if (attachments.is_empty() && bill_payment.line.is_empty()) || bill_payment.total_amt == 0.0 {
             // Continue early if we have no lines on the bill.
@@ -1191,9 +1197,9 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
                     for txn in line.linked_txn {
                         if txn.txn_type == "Bill" {
                             // Get the bill.
-                            let bill = qb.get_bill(&txn.txn_id).await.unwrap();
+                            let bill = qb.get_bill(&txn.txn_id).await?;
                             // Get the attachments for the bill.
-                            let attachments = qb.list_attachments_for_bill(&bill.id).await.unwrap();
+                            let attachments = qb.list_attachments_for_bill(&bill.id).await?;
                             for attachment in attachments {
                                 transaction.invoices.push(attachment.temp_download_uri.to_string());
                             }
@@ -1215,12 +1221,12 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
         }
     }
 
-    let purchases = qb.list_purchases().await.unwrap();
+    let purchases = qb.list_purchases().await?;
     for purchase in purchases.clone() {
         // Let's try to match the Brex reciepts to the transactions.
         if purchase.account_ref.name == "Credit Cards:Brex" {
             // See if we even have attachments.
-            let attachments = qb.list_attachments_for_purchase(&purchase.id).await.unwrap();
+            let attachments = qb.list_attachments_for_purchase(&purchase.id).await?;
             if attachments.is_empty() {
                 // We can continue early since we don't have attachments.
                 continue;
@@ -1271,6 +1277,8 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) {
         }
     }
     println!("len: {}", purchases.len());
+
+    Ok(())
 }
 
 fn clean_merchant_name(s: &str) -> String {

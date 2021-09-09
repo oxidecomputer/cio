@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -35,7 +36,7 @@ pub struct ApplicationForm {
 }
 
 impl ApplicationForm {
-    pub async fn do_form(&self, db: &Database) {
+    pub async fn do_form(&self, db: &Database) -> Result<()> {
         // If their email is empty return early.
         if self.email.is_empty()
             || self.name.is_empty()
@@ -46,14 +47,14 @@ impl ApplicationForm {
         {
             // This should not happen since we verify on the client side we have these
             // things.
-            return;
+            return Ok(());
         }
 
         // Convert the application form to an applicant.
         let new_applicant: NewApplicant = self.clone().into();
 
         // Add the applicant to the database.
-        let mut applicant = new_applicant.upsert(db).await;
+        let mut applicant = new_applicant.upsert(db).await?;
 
         let company = Company::get_by_id(db, self.cio_company_id);
 
@@ -65,6 +66,8 @@ impl ApplicationForm {
 
         // Update airtable and the database again.
         applicant.update(db).await;
+
+        Ok(())
     }
 }
 

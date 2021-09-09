@@ -73,8 +73,8 @@ pub async fn generate_terraform_files_for_okta(
         return Ok(());
     }
 
-    let users = Users::get_from_db(db, company.id);
-    let groups = Groups::get_from_db(db, company.id);
+    let users = Users::get_from_db(db, company.id)?;
+    let groups = Groups::get_from_db(db, company.id)?;
 
     let owner = &company.github_org;
     let repo = "configs";
@@ -134,7 +134,7 @@ pub async fn generate_terraform_files_for_aws_and_github(
     db: &Database,
     company: &Company,
 ) -> Result<()> {
-    let users = Users::get_from_db(db, company.id);
+    let users = Users::get_from_db(db, company.id)?;
 
     let owner = &company.github_org;
     let repo = "configs";

@@ -118,12 +118,11 @@ impl ApplicantReview {
     }
 }
 
-pub async fn refresh_reviews(db: &Database, company: &Company) {
+pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
     let is: Vec<airtable_api::Record<ApplicantReview>> = company
         .authenticate_airtable(&company.airtable_base_id_hiring)
         .list_records(&ApplicantReview::airtable_table(), "Grid view", vec![])
-        .await
-        .unwrap();
+        .await?;
 
     for record in is {
         if record.fields.name.is_empty() || record.fields.applicant.is_empty() {
@@ -133,7 +132,7 @@ pub async fn refresh_reviews(db: &Database, company: &Company) {
 
         let new_review: NewApplicantReview = record.fields.into();
 
-        let mut review = new_review.upsert_in_db(db);
+        let mut review = new_review.upsert_in_db(db)?;
         if review.airtable_record_id.is_empty() {
             review.airtable_record_id = record.id;
         }
@@ -145,7 +144,11 @@ pub async fn refresh_reviews(db: &Database, company: &Company) {
     }
 
     // Update them all from the database.
-    ApplicantReviews::get_from_db(db, company.id).update_airtable(db).await;
+    ApplicantReviews::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -159,6 +162,6 @@ mod tests {
 
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        refresh_reviews(&db, &oxide).await;
+        refresh_reviews(&db, &oxide).await.unwrap();
     }
 }
