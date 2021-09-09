@@ -23,7 +23,6 @@ use cio_api::{
     rack_line::RackLineSubscriber,
     schema::{api_tokens, applicants},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
-    swag_inventory::SwagInventoryItem,
     swag_store::Order,
     utils::decode_base64,
 };
@@ -537,25 +536,12 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
-    let event = body_param.into_inner();
-
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(rqctx, body_param).await
+    {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-
-    // Get the row from airtable.
-    let swag_inventory_item =
-        SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-            .await
-            .unwrap();
-
-    // Print the barcode label(s).
-    swag_inventory_item.print_label(&api_context.db).await.unwrap();
-    info!("swag inventory item {} printed label", swag_inventory_item.name);
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -573,27 +559,10 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let api_context = rqctx.context();
 
-    let event = body_param.into_inner();
-
-    if event.record_id.is_empty() {
-        warn!("record id is empty");
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
-    }
-
-    // Get the row from airtable.
-    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
-        .await
-        .unwrap();
-    if applicant.criminal_background_check_status.is_empty() {
-        // Request the background check, since we previously have not requested one.
-        applicant
-            .send_background_check_invitation(&api_context.db)
-            .await
-            .unwrap();
-        info!("sent background check invitation to applicant: {}", applicant.email);
+    if let Err(e) = crate::handlers::handle_airtable_applicants_request_background_check(rqctx, body_param).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
 
     sentry::end_session();

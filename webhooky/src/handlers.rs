@@ -11,6 +11,7 @@ use cio_api::{
     journal_clubs::JournalClubMeeting,
     rfds::RFD,
     schema::{applicants, journal_club_meetings, rfds},
+    swag_inventory::SwagInventoryItem,
     utils::merge_json,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl, RunQueryDsl};
@@ -626,6 +627,54 @@ pub async fn handle_airtable_assets_items_print_barcode_label(
     // Print the barcode label(s).
     asset_item.print_label(&api_context.db).await?;
     info!("asset item {} printed label", asset_item.name);
+
+    Ok(())
+}
+
+pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    // Get the row from airtable.
+    let swag_inventory_item =
+        SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    // Print the barcode label(s).
+    swag_inventory_item.print_label(&api_context.db).await?;
+    info!("swag inventory item {} printed label", swag_inventory_item.name);
+
+    Ok(())
+}
+
+pub async fn handle_airtable_applicants_request_background_check(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+
+    if event.record_id.is_empty() {
+        warn!("record id is empty");
+        return Ok(());
+    }
+
+    // Get the row from airtable.
+    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    if applicant.criminal_background_check_status.is_empty() {
+        // Request the background check, since we previously have not requested one.
+        applicant.send_background_check_invitation(&api_context.db).await?;
+        info!("sent background check invitation to applicant: {}", applicant.email);
+    }
 
     Ok(())
 }
