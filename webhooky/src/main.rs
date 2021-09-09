@@ -56,10 +56,7 @@ use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType, Slack};
 use zoom_api::Client as Zoom;
 
-use crate::{
-    github_types::GitHubWebhook, handlers::handle_products_sold_count, handlers_github::handle_github,
-    slack_commands::SlackCommand,
-};
+use crate::{github_types::GitHubWebhook, slack_commands::SlackCommand};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -272,7 +269,7 @@ async fn listen_products_sold_count_requests(
     sentry::start_session();
 
     let mut resp: CounterResponse = Default::default();
-    match handle_products_sold_count(rqctx).await {
+    match crate::handlers::handle_products_sold_count(rqctx).await {
         Ok(r) => {
             resp = r;
         }
@@ -297,7 +294,7 @@ async fn listen_github_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
-    if let Err(e) = handle_github(rqctx, body_param).await {
+    if let Err(e) = crate::handlers_github::handle_github(rqctx, body_param).await {
         // Send the error to sentry.
         sentry_anyhow::capture_anyhow(&e);
     }
@@ -307,7 +304,7 @@ async fn listen_github_webhooks(
 }
 
 #[derive(Deserialize, Debug, JsonSchema)]
-struct RFDPathParams {
+pub struct RFDPathParams {
     num: i32,
 }
 
@@ -321,35 +318,11 @@ async fn trigger_rfd_update_by_number(
     path_params: Path<RFDPathParams>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
-    let num = path_params.into_inner().num;
-    info!("triggering an update for RFD number `{}`", num);
 
-    let api_context = rqctx.context();
-    let db = &api_context.db;
-
-    // Get the company id for Oxide.
-    // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
-
-    let github = oxide.authenticate_github().unwrap();
-
-    let result = RFD::get_from_db(db, num);
-    if result.is_none() {
-        // Return early, we couldn't find an RFD.
-        warn!("No RFD was found with number `{}`", num);
-        sentry::end_session();
-        return Ok(HttpResponseAccepted("ok".to_string()));
+    if let Err(e) = crate::handlers::handle_rfd_update_by_number(rqctx, path_params).await {
+        // Send the error to sentry.
+        sentry_anyhow::capture_anyhow(&e);
     }
-    let mut rfd = result.unwrap();
-    // Update the RFD.
-    rfd.expand(&github, &oxide).await.unwrap();
-    info!("updated  RFD {}", rfd.number_string);
-
-    rfd.convert_and_upload_pdf(db, &github, &oxide).await.unwrap();
-    info!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
-
-    // Save the rfd back to our database.
-    rfd.update(db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
