@@ -30,6 +30,7 @@ use schemars::JsonSchema;
 use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
+use slog::Drain;
 use zoom_api::Client as Zoom;
 
 use crate::github_types::GitHubWebhook;
@@ -39,8 +40,9 @@ async fn main() -> Result<(), String> {
     // Initialize our logger.
     let mut log_builder = pretty_env_logger::formatted_builder();
     log_builder.parse_filters("info");
+    let base_logger = log_builder.build();
 
-    let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
+    let logger = sentry_log::SentryLogger::with_dest(base_logger);
 
     log::set_boxed_logger(Box::new(logger)).unwrap();
 
@@ -152,6 +154,7 @@ async fn main() -> Result<(), String> {
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
+    api.register(trigger_sync_repos_create).unwrap();
     api.register(api_get_schema).unwrap();
 
     // Print the OpenAPI Spec to stdout.
@@ -187,6 +190,8 @@ async fn main() -> Result<(), String> {
 pub struct Context {
     db: Database,
 
+    sec: steno::SecClient,
+
     schema: String,
 }
 
@@ -195,10 +200,20 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(schema: String) -> Context {
+        let log = {
+            let decorator = slog_term::TermDecorator::new().build();
+            let drain = slog_term::FullFormat::new(decorator).build().fuse();
+            let drain = slog::LevelFilter(drain, slog::Level::Warning).fuse();
+            let drain = slog_async::Async::new(drain).build().fuse();
+            slog::Logger::root(drain, slog::o!())
+        };
+
         let db = Database::new();
 
+        let sec = steno::sec(log.new(slog::o!()), Arc::new(db.clone()));
+
         // Create the context.
-        Context { db, schema }
+        Context { db, sec, schema }
     }
 }
 
@@ -1470,6 +1485,29 @@ async fn listen_slack_commands_webhooks(
     sentry::start_session();
 
     match crate::handlers::handle_slack_commands(rqctx, body_param).await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseOk(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a saga run of sync repos. */
+#[endpoint {
+    method = POST,
+    path = "/sagas/sync-repos",
+}]
+async fn trigger_sync_repos_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<Vec<uuid::Uuid>>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_sync_repos_create(rqctx).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseOk(r))

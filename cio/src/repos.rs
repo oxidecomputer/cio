@@ -609,29 +609,3 @@ impl FromUrl for Option<url::Url> {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Companys,
-        db::Database,
-        repos::{refresh_db_github_repos, sync_all_repo_settings},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_github_repos() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1).unwrap();
-        // Iterate over the companies and update.
-        for company in companies {
-            let github = company.authenticate_github().unwrap();
-
-            sync_all_repo_settings(&db, &github, &company).await.unwrap();
-            refresh_db_github_repos(&db, &github, &company).await.unwrap();
-        }
-    }
-}

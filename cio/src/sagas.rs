@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::{companies::Company, db::Database};
@@ -33,8 +33,8 @@ async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> 
 }
 
 /// Create a new saga with the given parameters and then execute it.
-pub async fn sync_repos(db: Database, sec: steno::SecClient, id: uuid::Uuid, company: &Company) -> Result<()> {
-    let context = Arc::new(Context { db });
+pub async fn sync_repos(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, company: &Company) -> Result<()> {
+    let context = Arc::new(Context { db: db.clone() });
     let params = Params {
         company: company.clone(),
     };
@@ -66,7 +66,7 @@ pub async fn sync_repos(db: Database, sec: steno::SecClient, id: uuid::Uuid, com
     );
     let saga_template = Arc::new(builder.build());
 
-    let saga_id = steno::SagaId(id);
+    let saga_id = steno::SagaId(*id);
 
     // Create the saga.
     let saga_future = sec
@@ -95,8 +95,7 @@ pub async fn sync_repos(db: Database, sec: steno::SecClient, id: uuid::Uuid, com
 
     // Print the results.
     if let Err(error) = result.kind {
-        println!("action failed: {}", error.error_node_name);
-        println!("error: {}", error.error_source);
+        bail!("action failed: {:#?}", error,);
     }
 
     Ok(())

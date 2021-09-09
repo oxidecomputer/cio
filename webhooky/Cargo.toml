@@ -12,8 +12,8 @@ anyhow = "1"
 checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
-cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
-#cio-api = { path = "../cio" }
+#cio-api = { git = "https://github.com/oxidecomputer/cio", branch = "master" }
+cio-api = { path = "../cio" }
 docusign = "^0.1.0"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
 #dropshot = "^0.5.0"
@@ -49,6 +49,11 @@ sheets = "^0.2.0"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.12"
 slack-chat-api = "^0.1.16"
+slog = "2"
+slog-async = "2"
+slog-term = "2"
+steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full"] }
+uuid = { version = "^0.8", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
