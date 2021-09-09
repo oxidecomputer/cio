@@ -373,7 +373,7 @@ mod tests {
     async fn test_cron_mailing_list_subscribers() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update the mailing list subscribers for both.
         for company in companies {
             refresh_db_mailing_list_subscribers(&db, &company).await.unwrap();

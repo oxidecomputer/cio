@@ -1145,7 +1145,11 @@ mod tests {
         refresh_db_rfds(&db, &oxide).await.unwrap();
 
         // Update rfds in airtable.
-        RFDs::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        RFDs::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 
     #[ignore]

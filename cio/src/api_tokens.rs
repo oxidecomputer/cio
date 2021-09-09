@@ -147,6 +147,10 @@ mod tests {
         // This should always be Oxide.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        APITokens::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        APITokens::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 }

@@ -352,9 +352,15 @@ mod tests {
 
         refresh_db_journal_club_meetings(&db, &github, &oxide).await.unwrap();
 
-        JournalClubPapers::get_from_db(&db, oxide.id).update_airtable(&db).await;
-        JournalClubMeetings::get_from_db(&db, oxide.id)
+        JournalClubPapers::get_from_db(&db, oxide.id)
+            .unwrap()
             .update_airtable(&db)
-            .await;
+            .await
+            .unwrap();
+        JournalClubMeetings::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 }

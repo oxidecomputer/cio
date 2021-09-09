@@ -4883,11 +4883,15 @@ mod tests {
         // TODO: eventually remove this.
         refresh_db_applicants(&db, &oxide).await.unwrap();
 
-        // Update Airtable.
-        Applicants::get_from_db(&db, oxide.id).update_airtable(&db).await;
-
         // Refresh DocuSign for the applicants.
         refresh_docusign_for_applicants(&db, &oxide).await.unwrap();
+
+        // Update Airtable.
+        Applicants::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 
     #[ignore]

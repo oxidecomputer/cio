@@ -599,7 +599,11 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_swag_items(&db, &oxide).await.unwrap();
-        SwagItems::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        SwagItems::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 
     #[ignore]
@@ -613,8 +617,10 @@ mod tests {
 
         refresh_swag_inventory_items(&db, &oxide).await.unwrap();
         SwagInventoryItems::get_from_db(&db, oxide.id)
+            .unwrap()
             .update_airtable(&db)
-            .await;
+            .await
+            .unwrap();
     }
 
     #[ignore]
@@ -626,6 +632,10 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        BarcodeScans::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        BarcodeScans::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 }

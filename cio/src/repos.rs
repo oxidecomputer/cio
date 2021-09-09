@@ -640,7 +640,7 @@ mod tests {
     async fn test_cron_github_repos() {
         // Initialize our database.
         let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1);
+        let companies = Companys::get_from_db(&db, 1).unwrap();
         // Iterate over the companies and update.
         for company in companies {
             let github = company.authenticate_github();
@@ -648,7 +648,11 @@ mod tests {
             sync_all_repo_settings(&db, &github, &company).await.unwrap();
             refresh_db_github_repos(&db, &github, &company).await.unwrap();
 
-            GithubRepos::get_from_db(&db, company.id).update_airtable(&db).await;
+            GithubRepos::get_from_db(&db, company.id)
+                .unwrap()
+                .update_airtable(&db)
+                .await
+                .unwrap();
         }
     }
 }

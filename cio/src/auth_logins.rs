@@ -201,7 +201,15 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         // Update auth user and auth user logins in airtable.
-        AuthUserLogins::get_from_db(&db, oxide.id).update_airtable(&db).await;
-        AuthUsers::get_from_db(&db, oxide.id).update_airtable(&db).await;
+        AuthUserLogins::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
+        AuthUsers::get_from_db(&db, oxide.id)
+            .unwrap()
+            .update_airtable(&db)
+            .await
+            .unwrap();
     }
 }
