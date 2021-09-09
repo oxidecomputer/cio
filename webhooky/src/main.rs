@@ -515,7 +515,7 @@ async fn trigger_rfd_update_by_number(
     println!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
     // Save the rfd back to our database.
-    rfd.update(db).await;
+    rfd.update(db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -679,20 +679,20 @@ async fn listen_google_sheets_edit_webhooks(
             // If they changed their status to OnBoarding let's do the docusign updates.
             if a.status == cio_api::applicant_status::Status::Onboarding.to_string() {
                 // First let's update the applicant.
-                a.update(db).await;
+                a.update(db).await.unwrap();
 
                 // Create our docusign client.
                 let dsa = oxide.authenticate_docusign(db).await;
-                if let Some(ds) = dsa {
+                if let Ok(ds) = dsa {
                     // Get the template we need.
                     let offer_template_id =
                         get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
 
-                    a.do_docusign_offer(db, &ds, &offer_template_id, &oxide).await;
+                    a.do_docusign_offer(db, &ds, &offer_template_id, &oxide).await.unwrap();
 
                     let piia_template_id =
                         get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE).await;
-                    a.do_docusign_piia(db, &ds, &piia_template_id, &oxide).await;
+                    a.do_docusign_piia(db, &ds, &piia_template_id, &oxide).await.unwrap();
                 }
             }
         }
@@ -772,8 +772,8 @@ async fn listen_google_sheets_edit_webhooks(
     }
 
     // Update the applicant in the database and Airtable.
-    let new_applicant = a.update(db).await;
-    let company = Company::get_by_id(db, new_applicant.cio_company_id);
+    let new_applicant = a.update(db).await.unwrap();
+    let company = Company::get_by_id(db, new_applicant.cio_company_id).unwrap();
 
     // Get all the hiring issues on the configs repository.
     let configs_issues = github
@@ -804,7 +804,8 @@ async fn listen_google_sheets_edit_webhooks(
 
     new_applicant
         .create_github_onboarding_issue(db, &github, &configs_issues)
-        .await;
+        .await
+        .unwrap();
 
     println!("applicant {} updated successfully", new_applicant.email);
     sentry::end_session();
@@ -946,19 +947,20 @@ async fn listen_google_sheets_row_create_webhooks(
             sent_email_follow_up_index.try_into().unwrap(),
             event.event.range.row_start.try_into().unwrap(),
         )
-        .await;
+        .await
+        .unwrap();
 
     if !applicant.sent_email_received {
         println!("applicant is new, sending internal notifications: {:?}", applicant);
 
         // Send a company-wide email.
-        applicant.send_email_internally(db).await;
+        applicant.send_email_internally(db).await.unwrap();
 
         applicant.sent_email_received = true;
     }
 
     // Send the applicant to the database and Airtable.
-    let a = applicant.upsert(db).await;
+    let a = applicant.upsert(db).await.unwrap();
 
     println!("applicant {} created successfully", a.email);
     sentry::end_session();
@@ -998,10 +1000,12 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     }
 
     // Get the row from airtable.
-    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
 
     // Create a new shipment for the employee and print the label.
-    user.create_shipment_to_home_address(&api_context.db).await;
+    user.create_shipment_to_home_address(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1031,10 +1035,12 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     }
 
     // Get the row from airtable.
-    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
 
     // Print the barcode label(s).
-    asset_item.print_label(&api_context.db).await;
+    asset_item.print_label(&api_context.db).await.unwrap();
     println!("asset item {} printed label", asset_item.name);
 
     sentry::end_session();
@@ -1066,10 +1072,12 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
 
     // Get the row from airtable.
     let swag_inventory_item =
-        SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+        SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+            .await
+            .unwrap();
 
     // Print the barcode label(s).
-    swag_inventory_item.print_label(&api_context.db).await;
+    swag_inventory_item.print_label(&api_context.db).await.unwrap();
     println!("swag inventory item {} printed label", swag_inventory_item.name);
 
     sentry::end_session();
@@ -1100,10 +1108,15 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     }
 
     // Get the row from airtable.
-    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
     if applicant.criminal_background_check_status.is_empty() {
         // Request the background check, since we previously have not requested one.
-        applicant.send_background_check_invitation(&api_context.db).await;
+        applicant
+            .send_background_check_invitation(&api_context.db)
+            .await
+            .unwrap();
         println!("sent background check invitation to applicant: {}", applicant.email);
     }
 
@@ -1136,7 +1149,9 @@ async fn listen_airtable_applicants_update_webhooks(
     }
 
     // Get the row from airtable.
-    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
 
     if applicant.status.is_empty() {
         sentry::capture_message(
@@ -1148,7 +1163,7 @@ async fn listen_airtable_applicants_update_webhooks(
     }
 
     // Grab our old applicant from the database.
-    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id);
+    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id).unwrap();
 
     // Grab the status and the status raw.
     let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
@@ -1163,7 +1178,7 @@ async fn listen_airtable_applicants_update_webhooks(
     // well.
 
     // Update the row in our database.
-    db_applicant.update(&api_context.db).await;
+    db_applicant.update(&api_context.db).await.unwrap();
 
     println!("applicant {} updated successfully", applicant.email);
     sentry::end_session();
@@ -1195,7 +1210,9 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     }
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
 
     // If it is a row we created from our internal store do nothing.
     if shipment.notes.contains("Oxide store")
@@ -1213,11 +1230,14 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     }
 
     // Update the row in our database.
-    let mut new_shipment = shipment.update(&api_context.db).await;
+    let mut new_shipment = shipment.update(&api_context.db).await.unwrap();
     // Create the shipment in shippo.
-    new_shipment.create_or_get_shippo_shipment(&api_context.db).await;
+    new_shipment
+        .create_or_get_shippo_shipment(&api_context.db)
+        .await
+        .unwrap();
     // Update airtable again.
-    new_shipment.update(&api_context.db).await;
+    new_shipment.update(&api_context.db).await.unwrap();
 
     println!("shipment {} created successfully", shipment.email);
     sentry::end_session();
@@ -1257,18 +1277,19 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let mut shipment =
-        OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let mut shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
 
     // Reprint the label.
-    shipment.print_label(&api_context.db).await;
+    shipment.print_label(&api_context.db).await.unwrap();
     println!("shipment {} reprinted label", shipment.email);
 
     // Update the field.
     shipment.status = "Label printed".to_string();
 
     // Update Airtable.
-    shipment.update(&api_context.db).await;
+    shipment.update(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1298,14 +1319,16 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
 
     // Reprint the receipt.
-    shipment.print_receipt(&api_context.db).await;
+    shipment.print_receipt(&api_context.db).await.unwrap();
     println!("shipment {} reprinted receipt", shipment.email);
 
     // Update Airtable.
-    shipment.update(&api_context.db).await;
+    shipment.update(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1335,10 +1358,12 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await;
+    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id)
+        .await
+        .unwrap();
 
     // Resend the email to the recipient.
-    shipment.send_email_to_recipient(&api_context.db).await;
+    shipment.send_email_to_recipient(&api_context.db).await.unwrap();
     println!("resent the shipment email to the recipient {}", shipment.email);
 
     sentry::end_session();
@@ -1368,8 +1393,10 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
 
     // Schedule the pickup.
     let api_context = rqctx.context();
-    let company = Company::get_by_id(&api_context.db, event.cio_company_id);
-    OutboundShipments::create_pickup(&api_context.db, &company).await;
+    let company = Company::get_by_id(&api_context.db, event.cio_company_id).unwrap();
+    OutboundShipments::create_pickup(&api_context.db, &company)
+        .await
+        .unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1523,7 +1550,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
 
     // Add the shipment to our database.
     let api_context = rqctx.context();
-    i.upsert(&api_context.db).await;
+    i.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -1550,7 +1577,7 @@ async fn listen_applicant_review_requests(
     }
 
     // Add them to the database.
-    event.upsert(&api_context.db).await;
+    event.upsert(&api_context.db).await.unwrap();
 
     println!("applicant review created successfully: {:?}", event);
 
@@ -1572,7 +1599,7 @@ async fn listen_application_submit_requests(
     let api_context = rqctx.context();
     let event = body_param.into_inner();
 
-    event.do_form(&api_context.db).await;
+    event.do_form(&api_context.db).await.unwrap();
 
     println!("application for {} {} created successfully", event.email, event.role);
 
@@ -1643,7 +1670,7 @@ async fn listen_application_files_upload_requests(
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    let company = Company::get_by_id(db, data.cio_company_id);
+    let company = Company::get_by_id(db, data.cio_company_id).unwrap();
 
     // Initialize the Google Drive client.
     let drive = company.authenticate_google_drive(db).await.unwrap();
@@ -1745,7 +1772,9 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     let db = &api_context.db;
 
     // Get the row from airtable.
-    let record = InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id).await;
+    let record = InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id)
+        .await
+        .unwrap();
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
@@ -1757,12 +1786,12 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     let mut new_shipment: NewInboundShipment = record.into();
 
     new_shipment.expand().await;
-    let mut shipment = new_shipment.upsert_in_db(db);
+    let mut shipment = new_shipment.upsert_in_db(db).unwrap();
     if shipment.airtable_record_id.is_empty() {
         shipment.airtable_record_id = event.record_id;
     }
     shipment.cio_company_id = event.cio_company_id;
-    shipment.update(db).await;
+    shipment.update(db).await.unwrap();
 
     println!("inbound shipment {} updated successfully", shipment.tracking_number);
     sentry::end_session();
@@ -1785,7 +1814,7 @@ async fn listen_store_order_create(
 
     let event = body_param.into_inner();
     println!("order {:?}", event);
-    event.do_order(&api_context.db).await;
+    event.do_order(&api_context.db).await.unwrap();
 
     println!("order for {} created successfully", event.email);
     sentry::end_session();
@@ -1862,7 +1891,7 @@ async fn listen_shippo_tracking_update_webhooks(
             shipment.delivered_time = tracking_status.status_date;
         }
 
-        shipment.update(&api_context.db).await;
+        shipment.update(&api_context.db).await.unwrap();
     }
 
     // Update the outbound shipment if it exists.
@@ -1872,8 +1901,8 @@ async fn listen_shippo_tracking_update_webhooks(
         // Update the shipment in shippo.
         // TODO: we likely don't need the extra request here, but it makes the code more DRY.
         // Clean this up eventually.
-        shipment.create_or_get_shippo_shipment(&api_context.db).await;
-        shipment.update(&api_context.db).await;
+        shipment.create_or_get_shippo_shipment(&api_context.db).await.unwrap();
+        shipment.update(&api_context.db).await.unwrap();
     }
 
     println!("shipment {} tracking status updated successfully", ts.tracking_number);
@@ -1957,7 +1986,7 @@ async fn listen_checkr_background_update_webhooks(
         }
 
         // Update the applicant.
-        applicant.update(&api_context.db).await;
+        applicant.update(&api_context.db).await.unwrap();
     }
 
     sentry::end_session();
@@ -2074,7 +2103,7 @@ async fn listen_auth_google_callback(
     token.expand();
 
     // Update it in the database.
-    token.upsert(&api_context.db).await;
+    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2189,7 +2218,7 @@ async fn listen_auth_mailchimp_callback(
     };
     token.expand();
     // Update it in the database.
-    token.upsert(&api_context.db).await;
+    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2275,7 +2304,7 @@ async fn listen_auth_gusto_callback(
     };
     token.expand();
     // Update it in the database.
-    token.upsert(&api_context.db).await;
+    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2383,7 +2412,7 @@ async fn listen_auth_zoom_callback(
     };
     token.expand();
     // Update it in the database.
-    token.upsert(&api_context.db).await;
+    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2478,7 +2507,7 @@ async fn listen_auth_ramp_callback(
     };
     token.expand();
     // Update it in the database.
-    token.upsert(&api_context.db).await;
+    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2578,9 +2607,9 @@ async fn listen_auth_slack_callback(
             .get_result::<APIToken>(&api_context.db.conn())
             .unwrap_or_else(|e| panic!("unable to update record {}: {}", existing.id, e))
     } else {
-        token.create_in_db(&api_context.db)
+        token.create_in_db(&api_context.db).unwrap()
     };
-    new_token.upsert_in_airtable(&api_context.db).await;
+    new_token.upsert_in_airtable(&api_context.db).await.unwrap();
 
     // Save the user token to the database.
     if let Some(authed_user) = t.authed_user {
@@ -2621,9 +2650,9 @@ async fn listen_auth_slack_callback(
                 .get_result::<APIToken>(&api_context.db.conn())
                 .unwrap_or_else(|e| panic!("unable to update record {}: {}", existing.id, e))
         } else {
-            user_token.create_in_db(&api_context.db)
+            user_token.create_in_db(&api_context.db).unwrap()
         };
-        new_user_token.upsert_in_airtable(&api_context.db).await;
+        new_user_token.upsert_in_airtable(&api_context.db).await.unwrap();
     }
 
     sentry::end_session();
@@ -2704,7 +2733,7 @@ async fn listen_auth_quickbooks_callback(
     token.expand();
 
     // Update it in the database.
-    token.upsert(&api_context.db).await;
+    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2801,7 +2830,7 @@ async fn listen_auth_docusign_callback(
     token.expand();
 
     // Update it in the database.
-    token.upsert(&api_context.db).await;
+    token.upsert(&api_context.db).await.unwrap();
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -2829,14 +2858,15 @@ async fn listen_docusign_envelope_update_webhooks(
         .first::<Applicant>(&db.conn());
     match result {
         Ok(mut applicant) => {
-            let company = applicant.company(db);
+            let company = applicant.company(db).unwrap();
 
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
-            if let Some(ds) = dsa {
+            if let Ok(ds) = dsa {
                 applicant
                     .update_applicant_from_docusign_offer_envelope(db, &ds, event.clone())
-                    .await;
+                    .await
+                    .unwrap();
             }
         }
         Err(e) => {
@@ -2854,14 +2884,15 @@ async fn listen_docusign_envelope_update_webhooks(
         .first::<Applicant>(&db.conn());
     match result {
         Ok(mut applicant) => {
-            let company = applicant.company(db);
+            let company = applicant.company(db).unwrap();
 
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
-            if let Some(ds) = dsa {
+            if let Ok(ds) = dsa {
                 applicant
                     .update_applicant_from_docusign_piia_envelope(db, &ds, event)
-                    .await;
+                    .await
+                    .unwrap();
             }
         }
         Err(e) => {
@@ -2894,10 +2925,10 @@ async fn listen_analytics_page_view_webhooks(
 
     // Expand the page_view.
     event.set_page_link();
-    event.set_company_id(db);
+    event.set_company_id(db).unwrap();
 
     // Add the page_view to the database and Airttable.
-    let pv = event.create(db).await;
+    let pv = event.create(db).await.unwrap();
 
     println!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
     sentry::end_session();
@@ -2947,7 +2978,7 @@ async fn listen_mailchimp_mailing_list_webhooks(
     let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
         // Update the subscriber in the database.
-        let subscriber = new_subscriber.upsert(db).await;
+        let subscriber = new_subscriber.upsert(db).await.unwrap();
 
         println!("subscriber {} created successfully", subscriber.email);
     } else {
@@ -3003,7 +3034,7 @@ async fn listen_mailchimp_rack_line_webhooks(
     let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
         // Update the subscriber in the database.
-        let subscriber = new_subscriber.upsert(db).await;
+        let subscriber = new_subscriber.upsert(db).await.unwrap();
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
@@ -3037,7 +3068,7 @@ async fn listen_slack_commands_webhooks(
     let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes()).unwrap();
 
     // Get the company from the Slack team id.
-    let company = Company::get_from_slack_team_id(db, &bot_command.team_id);
+    let company = Company::get_from_slack_team_id(db, &bot_command.team_id).unwrap();
 
     // Get the command type.
     let command = SlackCommand::from_str(&bot_command.command).unwrap();
@@ -3957,7 +3988,7 @@ async fn handle_rfd_pull_request(
     }
 
     // Update the RFD to show the new state and link in the database.
-    rfd.update(db).await;
+    rfd.update(db).await?;
     a("[SUCCESS]: updated RFD in the database");
     a("[SUCCESS]: updated RFD in Airtable");
 
@@ -3988,7 +4019,7 @@ async fn handle_rfd_push(
     let db = &api_context.db;
 
     // Initialize the Google Drive client.
-    let drive = company.authenticate_google_drive(db).await.unwrap();
+    let drive = company.authenticate_google_drive(db).await?;
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
@@ -4152,10 +4183,10 @@ async fn handle_rfd_push(
             }
 
             // Update the RFD in the database.
-            let mut rfd = new_rfd.upsert(db).await;
+            let mut rfd = new_rfd.upsert(db).await?;
             // Update all the fields for the RFD.
             rfd.expand(github, company).await?;
-            rfd.update(db).await;
+            rfd.update(db).await?;
             a(&format!(
                 "[SUCCESS]: updated RFD {} in the database",
                 new_rfd.number_string
@@ -4172,7 +4203,7 @@ async fn handle_rfd_push(
 
             // Update the PDFs for the RFD.
             rfd.convert_and_upload_pdf(db, github, company).await?;
-            rfd.update(db).await;
+            rfd.update(db).await?;
             a(&format!(
                 "[SUCCESS]: updated pdf `{}` for RFD {}",
                 rfd.get_pdf_filename(),
@@ -4290,7 +4321,7 @@ async fn handle_rfd_push(
                 rfd_mut.update_state("published", file.ends_with(".md"));
 
                 // Update the RFD to show the new state in the database.
-                rfd_mut.update(db).await;
+                rfd_mut.update(db).await?;
 
                 // Update the file in GitHub.
                 // Keep in mind: this push will kick off another webhook.
@@ -4517,7 +4548,7 @@ async fn handle_repository_event(
 
     let repo = github.repos().get(&company.github_org, &event.repository.name).await?;
     let nr = NewRepo::new_from_full(repo.clone(), company.id);
-    let new_repo = nr.upsert(&api_context.db).await;
+    let new_repo = nr.upsert(&api_context.db).await?;
     a(&format!(
         "[SUCCESS]: added repo `{}` to the database",
         new_repo.full_name
