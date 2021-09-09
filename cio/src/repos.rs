@@ -33,7 +33,7 @@ pub struct GitHubUser {
     pub username: String,
     #[serde(
         default,
-        deserialize_with = "deserialize_null_string::deserialize",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize",
         skip_serializing_if = "String::is_empty"
     )]
     pub email: String,
@@ -166,7 +166,7 @@ pub struct NewRepo {
     pub milestones_url: String,
     #[serde(
         default,
-        deserialize_with = "deserialize_null_string::deserialize",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize",
         skip_serializing_if = "String::is_empty"
     )]
     pub mirror_url: String,
@@ -570,27 +570,9 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
         repo.delete(db).await?;
     }
 
+    GithubRepos::get_from_db(db, company.id)?.update_airtable(db).await?;
+
     Ok(())
-}
-
-pub mod deserialize_null_string {
-    use serde::{self, Deserialize, Deserializer};
-
-    // The signature of a deserialize_with function must follow the pattern:
-    //
-    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
-    //    where
-    //        D: Deserializer<'de>
-    //
-    // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer).unwrap_or_default();
-
-        Ok(s)
-    }
 }
 
 /**
@@ -633,7 +615,7 @@ mod tests {
     use crate::{
         companies::Companys,
         db::Database,
-        repos::{refresh_db_github_repos, sync_all_repo_settings, GithubRepos},
+        repos::{refresh_db_github_repos, sync_all_repo_settings},
     };
 
     #[ignore]
@@ -650,12 +632,6 @@ mod tests {
 
             sync_all_repo_settings(&db, &github, &company).await.unwrap();
             refresh_db_github_repos(&db, &github, &company).await.unwrap();
-
-            GithubRepos::get_from_db(&db, company.id)
-                .unwrap()
-                .update_airtable(&db)
-                .await
-                .unwrap();
         }
     }
 }

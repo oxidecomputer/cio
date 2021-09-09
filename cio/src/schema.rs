@@ -446,6 +446,7 @@ table! {
         created_at -> Timestamptz,
         completed_at -> Nullable<Timestamptz>,
         logs -> Text,
+        saga_id -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }

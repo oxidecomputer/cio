@@ -6,6 +6,7 @@ CREATE TABLE functions (
     created_at TIMESTAMPTZ NOT NULL,
     completed_at TIMESTAMPTZ DEFAULT NULL,
     logs TEXT NOT NULL,
+    saga_id VARCHAR NOT NULL DEFAULT '',
     cio_company_id INTEGER NOT NULL DEFAULT 0,
     airtable_record_id VARCHAR NOT NULL DEFAULT ''
 )

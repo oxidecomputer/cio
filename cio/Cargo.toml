@@ -85,6 +85,7 @@ shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.16"
 #slack-chat-api = { path = "../slack" }
+steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tailscale-api = "^0.1.2"
 #tailscale-api = { path = "../tailscale" }
 tripactions = "^0.2.0"
@@ -94,6 +95,7 @@ titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
 url = "2"
+uuid = { version = "^0.8", features = ["serde", "v4"] }
 walkdir = "^2.3.2"
 yup-oauth2 = "^5"
 zip = "0.5"
