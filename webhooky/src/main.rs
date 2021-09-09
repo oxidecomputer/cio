@@ -389,9 +389,10 @@ async fn listen_github_webhooks(
             });
 
             // Now let's handle the event.
-            handle_repository_event(&github, api_context, event.clone(), &company)
-                .await
-                .unwrap();
+            if let Err(e) = handle_repository_event(&github, api_context, event.clone(), &company).await {
+                // Send the error to sentry.
+                sentry_anyhow::capture_anyhow(&e);
+            }
 
             sentry::end_session();
             return Ok(HttpResponseAccepted("ok".to_string()));
