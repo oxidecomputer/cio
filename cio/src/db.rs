@@ -17,7 +17,7 @@ impl Default for Database {
         let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
 
         let manager = r2d2::ConnectionManager::new(&database_url);
-        let pool = r2d2::Pool::builder().max_size(25).build(manager).unwrap();
+        let pool = r2d2::Pool::builder().max_size(5).build(manager).unwrap();
 
         Database {
             pool: DB(Arc::new(pool)),

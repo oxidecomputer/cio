@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use anyhow::{bail, Result};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use crate::{companies::Company, db::Database};
+use crate::{companies::Company, db::Database, functions::Function};
 
 /// Define our saga for syncing repos.
 #[derive(Debug)]
@@ -27,44 +28,40 @@ impl steno::SagaType for Saga {
     type ExecContextType = Arc<Context>;
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FnOutput(String);
+
+impl fmt::Display for FnOutput {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        write!(f, "{}", self.0)
+    }
+}
+
 async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> {
     // This is a noop, we don't have to undo anything.
     Ok(())
 }
 
 /// Create a new saga with the given parameters and then execute it.
-pub async fn sync_repos(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, company: &Company) -> Result<()> {
+pub async fn do_saga(
+    db: &Database,
+    sec: &steno::SecClient,
+    id: &uuid::Uuid,
+    company: &Company,
+    template: steno::SagaTemplate<Saga>,
+    fns: Vec<String>,
+) -> Result<()> {
     let context = Arc::new(Context { db: db.clone() });
     let params = Params {
         company: company.clone(),
     };
 
-    let mut builder = steno::SagaTemplateBuilder::new();
-    builder.append(
-        // name of this action's output (can be used in subsequent actions)
-        "sync_all_repo_settings",
-        // human-readable label for the action
-        "SyncAllRepoSettings",
-        steno::ActionFunc::new_action(
-            // action function
-            action_sync_all_repo_settings,
-            // undo function
-            undo_action,
-        ),
-    );
-    builder.append(
-        // name of this action's output (can be used in subsequent actions)
-        "refresh_db_github_repos",
-        // human-readable label for the action
-        "RefreshDBGitHubRepos",
-        steno::ActionFunc::new_action(
-            // action function
-            action_refresh_db_github_repos,
-            // undo function
-            undo_action,
-        ),
-    );
-    let saga_template = Arc::new(builder.build());
+    let saga_template = Arc::new(template);
 
     let saga_id = steno::SagaId(*id);
 
@@ -93,31 +90,98 @@ pub async fn sync_repos(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, 
     //
     let result = saga_future.await;
 
+    // Get the function.
+    let mut f = Function::get_from_db(db, saga_id.to_string()).unwrap();
+
     // Print the results.
-    if let Err(error) = result.kind {
-        bail!("action failed: {:#?}", error,);
+    match result.kind {
+        Ok(s) => {
+            let mut logs = String::new();
+            for func in fns {
+                // Save the success output to the logs.
+                // For each function.
+                let log = s.lookup_output::<FnOutput>(&func).unwrap();
+                logs = format!("{}\n\nOUTPUT `{}`:\n\n{}", logs, func, log);
+            }
+
+            f.logs = logs.trim().to_string();
+            f.conclusion = octorust::types::Conclusion::Success.to_string();
+            f.completed_at = Some(Utc::now());
+        }
+        Err(e) => {
+            // Save the error to the logs.
+            f.logs = format!("running failed:\n{:?}", e);
+            f.conclusion = octorust::types::Conclusion::Failure.to_string();
+            f.completed_at = Some(Utc::now());
+
+            bail!("action failed: {:#?}", e);
+        }
     }
+
+    f.update(db).await?;
 
     Ok(())
 }
 
-async fn action_sync_all_repo_settings(action_context: steno::ActionContext<Saga>) -> Result<(), steno::ActionError> {
+async fn action_sync_all_repo_settings(
+    action_context: steno::ActionContext<Saga>,
+) -> Result<FnOutput, steno::ActionError> {
     let context = action_context.user_data();
     let company = &action_context.saga_params().company;
     let github = company.authenticate_github().unwrap();
+
     crate::repos::sync_all_repo_settings(&context.db, &github, company)
         .await
         .unwrap();
-    Ok(())
+
+    Ok(FnOutput(String::new()))
 }
 
-async fn action_refresh_db_github_repos(action_context: steno::ActionContext<Saga>) -> Result<(), steno::ActionError> {
+async fn action_refresh_db_github_repos(
+    action_context: steno::ActionContext<Saga>,
+) -> Result<FnOutput, steno::ActionError> {
     let context = action_context.user_data();
     let company = &action_context.saga_params().company;
     let github = company.authenticate_github().unwrap();
+
     crate::repos::refresh_db_github_repos(&context.db, &github, company)
         .await
         .unwrap();
 
-    Ok(())
+    Ok(FnOutput(String::new()))
+}
+
+pub async fn sync_repos(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, company: &Company) -> Result<()> {
+    let mut fns: Vec<String> = Default::default();
+
+    let mut builder = steno::SagaTemplateBuilder::new();
+    builder.append(
+        // name of this action's output (can be used in subsequent actions)
+        "sync_all_repo_settings",
+        // human-readable label for the action
+        "SyncAllRepoSettings",
+        steno::ActionFunc::new_action(
+            // action function
+            action_sync_all_repo_settings,
+            // undo function
+            undo_action,
+        ),
+    );
+    fns.push("sync_all_repo_settings".to_string());
+
+    builder.append(
+        // name of this action's output (can be used in subsequent actions)
+        "refresh_db_github_repos",
+        // human-readable label for the action
+        "RefreshDBGitHubRepos",
+        steno::ActionFunc::new_action(
+            // action function
+            action_refresh_db_github_repos,
+            // undo function
+            undo_action,
+        ),
+    );
+    fns.push("refresh_db_github_repos".to_string());
+
+    do_saga(db, sec, id, company, builder.build(), fns).await
 }
