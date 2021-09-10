@@ -59,7 +59,7 @@ async fn main() -> Result<(), String> {
     let logger = slog::Logger::root(drain, slog::slog_o!("version" => env!("CARGO_PKG_VERSION")));
 
     let _scope_guard = slog_scope::set_global_logger(logger.clone());
-    let _log_guard = slog_stdlog::init().unwrap();
+    let _log_guard = slog_stdlog::init_with_level(log::Level::Info).unwrap();
 
     let service_address = "0.0.0.0:8080";
 
