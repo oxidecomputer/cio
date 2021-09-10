@@ -1139,7 +1139,7 @@
         }
       }
     },
-    "/function/{uuid}": {
+    "/functions/{uuid}": {
       "get": {
         "description": "Get information about a function by its uuid.",
         "operationId": "listen_get_function_by_uuid",
@@ -1168,7 +1168,7 @@
         }
       }
     },
-    "/function/{uuid}/logs": {
+    "/functions/{uuid}/logs": {
       "get": {
         "description": "Get a functions logs by its uuid.",
         "operationId": "listen_get_function_logs_by_uuid",
@@ -1191,51 +1191,6 @@
                 "schema": {
                   "title": "String",
                   "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/functions/sagas": {
-      "get": {
-        "description": "List all the current sagas.",
-        "operationId": "listen_get_current_sagas",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "Array_of_SagaView",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SagaView"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/functions/sync-repos": {
-      "post": {
-        "description": "Listen for triggering a function run of sync repos.",
-        "operationId": "trigger_sync_repos_create",
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "Array_of_Uuid",
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
                 }
               }
             }
@@ -1530,6 +1485,29 @@
                 "schema": {
                   "title": "String",
                   "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-repos": {
+      "post": {
+        "description": "Listen for triggering a function run of sync repos.",
+        "operationId": "trigger_sync_repos_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_Uuid",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
                 }
               }
             }
@@ -3043,21 +3021,6 @@
             }
           }
         }
-      },
-      "SagaView": {
-        "description": "External consumer's view of a saga",
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "params": {}
-        },
-        "required": [
-          "id",
-          "params"
-        ]
       },
       "TemplateRole": {
         "type": "object",
