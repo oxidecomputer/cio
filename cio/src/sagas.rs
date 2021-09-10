@@ -1,8 +1,9 @@
-use std::{fmt, sync::Arc};
+use std::{env, fmt, fs, sync::Arc};
 
 use anyhow::{bail, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use slog::Drain;
 
 use crate::{companies::Company, db::Database, functions::Function};
 
@@ -110,7 +111,7 @@ pub async fn do_saga(
         }
         Err(e) => {
             // Save the error to the logs.
-            f.logs = format!("running failed:\n{:?}", e);
+            f.logs = format!("{:?}", e);
             f.conclusion = octorust::types::Conclusion::Failure.to_string();
             f.completed_at = Some(Utc::now());
 
@@ -130,11 +131,63 @@ async fn action_sync_all_repo_settings(
     let company = &action_context.saga_params().company;
     let github = company.authenticate_github().unwrap();
 
-    crate::repos::sync_all_repo_settings(&context.db, &github, company)
-        .await
+    // Create a temp file for our logs.
+    let mut log_path = env::temp_dir();
+    log_path.push(format!("{}.log", uuid::Uuid::new_v4().to_string()));
+    let file = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&log_path)
         .unwrap();
 
-    Ok(FnOutput(String::new()))
+    // Create the logger.
+    let decorator = slog_term::PlainDecorator::new(file);
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    // TODO consider adding sentry as a drain here?
+    // Unsure if that will duplicate the logs tho.
+    let logger = slog::Logger::root(drain, slog::slog_o!("version" => env!("CARGO_PKG_VERSION")));
+
+    let get_logs = || {
+        let s = fs::read_to_string(&log_path).unwrap();
+
+        s
+    };
+
+    if let Err(e) = slog_scope::scope(&logger, || async {
+        let _log_guard = slog_stdlog::init_with_level(log::Level::Info).unwrap();
+
+        // Execute the function within the scope of the logger.
+        // TODO: print the error and return an ActionError.
+        match crate::repos::sync_all_repo_settings(&context.db, &github, company).await {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                let s = get_logs();
+
+                // Return an action error but include the logs.
+                // Format the anyhow error with a stack trace.
+                return Err(steno::ActionError::action_failed(format!(
+                    "ERROR:\n\n{:?}\n\n===========\n\nLOGS:\n\n{}",
+                    err, s
+                )));
+            }
+        }
+    })
+    .await
+    {
+        // Delete our temporary file.
+        fs::remove_file(&log_path).unwrap();
+
+        return Err(e);
+    }
+
+    let s = get_logs();
+
+    // Delete our temporary file.
+    fs::remove_file(&log_path).unwrap();
+
+    Ok(FnOutput(s))
 }
 
 async fn action_refresh_db_github_repos(
