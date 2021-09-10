@@ -317,7 +317,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 }
 
                 let mut attendees: Vec<String> = Default::default();
-                for attendee in event.attendees {
+                for attendee in &event.attendees {
                     if !attendee.resource {
                         attendees.push(attendee.email.to_string());
                     }
@@ -325,7 +325,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
                 let mut video = "".to_string();
                 let mut chat_log_link = "".to_string();
-                for attachment in event.attachments {
+                for attachment in &event.attachments {
                     if attachment.mime_type == "video/mp4" && attachment.title.starts_with(&event.summary) {
                         video = attachment.file_url.to_string();
                     }
@@ -376,7 +376,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 }
 
                 // Let's add our perms to the file to ensure we have access.
-                drive_client
+                match drive_client
                     .permissions()
                     .add_if_not_exists(
                         &video_id,
@@ -387,7 +387,13 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         false, // use domain admin access
                         false, // send notification email
                     )
-                    .await?;
+                    .await
+                {
+                    Ok(_) => (),
+                    Err(e) => {
+                        info!("adding permission for event video: {:#?} failed: {}", event, e);
+                    }
+                };
 
                 // Download the video.
                 let video_contents = drive_client.files().download_by_id(&video_id).await?;

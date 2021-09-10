@@ -53,16 +53,8 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
             // We only care about distinct commits.
             if !commit.distinct {
                 // The commit is not distinct.
+                // This happens on merges sometimes, it's nothing to worry about.
                 // We can throw this out, log it and return early.
-                sentry::with_scope(
-                    |scope| {
-                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                        scope.set_tag("github.event.type", &event_type_string);
-                    },
-                    || {
-                        warn!("`push` event commit `{}` is not distinct", commit.id);
-                    },
-                );
                 return Ok(());
             }
 
@@ -157,28 +149,8 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
                         }
                     }
                 }
-                EventType::CheckRun => {
-                    sentry::with_scope(
-                        |scope| {
-                            scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                            scope.set_tag("github.event.type", &event_type_string);
-                        },
-                        || {
-                            sentry::capture_message("CheckRun event", sentry::Level::Info);
-                        },
-                    );
-                }
-                EventType::CheckSuite => {
-                    sentry::with_scope(
-                        |scope| {
-                            scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                            scope.set_tag("github.event.type", &event_type_string);
-                        },
-                        || {
-                            sentry::capture_message("CheckSuite event", sentry::Level::Info);
-                        },
-                    );
-                }
+                EventType::CheckRun => {}
+                EventType::CheckSuite => {}
                 _ => (),
             },
             Repo::Configs => {
