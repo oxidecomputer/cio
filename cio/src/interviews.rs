@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use google_drive::{
-    traits::{DriveOps, FileOps},
+    traits::{DriveOps, FileOps, PermissionOps},
     Client as GoogleDrive,
 };
 use log::{info, warn};
