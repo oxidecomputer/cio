@@ -488,7 +488,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive 0.2.3",
+ "google-drive",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -541,7 +541,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#67a7bbbac9f789dbacca1aa538d6a29e6a6f5679"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#33496ef80eb1e16f0841fb8e227ce23da8f5e0d7"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -566,7 +566,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive 0.2.2",
+ "google-drive",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -1529,33 +1529,9 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb783243fd048a8f1fcf4af043f65cead32d9fc7e435ae683b09d3d0fcbd6229"
-dependencies = [
- "anyhow",
- "async-recursion",
- "async-trait",
- "base64 0.12.3",
- "bytes 1.1.0",
- "chrono",
- "http",
- "hyperx",
- "jsonwebtoken",
- "mime 0.3.16",
- "percent-encoding 2.1.0",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "serde_urlencoded 0.7.0",
- "uuid",
- "yup-oauth2",
-]
-
-[[package]]
-name = "google-drive"
 version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4fb47f0d29dab4779a5b1b350946852a7a0fa719190ef4f1656b2378be2cd45"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2240,7 +2216,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#67a7bbbac9f789dbacca1aa538d6a29e6a6f5679"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#33496ef80eb1e16f0841fb8e227ce23da8f5e0d7"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -5189,7 +5165,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive 0.2.2",
+ "google-drive",
  "gusto-api",
  "http",
  "hyper 0.10.16",
