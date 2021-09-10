@@ -37,17 +37,6 @@ use crate::github_types::GitHubWebhook;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-    // Initialize our logger.
-    let mut log_builder = pretty_env_logger::formatted_builder();
-    log_builder.parse_filters("info");
-    let base_logger = log_builder.build();
-
-    let logger = sentry_log::SentryLogger::with_dest(base_logger);
-
-    log::set_boxed_logger(Box::new(logger)).unwrap();
-
-    log::set_max_level(log::LevelFilter::Info);
-
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
@@ -61,6 +50,16 @@ async fn main() -> Result<(), String> {
         ),
         ..Default::default()
     });
+
+    // Initialize our logger.
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let drain = sentry_slog::SentryDrain::new(drain);
+    let logger = slog::Logger::root(drain, slog::slog_o!("version" => env!("CARGO_PKG_VERSION")));
+
+    let _scope_guard = slog_scope::set_global_logger(logger.clone());
+    let _log_guard = slog_stdlog::init().unwrap();
 
     let service_address = "0.0.0.0:8080";
 
@@ -175,7 +174,7 @@ async fn main() -> Result<(), String> {
     /*
      * The functions that implement our API endpoints will share this context.
      */
-    let api_context = Context::new(schema).await;
+    let api_context = Context::new(schema, logger).await;
 
     /*
      * Set up the server.
@@ -202,18 +201,10 @@ impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new(schema: String) -> Context {
-        let log = {
-            let decorator = slog_term::TermDecorator::new().build();
-            let drain = slog_term::FullFormat::new(decorator).build().fuse();
-            let drain = slog::LevelFilter(drain, slog::Level::Warning).fuse();
-            let drain = slog_async::Async::new(drain).build().fuse();
-            slog::Logger::root(drain, slog::o!())
-        };
-
+    pub async fn new(schema: String, logger: slog::Logger) -> Context {
         let db = Database::new();
 
-        let sec = steno::sec(log.new(slog::o!()), Arc::new(db.clone()));
+        let sec = steno::sec(logger, Arc::new(db.clone()));
 
         // Create the context.
         Context { db, sec, schema }
