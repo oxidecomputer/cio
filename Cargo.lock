@@ -488,7 +488,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive 0.2.4",
+ "google-drive",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -566,7 +566,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive 0.2.3",
+ "google-drive",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -1534,35 +1534,9 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4fb47f0d29dab4779a5b1b350946852a7a0fa719190ef4f1656b2378be2cd45"
-dependencies = [
- "anyhow",
- "async-recursion",
- "async-trait",
- "base64 0.12.3",
- "bytes 1.1.0",
- "chrono",
- "http",
- "hyperx",
- "jsonwebtoken",
- "mime 0.3.16",
- "percent-encoding 2.1.0",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "serde_urlencoded 0.7.0",
- "url 2.2.2",
- "urlencoding",
- "uuid",
- "yup-oauth2",
-]
-
-[[package]]
-name = "google-drive"
 version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c68ab0cc20e6d5714b2264eca1673864ccdab460a9d7a09233132c7d25452801"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4011,9 +3985,9 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.8.20"
+version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad104641f3c958dab30eb3010e834c2622d1f3f4c530fef1dee20ad9485f3c09"
+checksum = "d8c608a35705a5d3cdc9fbe403147647ff34b921f8e833e49306df898f9b20af"
 dependencies = [
  "dtoa",
  "indexmap",
@@ -5196,7 +5170,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive 0.2.3",
+ "google-drive",
  "gusto-api",
  "http",
  "hyper 0.10.16",
