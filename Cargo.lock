@@ -488,7 +488,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive",
+ "google-drive 0.2.4",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -523,11 +523,6 @@ dependencies = [
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
- "slog",
- "slog-async",
- "slog-scope",
- "slog-stdlog",
- "slog-term",
  "steno",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
@@ -546,7 +541,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f3d27ee2d4a68abe238315b32ee44166bc6a0551"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#c5575dd188158b923d1fc2d45bbcff76efb8a30c"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -571,7 +566,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive",
+ "google-drive 0.2.3",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -606,6 +601,11 @@ dependencies = [
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog",
+ "slog-async",
+ "slog-scope",
+ "slog-stdlog",
+ "slog-term",
  "steno",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
@@ -1561,6 +1561,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "google-drive"
+version = "0.2.4"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "base64 0.12.3",
+ "bytes 1.1.0",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.0",
+ "url 2.2.2",
+ "urlencoding",
+ "uuid",
+ "yup-oauth2",
+]
+
+[[package]]
 name = "google-geocode"
 version = "0.1.5"
 dependencies = [
@@ -2221,7 +2247,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#f3d27ee2d4a68abe238315b32ee44166bc6a0551"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#c5575dd188158b923d1fc2d45bbcff76efb8a30c"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -5170,7 +5196,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive",
+ "google-drive 0.2.3",
  "gusto-api",
  "http",
  "hyper 0.10.16",

@@ -270,10 +270,6 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
 
 /// Sync the recorded meetings from Google.
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
-    RecordedMeetings::get_from_db(db, company.id)?
-        .update_airtable(db)
-        .await?;
-
     let mut gcal = company.authenticate_google_calendar(db).await?;
     let revai = RevAI::new_from_env();
 
@@ -337,12 +333,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         chat_log_link = attachment.file_url.to_string();
                     }
                 }
-                chat_log_link = chat_log_link
+                let chat_log_id = chat_log_link
                     .trim_start_matches("https://drive.google.com/open?id=")
                     .trim_start_matches("https://drive.google.com/file/d/")
                     .trim_end_matches("/view?usp=drive_web")
                     .to_string();
-                video = video
+                let video_id = video
                     .trim_start_matches("https://drive.google.com/open?id=")
                     .trim_start_matches("https://drive.google.com/file/d/")
                     .trim_end_matches("/view?usp=drive_web")
@@ -360,51 +356,41 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 // If we have a chat log, we should download it.
                 let mut chat_log = "".to_string();
                 if !chat_log_link.is_empty() {
+                    // Let's add our perms to the file to ensure we have access.
+                    drive_client
+                        .permissions()
+                        .add_if_not_exists(
+                            &chat_log_id,
+                            &format!("all@{}", company.gsuite_domain),
+                            "",
+                            "writer",
+                            "group",
+                            false, // use domain admin access
+                            false, // send notification email
+                        )
+                        .await?;
+
                     // Download the file.
-                    let contents = match drive_client.files().download_by_id(&chat_log_link).await {
-                        Ok(c) => c,
-                        Err(_) => {
-                            // Likely this errored because we don't have the right perms.
-                            // Let's add our perms and try again.
-                            drive_client
-                                .permissions()
-                                .add_if_not_exists(
-                                    &chat_log_link,
-                                    &format!("all@{}", company.gsuite_domain),
-                                    "",
-                                    "writer",
-                                    "group",
-                                    true,  // use domain admin access
-                                    false, // send notification email
-                                )
-                                .await?;
-                            drive_client.files().download_by_id(&chat_log_link).await?
-                        }
-                    };
+                    let contents = drive_client.files().download_by_id(&chat_log_id).await?;
                     chat_log = from_utf8(&contents).unwrap_or_default().trim().to_string();
                 }
 
-                // Try to download the video.
-                let video_contents = match drive_client.files().download_by_id(&video).await {
-                    Ok(c) => c,
-                    Err(_) => {
-                        // Likely this errored because we don't have the right perms.
-                        // Let's add our perms and try again.
-                        drive_client
-                            .permissions()
-                            .add_if_not_exists(
-                                &video,
-                                &format!("all@{}", company.gsuite_domain),
-                                "",
-                                "writer",
-                                "group",
-                                true,  // use domain admin access
-                                false, // send notification email
-                            )
-                            .await?;
-                        drive_client.files().download_by_id(&video).await?
-                    }
-                };
+                // Let's add our perms to the file to ensure we have access.
+                drive_client
+                    .permissions()
+                    .add_if_not_exists(
+                        &video_id,
+                        &format!("all@{}", company.gsuite_domain),
+                        "",
+                        "writer",
+                        "group",
+                        false, // use domain admin access
+                        false, // send notification email
+                    )
+                    .await?;
+
+                // Download the video.
+                let video_contents = drive_client.files().download_by_id(&video_id).await?;
 
                 // Make sure the contents aren't empty.
                 if video_contents.is_empty() {
@@ -479,6 +465,10 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             }
         }
     }
+
+    RecordedMeetings::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }

@@ -1,9 +1,8 @@
-use std::{env, fmt, fs, sync::Arc};
+use std::{fmt, sync::Arc};
 
 use anyhow::{bail, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use slog::Drain;
 
 use crate::{companies::Company, db::Database, functions::Function};
 
@@ -124,7 +123,7 @@ pub async fn do_saga(
     Ok(())
 }
 
-async fn action_sync_all_repo_settings(
+/*async fn action_sync_all_repo_settings(
     action_context: steno::ActionContext<Saga>,
 ) -> Result<FnOutput, steno::ActionError> {
     let context = action_context.user_data();
@@ -142,52 +141,61 @@ async fn action_sync_all_repo_settings(
         .unwrap();
 
     // Create the logger.
-    let decorator = slog_term::PlainDecorator::new(file);
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    // TODO consider adding sentry as a drain here?
-    // Unsure if that will duplicate the logs tho.
-    let logger = slog::Logger::root(drain, slog::slog_o!("version" => env!("CARGO_PKG_VERSION")));
+    // Initialize our logger.
+    // TODO: try logging to memory instead (?) see: https://github.com/env-logger-rs/env_logger/blob/main/examples/custom_target.rs
+    // TODO: this will be leaky and might log other functions output as well...
+    //       we should find a way to scope it.
+    let mut log_builder = env_logger::Builder::from_default_env();
+    log_builder.parse_filters("info");
+    log_builder.target(env_logger::Target::Pipe(Box::new(file)));
+
+    let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
+
+    log::set_boxed_logger(Box::new(logger)).unwrap();
+
+    log::set_max_level(log::LevelFilter::Info);
 
     let get_logs = || {
         let s = fs::read_to_string(&log_path).unwrap();
+        // Delete our temporary file.
+        fs::remove_file(&log_path).unwrap();
 
         s
     };
 
-    if let Err(e) = slog_scope::scope(&logger, || async {
-        let _log_guard = slog_stdlog::init_with_level(log::Level::Info).unwrap();
+    // Execute the function within the scope of the logger.
+    // Print the error and return an ActionError.
+    match crate::repos::sync_all_repo_settings(&context.db, &github, company).await {
+        Ok(_) => (),
+        Err(err) => {
+            let s = get_logs();
 
-        // Execute the function within the scope of the logger.
-        // TODO: print the error and return an ActionError.
-        match crate::repos::sync_all_repo_settings(&context.db, &github, company).await {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                let s = get_logs();
-
-                // Return an action error but include the logs.
-                // Format the anyhow error with a stack trace.
-                return Err(steno::ActionError::action_failed(format!(
-                    "ERROR:\n\n{:?}\n\n===========\n\nLOGS:\n\n{}",
-                    err, s
-                )));
-            }
+            // Return an action error but include the logs.
+            // Format the anyhow error with a stack trace.
+            return Err(steno::ActionError::action_failed(format!(
+                "ERROR:\n\n{:?}\n\n===========\n\nLOGS:\n\n{}",
+                err, s
+            )));
         }
-    })
-    .await
-    {
-        // Delete our temporary file.
-        fs::remove_file(&log_path).unwrap();
-
-        return Err(e);
     }
 
     let s = get_logs();
 
-    // Delete our temporary file.
-    fs::remove_file(&log_path).unwrap();
-
     Ok(FnOutput(s))
+}*/
+
+async fn action_sync_all_repo_settings(
+    action_context: steno::ActionContext<Saga>,
+) -> Result<FnOutput, steno::ActionError> {
+    let context = action_context.user_data();
+    let company = &action_context.saga_params().company;
+    let github = company.authenticate_github().unwrap();
+
+    crate::repos::sync_all_repo_settings(&context.db, &github, company)
+        .await
+        .unwrap();
+
+    Ok(FnOutput(String::new()))
 }
 
 async fn action_refresh_db_github_repos(

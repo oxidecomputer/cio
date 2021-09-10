@@ -36,8 +36,8 @@ flate2 = "1"
 futures-util = "0.3"
 google-calendar = "^0.1.0"
 #google-calendar = { path = "../../third-party-api-clients/google/calendar" }
-google-drive = "^0.2.0"
-#google-drive = { path = "../../third-party-api-clients/google/drive" }
+#google-drive = "^0.2.0"
+google-drive = { path = "../../third-party-api-clients/google/drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
 google-groups-settings = "^0.1.0"
@@ -84,11 +84,6 @@ sheets = "^0.2.0"
 shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.16"
-slog = "2"
-slog-async = "2"
-slog-scope = "4"
-slog-stdlog = "4"
-slog-term = "2"
 #slack-chat-api = { path = "../slack" }
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tailscale-api = "^0.1.2"
