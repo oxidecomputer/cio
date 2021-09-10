@@ -300,21 +300,25 @@ cc @jessfraz"#,
                     return Ok(());
                 }
 
-                if let Err(e) = cio_api::utils::add_comment_to_commit(
-                    github,
-                    &self.repository.owner.login,
-                    &self.repository.name,
-                    &sha,
-                    comment,
-                )
-                .await
+                if let Err(e) = github
+                    .repos()
+                    .create_commit_comment(
+                        &self.repository.owner.login,
+                        &self.repository.name,
+                        &sha,
+                        &octorust::types::ReposCreateCommitCommentRequest {
+                            body: comment.to_string(),
+                            line: 0,
+                            path: String::new(),
+                            position: 0,
+                        },
+                    )
+                    .await
                 {
                     warn!("unable to create comment `{}` on commit event: {}", comment, e);
                 }
             }
         }
-
-        // TODO: comment on pull request instead, etc.
 
         Ok(())
     }

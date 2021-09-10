@@ -4,7 +4,7 @@ use std::str::from_utf8;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
-use google_drive::traits::{DriveOps, FileOps};
+use google_drive::traits::{DriveOps, FileOps, PermissionOps};
 use inflector::cases::kebabcase::to_kebab_case;
 use log::{info, warn};
 use macros::db;
@@ -287,6 +287,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
             // We get a new token since likely our other has expired.
+            // TODO: bake this into the client instead.
             gcal = company.authenticate_google_calendar(db).await?;
 
             // Let's get all the events on this calendar and try and see if they
@@ -336,42 +337,74 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         chat_log_link = attachment.file_url.to_string();
                     }
                 }
+                chat_log_link = chat_log_link
+                    .trim_start_matches("https://drive.google.com/open?id=")
+                    .trim_start_matches("https://drive.google.com/file/d/")
+                    .trim_end_matches("/view?usp=drive_web")
+                    .to_string();
+                video = video
+                    .trim_start_matches("https://drive.google.com/open?id=")
+                    .trim_start_matches("https://drive.google.com/file/d/")
+                    .trim_end_matches("/view?usp=drive_web")
+                    .to_string();
 
                 if video.is_empty() {
                     // Continue early, we don't care.
                     continue;
                 }
 
+                // We get the drive client here so we know it is not expired.
+                // TODO: bake this into the client and then move this to the top of the function.
                 let drive_client = company.authenticate_google_drive(db).await?;
 
                 // If we have a chat log, we should download it.
                 let mut chat_log = "".to_string();
                 if !chat_log_link.is_empty() {
                     // Download the file.
-                    let contents = drive_client
-                        .files()
-                        .download_by_id(
-                            chat_log_link
-                                .trim_start_matches("https://drive.google.com/open?id=")
-                                .trim_start_matches("https://drive.google.com/file/d/")
-                                .trim_end_matches("/view?usp=drive_web"),
-                        )
-                        .await
-                        .unwrap_or_default();
+                    let contents = match drive_client.files().download_by_id(&chat_log_link).await {
+                        Ok(c) => c,
+                        Err(_) => {
+                            // Likely this errored because we don't have the right perms.
+                            // Let's add our perms and try again.
+                            drive_client
+                                .permissions()
+                                .add_if_not_exists(
+                                    &chat_log_link,
+                                    &format!("all@{}", company.gsuite_domain),
+                                    "",
+                                    "writer",
+                                    "group",
+                                    true,  // use domain admin access
+                                    false, // send notification email
+                                )
+                                .await?;
+                            drive_client.files().download_by_id(&chat_log_link).await?
+                        }
+                    };
                     chat_log = from_utf8(&contents).unwrap_or_default().trim().to_string();
                 }
 
                 // Try to download the video.
-                let video_contents = drive_client
-                    .files()
-                    .download_by_id(
-                        video
-                            .trim_start_matches("https://drive.google.com/open?id=")
-                            .trim_start_matches("https://drive.google.com/file/d/")
-                            .trim_end_matches("/view?usp=drive_web"),
-                    )
-                    .await
-                    .unwrap_or_default();
+                let video_contents = match drive_client.files().download_by_id(&video).await {
+                    Ok(c) => c,
+                    Err(_) => {
+                        // Likely this errored because we don't have the right perms.
+                        // Let's add our perms and try again.
+                        drive_client
+                            .permissions()
+                            .add_if_not_exists(
+                                &video,
+                                &format!("all@{}", company.gsuite_domain),
+                                "",
+                                "writer",
+                                "group",
+                                true,  // use domain admin access
+                                false, // send notification email
+                            )
+                            .await?;
+                        drive_client.files().download_by_id(&video).await?
+                    }
+                };
 
                 // Make sure the contents aren't empty.
                 if video_contents.is_empty() {

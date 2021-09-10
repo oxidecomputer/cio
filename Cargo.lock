@@ -346,6 +346,9 @@ name = "bytes"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4872d67bab6358e59559027aa3b9157c53d9358c51423c17554809a8858e0f8"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bzip2"
@@ -485,7 +488,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive",
+ "google-drive 0.2.3",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -563,7 +566,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "google-calendar",
- "google-drive",
+ "google-drive 0.2.2",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
  "gsuite-api",
@@ -1546,6 +1549,32 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.0",
+ "uuid",
+ "yup-oauth2",
+]
+
+[[package]]
+name = "google-drive"
+version = "0.2.3"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "base64 0.12.3",
+ "bytes 1.1.0",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.0",
+ "url 2.2.2",
+ "urlencoding",
  "uuid",
  "yup-oauth2",
 ]
@@ -5160,7 +5189,7 @@ dependencies = [
  "dropshot 0.5.2-dev",
  "formdata",
  "futures-util",
- "google-drive",
+ "google-drive 0.2.2",
  "gusto-api",
  "http",
  "hyper 0.10.16",

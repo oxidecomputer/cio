@@ -488,6 +488,20 @@ The Oxide Team
             .await?;
         applicant.interview_packet = format!("https://drive.google.com/open?id={}", drive_file.id);
         applicant.update(db).await?;
+
+        // Add the applicant as a reader to their packet file.
+        drive_client
+            .permissions()
+            .add_if_not_exists(
+                &drive_file.id,
+                &applicant.email,
+                "",
+                "reader",
+                "user",
+                true,  // use domain admin access
+                false, // send notification email TODO: change this to true and add a message
+            )
+            .await?;
     }
 
     Ok(())

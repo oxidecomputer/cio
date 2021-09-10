@@ -104,8 +104,8 @@ impl Function {
 
         match &event.event_type {
             steno::SagaNodeEventType::Started => {}
-            steno::SagaNodeEventType::Succeeded(s) => {}
-            steno::SagaNodeEventType::Failed(err) => {}
+            steno::SagaNodeEventType::Succeeded(_s) => {}
+            steno::SagaNodeEventType::Failed(_err) => {}
             steno::SagaNodeEventType::UndoStarted => (),
             steno::SagaNodeEventType::UndoFinished => (),
         }
