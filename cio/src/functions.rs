@@ -86,6 +86,10 @@ impl Function {
             steno::SagaCachedState::Done => octorust::types::JobStatus::Completed,
         };
 
+        if status == octorust::types::JobStatus::Completed && nf.completed_at.is_none() {
+            nf.completed_at = Utc::now();
+        }
+
         // Update the status.
         nf.status = status.to_string();
 
@@ -96,36 +100,17 @@ impl Function {
     pub async fn from_saga_node_event(db: &Database, event: &steno::SagaNodeEvent) -> Result<Self> {
         info!("got saga node event: {:?}", event);
         // Get the saga from it's id.
-        let mut nf = Function::get_from_db(db, event.saga_id.to_string()).unwrap();
+        let nf = Function::get_from_db(db, event.saga_id.to_string()).unwrap();
 
         match &event.event_type {
-            steno::SagaNodeEventType::Started => {
-                nf.status = octorust::types::JobStatus::InProgress.to_string();
-            }
-            steno::SagaNodeEventType::Succeeded(s) => {
-                if nf.completed_at.is_none() {
-                    nf.status = octorust::types::JobStatus::Completed.to_string();
-                    nf.conclusion = octorust::types::Conclusion::Success.to_string();
-                    nf.completed_at = Some(Utc::now());
-
-                    // Save the logs.
-                    nf.logs = s.to_string();
-                }
-            }
-            steno::SagaNodeEventType::Failed(err) => {
-                if nf.completed_at.is_none() {
-                    nf.status = octorust::types::JobStatus::Completed.to_string();
-                    nf.conclusion = octorust::types::Conclusion::Failure.to_string();
-                    nf.completed_at = Some(Utc::now());
-
-                    // Save the logs.
-                    nf.logs = err.to_string();
-                }
-            }
+            steno::SagaNodeEventType::Started => {}
+            steno::SagaNodeEventType::Succeeded(s) => {}
+            steno::SagaNodeEventType::Failed(err) => {}
             steno::SagaNodeEventType::UndoStarted => (),
             steno::SagaNodeEventType::UndoFinished => (),
         }
 
-        nf.update(db).await
+        //nf.update(db).await
+        Ok(nf)
     }
 }
