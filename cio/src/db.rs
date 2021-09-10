@@ -17,6 +17,8 @@ impl Default for Database {
         let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
 
         let manager = r2d2::ConnectionManager::new(&database_url);
+        // TODO: once we remove creating new databases for each of the cron tests, then
+        // make this max something like 100+
         let pool = r2d2::Pool::builder().max_size(5).build(manager).unwrap();
 
         Database {
