@@ -498,7 +498,7 @@ The Oxide Team
                 "",
                 "reader",
                 "user",
-                true,  // use domain admin access
+                false, // use domain admin access
                 false, // send notification email TODO: change this to true and add a message
             )
             .await?;
