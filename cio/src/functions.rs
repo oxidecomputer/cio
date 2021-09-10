@@ -1,6 +1,7 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use log::info;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -48,6 +49,7 @@ impl UpdateAirtableRecord<Function> for Function {
 impl Function {
     /// Update a job from SagaCreateParams.
     pub async fn from_saga_create_params(db: &Database, saga: &steno::SagaCreateParams) -> Result<Self> {
+        info!("got saga create params: {:?}", saga);
         let status = match saga.state {
             steno::SagaCachedState::Running => octorust::types::JobStatus::InProgress,
             steno::SagaCachedState::Unwinding => octorust::types::JobStatus::InProgress,
@@ -74,6 +76,7 @@ impl Function {
         saga_id: &steno::SagaId,
         state: &steno::SagaCachedState,
     ) -> Result<Self> {
+        info!("got saga {} cached state: {:?}", saga_id, state);
         // Get the saga from it's id.
         let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
 
@@ -91,6 +94,7 @@ impl Function {
 
     /// Update a job from SagaNodeEvent.
     pub async fn from_saga_node_event(db: &Database, event: &steno::SagaNodeEvent) -> Result<Self> {
+        info!("got saga node event: {:?}", event);
         // Get the saga from it's id.
         let mut nf = Function::get_from_db(db, event.saga_id.to_string()).unwrap();
 
@@ -99,10 +103,7 @@ impl Function {
                 nf.status = octorust::types::JobStatus::InProgress.to_string();
             }
             steno::SagaNodeEventType::Succeeded(s) => {
-                if nf.status != octorust::types::JobStatus::Completed.to_string()
-                    && nf.completed_at.is_none()
-                    && nf.conclusion != octorust::types::Conclusion::Success.to_string()
-                {
+                if nf.completed_at.is_none() {
                     nf.status = octorust::types::JobStatus::Completed.to_string();
                     nf.conclusion = octorust::types::Conclusion::Success.to_string();
                     nf.completed_at = Some(Utc::now());
@@ -112,10 +113,7 @@ impl Function {
                 }
             }
             steno::SagaNodeEventType::Failed(err) => {
-                if nf.status != octorust::types::JobStatus::Completed.to_string()
-                    && nf.completed_at.is_none()
-                    && nf.conclusion != octorust::types::Conclusion::Failure.to_string()
-                {
+                if nf.completed_at.is_none() {
                     nf.status = octorust::types::JobStatus::Completed.to_string();
                     nf.conclusion = octorust::types::Conclusion::Failure.to_string();
                     nf.completed_at = Some(Utc::now());
@@ -129,17 +127,5 @@ impl Function {
         }
 
         nf.update(db).await
-    }
-
-    /// Get the most current job.
-    pub async fn get_current_or_last_run(db: &Database, name: &str) -> Result<Self> {
-        match functions::dsl::functions
-            .filter(functions::dsl::name.eq(name.to_string()))
-            .order_by(functions::dsl::created_at.desc())
-            .first::<Function>(&db.conn())
-        {
-            Ok(fun) => Ok(fun),
-            Err(e) => bail!("could not get most recent function with name `{}`: {}", name, e),
-        }
     }
 }

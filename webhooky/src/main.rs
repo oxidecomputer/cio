@@ -156,7 +156,6 @@ async fn main() -> Result<(), String> {
     api.register(trigger_sync_repos_create).unwrap();
     api.register(listen_get_function_by_uuid).unwrap();
     api.register(listen_get_function_logs_by_uuid).unwrap();
-    // api.register(listen_get_current_sagas).unwrap();
     api.register(api_get_schema).unwrap();
 
     // Print the OpenAPI Spec to stdout.
@@ -1499,7 +1498,7 @@ pub struct FunctionPathParams {
 /** Get information about a function by its uuid. */
 #[endpoint {
     method = GET,
-    path = "/function/{uuid}",
+    path = "/functions/{uuid}",
 }]
 async fn listen_get_function_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
@@ -1523,7 +1522,7 @@ async fn listen_get_function_by_uuid(
 /** Get a functions logs by its uuid. */
 #[endpoint {
     method = GET,
-    path = "/function/{uuid}/logs",
+    path = "/functions/{uuid}/logs",
 }]
 async fn listen_get_function_logs_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
@@ -1547,7 +1546,7 @@ async fn listen_get_function_logs_by_uuid(
 /** Listen for triggering a function run of sync repos. */
 #[endpoint {
     method = POST,
-    path = "/functions/sync-repos",
+    path = "/run/sync-repos",
 }]
 async fn trigger_sync_repos_create(
     rqctx: Arc<RequestContext<Context>>,
@@ -1565,25 +1564,6 @@ async fn trigger_sync_repos_create(
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
-}
-
-/** List all the current sagas. */
-#[endpoint {
-    method = GET,
-    path = "/functions/sagas",
-}]
-async fn listen_get_current_sagas(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<steno::SagaView>>, HttpError> {
-    sentry::start_session();
-    let api_context = rqctx.context();
-
-    let sagas = api_context
-        .sec
-        .saga_list(None, std::num::NonZeroU32::new(10000).unwrap())
-        .await;
-    sentry::end_session();
-    Ok(HttpResponseOk(sagas))
 }
 
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
