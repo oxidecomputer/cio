@@ -87,7 +87,7 @@ impl Function {
         };
 
         if status == octorust::types::JobStatus::Completed && nf.completed_at.is_none() {
-            nf.completed_at = Utc::now();
+            nf.completed_at = Some(Utc::now());
         }
 
         // Update the status.
