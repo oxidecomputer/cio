@@ -25,7 +25,6 @@ use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use sheets::Client as GoogleSheets;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 use tar::Archive;
@@ -1461,124 +1460,6 @@ The Oxide Team",
         HumanTime::from(dur)
     }
 
-    /// Convert the applicant into JSON for a Slack message.
-    pub fn as_slack_msg(&self) -> Value {
-        let time = self.human_duration();
-
-        let mut status_msg = format!(
-            "<https://docs.google.com/spreadsheets/d/{}|{}> | interested in: {} | applied {}",
-            self.sheet_id,
-            self.role,
-            self.interested_in.join(","),
-            time
-        );
-        if !self.status.is_empty() {
-            status_msg += &format!(" | status: *{}*", self.status);
-        }
-
-        let mut values_msg = "".to_string();
-        if !self.value_reflected.is_empty() {
-            values_msg += &format!("values reflected: *{}*", self.value_reflected);
-        }
-        if !self.value_violated.is_empty() {
-            values_msg += &format!(" | violated: *{}*", self.value_violated);
-        }
-        for (k, tension) in self.values_in_tension.iter().enumerate() {
-            if k == 0 {
-                values_msg += &format!(" | in tension: *{}*", tension);
-            } else {
-                values_msg += &format!(" *& {}*", tension);
-            }
-        }
-        if values_msg.is_empty() {
-            values_msg = "values not yet populated".to_string();
-        }
-
-        let mut intro_msg = format!("*{}*  <mailto:{}|{}>", self.name, self.email, self.email,);
-        if !self.location.is_empty() {
-            intro_msg += &format!("  {}", self.location);
-        }
-
-        let mut info_msg = format!("<{}|resume> | <{}|materials>", self.resume, self.materials,);
-        if !self.phone.is_empty() {
-            info_msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
-        }
-        if !self.github.is_empty() {
-            info_msg += &format!(
-                " | <https://github.com/{}|github:{}>",
-                self.github.trim_start_matches('@'),
-                self.github,
-            );
-        }
-        if !self.gitlab.is_empty() {
-            info_msg += &format!(
-                " | <https://gitlab.com/{}|gitlab:{}>",
-                self.gitlab.trim_start_matches('@'),
-                self.gitlab,
-            );
-        }
-        if !self.linkedin.is_empty() {
-            info_msg += &format!(" | <{}|linkedin>", self.linkedin,);
-        }
-        if !self.portfolio.is_empty() {
-            info_msg += &format!(" | <{}|portfolio>", self.portfolio,);
-        }
-        if !self.website.is_empty() {
-            info_msg += &format!(" | <{}|website>", self.website,);
-        }
-
-        json!(FormattedMessage {
-            channel: Default::default(),
-            attachments: Default::default(),
-            blocks: vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: intro_msg,
-                    }),
-                    elements: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: info_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: values_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: status_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                }
-            ]
-        })
-    }
-
     /// Get the applicant's information in the form of the body of an email for a
     /// company wide notification that we received a new application.
     fn as_company_notification_email(&self) -> String {
@@ -1644,6 +1525,133 @@ The applicants Airtable \
         );
 
         msg
+    }
+}
+
+/// Convert the applicant into a Slack message.
+impl From<NewApplicant> for FormattedMessage {
+    fn from(item: NewApplicant) -> Self {
+        let time = item.human_duration();
+
+        let mut status_msg = format!(
+            "<https://docs.google.com/spreadsheets/d/{}|{}> | interested in: {} | applied {}",
+            item.sheet_id,
+            item.role,
+            item.interested_in.join(","),
+            time
+        );
+        if !item.status.is_empty() {
+            status_msg += &format!(" | status: *{}*", item.status);
+        }
+
+        let mut values_msg = "".to_string();
+        if !item.value_reflected.is_empty() {
+            values_msg += &format!("values reflected: *{}*", item.value_reflected);
+        }
+        if !item.value_violated.is_empty() {
+            values_msg += &format!(" | violated: *{}*", item.value_violated);
+        }
+        for (k, tension) in item.values_in_tension.iter().enumerate() {
+            if k == 0 {
+                values_msg += &format!(" | in tension: *{}*", tension);
+            } else {
+                values_msg += &format!(" *& {}*", tension);
+            }
+        }
+        if values_msg.is_empty() {
+            values_msg = "values not yet populated".to_string();
+        }
+
+        let mut intro_msg = format!("*{}*  <mailto:{}|{}>", item.name, item.email, item.email,);
+        if !item.location.is_empty() {
+            intro_msg += &format!("  {}", item.location);
+        }
+
+        let mut info_msg = format!("<{}|resume> | <{}|materials>", item.resume, item.materials,);
+        if !item.phone.is_empty() {
+            info_msg += &format!(" | <tel:{}|{}>", item.phone, item.phone);
+        }
+        if !item.github.is_empty() {
+            info_msg += &format!(
+                " | <https://github.com/{}|github:{}>",
+                item.github.trim_start_matches('@'),
+                item.github,
+            );
+        }
+        if !item.gitlab.is_empty() {
+            info_msg += &format!(
+                " | <https://gitlab.com/{}|gitlab:{}>",
+                item.gitlab.trim_start_matches('@'),
+                item.gitlab,
+            );
+        }
+        if !item.linkedin.is_empty() {
+            info_msg += &format!(" | <{}|linkedin>", item.linkedin,);
+        }
+        if !item.portfolio.is_empty() {
+            info_msg += &format!(" | <{}|portfolio>", item.portfolio,);
+        }
+        if !item.website.is_empty() {
+            info_msg += &format!(" | <{}|website>", item.website,);
+        }
+
+        FormattedMessage {
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: intro_msg,
+                    }),
+                    elements: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: info_msg,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: values_msg,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: status_msg,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+            ],
+        }
+    }
+}
+
+impl From<Applicant> for FormattedMessage {
+    fn from(item: Applicant) -> Self {
+        let new: NewApplicant = item.into();
+        new.into()
     }
 }
 
@@ -1921,121 +1929,6 @@ impl Applicant {
         info!("sent background check invitation to: {}", self.email);
 
         Ok(())
-    }
-
-    /// Convert the applicant into JSON for a Slack message.
-    pub fn as_slack_msg(&self) -> Value {
-        let time = self.human_duration();
-
-        let mut status_msg = format!(
-            "<https://docs.google.com/spreadsheets/d/{}|{}> Applicant | applied {}",
-            self.sheet_id, self.role, time
-        );
-        if !self.status.is_empty() {
-            status_msg += &format!(" | status: *{}*", self.status);
-        }
-
-        let mut values_msg = "".to_string();
-        if !self.value_reflected.is_empty() {
-            values_msg += &format!("values reflected: *{}*", self.value_reflected);
-        }
-        if !self.value_violated.is_empty() {
-            values_msg += &format!(" | violated: *{}*", self.value_violated);
-        }
-        for (k, tension) in self.values_in_tension.iter().enumerate() {
-            if k == 0 {
-                values_msg += &format!(" | in tension: *{}*", tension);
-            } else {
-                values_msg += &format!(" *& {}*", tension);
-            }
-        }
-        if values_msg.is_empty() {
-            values_msg = "values not yet populated".to_string();
-        }
-
-        let mut intro_msg = format!("*{}*  <mailto:{}|{}>", self.name, self.email, self.email,);
-        if !self.location.is_empty() {
-            intro_msg += &format!("  {}", self.location);
-        }
-
-        let mut info_msg = format!("<{}|resume> | <{}|materials>", self.resume, self.materials,);
-        if !self.phone.is_empty() {
-            info_msg += &format!(" | <tel:{}|{}>", self.phone, self.phone);
-        }
-        if !self.github.is_empty() {
-            info_msg += &format!(
-                " | <https://github.com/{}|github:{}>",
-                self.github.trim_start_matches('@'),
-                self.github,
-            );
-        }
-        if !self.gitlab.is_empty() {
-            info_msg += &format!(
-                " | <https://gitlab.com/{}|gitlab:{}>",
-                self.gitlab.trim_start_matches('@'),
-                self.gitlab,
-            );
-        }
-        if !self.linkedin.is_empty() {
-            info_msg += &format!(" | <{}|linkedin>", self.linkedin,);
-        }
-        if !self.portfolio.is_empty() {
-            info_msg += &format!(" | <{}|portfolio>", self.portfolio,);
-        }
-        if !self.website.is_empty() {
-            info_msg += &format!(" | <{}|website>", self.website,);
-        }
-
-        json!(FormattedMessage {
-            channel: Default::default(),
-            attachments: Default::default(),
-            blocks: vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: intro_msg,
-                    }),
-                    elements: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: info_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: values_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: status_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                }
-            ]
-        })
     }
 
     /// Send an email to a scorer that they are assigned to an applicant.

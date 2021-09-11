@@ -21,6 +21,7 @@ use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::{
     airtable::AIRTABLE_RFD_TABLE,
@@ -273,6 +274,43 @@ impl NewRFD {
     }
 }
 
+/// Convert an RFD into Slack message.
+impl From<NewRFD> for FormattedMessage {
+    fn from(item: NewRFD) -> Self {
+        let mut msg = format!(
+            "{} (_*{}*_) <{}|github> <{}|rendered>",
+            item.name, item.state, item.short_link, item.rendered_link
+        );
+
+        if !item.discussion.is_empty() {
+            msg += &format!(" <{}|discussion>", item.discussion);
+        }
+
+        FormattedMessage {
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![MessageBlock {
+                block_type: MessageBlockType::Section,
+                text: Some(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: msg,
+                }),
+                elements: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            }],
+        }
+    }
+}
+
+impl From<RFD> for FormattedMessage {
+    fn from(item: RFD) -> Self {
+        let new: NewRFD = item.into();
+        new.into()
+    }
+}
+
 impl RFD {
     pub async fn get_html(
         &self,
@@ -348,21 +386,6 @@ impl RFD {
         }
 
         Ok(result.to_string())
-    }
-
-    /// Convert an RFD into JSON as Slack message.
-    // TODO: make this include more fields
-    pub fn as_slack_msg(&self) -> String {
-        let mut msg = format!(
-            "{} (_*{}*_) <{}|github> <{}|rendered>",
-            self.name, self.state, self.short_link, self.rendered_link
-        );
-
-        if !self.discussion.is_empty() {
-            msg += &format!(" <{}|discussion>", self.discussion);
-        }
-
-        msg
     }
 
     /// Get a changelog for the RFD.

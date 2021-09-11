@@ -7,7 +7,6 @@ use chrono::NaiveDate;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::{
@@ -58,14 +57,14 @@ pub struct NewJournalClubMeeting {
     pub cio_company_id: i32,
 }
 
-impl JournalClubMeeting {
-    /// Convert the journal club meeting into JSON as Slack message.
-    pub fn as_slack_msg(&self) -> Value {
+/// Convert the journal club meeting into Slack message.
+impl From<NewJournalClubMeeting> for FormattedMessage {
+    fn from(item: NewJournalClubMeeting) -> Self {
         let mut objects = vec![MessageBlock {
             block_type: MessageBlockType::Section,
             text: Some(MessageBlockText {
                 text_type: MessageType::Markdown,
-                text: format!("<{}|*{}*>", self.issue, self.title),
+                text: format!("<{}|*{}*>", item.issue, item.title),
             }),
             elements: Default::default(),
             accessory: Default::default(),
@@ -75,12 +74,12 @@ impl JournalClubMeeting {
 
         let mut text = format!(
             "<https://github.com/{}|@{}> | issue date: {} | status: *{}*",
-            self.coordinator,
-            self.coordinator,
-            self.issue_date.format("%m/%d/%Y"),
-            self.state
+            item.coordinator,
+            item.coordinator,
+            item.issue_date.format("%m/%d/%Y"),
+            item.state
         );
-        let meeting_date = self.meeting_date.format("%m/%d/%Y").to_string();
+        let meeting_date = item.meeting_date.format("%m/%d/%Y").to_string();
         if meeting_date != *"01/01/1969" {
             text += &format!(" | meeting date: {}", meeting_date);
         }
@@ -96,12 +95,12 @@ impl JournalClubMeeting {
             fields: Default::default(),
         });
 
-        if !self.recording.is_empty() {
+        if !item.recording.is_empty() {
             objects.push(MessageBlock {
                 block_type: MessageBlockType::Context,
                 elements: vec![MessageBlockText {
                     text_type: MessageType::Markdown,
-                    text: format!("<{}|Meeting recording>", self.recording),
+                    text: format!("<{}|Meeting recording>", item.recording),
                 }],
                 text: Default::default(),
                 accessory: Default::default(),
@@ -110,11 +109,11 @@ impl JournalClubMeeting {
             });
         }
 
-        for paper in self.papers.clone() {
+        for paper in item.papers.clone() {
             let p: NewJournalClubPaper = serde_json::from_str(&paper).unwrap();
 
             let mut title = p.title.to_string();
-            if p.title == self.title {
+            if p.title == item.title {
                 title = "Paper".to_string();
             }
             objects.push(MessageBlock {
@@ -130,11 +129,18 @@ impl JournalClubMeeting {
             });
         }
 
-        json!(FormattedMessage {
+        FormattedMessage {
             channel: Default::default(),
             attachments: Default::default(),
             blocks: objects,
-        })
+        }
+    }
+}
+
+impl From<JournalClubMeeting> for FormattedMessage {
+    fn from(item: JournalClubMeeting) -> Self {
+        let new: NewJournalClubMeeting = item.into();
+        new.into()
     }
 }
 

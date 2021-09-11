@@ -27,7 +27,7 @@ use mailchimp_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
-use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType};
+use slack_chat_api::{BotCommand, FormattedMessage, MessageResponse, MessageResponseType};
 
 use crate::{
     server::{
@@ -423,10 +423,8 @@ pub async fn handle_slack_commands(
                     .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num)))
                     .first::<RFD>(&db.conn())
                 {
-                    json!(MessageResponse {
-                        response_type: MessageResponseType::InChannel,
-                        text: rfd.as_slack_msg(),
-                    })
+                    let r: FormattedMessage = rfd.into();
+                    json!(r)
                 } else if let Ok(rfd) = rfds::dsl::rfds
                     .filter(
                         rfds::dsl::cio_company_id
@@ -435,10 +433,8 @@ pub async fn handle_slack_commands(
                     )
                     .first::<RFD>(&db.conn())
                 {
-                    json!(MessageResponse {
-                        response_type: MessageResponseType::InChannel,
-                        text: rfd.as_slack_msg(),
-                    })
+                    let r: FormattedMessage = rfd.into();
+                    json!(r)
                 } else {
                     json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
@@ -456,10 +452,8 @@ pub async fn handle_slack_commands(
                 )
                 .first::<RFD>(&db.conn())
             {
-                json!(MessageResponse {
-                    response_type: MessageResponseType::InChannel,
-                    text: rfd.as_slack_msg(),
-                })
+                let r: FormattedMessage = rfd.into();
+                json!(r)
             } else {
                 json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
@@ -508,8 +502,8 @@ pub async fn handle_slack_commands(
                     merge_json(&mut msg, object);
                 }
 
-                let obj = a.as_slack_msg();
-                merge_json(&mut msg, obj);
+                let obj: FormattedMessage = a.into();
+                merge_json(&mut msg, json!(obj));
             }
 
             msg
@@ -523,7 +517,8 @@ pub async fn handle_slack_commands(
                 )
                 .first::<Applicant>(&db.conn())
             {
-                applicant.as_slack_msg()
+                let r: FormattedMessage = applicant.into();
+                json!(r)
             } else {
                 json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
@@ -562,8 +557,8 @@ pub async fn handle_slack_commands(
                     merge_json(&mut msg, object);
                 }
 
-                let obj = m.as_slack_msg();
-                merge_json(&mut msg, obj);
+                let obj: FormattedMessage = m.into();
+                merge_json(&mut msg, json!(obj));
             }
 
             msg
@@ -577,7 +572,8 @@ pub async fn handle_slack_commands(
                 )
                 .first::<JournalClubMeeting>(&db.conn())
             {
-                meeting.as_slack_msg()
+                let r: FormattedMessage = meeting.into();
+                json!(r)
             } else {
                 json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
