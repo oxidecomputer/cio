@@ -38,6 +38,7 @@ struct Opts {
 enum SubCommand {
     Server(Server),
 
+    SyncFinance(SyncFinance),
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
     SyncRFDs(SyncRFDs),
@@ -55,6 +56,10 @@ pub struct Server {
     #[clap(short, long, parse(from_os_str), value_hint = clap::ValueHint::FilePath)]
     spec_file: Option<std::path::PathBuf>,
 }
+
+/// A subcommand for running the background job of syncing finance data.
+#[derive(Clap)]
+pub struct SyncFinance {}
 
 /// A subcommand for running the background job of syncing repos.
 #[derive(Clap)]
@@ -111,6 +116,15 @@ async fn main() -> Result<()> {
     match opts.subcmd {
         SubCommand::Server(s) => {
             crate::server::server(&s, logger).await?;
+        }
+        SubCommand::SyncFinance(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                // cio_api::finance::refresh_all_finance(&db, &company).await?;
+            }
         }
         SubCommand::SyncRepos(_) => {
             let db = Database::new();

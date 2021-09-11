@@ -1172,7 +1172,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
     let qba = company.authenticate_quickbooks(db).await;
     if let Err(e) = qba {
         if e.to_string().contains("no token") {
-            // Return early, this company does not use Zoom.
+            // Return early, this company does not use QuickBooks.
             return Ok(());
         }
 
@@ -1328,31 +1328,23 @@ fn clean_merchant_name(s: &str) -> String {
     }
 }
 
+pub async fn refresh_all_finance(db: &Database, company: &Company) -> Result<()> {
+    refresh_software_vendors(db, company).await?;
+    refresh_ramp_reimbursements(db, company).await?;
+    refresh_ramp_transactions(db, company).await?;
+    refresh_accounts_payable(db, company).await?;
+    sync_quickbooks(db, company).await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         companies::{Company, Companys},
         db::Database,
-        finance::{
-            refresh_accounts_payable, refresh_bill_com_transactions, refresh_brex_transactions,
-            refresh_expensify_transactions, refresh_ramp_reimbursements, refresh_ramp_transactions,
-            refresh_software_vendors, sync_quickbooks,
-        },
+        finance::{refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions},
     };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance_quickbooks() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        sync_quickbooks(&db, &oxide).await.unwrap();
-    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
@@ -1394,61 +1386,5 @@ mod tests {
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
         refresh_brex_transactions(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance_ramp_reimbursements() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1).unwrap();
-        // Iterate over the companies and update.
-        for company in companies {
-            refresh_ramp_reimbursements(&db, &company).await.unwrap();
-        }
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance_ramp_transactions() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1).unwrap();
-        // Iterate over the companies and update.
-        for company in companies {
-            refresh_ramp_transactions(&db, &company).await.unwrap();
-        }
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_accounts_payable() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1).unwrap();
-        // Iterate over the companies and update.
-        for company in companies {
-            refresh_accounts_payable(&db, &company).await.unwrap();
-        }
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_vendors() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1).unwrap();
-        // Iterate over the companies and update.
-        for company in companies {
-            refresh_software_vendors(&db, &company).await.unwrap();
-        }
     }
 }
