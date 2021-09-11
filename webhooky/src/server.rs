@@ -234,7 +234,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
 pub struct Context {
     pub db: Database,
 
-    pub sec: steno::SecClient,
+    pub sec: Arc<steno::SecClient>,
 
     pub schema: String,
 }
@@ -249,7 +249,11 @@ impl Context {
         let sec = steno::sec(logger, Arc::new(db.clone()));
 
         // Create the context.
-        Context { db, sec, schema }
+        Context {
+            db,
+            sec: Arc::new(sec),
+            schema,
+        }
     }
 }
 
@@ -1872,10 +1876,17 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
     sentry::start_session();
 
     let ctx = rqctx.context();
+    let sec = &ctx.sec;
 
-    // Set all the in-progress sagas to 'interrupted'.
-    for saga in ctx.sec.saga_list(None, std::num::NonZeroU32::new(1000).unwrap()).await {
-        println!("saga: {:#?}", saga);
+    // Get all our sagas.
+    let sagas = sec.saga_list(None, std::num::NonZeroU32::new(1000).unwrap()).await;
+
+    // TODO: Shutdown the executer.
+    // This causes a compile time error, figure it out.
+    //sec.shutdown().await;
+
+    // Set all the in-progress sagas to 'cancelled'.
+    for saga in sagas {
         // Get the saga in the database.
         if let Some(mut f) = Function::get_from_db(&ctx.db, saga.id.to_string()) {
             // We only care about jobs that aren't completed.
