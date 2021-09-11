@@ -61,6 +61,22 @@ impl Function {
         Ok(())
     }
 
+    /// Add logs for a failed saga.
+    pub async fn add_logs_with_failure(db: &Database, saga_id: &uuid::Uuid, logs: &str) -> Result<()> {
+        if logs.is_empty() {
+            // Return early.
+            return Ok(());
+        }
+
+        // Get the saga from it's id.
+        let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
+        nf.logs = logs.to_string();
+        nf.conclusion = octorust::types::Conclusion::Failure.to_string();
+        nf.update(db).await?;
+
+        Ok(())
+    }
+
     /// Update a job from SagaCreateParams.
     pub async fn from_saga_create_params(db: &Database, saga: &steno::SagaCreateParams) -> Result<Self> {
         let status = match saga.state {
