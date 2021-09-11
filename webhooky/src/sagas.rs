@@ -1,4 +1,9 @@
-use std::{env, fmt, process::Command, sync::Arc};
+use std::{
+    env, fmt,
+    io::{BufRead, BufReader, Write},
+    process::{Command, Stdio},
+    sync::Arc,
+};
 
 use anyhow::{bail, Result};
 use chrono::Utc;
@@ -148,19 +153,51 @@ fn reexec(cmd: &str) -> Result<String> {
 
     // TODO, also pipe the logs to our logger but somehow nest them
     // or make it apparent its a child.
-    let output = Command::new(exe).args([cmd]).output()?;
+    let mut child = Command::new(exe)
+        .args([cmd])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
 
-    // Format the output.
-    // Find a better way to combine these two streams.
-    let s = format!(
-        "{}\n{}",
-        String::from_utf8(output.stdout)?,
-        String::from_utf8(output.stderr)?,
-    )
-    .trim()
-    .to_string();
+    let mut output = Vec::new();
 
-    if output.status.success() {
+    // TODO: Should be moved to a function that accepts something implementing `Write`
+    {
+        let stdout = child.stdout.as_mut().expect("wasn't stdout");
+        let stderr = child.stderr.as_mut().expect("wasn't stderr");
+
+        let mut stdout = BufReader::new(stdout);
+        let mut stderr = BufReader::new(stderr);
+
+        loop {
+            let (stdout_bytes, stderr_bytes) = match (stdout.fill_buf(), stderr.fill_buf()) {
+                (Ok(stdout), Ok(stderr)) => {
+                    output.write_all(stdout)?;
+                    output.write_all(stderr)?;
+
+                    (stdout.len(), stderr.len())
+                }
+                other => bail!("got some other pipe than stdout and stderr {:?}", other),
+            };
+
+            if stdout_bytes == 0 && stderr_bytes == 0 {
+                // Seems less-than-ideal; should be some way of
+                // telling if the child has actually exited vs just
+                // not outputting anything.
+                break;
+            }
+
+            stdout.consume(stdout_bytes);
+            stderr.consume(stderr_bytes);
+        }
+    }
+
+    let status = child.wait()?;
+
+    // Format the output as a string.
+    let s = String::from_utf8(output)?.trim().to_string();
+
+    if status.success() {
         Ok(s)
     } else {
         bail!(s)
