@@ -346,9 +346,9 @@ impl Slack {
     }
 
     /// Post text to a channel.
-    pub async fn post_to_channel(url: String, v: Value) -> Result<(), APIError> {
+    pub async fn post_to_channel(url: &str, v: &Value) -> Result<(), APIError> {
         let client = Client::new();
-        let resp = client.post(&url).body(Body::from(v.to_string())).send().await.unwrap();
+        let resp = client.post(url).body(Body::from(v.to_string())).send().await.unwrap();
 
         match resp.status() {
             StatusCode::OK => (),

@@ -83,8 +83,8 @@ sheets = "^0.2.0"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
-slack-chat-api = "^0.1.16"
-#slack-chat-api = { path = "../slack" }
+#slack-chat-api = "^0.1.16"
+slack-chat-api = { path = "../slack" }
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tailscale-api = "^0.1.2"
 #tailscale-api = { path = "../tailscale" }

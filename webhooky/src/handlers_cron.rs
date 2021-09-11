@@ -50,9 +50,10 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str) -> Result<
 
         // If the server stopped and restarted, we might have a lingering job
         // that we want to ignore and instead start a new one.
-        // Check if the duration it was started is longer than 12 hours ago.
+        // Check if the duration it was started is longer than a few hours ago.
         let duration_from_now = Utc::now().signed_duration_since(f.created_at);
-        if duration_from_now < Duration::hours(12) {
+        if duration_from_now < Duration::hours(6) {
+            // TODO: a better way to be to check if we know about the saga.
             // Return that uuid versus starting another.
             return Ok(u);
         }

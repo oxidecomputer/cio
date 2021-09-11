@@ -1370,6 +1370,13 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
         // Update the subscriber in the database.
         let subscriber = new_subscriber.upsert(db).await?;
 
+        // Parse the signup into a slack message.
+        // Send the message to the slack channel.
+        let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
+        company.post_to_slack_channel(db, &new_subscriber.as_slack_msg()).await;
+        // TODO: this causes a weird compile time error, figure it out.
+        info!("subscriber {} posted to Slack", subscriber.email);
+
         info!("subscriber {} created successfully", subscriber.email);
     } else {
         info!("subscriber {} already exists", new_subscriber.email);
@@ -1396,8 +1403,6 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     // Parse the webhook as a new rack line subscriber.
     let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db);
 
-    //let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
-
     let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
     if existing.is_none() {
         // Update the subscriber in the database.
@@ -1405,6 +1410,7 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
+        //let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
         //company.post_to_slack_channel(db, new_subscriber.as_slack_msg()).await;
         // TODO: this causes a weird compile time error, figure it out.
         // info!("subscriber {} posted to Slack", subscriber.email);

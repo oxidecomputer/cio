@@ -159,7 +159,7 @@ impl Company {
         })
     }
 
-    pub async fn post_to_slack_channel(&self, db: &Database, value: serde_json::Value) -> Result<()> {
+    pub async fn post_to_slack_channel(&self, db: &Database, value: &serde_json::Value) -> Result<()> {
         // We need to get the url from the api tokens.
         // Only do this if we have a token and the token is not empty.
         if let Ok(token) = api_tokens::dsl::api_tokens
@@ -171,7 +171,7 @@ impl Company {
             .first::<APIToken>(&db.conn())
         {
             if !token.endpoint.is_empty() {
-                Slack::post_to_channel(token.endpoint, value).await?;
+                Slack::post_to_channel(&token.endpoint, &value.clone()).await?;
             }
         }
 
