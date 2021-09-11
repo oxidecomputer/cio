@@ -43,6 +43,7 @@ enum SubCommand {
     #[clap(name = "sync-rfds")]
     SyncRFDs(SyncRFDs),
     SyncShipments(SyncShipments),
+    SyncShorturls(SyncShorturls),
     SyncTravel(SyncTravel),
 }
 
@@ -73,6 +74,10 @@ pub struct SyncRFDs {}
 /// A subcommand for running the background job of syncing shipments.
 #[derive(Clap)]
 pub struct SyncShipments {}
+
+/// A subcommand for running the background job of syncing shorturls.
+#[derive(Clap)]
+pub struct SyncShorturls {}
 
 /// A subcommand for running the background job of syncing travel data.
 #[derive(Clap)]
@@ -161,6 +166,9 @@ async fn main() -> Result<()> {
                 cio_api::shipments::refresh_inbound_shipments(&db, &company).await?;
                 cio_api::shipments::refresh_outbound_shipments(&db, &company).await?;
             }
+        }
+        SubCommand::SyncShorturls(_) => {
+            cio_api::shorturls::refresh_shorturls().await?;
         }
         SubCommand::SyncTravel(_) => {
             let db = Database::new();

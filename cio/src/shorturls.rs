@@ -257,16 +257,3 @@ pub struct ShortUrl {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub discussion: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::shorturls::refresh_shorturls;
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_shorturls() {
-        crate::utils::setup_logger();
-
-        refresh_shorturls().await.unwrap();
-    }
-}
