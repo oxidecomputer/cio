@@ -151,11 +151,14 @@ fn reexec(cmd: &str) -> Result<String> {
     let output = Command::new(exe).args([cmd]).output()?;
 
     // Format the output.
+    // Find a better way to combine these two streams.
     let s = format!(
-        "{}\n\n\n======== STDERR ========\n\n{}",
+        "{}\n{}",
         String::from_utf8(output.stdout)?,
         String::from_utf8(output.stderr)?,
-    );
+    )
+    .trim()
+    .to_string();
 
     if output.status.success() {
         Ok(s)
