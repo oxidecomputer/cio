@@ -6,7 +6,7 @@ use std::{
     process::Command,
 };
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
@@ -490,7 +490,7 @@ The Oxide Team
         applicant.update(db).await?;
 
         // Add the applicant as a reader to their packet file.
-        drive_client
+        if let Err(err) = drive_client
             .permissions()
             .add_if_not_exists(
                 &drive_file.id,
@@ -501,7 +501,14 @@ The Oxide Team
                 false, // use domain admin access
                 false, // send notification email TODO: change this to true and add a message
             )
-            .await?;
+            .await
+        {
+            if !err.to_string().contains("invalidSharingRequest") {
+                // An invalidSharingRequest occurs when the user it not a Google user, we can
+                // ignore it until we notify people.
+                bail!(err.to_string());
+            }
+        }
     }
 
     Ok(())
