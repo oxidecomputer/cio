@@ -138,7 +138,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         .description("Internal webhooks server for listening to several third party webhooks")
         .contact_url("https://oxide.computer")
         .contact_email("webhooks@oxide.computer");
-    let schema = api_definition.json()?.to_string();
+    let schema = api_definition.json()?;
 
     if let Some(spec_file) = &s.spec_file {
         info!("writing OpenAPI spec to {}...", spec_file.to_str().unwrap());
@@ -236,14 +236,14 @@ pub struct Context {
 
     pub sec: Arc<steno::SecClient>,
 
-    pub schema: String,
+    pub schema: serde_json::Value,
 }
 
 impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new(schema: String, logger: slog::Logger) -> Context {
+    pub async fn new(schema: serde_json::Value, logger: slog::Logger) -> Context {
         let db = Database::new();
 
         let sec = steno::sec(logger, Arc::new(db.clone()));
@@ -268,10 +268,10 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     let api_context = rqctx.context();
 
-    Ok(HttpResponseOk(api_context.schema.to_string()))
+    Ok(HttpResponseOk(api_context.schema.clone()))
 }
 
 /** Return pong. */
