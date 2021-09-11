@@ -165,9 +165,16 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
             "sync-travel",
         ];
         tokio::spawn(async move {
+            // Sleep for an hour before starting our loops, this ensures if we
+            // have a bunch of back to back deploys they do not get noisy.
+            let pre_start = std::time::Duration::from_secs(60 * 60);
+            info!("waiting for 1 hour before triggering jobs...");
+            std::thread::sleep(pre_start);
+
             // Make an infinite loop.
             loop {
-                // Wait for our interval.
+                // Set up our interval.
+                // However it will not wait the interval here.
                 info!("waiting for `{}` hours to trigger jobs...", hours);
                 interval.tick().await;
 

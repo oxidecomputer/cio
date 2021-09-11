@@ -64,7 +64,7 @@ pub struct Server {
     spec_file: Option<std::path::PathBuf>,
 
     /// Sets if the server should run cron jobs in the background
-    #[clap(short, long)]
+    #[clap(long)]
     do_cron: bool,
 }
 

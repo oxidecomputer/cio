@@ -43,4 +43,4 @@ RUN gem install \
 
 COPY --from=cargo-build /usr/src/webhooky/target/release/webhooky /usr/bin/webhooky
 
-CMD ["webhooky", "server"]
+CMD ["webhooky", "server", "--do-cron"]
