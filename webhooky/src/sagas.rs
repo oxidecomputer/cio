@@ -190,7 +190,7 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
             }
             Err(e) => {
                 // Save the logs.
-                Function::add_logs(db, saga_id, &output).await?;
+                Function::add_logs_with_failure(db, saga_id, &output).await?;
 
                 bail!(e);
             }
