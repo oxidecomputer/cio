@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
+use chrono::{Duration, Utc};
 use cio_api::{functions::Function, schema::functions};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{Path, RequestContext};
@@ -39,7 +40,6 @@ pub async fn handle_get_function_logs_by_uuid(
 pub async fn handle_reexec_cmd(rqctx: Arc<RequestContext<Context>>, cmd_name: &str) -> Result<uuid::Uuid> {
     let api_context = rqctx.context();
     let db = &api_context.db;
-    let sec = &api_context.sec;
 
     // Check if we already have an in-progress run for this job.
     if let Ok(f) = functions::dsl::functions
@@ -51,19 +51,18 @@ pub async fn handle_reexec_cmd(rqctx: Arc<RequestContext<Context>>, cmd_name: &s
 
         // If the server stopped and restarted, we might have a lingering job
         // that we want to ignore and instead start a new one.
-        // Check if our steno client knows of this saga id.
-        // if let Ok(_saga) = &sec.saga_get(steno::SagaId(u.clone())).await {
-        // TODO: Make sure our saga is not "Done".
-        // Our saga _should_ be marked as completed by the database, if it is done.
-        // Return that uuid versus starting another.
-        return Ok(u);
-        //}
+        // Check if the duration it was started is longer than 12 hours ago.
+        let duration_from_now = Utc::now().signed_duration_since(f.created_at);
+        if duration_from_now < Duration::hours(12) {
+            // Return that uuid versus starting another.
+            return Ok(u);
+        }
     }
 
     let id = uuid::Uuid::new_v4();
 
     // Run the saga.
-    crate::sagas::run_cmd(db, sec, &id, cmd_name).await?;
+    crate::sagas::run_cmd(db, &api_context.sec, &id, cmd_name).await?;
 
     Ok(id)
 }
