@@ -1,4 +1,3 @@
-#![allow(clippy::field_reassign_with_default)]
 mod event_types;
 mod github_types;
 mod handlers;
@@ -12,30 +11,12 @@ mod tracking_numbers;
 #[macro_use]
 extern crate serde_json;
 
-use std::{collections::HashMap, env, fs::File, sync::Arc};
+use std::env;
 
 use anyhow::Result;
-use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
 use clap::{AppSettings, Clap};
-use docusign::DocuSign;
-use dropshot::{
-    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
-};
-use google_drive::Client as GoogleDrive;
-use gusto_api::Client as Gusto;
-use log::{info, warn};
-use mailchimp_api::MailChimp;
-use quickbooks::QuickBooks;
-use ramp_api::Client as Ramp;
-use schemars::JsonSchema;
 use sentry::IntoDsn;
-use serde::{Deserialize, Serialize};
-use slack_chat_api::Slack;
 use slog::Drain;
-use zoom_api::Client as Zoom;
-
-use crate::github_types::GitHubWebhook;
 
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields.
@@ -43,6 +24,10 @@ use crate::github_types::GitHubWebhook;
 #[clap(version = clap::crate_version!(), author = clap::crate_authors!("\n"))]
 #[clap(setting = AppSettings::ColoredHelp)]
 struct Opts {
+    /// Print debug info
+    #[clap(short, long)]
+    debug: bool,
+
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -54,10 +39,7 @@ enum SubCommand {
 
 /// A subcommand for running the server.
 #[derive(Clap)]
-struct Server {
-    /// Print debug info
-    #[clap(short, long)]
-    debug: bool,
+pub struct Server {
     /// IP address and port that the server should listen
     #[clap(short, long, default_value = "0.0.0.0:8080")]
     address: String,
@@ -71,9 +53,45 @@ struct Server {
 async fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
 
+    // Initialize sentry.
+    let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
+    if !sentry_dsn.is_empty() {
+        let _guard = sentry::init(sentry::ClientOptions {
+            dsn: sentry_dsn.clone().into_dsn()?,
+
+            release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+            environment: Some(
+                env::var("SENTRY_ENV")
+                    .unwrap_or_else(|_| "development".to_string())
+                    .into(),
+            ),
+            ..Default::default()
+        });
+    }
+
+    // Initialize our logger.
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let logger = if !sentry_dsn.is_empty() {
+        let drain = sentry_slog::SentryDrain::new(drain);
+        slog::Logger::root(drain, slog::slog_o!())
+    } else {
+        slog::Logger::root(drain, slog::slog_o!())
+    };
+
+    let _scope_guard = slog_scope::set_global_logger(logger.clone());
+
+    // Set the logging level.
+    let mut log_level = log::Level::Info;
+    if opts.debug {
+        log_level = log::Level::Debug;
+    }
+    let _log_guard = slog_stdlog::init_with_level(log_level)?;
+
     match opts.subcmd {
         SubCommand::Server(s) => {
-            crate::server::server(&s).await?;
+            crate::server::server(&s, logger).await?;
         }
     }
 

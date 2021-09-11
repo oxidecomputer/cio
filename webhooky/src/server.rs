@@ -2,7 +2,6 @@ use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::Result;
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
-use clap::{AppSettings, Clap};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
@@ -15,51 +14,13 @@ use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
-use sentry::IntoDsn;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::Slack;
-use slog::Drain;
 use zoom_api::Client as Zoom;
 
 use crate::github_types::GitHubWebhook;
 
-pub async fn server(s: &crate::Server) -> Result<()> {
-    // Initialize sentry.
-    let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
-    if !sentry_dsn.is_empty() {
-        let _guard = sentry::init(sentry::ClientOptions {
-            dsn: sentry_dsn.clone().into_dsn()?,
-
-            release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
-            environment: Some(
-                env::var("SENTRY_ENV")
-                    .unwrap_or_else(|_| "development".to_string())
-                    .into(),
-            ),
-            ..Default::default()
-        });
-    }
-
-    // Initialize our logger.
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    let logger = if !sentry_dsn.is_empty() {
-        let drain = sentry_slog::SentryDrain::new(drain);
-        slog::Logger::root(drain, slog::slog_o!())
-    } else {
-        slog::Logger::root(drain, slog::slog_o!())
-    };
-
-    let _scope_guard = slog_scope::set_global_logger(logger.clone());
-
-    // Set the logging level.
-    let mut log_level = log::Level::Info;
-    if s.debug {
-        log_level = log::Level::Debug;
-    }
-    let _log_guard = slog_stdlog::init_with_level(log_level)?;
-
+pub async fn server(s: &crate::Server, logger: slog::Logger) -> Result<()> {
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
@@ -186,11 +147,11 @@ pub async fn server(s: &crate::Server) -> Result<()> {
  * Application-specific context (state shared by handler functions)
  */
 pub struct Context {
-    db: Database,
+    pub db: Database,
 
-    sec: steno::SecClient,
+    pub sec: steno::SecClient,
 
-    schema: String,
+    pub schema: String,
 }
 
 impl Context {
@@ -236,7 +197,7 @@ async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Str
 #[derive(Deserialize, Serialize, Default, Clone, Debug, JsonSchema)]
 pub struct CounterResponse {
     #[serde(default)]
-    count: i32,
+    pub count: i32,
 }
 
 /** Return the count of products sold. */
@@ -284,7 +245,7 @@ async fn listen_github_webhooks(
 
 #[derive(Deserialize, Debug, JsonSchema)]
 pub struct RFDPathParams {
-    num: i32,
+    pub num: i32,
 }
 
 /** Trigger an update for an RFD. */
@@ -1489,7 +1450,7 @@ async fn listen_slack_commands_webhooks(
 
 #[derive(Deserialize, Debug, JsonSchema)]
 pub struct FunctionPathParams {
-    uuid: String,
+    pub uuid: String,
 }
 
 /** Get information about a function by its uuid. */

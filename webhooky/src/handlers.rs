@@ -29,10 +29,12 @@ use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{BotCommand, MessageResponse, MessageResponseType};
 
-use crate::server::{
-    slack_commands::SlackCommand, AirtableRowEvent, ApplicationFileUploadData, Context, CounterResponse,
-    GitHubRateLimit, GoogleSpreadsheetEditEvent, GoogleSpreadsheetRowCreateEvent, RFDPathParams,
-    ShippoTrackingUpdateEvent,
+use crate::{
+    server::{
+        AirtableRowEvent, ApplicationFileUploadData, Context, CounterResponse, GitHubRateLimit,
+        GoogleSpreadsheetEditEvent, GoogleSpreadsheetRowCreateEvent, RFDPathParams, ShippoTrackingUpdateEvent,
+    },
+    slack_commands::SlackCommand,
 };
 
 pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
