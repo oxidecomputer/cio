@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                // cio_api::finance::refresh_all_finance(&db, &company).await?;
+                cio_api::finance::refresh_all_finance(&db, &company).await?;
             }
         }
         SubCommand::SyncRepos(_) => {

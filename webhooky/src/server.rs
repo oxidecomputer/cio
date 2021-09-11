@@ -111,6 +111,7 @@ pub async fn server(s: &crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(trigger_sync_repos_create).unwrap();
     api.register(trigger_sync_rfds_create).unwrap();
     api.register(trigger_sync_travel_create).unwrap();
+    api.register(trigger_sync_finance_create).unwrap();
     api.register(listen_get_function_by_uuid).unwrap();
     api.register(listen_get_function_logs_by_uuid).unwrap();
     api.register(api_get_schema).unwrap();
@@ -1560,6 +1561,29 @@ async fn trigger_sync_travel_create(
     sentry::start_session();
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-travel").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync finance. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-finance",
+}]
+async fn trigger_sync_finance_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-finance").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))

@@ -1341,7 +1341,7 @@ pub async fn refresh_all_finance(db: &Database, company: &Company) -> Result<()>
 #[cfg(test)]
 mod tests {
     use crate::{
-        companies::{Company, Companys},
+        companies::Company,
         db::Database,
         finance::{refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions},
     };
