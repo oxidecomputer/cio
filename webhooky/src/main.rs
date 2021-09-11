@@ -120,7 +120,7 @@ async fn main() -> Result<()> {
 
     match opts.subcmd {
         SubCommand::Server(s) => {
-            crate::server::server(&s, logger).await?;
+            crate::server::server(s, logger).await?;
         }
         SubCommand::SyncFinance(_) => {
             let db = Database::new();

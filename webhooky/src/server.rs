@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
 use docusign::DocuSign;
 use dropshot::{
@@ -20,7 +20,7 @@ use zoom_api::Client as Zoom;
 
 use crate::github_types::GitHubWebhook;
 
-pub async fn server(s: &crate::Server, logger: slog::Logger) -> Result<()> {
+pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
@@ -137,9 +137,9 @@ pub async fn server(s: &crate::Server, logger: slog::Logger) -> Result<()> {
     let api_context = Context::new(schema, logger).await;
 
     /*
-     * TODO: Setup our cron jobs to run every few hours.
+     * Setup our cron jobs to run every few hours.
      */
-    /*let mut interval = tokio::time::interval(std::time::Duration::from_secs(6 * 60 * 60));
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(6 * 60 * 60));
     tokio::spawn(async move {
         // Make an infinite loop.
         loop {
@@ -147,23 +147,23 @@ pub async fn server(s: &crate::Server, logger: slog::Logger) -> Result<()> {
             interval.tick().await;
 
             // TODO: Stagger the starts.
-            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-finance").await {
+            if let Err(e) = start_job(&s.address, "sync-finance").await {
                 sentry_anyhow::capture_anyhow(&e);
             }
-            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-repos").await {
+            if let Err(e) = start_job(&s.address, "sync-repos").await {
                 sentry_anyhow::capture_anyhow(&e);
             }
-            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-rfds").await {
+            if let Err(e) = start_job(&s.address, "sync-rfds").await {
                 sentry_anyhow::capture_anyhow(&e);
             }
-            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-shipments").await {
+            if let Err(e) = start_job(&s.address, "sync-shipments").await {
                 sentry_anyhow::capture_anyhow(&e);
             }
-            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-travel").await {
+            if let Err(e) = start_job(&s.address, "sync-travel").await {
                 sentry_anyhow::capture_anyhow(&e);
             }
         }
-    });*/
+    });
 
     /*
      * Set up the server.
@@ -1656,4 +1656,26 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
 
     // We use the debug formatting here so we get the stack trace.
     return HttpError::for_internal_error(format!("{:?}", err));
+}
+
+async fn start_job(address: &str, job: &str) -> Result<()> {
+    let resp = reqwest::Client::new()
+        .post(&format!("http://{}/run/{}", address, job))
+        .send()
+        .await?;
+
+    match resp.status() {
+        reqwest::StatusCode::OK => (),
+        reqwest::StatusCode::ACCEPTED => (),
+        s => {
+            bail!(
+                "starting job `{}` failed with status code `{}`: {}`",
+                job,
+                s,
+                resp.text().await?
+            )
+        }
+    }
+
+    Ok(())
 }
