@@ -351,7 +351,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 let mut chat_log = "".to_string();
                 if !chat_log_link.is_empty() {
                     // Let's add our perms to the file to ensure we have access.
-                    drive_client
+                    match drive_client
                         .permissions()
                         .add_if_not_exists(
                             &chat_log_id,
@@ -362,7 +362,13 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                             false, // use domain admin access
                             false, // send notification email
                         )
-                        .await?;
+                        .await
+                    {
+                        Ok(_) => (),
+                        Err(e) => {
+                            info!("adding permission for event chat log {} failed: {}", chat_log_link, e);
+                        }
+                    };
 
                     // Download the file.
                     let contents = drive_client
@@ -389,7 +395,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 {
                     Ok(_) => (),
                     Err(e) => {
-                        info!("adding permission for event video: {:#?} failed: {}", event, e);
+                        info!("adding permission for event video: {} failed: {}", video, e);
                     }
                 };
 
