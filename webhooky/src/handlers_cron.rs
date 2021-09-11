@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{bail, Result};
 use chrono::{Duration, Utc};
+use chrono_humanize::HumanTime;
 use cio_api::{functions::Function, schema::functions};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{Path, RequestContext};
@@ -44,6 +45,7 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str) -> Result<
     if let Ok(f) = functions::dsl::functions
         .filter(functions::dsl::name.eq(cmd_name.to_string()))
         .filter(functions::dsl::status.eq(octorust::types::JobStatus::InProgress.to_string()))
+        .order_by(functions::dsl::created_at.desc()) // Get the most recent one first.
         .first::<Function>(&db.conn())
     {
         let u = uuid::Uuid::parse_str(&f.saga_id)?;
@@ -52,8 +54,12 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str) -> Result<
         // that we want to ignore and instead start a new one.
         // Check if the duration it was started is longer than a few hours ago.
         let duration_from_now = Utc::now().signed_duration_since(f.created_at);
-        info!("Duration from now: {}", duration_from_now);
         if duration_from_now < Duration::hours(6) {
+            info!(
+                "duration from now is `{}`, returning existing job for `{}`",
+                HumanTime::from(duration_from_now),
+                cmd_name
+            );
             // TODO: a better way to be to check if we know about the saga.
             // Return that uuid versus starting another.
             return Ok(u);
