@@ -1088,6 +1088,11 @@ The Shipping Bot",
 
 // Sync the outbound shipments.
 pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_shipments.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Iterate over all the shipments in the database and update them.
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
@@ -1200,6 +1205,11 @@ pub fn clean_provider_name(s: &str) -> String {
 
 // Sync the inbound shipments.
 pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_shipments.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     let is: Vec<airtable_api::Record<InboundShipment>> = company
         .authenticate_airtable(&company.airtable_base_id_shipments)
         .list_records(&InboundShipment::airtable_table(), "Grid view", vec![])
@@ -1236,37 +1246,4 @@ pub fn clean_address_string(s: &str) -> String {
     }
 
     s.to_string()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Company,
-        db::Database,
-        shipments::{refresh_inbound_shipments, refresh_outbound_shipments},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_inbound_shipments() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_inbound_shipments(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_outbound_shipments() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_outbound_shipments(&db, &oxide).await.unwrap();
-    }
 }

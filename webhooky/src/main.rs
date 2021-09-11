@@ -42,6 +42,7 @@ enum SubCommand {
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
     SyncRFDs(SyncRFDs),
+    SyncShipments(SyncShipments),
     SyncTravel(SyncTravel),
 }
 
@@ -68,6 +69,10 @@ pub struct SyncRepos {}
 /// A subcommand for running the background job of syncing RFDs.
 #[derive(Clap)]
 pub struct SyncRFDs {}
+
+/// A subcommand for running the background job of syncing shipments.
+#[derive(Clap)]
+pub struct SyncShipments {}
 
 /// A subcommand for running the background job of syncing travel data.
 #[derive(Clap)]
@@ -145,6 +150,16 @@ async fn main() -> Result<()> {
             for company in companies {
                 cio_api::rfds::refresh_db_rfds(&db, &company).await?;
                 cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncShipments(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::shipments::refresh_inbound_shipments(&db, &company).await?;
+                cio_api::shipments::refresh_outbound_shipments(&db, &company).await?;
             }
         }
         SubCommand::SyncTravel(_) => {
