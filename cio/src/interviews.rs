@@ -76,6 +76,11 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 
 /// Sync interviews.
 pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     let gcal = company.authenticate_google_calendar(db).await?;
 
     // Get the list of our calendars.
@@ -273,6 +278,11 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 /// Compile interview packets for each interviewee.
 #[allow(clippy::type_complexity)]
 pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the Google Drive client.
     let drive_client = company.authenticate_google_drive(db).await?;
     // Figure out where our directory is.
@@ -797,26 +807,4 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
     document.save_to(&mut buffer)?;
     Ok(buffer)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Company,
-        db::Database,
-        interviews::{compile_packets, refresh_interviews},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_interviews() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-        refresh_interviews(&db, &oxide).await.unwrap();
-        compile_packets(&db, &oxide).await.unwrap();
-    }
 }

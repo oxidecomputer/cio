@@ -112,6 +112,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(trigger_sync_asset_inventory_create).unwrap();
     api.register(trigger_sync_configs_create).unwrap();
     api.register(trigger_sync_finance_create).unwrap();
+    api.register(trigger_sync_interviews_create).unwrap();
     api.register(trigger_sync_recorded_meetings_create).unwrap();
     api.register(trigger_sync_repos_create).unwrap();
     api.register(trigger_sync_rfds_create).unwrap();
@@ -153,6 +154,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         "sync-asset-inventory",
         "sync-configs",
         "sync-finance",
+        "sync-interviews",
         "sync-recorded-meetings",
         "sync-repos",
         "sync-rfds",
@@ -1764,6 +1766,29 @@ async fn trigger_sync_swag_inventory_create(
     sentry::start_session();
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-swag-inventory").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync interviews. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-interviews",
+}]
+async fn trigger_sync_interviews_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))

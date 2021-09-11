@@ -41,6 +41,7 @@ enum SubCommand {
     SyncAssetInventory(SyncAssetInventory),
     SyncConfigs(SyncConfigs),
     SyncFinance(SyncFinance),
+    SyncInterviews(SyncInterviews),
     SyncRecordedMeetings(SyncRecordedMeetings),
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
@@ -74,6 +75,10 @@ pub struct SyncConfigs {}
 /// A subcommand for running the background job of syncing finance data.
 #[derive(Clap)]
 pub struct SyncFinance {}
+
+/// A subcommand for running the background job of syncing finance data.
+#[derive(Clap)]
+pub struct SyncInterviews {}
 
 /// A subcommand for running the background job of syncing recorded_meetings.
 #[derive(Clap)]
@@ -172,6 +177,16 @@ async fn main() -> Result<()> {
             // Iterate over the companies and update.
             for company in companies {
                 cio_api::finance::refresh_all_finance(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncInterviews(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::interviews::refresh_interviews(&db, &company).await?;
+                cio_api::interviews::compile_packets(&db, &company).await?;
             }
         }
         SubCommand::SyncRecordedMeetings(_) => {
