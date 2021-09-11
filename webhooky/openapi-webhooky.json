@@ -7,7 +7,7 @@
       "url": "https://oxide.computer",
       "email": "webhooks@oxide.computer"
     },
-    "version": "0.0.1"
+    "version": "0.1.0"
   },
   "paths": {
     "/": {
@@ -1492,6 +1492,26 @@
         }
       }
     },
+    "/run/sync-finance": {
+      "post": {
+        "description": "Listen for triggering a function run of sync finance.",
+        "operationId": "trigger_sync_finance_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/run/sync-repos": {
       "post": {
         "description": "Listen for triggering a function run of sync repos.",
@@ -1502,12 +1522,69 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_Uuid",
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-rfds": {
+      "post": {
+        "description": "Listen for triggering a function run of sync RFDs.",
+        "operationId": "trigger_sync_rfds_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-shipments": {
+      "post": {
+        "description": "Listen for triggering a function run of sync shipments.",
+        "operationId": "trigger_sync_shipments_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-travel": {
+      "post": {
+        "description": "Listen for triggering a function run of sync travel.",
+        "operationId": "trigger_sync_travel_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
