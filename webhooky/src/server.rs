@@ -1,6 +1,7 @@
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::{bail, Result};
+use chrono::Utc;
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
 use docusign::DocuSign;
 use dropshot::{
@@ -15,6 +16,10 @@ use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use signal_hook::{
+    consts::{SIGINT, SIGTERM},
+    iterator::Signals,
+};
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
@@ -108,6 +113,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
+    api.register(trigger_cleanup_create).unwrap();
 
     api.register(trigger_sync_applications_create).unwrap();
     api.register(trigger_sync_asset_inventory_create).unwrap();
@@ -145,6 +151,8 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
      */
     let api_context = Context::new(schema, logger).await;
 
+    // Copy the Server struct so we can move it into our loop.
+    let svr = s.clone();
     if s.do_cron {
         /*
          * Setup our cron jobs to run every few hours.
@@ -181,7 +189,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
 
                 // TODO: Stagger the starts.
                 for j in &cron_jobs {
-                    if let Err(e) = start_job(&s.address, j).await {
+                    if let Err(e) = start_job(&svr.address, j).await {
                         sentry_anyhow::capture_anyhow(&e);
                     }
                 }
@@ -194,7 +202,27 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
      */
     let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)?.start();
 
-    // TODO: Listen for ^C and cleanup gracefully.
+    // For Cloud run & ctrl+c, shutdown gracefully.
+    // "The main process inside the container will receive SIGTERM, and after a grace period,
+    // SIGKILL."
+    // Regsitering SIGKILL here will panic at runtime, so let's avoid that.
+    let mut signals = Signals::new(&[SIGINT, SIGTERM])?;
+
+    tokio::spawn(async move {
+        for sig in signals.forever() {
+            info!("received signal: {:?}", sig);
+            info!("triggering cleanup...");
+
+            // Run the cleanup job.
+            if let Err(e) = start_job(&s.address, "cleanup").await {
+                sentry_anyhow::capture_anyhow(&e);
+            }
+            // Exit the process.
+            info!("all clean, exiting!");
+            std::process::exit(0);
+        }
+    });
+
     server.await.unwrap();
 
     Ok(())
@@ -1832,6 +1860,40 @@ async fn trigger_sync_applications_create(
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
+}
+
+/** Listen for triggering a cleanup of all in-progress sagas, we typically run this when the server
+ * is shutting down. */
+#[endpoint {
+    method = POST,
+    path = "/run/cleanup",
+}]
+async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseAccepted<()>, HttpError> {
+    sentry::start_session();
+
+    let ctx = rqctx.context();
+
+    // Set all the in-progress sagas to 'interrupted'.
+    for saga in ctx.sec.saga_list(None, std::num::NonZeroU32::new(1000).unwrap()).await {
+        println!("saga: {:#?}", saga);
+        // Get the saga in the database.
+        if let Some(mut f) = Function::get_from_db(&ctx.db, saga.id.to_string()) {
+            // We only care about jobs that aren't completed.
+            if f.status != octorust::types::JobStatus::Completed.to_string() {
+                // Let's set the job to "Completed".
+                f.status = octorust::types::JobStatus::Completed.to_string();
+                // Let's set the conclusion to "Cancelled".
+                f.conclusion = octorust::types::Conclusion::Cancelled.to_string();
+                f.completed_at = Some(Utc::now());
+
+                f.update(&ctx.db).await.map_err(handle_anyhow_err_as_http_err)?;
+                info!("set saga `{}` `{}` as `{}`", f.name, f.saga_id, f.status);
+            }
+        }
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted(()))
 }
 
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {

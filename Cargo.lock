@@ -663,6 +663,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clokwerk"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a99373edf782eec8fde0d52bd2f60e4ae5eaca31f1d2cf5aec68243849a37a9"
+dependencies = [
+ "chrono",
+]
+
+[[package]]
 name = "cloudflare"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4158,6 +4167,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal-hook"
+version = "0.3.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c98891d737e271a2954825ef19e46bd16bdb98e2746f2eec4f7a4ef7946efd1"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5263,6 +5282,7 @@ dependencies = [
  "chrono-humanize",
  "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?branch=master)",
  "clap 3.0.0-beta.4",
+ "clokwerk",
  "diesel",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.5.2-dev",
@@ -5293,6 +5313,7 @@ dependencies = [
  "serde_urlencoded 0.7.0",
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "signal-hook",
  "slack-chat-api 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog",
  "slog-async",

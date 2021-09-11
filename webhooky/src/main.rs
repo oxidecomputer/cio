@@ -54,7 +54,7 @@ enum SubCommand {
 }
 
 /// A subcommand for running the server.
-#[derive(Clap)]
+#[derive(Clap, Clone)]
 pub struct Server {
     /// IP address and port that the server should listen
     #[clap(short, long, default_value = "0.0.0.0:8080")]
