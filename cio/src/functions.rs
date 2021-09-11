@@ -1,7 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use log::info;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -49,7 +48,6 @@ impl UpdateAirtableRecord<Function> for Function {
 impl Function {
     /// Update a job from SagaCreateParams.
     pub async fn from_saga_create_params(db: &Database, saga: &steno::SagaCreateParams) -> Result<Self> {
-        info!("got saga create params: {:?}", saga);
         let status = match saga.state {
             steno::SagaCachedState::Running => octorust::types::JobStatus::InProgress,
             steno::SagaCachedState::Unwinding => octorust::types::JobStatus::InProgress,
@@ -76,7 +74,6 @@ impl Function {
         saga_id: &steno::SagaId,
         state: &steno::SagaCachedState,
     ) -> Result<Self> {
-        info!("got saga {} cached state: {:?}", saga_id, state);
         // Get the saga from it's id.
         let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
 
@@ -98,7 +95,6 @@ impl Function {
 
     /// Update a job from SagaNodeEvent.
     pub async fn from_saga_node_event(db: &Database, event: &steno::SagaNodeEvent) -> Result<Self> {
-        info!("got saga node event: {:?}", event);
         // Get the saga from it's id.
         let nf = Function::get_from_db(db, event.saga_id.to_string()).unwrap();
 

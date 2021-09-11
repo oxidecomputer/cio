@@ -1,4 +1,4 @@
-use std::{env, fmt, sync::Arc};
+use std::{env, fmt, process::Command, sync::Arc};
 
 use anyhow::{bail, Result};
 use chrono::Utc;
@@ -88,7 +88,7 @@ pub async fn do_saga(
         Ok(s) => {
             // Save the success output to the logs.
             // For each function.
-            let log = s.lookup_output::<FnOutput>(cmd_name).unwrap();
+            let log = s.lookup_output::<FnOutput>(cmd_name)?;
 
             f.logs = log.0.trim().to_string();
             f.conclusion = octorust::types::Conclusion::Success.to_string();
@@ -141,8 +141,23 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     }
 }
 
+// We re-exec our current binary so we can get the best log output.
+// The only downside is we are creating more connections to the database.
 fn reexec(cmd: &str) -> Result<String> {
     let exe = env::current_exe()?;
 
-    Ok(String::new())
+    let output = Command::new(exe).args([cmd]).output()?;
+
+    // Format the output.
+    let s = format!(
+        "{}\n\n\n======== STDERR ========\n\n{}",
+        String::from_utf8(output.stdout)?,
+        String::from_utf8(output.stderr)?,
+    );
+
+    if output.status.success() {
+        Ok(s)
+    } else {
+        bail!(s)
+    }
 }
