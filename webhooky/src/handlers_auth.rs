@@ -18,7 +18,7 @@ use ramp_api::Client as Ramp;
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::{AuthCallback, Context};
+use crate::server::{AuthCallback, Context};
 
 pub async fn handle_auth_google_callback(
     rqctx: Arc<RequestContext<Context>>,

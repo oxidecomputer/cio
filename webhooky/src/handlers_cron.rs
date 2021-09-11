@@ -5,7 +5,7 @@ use cio_api::{companies::Companys, functions::Function};
 use dropshot::{Path, RequestContext};
 use log::info;
 
-use crate::{Context, FunctionPathParams};
+use crate::server::{Context, FunctionPathParams};
 
 pub async fn handle_get_function_by_uuid(
     rqctx: Arc<RequestContext<Context>>,

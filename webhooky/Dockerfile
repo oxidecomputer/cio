@@ -40,4 +40,4 @@ RUN gem install \
 
 COPY --from=cargo-build /usr/src/webhooky/target/release/webhooky /usr/bin/webhooky
 
-CMD ["webhooky"]
+CMD ["webhooky", "server"]
