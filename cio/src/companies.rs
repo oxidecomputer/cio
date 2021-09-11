@@ -171,7 +171,24 @@ impl Company {
             .first::<APIToken>(&db.conn())
         {
             if !token.endpoint.is_empty() {
-                Slack::post_to_channel(&token.endpoint, &value.clone()).await?;
+                // Post to the endpoint.
+                let client = reqwest::Client::new();
+                let resp = client
+                    .post(&token.endpoint)
+                    .body(reqwest::Body::from(value.to_string()))
+                    .send()
+                    .await?;
+
+                match resp.status() {
+                    reqwest::StatusCode::OK => (),
+                    s => {
+                        bail!(
+                            "posting to slack channel failed with status code `{}`: {}",
+                            s,
+                            resp.text().await?
+                        )
+                    }
+                }
             }
         }
 
