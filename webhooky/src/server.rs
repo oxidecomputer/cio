@@ -1508,10 +1508,10 @@ async fn listen_get_function_logs_by_uuid(
 }]
 async fn trigger_sync_repos_create(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseAccepted<Vec<uuid::Uuid>>, HttpError> {
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_sync_repos_create(rqctx).await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-repos").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))

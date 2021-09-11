@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
-use cio_api::{companies::Companys, functions::Function};
+use cio_api::functions::Function;
 use dropshot::{Path, RequestContext};
 use log::info;
 
@@ -35,21 +35,14 @@ pub async fn handle_get_function_logs_by_uuid(
     Ok(f.logs)
 }
 
-pub async fn handle_sync_repos_create(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<uuid::Uuid>> {
+pub async fn handle_reexec_cmd(rqctx: Arc<RequestContext<Context>>, cmd_name: &str) -> Result<uuid::Uuid> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    let mut fns: Vec<uuid::Uuid> = Vec::new();
-    let companies = Companys::get_from_db(db, 1)?;
-    // Iterate over the companies and update.
-    for company in companies {
-        let id = uuid::Uuid::new_v4();
+    let id = uuid::Uuid::new_v4();
 
-        // Run the saga.
-        cio_api::sagas::sync_repos(db, &api_context.sec, &id, &company).await?;
+    // Run the saga.
+    crate::sagas::run_cmd(db, &api_context.sec, &id, cmd_name).await?;
 
-        fns.push(id);
-    }
-
-    Ok(fns)
+    Ok(id)
 }
