@@ -38,12 +38,16 @@ struct Opts {
 enum SubCommand {
     Server(Server),
 
+    SyncAssetInventory(SyncAssetInventory),
+    SyncConfigs(SyncConfigs),
     SyncFinance(SyncFinance),
+    SyncRecordedMeetings(SyncRecordedMeetings),
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
     SyncRFDs(SyncRFDs),
     SyncShipments(SyncShipments),
     SyncShorturls(SyncShorturls),
+    SyncSwagInventory(SyncSwagInventory),
     SyncTravel(SyncTravel),
 }
 
@@ -59,9 +63,21 @@ pub struct Server {
     spec_file: Option<std::path::PathBuf>,
 }
 
+/// A subcommand for running the background job of syncing asset inventory.
+#[derive(Clap)]
+pub struct SyncAssetInventory {}
+
+/// A subcommand for running the background job of syncing configs.
+#[derive(Clap)]
+pub struct SyncConfigs {}
+
 /// A subcommand for running the background job of syncing finance data.
 #[derive(Clap)]
 pub struct SyncFinance {}
+
+/// A subcommand for running the background job of syncing recorded_meetings.
+#[derive(Clap)]
+pub struct SyncRecordedMeetings {}
 
 /// A subcommand for running the background job of syncing repos.
 #[derive(Clap)]
@@ -78,6 +94,10 @@ pub struct SyncShipments {}
 /// A subcommand for running the background job of syncing shorturls.
 #[derive(Clap)]
 pub struct SyncShorturls {}
+
+/// A subcommand for running the background job of syncing swag inventory.
+#[derive(Clap)]
+pub struct SyncSwagInventory {}
 
 /// A subcommand for running the background job of syncing travel data.
 #[derive(Clap)]
@@ -127,6 +147,24 @@ async fn main() -> Result<()> {
         SubCommand::Server(s) => {
             crate::server::server(s, logger).await?;
         }
+        SubCommand::SyncAssetInventory(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::asset_inventory::refresh_asset_items(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncConfigs(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::configs::refresh_db_configs_and_airtable(&db, &company).await?;
+            }
+        }
         SubCommand::SyncFinance(_) => {
             let db = Database::new();
             let companies = Companys::get_from_db(&db, 1)?;
@@ -134,6 +172,16 @@ async fn main() -> Result<()> {
             // Iterate over the companies and update.
             for company in companies {
                 cio_api::finance::refresh_all_finance(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncRecordedMeetings(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::recorded_meetings::refresh_zoom_recorded_meetings(&db, &company).await?;
+                cio_api::recorded_meetings::refresh_google_recorded_meetings(&db, &company).await?;
             }
         }
         SubCommand::SyncRepos(_) => {
@@ -169,6 +217,17 @@ async fn main() -> Result<()> {
         }
         SubCommand::SyncShorturls(_) => {
             cio_api::shorturls::refresh_shorturls().await?;
+        }
+        SubCommand::SyncSwagInventory(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::swag_inventory::refresh_swag_items(&db, &company).await?;
+                cio_api::swag_inventory::refresh_swag_inventory_items(&db, &company).await?;
+                cio_api::swag_inventory::refresh_barcode_scans(&db, &company).await?;
+            }
         }
         SubCommand::SyncTravel(_) => {
             let db = Database::new();

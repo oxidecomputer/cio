@@ -86,6 +86,11 @@ impl UpdateAirtableRecord<SwagItem> for SwagItem {
 
 /// Sync swag items from Airtable.
 pub async fn refresh_swag_items(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_swag.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SwagItem>> = company
         .authenticate_airtable(&company.airtable_base_id_swag)
@@ -99,6 +104,8 @@ pub async fn refresh_swag_items(db: &Database, company: &Company) -> Result<()> 
         db_item.airtable_record_id = item_record.id.to_string();
         db_item.update(db).await?;
     }
+
+    SwagItems::get_from_db(db, company.id)?.update_airtable(db).await?;
 
     Ok(())
 }
@@ -455,6 +462,11 @@ impl SwagInventoryItem {
 
 /// Sync swag inventory items from Airtable.
 pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_swag.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the Google Drive client.
     let drive_client = company.authenticate_google_drive(db).await?;
 
@@ -480,6 +492,10 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> R
         db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
         db_inventory_item.update(db).await?;
     }
+
+    SwagInventoryItems::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }
@@ -577,69 +593,13 @@ impl BarcodeScan {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Company,
-        db::Database,
-        swag_inventory::{
-            refresh_swag_inventory_items, refresh_swag_items, BarcodeScans, SwagInventoryItems, SwagItems,
-        },
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_swag_items() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_swag_items(&db, &oxide).await.unwrap();
-        SwagItems::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
+pub async fn refresh_barcode_scans(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_swag.is_empty() {
+        // Return early.
+        return Ok(());
     }
 
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_swag_inventory_items() {
-        crate::utils::setup_logger();
+    BarcodeScans::get_from_db(db, company.id)?.update_airtable(db).await?;
 
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_swag_inventory_items(&db, &oxide).await.unwrap();
-        SwagInventoryItems::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_swag_inventory_refresh_barcode_scans() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        BarcodeScans::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
+    Ok(())
 }

@@ -2850,22 +2850,3 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
 
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::{companies::Companys, configs::refresh_db_configs_and_airtable, db::Database};
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_configs() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1).unwrap();
-        // Iterate over the companies and update.
-        for company in companies {
-            refresh_db_configs_and_airtable(&db, &company).await.unwrap();
-        }
-    }
-}

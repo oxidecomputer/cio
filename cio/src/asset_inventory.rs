@@ -265,6 +265,11 @@ impl AssetItem {
 
 /// Sync asset items from Airtable.
 pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_assets.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the Google Drive client.
     let drive_client = company.authenticate_google_drive(db).await?;
 
@@ -295,33 +300,7 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()>
         db_item.update(db).await?;
     }
 
+    AssetItems::get_from_db(db, company.id)?.update_airtable(db).await?;
+
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        asset_inventory::{refresh_asset_items, AssetItems},
-        companies::Company,
-        db::Database,
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_asset_items() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_asset_items(&db, &oxide).await.unwrap();
-        AssetItems::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
 }
