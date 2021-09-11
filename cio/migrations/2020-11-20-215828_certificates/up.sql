@@ -5,5 +5,8 @@ CREATE TABLE certificates (
     private_key TEXT NOT NULL,
     valid_days_left INTEGER NOT NULL,
     expiration_date DATE NOT NULL,
+    repos [] TEXT NOT NULL,
+    certificate_github_actions_secret_name VARCHAR NOT NULL,
+    private_key_github_actions_secret_name VARCHAR NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )

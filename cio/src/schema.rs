@@ -331,6 +331,9 @@ table! {
         private_key -> Text,
         valid_days_left -> Int4,
         expiration_date -> Date,
+        repos -> Array<Text>,
+        certificate_github_actions_secret_name -> Varchar,
+        private_key_github_actions_secret_name -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
