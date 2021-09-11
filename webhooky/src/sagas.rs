@@ -166,15 +166,16 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
 
     let mut start = Instant::now();
 
+    // Scope a new logger for this command.
+    let logger = slog_scope::logger().new(slog::slog_o!("cmd" => cmd.to_string(), "saga_id" => saga_id.to_string()));
+
     for line in out.lines() {
         match line {
             Ok(l) => {
                 output.push_str(&l);
                 output.push('\n');
 
-                // TODO, also pipe the logs to our logger but somehow nest them
-                // or make it apparent its a child.
-                println!("{}", l);
+                slog::info!(logger, "{}", l);
 
                 // Only save the logs when we have time, just do it async and don't
                 // wait on it, else we will be waiting forever.
