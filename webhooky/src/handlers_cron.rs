@@ -37,8 +37,7 @@ pub async fn handle_get_function_logs_by_uuid(
     Ok(f.logs)
 }
 
-pub async fn handle_reexec_cmd(rqctx: Arc<RequestContext<Context>>, cmd_name: &str) -> Result<uuid::Uuid> {
-    let api_context = rqctx.context();
+pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str) -> Result<uuid::Uuid> {
     let db = &api_context.db;
 
     // Check if we already have an in-progress run for this job.

@@ -137,6 +137,35 @@ pub async fn server(s: &crate::Server, logger: slog::Logger) -> Result<()> {
     let api_context = Context::new(schema, logger).await;
 
     /*
+     * TODO: Setup our cron jobs to run every few hours.
+     */
+    /*let mut interval = tokio::time::interval(std::time::Duration::from_secs(6 * 60 * 60));
+    tokio::spawn(async move {
+        // Make an infinite loop.
+        loop {
+            // Wait for our interval.
+            interval.tick().await;
+
+            // TODO: Stagger the starts.
+            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-finance").await {
+                sentry_anyhow::capture_anyhow(&e);
+            }
+            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-repos").await {
+                sentry_anyhow::capture_anyhow(&e);
+            }
+            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-rfds").await {
+                sentry_anyhow::capture_anyhow(&e);
+            }
+            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-shipments").await {
+                sentry_anyhow::capture_anyhow(&e);
+            }
+            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(&api_context, "sync-travel").await {
+                sentry_anyhow::capture_anyhow(&e);
+            }
+        }
+    });*/
+
+    /*
      * Set up the server.
      */
     let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)?.start();
@@ -1515,7 +1544,7 @@ async fn trigger_sync_repos_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-repos").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-repos").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1538,7 +1567,7 @@ async fn trigger_sync_rfds_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-rfds").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-rfds").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1561,7 +1590,7 @@ async fn trigger_sync_travel_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-travel").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1584,7 +1613,7 @@ async fn trigger_sync_finance_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-finance").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-finance").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1607,7 +1636,7 @@ async fn trigger_sync_shipments_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-shipments").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shipments").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
