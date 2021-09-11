@@ -1,18 +1,21 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     env, fs,
     io::Write,
     path::{Path, PathBuf},
     str::from_utf8,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use log::info;
 use octorust::Client as GitHub;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
 use sentry::IntoDsn;
 use serde_json::Value;
+use sodiumoxide::crypto::secretbox;
+
+use crate::companies::Company;
 
 /// Write a file.
 pub fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
@@ -316,13 +319,49 @@ pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
 
 pub fn decode_base64(c: &str) -> Vec<u8> {
     let v = c.replace("\n", "");
-    let decoded = base64::decode_config(&v, base64::STANDARD).unwrap();
+    let decoded = base64::decode(&v).unwrap();
     decoded.trim().to_vec()
 }
 
 pub fn decode_base64_to_string(c: &str) -> String {
     let decoded = decode_base64(c);
     from_utf8(&decoded).unwrap().trim().to_string()
+}
+
+pub async fn encrypt_github_secrets(
+    github: &octorust::Client,
+    company: &Company,
+    repo: &str,
+    s: BTreeMap<String, String>,
+) -> Result<BTreeMap<String, String>> {
+    sodiumoxide::init().map_err(|_| anyhow!("initializing sodiumoxide failed!"))?;
+
+    // Get the public key for the repo.
+    let pk = github.actions().get_repo_public_key(&company.github_org, repo).await?;
+    let pke = &base64::decode(pk.key)?;
+
+    // Resize our slice.
+    let mut spke: [u8; 32] = Default::default();
+    for (i, v) in pke.iter().enumerate() {
+        spke[i] = *v;
+    }
+
+    let mut secrets = s.clone();
+
+    // Iterate over and encrypt all our secrets.
+    for (name, secret) in &secrets {
+        // Load the key.
+        let key = secretbox::Key(spke);
+        let nonce = secretbox::gen_nonce();
+
+        let ciphertext = secretbox::seal(secret.as_bytes(), &nonce, &key);
+        let encoded = base64::encode(ciphertext);
+
+        secrets.insert(name.to_string(), encoded);
+    }
+
+    // Return our newly encrypted secrets.
+    Ok(secrets)
 }
 
 /// Generate a random string that we can use as a temporary password for new users
@@ -378,5 +417,25 @@ pub fn setup_logger() {
             scope.set_tag("runner.os", env::var("RUNNER_OS").unwrap_or_default());
             scope.set_tag("ci", env::var("CI").unwrap_or_default());
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_utils() {
+        // Get the company id for Oxide.
+        // TODO: split this out per company.
+        let db = crate::db::Database::new();
+        let company = crate::companies::Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        let github = company.authenticate_github().unwrap();
+
+        let mut s: BTreeMap<String, String> = Default::default();
+        s.insert("TESTING".to_string(), "thing".to_string());
+        let secrets = encrypt_github_secrets(&github, &company, "cio", s).await.unwrap();
+        println!("secrets: {:#?}", secrets);
     }
 }

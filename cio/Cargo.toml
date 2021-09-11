@@ -84,6 +84,7 @@ sheets = "^0.2.0"
 shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
 slack-chat-api = "^0.1.16"
+sodiumoxide = "^0.2.7"
 #slack-chat-api = { path = "../slack" }
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tailscale-api = "^0.1.2"
