@@ -333,7 +333,7 @@ pub async fn encrypt_github_secrets(
     company: &Company,
     repo: &str,
     s: BTreeMap<String, String>,
-) -> Result<BTreeMap<String, String>> {
+) -> Result<(String, BTreeMap<String, String>)> {
     sodiumoxide::init().map_err(|_| anyhow!("initializing sodiumoxide failed!"))?;
 
     // Get the public key for the repo.
@@ -360,8 +360,8 @@ pub async fn encrypt_github_secrets(
         secrets.insert(name, encoded);
     }
 
-    // Return our newly encrypted secrets.
-    Ok(secrets)
+    // Return our newly encrypted secrets and the key ID.
+    Ok((pk.key_id.to_string(), secrets))
 }
 
 /// Generate a random string that we can use as a temporary password for new users

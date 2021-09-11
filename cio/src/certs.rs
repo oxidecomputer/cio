@@ -25,7 +25,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     schema::certificates,
-    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
+    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, BTreeMap},
 };
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
@@ -351,6 +351,51 @@ impl NewCertificate {
             self.private_key.as_bytes().to_vec(),
         )
         .await?;
+
+        Ok(())
+    }
+
+    /// For the repos given, update the GitHub actions secrets with the new cert and key.
+    pub async fn update_github_action_secrets(&self, github: &octorust::Client, company: &Company) -> Result<()> {
+        if self.repos.is_empty()
+            || self.certificate_github_actions_secret_name.is_empty()
+            || self.private_key_github_actions_secret_name.is_empty()
+        {
+            // If we have no repos to update return early.
+            return Ok(());
+        }
+
+        let mut plain_text: BTreeMap<String, String> = Default::default();
+        plain_text.push(
+            self.certificate_github_actions_secret_name.to_string(),
+            self.certificate.to_string(),
+        );
+        plain_text.push(
+            self.private_key_github_actions_secret_name.to_string(),
+            self.private_key.to_string(),
+        );
+
+        for repo in &self.repos {
+            // First let's encrypt the secrets for the repo.
+            // This uses the repo's public key.
+            let (key_id, secrets) = crate::utils::encrypt_github_secrets(github, company, repo, plain_text).await?;
+
+            // Update each secret.
+            for (name, secret) in secrets {
+                github
+                    .actions()
+                    .create_or_update_repo_secret(
+                        &company.github_org,
+                        repo,
+                        &name,
+                        &octorust::types::ActionsCreateUpdateRepoSecretRequest {
+                            encrypted_value: secret.to_string(),
+                            key_id: key_id.to_string(),
+                        },
+                    )
+                    .await?;
+            }
+        }
 
         Ok(())
     }

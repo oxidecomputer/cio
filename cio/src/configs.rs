@@ -2652,6 +2652,9 @@ pub async fn sync_certificates(
 
             // Save the certificate to disk.
             certificate.save_to_github_repo(github, company).await?;
+
+            // Update the Github Action secrets, with the new certificates if there are some.
+            certificate.update_github_action_secrets(github, company).await?;
         }
 
         if certificate.certificate.is_empty() {
