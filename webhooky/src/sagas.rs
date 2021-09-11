@@ -17,10 +17,13 @@ pub struct Saga;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Params {
     cmd_name: String,
+    saga_id: uuid::Uuid,
 }
 
 #[derive(Debug)]
-pub struct Context {}
+pub struct Context {
+    db: Database,
+}
 
 impl steno::SagaType for Saga {
     // Type for the saga's parameters
@@ -57,9 +60,10 @@ pub async fn do_saga(
     template: steno::SagaTemplate<Saga>,
     cmd_name: &str,
 ) -> Result<()> {
-    let context = Arc::new(Context {});
+    let context = Arc::new(Context { db: db.clone() });
     let params = Params {
         cmd_name: cmd_name.to_string(),
+        saga_id: *id,
     };
 
     let saga_template = Arc::new(template);
@@ -132,11 +136,13 @@ pub async fn run_cmd(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, cmd
     do_saga(db, sec, id, builder.build(), cmd_name).await
 }
 async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<FnOutput, steno::ActionError> {
+    let db = &action_context.user_data().db;
     let cmd_name = &action_context.saga_params().cmd_name;
+    let saga_id = &action_context.saga_params().saga_id;
 
     // Execute the function within the scope of the logger.
     // Print the error and return an ActionError.
-    match reexec(cmd_name) {
+    match reexec(db, cmd_name, saga_id).await {
         Ok(s) => Ok(FnOutput(s)),
         Err(err) => {
             // Return an action error but include the logs.
@@ -148,7 +154,7 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
 
 // We re-exec our current binary so we can get the best log output.
 // The only downside is we are creating more connections to the database.
-fn reexec(cmd: &str) -> Result<String> {
+async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String> {
     let exe = env::current_exe()?;
 
     // TODO, also pipe the logs to our logger but somehow nest them
@@ -161,8 +167,8 @@ fn reexec(cmd: &str) -> Result<String> {
 
     let mut output = Vec::new();
 
-    // TODO: Should be moved to a function that accepts something implementing `Write`
-    {
+    // TODO: Should be moved to a function that accepts something implementing `Write`.
+    async {
         let stdout = child.stdout.as_mut().expect("wasn't stdout");
         let stderr = child.stderr.as_mut().expect("wasn't stderr");
 
@@ -175,22 +181,27 @@ fn reexec(cmd: &str) -> Result<String> {
                     output.write_all(stdout)?;
                     output.write_all(stderr)?;
 
+                    // Save the new output to the database.
+                    // TODO: we might want to buffer this so it's not so many requests.
+                    Function::add_logs(db, saga_id, &output).await?;
+
                     (stdout.len(), stderr.len())
                 }
                 other => bail!("got some other pipe than stdout and stderr {:?}", other),
             };
 
             if stdout_bytes == 0 && stderr_bytes == 0 {
-                // Seems less-than-ideal; should be some way of
+                // TODO: Seems less-than-ideal; should be some way of
                 // telling if the child has actually exited vs just
                 // not outputting anything.
-                break;
+                return Ok(());
             }
 
             stdout.consume(stdout_bytes);
             stderr.consume(stderr_bytes);
         }
     }
+    .await?;
 
     let status = child.wait()?;
 

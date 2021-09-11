@@ -46,6 +46,21 @@ impl UpdateAirtableRecord<Function> for Function {
 }
 
 impl Function {
+    /// Add logs to a running saga.
+    pub async fn add_logs(db: &Database, saga_id: &uuid::Uuid, logs: &[u8]) -> Result<()> {
+        if logs.is_empty() {
+            // Return early.
+            return Ok(());
+        }
+
+        // Get the saga from it's id.
+        let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
+        nf.logs = String::from_utf8(logs.to_vec())?.trim().to_string();
+        nf.update(db).await?;
+
+        Ok(())
+    }
+
     /// Update a job from SagaCreateParams.
     pub async fn from_saga_create_params(db: &Database, saga: &steno::SagaCreateParams) -> Result<Self> {
         let status = match saga.state {
