@@ -1,8 +1,8 @@
 use std::{
     env, fmt,
-    io::{BufRead, BufReader, Write},
-    process::{Command, Stdio},
+    io::{BufRead, BufReader},
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use anyhow::{bail, Result};
@@ -105,7 +105,7 @@ pub async fn do_saga(
         }
         Err(e) => {
             // Save the error to the logs.
-            f.logs = format!("{:?}", e);
+            f.logs = format!("{}\n\n{:?}", f.logs, e).trim().to_string();
             f.conclusion = octorust::types::Conclusion::Failure.to_string();
             f.completed_at = Some(Utc::now());
 
@@ -157,60 +157,44 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
 async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String> {
     let exe = env::current_exe()?;
 
-    // TODO, also pipe the logs to our logger but somehow nest them
-    // or make it apparent its a child.
-    let mut child = Command::new(exe)
-        .args([cmd])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+    let child = duct::cmd!(exe, cmd);
+    let reader = child.stderr_to_stdout().reader()?;
 
-    let mut output = Vec::new();
+    let mut output = String::new();
 
-    // TODO: Should be moved to a function that accepts something implementing `Write`.
-    async {
-        let stdout = child.stdout.as_mut().expect("wasn't stdout");
-        let stderr = child.stderr.as_mut().expect("wasn't stderr");
+    let out = BufReader::new(reader);
 
-        let mut stdout = BufReader::new(stdout);
-        let mut stderr = BufReader::new(stderr);
+    let mut start = Instant::now();
 
-        loop {
-            let (stdout_bytes, stderr_bytes) = match (stdout.fill_buf(), stderr.fill_buf()) {
-                (Ok(stdout), Ok(stderr)) => {
-                    output.write_all(stdout)?;
-                    output.write_all(stderr)?;
+    for line in out.lines() {
+        match line {
+            Ok(l) => {
+                output.push_str(&l);
+                output.push('\n');
 
-                    // Save the new output to the database.
-                    // TODO: we might want to buffer this so it's not so many requests.
+                // TODO, also pipe the logs to our logger but somehow nest them
+                // or make it apparent its a child.
+                println!("{}", l);
+
+                // Only save the logs when we have time, just do it async and don't
+                // wait on it, else we will be waiting forever.
+                // Update our start time after saving.
+                if start.elapsed() > Duration::from_secs(15) {
+                    // Save the logs.
                     Function::add_logs(db, saga_id, &output).await?;
 
-                    (stdout.len(), stderr.len())
+                    // Reset our start time to now.
+                    start = Instant::now();
                 }
-                other => bail!("got some other pipe than stdout and stderr {:?}", other),
-            };
-
-            if stdout_bytes == 0 && stderr_bytes == 0 {
-                // TODO: Seems less-than-ideal; should be some way of
-                // telling if the child has actually exited vs just
-                // not outputting anything.
-                return Ok(());
             }
+            Err(e) => {
+                // Save the logs.
+                Function::add_logs(db, saga_id, &output).await?;
 
-            stdout.consume(stdout_bytes);
-            stderr.consume(stderr_bytes);
+                bail!(e);
+            }
         }
     }
-    .await?;
 
-    let status = child.wait()?;
-
-    // Format the output as a string.
-    let s = String::from_utf8(output)?.trim().to_string();
-
-    if status.success() {
-        Ok(s)
-    } else {
-        bail!(s)
-    }
+    Ok(output)
 }

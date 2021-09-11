@@ -47,7 +47,7 @@ impl UpdateAirtableRecord<Function> for Function {
 
 impl Function {
     /// Add logs to a running saga.
-    pub async fn add_logs(db: &Database, saga_id: &uuid::Uuid, logs: &[u8]) -> Result<()> {
+    pub async fn add_logs(db: &Database, saga_id: &uuid::Uuid, logs: &str) -> Result<()> {
         if logs.is_empty() {
             // Return early.
             return Ok(());
@@ -55,7 +55,7 @@ impl Function {
 
         // Get the saga from it's id.
         let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
-        nf.logs = String::from_utf8(logs.to_vec())?.trim().to_string();
+        nf.logs = logs.to_string();
         nf.update(db).await?;
 
         Ok(())
