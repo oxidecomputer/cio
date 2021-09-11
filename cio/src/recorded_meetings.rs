@@ -270,7 +270,9 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
 
 /// Sync the recorded meetings from Google.
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
-    let mut gcal = company.authenticate_google_calendar(db).await?;
+    let gcal = company.authenticate_google_calendar(db).await?;
+    let drive_client = company.authenticate_google_drive(db).await?;
+
     let revai = RevAI::new_from_env();
 
     // Get the list of our calendars.
@@ -282,10 +284,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     // Iterate over the calendars.
     for calendar in calendars {
         if calendar.id.ends_with(&company.gsuite_domain) {
-            // We get a new token since likely our other has expired.
-            // TODO: bake this into the client instead.
-            gcal = company.authenticate_google_calendar(db).await?;
-
             // Let's get all the events on this calendar and try and see if they
             // have a meeting recorded.
             info!("getting events for {}", calendar.id);
@@ -348,10 +346,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     // Continue early, we don't care.
                     continue;
                 }
-
-                // We get the drive client here so we know it is not expired.
-                // TODO: bake this into the client and then move this to the top of the function.
-                let drive_client = company.authenticate_google_drive(db).await?;
 
                 // If we have a chat log, we should download it.
                 let mut chat_log = "".to_string();
