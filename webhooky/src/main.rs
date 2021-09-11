@@ -62,6 +62,10 @@ pub struct Server {
     /// Sets an optional output file for the API spec
     #[clap(short, long, parse(from_os_str), value_hint = clap::ValueHint::FilePath)]
     spec_file: Option<std::path::PathBuf>,
+
+    /// Sets if the server should run cron jobs in the background
+    #[clap(short, long)]
+    do_cron: bool,
 }
 
 /// A subcommand for running the background job of syncing asset inventory.

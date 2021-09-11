@@ -145,39 +145,41 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
      */
     let api_context = Context::new(schema, logger).await;
 
-    /*
-     * Setup our cron jobs to run every few hours.
-     */
-    let hours = 6;
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(hours * 60 * 60));
-    let cron_jobs = vec![
-        "sync-asset-inventory",
-        "sync-configs",
-        "sync-finance",
-        "sync-interviews",
-        "sync-recorded-meetings",
-        "sync-repos",
-        "sync-rfds",
-        "sync-shipments",
-        "sync-shorturls",
-        "sync-swag-inventory",
-        "sync-travel",
-    ];
-    tokio::spawn(async move {
-        // Make an infinite loop.
-        loop {
-            // Wait for our interval.
-            info!("waiting for `{}` hours to trigger jobs...", hours);
-            interval.tick().await;
+    if s.do_cron {
+        /*
+         * Setup our cron jobs to run every few hours.
+         */
+        let hours = 6;
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(hours * 60 * 60));
+        let cron_jobs = vec![
+            "sync-asset-inventory",
+            "sync-configs",
+            "sync-finance",
+            "sync-interviews",
+            "sync-recorded-meetings",
+            "sync-repos",
+            "sync-rfds",
+            "sync-shipments",
+            "sync-shorturls",
+            "sync-swag-inventory",
+            "sync-travel",
+        ];
+        tokio::spawn(async move {
+            // Make an infinite loop.
+            loop {
+                // Wait for our interval.
+                info!("waiting for `{}` hours to trigger jobs...", hours);
+                interval.tick().await;
 
-            // TODO: Stagger the starts.
-            for j in &cron_jobs {
-                if let Err(e) = start_job(&s.address, j).await {
-                    sentry_anyhow::capture_anyhow(&e);
+                // TODO: Stagger the starts.
+                for j in &cron_jobs {
+                    if let Err(e) = start_job(&s.address, j).await {
+                        sentry_anyhow::capture_anyhow(&e);
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
     /*
      * Set up the server.
