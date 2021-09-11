@@ -39,6 +39,7 @@ enum SubCommand {
     Server(Server),
 
     SyncRepos(SyncRepos),
+    #[clap(name = "sync-rfds")]
     SyncRFDs(SyncRFDs),
 }
 
