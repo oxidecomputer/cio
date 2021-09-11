@@ -172,9 +172,9 @@ impl Company {
         {
             if !token.endpoint.is_empty() {
                 let client = reqwest::Client::new();
-                //let resp = client.post(&token.endpoint).json(msg).send().await?;
+                let resp = client.post(&token.endpoint).json(msg).send().await?;
 
-                /*match resp.status() {
+                match resp.status() {
                     reqwest::StatusCode::OK => (),
                     s => {
                         bail!(
@@ -183,7 +183,7 @@ impl Company {
                             resp.text().await?
                         )
                     }
-                }*/
+                }
             }
         }
 
