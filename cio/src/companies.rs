@@ -159,7 +159,7 @@ impl Company {
         })
     }
 
-    pub async fn post_to_slack_channel(&self, db: &Database, value: &serde_json::Value) -> Result<()> {
+    pub async fn post_to_slack_channel(&self, db: &Database, msg: &slack_chat_api::FormattedMessage) -> Result<()> {
         // We need to get the url from the api tokens.
         // Only do this if we have a token and the token is not empty.
         if let Ok(token) = api_tokens::dsl::api_tokens
@@ -171,24 +171,19 @@ impl Company {
             .first::<APIToken>(&db.conn())
         {
             if !token.endpoint.is_empty() {
-                // Post to the endpoint.
                 let client = reqwest::Client::new();
-                let resp = client
-                    .post(&token.endpoint)
-                    .body(reqwest::Body::from(value.to_string()))
-                    .send()
-                    .await?;
+                //let resp = client.post(&token.endpoint).json(msg).send().await?;
 
-                match resp.status() {
+                /*match resp.status() {
                     reqwest::StatusCode::OK => (),
                     s => {
                         bail!(
-                            "posting to slack channel failed with status code `{}`: {}",
+                            "posting to slack channel failed with status code `{}`: {}`",
                             s,
                             resp.text().await?
                         )
                     }
-                }
+                }*/
             }
         }
 

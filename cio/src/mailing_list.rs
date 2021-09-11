@@ -7,7 +7,6 @@ use chrono_humanize::HumanTime;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::{
@@ -105,20 +104,22 @@ impl NewMailingListSubscriber {
 
         HumanTime::from(dur)
     }
+}
 
-    /// Convert the mailing list signup into JSON as Slack message.
-    pub fn as_slack_msg(&self) -> Value {
-        let time = self.human_duration();
+/// Convert the mailing list signup into a Slack message.
+impl From<NewMailingListSubscriber> for FormattedMessage {
+    fn from(item: NewMailingListSubscriber) -> Self {
+        let time = item.human_duration();
 
-        let msg = format!("*{}* <mailto:{}|{}>", self.name, self.email, self.email);
+        let msg = format!("*{}* <mailto:{}|{}>", item.name, item.email, item.email);
 
         let mut interest: MessageBlock = Default::default();
-        if !self.interest.is_empty() {
+        if !item.interest.is_empty() {
             interest = MessageBlock {
                 block_type: MessageBlockType::Section,
                 text: Some(MessageBlockText {
                     text_type: MessageType::Markdown,
-                    text: format!("\n>{}", self.interest),
+                    text: format!("\n>{}", item.interest),
                 }),
                 elements: Default::default(),
                 accessory: Default::default(),
@@ -129,16 +130,16 @@ impl NewMailingListSubscriber {
 
         let updates = format!(
             "podcast updates: _{}_ | newsletter: _{}_ | product updates: _{}_",
-            self.wants_podcast_updates, self.wants_newsletter, self.wants_product_updates,
+            item.wants_podcast_updates, item.wants_newsletter, item.wants_product_updates,
         );
 
         let mut context = "".to_string();
-        if !self.company.is_empty() {
-            context += &format!("works at {} | ", self.company);
+        if !item.company.is_empty() {
+            context += &format!("works at {} | ", item.company);
         }
         context += &format!("subscribed to mailing list {}", time);
 
-        json!(FormattedMessage {
+        FormattedMessage {
             channel: Default::default(),
             attachments: Default::default(),
             blocks: vec![
@@ -175,9 +176,9 @@ impl NewMailingListSubscriber {
                     accessory: Default::default(),
                     block_id: Default::default(),
                     fields: Default::default(),
-                }
+                },
             ],
-        })
+        }
     }
 }
 
