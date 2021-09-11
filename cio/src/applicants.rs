@@ -4732,16 +4732,7 @@ mod tests {
     use diesel::prelude::*;
     use serde_json::json;
 
-    use crate::{
-        applicants::{
-            refresh_background_checks, refresh_db_applicants, refresh_docusign_for_applicants,
-            refresh_new_applicants_and_reviews, update_applicant_reviewers_leaderboard,
-            update_applications_with_scoring_forms, update_applications_with_scoring_results, Applicant, Applicants,
-        },
-        companies::Company,
-        db::Database,
-        schema::applicants,
-    };
+    use crate::{applicants::Applicant, db::Database, schema::applicants};
 
     #[test]
     fn test_serialize_deserialize_applicants() {
@@ -4762,67 +4753,5 @@ mod tests {
         // originally.
         let a: Applicant = serde_json::from_str(&scorers).unwrap();
         assert_eq!(applicant, a);
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_applicants_reviewer_leaderboard() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        update_applicant_reviewers_leaderboard(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_applicants_background_checks() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_background_checks(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_applicants() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        // Do the new applicants.
-        refresh_new_applicants_and_reviews(&db, &oxide).await.unwrap();
-
-        // Do the old applicants from Google sheets.
-        // TODO: eventually remove this.
-        refresh_db_applicants(&db, &oxide).await.unwrap();
-
-        // Refresh DocuSign for the applicants.
-        refresh_docusign_for_applicants(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_reviewers() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        // These come from the sheet at:
-        // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-        update_applications_with_scoring_forms(&db, &oxide).await.unwrap();
-
-        // This must be after update_applications_with_scoring_forms, so that if someone
-        // has done the application then we remove them from the scorers.
-        update_applications_with_scoring_results(&db, &oxide).await.unwrap();
     }
 }

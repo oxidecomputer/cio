@@ -157,20 +157,3 @@ pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
 
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::{applicant_reviews::refresh_reviews, companies::Company, db::Database};
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_applicant_reviews() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_reviews(&db, &oxide).await.unwrap();
-    }
-}

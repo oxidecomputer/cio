@@ -38,6 +38,7 @@ struct Opts {
 enum SubCommand {
     Server(Server),
 
+    SyncApplications(SyncApplications),
     SyncAssetInventory(SyncAssetInventory),
     SyncConfigs(SyncConfigs),
     SyncFinance(SyncFinance),
@@ -68,6 +69,10 @@ pub struct Server {
     do_cron: bool,
 }
 
+/// A subcommand for running the background job of syncing applications.
+#[derive(Clap)]
+pub struct SyncApplications {}
+
 /// A subcommand for running the background job of syncing asset inventory.
 #[derive(Clap)]
 pub struct SyncAssetInventory {}
@@ -80,7 +85,7 @@ pub struct SyncConfigs {}
 #[derive(Clap)]
 pub struct SyncFinance {}
 
-/// A subcommand for running the background job of syncing finance data.
+/// A subcommand for running the background job of syncing interviews.
 #[derive(Clap)]
 pub struct SyncInterviews {}
 
@@ -155,6 +160,36 @@ async fn main() -> Result<()> {
     match opts.subcmd {
         SubCommand::Server(s) => {
             crate::server::server(s, logger).await?;
+        }
+        SubCommand::SyncApplications(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                // Do the new applicants.
+                cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company).await?;
+                cio_api::applicant_reviews::refresh_reviews(&db, &company).await?;
+
+                // Refresh DocuSign for the applicants.
+                cio_api::applicants::refresh_docusign_for_applicants(&db, &company).await?;
+
+                cio_api::applicants::refresh_background_checks(&db, &company).await?;
+
+                // TODO: when we remove google sheets, we no longer need these.
+                //
+                // Do the old applicants from Google sheets.
+                cio_api::applicants::refresh_db_applicants(&db, &company).await?;
+
+                // These come from the sheet at:
+                // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
+                cio_api::applicants::update_applications_with_scoring_forms(&db, &company).await?;
+
+                // This must be after cio_api::applicants::update_applications_with_scoring_forms, so that if someone
+                // has done the application then we remove them from the scorers.
+                cio_api::applicants::update_applications_with_scoring_results(&db, &company).await?;
+                cio_api::applicants::update_applicant_reviewers_leaderboard(&db, &company).await?;
+            }
         }
         SubCommand::SyncAssetInventory(_) => {
             let db = Database::new();

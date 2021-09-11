@@ -109,6 +109,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
 
+    api.register(trigger_sync_applications_create).unwrap();
     api.register(trigger_sync_asset_inventory_create).unwrap();
     api.register(trigger_sync_configs_create).unwrap();
     api.register(trigger_sync_finance_create).unwrap();
@@ -152,6 +153,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         let hours = 6;
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(hours * 60 * 60));
         let cron_jobs = vec![
+            "sync-applications",
             "sync-asset-inventory",
             "sync-configs",
             "sync-finance",
@@ -1798,6 +1800,29 @@ async fn trigger_sync_interviews_create(
     sentry::start_session();
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync applications. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-applications",
+}]
+async fn trigger_sync_applications_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
