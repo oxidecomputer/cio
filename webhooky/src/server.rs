@@ -109,6 +109,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
 
+    api.register(trigger_sync_asset_inventory_create).unwrap();
     api.register(trigger_sync_configs_create).unwrap();
     api.register(trigger_sync_finance_create).unwrap();
     api.register(trigger_sync_recorded_meetings_create).unwrap();
