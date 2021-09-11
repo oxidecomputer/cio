@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
-use chrono::{Duration, Utc};
+use chrono::Utc;
 use chrono_humanize::HumanTime;
 use cio_api::{functions::Function, schema::functions};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -53,12 +53,13 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str) -> Result<
         // If the server stopped and restarted, we might have a lingering job
         // that we want to ignore and instead start a new one.
         // Check if the duration it was started is longer than a few hours ago.
-        let duration_from_now = Utc::now().signed_duration_since(f.created_at);
-        if duration_from_now < Duration::hours(6) {
+        let hours = -6;
+        let duration_from_now = f.created_at.signed_duration_since(Utc::now());
+        if (duration_from_now.num_hours()) > hours {
             info!(
-                "duration from now is `{}`, returning existing job for `{}`",
+                "existing job for `{}` was created `{}`, returning that job",
+                cmd_name,
                 HumanTime::from(duration_from_now),
-                cmd_name
             );
             // TODO: a better way to be to check if we know about the saga.
             // Return that uuid versus starting another.
