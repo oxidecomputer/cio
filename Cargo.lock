@@ -541,7 +541,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#c5575dd188158b923d1fc2d45bbcff76efb8a30c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#71ba52a2e0544247c8f69cb15f963830b698ed5f"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -601,11 +601,6 @@ dependencies = [
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
- "slog",
- "slog-async",
- "slog-scope",
- "slog-stdlog",
- "slog-term",
  "steno",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
@@ -2221,7 +2216,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#c5575dd188158b923d1fc2d45bbcff76efb8a30c"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#71ba52a2e0544247c8f69cb15f963830b698ed5f"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",

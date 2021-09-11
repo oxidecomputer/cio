@@ -365,7 +365,11 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         .await?;
 
                     // Download the file.
-                    let contents = drive_client.files().download_by_id(&chat_log_id).await?;
+                    let contents = drive_client
+                        .files()
+                        .download_by_id(&chat_log_id)
+                        .await
+                        .unwrap_or_default();
                     chat_log = from_utf8(&contents).unwrap_or_default().trim().to_string();
                 }
 
@@ -390,7 +394,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 };
 
                 // Download the video.
-                let video_contents = drive_client.files().download_by_id(&video_id).await?;
+                let video_contents = drive_client.files().download_by_id(&video_id).await.unwrap_or_default();
 
                 // Make sure the contents aren't empty.
                 if video_contents.is_empty() {
