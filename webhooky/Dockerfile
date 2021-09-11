@@ -31,6 +31,9 @@ RUN apt-get update && apt-get install -y \
 	pandoc \
 	poppler-utils \
 	ruby \
+    texlive-latex-base \
+	texlive-fonts-recommended \
+	texlive-fonts-extra \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 

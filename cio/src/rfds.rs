@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     airtable::AIRTABLE_RFD_TABLE,
     companies::Company,
-    core::UpdateAirtableRecord,
+    core::{GitHubPullRequest, UpdateAirtableRecord},
     db::Database,
     repos::FromUrl,
     schema::{rfds as r_f_ds, rfds},
@@ -934,6 +934,15 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     // Authenticate GitHub.
     let github = company.authenticate_github()?;
 
+    // Check if the repo exists, if not exit early.
+    if let Err(e) = github.repos().get(&company.github_org, "rfd").await {
+        if e.to_string().contains("404") {
+            return Ok(());
+        } else {
+            bail!("checking for rfd repo failed: {}", e);
+        }
+    }
+
     let rfds = get_rfds_from_repo(&github, company).await?;
 
     // Sync rfds.
@@ -956,6 +965,9 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
         new_rfd.update(db).await?;
     }
 
+    // Update rfds in airtable.
+    RFDs::get_from_db(db, company.id)?.update_airtable(db).await?;
+
     Ok(())
 }
 
@@ -963,6 +975,15 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
     // Get all the rfds from the database.
     let rfds = RFDs::get_from_db(db, company.id)?;
     let github = company.authenticate_github()?;
+
+    // Check if the repo exists, if not exit early.
+    if let Err(e) = github.repos().get(&company.github_org, "rfd").await {
+        if e.to_string().contains("404") {
+            return Ok(());
+        } else {
+            bail!("checking for rfd repo failed: {}", e);
+        }
+    }
 
     // Get all the PDF files.
     let files = github
@@ -1116,48 +1137,8 @@ mod tests {
     use crate::{
         companies::Company,
         db::Database,
-        rfds::{
-            clean_rfd_html_links, cleanup_rfd_pdfs, refresh_db_rfds, send_rfd_changelog, update_discussion_link,
-            update_state, NewRFD, RFDs,
-        },
+        rfds::{clean_rfd_html_links, send_rfd_changelog, update_discussion_link, update_state, NewRFD},
     };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_rfds_cleanup_pdfs() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        cleanup_rfd_pdfs(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_rfds() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_db_rfds(&db, &oxide).await.unwrap();
-
-        // Update rfds in airtable.
-        RFDs::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
@@ -1449,259 +1430,4 @@ sdf
         title = NewRFD::get_title(content).unwrap();
         assert_eq!(expected, title);
     }
-}
-
-/// A GitHub pull request.
-/// FROM: https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
-#[derive(Debug, Default, Clone, PartialEq, JsonSchema, Deserialize, Serialize)]
-pub struct GitHubPullRequest {
-    #[serde(default)]
-    pub id: i64,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub url: String,
-    /// The HTML location of this pull request.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub html_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub diff_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub patch_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub issue_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub commits_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub review_comments_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub review_comment_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub comments_url: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub statuses_url: String,
-    #[serde(default)]
-    pub number: i64,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub state: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub title: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub body: String,
-    /*pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,*/
-    #[serde(default)]
-    pub closed_at: Option<DateTime<Utc>>,
-    #[serde(default)]
-    pub merged_at: Option<DateTime<Utc>>,
-    #[serde(default)]
-    pub head: GitHubCommit,
-    #[serde(default)]
-    pub base: GitHubCommit,
-    // links
-    #[serde(default)]
-    pub user: crate::repos::GitHubUser,
-    #[serde(default)]
-    pub merged: bool,
-}
-
-impl From<octorust::types::PullRequestSimple> for GitHubPullRequest {
-    fn from(item: octorust::types::PullRequestSimple) -> Self {
-        GitHubPullRequest {
-            id: item.id,
-            url: item.url.to_string(),
-            diff_url: item.diff_url.to_string(),
-            issue_url: item.issue_url.to_string(),
-            patch_url: item.patch_url.to_string(),
-            comments_url: item.comments_url.to_string(),
-            html_url: item.html_url.to_string(),
-            commits_url: item.commits_url.to_string(),
-            review_comments_url: item.review_comments_url.to_string(),
-            review_comment_url: item.review_comment_url.to_string(),
-            statuses_url: item.statuses_url.to_string(),
-            number: item.number,
-            state: item.state.to_string(),
-            title: item.title.to_string(),
-            body: item.body.to_string(),
-            closed_at: item.closed_at,
-            merged_at: item.merged_at,
-            head: GitHubCommit {
-                id: item.head.sha.to_string(),
-                timestamp: None,
-                label: item.head.label.to_string(),
-                author: Default::default(),
-                url: "".to_string(),
-                distinct: true,
-                added: vec![],
-                modified: vec![],
-                removed: vec![],
-                message: "".to_string(),
-                commit_ref: item.head.ref_.to_string(),
-                sha: item.head.sha.to_string(),
-            },
-            base: GitHubCommit {
-                id: item.base.sha.to_string(),
-                timestamp: None,
-                label: item.base.label.to_string(),
-                author: Default::default(),
-                url: "".to_string(),
-                distinct: true,
-                added: vec![],
-                modified: vec![],
-                removed: vec![],
-                message: "".to_string(),
-                commit_ref: item.base.ref_.to_string(),
-                sha: item.base.sha.to_string(),
-            },
-            // TODO: actually do these.
-            user: Default::default(),
-            merged: item.merged_at.is_some(),
-        }
-    }
-}
-
-/// A GitHub commit.
-/// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
-#[derive(Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize)]
-pub struct GitHubCommit {
-    /// The SHA of the commit.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub id: String,
-    /// The ISO 8601 timestamp of the commit.
-    pub timestamp: Option<DateTime<Utc>>,
-    /// The commit message.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub message: String,
-    /// The git author of the commit.
-    #[serde(default, alias = "user")]
-    pub author: crate::repos::GitHubUser,
-    /// URL that points to the commit API resource.
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub url: String,
-    /// Whether this commit is distinct from any that have been pushed before.
-    #[serde(default)]
-    pub distinct: bool,
-    /// An array of files added in the commit.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub added: Vec<String>,
-    /// An array of files modified by the commit.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub modified: Vec<String>,
-    /// An array of files removed in the commit.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub removed: Vec<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub label: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        alias = "ref",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub commit_ref: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
-    )]
-    pub sha: String,
-}
-
-impl GitHubCommit {
-    /// Filter the files that were added, modified, or removed by their prefix
-    /// including a specified directory or path.
-    pub fn filter_files_by_path(&mut self, dir: &str) {
-        self.added = filter(&self.added, dir);
-        self.modified = filter(&self.modified, dir);
-        self.removed = filter(&self.removed, dir);
-    }
-
-    /// Return if the commit has any files that were added, modified, or removed.
-    pub fn has_changed_files(&self) -> bool {
-        !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
-    }
-
-    /// Return if a specific file was added, modified, or removed in a commit.
-    pub fn file_changed(&self, file: &str) -> bool {
-        self.added.contains(&file.to_string())
-            || self.modified.contains(&file.to_string())
-            || self.removed.contains(&file.to_string())
-    }
-}
-
-fn filter(files: &[String], dir: &str) -> Vec<String> {
-    let mut in_dir: Vec<String> = Default::default();
-    for file in files {
-        if file.starts_with(dir) {
-            in_dir.push(file.to_string());
-        }
-    }
-
-    in_dir
 }

@@ -39,6 +39,7 @@ enum SubCommand {
     Server(Server),
 
     SyncRepos(SyncRepos),
+    SyncRFDs(SyncRFDs),
 }
 
 /// A subcommand for running the server.
@@ -56,6 +57,10 @@ pub struct Server {
 /// A subcommand for running the background job of syncing repos.
 #[derive(Clap)]
 pub struct SyncRepos {}
+
+/// A subcommand for running the background job of syncing RFDs.
+#[derive(Clap)]
+pub struct SyncRFDs {}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -110,6 +115,16 @@ async fn main() -> Result<()> {
                 let github = company.authenticate_github().unwrap();
                 cio_api::repos::sync_all_repo_settings(&db, &github, &company).await?;
                 cio_api::repos::refresh_db_github_repos(&db, &github, &company).await?;
+            }
+        }
+        SubCommand::SyncRFDs(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::rfds::refresh_db_rfds(&db, &company).await.unwrap();
+                cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await.unwrap();
             }
         }
     }
