@@ -17,6 +17,7 @@ use std::env;
 use anyhow::Result;
 use cio_api::{companies::Companys, db::Database};
 use clap::{AppSettings, Clap};
+use log::info;
 use sentry::IntoDsn;
 use slog::Drain;
 
@@ -156,6 +157,10 @@ async fn main() -> Result<()> {
         log_level = log::Level::Debug;
     }
     let _log_guard = slog_stdlog::init_with_level(log_level)?;
+
+    if !sentry_dsn.is_empty() {
+        info!("running with sentry error capturing");
+    }
 
     match opts.subcmd {
         SubCommand::Server(s) => {
