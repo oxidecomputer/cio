@@ -146,6 +146,8 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
 fn reexec(cmd: &str) -> Result<String> {
     let exe = env::current_exe()?;
 
+    // TODO, also pipe the logs to our logger but somehow nest them
+    // or make it apparent its a child.
     let output = Command::new(exe).args([cmd]).output()?;
 
     // Format the output.
