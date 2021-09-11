@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use chrono::{offset::Utc, DateTime};
 use cio_api::{
+    core::{GitHubCommit, GitHubPullRequest},
     repos::GitHubUser,
-    rfds::{GitHubCommit, GitHubPullRequest},
 };
 use log::warn;
 use octorust::Client as GitHub;
