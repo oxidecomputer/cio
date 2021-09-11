@@ -349,7 +349,7 @@ pub async fn encrypt_github_secrets(
     let mut secrets = s.clone();
 
     // Iterate over and encrypt all our secrets.
-    for (name, secret) in &secrets {
+    for (name, secret) in &mut secrets {
         // Load the key.
         let key = secretbox::Key(spke);
         let nonce = secretbox::gen_nonce();
