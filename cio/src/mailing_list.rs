@@ -235,7 +235,7 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
     let mailchimp_auth = company.authenticate_mailchimp(db).await;
     if let Err(e) = mailchimp_auth {
         if e.to_string().contains("no token") {
-            // Return early, this company does not use Zoom.
+            // Return early, this company does not use MailChimp.
             return Ok(());
         }
 

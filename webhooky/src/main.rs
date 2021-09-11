@@ -41,6 +41,7 @@ enum SubCommand {
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
     SyncRFDs(SyncRFDs),
+    SyncTravel(SyncTravel),
 }
 
 /// A subcommand for running the server.
@@ -62,6 +63,10 @@ pub struct SyncRepos {}
 /// A subcommand for running the background job of syncing RFDs.
 #[derive(Clap)]
 pub struct SyncRFDs {}
+
+/// A subcommand for running the background job of syncing travel data.
+#[derive(Clap)]
+pub struct SyncTravel {}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -113,7 +118,7 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                let github = company.authenticate_github().unwrap();
+                let github = company.authenticate_github()?;
                 cio_api::repos::sync_all_repo_settings(&db, &github, &company).await?;
                 cio_api::repos::refresh_db_github_repos(&db, &github, &company).await?;
             }
@@ -124,8 +129,17 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                cio_api::rfds::refresh_db_rfds(&db, &company).await.unwrap();
-                cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await.unwrap();
+                cio_api::rfds::refresh_db_rfds(&db, &company).await?;
+                cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncTravel(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::travel::refresh_trip_actions(&db, &company).await?;
             }
         }
     }

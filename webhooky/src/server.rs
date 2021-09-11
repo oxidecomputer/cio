@@ -110,6 +110,7 @@ pub async fn server(s: &crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_sync_repos_create).unwrap();
     api.register(trigger_sync_rfds_create).unwrap();
+    api.register(trigger_sync_travel_create).unwrap();
     api.register(listen_get_function_by_uuid).unwrap();
     api.register(listen_get_function_logs_by_uuid).unwrap();
     api.register(api_get_schema).unwrap();
@@ -1536,6 +1537,29 @@ async fn trigger_sync_rfds_create(
     sentry::start_session();
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-rfds").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync travel. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-travel",
+}]
+async fn trigger_sync_travel_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx, "sync-travel").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))

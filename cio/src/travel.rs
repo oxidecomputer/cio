@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use macros::db;
@@ -94,7 +94,16 @@ impl UpdateAirtableRecord<Booking> for Booking {
 
 pub async fn refresh_trip_actions(db: &Database, company: &Company) -> Result<()> {
     // Authenticate with TripActions.
-    let ta = company.authenticate_tripactions(db).await?;
+    let tripactions_auth = company.authenticate_tripactions(db).await;
+    if let Err(e) = tripactions_auth {
+        if e.to_string().contains("no token") {
+            // Return early, this company does not use TripActions.
+            return Ok(());
+        }
+
+        bail!("authenticating tripactions failed: {}", e);
+    }
+    let ta = tripactions_auth?;
 
     // Let's get our bookings.
     let bookings = ta
@@ -153,23 +162,4 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) -> Result<()
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{companies::Company, db::Database, travel::refresh_trip_actions};
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_travel() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_trip_actions(&db, &oxide).await.unwrap();
-    }
 }

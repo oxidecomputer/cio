@@ -482,6 +482,11 @@ impl Company {
 
     /// Authenticate with TripActions.
     pub async fn authenticate_tripactions(&self, db: &Database) -> Result<TripActions> {
+        if self.tripactions_client_id.is_empty() || self.tripactions_client_secret.is_empty() {
+            // bail early we don't have a token.
+            bail!("no token");
+        }
+
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "tripactions".to_string()) {
             // Initialize the TripActions client.
