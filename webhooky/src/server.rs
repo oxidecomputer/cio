@@ -139,28 +139,27 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     /*
      * Setup our cron jobs to run every few hours.
      */
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(6 * 60 * 60));
+    let hours = 6;
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(hours * 60 * 60));
+    let cron_jobs = vec![
+        "sync-finance",
+        "sync-repos",
+        "sync-rfds",
+        "sync-shipments",
+        "sync-travel",
+    ];
     tokio::spawn(async move {
         // Make an infinite loop.
         loop {
             // Wait for our interval.
+            info!("waiting for `{}` hours to trigger jobs...", hours);
             interval.tick().await;
 
             // TODO: Stagger the starts.
-            if let Err(e) = start_job(&s.address, "sync-finance").await {
-                sentry_anyhow::capture_anyhow(&e);
-            }
-            if let Err(e) = start_job(&s.address, "sync-repos").await {
-                sentry_anyhow::capture_anyhow(&e);
-            }
-            if let Err(e) = start_job(&s.address, "sync-rfds").await {
-                sentry_anyhow::capture_anyhow(&e);
-            }
-            if let Err(e) = start_job(&s.address, "sync-shipments").await {
-                sentry_anyhow::capture_anyhow(&e);
-            }
-            if let Err(e) = start_job(&s.address, "sync-travel").await {
-                sentry_anyhow::capture_anyhow(&e);
+            for j in &cron_jobs {
+                if let Err(e) = start_job(&s.address, j).await {
+                    sentry_anyhow::capture_anyhow(&e);
+                }
             }
         }
     });
@@ -1659,6 +1658,8 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
 }
 
 async fn start_job(address: &str, job: &str) -> Result<()> {
+    info!("triggering job `{}`", job);
+
     let resp = reqwest::Client::new()
         .post(&format!("http://{}/run/{}", address, job))
         .send()
