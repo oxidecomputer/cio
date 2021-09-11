@@ -1,5 +1,6 @@
 #![allow(clippy::from_over_into)]
 use std::{
+    collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
     str::from_utf8,
@@ -25,7 +26,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     schema::certificates,
-    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, BTreeMap},
+    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
@@ -366,11 +367,11 @@ impl NewCertificate {
         }
 
         let mut plain_text: BTreeMap<String, String> = Default::default();
-        plain_text.push(
+        plain_text.insert(
             self.certificate_github_actions_secret_name.to_string(),
             self.certificate.to_string(),
         );
-        plain_text.push(
+        plain_text.insert(
             self.private_key_github_actions_secret_name.to_string(),
             self.private_key.to_string(),
         );
@@ -378,7 +379,7 @@ impl NewCertificate {
         for repo in &self.repos {
             // First let's encrypt the secrets for the repo.
             // This uses the repo's public key.
-            let (key_id, secrets) = crate::utils::encrypt_github_secrets(github, company, repo, plain_text).await?;
+            let (key_id, secrets) = crate::utils::encrypt_github_secrets(github, company, repo, &plain_text).await?;
 
             // Update each secret.
             for (name, secret) in secrets {

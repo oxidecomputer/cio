@@ -332,7 +332,7 @@ pub async fn encrypt_github_secrets(
     github: &octorust::Client,
     company: &Company,
     repo: &str,
-    s: BTreeMap<String, String>,
+    s: &BTreeMap<String, String>,
 ) -> Result<(String, BTreeMap<String, String>)> {
     sodiumoxide::init().map_err(|_| anyhow!("initializing sodiumoxide failed!"))?;
 
@@ -361,7 +361,7 @@ pub async fn encrypt_github_secrets(
     }
 
     // Return our newly encrypted secrets and the key ID.
-    Ok((pk.key_id.to_string(), secrets))
+    Ok((pk.key_id, secrets))
 }
 
 /// Generate a random string that we can use as a temporary password for new users
