@@ -119,9 +119,8 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(trigger_sync_rfds_create).unwrap();
     api.register(trigger_sync_shipments_create).unwrap();
     api.register(trigger_sync_shorturls_create).unwrap();
-    api.register(trigger_sync_travel_create).unwrap();
     api.register(trigger_sync_swag_inventory_create).unwrap();
-    api.register(trigger_sync_shorturls_create).unwrap();
+    api.register(trigger_sync_travel_create).unwrap();
 
     api.register(listen_get_function_by_uuid).unwrap();
     api.register(listen_get_function_logs_by_uuid).unwrap();
