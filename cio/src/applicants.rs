@@ -2877,6 +2877,11 @@ pub fn get_role_from_sheet_id(sheet_id: &str) -> String {
 
 // Sync the applicants with our database.
 pub async fn refresh_db_applicants(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     let github = company.authenticate_github()?;
 
     // Get all the hiring issues on the configs repository.
@@ -3022,6 +3027,11 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>
 }
 
 pub async fn update_applications_with_scoring_forms(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the GSuite sheets client.
     let sheets_client = company.authenticate_google_sheets(db).await?;
 
@@ -3172,6 +3182,11 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
 }
 
 pub async fn update_applications_with_scoring_results(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the GSuite sheets client.
     let sheets_client = company.authenticate_google_sheets(db).await?;
 
@@ -3340,6 +3355,11 @@ fn is_materials(file_name: &str) -> bool {
 }
 
 pub async fn refresh_background_checks(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the Checker client.
     let checkr_auth = company.authenticate_checkr();
     if checkr_auth.is_none() {
@@ -3442,6 +3462,11 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
 }
 
 pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the GSuite sheets client.
     let sheets_client = company.authenticate_google_sheets(db).await?;
 
@@ -3522,6 +3547,11 @@ pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Com
 }
 
 pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Authenticate DocuSign.
     let dsa = company.authenticate_docusign(db).await;
     if let Err(e) = dsa {
@@ -4611,6 +4641,11 @@ Sincerely,
 }
 
 pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) -> Result<()> {
+    if company.airtable_base_id_hiring.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the GSuite sheets client.
     let drive_client = company.authenticate_google_drive(db).await?;
 
@@ -4683,6 +4718,11 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
 
         // TODO: we could move docusign stuff here as well, and out of its own function.
     }
+
+    // Update Airtable.
+    // TODO: this might cause some racy problems, maybe only run at night (?)
+    // Or maybe always get the latest from the database and update airtable with that (?)
+    // Applicants::get_from_db(db, company.id)?.update_airtable(db).await?;
 
     Ok(())
 }
@@ -4766,13 +4806,6 @@ mod tests {
 
         // Refresh DocuSign for the applicants.
         refresh_docusign_for_applicants(&db, &oxide).await.unwrap();
-
-        // Update Airtable.
-        Applicants::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
     }
 
     #[ignore]
