@@ -14,6 +14,7 @@ extern crate serde_json;
 use std::env;
 
 use anyhow::Result;
+use cio_api::{companies::Companys, db::Database};
 use clap::{AppSettings, Clap};
 use sentry::IntoDsn;
 use slog::Drain;
@@ -35,6 +36,8 @@ struct Opts {
 #[derive(Clap)]
 enum SubCommand {
     Server(Server),
+
+    SyncRepos(SyncRepos),
 }
 
 /// A subcommand for running the server.
@@ -48,6 +51,10 @@ pub struct Server {
     #[clap(short, long, parse(from_os_str), value_hint = clap::ValueHint::FilePath)]
     spec_file: Option<std::path::PathBuf>,
 }
+
+/// A subcommand for running the background job of syncing repos.
+#[derive(Clap)]
+pub struct SyncRepos {}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -92,6 +99,17 @@ async fn main() -> Result<()> {
     match opts.subcmd {
         SubCommand::Server(s) => {
             crate::server::server(&s, logger).await?;
+        }
+        SubCommand::SyncRepos(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                let github = company.authenticate_github().unwrap();
+                cio_api::repos::sync_all_repo_settings(&db, &github, &company).await?;
+                cio_api::repos::refresh_db_github_repos(&db, &github, &company).await?;
+            }
         }
     }
 
