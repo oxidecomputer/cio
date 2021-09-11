@@ -58,6 +58,7 @@ pub struct NewCertificate {
     /// The repos that use this as a secret for GitHub actions.
     /// The repo must be in the org for this company.
     /// When the certificate is up for renewal it will also update these secrets.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub repos: Vec<String>,
 
     /// The name of the secret for the certificate if it is used in GitHub Actions.

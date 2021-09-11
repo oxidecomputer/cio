@@ -19,10 +19,7 @@
             "description": "successful operation",
             "content": {
               "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
+                "schema": {}
               }
             }
           }
@@ -1492,10 +1489,121 @@
         }
       }
     },
+    "/run/cleanup": {
+      "post": {
+        "description": "Listen for triggering a cleanup of all in-progress sagas, we typically run this when the server is shutting down.",
+        "operationId": "trigger_cleanup_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation"
+          }
+        }
+      }
+    },
+    "/run/sync-applications": {
+      "post": {
+        "description": "Listen for triggering a function run of sync applications.",
+        "operationId": "trigger_sync_applications_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-asset-inventory": {
+      "post": {
+        "description": "Listen for triggering a function run of sync asset inventory.",
+        "operationId": "trigger_sync_asset_inventory_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-configs": {
+      "post": {
+        "description": "Listen for triggering a function run of sync configs.",
+        "operationId": "trigger_sync_configs_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/run/sync-finance": {
       "post": {
         "description": "Listen for triggering a function run of sync finance.",
         "operationId": "trigger_sync_finance_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-interviews": {
+      "post": {
+        "description": "Listen for triggering a function run of sync interviews.",
+        "operationId": "trigger_sync_interviews_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-recorded-meetings": {
+      "post": {
+        "description": "Listen for triggering a function run of sync recorded meetings.",
+        "operationId": "trigger_sync_recorded_meetings_create",
         "responses": {
           "202": {
             "description": "successfully enqueued operation",
@@ -1556,6 +1664,46 @@
       "post": {
         "description": "Listen for triggering a function run of sync shipments.",
         "operationId": "trigger_sync_shipments_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-shorturls": {
+      "post": {
+        "description": "Listen for triggering a function run of sync shorturls.",
+        "operationId": "trigger_sync_shorturls_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-swag-inventory": {
+      "post": {
+        "description": "Listen for triggering a function run of sync swag inventory.",
+        "operationId": "trigger_sync_swag_inventory_create",
         "responses": {
           "202": {
             "description": "successfully enqueued operation",
