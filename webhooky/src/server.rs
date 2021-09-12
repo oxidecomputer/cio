@@ -116,11 +116,16 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_cleanup_create).unwrap();
 
+    api.register(trigger_sync_analytics_create).unwrap();
+    api.register(trigger_sync_api_tokens_create).unwrap();
     api.register(trigger_sync_applications_create).unwrap();
     api.register(trigger_sync_asset_inventory_create).unwrap();
+    api.register(trigger_sync_companies_create).unwrap();
     api.register(trigger_sync_configs_create).unwrap();
     api.register(trigger_sync_finance_create).unwrap();
     api.register(trigger_sync_interviews_create).unwrap();
+    api.register(trigger_sync_journal_clubs_create).unwrap();
+    api.register(trigger_sync_mailing_lists_create).unwrap();
     api.register(trigger_sync_recorded_meetings_create).unwrap();
     api.register(trigger_sync_repos_create).unwrap();
     api.register(trigger_sync_rfds_create).unwrap();
@@ -161,11 +166,16 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         let hours = 6;
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(hours * 60 * 60));
         let cron_jobs = vec![
+            "sync-analytics",
+            "sync-api-tokens",
             "sync-applications",
             "sync-asset-inventory",
+            "sync-companies",
             "sync-configs",
             "sync-finance",
             "sync-interviews",
+            "sync-journal-clubs",
+            "sync-mailing-lists",
             "sync-recorded-meetings",
             "sync-repos",
             "sync-rfds",
@@ -1877,6 +1887,121 @@ async fn trigger_sync_applications_create(
     sentry::start_session();
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync analytics. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-analytics",
+}]
+async fn trigger_sync_analytics_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-analytics").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync companies. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-companies",
+}]
+async fn trigger_sync_companies_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-companies").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync mailing lists. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-mailing-lists",
+}]
+async fn trigger_sync_mailing_lists_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-mailing-lists").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync journal clubs. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-journal-clubs",
+}]
+async fn trigger_sync_journal_clubs_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-journal-clubs").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync api tokens. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-api-tokens",
+}]
+async fn trigger_sync_api_tokens_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-api-tokens").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))

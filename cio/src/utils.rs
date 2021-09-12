@@ -419,23 +419,3 @@ pub fn setup_logger() {
         });
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_utils() {
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let db = crate::db::Database::new();
-        let company = crate::companies::Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-        let github = company.authenticate_github().unwrap();
-
-        let mut s: BTreeMap<String, String> = Default::default();
-        s.insert("TESTING".to_string(), "thing".to_string());
-        let secrets = encrypt_github_secrets(&github, &company, "cio", s).await.unwrap();
-        println!("secrets: {:#?}", secrets);
-    }
-}

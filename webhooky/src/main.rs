@@ -39,6 +39,7 @@ enum SubCommand {
     Server(Server),
 
     SyncAnalytics(SyncAnalytics),
+    #[clap(name = "sync-api-tokens")]
     SyncAPITokens(SyncAPITokens),
     SyncApplications(SyncApplications),
     SyncAssetInventory(SyncAssetInventory),
