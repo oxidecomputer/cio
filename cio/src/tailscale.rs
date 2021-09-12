@@ -8,6 +8,11 @@ use crate::companies::Company;
 /// Tailscale devices that need to cleaned up when they are no longer active.
 /// This function does that.
 pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
+    if company.tailscale_api_key.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Initialize the Tailscale API.
     let tailscale = company.authenticate_tailscale();
 
@@ -34,23 +39,4 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{companies::Company, db::Database, tailscale::cleanup_old_tailscale_devices};
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_tailscale() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        cleanup_old_tailscale_devices(&oxide).await.unwrap();
-    }
 }

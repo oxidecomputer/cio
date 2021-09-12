@@ -49,6 +49,7 @@ enum SubCommand {
     SyncInterviews(SyncInterviews),
     SyncJournalClubs(SyncJournalClubs),
     SyncMailingLists(SyncMailingLists),
+    SyncOther(SyncOther),
     SyncRecordedMeetings(SyncRecordedMeetings),
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
@@ -114,6 +115,10 @@ pub struct SyncJournalClubs {}
 /// A subcommand for running the background job of syncing mailing lists.
 #[derive(Clap)]
 pub struct SyncMailingLists {}
+
+/// A subcommand for running the background job of syncing other things.
+#[derive(Clap)]
+pub struct SyncOther {}
 
 /// A subcommand for running the background job of syncing recorded_meetings.
 #[derive(Clap)]
@@ -319,6 +324,18 @@ async fn main() -> Result<()> {
             for company in companies {
                 cio_api::rfds::refresh_db_rfds(&db, &company).await?;
                 cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncOther(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::tailscale::cleanup_old_tailscale_devices(&company).await?;
+                if company.name == "Oxide" {
+                    cio_api::customers::sync_customer_meeting_notes(&company).await?;
+                }
             }
         }
         SubCommand::SyncShipments(_) => {

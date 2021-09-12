@@ -64,22 +64,3 @@ pub async fn sync_customer_meeting_notes(company: &Company) -> Result<()> {
 
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::{companies::Company, customers::sync_customer_meeting_notes, db::Database};
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_meeting_notes() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        sync_customer_meeting_notes(&oxide).await.unwrap();
-    }
-}
