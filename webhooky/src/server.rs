@@ -3,6 +3,7 @@ use std::{collections::HashMap, env, fs::File, sync::Arc};
 use anyhow::{bail, Result};
 use chrono::Utc;
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
+use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
@@ -160,14 +161,16 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     let api_context = Context::new(schema, logger).await;
 
     // Copy the Server struct so we can move it into our loop.
-    let svr = s.clone();
     if s.do_cron {
         /*
-         * Setup our cron jobs to run every few hours.
+         * Setup our cron jobs, with our timezone.
          */
-        let hours = 6;
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(hours * 60 * 60));
-        let cron_jobs = vec![
+        let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
+        scheduler.every(1.day()).at("1:00 am").run(|| async {
+            do_job("localhost:8080", "sync-huddles").await;
+        });
+
+        let _cron_jobs = vec![
             "sync-analytics",
             "sync-api-tokens",
             "sync-applications",
@@ -188,25 +191,11 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
             "sync-travel",
         ];
         tokio::spawn(async move {
-            // Sleep for an hour before starting our loops, this ensures if we
-            // have a bunch of back to back deploys they do not get noisy.
-            let pre_start = std::time::Duration::from_secs(60 * 60);
-            info!("waiting for 1 hour before triggering jobs...");
-            std::thread::sleep(pre_start);
+            info!("starting cron job scheduler...");
 
-            // Make an infinite loop.
             loop {
-                // Set up our interval.
-                // However it will not wait the interval here.
-                info!("waiting for `{}` hours to trigger jobs...", hours);
-                interval.tick().await;
-
-                // TODO: Stagger the starts.
-                for j in &cron_jobs {
-                    if let Err(e) = start_job(&svr.address, j).await {
-                        sentry_anyhow::capture_anyhow(&e);
-                    }
-                }
+                scheduler.run_pending().await;
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             }
         });
     }
@@ -2143,4 +2132,10 @@ async fn start_job(address: &str, job: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn do_job(address: &str, job: &str) {
+    if let Err(e) = start_job(address, job).await {
+        sentry_anyhow::capture_anyhow(&e);
+    }
 }
