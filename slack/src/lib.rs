@@ -432,7 +432,7 @@ impl Default for MessageResponseType {
 /// A bot command to be run and sent back to Slack.
 ///
 /// Docs: https://api.slack.com/interactivity/slash-commands#app_command_handling
-#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct BotCommand {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub user_name: String,
@@ -463,7 +463,7 @@ pub struct BotCommand {
 /// A formatted message to send to Slack.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts
-#[derive(Debug, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub struct FormattedMessage {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub channel: String,
@@ -476,7 +476,7 @@ pub struct FormattedMessage {
 /// A Slack message block.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts#adding-blocks
-#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlock {
     #[serde(rename = "type")]
     pub block_type: MessageBlockType,
@@ -493,7 +493,7 @@ pub struct MessageBlock {
 }
 
 /// A message block type in Slack.
-#[derive(Debug, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub enum MessageBlockType {
     #[serde(rename = "header")]
     Header,
@@ -512,7 +512,7 @@ impl Default for MessageBlockType {
 }
 
 /// Message block text in Slack.
-#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlockText {
     #[serde(rename = "type")]
     pub text_type: MessageType,
@@ -520,7 +520,7 @@ pub struct MessageBlockText {
 }
 
 /// Message type in Slack.
-#[derive(Debug, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub enum MessageType {
     #[serde(rename = "plain_text")]
     PlainText,
@@ -537,7 +537,7 @@ impl Default for MessageType {
 }
 
 /// Message block accessory in Slack.
-#[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlockAccessory {
     #[serde(rename = "type")]
     pub accessory_type: MessageType,
@@ -548,7 +548,7 @@ pub struct MessageBlockAccessory {
 /// A message attachment in Slack.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts#building-attachments
-#[derive(Debug, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub struct MessageAttachment {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blocks: Vec<MessageBlock>,
@@ -588,7 +588,7 @@ pub struct MessageAttachment {
 }
 
 /// A message attachment field in Slack.
-#[derive(Debug, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub struct MessageAttachmentField {
     pub short: bool,
     pub title: String,

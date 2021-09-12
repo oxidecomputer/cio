@@ -28,7 +28,10 @@ use mailchimp_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
-use slack_chat_api::{BotCommand, FormattedMessage, MessageResponse, MessageResponseType};
+use slack_chat_api::{
+    BotCommand, FormattedMessage, MessageAttachment, MessageBlock, MessageBlockType, MessageResponse,
+    MessageResponseType,
+};
 
 use crate::{
     server::{
@@ -415,6 +418,33 @@ pub async fn handle_slack_commands(
     let command = SlackCommand::from_str(&bot_command.command).unwrap();
     let text = bot_command.text.trim();
 
+    // Create a basic divider we can use as a reference.
+    let divider = MessageAttachment {
+        color: Default::default(),
+        author_icon: Default::default(),
+        author_link: Default::default(),
+        author_name: Default::default(),
+        fallback: Default::default(),
+        fields: Default::default(),
+        footer: Default::default(),
+        footer_icon: Default::default(),
+        image_url: Default::default(),
+        pretext: Default::default(),
+        text: Default::default(),
+        thumb_url: Default::default(),
+        title: Default::default(),
+        title_link: Default::default(),
+        ts: Utc::now(),
+        blocks: vec![MessageBlock {
+            block_type: MessageBlockType::Divider,
+            text: None,
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        }],
+    };
+
     // Filter by command type and do the command.
     let response = match command {
         SlackCommand::RFD => {
@@ -518,27 +548,34 @@ pub async fn handle_slack_commands(
                         status.to_string()
                     ),
                 })
+            } else if applicants.is_empty() {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!(
+                        "Sorry <@{}> :scream: I could not find any applicants with status `{}`",
+                        bot_command.user_id,
+                        status.to_string()
+                    ),
+                })
             } else {
-                let mut msg: serde_json::Value = Default::default();
+                // We know we have at least one item, lets add it.
+                let mut msg: FormattedMessage = applicants.get(0).unwrap().clone().into();
                 for (i, a) in applicants.into_iter().enumerate() {
-                    if i > 0 {
-                        // Merge a divider onto the stack.
-                        let object = json!({
-                            "attachments": [{
-                                "blocks": [{
-                                    "type": "divider"
-                                }]
-                            }]
-                        });
-
-                        merge_json(&mut msg, object);
+                    if i == 0 {
+                        continue;
                     }
 
-                    let obj: FormattedMessage = a.into();
-                    merge_json(&mut msg, json!(obj));
+                    if i > 0 {
+                        // Add our divider.
+                        msg.attachments.push(divider.clone());
+                    }
+
+                    // Add the rest of the blocks.
+                    let mut m: FormattedMessage = a.into();
+                    msg.attachments.append(&mut m.attachments);
                 }
 
-                msg
+                json!(msg)
             }
         }
         SlackCommand::Applicant => {
