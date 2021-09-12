@@ -632,7 +632,8 @@ pub async fn handle_slack_commands(
                         .filter(
                             inbound_shipments::dsl::cio_company_id
                                 .eq(company.id)
-                                .and(inbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string())),
+                                .and(inbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string()))
+                                .and(inbound_shipments::dsl::delivered_time.is_null()),
                         )
                         .load::<InboundShipment>(&db.conn())?
                 } else {
