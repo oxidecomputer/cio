@@ -2,7 +2,7 @@
 use std::{
     collections::{BTreeMap, HashMap},
     str::from_utf8,
-    thread, time,
+    time,
 };
 
 use anyhow::{bail, Result};
@@ -1824,7 +1824,7 @@ pub async fn sync_users(
             // TODO: this is horrible, but we will sleep here to allow the terraform
             // job to run.
             // We also need a better way to ensure the terraform job passed...
-            thread::sleep(time::Duration::from_secs(120));
+            tokio::time::sleep(time::Duration::from_secs(120)).await;
 
             // The user did not already exist in the database.
             // We should send them an email about setting up their account.

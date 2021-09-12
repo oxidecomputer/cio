@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeMap, HashMap},
-    thread, time,
+    time,
 };
 
 use anyhow::{bail, Result};
@@ -414,7 +414,7 @@ pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Gr
     let mut result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     if result.is_err() {
         // Try again.
-        thread::sleep(time::Duration::from_secs(1));
+        tokio::time::sleep(time::Duration::from_secs(1)).await;
         result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     }
     let mut settings = result?;
@@ -441,7 +441,7 @@ pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Gr
         .await;
     if result2.is_err() {
         // Try again.
-        thread::sleep(time::Duration::from_secs(1));
+        tokio::time::sleep(time::Duration::from_secs(1)).await;
         ggs.groups()
             .update(google_groups_settings::types::Alt::Json, &email, &settings)
             .await?;
