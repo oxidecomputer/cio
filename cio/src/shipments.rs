@@ -184,20 +184,20 @@ fn get_color_based_on_tracking_status(s: &str) -> String {
     let status = s.to_lowercase().trim().to_string();
 
     if status == "delivered" {
-        return "#48D597".to_string();
+        return crate::colors::Colors::Green.to_string();
     }
     if status == "transit" {
-        return "#4969F6".to_string();
+        return crate::colors::Colors::Blue.to_string();
     }
     if status == "pre_transit" {
-        return "#F5CF65".to_string();
+        return crate::colors::Colors::Yellow.to_string();
     }
     if status == "returned" || status == "unknown" {
-        return "#E86886".to_string();
+        return crate::colors::Colors::Red.to_string();
     }
 
     // Otherwise return yellow as default if we don't know.
-    "#F5CF65".to_string()
+    crate::colors::Colors::Yellow.to_string()
 }
 
 /// Convert the inbound shipment into a Slack message.
@@ -378,7 +378,6 @@ pub struct NewOutboundShipment {
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub phone: String,
-    // TODO: make status an enum.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub status: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -479,14 +478,16 @@ impl From<NewOutboundShipment> for FormattedMessage {
             item.oxide_tracking_link.trim_start_matches("https://"),
         );
         if let Some(eta) = item.eta {
-            if item.status != "Delivered" && item.status != "Picked up" {
+            if item.status != crate::shipment_status::Status::Delivered.to_string()
+                && item.status != crate::shipment_status::Status::PickedUp.to_string()
+            {
                 let dur = eta - Utc::now();
 
                 status_msg += &format!(" | _eta {}_", HumanTime::from(dur));
             }
         }
 
-        if item.status == "Delivered" {
+        if item.status == crate::shipment_status::Status::Delivered.to_string() {
             if let Some(delivered) = item.delivered_time {
                 let dur = delivered - Utc::now();
 
@@ -629,7 +630,7 @@ impl OutboundShipments {
         let shipments = outbound_shipments::dsl::outbound_shipments
             .filter(
                 outbound_shipments::dsl::status
-                    .eq("Label printed".to_string())
+                    .eq(crate::shipment_status::Status::LabelPrinted.to_string())
                     .and(outbound_shipments::dsl::carrier.eq("USPS".to_string()))
                     .and(outbound_shipments::dsl::pickup_date.is_null()),
             )
@@ -728,7 +729,7 @@ impl OutboundShipments {
         // For each of the shipments, let's set the pickup date.
         for mut shipment in shipments {
             shipment.pickup_date = Some(pickup_date);
-            shipment.status = "Waiting for pickup".to_string();
+            shipment.status = crate::shipment_status::Status::WaitingForPickup.to_string();
             shipment.update(db).await?;
         }
 
@@ -1087,7 +1088,7 @@ The Shipping Bot",
 
         // If we did local_pickup, we can return early here.
         if self.local_pickup {
-            self.status = "Picked up".to_string();
+            self.status = crate::shipment_status::Status::PickedUp.to_string();
             self.update(db).await?;
             // Return early.
             return Ok(());
@@ -1126,7 +1127,7 @@ The Shipping Bot",
 
             // Get the status of the shipment.
             if tracking_status.status == *"TRANSIT" || tracking_status.status == "IN_TRANSIT" {
-                if self.status != *"Shipped" {
+                if self.status != crate::shipment_status::Status::Shipped.to_string() {
                     // Send an email to the recipient with their tracking link.
                     // Wait until it is in transit to do this.
                     self.send_email_to_recipient(db).await?;
@@ -1135,17 +1136,17 @@ The Shipping Bot",
                     self.shipped_time = tracking_status.status_date;
                 }
 
-                self.status = "Shipped".to_string();
+                self.status = crate::shipment_status::Status::Shipped.to_string();
             }
             if tracking_status.status == *"DELIVERED" {
-                self.status = "Delivered".to_string();
+                self.status = crate::shipment_status::Status::Delivered.to_string();
                 self.delivered_time = tracking_status.status_date;
             }
             if tracking_status.status == *"RETURNED" {
-                self.status = "Returned".to_string();
+                self.status = crate::shipment_status::Status::Returned.to_string();
             }
             if tracking_status.status == *"FAILURE" {
-                self.status = "Failure".to_string();
+                self.status = crate::shipment_status::Status::Failure.to_string();
             }
 
             // Iterate over the tracking history and set the shipped_time.
@@ -1282,7 +1283,7 @@ The Shipping Bot",
                 self.label_link = label.label_url.to_string();
                 self.eta = label.eta;
                 self.shippo_id = label.object_id.to_string();
-                self.status = "Label created".to_string();
+                self.status = crate::shipment_status::Status::LabelCreated.to_string();
                 if label.status != "SUCCESS" {
                     self.status = label.status.to_string();
                     // Print the messages in the messages field.
@@ -1306,7 +1307,7 @@ The Shipping Bot",
                 self.print_label(db).await?;
                 // Print the receipt.
                 self.print_receipt(db).await?;
-                self.status = "Label printed".to_string();
+                self.status = crate::shipment_status::Status::LabelPrinted.to_string();
 
                 // Send an email to us that we need to package the shipment.
                 self.send_email_internally(db).await?;
