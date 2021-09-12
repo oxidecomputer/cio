@@ -113,6 +113,35 @@
         }
       }
     },
+    "/airtable/certificates/renew": {
+      "post": {
+        "description": "Listen for a button pressed to renew a certificate.",
+        "operationId": "listen_airtable_certificates_renew_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AirtableRowEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/airtable/employees/print_home_address_label": {
       "post": {
         "description": "Listen for a button pressed to print a home address label for employees.",
@@ -1500,6 +1529,46 @@
         }
       }
     },
+    "/run/sync-analytics": {
+      "post": {
+        "description": "Listen for triggering a function run of sync analytics.",
+        "operationId": "trigger_sync_analytics_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-api-tokens": {
+      "post": {
+        "description": "Listen for triggering a function run of sync api tokens.",
+        "operationId": "trigger_sync_api_tokens_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/run/sync-applications": {
       "post": {
         "description": "Listen for triggering a function run of sync applications.",
@@ -1524,6 +1593,26 @@
       "post": {
         "description": "Listen for triggering a function run of sync asset inventory.",
         "operationId": "trigger_sync_asset_inventory_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-companies": {
+      "post": {
+        "description": "Listen for triggering a function run of sync companies.",
+        "operationId": "trigger_sync_companies_create",
         "responses": {
           "202": {
             "description": "successfully enqueued operation",
@@ -1580,10 +1669,90 @@
         }
       }
     },
+    "/run/sync-huddles": {
+      "post": {
+        "description": "Listen for triggering a function run of sync huddles.",
+        "operationId": "trigger_sync_huddles_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/run/sync-interviews": {
       "post": {
         "description": "Listen for triggering a function run of sync interviews.",
         "operationId": "trigger_sync_interviews_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-journal-clubs": {
+      "post": {
+        "description": "Listen for triggering a function run of sync journal clubs.",
+        "operationId": "trigger_sync_journal_clubs_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-mailing-lists": {
+      "post": {
+        "description": "Listen for triggering a function run of sync mailing lists.",
+        "operationId": "trigger_sync_mailing_lists_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run/sync-other": {
+      "post": {
+        "description": "Listen for triggering a function run of sync other.",
+        "operationId": "trigger_sync_other_create",
         "responses": {
           "202": {
             "description": "successfully enqueued operation",
