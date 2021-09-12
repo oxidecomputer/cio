@@ -147,7 +147,7 @@ impl NewInboundShipment {
         // Get the tracking status for the shipment and fill in the details.
         let ts = shippo.get_tracking_status(&carrier, &self.tracking_number).await?;
         self.tracking_number = ts.tracking_number.to_string();
-        let status = ts.tracking_status.unwrap_or_default();
+        let mut status = ts.tracking_status.unwrap_or_default();
         self.tracking_link();
         self.eta = ts.eta;
 
@@ -194,6 +194,16 @@ impl NewInboundShipment {
             company.post_to_slack_channel(db, &msg).await?;
         }
 
+        Ok(())
+    }
+}
+
+impl InboundShipment {
+    /// Get the details about the shipment from the tracking API.
+    pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
+        let mut ns: NewInboundShipment = self.clone().into();
+        ns.expand(db, company).await?;
+        ns.upsert(db).await?;
         Ok(())
     }
 }

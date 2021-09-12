@@ -1355,54 +1355,7 @@ pub async fn handle_shippo_tracking_update(
     {
         let company = shipment.company(&api_context.db)?;
 
-        // Get the tracking status for the shipment and fill in the details.
-        shipment.tracking_number = ts.tracking_number.to_string();
-        let tracking_status = ts.tracking_status.unwrap_or_default();
-        shipment.tracking_link();
-        shipment.eta = ts.eta;
-
-        shipment.oxide_tracking_link = shipment.oxide_tracking_link();
-
-        shipment.messages = tracking_status.status_details;
-
-        // Iterate over the tracking history and set the shipped_time.
-        // Get the first date it was maked as in transit and use that as the shipped
-        // time.
-        for h in ts.tracking_history {
-            if h.status == *"TRANSIT" {
-                if let Some(shipped_time) = h.status_date {
-                    let current_shipped_time = if let Some(s) = shipment.shipped_time {
-                        s
-                    } else {
-                        Utc::now()
-                    };
-
-                    if shipped_time < current_shipped_time {
-                        shipment.shipped_time = Some(shipped_time);
-                    }
-                }
-            }
-        }
-
-        if tracking_status.status == *"DELIVERED" {
-            shipment.delivered_time = tracking_status.status_date;
-        }
-
-        if shipment.delivered_time.is_some() {
-            status.status = "DELIVERED".to_string();
-        }
-
-        let send_notification = shipment.tracking_status != tracking_status.status;
-
-        shipment.tracking_status = tracking_status.status.to_string();
-
-        if send_notification {
-            // Send a slack notification since it changed.
-            let msg: FormattedMessage = shipment.clone().into();
-            company.post_to_slack_channel(&api_context.db, &msg).await?;
-        }
-
-        shipment.update(&api_context.db).await?;
+        //shipment.expand(&api_context.db, &company).await?;
     }
 
     // Update the outbound shipment if it exists.
