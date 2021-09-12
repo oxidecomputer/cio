@@ -1388,6 +1388,10 @@ pub async fn handle_shippo_tracking_update(
             shipment.delivered_time = tracking_status.status_date;
         }
 
+        if shipment.delivered_time.is_some() {
+            status.status = "DELIVERED".to_string();
+        }
+
         let send_notification = shipment.tracking_status != tracking_status.status;
 
         shipment.tracking_status = tracking_status.status.to_string();

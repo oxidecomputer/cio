@@ -174,6 +174,10 @@ impl NewInboundShipment {
             self.delivered_time = status.status_date;
         }
 
+        if self.delivered_time.is_some() {
+            status.status = "DELIVERED".to_string();
+        }
+
         // Register a tracking webhook for this shipment.
         shippo
             .register_tracking_webhook(&carrier, &self.tracking_number)
