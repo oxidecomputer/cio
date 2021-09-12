@@ -135,7 +135,7 @@ impl NewInboundShipment {
     }
 
     /// Get the details about the shipment from the tracking API.
-    pub async fn expand(&mut self) {
+    pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
         // Create the shippo client.
         let shippo = Shippo::new_from_env();
 
@@ -145,13 +145,9 @@ impl NewInboundShipment {
         }
 
         // Get the tracking status for the shipment and fill in the details.
-        let ts = shippo
-            .get_tracking_status(&carrier, &self.tracking_number)
-            .await
-            .unwrap_or_default();
+        let ts = shippo.get_tracking_status(&carrier, &self.tracking_number).await?;
         self.tracking_number = ts.tracking_number.to_string();
         let status = ts.tracking_status.unwrap_or_default();
-        self.tracking_status = status.status.to_string();
         self.tracking_link();
         self.eta = ts.eta;
 
@@ -177,6 +173,19 @@ impl NewInboundShipment {
         if status.status == *"DELIVERED" {
             self.delivered_time = status.status_date;
         }
+
+        let send_notification = self.tracking_status != status.status;
+
+        // Set the new status.
+        self.tracking_status = status.status.to_string();
+
+        if send_notification {
+            // Send a slack notification since it changed.
+            let msg: FormattedMessage = self.clone().into();
+            company.post_to_slack_channel(db, &msg).await?;
+        }
+
+        Ok(())
     }
 }
 
@@ -449,7 +458,7 @@ impl From<User> for NewOutboundShipment {
             delivered_time: None,
             shipped_time: None,
             shippo_id: Default::default(),
-            status: "Queued".to_string(),
+            status: crate::shipment_status::Status::Queued.to_string(),
             tracking_link: Default::default(),
             oxide_tracking_link: Default::default(),
             tracking_number: Default::default(),
@@ -729,7 +738,9 @@ impl OutboundShipments {
         // For each of the shipments, let's set the pickup date.
         for mut shipment in shipments {
             shipment.pickup_date = Some(pickup_date);
-            shipment.status = crate::shipment_status::Status::WaitingForPickup.to_string();
+            shipment
+                .set_status(db, crate::shipment_status::Status::WaitingForPickup, company)
+                .await?;
             shipment.update(db).await?;
         }
 
@@ -1063,6 +1074,28 @@ The Shipping Bot",
         Ok(())
     }
 
+    /// Sends a Slack notification if the status of the shipment changed.
+    /// And changes the status of the shipment.
+    pub async fn set_status(
+        &mut self,
+        db: &Database,
+        status: crate::shipment_status::Status,
+        company: &Company,
+    ) -> Result<()> {
+        let send_notification = self.status != status.to_string();
+
+        // Set the new status.
+        self.status = status.to_string();
+
+        if send_notification {
+            // Send a slack notification since it changed.
+            let msg: FormattedMessage = self.clone().into();
+            company.post_to_slack_channel(db, &msg).await?;
+        }
+
+        Ok(())
+    }
+
     /// Create or get a shipment in shippo that matches this shipment.
     pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) -> Result<()> {
         let company = self.company(db)?;
@@ -1088,7 +1121,8 @@ The Shipping Bot",
 
         // If we did local_pickup, we can return early here.
         if self.local_pickup {
-            self.status = crate::shipment_status::Status::PickedUp.to_string();
+            self.set_status(db, crate::shipment_status::Status::PickedUp, &company)
+                .await?;
             self.update(db).await?;
             // Return early.
             return Ok(());
@@ -1125,30 +1159,6 @@ The Shipping Bot",
                 self.messages = tracking_status.status_details;
             }
 
-            // Get the status of the shipment.
-            if tracking_status.status == *"TRANSIT" || tracking_status.status == "IN_TRANSIT" {
-                if self.status != crate::shipment_status::Status::Shipped.to_string() {
-                    // Send an email to the recipient with their tracking link.
-                    // Wait until it is in transit to do this.
-                    self.send_email_to_recipient(db).await?;
-                    // We make sure it only does this one time.
-                    // Set the shipped date as this first date.
-                    self.shipped_time = tracking_status.status_date;
-                }
-
-                self.status = crate::shipment_status::Status::Shipped.to_string();
-            }
-            if tracking_status.status == *"DELIVERED" {
-                self.status = crate::shipment_status::Status::Delivered.to_string();
-                self.delivered_time = tracking_status.status_date;
-            }
-            if tracking_status.status == *"RETURNED" {
-                self.status = crate::shipment_status::Status::Returned.to_string();
-            }
-            if tracking_status.status == *"FAILURE" {
-                self.status = crate::shipment_status::Status::Failure.to_string();
-            }
-
             // Iterate over the tracking history and set the shipped_time.
             // Get the first date it was maked as in transit and use that as the shipped
             // time.
@@ -1162,6 +1172,34 @@ The Shipping Bot",
                         }
                     }
                 }
+            }
+
+            // Get the status of the shipment.
+            if tracking_status.status == *"TRANSIT" || tracking_status.status == "IN_TRANSIT" {
+                if self.status != crate::shipment_status::Status::Shipped.to_string() {
+                    // Send an email to the recipient with their tracking link.
+                    // Wait until it is in transit to do this.
+                    self.send_email_to_recipient(db).await?;
+                    // We make sure it only does this one time.
+                    // Set the shipped date as this first date.
+                    self.shipped_time = tracking_status.status_date;
+                }
+
+                self.set_status(db, crate::shipment_status::Status::Shipped, &company)
+                    .await?;
+            }
+            if tracking_status.status == *"DELIVERED" {
+                self.delivered_time = tracking_status.status_date;
+                self.set_status(db, crate::shipment_status::Status::Delivered, &company)
+                    .await?;
+            }
+            if tracking_status.status == *"RETURNED" {
+                self.set_status(db, crate::shipment_status::Status::Returned, &company)
+                    .await?;
+            }
+            if tracking_status.status == *"FAILURE" {
+                self.set_status(db, crate::shipment_status::Status::Failure, &company)
+                    .await?;
             }
 
             // Return early.
@@ -1283,17 +1321,18 @@ The Shipping Bot",
                 self.label_link = label.label_url.to_string();
                 self.eta = label.eta;
                 self.shippo_id = label.object_id.to_string();
-                self.status = crate::shipment_status::Status::LabelCreated.to_string();
+                self.oxide_tracking_link = self.oxide_tracking_link();
                 if label.status != "SUCCESS" {
-                    self.status = label.status.to_string();
                     // Print the messages in the messages field.
                     let mut messages = "".to_string();
                     for m in label.messages {
                         messages = format!("{}\n{} {} {}", messages, m.code, m.source, m.text);
                     }
                     self.messages = messages.trim().to_string();
+                } else {
+                    self.set_status(db, crate::shipment_status::Status::LabelCreated, &company)
+                        .await?;
                 }
-                self.oxide_tracking_link = self.oxide_tracking_link();
 
                 // Save it in Airtable here, in case one of the below steps fails.
                 self.update(db).await?;
@@ -1307,7 +1346,8 @@ The Shipping Bot",
                 self.print_label(db).await?;
                 // Print the receipt.
                 self.print_receipt(db).await?;
-                self.status = crate::shipment_status::Status::LabelPrinted.to_string();
+                self.set_status(db, crate::shipment_status::Status::LabelPrinted, &company)
+                    .await?;
 
                 // Send an email to us that we need to package the shipment.
                 self.send_email_internally(db).await?;
@@ -1373,7 +1413,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
             delivered_time: None,
             shipped_time: None,
             shippo_id: order.transactions.get(0).unwrap().object_id.to_string(),
-            status: "Queued".to_string(),
+            status: crate::shipment_status::Status::Queued.to_string(),
             tracking_link: Default::default(),
             oxide_tracking_link: Default::default(),
             tracking_number: Default::default(),
@@ -1411,6 +1451,11 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 
         // Upsert the record in the database.
         let mut s = ns.upsert_in_db(db)?;
+
+        // The shipment is actually new, lets send the notification for the status
+        // as queued then.
+        s.set_status(db, crate::shipment_status::Status::Queued, company)
+            .await?;
 
         // Update the shipment from shippo.
         s.create_or_get_shippo_shipment(db).await?;
@@ -1458,7 +1503,7 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Resu
         }
 
         let mut new_shipment: NewInboundShipment = record.fields.into();
-        new_shipment.expand().await;
+        new_shipment.expand(db, company).await?;
         new_shipment.cio_company_id = company.id;
         let mut shipment = new_shipment.upsert_in_db(db)?;
         if shipment.airtable_record_id.is_empty() {
