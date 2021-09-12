@@ -337,22 +337,22 @@ impl From<NewSwagInventoryItem> for FormattedMessage {
                 blocks: vec![
                     MessageBlock {
                         block_type: MessageBlockType::Section,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text,
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: format!("Swag inventory item | {} | {}", item.item, item.size),
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
@@ -551,7 +551,7 @@ impl SwagInventoryItem {
             // Set our accessory.
             msg.attachments[0].blocks[0].accessory = Some(accessory);
             // Set our text.
-            msg.attachments[0].blocks[0].elements[0].text = format!(
+            msg.attachments[0].blocks[0].text.text = format!(
                 "*{}*\n | stock changed from `{}` to `{}`",
                 self.name, self.current_stock, new
             );

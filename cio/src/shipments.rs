@@ -273,33 +273,33 @@ impl From<NewInboundShipment> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Section,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: notes,
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: status_msg,
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: "*INBOUND SHIPMENT*".to_string(),
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
@@ -537,33 +537,33 @@ impl From<NewOutboundShipment> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Section,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: item.contents,
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: status_msg,
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        text: Some(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: "*OUTBOUND SHIPMENT*".to_string(),
-                        }],
-                        text: Default::default(),
+                        }),
+                        elements: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
