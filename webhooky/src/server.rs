@@ -187,7 +187,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         scheduler.every(1.day()).at("1:30 am").run(|| async {
             do_job("localhost:8080", "sync-finance").await;
         });
-        scheduler.every(1.day()).at("1:00 am").run(|| async {
+        scheduler.every(2.hours()).run(|| async {
             do_job("localhost:8080", "sync-huddles").await;
         });
         scheduler.every(4.hours()).run(|| async {
