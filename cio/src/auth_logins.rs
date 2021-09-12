@@ -182,36 +182,3 @@ impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        auth_logins::{AuthUserLogins, AuthUsers},
-        companies::Company,
-        db::Database,
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_auth_users_and_logins_refresh() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        // Update auth user and auth user logins in airtable.
-        AuthUserLogins::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-        AuthUsers::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
-}
