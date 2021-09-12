@@ -61,6 +61,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         .unwrap();
     api.register(listen_airtable_employees_print_home_address_label_webhooks)
         .unwrap();
+    api.register(listen_airtable_certificates_renew_webhooks).unwrap();
     api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
     api.register(listen_airtable_shipments_outbound_create_webhooks)
         .unwrap();
@@ -529,6 +530,28 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     sentry::start_session();
 
     if let Err(e) = crate::handlers::handle_airtable_employees_print_home_address_label(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for a button pressed to renew a certificate.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/certificates/renew",
+}]
+async fn listen_airtable_certificates_renew_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+
+    if let Err(e) = crate::handlers::handle_airtable_certificates_renew(rqctx, body_param).await {
         // Send the error to sentry.
         return Err(handle_anyhow_err_as_http_err(e));
     }

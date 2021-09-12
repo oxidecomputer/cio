@@ -7,6 +7,7 @@ use cio_api::{
     analytics::NewPageView,
     applicants::{get_docusign_template_id, get_role_from_sheet_id, Applicant, NewApplicant},
     asset_inventory::AssetItem,
+    certs::Certificate,
     companies::Company,
     configs::User,
     journal_clubs::JournalClubMeeting,
@@ -607,6 +608,31 @@ pub async fn handle_airtable_employees_print_home_address_label(
 
     // Create a new shipment for the employee and print the label.
     user.create_shipment_to_home_address(&api_context.db).await?;
+
+    Ok(())
+}
+
+pub async fn handle_airtable_certificates_renew(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    let event = body_param.into_inner();
+
+    if event.record_id.is_empty() {
+        bail!("record id is empty");
+    }
+
+    // Get the row from airtable.
+    let cert = Certificate::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    let company = cert.company(&api_context.db)?;
+
+    let github = company.authenticate_github()?;
+
+    // Renew the cert.
+    cert.renew(&api_context.db, &github, &company).await?;
 
     Ok(())
 }

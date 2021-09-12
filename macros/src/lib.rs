@@ -157,6 +157,14 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
+    impl From<&#new_struct_name> for #og_struct_name {
+        fn from(item: &#new_struct_name) -> Self {
+            #og_struct_name {
+                #struct_inners
+            }
+        }
+    }
+
     impl #new_struct_name {
         /// Update the record in the database and Airtable.
         pub async fn update(&self, db: &crate::db::Database) -> anyhow::Result<Self> {

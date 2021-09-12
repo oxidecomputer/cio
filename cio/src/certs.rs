@@ -25,6 +25,7 @@ use crate::{
     airtable::AIRTABLE_CERTIFICATES_TABLE,
     companies::Company,
     core::UpdateAirtableRecord,
+    db::Database,
     schema::certificates,
     utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
@@ -438,6 +439,25 @@ impl NewCertificate {
 #[async_trait]
 impl UpdateAirtableRecord<Certificate> for Certificate {
     async fn update_airtable_record(&mut self, _record: Certificate) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl Certificate {
+    pub async fn renew(&self, db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
+        let mut cert: NewCertificate = self.into();
+
+        cert.populate(company).await?;
+
+        // Save the certificate to disk.
+        cert.save_to_github_repo(github, company).await?;
+
+        // Update the Github Action secrets, with the new certificates if there are some.
+        cert.update_github_action_secrets(github, company).await?;
+
+        // Update the database and Airtable.
+        cert.upsert(db).await?;
+
         Ok(())
     }
 }
