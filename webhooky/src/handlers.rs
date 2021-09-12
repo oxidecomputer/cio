@@ -602,10 +602,8 @@ pub async fn handle_slack_commands(
             }
         }
         SlackCommand::Shipments => {
-            let mut msg: serde_json::Value = Default::default();
-
-            if !text.is_empty() && text != "outbound" && text != "inbound" {
-                msg = json!(MessageResponse {
+            let msg = if !text.is_empty() && text != "outbound" && text != "inbound" {
+                json!(MessageResponse {
                     response_type: MessageResponseType::InChannel,
                     text: format!(
                         "Sorry <@{}> :scream: `{}` is valid, try `outbound` or `inbound` or leave blank for both",
@@ -642,7 +640,7 @@ pub async fn handle_slack_commands(
                 };
 
                 if outbound.is_empty() && text == "outbound" {
-                    msg = json!(MessageResponse {
+                    json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: format!(
                             "Sorry <@{}> :scream: I could not find any `outbound` shipments",
@@ -650,7 +648,7 @@ pub async fn handle_slack_commands(
                         ),
                     })
                 } else if inbound.is_empty() && text == "inbound" {
-                    msg = json!(MessageResponse {
+                    json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: format!(
                             "Sorry <@{}> :scream: I could not find any `inbound` shipments",
@@ -658,7 +656,7 @@ pub async fn handle_slack_commands(
                         ),
                     })
                 } else if inbound.is_empty() && outbound.is_empty() {
-                    msg = json!(MessageResponse {
+                    json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: format!(
                             "Sorry <@{}> :scream: I could not find any shipments that had not been delivered",
@@ -702,9 +700,9 @@ pub async fn handle_slack_commands(
                         fm.attachments.append(&mut m.attachments);
                     }
 
-                    msg = json!(fm)
+                    json!(fm)
                 }
-            }
+            };
 
             warn!("{}", msg.to_string());
             msg
