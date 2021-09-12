@@ -356,7 +356,9 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
                 existing.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
                 interviewers.insert(interview.email.to_string(), existing.clone());
             } else {
-                warn!("interviewer {} not found in database", username);
+                // This gets called for people who left the company.
+                // TODO: add a better way of handling them.
+                info!("interviewer {} not found in database", username);
             }
         }
     }
