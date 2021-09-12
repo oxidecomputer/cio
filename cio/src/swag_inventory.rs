@@ -333,7 +333,7 @@ impl From<NewSwagInventoryItem> for FormattedMessage {
                 thumb_url: Default::default(),
                 title: Default::default(),
                 title_link: Default::default(),
-                ts: Utc::now(),
+                ts: Default::default(),
                 blocks: vec![
                     MessageBlock {
                         block_type: MessageBlockType::Section,

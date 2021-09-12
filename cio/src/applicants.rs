@@ -1558,15 +1558,19 @@ impl From<NewApplicant> for FormattedMessage {
         let time = item.human_duration();
 
         let mut status_msg = format!(
-            "<https://docs.google.com/spreadsheets/d/{}|{}> | interested in: {} | applied {}",
-            item.sheet_id,
-            item.role,
-            item.interested_in.join(","),
-            time
+            "<https://docs.google.com/spreadsheets/d/{}|{}>",
+            item.sheet_id, item.role,
         );
+
+        if !item.interested_in.is_empty() {
+            status_msg += &format!(" | interested in: {}", item.interested_in.join(","));
+        }
+
         if !item.status.is_empty() {
             status_msg += &format!(" | status: *{}*", item.status);
         }
+
+        status_msg += &format!(" | applied {}", time);
 
         let mut values_msg = "".to_string();
         if !item.value_reflected.is_empty() {
@@ -1637,7 +1641,7 @@ impl From<NewApplicant> for FormattedMessage {
                 thumb_url: Default::default(),
                 title: Default::default(),
                 title_link: Default::default(),
-                ts: Utc::now(),
+                ts: Default::default(),
                 blocks: vec![
                     MessageBlock {
                         block_type: MessageBlockType::Section,

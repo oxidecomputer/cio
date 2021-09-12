@@ -263,7 +263,7 @@ impl From<NewInboundShipment> for FormattedMessage {
                 thumb_url: Default::default(),
                 title: Default::default(),
                 title_link: Default::default(),
-                ts: Utc::now(),
+                ts: Default::default(),
                 blocks: vec![
                     MessageBlock {
                         block_type: MessageBlockType::Header,
@@ -527,7 +527,7 @@ impl From<NewOutboundShipment> for FormattedMessage {
                 thumb_url: Default::default(),
                 title: Default::default(),
                 title_link: Default::default(),
-                ts: Utc::now(),
+                ts: Default::default(),
                 blocks: vec![
                     MessageBlock {
                         block_type: MessageBlockType::Header,
