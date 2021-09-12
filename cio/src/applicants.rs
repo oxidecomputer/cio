@@ -26,7 +26,9 @@ use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 use sheets::Client as GoogleSheets;
-use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
+use slack_chat_api::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 use tar::Archive;
 use walkdir::WalkDir;
 
@@ -1532,6 +1534,24 @@ The applicants Airtable \
     }
 }
 
+fn get_color_based_on_status(s: &str) -> String {
+    let status = crate::applicant_status::Status::from_str(s).unwrap();
+
+    let color = match status {
+        crate::applicant_status::Status::NextSteps => crate::colors::Colors::Blue,
+        crate::applicant_status::Status::Deferred => crate::colors::Colors::Red,
+        crate::applicant_status::Status::Declined => crate::colors::Colors::Red,
+        crate::applicant_status::Status::Hired => crate::colors::Colors::Green,
+        crate::applicant_status::Status::GivingOffer => crate::colors::Colors::Green,
+        crate::applicant_status::Status::Contractor => crate::colors::Colors::Green,
+        crate::applicant_status::Status::NeedsToBeTriaged => crate::colors::Colors::Yellow,
+        crate::applicant_status::Status::Interviewing => crate::colors::Colors::Blue,
+        crate::applicant_status::Status::Onboarding => crate::colors::Colors::Green,
+    };
+
+    color.to_string()
+}
+
 /// Convert the applicant into a Slack message.
 impl From<NewApplicant> for FormattedMessage {
     fn from(item: NewApplicant) -> Self {
@@ -1601,53 +1621,70 @@ impl From<NewApplicant> for FormattedMessage {
 
         FormattedMessage {
             channel: Default::default(),
-            attachments: Default::default(),
-            blocks: vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: intro_msg,
-                    }),
-                    elements: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: info_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: values_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: status_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-            ],
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: get_color_based_on_status(&item.status),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Utc::now(),
+                blocks: vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        text: Some(MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: intro_msg,
+                        }),
+                        elements: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: info_msg,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: values_msg,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: status_msg,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                ],
+            }],
         }
     }
 }
