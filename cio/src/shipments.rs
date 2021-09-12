@@ -13,7 +13,9 @@ use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
-use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
+use slack_chat_api::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 
 use crate::{
     airtable::{AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE},
@@ -178,6 +180,26 @@ impl NewInboundShipment {
     }
 }
 
+fn get_color_based_on_tracking_status(s: &str) -> String {
+    let status = s.to_lowercase().trim().to_string();
+
+    if status == "delivered" {
+        return "#48D597".to_string();
+    }
+    if status == "transit" {
+        return "#4969F6".to_string();
+    }
+    if status == "pre_transit" {
+        return "#F5CF65".to_string();
+    }
+    if status == "returned" || status == "unknown" {
+        return "#E86886".to_string();
+    }
+
+    // Otherwise return yellow as default if we don't know.
+    "#F5CF65".to_string()
+}
+
 /// Convert the inbound shipment into a Slack message.
 impl From<NewInboundShipment> for FormattedMessage {
     fn from(item: NewInboundShipment) -> Self {
@@ -211,53 +233,70 @@ impl From<NewInboundShipment> for FormattedMessage {
 
         FormattedMessage {
             channel: Default::default(),
-            attachments: Default::default(),
-            blocks: vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Header,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::PlainText,
-                        text: item.name,
-                    }),
-                    elements: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: notes,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: status_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: "*INBOUND SHIPMENT*".to_string(),
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-            ],
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: get_color_based_on_tracking_status(&item.tracking_status),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Utc::now(),
+                blocks: vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Header,
+                        text: Some(MessageBlockText {
+                            text_type: MessageType::PlainText,
+                            text: item.name,
+                        }),
+                        elements: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: notes,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: status_msg,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: "*INBOUND SHIPMENT*".to_string(),
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                ],
+            }],
         }
     }
 }
@@ -450,53 +489,70 @@ impl From<NewOutboundShipment> for FormattedMessage {
 
         FormattedMessage {
             channel: Default::default(),
-            attachments: Default::default(),
-            blocks: vec![
-                MessageBlock {
-                    block_type: MessageBlockType::Header,
-                    text: Some(MessageBlockText {
-                        text_type: MessageType::PlainText,
-                        text: item.name.to_string(),
-                    }),
-                    elements: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Section,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: item.contents,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: status_msg,
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-                MessageBlock {
-                    block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: "*OUTBOUND SHIPMENT*".to_string(),
-                    }],
-                    text: Default::default(),
-                    accessory: Default::default(),
-                    block_id: Default::default(),
-                    fields: Default::default(),
-                },
-            ],
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: get_color_based_on_tracking_status(&item.tracking_status),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Utc::now(),
+                blocks: vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Header,
+                        text: Some(MessageBlockText {
+                            text_type: MessageType::PlainText,
+                            text: item.name.to_string(),
+                        }),
+                        elements: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: item.contents,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: status_msg,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: "*OUTBOUND SHIPMENT*".to_string(),
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                ],
+            }],
         }
     }
 }
