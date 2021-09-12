@@ -162,28 +162,38 @@ impl Company {
     pub async fn post_to_slack_channel(&self, db: &Database, msg: &slack_chat_api::FormattedMessage) -> Result<()> {
         // We need to get the url from the api tokens.
         // Only do this if we have a token and the token is not empty.
-        if let Ok(token) = api_tokens::dsl::api_tokens
+        let t = api_tokens::dsl::api_tokens
             .filter(
                 api_tokens::dsl::auth_company_id
                     .eq(self.id)
                     .and(api_tokens::dsl::product.eq("slack".to_lowercase())),
             )
-            .first::<APIToken>(&db.conn())
-        {
-            if !token.endpoint.is_empty() {
-                let client = reqwest::Client::new();
-                let resp = client.post(&token.endpoint).json(msg).send().await?;
+            .first::<APIToken>(&db.conn());
+        if t.is_err() {
+            // Return early we likely don't have a token for slack, so we don't want to post
+            // anyways.
+            return Ok(());
+        }
 
-                match resp.status() {
-                    reqwest::StatusCode::OK => (),
-                    s => {
-                        bail!(
-                            "posting to slack channel failed with status code `{}`: {}`",
-                            s,
-                            resp.text().await?
-                        )
-                    }
-                }
+        let token = t?;
+        if token.endpoint.is_empty() {
+            // Return early we likely don't have a token for slack, so we don't want to post
+            // anyways.
+            return Ok(());
+        }
+
+        // Okay, we have a valid token, let's do the thing!
+        let client = reqwest::Client::new();
+        let resp = client.post(&token.endpoint).json(msg).send().await?;
+
+        match resp.status() {
+            reqwest::StatusCode::OK => (),
+            s => {
+                bail!(
+                    "posting to slack channel failed with status code `{}`: {}`",
+                    s,
+                    resp.text().await?
+                )
             }
         }
 

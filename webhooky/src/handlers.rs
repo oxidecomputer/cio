@@ -570,7 +570,11 @@ pub async fn handle_slack_commands(
                     .filter(
                         outbound_shipments::dsl::cio_company_id
                             .eq(company.id)
-                            .and(outbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string())),
+                            .and(outbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string()))
+                            .and(
+                                outbound_shipments::dsl::status
+                                    .ne(cio_api::shipment_status::Status::PickedUp.to_string()),
+                            ),
                     )
                     .load::<OutboundShipment>(&db.conn())?;
                 for (i, m) in outbound.into_iter().enumerate() {
@@ -1216,9 +1220,11 @@ pub async fn handle_airtable_shipments_inbound_create(
         bail!("tracking_number and carrier are empty, ignoring");
     }
 
+    let company = record.company(db)?;
+
     let mut new_shipment: NewInboundShipment = record.into();
 
-    new_shipment.expand().await;
+    new_shipment.expand(db, &company).await?;
     let mut shipment = new_shipment.upsert_in_db(db)?;
     if shipment.airtable_record_id.is_empty() {
         shipment.airtable_record_id = event.record_id;
@@ -1484,11 +1490,9 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
-        // TODO: this causes a weird compile time error, figure it out.
-        /*let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
+        let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
         company.post_to_slack_channel(db, &new_subscriber.into()).await?;
-        // TODO: this causes a weird compile time error, figure it out.
-        info!("subscriber {} posted to Slack", subscriber.email);*/
+        info!("subscriber {} posted to Slack", subscriber.email);
 
         info!("subscriber {} created successfully", subscriber.email);
     } else {
@@ -1523,10 +1527,9 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
-        // TODO: this causes a weird compile time error, figure it out.
-        /*let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
-        company.post_to_slack_channel(db, &new_subscriber.into()).await;
-        info!("subscriber {} posted to Slack", subscriber.email);*/
+        let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
+        company.post_to_slack_channel(db, &new_subscriber.into()).await?;
+        info!("subscriber {} posted to Slack", subscriber.email);
 
         info!("subscriber {} created successfully", subscriber.email);
     } else {
