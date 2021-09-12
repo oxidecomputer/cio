@@ -434,17 +434,29 @@ impl Default for MessageResponseType {
 /// Docs: https://api.slack.com/interactivity/slash-commands#app_command_handling
 #[derive(Debug, Default, JsonSchema, Deserialize, Serialize)]
 pub struct BotCommand {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub user_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub command: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub api_app_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub response_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub trigger_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub channel_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub team_domain: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub team_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub channel_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub user_id: String,
 }
 
