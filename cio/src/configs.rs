@@ -1735,7 +1735,9 @@ pub async fn sync_users(
                     }
                 }
                 Err(e) => {
-                    warn!("getting airtable enterprise user for {} failed: {}", user.email, e);
+                    if user.is_full_time() {
+                        warn!("getting airtable enterprise user for {} failed: {}", user.email, e);
+                    }
                 }
             }
         }
