@@ -17,6 +17,10 @@ use printpdf::{types::plugins::graphics::two_dimensional::image::Image as PdfIma
 use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use slack_chat_api::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockAccessory, MessageBlockText, MessageBlockType,
+    MessageType,
+};
 
 use crate::{
     airtable::{AIRTABLE_BARCODE_SCANS_TABLE, AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE, AIRTABLE_SWAG_ITEMS_TABLE},
@@ -306,6 +310,66 @@ impl NewSwagInventoryItem {
     }
 }
 
+/// Convert the swag inventory item into a Slack message.
+impl From<NewSwagInventoryItem> for FormattedMessage {
+    fn from(item: NewSwagInventoryItem) -> Self {
+        let text = format!("*{}*\n | current stock: {}", item.name, item.current_stock);
+
+        FormattedMessage {
+            channel: Default::default(),
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: "".to_string(),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Utc::now(),
+                blocks: vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: format!("Swag inventory item | {} | {}", item.item, item.size),
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                ],
+            }],
+        }
+    }
+}
+
+impl From<SwagInventoryItem> for FormattedMessage {
+    fn from(item: SwagInventoryItem) -> Self {
+        let new: NewSwagInventoryItem = item.into();
+        new.into()
+    }
+}
+
 // Get the bytes for a pdf barcode label.
 pub fn generate_pdf_barcode_label(
     image_bytes: &[u8],
@@ -458,6 +522,55 @@ impl SwagInventoryItem {
 
         Ok(())
     }
+
+    pub fn get_item(&self, db: &Database) -> Option<SwagItem> {
+        SwagItem::get_from_db(db, self.item.to_string())
+    }
+
+    pub async fn send_notification_if_inventory_changed(
+        &mut self,
+        db: &Database,
+        company: &Company,
+        new: i32,
+    ) -> Result<()> {
+        let send_notification = self.current_stock != new;
+
+        if send_notification {
+            // Send a slack notification since it changed.
+            let mut msg: FormattedMessage = self.clone().into();
+
+            let item = self.get_item(db).unwrap();
+
+            // Add our image as an accessory.
+            let accessory = MessageBlockAccessory {
+                accessory_type: MessageType::Image,
+                image_url: item.image.to_string(),
+                alt_text: self.item.to_string(),
+            };
+
+            // Set our accessory.
+            msg.attachments[0].blocks[0].accessory = Some(accessory);
+            // Set our text.
+            msg.attachments[0].blocks[0].elements[0].text = format!(
+                "*{}*\n | stock changed from `{}` to `{}`",
+                self.name, self.current_stock, new
+            );
+
+            if self.current_stock > new {
+                msg.attachments[0].color = crate::colors::Colors::Yellow.to_string();
+            } else {
+                // We increased in stock, show it as Green.
+                msg.attachments[0].color = crate::colors::Colors::Green.to_string();
+            }
+
+            company.post_to_slack_channel(db, &msg).await?;
+        }
+
+        // Set the new count.
+        self.current_stock = new;
+
+        Ok(())
+    }
 }
 
 /// Sync swag inventory items from Airtable.
@@ -487,6 +600,8 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> R
         let mut inventory_item: NewSwagInventoryItem = inventory_item_record.fields.into();
         inventory_item.expand(&drive_client, &drive_id, &parent_id).await?;
         inventory_item.cio_company_id = company.id;
+
+        // TODO: send a slack notification for a new item (?)
 
         let mut db_inventory_item = inventory_item.upsert_in_db(db)?;
         db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();

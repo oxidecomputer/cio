@@ -83,15 +83,23 @@ impl Order {
         for item in &self.items {
             // Get the swag item from the database.
             let mut swag_inventory_item = SwagInventoryItem::get_by_id(db, item.id)?;
-            swag_inventory_item.current_stock -= item.quantity;
+            let mut new = swag_inventory_item.current_stock - item.quantity;
             if swag_inventory_item.current_stock < 0 {
                 // TODO: Hopefully this never happens. The store code _should_ only allow people
                 // to order what is in stock but just in case let's make sure this does not
                 // go negative.
-                swag_inventory_item.current_stock = 0;
+                new = 0;
             }
+
+            let company = swag_inventory_item.company(db)?;
+
+            // This will also set the value.
+            swag_inventory_item
+                .send_notification_if_inventory_changed(db, &company, new)
+                .await?;
+
             info!(
-                "subtracted {} from current stock of {} making the total now {}",
+                "subtracted `{}` from current stock of `{}` making the total now `{}`",
                 item.quantity, swag_inventory_item.name, swag_inventory_item.current_stock
             );
             swag_inventory_item.update(db).await?;
