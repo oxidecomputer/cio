@@ -482,32 +482,64 @@ pub async fn handle_slack_commands(
             })
         }
         SlackCommand::Applicants => {
-            // Get the applicants that need to be triaged.
-            let applicants =
-                applicants::dsl::applicants
-                    .filter(applicants::dsl::cio_company_id.eq(company.id).and(
-                        applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string()),
-                    ))
-                    .load::<Applicant>(&db.conn())?;
+            let mut status = cio_api::applicant_status::Status::NeedsToBeTriaged;
 
-            let mut msg: serde_json::Value = Default::default();
-            for (i, a) in applicants.into_iter().enumerate() {
-                if i > 0 {
-                    // Merge a divider onto the stack.
-                    let object = json!({
-                        "blocks": [{
-                            "type": "divider"
-                        }]
-                    });
-
-                    merge_json(&mut msg, object);
-                }
-
-                let obj: FormattedMessage = a.into();
-                merge_json(&mut msg, json!(obj));
+            if text.to_lowercase() == "onboarding" {
+                status = cio_api::applicant_status::Status::Onboarding;
+            } else if text.to_lowercase() == "interviewing" {
+                status = cio_api::applicant_status::Status::Interviewing;
+            } else if text.to_lowercase() == "giving offer" {
+                status = cio_api::applicant_status::Status::GivingOffer;
+            } else if text.to_lowercase() == "next steps" {
+                status = cio_api::applicant_status::Status::NextSteps;
+            } else if text.to_lowercase() == "hired" {
+                status = cio_api::applicant_status::Status::Hired;
+            } else if text.to_lowercase() == "deferred" {
+                status = cio_api::applicant_status::Status::Deferred;
+            } else if text.to_lowercase() == "declined" {
+                status = cio_api::applicant_status::Status::Declined;
             }
 
-            msg
+            // Get the applicants that need to be triaged.
+            let applicants = applicants::dsl::applicants
+                .filter(
+                    applicants::dsl::cio_company_id
+                        .eq(company.id)
+                        .and(applicants::dsl::status.eq(status.to_string())),
+                )
+                .load::<Applicant>(&db.conn())?;
+
+            if applicants.len() > 10 {
+                json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!(
+                        "Found `{}` applicants with status `{}`. Sorry, that's too many to return at once.",
+                        applicants.len(),
+                        status.to_string()
+                    ),
+                })
+            } else {
+                let mut msg: serde_json::Value = Default::default();
+                for (i, a) in applicants.into_iter().enumerate() {
+                    if i > 0 {
+                        // Merge a divider onto the stack.
+                        let object = json!({
+                            "attachments": [{
+                                "blocks": [{
+                                    "type": "divider"
+                                }]
+                            }]
+                        });
+
+                        merge_json(&mut msg, object);
+                    }
+
+                    let obj: FormattedMessage = a.into();
+                    merge_json(&mut msg, json!(obj));
+                }
+
+                msg
+            }
         }
         SlackCommand::Applicant => {
             if let Ok(applicant) = applicants::dsl::applicants
@@ -545,8 +577,10 @@ pub async fn handle_slack_commands(
                     if i > 0 {
                         // Merge a divider onto the stack.
                         let object = json!({
-                            "blocks": [{
-                                "type": "divider"
+                            "attachments": [{
+                                "blocks": [{
+                                    "type": "divider"
+                                }]
                             }]
                         });
 
