@@ -123,6 +123,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(trigger_sync_companies_create).unwrap();
     api.register(trigger_sync_configs_create).unwrap();
     api.register(trigger_sync_finance_create).unwrap();
+    api.register(trigger_sync_huddles_create).unwrap();
     api.register(trigger_sync_interviews_create).unwrap();
     api.register(trigger_sync_journal_clubs_create).unwrap();
     api.register(trigger_sync_mailing_lists_create).unwrap();
@@ -174,6 +175,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
             "sync-companies",
             "sync-configs",
             "sync-finance",
+            "sync-huddles",
             "sync-interviews",
             "sync-journal-clubs",
             "sync-mailing-lists",
@@ -1957,6 +1959,29 @@ async fn trigger_sync_other_create(
     sentry::start_session();
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-other").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync huddles. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-huddles",
+}]
+async fn trigger_sync_huddles_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-huddles").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))

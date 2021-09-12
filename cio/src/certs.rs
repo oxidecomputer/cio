@@ -171,7 +171,7 @@ impl NewCertificate {
                     .await?
                     .result;
 
-                info!("created dns record: {:#?}", dns_record);
+                info!("created dns record: {:?}", dns_record);
             } else {
                 // Update the DNS record.
                 let dns_record = api_client
@@ -190,7 +190,7 @@ impl NewCertificate {
                     .await?
                     .result;
 
-                info!("updated dns record: {:#?}", dns_record);
+                info!("updated dns record: {:?}", dns_record);
             }
 
             // TODO: make this less awful than a sleep.

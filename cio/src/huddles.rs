@@ -22,6 +22,11 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> 
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
 
+    if configs.huddles.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     let gcal = company.authenticate_google_calendar(db).await?;
 
     // Iterate over the huddle meetings.
@@ -163,6 +168,11 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
 pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
+
+    if configs.huddles.is_empty() {
+        // Return early.
+        return Ok(());
+    }
 
     let gcal = company.authenticate_google_calendar(db).await?;
 
@@ -396,6 +406,11 @@ pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
 
+    if configs.huddles.is_empty() {
+        // Return early.
+        return Ok(());
+    }
+
     // Define the date format.
     let date_format = "%A, %-d %B, %C%y";
 
@@ -451,6 +466,11 @@ pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
 pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
+
+    if configs.huddles.is_empty() {
+        // Return early.
+        return Ok(());
+    }
 
     let gcal = company.authenticate_google_calendar(db).await?;
 
@@ -653,33 +673,4 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Company,
-        db::Database,
-        huddles::{send_huddle_reminders, sync_changes_to_google_events, sync_huddle_meeting_notes, sync_huddles},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_huddles() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        sync_changes_to_google_events(&db, &oxide).await.unwrap();
-
-        sync_huddles(&db, &oxide).await.unwrap();
-
-        send_huddle_reminders(&db, &oxide).await.unwrap();
-
-        sync_huddle_meeting_notes(&oxide).await.unwrap();
-    }
 }
