@@ -575,7 +575,6 @@ pub async fn handle_slack_commands(
                     msg.attachments.append(&mut m.attachments);
                 }
 
-                warn!("{}", json!(msg).to_string());
                 json!(msg)
             }
         }
@@ -589,7 +588,6 @@ pub async fn handle_slack_commands(
                 .first::<Applicant>(&db.conn())
             {
                 let r: FormattedMessage = applicant.into();
-                warn!("{}", json!(r).to_string());
                 json!(r)
             } else {
                 json!(MessageResponse {
@@ -705,7 +703,6 @@ pub async fn handle_slack_commands(
                 }
             };
 
-            warn!("{}", msg.to_string());
             msg
         }
         SlackCommand::Papers => {
