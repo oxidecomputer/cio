@@ -631,7 +631,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
                     info!("huddle {} date={} updated", slug, record.fields.date);
                 }
                 None => {
-                    warn!("no huddle event matches: {}", record.fields.date);
+                    info!("no huddle event matches: {}", record.fields.date);
                 }
             }
         }
