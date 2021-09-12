@@ -1910,6 +1910,7 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     // Send to sentry.
     sentry_anyhow::capture_anyhow(&err);
+    sentry::capture_message(&err.to_string(), sentry::Level::Fatal);
     sentry::end_session();
 
     // We use the debug formatting here so we get the stack trace.
@@ -1919,10 +1920,18 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
 async fn start_job(address: &str, job: &str) -> Result<()> {
     info!("triggering job `{}`", job);
 
-    let resp = reqwest::Client::new()
-        .post(&format!("http://{}/run/{}", address, job))
-        .send()
-        .await?;
+    let client = if job == "cleanup" {
+        // Don't timeout if we have a cleanup request.
+        reqwest::Client::new()
+    } else {
+        // Timeout for the cron jobs.
+        reqwest::ClientBuilder::new()
+            .timeout(std::time::Duration::from_secs(60))
+            .connect_timeout(std::time::Duration::from_secs(2))
+            .build()?
+    };
+
+    let resp = client.post(&format!("http://{}/run/{}", address, job)).send().await?;
 
     match resp.status() {
         reqwest::StatusCode::OK => (),
