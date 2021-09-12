@@ -1441,7 +1441,7 @@ The Oxide Team",
         // Get the last ten character of the string.
         if let Ok(phone_number) = phonenumber::parse(Some(country), phone.to_string()) {
             if !phone_number.is_valid() {
-                warn!("phone number is invalid: `{}`", phone);
+                info!("phone number is invalid: `{}`", phone);
             }
 
             phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
@@ -4130,7 +4130,7 @@ Sincerely,
         // Get the last ten character of the string.
         if let Ok(phone_number) = phonenumber::parse(Some(country), phone.to_string()) {
             if !phone_number.is_valid() {
-                warn!("phone number is invalid: {}", phone);
+                info!("phone number is invalid: {}", phone);
             }
 
             phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
