@@ -190,12 +190,14 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
             }
             Err(e) => {
                 // Save the logs.
-                Function::add_logs_with_failure(db, saga_id, &output).await?;
+                Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Failure).await?;
 
                 bail!(e);
             }
         }
     }
 
+    // We do this here because sometimes the saga fails to update.
+    Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Success).await?;
     Ok(output)
 }

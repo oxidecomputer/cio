@@ -61,8 +61,13 @@ impl Function {
         Ok(())
     }
 
-    /// Add logs for a failed saga.
-    pub async fn add_logs_with_failure(db: &Database, saga_id: &uuid::Uuid, logs: &str) -> Result<()> {
+    /// Add logs with a conclusion saga.
+    pub async fn add_logs_with_conclusion(
+        db: &Database,
+        saga_id: &uuid::Uuid,
+        logs: &str,
+        conclusion: &octorust::types::Conclusion,
+    ) -> Result<()> {
         if logs.is_empty() {
             // Return early.
             return Ok(());
@@ -71,7 +76,7 @@ impl Function {
         // Get the saga from it's id.
         let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
         nf.logs = logs.to_string();
-        nf.conclusion = octorust::types::Conclusion::Failure.to_string();
+        nf.conclusion = conclusion.to_string();
         nf.update(db).await?;
 
         Ok(())
