@@ -17,7 +17,6 @@ use std::env;
 use anyhow::Result;
 use cio_api::{companies::Companys, db::Database};
 use clap::{AppSettings, Clap};
-use log::info;
 use sentry::IntoDsn;
 use slog::Drain;
 
