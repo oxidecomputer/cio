@@ -1557,10 +1557,7 @@ impl From<NewApplicant> for FormattedMessage {
     fn from(item: NewApplicant) -> Self {
         let time = item.human_duration();
 
-        let mut status_msg = format!(
-            "<https://docs.google.com/spreadsheets/d/{}|{}>",
-            item.sheet_id, item.role,
-        );
+        let mut status_msg = item.role.to_string();
 
         if !item.interested_in.is_empty() {
             status_msg += &format!(" | interested in: {}", item.interested_in.join(","));
