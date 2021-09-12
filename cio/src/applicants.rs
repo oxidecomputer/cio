@@ -3380,6 +3380,7 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) -> Resu
         // Try for all the sheet_ids.
         for (_, sheet_id) in get_sheets_map() {
             // Match on their email or their name.
+            // TODO: check with the new way.
             // TODO: name is working for now but might want to make it more fuzzy in the future.
             // This could be problematic if we have two John Smiths join in the same week.
             if let Ok(mut applicant) = applicants::dsl::applicants
@@ -3408,7 +3409,7 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) -> Resu
                     applicant.update(db).await?;
                 }
             } else {
-                warn!(
+                info!(
                     "could not find applicant with email {} in sheet_id {}",
                     candidate.email, sheet_id
                 );
