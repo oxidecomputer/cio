@@ -5,7 +5,9 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{airtable::AIRTABLE_FUNCTIONS_TABLE, core::UpdateAirtableRecord, db::Database, schema::functions};
+use crate::{
+    airtable::AIRTABLE_FUNCTIONS_TABLE, core::UpdateAirtableRecord, db::Database, schema::functions, utils::truncate,
+};
 
 #[db {
     new_struct_name = "Function",
@@ -41,6 +43,7 @@ pub struct NewFunction {
 #[async_trait]
 impl UpdateAirtableRecord<Function> for Function {
     async fn update_airtable_record(&mut self, _record: Function) -> Result<()> {
+        self.logs = truncate(&self.logs, 100000);
         Ok(())
     }
 }
