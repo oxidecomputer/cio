@@ -27,7 +27,6 @@
 #![allow(clippy::nonstandard_macro_braces)]
 use std::{collections::HashMap, env, error, fmt, fmt::Debug, sync::Arc};
 
-use chrono::{offset::Utc, serde::ts_seconds, DateTime};
 use reqwest::{header, Body, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -580,11 +579,8 @@ pub struct MessageAttachment {
     pub title: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title_link: String,
-    #[serde(
-        deserialize_with = "ts_seconds::deserialize",
-        serialize_with = "ts_seconds::serialize"
-    )]
-    pub ts: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ts: String,
 }
 
 /// A message attachment field in Slack.
