@@ -36,8 +36,9 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::{env, error, fmt, fmt::Debug, sync::Arc};
+use std::{env, fmt, fmt::Debug, sync::Arc};
 
+use anyhow::{bail, Result};
 use chrono::{offset::Utc, DateTime};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
@@ -60,7 +61,7 @@ pub struct Airtable {
 
 /// Get the API key from the AIRTABLE_API_KEY env variable.
 pub fn api_key_from_env() -> String {
-    env::var("AIRTABLE_API_KEY").unwrap()
+    env::var("AIRTABLE_API_KEY").unwrap_or_default()
 }
 
 impl Airtable {
@@ -104,15 +105,15 @@ impl Airtable {
         &self.key
     }
 
-    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Request
+    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Result<Request>
     where
         B: Serialize,
     {
-        let base = Url::parse(ENDPOINT).unwrap();
-        let url = base.join(&(self.base_id.to_string() + "/" + &path)).unwrap();
+        let base = Url::parse(ENDPOINT)?;
+        let url = base.join(&(self.base_id.to_string() + "/" + &path))?;
 
         let bt = format!("Bearer {}", self.key);
-        let bearer = header::HeaderValue::from_str(&bt).unwrap();
+        let bearer = header::HeaderValue::from_str(&bt)?;
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
@@ -137,7 +138,7 @@ impl Airtable {
         }
 
         // Build the request.
-        rb.build().unwrap()
+        Ok(rb.build()?)
     }
 
     /// List records in a table for a particular view.
@@ -146,28 +147,25 @@ impl Airtable {
         table: &str,
         view: &str,
         fields: Vec<&str>,
-    ) -> Result<Vec<Record<T>>, APIError> {
+    ) -> Result<Vec<Record<T>>> {
         let mut params = vec![("pageSize", "100".to_string()), ("view", view.to_string())];
         for field in fields {
             params.push(("fields[]", field.to_string()));
         }
 
         // Build the request.
-        let mut request = self.request(Method::GET, table.to_string(), (), Some(params));
+        let mut request = self.request(Method::GET, table.to_string(), (), Some(params))?;
 
-        let mut resp = self.client.execute(request).await.unwrap();
+        let mut resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
         // Try to deserialize the response.
-        let mut r: APICall<T> = resp.json().await.unwrap();
+        let mut r: APICall<T> = resp.json().await?;
 
         let mut records = r.records;
 
@@ -185,21 +183,18 @@ impl Airtable {
                     ("view", view.to_string()),
                     ("offset", offset),
                 ]),
-            );
+            )?;
 
-            resp = self.client.execute(request).await.unwrap();
+            resp = self.client.execute(request).await?;
             match resp.status() {
                 StatusCode::OK => (),
                 s => {
-                    return Err(APIError {
-                        status_code: s,
-                        body: resp.text().await.unwrap(),
-                    })
+                    bail!("status code: {}, body: {}", s, resp.text().await?);
                 }
             };
 
             // Try to deserialize the response.
-            r = resp.json().await.unwrap();
+            r = resp.json().await?;
 
             records.append(&mut r.records);
 
@@ -210,45 +205,39 @@ impl Airtable {
     }
 
     /// Get record from a table.
-    pub async fn get_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<Record<T>, APIError> {
+    pub async fn get_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<Record<T>> {
         // Build the request.
-        let request = self.request(Method::GET, format!("{}/{}", table, record_id), (), None);
+        let request = self.request(Method::GET, format!("{}/{}", table, record_id), (), None)?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
         // Try to deserialize the response.
-        let record: Record<T> = resp.json().await.unwrap();
+        let record: Record<T> = resp.json().await?;
 
         Ok(record)
     }
 
     /// Delete record from a table.
-    pub async fn delete_record(&self, table: &str, record_id: &str) -> Result<(), APIError> {
+    pub async fn delete_record(&self, table: &str, record_id: &str) -> Result<()> {
         // Build the request.
         let request = self.request(
             Method::DELETE,
             table.to_string(),
             (),
             Some(vec![("records[]", record_id.to_string())]),
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
@@ -263,7 +252,7 @@ impl Airtable {
         &self,
         table: &str,
         records: Vec<Record<T>>,
-    ) -> Result<Vec<Record<T>>, APIError> {
+    ) -> Result<Vec<Record<T>>> {
         // Build the request.
         let request = self.request(
             Method::POST,
@@ -274,21 +263,18 @@ impl Airtable {
                 typecast: Some(true),
             },
             None,
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
         // Try to deserialize the response.
-        let r: APICall<T> = resp.json().await.unwrap();
+        let r: APICall<T> = resp.json().await?;
 
         Ok(r.records)
     }
@@ -301,7 +287,7 @@ impl Airtable {
         &self,
         table: &str,
         records: Vec<Record<T>>,
-    ) -> Result<Vec<Record<T>>, APIError> {
+    ) -> Result<Vec<Record<T>>> {
         // Build the request.
         let request = self.request(
             Method::PATCH,
@@ -312,16 +298,13 @@ impl Airtable {
                 typecast: Some(true),
             },
             None,
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
@@ -338,13 +321,10 @@ impl Airtable {
     /// List users.
     /// This is for an enterprise admin to do only.
     /// FROM: https://airtable.com/api/enterprise
-    pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
+    pub async fn list_users(&self) -> Result<Vec<User>> {
         if self.enterprise_account_id.is_empty() {
             // Return an error early.
-            return Err(APIError {
-                status_code: StatusCode::OK,
-                body: "An enterprise account id is required.".to_string(),
-            });
+            bail!("An enterprise account id is required.");
         }
 
         // Build the request.
@@ -353,21 +333,18 @@ impl Airtable {
             format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![("state", "provisioned".to_string())]),
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
         // Try to deserialize the response.
-        let result: UsersResponse = resp.json().await.unwrap();
+        let result: UsersResponse = resp.json().await?;
 
         Ok(result.users)
     }
@@ -376,13 +353,10 @@ impl Airtable {
     /// This is for an enterprise admin to do only.
     /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserGetInformationByEmail
     /// Permission level can be: owner | create | edit | comment | read
-    pub async fn get_enterprise_user(&self, email: &str) -> Result<EnterpriseUser, APIError> {
+    pub async fn get_enterprise_user(&self, email: &str) -> Result<EnterpriseUser> {
         if self.enterprise_account_id.is_empty() {
             // Return an error early.
-            return Err(APIError {
-                status_code: StatusCode::OK,
-                body: "An enterprise account id is required.".to_string(),
-            });
+            bail!("An enterprise account id is required.");
         }
 
         // Build the request.
@@ -394,26 +368,20 @@ impl Airtable {
                 ("email", email.to_string()),
                 ("include", "collaborations".to_string()),
             ]),
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
-        let r: EnterpriseUsersResponse = resp.json().await.unwrap();
+        let r: EnterpriseUsersResponse = resp.json().await?;
 
         if r.users.is_empty() {
-            return Err(APIError {
-                status_code: StatusCode::NOT_FOUND,
-                body: format!("Could not find user with email: {}", email),
-            });
+            bail!("no user was returned");
         }
 
         Ok(r.users.get(0).unwrap().clone())
@@ -428,13 +396,10 @@ impl Airtable {
         workspace_id: &str,
         user_id: &str,
         permission_level: &str,
-    ) -> Result<(), APIError> {
+    ) -> Result<()> {
         if self.enterprise_account_id.is_empty() {
             // Return an error early.
-            return Err(APIError {
-                status_code: StatusCode::OK,
-                body: "An enterprise account id is required.".to_string(),
-            });
+            bail!("An enterprise account id is required.");
         }
 
         // Build the request.
@@ -452,16 +417,13 @@ impl Airtable {
                 }],
             },
             None,
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
@@ -472,13 +434,10 @@ impl Airtable {
     /// This is for an enterprise admin to do only.
     /// The user must be an internal user, meaning they have an email with the company domain.
     /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserDeleteUserByEmail
-    pub async fn delete_internal_user_by_email(&self, email: &str) -> Result<(), APIError> {
+    pub async fn delete_internal_user_by_email(&self, email: &str) -> Result<()> {
         if self.enterprise_account_id.is_empty() {
             // Return an error early.
-            return Err(APIError {
-                status_code: StatusCode::OK,
-                body: "An enterprise account id is required.".to_string(),
-            });
+            bail!("An enterprise account id is required.");
         }
 
         // Build the request.
@@ -487,65 +446,23 @@ impl Airtable {
             format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
             (),
             Some(vec![("email", email.to_string())]),
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
         // Try to deserialize the response.
-        let result: DeleteUserResponse = resp.json().await.unwrap();
+        let result: DeleteUserResponse = resp.json().await?;
         if !result.errors.is_empty() {
-            return Err(APIError {
-                status_code: StatusCode::OK,
-                body: format!("{:?}", result),
-            });
+            bail!("body: {:?}", result);
         }
 
         Ok(())
-    }
-}
-
-/// Error type returned by our library.
-pub struct APIError {
-    pub status_code: StatusCode,
-    pub body: String,
-}
-
-impl fmt::Display for APIError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
-    }
-}
-
-impl fmt::Debug for APIError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
-    }
-}
-
-// This is important for other errors to wrap this one.
-impl error::Error for APIError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        // Generic error, underlying cause isn't tracked.
-        None
     }
 }
 
