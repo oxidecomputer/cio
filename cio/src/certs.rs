@@ -449,6 +449,10 @@ impl Certificate {
 
         cert.populate(company).await?;
 
+        let exp_date = cert.expiration_date();
+        cert.expiration_date = exp_date.date().naive_utc();
+        cert.valid_days_left = cert.valid_days_left();
+
         // Save the certificate to disk.
         cert.save_to_github_repo(github, company).await?;
 
