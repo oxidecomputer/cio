@@ -602,59 +602,105 @@ pub async fn handle_slack_commands(
         SlackCommand::Shipments => {
             let mut msg: serde_json::Value = Default::default();
 
-            if text.is_empty() || text == "outbound" {
-                let outbound = outbound_shipments::dsl::outbound_shipments
-                    .filter(
-                        outbound_shipments::dsl::cio_company_id
-                            .eq(company.id)
-                            .and(outbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string()))
-                            .and(
-                                outbound_shipments::dsl::status
-                                    .ne(cio_api::shipment_status::Status::PickedUp.to_string()),
-                            ),
-                    )
-                    .load::<OutboundShipment>(&db.conn())?;
-                for (i, m) in outbound.into_iter().enumerate() {
-                    if i > 0 {
-                        // Merge a divider onto the stack.
-                        let object = json!({
-                            "attachments": [{
-                                "blocks": [{
-                                    "type": "divider"
-                                }]
-                            }]
-                        });
+            if !text.is_empty() && text != "outbound" && text != "inbound" {
+                msg = json!(MessageResponse {
+                    response_type: MessageResponseType::InChannel,
+                    text: format!(
+                        "Sorry <@{}> :scream: `{}` is valid, try `outbound` or `inbound` or leave blank for both",
+                        bot_command.user_id, text
+                    ),
+                })
+            } else {
+                let outbound = if text.is_empty() || text == "outbound" {
+                    outbound_shipments::dsl::outbound_shipments
+                        .filter(
+                            outbound_shipments::dsl::cio_company_id
+                                .eq(company.id)
+                                .and(outbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string()))
+                                .and(
+                                    outbound_shipments::dsl::status
+                                        .ne(cio_api::shipment_status::Status::PickedUp.to_string()),
+                                ),
+                        )
+                        .load::<OutboundShipment>(&db.conn())?
+                } else {
+                    Default::default()
+                };
 
-                        merge_json(&mut msg, object);
+                let inbound = if text.is_empty() || text == "inbound" {
+                    inbound_shipments::dsl::inbound_shipments
+                        .filter(
+                            inbound_shipments::dsl::cio_company_id
+                                .eq(company.id)
+                                .and(inbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string())),
+                        )
+                        .load::<InboundShipment>(&db.conn())?
+                } else {
+                    Default::default()
+                };
+
+                if outbound.is_empty() && text == "outbound" {
+                    msg = json!(MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: format!(
+                            "Sorry <@{}> :scream: I could not find any `outbound` shipments",
+                            bot_command.user_id,
+                        ),
+                    })
+                } else if inbound.is_empty() && text == "inbound" {
+                    msg = json!(MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: format!(
+                            "Sorry <@{}> :scream: I could not find any `inbound` shipments",
+                            bot_command.user_id,
+                        ),
+                    })
+                } else if inbound.is_empty() && outbound.is_empty() {
+                    msg = json!(MessageResponse {
+                        response_type: MessageResponseType::InChannel,
+                        text: format!(
+                            "Sorry <@{}> :scream: I could not find any shipments that had not been delivered",
+                            bot_command.user_id,
+                        ),
+                    })
+                } else {
+                    let mut fm: FormattedMessage = if (text.is_empty() || text == "outbound") && !outbound.is_empty() {
+                        outbound.get(0).unwrap().clone().into()
+                    } else {
+                        inbound.get(0).unwrap().clone().into()
+                    };
+
+                    for (i, a) in outbound.clone().into_iter().enumerate() {
+                        if i == 0 {
+                            continue;
+                        }
+
+                        if i > 0 {
+                            // Add our divider.
+                            fm.attachments.push(divider.clone());
+                        }
+
+                        // Add the rest of the blocks.
+                        let mut m: FormattedMessage = a.into();
+                        fm.attachments.append(&mut m.attachments);
                     }
 
-                    let obj: FormattedMessage = m.into();
-                    merge_json(&mut msg, json!(obj));
-                }
-            }
+                    for (i, a) in inbound.into_iter().enumerate() {
+                        if i == 0 && (text == "inbound" || text.is_empty() || outbound.is_empty()) {
+                            continue;
+                        }
 
-            if text.is_empty() || text == "inbound" {
-                let inbound = inbound_shipments::dsl::inbound_shipments
-                    .filter(
-                        inbound_shipments::dsl::cio_company_id
-                            .eq(company.id)
-                            .and(inbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string())),
-                    )
-                    .load::<InboundShipment>(&db.conn())?;
-                for (i, m) in inbound.into_iter().enumerate() {
-                    if i > 0 {
-                        // Merge a divider onto the stack.
-                        let object = json!({
-                            "blocks": [{
-                                "type": "divider"
-                            }]
-                        });
+                        if i > 0 {
+                            // Add our divider.
+                            fm.attachments.push(divider.clone());
+                        }
 
-                        merge_json(&mut msg, object);
+                        // Add the rest of the blocks.
+                        let mut m: FormattedMessage = a.into();
+                        fm.attachments.append(&mut m.attachments);
                     }
 
-                    let obj: FormattedMessage = m.into();
-                    merge_json(&mut msg, json!(obj));
+                    msg = json!(msg)
                 }
             }
 
