@@ -551,10 +551,12 @@ impl SwagInventoryItem {
             // Set our accessory.
             msg.attachments[0].blocks[0].accessory = Some(accessory);
             // Set our text.
-            msg.attachments[0].blocks[0].text.text = format!(
+            let mut t = msg.attachments[0].blocks[0].text.unwrap();
+            t.text = format!(
                 "*{}*\n | stock changed from `{}` to `{}`",
                 self.name, self.current_stock, new
             );
+            msg.attachments[0].blocks[0].text = Some(t);
 
             if self.current_stock > new {
                 msg.attachments[0].color = crate::colors::Colors::Yellow.to_string();
