@@ -687,7 +687,7 @@ pub async fn handle_slack_commands(
                     }
 
                     for (i, a) in inbound.into_iter().enumerate() {
-                        if i == 0 && (text == "inbound" || text.is_empty() || outbound.is_empty()) {
+                        if i == 0 && ((text == "inbound" || text.is_empty()) && outbound.is_empty()) {
                             continue;
                         }
 
