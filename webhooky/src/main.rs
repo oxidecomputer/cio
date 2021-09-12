@@ -187,7 +187,7 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                // crate::analytics::refresh_analytics(&db, &company).await?;
+                cio_api::analytics::refresh_analytics(&db, &company).await?;
             }
         }
         SubCommand::SyncAPITokens(_) => {
@@ -196,7 +196,7 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                // crate::api_tokens::refresh_api_tokens(&db, &company).await?;
+                cio_api::api_tokens::refresh_api_tokens(&db, &company).await?;
             }
         }
         SubCommand::SyncApplications(_) => {
@@ -275,7 +275,7 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                //cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await?;
+                cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await?;
             }
         }
         SubCommand::SyncMailingLists(_) => {
