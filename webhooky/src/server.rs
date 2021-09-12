@@ -166,30 +166,65 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
          * Setup our cron jobs, with our timezone.
          */
         let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
+        scheduler.every(1.day()).at("2:00 am").run(|| async {
+            do_job("localhost:8080", "sync-analytics").await;
+        });
+        scheduler.every(1.day()).at("11:00 pm").run(|| async {
+            do_job("localhost:8080", "sync-api-tokens").await;
+        });
+        scheduler.every(1.day()).at("11:30 pm").run(|| async {
+            do_job("localhost:8080", "sync-applications").await;
+        });
+        scheduler.every(1.day()).at("10:00 pm").run(|| async {
+            do_job("localhost:8080", "sync-asset-inventory").await;
+        });
+        scheduler.every(1.day()).at("10:30 pm").run(|| async {
+            do_job("localhost:8080", "sync-companies").await;
+        });
+        scheduler.every(1.day()).at("10:45 pm").run(|| async {
+            do_job("localhost:8080", "sync-configs").await;
+        });
+        scheduler.every(1.day()).at("1:30 am").run(|| async {
+            do_job("localhost:8080", "sync-finance").await;
+        });
         scheduler.every(1.day()).at("1:00 am").run(|| async {
             do_job("localhost:8080", "sync-huddles").await;
         });
+        scheduler.every(4.hours()).run(|| async {
+            do_job("localhost:8080", "sync-interviews").await;
+        });
+        scheduler.every(1.day()).at("2:30 am").run(|| async {
+            do_job("localhost:8080", "sync-journal-clubs").await;
+        });
+        scheduler.every(1.day()).at("9:00 pm").run(|| async {
+            do_job("localhost:8080", "sync-mailing-lists").await;
+        });
+        scheduler.every(6.hours()).run(|| async {
+            do_job("localhost:8080", "sync-recorded-meetings").await;
+        });
+        scheduler.every(1.day()).at("9:15 pm").run(|| async {
+            do_job("localhost:8080", "sync-repos").await;
+        });
+        scheduler.every(1.day()).at("7:45 pm").run(|| async {
+            do_job("localhost:8080", "sync-rfds").await;
+        });
+        scheduler.every(2.hours()).run(|| async {
+            do_job("localhost:8080", "sync-shipments").await;
+        });
+        scheduler.every(3.hours()).run(|| async {
+            do_job("localhost:8080", "sync-shorturls").await;
+        });
+        scheduler.every(1.day()).at("10:30 pm").run(|| async {
+            do_job("localhost:8080", "sync-swag-inventory").await;
+        });
+        scheduler.every(5.hours()).run(|| async {
+            do_job("localhost:8080", "sync-travel").await;
+        });
+        // TODO: Run the RFD changelog.
+        /*scheduler.every(Monday).at("8:00 am").run(|| async {
+            do_job("localhost:8080", "send-rfd-changelog").await;
+        });*/
 
-        let _cron_jobs = vec![
-            "sync-analytics",
-            "sync-api-tokens",
-            "sync-applications",
-            "sync-asset-inventory",
-            "sync-companies",
-            "sync-configs",
-            "sync-finance",
-            "sync-huddles",
-            "sync-interviews",
-            "sync-journal-clubs",
-            "sync-mailing-lists",
-            "sync-recorded-meetings",
-            "sync-repos",
-            "sync-rfds",
-            "sync-shipments",
-            "sync-shorturls",
-            "sync-swag-inventory",
-            "sync-travel",
-        ];
         tokio::spawn(async move {
             info!("starting cron job scheduler...");
 
