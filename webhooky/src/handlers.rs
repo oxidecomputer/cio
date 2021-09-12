@@ -1356,10 +1356,11 @@ pub async fn handle_shippo_tracking_update(
     if let Some(mut shipment) =
         InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
     {
+        let company = shipment.company(&api_context.db)?;
+
         // Get the tracking status for the shipment and fill in the details.
         shipment.tracking_number = ts.tracking_number.to_string();
         let tracking_status = ts.tracking_status.unwrap_or_default();
-        shipment.tracking_status = tracking_status.status.to_string();
         shipment.tracking_link();
         shipment.eta = ts.eta;
 
@@ -1388,6 +1389,16 @@ pub async fn handle_shippo_tracking_update(
 
         if tracking_status.status == *"DELIVERED" {
             shipment.delivered_time = tracking_status.status_date;
+        }
+
+        let send_notification = shipment.tracking_status != tracking_status.status;
+
+        shipment.tracking_status = tracking_status.status.to_string();
+
+        if send_notification {
+            // Send a slack notification since it changed.
+            let msg: FormattedMessage = shipment.clone().into();
+            company.post_to_slack_channel(&api_context.db, &msg).await?;
         }
 
         shipment.update(&api_context.db).await?;

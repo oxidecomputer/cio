@@ -174,6 +174,11 @@ impl NewInboundShipment {
             self.delivered_time = status.status_date;
         }
 
+        // Register a tracking webhook for this shipment.
+        shippo
+            .register_tracking_webhook(&carrier, &self.tracking_number)
+            .await?;
+
         let send_notification = self.tracking_status != status.status;
 
         // Set the new status.
