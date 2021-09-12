@@ -4,6 +4,7 @@ use std::convert::From;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
+use chrono_humanize::HumanTime;
 use google_geocode::Geocode;
 use log::{info, warn};
 use macros::db;
@@ -12,6 +13,7 @@ use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 use shippo::{Address, CustomsDeclaration, CustomsItem, NewShipment, NewTransaction, Parcel, Shippo};
+use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
 
 use crate::{
     airtable::{AIRTABLE_INBOUND_TABLE, AIRTABLE_OUTBOUND_TABLE, AIRTABLE_PACKAGE_PICKUPS_TABLE},
@@ -176,6 +178,90 @@ impl NewInboundShipment {
     }
 }
 
+/// Convert the inbound shipment into a Slack message.
+impl From<NewInboundShipment> for FormattedMessage {
+    fn from(item: NewInboundShipment) -> Self {
+        let mut status_msg = format!(
+            "*{}* | <{}|{}>",
+            item.tracking_status,
+            item.oxide_tracking_link,
+            item.oxide_tracking_link.trim_start_matches("https://"),
+        );
+        if let Some(eta) = item.eta {
+            if item.tracking_status != "DELIVERED" {
+                let dur = eta - Utc::now();
+
+                status_msg += &format!(" | _eta {}_", HumanTime::from(dur));
+            }
+        }
+        if item.tracking_status != "DELIVERED" {
+            if let Some(delivered) = item.delivered_time {
+                let dur = delivered - Utc::now();
+
+                status_msg += &format!(" | _delivered {}_", HumanTime::from(dur));
+            }
+        }
+
+        let mut notes = String::new();
+        if !item.order_number.is_empty() {
+            notes = format!("order #: {}", item.order_number);
+        } else if !item.notes.starts_with("Parsed email from") && !item.notes.is_empty() {
+            notes = item.notes.to_string();
+        }
+
+        FormattedMessage {
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Header,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::PlainText,
+                        text: item.name,
+                    }),
+                    elements: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: notes,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: status_msg,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: "*INBOUND SHIPMENT*".to_string(),
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+            ],
+        }
+    }
+}
+
 impl InboundShipment {
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
@@ -332,6 +418,85 @@ impl From<User> for NewOutboundShipment {
             local_pickup: Default::default(),
             link_to_package_pickup: Default::default(),
             cio_company_id: user.cio_company_id,
+        }
+    }
+}
+
+/// Convert the outbound shipment into a Slack message.
+impl From<NewOutboundShipment> for FormattedMessage {
+    fn from(item: NewOutboundShipment) -> Self {
+        let mut status_msg = format!(
+            "*{}* | _{}_ | <{}|{}>",
+            item.tracking_status,
+            item.status,
+            item.oxide_tracking_link,
+            item.oxide_tracking_link.trim_start_matches("https://"),
+        );
+        if let Some(eta) = item.eta {
+            if item.status != "Delivered" && item.status != "Picked up" {
+                let dur = eta - Utc::now();
+
+                status_msg += &format!(" | _eta {}_", HumanTime::from(dur));
+            }
+        }
+
+        if item.status == "Delivered" {
+            if let Some(delivered) = item.delivered_time {
+                let dur = delivered - Utc::now();
+
+                status_msg += &format!(" | _delivered {}_", HumanTime::from(dur));
+            }
+        }
+
+        FormattedMessage {
+            channel: Default::default(),
+            attachments: Default::default(),
+            blocks: vec![
+                MessageBlock {
+                    block_type: MessageBlockType::Header,
+                    text: Some(MessageBlockText {
+                        text_type: MessageType::PlainText,
+                        text: item.name.to_string(),
+                    }),
+                    elements: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Section,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: item.contents,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: status_msg,
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+                MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: "*OUTBOUND SHIPMENT*".to_string(),
+                    }],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                },
+            ],
         }
     }
 }

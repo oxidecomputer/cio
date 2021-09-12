@@ -483,6 +483,8 @@ pub struct MessageBlock {
 /// A message block type in Slack.
 #[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub enum MessageBlockType {
+    #[serde(rename = "header")]
+    Header,
     #[serde(rename = "section")]
     Section,
     #[serde(rename = "context")]
@@ -508,6 +510,8 @@ pub struct MessageBlockText {
 /// Message type in Slack.
 #[derive(Debug, Deserialize, JsonSchema, Serialize)]
 pub enum MessageType {
+    #[serde(rename = "plain_text")]
+    PlainText,
     #[serde(rename = "mrkdwn")]
     Markdown,
     #[serde(rename = "image")]
