@@ -315,12 +315,10 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
 }
 
 // Sync the journal_club_meetings with our database.
-pub async fn refresh_db_journal_club_meetings(
-    db: &Database,
-    github: &octorust::Client,
-    company: &Company,
-) -> Result<()> {
-    let journal_club_meetings = get_meetings_from_repo(github, company).await?;
+pub async fn refresh_db_journal_club_meetings(db: &Database, company: &Company) -> Result<()> {
+    let github = company.authenticate_github()?;
+
+    let journal_club_meetings = get_meetings_from_repo(&github, company).await?;
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {
@@ -334,41 +332,13 @@ pub async fn refresh_db_journal_club_meetings(
         }
     }
 
+    JournalClubPapers::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
+    JournalClubMeetings::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Company,
-        db::Database,
-        journal_clubs::{refresh_db_journal_club_meetings, JournalClubMeetings, JournalClubPapers},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_journal_club_meetings_and_papers() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        let github = oxide.authenticate_github().unwrap();
-
-        refresh_db_journal_club_meetings(&db, &github, &oxide).await.unwrap();
-
-        JournalClubPapers::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-        JournalClubMeetings::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
 }

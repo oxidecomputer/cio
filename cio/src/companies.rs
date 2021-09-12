@@ -809,7 +809,7 @@ impl Company {
 pub async fn refresh_companies() -> Result<()> {
     let db = Database::new();
 
-    // This should forever only be oxide.
+    // This should forever only be Oxide.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
     let is: Vec<airtable_api::Record<Company>> = oxide
@@ -873,17 +873,4 @@ pub struct UserInfo {
     pub hd: String,
     #[serde(default)]
     pub verified_email: bool,
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::companies::refresh_companies;
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_companies() {
-        crate::utils::setup_logger();
-
-        refresh_companies().await.unwrap();
-    }
 }

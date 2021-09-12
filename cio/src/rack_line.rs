@@ -182,6 +182,10 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
         ns.upsert(db).await?;
     }
 
+    RackLineSubscribers::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
     Ok(())
 }
 
@@ -253,34 +257,5 @@ impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Company,
-        db::Database,
-        rack_line::{refresh_db_rack_line_subscribers, RackLineSubscribers},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_rack_line_subscribers() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        refresh_db_rack_line_subscribers(&db, &oxide).await.unwrap();
-        RackLineSubscribers::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
     }
 }

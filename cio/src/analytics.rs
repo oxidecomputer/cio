@@ -7,8 +7,12 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_PAGE_VIEWS_TABLE, auth_logins::AuthUsers, companies::Companys, core::UpdateAirtableRecord,
-    db::Database, schema::page_views,
+    airtable::AIRTABLE_PAGE_VIEWS_TABLE,
+    auth_logins::AuthUsers,
+    companies::{Company, Companys},
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::page_views,
 };
 
 #[db {
@@ -80,25 +84,8 @@ impl NewPageView {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::{analytics::PageViews, companies::Company, db::Database};
+pub async fn refresh_analytics(db: &Database, company: &Company) -> Result<()> {
+    PageViews::get_from_db(db, company.id)?.update_airtable(db).await?;
 
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_page_views_airtable() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-
-        // TODO: iterate over all the companies.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        PageViews::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
+    Ok(())
 }

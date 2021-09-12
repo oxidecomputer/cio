@@ -38,11 +38,16 @@ struct Opts {
 enum SubCommand {
     Server(Server),
 
+    SyncAnalytics(SyncAnalytics),
+    SyncAPITokens(SyncAPITokens),
     SyncApplications(SyncApplications),
     SyncAssetInventory(SyncAssetInventory),
+    SyncCompanies(SyncCompanies),
     SyncConfigs(SyncConfigs),
     SyncFinance(SyncFinance),
     SyncInterviews(SyncInterviews),
+    SyncJournalClubs(SyncJournalClubs),
+    SyncMailingLists(SyncMailingLists),
     SyncRecordedMeetings(SyncRecordedMeetings),
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
@@ -69,6 +74,14 @@ pub struct Server {
     do_cron: bool,
 }
 
+/// A subcommand for running the background job of syncing analytics.
+#[derive(Clap)]
+pub struct SyncAnalytics {}
+
+/// A subcommand for running the background job of syncing API tokens.
+#[derive(Clap)]
+pub struct SyncAPITokens {}
+
 /// A subcommand for running the background job of syncing applications.
 #[derive(Clap)]
 pub struct SyncApplications {}
@@ -76,6 +89,10 @@ pub struct SyncApplications {}
 /// A subcommand for running the background job of syncing asset inventory.
 #[derive(Clap)]
 pub struct SyncAssetInventory {}
+
+/// A subcommand for running the background job of syncing companies.
+#[derive(Clap)]
+pub struct SyncCompanies {}
 
 /// A subcommand for running the background job of syncing configs.
 #[derive(Clap)]
@@ -88,6 +105,14 @@ pub struct SyncFinance {}
 /// A subcommand for running the background job of syncing interviews.
 #[derive(Clap)]
 pub struct SyncInterviews {}
+
+/// A subcommand for running the background job of syncing journal clubs.
+#[derive(Clap)]
+pub struct SyncJournalClubs {}
+
+/// A subcommand for running the background job of syncing mailing lists.
+#[derive(Clap)]
+pub struct SyncMailingLists {}
 
 /// A subcommand for running the background job of syncing recorded_meetings.
 #[derive(Clap)]
@@ -155,6 +180,24 @@ async fn main() -> Result<()> {
         SubCommand::Server(s) => {
             crate::server::server(s, logger).await?;
         }
+        SubCommand::SyncAnalytics(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                // crate::analytics::refresh_analytics(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncAPITokens(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                // crate::api_tokens::refresh_api_tokens(&db, &company).await?;
+            }
+        }
         SubCommand::SyncApplications(_) => {
             let db = Database::new();
             let companies = Companys::get_from_db(&db, 1)?;
@@ -194,6 +237,9 @@ async fn main() -> Result<()> {
                 cio_api::asset_inventory::refresh_asset_items(&db, &company).await?;
             }
         }
+        SubCommand::SyncCompanies(_) => {
+            cio_api::companies::refresh_companies().await?;
+        }
         SubCommand::SyncConfigs(_) => {
             let db = Database::new();
             let companies = Companys::get_from_db(&db, 1)?;
@@ -220,6 +266,27 @@ async fn main() -> Result<()> {
             for company in companies {
                 cio_api::interviews::refresh_interviews(&db, &company).await?;
                 cio_api::interviews::compile_packets(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncJournalClubs(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                //cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await?;
+            }
+        }
+        SubCommand::SyncMailingLists(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and update.
+            for company in companies {
+                cio_api::mailing_list::refresh_db_mailing_list_subscribers(&db, &company).await?;
+                if company.name == "Oxide" {
+                    cio_api::rack_line::refresh_db_rack_line_subscribers(&db, &company).await?;
+                }
             }
         }
         SubCommand::SyncRecordedMeetings(_) => {

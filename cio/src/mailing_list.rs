@@ -254,6 +254,10 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
         ns.upsert(db).await?;
     }
 
+    MailingListSubscribers::get_from_db(db, company.id)?
+        .update_airtable(db)
+        .await?;
+
     Ok(())
 }
 
@@ -358,33 +362,5 @@ impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
         ns.populate_formatted_address();
 
         ns
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Companys,
-        db::Database,
-        mailing_list::{refresh_db_mailing_list_subscribers, MailingListSubscribers},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_mailing_list_subscribers() {
-        crate::utils::setup_logger();
-
-        // Initialize our database.
-        let db = Database::new();
-        let companies = Companys::get_from_db(&db, 1).unwrap();
-        // Iterate over the companies and update the mailing list subscribers for both.
-        for company in companies {
-            refresh_db_mailing_list_subscribers(&db, &company).await.unwrap();
-            MailingListSubscribers::get_from_db(&db, company.id)
-                .unwrap()
-                .update_airtable(&db)
-                .await
-                .unwrap();
-        }
     }
 }

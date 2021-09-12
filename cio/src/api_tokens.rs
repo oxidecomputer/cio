@@ -135,24 +135,8 @@ impl APIToken {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::{api_tokens::APITokens, companies::Company, db::Database};
+pub async fn refresh_api_tokens(db: &Database, company: &Company) -> Result<()> {
+    APITokens::get_from_db(db, company.id)?.update_airtable(db).await?;
 
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_cron_api_tokens() {
-        crate::utils::setup_logger();
-
-        let db = Database::new();
-
-        // This should always be Oxide.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
-        APITokens::get_from_db(&db, oxide.id)
-            .unwrap()
-            .update_airtable(&db)
-            .await
-            .unwrap();
-    }
+    Ok(())
 }
