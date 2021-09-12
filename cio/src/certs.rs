@@ -4,7 +4,7 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     str::from_utf8,
-    thread, time,
+    time,
 };
 
 use acme_lib::{create_p384_key, persist::FilePersist, Directory, DirectoryUrl};
@@ -196,7 +196,7 @@ impl NewCertificate {
             // TODO: make this less awful than a sleep.
             info!("validating the proof...");
             let dur = time::Duration::from_secs(10);
-            thread::sleep(dur);
+            tokio::time::sleep(dur).await;
 
             // After the TXT record is accessible, the calls
             // this to tell the ACME API to start checking the
