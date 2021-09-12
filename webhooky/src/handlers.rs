@@ -1355,7 +1355,7 @@ pub async fn handle_shippo_tracking_update(
     {
         let company = shipment.company(&api_context.db)?;
 
-        //shipment.expand(&api_context.db, &company).await?;
+        shipment.expand(&api_context.db, &company).await?;
     }
 
     // Update the outbound shipment if it exists.
