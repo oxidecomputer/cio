@@ -575,6 +575,7 @@ pub async fn handle_slack_commands(
                     msg.attachments.append(&mut m.attachments);
                 }
 
+                warn!("{}", msg.to_string());
                 json!(msg)
             }
         }
@@ -700,7 +701,7 @@ pub async fn handle_slack_commands(
                         fm.attachments.append(&mut m.attachments);
                     }
 
-                    msg = json!(msg)
+                    msg = json!(fm)
                 }
             }
 
