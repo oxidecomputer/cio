@@ -542,7 +542,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a2310562dca8a6dcf9a4c4ce3fba1b6ff679dfb8"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#82d27a9e89e54d045cb4253dde48c5140c347bce"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -2291,7 +2291,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a2310562dca8a6dcf9a4c4ce3fba1b6ff679dfb8"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#82d27a9e89e54d045cb4253dde48c5140c347bce"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
