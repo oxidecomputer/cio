@@ -348,11 +348,11 @@ impl From<NewSwagInventoryItem> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: Some(MessageBlockText {
+                        elements: vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: format!("Swag inventory item | {} | {}", item.item, item.size),
-                        }),
-                        elements: Default::default(),
+                        }],
+                        text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),

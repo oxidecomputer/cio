@@ -284,22 +284,22 @@ impl From<NewInboundShipment> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: Some(MessageBlockText {
+                        elements: vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: status_msg,
-                        }),
-                        elements: Default::default(),
+                        }],
+                        text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: Some(MessageBlockText {
+                        elements: vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: "*INBOUND SHIPMENT*".to_string(),
-                        }),
-                        elements: Default::default(),
+                        }],
+                        text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
@@ -548,22 +548,22 @@ impl From<NewOutboundShipment> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: Some(MessageBlockText {
+                        elements: vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: status_msg,
-                        }),
-                        elements: Default::default(),
+                        }],
+                        text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        text: Some(MessageBlockText {
+                        elements: vec![MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: "*OUTBOUND SHIPMENT*".to_string(),
-                        }),
-                        elements: Default::default(),
+                        }],
+                        text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
                         fields: Default::default(),
