@@ -295,7 +295,9 @@ impl NewApplicant {
                 longitude = location.lng as f32;
             }
             Err(e) => {
-                warn!("could not get lat lng for location `{}`: {}", location, e);
+                if !location.is_empty() {
+                    warn!("could not get lat lng for location `{}`: {}", location, e);
+                }
             }
         }
 
@@ -921,7 +923,9 @@ The Oxide Team",
                     longitude = location.lng as f32;
                 }
                 Err(e) => {
-                    warn!("could not get lat lng for location `{}`: {}", location, e);
+                    if !location.is_empty() {
+                        warn!("could not get lat lng for location `{}`: {}", location, e);
+                    }
                 }
             }
         }
@@ -3631,7 +3635,9 @@ impl Applicant {
                 self.longitude = location.lng as f32;
             }
             Err(e) => {
-                warn!("could not get lat lng for location `{}`: {}", self.location, e);
+                if !self.location.is_empty() {
+                    warn!("could not get lat lng for location `{}`: {}", self.location, e);
+                }
             }
         }
     }

@@ -328,7 +328,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                warn!("could not find vendor that matches {}", vendor);
+                info!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -407,7 +407,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                warn!("could not find vendor that matches {}", vendor);
+                info!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -781,7 +781,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
                 } else if last_name == "Randal" {
                     record.employee_email = "allison@oxidecomputer.com".to_string();
                 } else {
-                    warn!(
+                    info!(
                         "could not find user with name `{}` last name `{}`: {}",
                         name, last_name, e
                     );
@@ -804,7 +804,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                warn!("could not find vendor that matches {}", vendor);
+                info!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -909,7 +909,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
                 bill.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                warn!("could not find vendor that matches {}", vendor);
+                info!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -1102,7 +1102,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                warn!("could not find vendor that matches {}", vendor);
+                info!("could not find vendor that matches {}", vendor);
             }
         }
 
@@ -1154,7 +1154,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
             None => {
-                warn!("could not find vendor that matches {}", vendor);
+                info!("could not find vendor that matches {}", vendor);
             }
         }
 
