@@ -2171,7 +2171,9 @@ async fn start_job(address: &str, job: &str) -> Result<()> {
 
 async fn do_job(address: &str, job: &str) {
     if let Err(e) = start_job(address, job).await {
-        if !e.to_string().contains("operation timed out") {
+        if !e.to_string().contains("operation timed out")
+            && !e.to_string().contains("connection closed before message completed")
+        {
             // We don't care about timeout errors.
             sentry_anyhow::capture_anyhow(&e);
         }
