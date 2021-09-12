@@ -14,7 +14,7 @@ use cio_api::{
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
     rfds::RFD,
-    schema::{applicants, journal_club_meetings, rfds},
+    schema::{applicants, inbound_shipments, journal_club_meetings, outbound_shipments, rfds},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
     swag_inventory::SwagInventoryItem,
     swag_store::Order,
@@ -531,31 +531,59 @@ pub async fn handle_slack_commands(
             }
         }
         SlackCommand::Shipments => {
-            /*let outbound = outbound_shipments::dsl::outbound_shipments
-            .filter(
-                outbound_shipments::dsl::cio_company_id
-                    .eq(company.id)
-                    .and(outbound_shipments::dsl::tracking_status.neq("DELIVERED".to_string())),
-            )
-            .load::<OutboundShipment>(&db.conn())?;*/
-
             let mut msg: serde_json::Value = Default::default();
-            /*for (i, m) in outbound.into_iter().enumerate() {
-                if i > 0 {
-                    // Merge a divider onto the stack.
-                    let object = json!({
-                        "blocks": [{
-                            "type": "divider"
-                        }]
-                    });
 
-                    merge_json(&mut msg, object);
+            if text.is_empty() || text == "outbound" {
+                let outbound = outbound_shipments::dsl::outbound_shipments
+                    .filter(
+                        outbound_shipments::dsl::cio_company_id
+                            .eq(company.id)
+                            .and(outbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string())),
+                    )
+                    .load::<OutboundShipment>(&db.conn())?;
+                for (i, m) in outbound.into_iter().enumerate() {
+                    if i > 0 {
+                        // Merge a divider onto the stack.
+                        let object = json!({
+                            "blocks": [{
+                                "type": "divider"
+                            }]
+                        });
+
+                        merge_json(&mut msg, object);
+                    }
+
+                    let obj: FormattedMessage = m.into();
+                    merge_json(&mut msg, json!(obj));
                 }
+            }
 
-                let obj: FormattedMessage = m.into();
-                merge_json(&mut msg, json!(obj));
-            }*/
+            if text.is_empty() || text == "inbound" {
+                let inbound = inbound_shipments::dsl::inbound_shipments
+                    .filter(
+                        inbound_shipments::dsl::cio_company_id
+                            .eq(company.id)
+                            .and(inbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string())),
+                    )
+                    .load::<InboundShipment>(&db.conn())?;
+                for (i, m) in inbound.into_iter().enumerate() {
+                    if i > 0 {
+                        // Merge a divider onto the stack.
+                        let object = json!({
+                            "blocks": [{
+                                "type": "divider"
+                            }]
+                        });
 
+                        merge_json(&mut msg, object);
+                    }
+
+                    let obj: FormattedMessage = m.into();
+                    merge_json(&mut msg, json!(obj));
+                }
+            }
+
+            warn!("{}", msg.to_string());
             msg
         }
         SlackCommand::Papers => {
