@@ -1422,7 +1422,8 @@ pub async fn handle_checkr_background_update(
         || event.data.object.status.is_empty()
     {
         // Return early we don't care.
-        bail!("checkr candidate id is empty for event: {:?}", event);
+        info!("checkr candidate id is empty for event: {:?}", event);
+        return Ok(());
     }
 
     // TODO: change this to the real company name.
