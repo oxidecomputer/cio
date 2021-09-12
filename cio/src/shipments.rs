@@ -301,6 +301,13 @@ impl From<NewInboundShipment> for FormattedMessage {
     }
 }
 
+impl From<InboundShipment> for FormattedMessage {
+    fn from(item: InboundShipment) -> Self {
+        let new: NewInboundShipment = item.into();
+        new.into()
+    }
+}
+
 impl InboundShipment {
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
@@ -554,6 +561,13 @@ impl From<NewOutboundShipment> for FormattedMessage {
                 ],
             }],
         }
+    }
+}
+
+impl From<OutboundShipment> for FormattedMessage {
+    fn from(item: OutboundShipment) -> Self {
+        let new: NewOutboundShipment = item.into();
+        new.into()
     }
 }
 

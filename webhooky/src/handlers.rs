@@ -530,6 +530,34 @@ pub async fn handle_slack_commands(
                 })
             }
         }
+        SlackCommand::Shipments => {
+            /*let outbound = outbound_shipments::dsl::outbound_shipments
+            .filter(
+                outbound_shipments::dsl::cio_company_id
+                    .eq(company.id)
+                    .and(outbound_shipments::dsl::tracking_status.neq("DELIVERED".to_string())),
+            )
+            .load::<OutboundShipment>(&db.conn())?;*/
+
+            let mut msg: serde_json::Value = Default::default();
+            /*for (i, m) in outbound.into_iter().enumerate() {
+                if i > 0 {
+                    // Merge a divider onto the stack.
+                    let object = json!({
+                        "blocks": [{
+                            "type": "divider"
+                        }]
+                    });
+
+                    merge_json(&mut msg, object);
+                }
+
+                let obj: FormattedMessage = m.into();
+                merge_json(&mut msg, json!(obj));
+            }*/
+
+            msg
+        }
         SlackCommand::Papers => {
             // If we asked for the closed meetings then only show those, otherwise
             // default to the open meetings.

@@ -15,6 +15,8 @@ pub enum SlackCommand {
     Papers,
 
     Paper,
+
+    Shipments,
 }
 
 impl SlackCommand {
@@ -27,6 +29,7 @@ impl SlackCommand {
             SlackCommand::Applicant => "/applicant",
             SlackCommand::Papers => "/papers",
             SlackCommand::Paper => "/paper",
+            SlackCommand::Shipments => "/shipments",
         }
     }
 }
@@ -42,6 +45,7 @@ impl FromStr for SlackCommand {
             "/applicant" => Ok(SlackCommand::Applicant),
             "/papers" => Ok(SlackCommand::Papers),
             "/paper" => Ok(SlackCommand::Paper),
+            "/shipments" => Ok(SlackCommand::Shipments),
             _ => Err(format!("invalid Slack command: `{}`", s)),
         }
     }
