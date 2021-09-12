@@ -1910,7 +1910,6 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     // Send to sentry.
     sentry_anyhow::capture_anyhow(&err);
-    sentry::capture_message(&err.to_string(), sentry::Level::Fatal);
     sentry::end_session();
 
     // We use the debug formatting here so we get the stack trace.

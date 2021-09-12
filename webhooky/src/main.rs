@@ -124,30 +124,24 @@ async fn main() -> Result<()> {
 
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
-    if !sentry_dsn.is_empty() {
-        let _guard = sentry::init(sentry::ClientOptions {
-            dsn: sentry_dsn.clone().into_dsn()?,
+    let _guard = sentry::init(sentry::ClientOptions {
+        dsn: sentry_dsn.clone().into_dsn()?,
 
-            release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
-            environment: Some(
-                env::var("SENTRY_ENV")
-                    .unwrap_or_else(|_| "development".to_string())
-                    .into(),
-            ),
-            ..Default::default()
-        });
-    }
+        release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
+        environment: Some(
+            env::var("SENTRY_ENV")
+                .unwrap_or_else(|_| "development".to_string())
+                .into(),
+        ),
+        ..Default::default()
+    });
 
     // Initialize our logger.
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
-    let logger = if !sentry_dsn.is_empty() {
-        let drain = sentry_slog::SentryDrain::new(drain);
-        slog::Logger::root(drain, slog::slog_o!())
-    } else {
-        slog::Logger::root(drain, slog::slog_o!())
-    };
+    let drain = sentry_slog::SentryDrain::new(drain);
+    let logger = slog::Logger::root(drain, slog::slog_o!());
 
     let _scope_guard = slog_scope::set_global_logger(logger.clone());
 
@@ -157,10 +151,6 @@ async fn main() -> Result<()> {
         log_level = log::Level::Debug;
     }
     let _log_guard = slog_stdlog::init_with_level(log_level)?;
-
-    if !sentry_dsn.is_empty() {
-        info!("running with sentry error capturing");
-    }
 
     match opts.subcmd {
         SubCommand::Server(s) => {
