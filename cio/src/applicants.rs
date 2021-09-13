@@ -267,6 +267,16 @@ pub fn clean_interested_in(st: &str) -> String {
 }
 
 impl NewApplicant {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_applicants.to_string();
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
     /// Parse the sheet columns from single Google Sheets row values.
     /// This is what we get back from the webhook.
     pub async fn parse_from_row(sheet_id: &str, values: &HashMap<String, Vec<String>>) -> Self {
@@ -1698,6 +1708,11 @@ impl From<Applicant> for FormattedMessage {
 }
 
 impl Applicant {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewApplicant = self.into();
+        n.send_slack_notification(db, company).await
+    }
+
     /// Update an applicant's status based on dates, interviews, etc.
     pub fn update_status(&mut self) {
         // If we know they have more than 1 interview AND their current status is "next steps",

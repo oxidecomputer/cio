@@ -61,6 +61,23 @@ impl NewRackLineSubscriber {
 
         HumanTime::from(dur)
     }
+
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_mailing_lists.to_string();
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+}
+
+impl RackLineSubscriber {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewRackLineSubscriber = self.into();
+        n.send_slack_notification(db, company).await
+    }
 }
 
 /// Convert the mailing list signup into Slack message.

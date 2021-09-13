@@ -105,6 +105,16 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
 }
 
 impl NewInboundShipment {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_shipments.to_string();
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
@@ -194,9 +204,7 @@ impl NewInboundShipment {
         self.tracking_status = status.status.to_string();
 
         if send_notification && !self.tracking_status.is_empty() {
-            // Send a slack notification since it changed.
-            let msg: FormattedMessage = self.clone().into();
-            company.post_to_slack_channel(db, &msg).await?;
+            self.send_slack_notification(db, company).await?;
         }
 
         Ok(())
@@ -210,6 +218,11 @@ impl InboundShipment {
         ns.expand(db, company).await?;
         ns.upsert(db).await?;
         Ok(())
+    }
+
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewInboundShipment = self.into();
+        n.send_slack_notification(db, company).await
     }
 }
 
@@ -497,6 +510,18 @@ impl From<User> for NewOutboundShipment {
             link_to_package_pickup: Default::default(),
             cio_company_id: user.cio_company_id,
         }
+    }
+}
+
+impl NewOutboundShipment {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_shipments.to_string();
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
     }
 }
 
@@ -847,6 +872,11 @@ impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
 }
 
 impl OutboundShipment {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewOutboundShipment = self.into();
+        n.send_slack_notification(db, company).await
+    }
+
     fn populate_formatted_address(&mut self) {
         let mut street_address = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -1112,9 +1142,7 @@ The Shipping Bot",
         self.status = status.to_string();
 
         if send_notification {
-            // Send a slack notification since it changed.
-            let msg: FormattedMessage = self.clone().into();
-            company.post_to_slack_channel(db, &msg).await?;
+            self.send_slack_notification(db, company).await?;
         }
 
         Ok(())

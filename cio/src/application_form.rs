@@ -2,7 +2,6 @@ use anyhow::Result;
 use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use slack_chat_api::FormattedMessage;
 
 use crate::{applicants::NewApplicant, companies::Company, db::Database};
 
@@ -68,9 +67,7 @@ impl ApplicationForm {
         // Update airtable and the database again.
         applicant.update(db).await?;
 
-        // Send a slack notification for the new application.
-        let msg: FormattedMessage = applicant.into();
-        company.post_to_slack_channel(db, &msg).await?;
+        applicant.send_slack_notification(db, &company).await?;
 
         Ok(())
     }

@@ -80,6 +80,16 @@ pub struct NewMailingListSubscriber {
 }
 
 impl NewMailingListSubscriber {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_mailing_lists.to_string();
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
     fn populate_formatted_address(&mut self) {
         let mut street_address = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -103,6 +113,13 @@ impl NewMailingListSubscriber {
         }
 
         HumanTime::from(dur)
+    }
+}
+
+impl MailingListSubscriber {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewMailingListSubscriber = self.into();
+        n.send_slack_notification(db, company).await
     }
 }
 

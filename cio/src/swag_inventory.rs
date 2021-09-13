@@ -193,6 +193,16 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 }
 
 impl NewSwagInventoryItem {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_swag.to_string();
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
     pub fn generate_barcode(&mut self) {
         let mut barcode = self
             .name
@@ -367,6 +377,13 @@ impl From<SwagInventoryItem> for FormattedMessage {
     fn from(item: SwagInventoryItem) -> Self {
         let new: NewSwagInventoryItem = item.into();
         new.into()
+    }
+}
+
+impl SwagInventoryItem {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewSwagInventoryItem = self.into();
+        n.send_slack_notification(db, company).await
     }
 }
 
@@ -564,6 +581,8 @@ impl SwagInventoryItem {
                 // We increased in stock, show it as Green.
                 msg.attachments[0].color = crate::colors::Colors::Green.to_string();
             }
+
+            msg.channel = company.slack_channel_swag.to_string();
 
             company.post_to_slack_channel(db, &msg).await?;
         }
