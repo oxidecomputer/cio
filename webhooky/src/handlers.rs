@@ -1444,7 +1444,7 @@ pub async fn handle_checkr_background_update(
 
         // Set the status for the report.
         if event.data.object.package.contains("premium_criminal") {
-            send_notification = applicant.criminal_background_check_status == event.data.object.status;
+            send_notification = applicant.criminal_background_check_status != event.data.object.status;
 
             applicant.criminal_background_check_status = event.data.object.status.to_string();
         }

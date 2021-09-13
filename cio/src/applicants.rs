@@ -3553,8 +3553,12 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) -> Resu
                     // Get the report for the candidate.
                     let report = checkr.get_report(report_id).await.unwrap();
 
+                    let mut send_notification = false;
+
                     // Set the status for the report.
                     if report.package.contains("premium_criminal") {
+                        send_notification = applicant.criminal_background_check_status != report.status;
+
                         applicant.criminal_background_check_status = report.status.to_string();
                     }
                     if report.package.contains("motor_vehicle") {
@@ -3563,6 +3567,12 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) -> Resu
 
                     // Update the applicant.
                     applicant.update(db).await?;
+
+                    if send_notification {
+                        applicant
+                            .send_slack_notification_background_check_status_changed(&api_context.db, &company)
+                            .await?;
+                    }
                 }
             } else {
                 info!(
