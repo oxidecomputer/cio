@@ -308,7 +308,7 @@ impl UserConfig {
         // Create the applicant in Gusto.
         let employee = gusto
             .employees()
-            .post_employee(
+            .post(
                 gusto_company_id,
                 &gusto_api::types::PostEmployeesRequest {
                     first_name: self.first_name.to_string(),
@@ -328,7 +328,7 @@ impl UserConfig {
         let state = crate::states::StatesMap::shorthand(&self.home_address_state);
         gusto
             .employees()
-            .put_employee_home_address(
+            .put_home_address(
                 &self.gusto_id,
                 &gusto_api::types::PutEmployeeHomeAddressRequest {
                     version: "".to_string(),

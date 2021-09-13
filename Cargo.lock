@@ -544,7 +544,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#b1a8205c55988ea29c25af762f3e1c0f372655b4"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#10aecf38153131a1822c09e117a7ebabf14281ee"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -1694,12 +1694,14 @@ dependencies = [
 
 [[package]]
 name = "gusto-api"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c8b1462b7164552c8b978f73b5f0dc72b7c25213f2da5fbe98832ab9b01e87"
+checksum = "0db883bb45286b215e22ef886e5f63dcc0b9223691bc58a4b386fa434892542f"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "async-trait",
+ "bytes 1.1.0",
  "chrono",
  "http",
  "hyperx",
@@ -1710,6 +1712,9 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded 0.7.0",
+ "url 2.2.2",
+ "urlencoding",
  "uuid",
 ]
 
@@ -2293,7 +2298,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#b1a8205c55988ea29c25af762f3e1c0f372655b4"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#10aecf38153131a1822c09e117a7ebabf14281ee"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
