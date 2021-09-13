@@ -422,6 +422,51 @@ pub fn setup_logger() {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_create_and_get_repo_secret() {
+        // Initialize our database.
+        let db = crate::db::Database::new();
+        let company = crate::companies::Company::get_by_id(&db, 1).unwrap();
+        let github = company.authenticate_github().unwrap();
+
+        let repo = "cio";
+        let k = "TEST_SECRET";
+        let plain = "thing";
+        let mut plain_text: BTreeMap<String, String> = Default::default();
+        plain_text.insert(k.to_string(), plain.to_string());
+
+        let (key_id, secrets) = crate::utils::encrypt_github_secrets(&github, &company, repo, &plain_text)
+            .await
+            .unwrap();
+
+        let secret = secrets.get(k).unwrap().to_string();
+        println!("{}={}", k, secret);
+
+        // Create the secret.
+        github
+            .actions()
+            .create_or_update_repo_secret(
+                &company.github_org,
+                repo,
+                k,
+                &octorust::types::ActionsCreateUpdateRepoSecretRequest {
+                    encrypted_value: secret,
+                    key_id: key_id.to_string(),
+                },
+            )
+            .await
+            .unwrap();
+
+        // Get the secret back out.
+        github
+            .actions()
+            .get_repo_secret(&company.github_org, repo, k)
+            .await
+            .unwrap();
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
