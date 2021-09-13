@@ -13,7 +13,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
 use sentry::IntoDsn;
 use serde_json::Value;
-use sodiumoxide::crypto::secretbox;
+use sodiumoxide::crypto::box_;
 
 use crate::companies::Company;
 
@@ -338,21 +338,17 @@ pub async fn encrypt_github_secrets(
 
     // Get the public key for the repo.
     let pk = github.actions().get_repo_public_key(&company.github_org, repo).await?;
-    let pke = &base64::decode(pk.key)?;
+    let pke = &sodiumoxide::base64::decode(pk.key, sodiumoxide::base64::Variant::Original).unwrap();
 
     // Resize our slice.
-    let mut key_bytes: [u8; 32] = Default::default();
-    key_bytes.copy_from_slice(&pke);
-    let key = sodiumoxide::crypto::secretbox::Key(key_bytes);
-    let nonce = secretbox::gen_nonce();
+    let key = sodiumoxide::crypto::box_::PublicKey::from_slice(&pke).unwrap();
 
     let mut secrets = s.clone();
 
     // Iterate over and encrypt all our secrets.
     for (name, secret) in secrets.clone() {
-        let secret_bytes = secretbox::seal(secret.as_bytes(), &nonce, &key);
-        let ciphertext = [&nonce[..], b":", &secret_bytes].concat();
-        let encoded = base64::encode(ciphertext);
+        let secret_bytes = sodiumoxide::crypto::sealedbox::seal(secret.as_bytes(), &key);
+        let encoded = sodiumoxide::base64::encode(secret_bytes, sodiumoxide::base64::Variant::Original);
 
         secrets.insert(name, encoded);
     }
