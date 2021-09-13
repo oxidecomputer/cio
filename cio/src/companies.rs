@@ -1,7 +1,7 @@
 use std::{convert::TryInto, env};
 
 use airtable_api::Airtable;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::Utc;
@@ -184,7 +184,10 @@ impl Company {
         let slack = r?;
 
         // Post the message;
-        slack.post_message(msg).await?;
+        if let Err(e) = slack.post_message(msg).await {
+            // Give useful information with the error.
+            return Err(anyhow!("posting `{:#?}` as a slack message failed: {}", msg, e));
+        }
 
         Ok(())
     }
