@@ -6,12 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::{AIRTABLE_FUNCTIONS_TABLE, AIRTABLE_GRID_VIEW},
-    companies::Company,
-    core::UpdateAirtableRecord,
-    db::Database,
-    schema::functions,
-    utils::truncate,
+    airtable::AIRTABLE_FUNCTIONS_TABLE, core::UpdateAirtableRecord, db::Database, schema::functions, utils::truncate,
 };
 
 #[db {
