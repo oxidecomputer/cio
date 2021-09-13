@@ -6,7 +6,12 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_FUNCTIONS_TABLE, core::UpdateAirtableRecord, db::Database, schema::functions, utils::truncate,
+    airtable::{AIRTABLE_FUNCTIONS_TABLE, AIRTABLE_GRID_VIEW},
+    companies::Company,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::functions,
+    utils::truncate,
 };
 
 #[db {
@@ -148,4 +153,29 @@ impl Function {
         //nf.update(db).await
         Ok(nf)
     }
+}
+
+pub async fn refresh_functions() -> Result<()> {
+    let db = Database::new();
+
+    // This should forever only be Oxide.
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+
+    let hours_ago = Utc::now().checked_sub_signed(chrono::Duration::days(1)).unwrap();
+
+    // List all functions that are not "Completed".
+    let fns = functions::dsl::functions
+        .filter(functions::dsl::status.eq(octorust::types::JobStatus::InProgress.to_string()))
+        .filter(functions::dsl::created_at.lt(hours_ago))
+        .load::<Function>(&db.conn())?;
+
+    for (mut f) in fns {
+        // Set the function as TimedOut.
+        f.status = octorust::types::JobStatus::Completed.to_string();
+        f.conclusion = octorust::types::Conclusion::TimedOut.to_string();
+
+        f.update(&db).await?;
+    }
+
+    Ok(())
 }

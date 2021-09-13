@@ -33,7 +33,7 @@ use tripactions::Client as TripActions;
 use zoom_api::Client as Zoom;
 
 use crate::{
-    airtable::AIRTABLE_COMPANIES_TABLE,
+    airtable::{AIRTABLE_COMPANIES_TABLE, AIRTABLE_GRID_VIEW},
     api_tokens::{APIToken, NewAPIToken},
     configs::{Building, Buildings},
     core::UpdateAirtableRecord,
@@ -824,7 +824,7 @@ pub async fn refresh_companies() -> Result<()> {
 
     let is: Vec<airtable_api::Record<Company>> = oxide
         .authenticate_airtable(&oxide.airtable_base_id_cio)
-        .list_records(&Company::airtable_table(), "Grid view", vec![])
+        .list_records(&Company::airtable_table(), AIRTABLE_GRID_VIEW, vec![])
         .await?;
 
     for record in is {
