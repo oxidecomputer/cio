@@ -118,6 +118,16 @@ pub struct NewCompany {
     pub airtable_base_id_travel: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub airtable_base_id_cio: String,
+
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub slack_channel_applicants: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub slack_channel_swag: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub slack_channel_shipments: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub slack_channel_mailing_lists: String,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,

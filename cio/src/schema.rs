@@ -375,6 +375,10 @@ table! {
         airtable_base_id_assets -> Varchar,
         airtable_base_id_travel -> Varchar,
         airtable_base_id_cio -> Varchar,
+        slack_channel_applicants -> Varchar,
+        slack_channel_swag -> Varchar,
+        slack_channel_shipments -> Varchar,
+        slack_channel_mailing_lists -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
