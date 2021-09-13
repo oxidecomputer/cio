@@ -5,5 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "${{secrets.TEST_SECRET}}"
-      - run: if [[ "${{secrets.TEST_SECRET}}" = "thing" ]]; then echo "success"; done
+      - run: if [[ "${{secrets.TEST_SECRET}}" = "thing" ]]; then echo "success"; fi
         shell: bash
