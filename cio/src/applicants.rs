@@ -1746,6 +1746,45 @@ impl Applicant {
         Ok(())
     }
 
+    pub async fn send_slack_notification_start_date_changed(&self, db: &Database, company: &Company) -> Result<()> {
+        if self.start_date.is_none() {
+            // Return early, we don't care.
+            return Ok(());
+        }
+
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_applicants.to_string();
+
+        let start_date = self.start_date.unwrap();
+        let dur = start_date - Utc::now().date().naive_utc();
+        let human_date = HumanTime::from(dur);
+
+        let update = MessageBlock {
+            block_type: MessageBlockType::Section,
+            text: Some(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!(
+                    "start date is now `{}`, {}",
+                    start_date.format("YYYY-MM-DD"),
+                    human_date
+                ),
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        };
+
+        // Make the new block be the second thing.
+        msg.attachments[0].blocks.insert(1, update);
+
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
     pub async fn send_slack_notification_docusign_offer_status_changed(
         &self,
         db: &Database,
@@ -3570,7 +3609,7 @@ pub async fn refresh_background_checks(db: &Database, company: &Company) -> Resu
 
                     if send_notification {
                         applicant
-                            .send_slack_notification_background_check_status_changed(&api_context.db, &company)
+                            .send_slack_notification_background_check_status_changed(db, company)
                             .await?;
                     }
                 }
@@ -4576,11 +4615,16 @@ Sincerely,
             employee.update(db).await?;
         }
 
+        let mut send_notification_start_date = false;
+
         for fd in form_data {
             // TODO: we could somehow use the manager data here or above. The manager data is in
             // the docusign data.
             if fd.name == "Start Date" {
                 let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y").unwrap();
+
+                send_notification_start_date = self.start_date.is_none() || self.start_date.unwrap() != start_date;
+
                 self.start_date = Some(start_date);
             }
         }
@@ -4592,6 +4636,11 @@ Sincerely,
             // Send a slack notification that the docusign status changed.
             self.send_slack_notification_docusign_offer_status_changed(db, &company)
                 .await?;
+        }
+
+        if send_notification_start_date {
+            // Send a slack notification that the start date changed.
+            self.send_slack_notification_start_date_changed(db, &company).await?;
         }
 
         Ok(())
