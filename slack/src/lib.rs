@@ -292,6 +292,25 @@ impl Slack {
         Ok(())
     }
 
+    /// Post message to a channel.
+    /// FROM: https://api.slack.com/methods/chat.postMessage
+    pub async fn post_message(&self, body: &FormattedMessage) -> Result<(), APIError> {
+        let request = self.request(&self.user_token, Method::POST, "chat.postMessage", body, None);
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        Ok(())
+    }
+
     /// Remove users from a workspace.
     /// FROM: https://api.slack.com/methods/admin.users.remove
     pub async fn remove_user(&self, user_id: &str) -> Result<(), APIError> {
