@@ -1746,6 +1746,37 @@ impl Applicant {
         Ok(())
     }
 
+    pub async fn send_slack_notification_status_changed(&self, db: &Database, company: &Company) -> Result<()> {
+        if self.start_date.is_none() {
+            // Return early, we don't care.
+            return Ok(());
+        }
+
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_applicants.to_string();
+
+        let update = MessageBlock {
+            block_type: MessageBlockType::Section,
+            text: Some(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!("status is now `{}`", self.status),
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        };
+
+        // Make the new block be the second thing.
+        msg.attachments[0].blocks.insert(1, update);
+
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
     pub async fn send_slack_notification_start_date_changed(&self, db: &Database, company: &Company) -> Result<()> {
         if self.start_date.is_none() {
             // Return early, we don't care.
@@ -1849,13 +1880,16 @@ impl Applicant {
     }
 
     /// Update an applicant's status based on dates, interviews, etc.
-    pub fn update_status(&mut self) {
+    pub async fn update_status(&mut self, db: &Database, company: &Company) -> Result<()> {
+        let mut send_notification = false;
+
         // If we know they have more than 1 interview AND their current status is "next steps",
         // THEN we can mark the applicant as in the "interviewing" state.
         if self.interviews.len() > 1
             && (self.status == crate::applicant_status::Status::NextSteps.to_string()
                 || self.status == crate::applicant_status::Status::NeedsToBeTriaged.to_string())
         {
+            send_notification = self.status != crate::applicant_status::Status::Interviewing.to_string();
             self.status = crate::applicant_status::Status::Interviewing.to_string();
         }
 
@@ -1868,8 +1902,18 @@ impl Applicant {
         {
             // We shouldn't also check if we have an employee for the user, only if the employee had
             // been hired and left.
+            // TODO: Have a status for if the employee was hired but then left the company.
+            send_notification = self.status != crate::applicant_status::Status::Hired.to_string();
             self.status = crate::applicant_status::Status::Hired.to_string();
         }
+
+        if send_notification {
+            // Update the database first just in case.
+            self.update(db).await?;
+            self.send_slack_notification_status_changed(db, company).await?;
+        }
+
+        Ok(())
     }
 
     /// Update the interviews start and end time, if we have it.
@@ -4950,7 +4994,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         applicant.expand(db, &drive_client).await?;
 
         // Update the applicant's status based on other criteria.
-        applicant.update_status();
+        applicant.update_status(db, company).await?;
 
         // Update airtable and the database again, we want to save our status just in
         // case there is an error.
