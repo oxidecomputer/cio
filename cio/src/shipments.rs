@@ -188,7 +188,7 @@ impl NewInboundShipment {
         // Set the new status.
         self.tracking_status = status.status.to_string();
 
-        if send_notification {
+        if send_notification && !self.tracking_status.is_empty() {
             // Send a slack notification since it changed.
             let msg: FormattedMessage = self.clone().into();
             company.post_to_slack_channel(db, &msg).await?;
