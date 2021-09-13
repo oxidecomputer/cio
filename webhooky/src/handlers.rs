@@ -904,6 +904,9 @@ pub async fn handle_airtable_applicants_update(
 
     // Grab the status and the status raw.
     let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
+
+    let send_notification = db_applicant.status != status.to_string();
+
     db_applicant.status = status.to_string();
     if !applicant.raw_status.is_empty() {
         // Update the raw status if it had changed.
@@ -916,6 +919,14 @@ pub async fn handle_airtable_applicants_update(
 
     // Update the row in our database.
     db_applicant.update(&api_context.db).await?;
+
+    if send_notification {
+        let company = db_applicant.company(&api_context.db)?;
+
+        db_applicant
+            .send_slack_notification_status_changed(&api_context.db, &company)
+            .await?;
+    }
 
     info!("applicant {} updated successfully", applicant.email);
     Ok(())
@@ -1168,7 +1179,7 @@ pub async fn handle_applicant_review(
     info!("applicant review created successfully: {:?}", event);
 
     // Add the person to the scorers field of the applicant.
-    review.expand(&api_context.db)?;
+    review.expand(&api_context.db).await?;
     let review = review.update(&api_context.db).await?;
 
     // Get the applicant for the review.
