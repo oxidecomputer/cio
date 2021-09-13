@@ -295,7 +295,7 @@ impl Slack {
     /// Post message to a channel.
     /// FROM: https://api.slack.com/methods/chat.postMessage
     pub async fn post_message(&self, body: &FormattedMessage) -> Result<(), APIError> {
-        let request = self.request(&self.user_token, Method::POST, "chat.postMessage", body, None);
+        let request = self.request(&self.token, Method::POST, "chat.postMessage", body, None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
