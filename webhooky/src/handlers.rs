@@ -1563,7 +1563,7 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
         let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
-        company.post_to_slack_channel(db, &new_subscriber.into()).await?;
+        subscriber.send_slack_notification(db, &company).await?;
         info!("subscriber {} posted to Slack", subscriber.email);
 
         info!("subscriber {} created successfully", subscriber.email);
@@ -1600,7 +1600,7 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
         let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
-        company.post_to_slack_channel(db, &new_subscriber.into()).await?;
+        subscriber.send_slack_notification(db, &company).await?;
         info!("subscriber {} posted to Slack", subscriber.email);
 
         info!("subscriber {} created successfully", subscriber.email);
