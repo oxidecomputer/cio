@@ -341,20 +341,17 @@ pub async fn encrypt_github_secrets(
     let pke = &base64::decode(pk.key)?;
 
     // Resize our slice.
-    let mut spke: [u8; 32] = Default::default();
-    for (i, v) in pke.iter().enumerate() {
-        spke[i] = *v;
-    }
+    let mut key_bytes: [u8; 32] = Default::default();
+    key_bytes.copy_from_slice(&pke);
+    let key = sodiumoxide::crypto::secretbox::Key(key_bytes);
+    let nonce = secretbox::gen_nonce();
 
     let mut secrets = s.clone();
 
     // Iterate over and encrypt all our secrets.
     for (name, secret) in secrets.clone() {
-        // Load the key.
-        let key = secretbox::Key(spke);
-        let nonce = secretbox::gen_nonce();
-
-        let ciphertext = secretbox::seal(secret.as_bytes(), &nonce, &key);
+        let secret_bytes = secretbox::seal(secret.as_bytes(), &nonce, &key);
+        let ciphertext = [&nonce[..], b":", &secret_bytes].concat();
         let encoded = base64::encode(ciphertext);
 
         secrets.insert(name, encoded);
