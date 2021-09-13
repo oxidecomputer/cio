@@ -1713,6 +1713,102 @@ impl Applicant {
         n.send_slack_notification(db, company).await
     }
 
+    pub async fn send_slack_notification_background_check_status_changed(
+        &self,
+        db: &Database,
+        company: &Company,
+    ) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_applicants.to_string();
+
+        let update = MessageBlock {
+            block_type: MessageBlockType::Section,
+            text: Some(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!(
+                    "background check status is now `{}`",
+                    self.criminal_background_check_status
+                ),
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        };
+
+        // Make the new block be the second thing.
+        msg.attachments[0].blocks.insert(1, update);
+
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
+    pub async fn send_slack_notification_docusign_offer_status_changed(
+        &self,
+        db: &Database,
+        company: &Company,
+    ) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_applicants.to_string();
+
+        let update = MessageBlock {
+            block_type: MessageBlockType::Section,
+            text: Some(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!("docusign offer status is now `{}`", self.docusign_envelope_status),
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        };
+
+        // Make the new block be the second thing.
+        msg.attachments[0].blocks.insert(1, update);
+
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
+    pub async fn send_slack_notification_docusign_piia_status_changed(
+        &self,
+        db: &Database,
+        company: &Company,
+    ) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+        // Set the channel.
+        msg.channel = company.slack_channel_applicants.to_string();
+
+        let update = MessageBlock {
+            block_type: MessageBlockType::Section,
+            text: Some(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: format!(
+                    "docusign employee agreements status is now `{}`",
+                    self.docusign_piia_envelope_status
+                ),
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        };
+
+        // Make the new block be the second thing.
+        msg.attachments[0].blocks.insert(1, update);
+
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+
     /// Update an applicant's status based on dates, interviews, etc.
     pub fn update_status(&mut self) {
         // If we know they have more than 1 interview AND their current status is "next steps",
@@ -1965,9 +2061,13 @@ impl Applicant {
 
                     self.update(db).await?;
 
+                    self.send_slack_notification_background_check_status_changed(db, &company)
+                        .await?;
+
                     info!("sent background check invitation to: {}", self.email);
                 }
-                // We can return early they already exist as a candidate.
+                // We can return early they already exist as a candidate and we have sent them an
+                // invite.
                 return Ok(());
             }
         }
@@ -1982,6 +2082,9 @@ impl Applicant {
         self.criminal_background_check_status = "requested".to_string();
 
         self.update(db).await?;
+
+        self.send_slack_notification_background_check_status_changed(db, &company)
+            .await?;
 
         info!("sent background check invitation to: {}", self.email);
 
@@ -4305,6 +4408,10 @@ Sincerely,
 
             // Update the applicant in the database.
             self.update(db).await?;
+
+            // Send a slack notification that the docusign status changed.
+            self.send_slack_notification_docusign_offer_status_changed(db, company)
+                .await?;
         } else if !self.docusign_envelope_id.is_empty() {
             // We have sent their offer.
             // Let's get the status of the envelope in Docusign.
@@ -4328,6 +4435,8 @@ Sincerely,
 
         let company = self.company(db)?;
 
+        let send_notification = self.docusign_envelope_status != envelope.status;
+
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
         self.offer_created = envelope.created_date_time;
@@ -4336,6 +4445,12 @@ Sincerely,
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
             self.update(db).await?;
+
+            if send_notification {
+                // Send a slack notification that the docusign status changed.
+                self.send_slack_notification_docusign_offer_status_changed(db, &company)
+                    .await?;
+            }
             return Ok(());
         }
 
@@ -4462,6 +4577,13 @@ Sincerely,
 
         self.update(db).await?;
 
+        // Send the slack notification if we should.
+        if send_notification {
+            // Send a slack notification that the docusign status changed.
+            self.send_slack_notification_docusign_offer_status_changed(db, &company)
+                .await?;
+        }
+
         Ok(())
     }
 
@@ -4585,6 +4707,10 @@ Sincerely,
 
             // Update the applicant in the database.
             self.update(db).await?;
+
+            // Send a slack notification that the docusign status changed.
+            self.send_slack_notification_docusign_piia_status_changed(db, company)
+                .await?;
         } else if !self.docusign_piia_envelope_id.is_empty() {
             // We have sent their employee agreements.
             // Let's get the status of the envelope in Docusign.
@@ -4630,6 +4756,8 @@ Sincerely,
 
         let company = self.company(db)?;
 
+        let send_notification = self.docusign_piia_envelope_status != envelope.status;
+
         // Set the status in the database and airtable.
         self.docusign_piia_envelope_status = envelope.status.to_string();
         self.piia_envelope_created = envelope.created_date_time;
@@ -4638,6 +4766,12 @@ Sincerely,
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
             self.update(db).await?;
+
+            if send_notification {
+                // Send a slack notification that the docusign status changed.
+                self.send_slack_notification_docusign_piia_status_changed(db, &company)
+                    .await?;
+            }
             return Ok(());
         }
 
@@ -4650,6 +4784,12 @@ Sincerely,
 
         // Let's update the database here since nothing else has to do with that.
         self.update(db).await?;
+
+        if send_notification {
+            // Send a slack notification that the docusign status changed.
+            self.send_slack_notification_docusign_piia_status_changed(db, &company)
+                .await?;
+        }
 
         // Initialize the Google Drive client.
         let drive_client = company.authenticate_google_drive(db).await?;
