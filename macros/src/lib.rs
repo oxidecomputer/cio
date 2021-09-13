@@ -338,7 +338,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                         .await {
                             Ok(v) => return Some(v),
                             Err(e) => {
-                                log::warn!("getting airtable record failed: {}", self.airtable_record_id);
+                                log::info!("getting airtable record failed: {}", self.airtable_record_id);
                                 return None;
                             }
                         }
