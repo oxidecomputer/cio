@@ -642,7 +642,7 @@ pub async fn handle_slack_commands(
                     json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: format!(
-                            "Sorry <@{}> :scream: I could not find any `outbound` shipments",
+                            "Sorry <@{}> :scream: I could not find any `outbound` shipments pending delivery",
                             bot_command.user_id,
                         ),
                     })
@@ -650,7 +650,7 @@ pub async fn handle_slack_commands(
                     json!(MessageResponse {
                         response_type: MessageResponseType::InChannel,
                         text: format!(
-                            "Sorry <@{}> :scream: I could not find any `inbound` shipments",
+                            "Sorry <@{}> :scream: I could not find any `inbound` shipments pending delivery",
                             bot_command.user_id,
                         ),
                     })
