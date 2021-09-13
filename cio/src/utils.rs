@@ -419,3 +419,19 @@ pub fn setup_logger() {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_utils() {
+        // Initialize our database.
+        let db = crate::db::Database::new();
+        let company = crate::companies::Company::get_by_id(&db, 1).unwrap();
+
+        crate::shipments::refresh_inbound_shipments(&db, &company)
+            .await
+            .unwrap();
+    }
+}

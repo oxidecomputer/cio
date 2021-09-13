@@ -167,10 +167,15 @@ impl NewInboundShipment {
                         self.shipped_time = Some(shipped_time);
                     }
                 }
+            } else if h.status == *"DELIVERED" {
+                status.status = "DELIVERED".to_string();
+                if h.status_date.is_some() {
+                    self.delivered_time = h.status_date;
+                }
             }
         }
 
-        if status.status == *"DELIVERED" {
+        if status.status == *"DELIVERED" && status.status_date.is_some() {
             self.delivered_time = status.status_date;
         }
 

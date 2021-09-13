@@ -1113,9 +1113,13 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
 }
 
 /// Create a changelog email for the RFDs.
-pub async fn send_rfd_changelog(company: &Company) -> Result<()> {
-    // Initialize our database.
-    let db = Database::new();
+pub async fn send_rfd_changelog(db: &Database, company: &Company) -> Result<()> {
+    let rfds = RFDs::get_from_db(db, company.id)?;
+
+    if rfds.0.is_empty() {
+        // Return early.
+        return Ok(());
+    }
 
     let github = company.authenticate_github()?;
     let seven_days_ago = Utc::now() - Duration::days(7);
@@ -1128,7 +1132,6 @@ pub async fn send_rfd_changelog(company: &Company) -> Result<()> {
     let mut changelog = format!("Changes to RFDs for the week {}:\n", week_format);
 
     // Iterate over the RFDs.
-    let rfds = RFDs::get_from_db(&db, company.id)?;
     for rfd in rfds {
         let changes = rfd.get_weekly_changelog(&github, seven_days_ago, company).await?;
         if !changes.is_empty() {
@@ -1175,7 +1178,7 @@ mod tests {
         // TODO: split this out per company.
         let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
 
-        send_rfd_changelog(&oxide).await.unwrap();
+        send_rfd_changelog(&db, &oxide).await.unwrap();
     }
 
     #[test]
