@@ -124,6 +124,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(trigger_sync_companies_create).unwrap();
     api.register(trigger_sync_configs_create).unwrap();
     api.register(trigger_sync_finance_create).unwrap();
+    api.register(trigger_sync_functions_create).unwrap();
     api.register(trigger_sync_huddles_create).unwrap();
     api.register(trigger_sync_interviews_create).unwrap();
     api.register(trigger_sync_journal_clubs_create).unwrap();
@@ -186,6 +187,9 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         });
         scheduler.every(1.day()).at("1:30 am").run(|| async {
             do_job("localhost:8080", "sync-finance").await;
+        });
+        scheduler.every(2.hours()).run(|| async {
+            do_job("localhost:8080", "sync-functions").await;
         });
         scheduler.every(2.hours()).run(|| async {
             do_job("localhost:8080", "sync-huddles").await;
@@ -1707,6 +1711,29 @@ async fn trigger_sync_travel_create(
     sentry::start_session();
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel").await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync functions. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-functions",
+}]
+async fn trigger_sync_functions_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-functions").await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))

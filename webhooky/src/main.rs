@@ -46,6 +46,7 @@ enum SubCommand {
     SyncCompanies(SyncCompanies),
     SyncConfigs(SyncConfigs),
     SyncFinance(SyncFinance),
+    SyncFunctions(SyncFunctions),
     SyncHuddles(SyncHuddles),
     SyncInterviews(SyncInterviews),
     SyncJournalClubs(SyncJournalClubs),
@@ -104,6 +105,10 @@ pub struct SyncConfigs {}
 /// A subcommand for running the background job of syncing finance data.
 #[derive(Clap)]
 pub struct SyncFinance {}
+
+/// A subcommand for running the background job of syncing functions.
+#[derive(Clap)]
+pub struct SyncFunctions {}
 
 /// A subcommand for running the background job of syncing interviews.
 #[derive(Clap)]
@@ -268,6 +273,9 @@ async fn main() -> Result<()> {
             for company in companies {
                 cio_api::finance::refresh_all_finance(&db, &company).await?;
             }
+        }
+        SubCommand::SyncFunctions(_) => {
+            cio_api::functions::refresh_functions().await?;
         }
         SubCommand::SyncHuddles(_) => {
             let db = Database::new();
