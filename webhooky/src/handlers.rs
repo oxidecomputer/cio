@@ -1438,8 +1438,14 @@ pub async fn handle_checkr_background_update(
         // Keep the fields from Airtable we need just in case they changed.
         applicant.keep_fields_from_airtable(&api_context.db).await;
 
+        let company = applicant.company(&api_context.db)?;
+
+        let mut send_notification = false;
+
         // Set the status for the report.
         if event.data.object.package.contains("premium_criminal") {
+            send_notification = applicant.criminal_background_check_status == event.data.object.status;
+
             applicant.criminal_background_check_status = event.data.object.status.to_string();
         }
         if event.data.object.package.contains("motor_vehicle") {
@@ -1448,6 +1454,12 @@ pub async fn handle_checkr_background_update(
 
         // Update the applicant.
         applicant.update(&api_context.db).await?;
+
+        if send_notification {
+            applicant
+                .send_slack_notification_background_check_status_changed(&api_context.db, &company)
+                .await?;
+        }
     }
 
     Ok(())
