@@ -112,9 +112,10 @@ impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
 impl ApplicantReview {
     pub fn expand(&mut self, db: &Database) -> Result<()> {
         // We need to get the person from the leaderboard that matches this reviewer.
-        let reviewer = ApplicantReviewer::get_from_db(db, self.reviewer.to_string()).unwrap();
-        // Set this to the link to leaderboard.
-        self.link_to_leaderboard = vec![reviewer.airtable_record_id];
+        if let Some(reviewer) = ApplicantReviewer::get_from_db(db, self.reviewer.to_string()) {
+            // Set this to the link to leaderboard.
+            self.link_to_leaderboard = vec![reviewer.airtable_record_id];
+        }
 
         Ok(())
     }
