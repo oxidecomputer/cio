@@ -1182,7 +1182,7 @@ pub async fn handle_applicant_review(
 
     // Update the scorers for the applicant.
     // This will also update the database after.
-    applicant.update_reviews_scoring(&api_context.db).await;
+    applicant.update_reviews_scoring(&api_context.db).await?;
 
     println!(
         "applicant {} with review by {} updated successfully",
