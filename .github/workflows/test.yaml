@@ -1,5 +1,5 @@
-name: GitHub Actions Demo
-on: [push]
+name: Test secret set from API
+on: [push, workflow_dispatch]
 jobs:
   test-secret-set-from-api:
     runs-on: ubuntu-latest
