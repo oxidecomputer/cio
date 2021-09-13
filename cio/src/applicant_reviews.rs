@@ -5,8 +5,13 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    airtable::AIRTABLE_REVIEWS_TABLE, applicants::ApplicantReviewer, companies::Company, core::UpdateAirtableRecord,
-    db::Database, schema::applicant_reviews,
+    airtable::AIRTABLE_REVIEWS_TABLE,
+    applicants::{ApplicantReviewer, NewApplicantReviewer},
+    companies::Company,
+    configs::User,
+    core::UpdateAirtableRecord,
+    db::Database,
+    schema::applicant_reviews,
 };
 
 #[db {
@@ -110,11 +115,36 @@ impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
 }
 
 impl ApplicantReview {
-    pub fn expand(&mut self, db: &Database) -> Result<()> {
+    pub async fn expand(&mut self, db: &Database) -> Result<()> {
+        let company = self.company(db)?;
+
         // We need to get the person from the leaderboard that matches this reviewer.
         if let Some(reviewer) = ApplicantReviewer::get_from_db(db, self.reviewer.to_string()) {
             // Set this to the link to leaderboard.
             self.link_to_leaderboard = vec![reviewer.airtable_record_id];
+        } else if let Some(user) = User::get_from_db(
+            db,
+            company.id,
+            self.reviewer
+                .trim_end_matches(&company.gsuite_domain)
+                .trim_end_matches('@')
+                .to_string(),
+        ) {
+            // We need to addd them to the leaderboard.
+            let reviewer = NewApplicantReviewer {
+                name: user.full_name(),
+                email: self.reviewer.to_string(),
+                evaluations: 0,
+                emphatic_yes: 0,
+                yes: 0,
+                pass: 0,
+                no: 0,
+                not_applicable: 0,
+                cio_company_id: self.cio_company_id,
+            };
+
+            // Upsert the applicant reviewer in the database.
+            reviewer.upsert(db).await?;
         }
 
         Ok(())
@@ -146,7 +176,7 @@ pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
         }
         review.cio_company_id = company.id;
 
-        review.expand(db)?;
+        review.expand(db).await?;
 
         review.update(db).await?;
     }
