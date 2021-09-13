@@ -158,9 +158,6 @@ impl Function {
 pub async fn refresh_functions() -> Result<()> {
     let db = Database::new();
 
-    // This should forever only be Oxide.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
-
     let hours_ago = Utc::now().checked_sub_signed(chrono::Duration::days(1)).unwrap();
 
     // List all functions that are not "Completed".
@@ -169,7 +166,7 @@ pub async fn refresh_functions() -> Result<()> {
         .filter(functions::dsl::created_at.lt(hours_ago))
         .load::<Function>(&db.conn())?;
 
-    for (mut f) in fns {
+    for mut f in fns {
         // Set the function as TimedOut.
         f.status = octorust::types::JobStatus::Completed.to_string();
         f.conclusion = octorust::types::Conclusion::TimedOut.to_string();
