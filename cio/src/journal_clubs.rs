@@ -296,13 +296,15 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
     let owner = &company.github_org;
     let repo = "papers";
 
+    let r = github.repos().get(owner, repo).await?;
+
     // Get the contents of the .helpers/meetings.json file.
     let (meetings_json_content, _) = get_file_content_from_repo(
         github,
         owner,
         repo,
         // branch, empty means default
-        "",
+        &r.default_branch,
         ".helpers/meetings.json",
     )
     .await?;
