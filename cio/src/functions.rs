@@ -169,5 +169,31 @@ pub async fn refresh_functions() -> Result<()> {
         f.update(&db).await?;
     }
 
+    // List all functions that are "Completed", but have no conclusion.
+    let fns = functions::dsl::functions
+        .filter(functions::dsl::status.eq(octorust::types::JobStatus::Completed.to_string()))
+        .filter(functions::dsl::conclusion.eq("".to_string()))
+        .load::<Function>(&db.conn())?;
+
+    for mut f in fns {
+        // Set the function as Neutral.
+        f.conclusion = octorust::types::Conclusion::Neutral.to_string();
+
+        f.update(&db).await?;
+    }
+
+    // List all functions that are "In-progress", but have a conclusion.
+    let fns = functions::dsl::functions
+        .filter(functions::dsl::status.eq(octorust::types::JobStatus::InProgress.to_string()))
+        .filter(functions::dsl::conclusion.ne("".to_string()))
+        .load::<Function>(&db.conn())?;
+
+    for mut f in fns {
+        // Set the function as Completed.
+        f.status = octorust::types::JobStatus::Completed.to_string();
+
+        f.update(&db).await?;
+    }
+
     Ok(())
 }
