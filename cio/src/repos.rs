@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     airtable::AIRTABLE_GITHUB_REPOS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
-    schema::github_repos,
+    github_prs::FromSimpleUser, schema::github_repos,
 };
 
 /// The data type for a GitHub user.
@@ -241,7 +241,7 @@ impl NewRepo {
     pub fn new_from_full(r: octorust::types::FullRepository, cio_company_id: i32) -> Self {
         NewRepo {
             github_id: r.id.to_string(),
-            owner: r.owner.unwrap().login,
+            owner: r.owner.to_string(),
             name: r.name,
             full_name: r.full_name,
             description: r.description,

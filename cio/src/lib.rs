@@ -20,6 +20,7 @@ pub mod customers;
 pub mod db;
 pub mod finance;
 pub mod functions;
+pub mod github_prs;
 pub mod gsuite;
 pub mod huddles;
 pub mod interviews;
