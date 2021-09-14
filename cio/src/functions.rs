@@ -182,20 +182,7 @@ pub async fn refresh_functions() -> Result<()> {
         f.update(&db).await?;
     }
 
-    // List all functions that are "In-progress", but have a conclusion.
-    let fns = functions::dsl::functions
-        .filter(functions::dsl::status.eq(octorust::types::JobStatus::InProgress.to_string()))
-        .load::<Function>(&db.conn())?;
-
-    for mut f in fns {
-        if !f.conclusion.is_empty() {
-            // These have a conclusion.
-            // Set the function as Completed.
-            f.status = octorust::types::JobStatus::Completed.to_string();
-
-            f.update(&db).await?;
-        }
-    }
+    Functions::get_from_db(&db, 1)?.update_airtable(&db).await?;
 
     Ok(())
 }
