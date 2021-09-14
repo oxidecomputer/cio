@@ -232,22 +232,31 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
     for vendor_record in results {
         let mut vendor: NewSoftwareVendor = vendor_record.fields.into();
 
+        let new_cost_per_user_per_month = vendor.cost_per_user_per_month;
+
+        // Get the existing record if there is one.
+        let existing = SoftwareVendor::get_from_db(db, company.id, vendor.name.to_string());
+        // Set the existing cost and number of users, since we want to know
+        // via slack notification if it changed.
+        vendor.cost_per_user_per_month = if let Some(ex) = existing {
+            ex.cost_per_user_per_month
+        } else {
+            0.0
+        };
+        vendor.users = if let Some(ex) = existing { ex.users } else { 0 };
+
         // Set the company id.
         vendor.cio_company_id = company.id;
 
-        if vendor.name == "GitHub" {
+        let users = if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
             let org = github.orgs().get(&company.github_org).await?;
-            vendor.users = org.plan.unwrap().filled_seats as i32;
-        }
-
-        if vendor.name == "Okta" && okta_auth.is_some() {
+            org.plan.unwrap().filled_seats as i32
+        } else if vendor.name == "Okta" && okta_auth.is_some() {
             let okta = okta_auth.as_ref().unwrap();
             let users = okta.list_users().await?;
-            vendor.users = users.len() as i32;
-        }
-
-        if vendor.name == "Google Workspace" {
+            users.len() as i32
+        } else if vendor.name == "Google Workspace" {
             let users = gsuite
                 .users()
                 .list_all(
@@ -262,10 +271,8 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
                     gsuite_api::types::ViewType::AdminView,                // view type
                 )
                 .await?;
-            vendor.users = users.len() as i32;
-        }
-
-        if vendor.name == "Slack" && slack_auth.is_ok() {
+            users.len() as i32
+        } else if vendor.name == "Slack" && slack_auth.is_ok() {
             let slack = slack_auth.as_ref().unwrap();
             let users = slack.billable_info().await?;
             let mut count = 0;
@@ -275,21 +282,27 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
                 }
             }
 
-            vendor.users = count;
-        }
-
-        // Airtable, Brex, Gusto, Expensify are all the same number of users as
-        // in all@.
-        if vendor.name == "Airtable"
+            count
+        } else if vendor.name == "Airtable"
             || vendor.name == "Ramp"
             || vendor.name == "Brex"
             || vendor.name == "Gusto"
             || vendor.name == "Expensify"
         {
+            // Airtable, Brex, Gusto, Expensify are all the same number of users as
+            // in all@.
             let group = Group::get_from_db(db, company.id, "all".to_string()).unwrap();
             let airtable_group = group.get_existing_airtable_record(db).await.unwrap();
-            vendor.users = airtable_group.fields.members.len() as i32;
-        }
+
+            airtable_group.fields.members.len() as i32
+        } else {
+            vendor.users
+        };
+
+        // Send the slack notification if the number of users or cost changed.
+        vendor
+            .send_slack_notification_if_price_changed(db, company, users, new_cost_per_user_per_month)
+            .await?;
 
         // Upsert the record in our database.
         let mut db_vendor = vendor.upsert_in_db(db)?;
