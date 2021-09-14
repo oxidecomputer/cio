@@ -303,7 +303,7 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
         repo,
         // branch, empty means default
         "",
-        "/.helpers/meetings.json",
+        ".helpers/meetings.json",
     )
     .await?;
     let meetings_json_string = from_utf8(&meetings_json_content)?;
