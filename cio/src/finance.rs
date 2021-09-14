@@ -157,7 +157,7 @@ impl From<SoftwareVendor> for FormattedMessage {
     }
 }
 
-impl SoftwareVendor {
+impl NewSoftwareVendor {
     pub async fn send_slack_notification_if_price_changed(
         &mut self,
         db: &Database,
@@ -165,7 +165,7 @@ impl SoftwareVendor {
         new: i32,
         new_cost_per_user: f32,
     ) -> Result<()> {
-        let send_notification = self.users != new || self.cost_per_user_per_month != new_cost_per_user;
+        let send_notification = self.users != new || (self.cost_per_user_per_month - new_cost_per_user).abs() > 0.05;
 
         if send_notification {
             // Send a slack notification since it changed.
@@ -238,12 +238,12 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
         let existing = SoftwareVendor::get_from_db(db, company.id, vendor.name.to_string());
         // Set the existing cost and number of users, since we want to know
         // via slack notification if it changed.
-        vendor.cost_per_user_per_month = if let Some(ex) = existing {
+        vendor.cost_per_user_per_month = if let Some(ref ex) = existing {
             ex.cost_per_user_per_month
         } else {
             0.0
         };
-        vendor.users = if let Some(ex) = existing { ex.users } else { 0 };
+        vendor.users = if let Some(ref ex) = existing { ex.users } else { 0 };
 
         // Set the company id.
         vendor.cio_company_id = company.id;
@@ -300,6 +300,8 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
         };
 
         // Send the slack notification if the number of users or cost changed.
+        // This will also set the values for users and cost_per_user_per_month, so
+        // do this before sending to the database.
         vendor
             .send_slack_notification_if_price_changed(db, company, users, new_cost_per_user_per_month)
             .await?;
