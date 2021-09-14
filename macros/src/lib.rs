@@ -446,6 +446,11 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             let mut records = #new_struct_name_plural::get_from_airtable(db, self.0.get(0).unwrap().cio_company_id).await?;
 
             for mut vec_record in self.0.clone() {
+                // Get the latest of this record from the database.
+                // This make this less racy if we have a bunch and things got
+                // out of sync.
+                vec_record = #new_struct_name::get_by_id(db, vec_record.id).unwrap();
+
                 // See if we have it in our Airtable records.
                 match records.get(&vec_record.id) {
                     Some(r) => {
@@ -471,6 +476,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // Iterate over the records remaining and remove them from airtable
             // since they don't exist in our vector.
             for (_, record) in records {
+                // TODO: Ensure it didn't _just_ get added to the database.
                 // Delete the record from airtable.
                 record.fields.airtable(db)?.delete_record(&#new_struct_name::airtable_table(), &record.id).await?;
             }
