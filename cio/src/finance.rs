@@ -7,6 +7,9 @@ use log::{info, warn};
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use slack_chat_api::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 
 use crate::{
     airtable::{
@@ -91,6 +94,121 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
         self.link_to_accounts_payable = record.link_to_accounts_payable;
         // Keep this the same, we update it from the expensed items.
         self.link_to_expensed_items = record.link_to_expensed_items;
+
+        Ok(())
+    }
+}
+
+/// Convert the applicant into a Slack message.
+impl From<NewSoftwareVendor> for FormattedMessage {
+    fn from(item: NewSoftwareVendor) -> Self {
+        FormattedMessage {
+            channel: Default::default(),
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: Default::default(),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Default::default(),
+                blocks: vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Header,
+                        text: Some(MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: item.name.to_string(),
+                        }),
+                        elements: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: format!("Vendors | {} | {} | _just now_", item.category, item.status),
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                ],
+            }],
+        }
+    }
+}
+
+impl From<SoftwareVendor> for FormattedMessage {
+    fn from(item: SoftwareVendor) -> Self {
+        let new: NewSoftwareVendor = item.into();
+        new.into()
+    }
+}
+
+impl SoftwareVendor {
+    pub async fn send_slack_notification_if_price_changed(
+        &mut self,
+        db: &Database,
+        company: &Company,
+        new: i32,
+        new_cost_per_user: f32,
+    ) -> Result<()> {
+        let send_notification = self.users != new || self.cost_per_user_per_month != new_cost_per_user;
+
+        if send_notification {
+            // Send a slack notification since it changed.
+            let mut msg: FormattedMessage = self.clone().into();
+
+            // Add text.
+            let text = MessageBlock {
+                block_type: MessageBlockType::Section,
+                text: Some(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: format!(
+                        "price changed from `{}` users @ `${}` to `{}` users @ `${}`, total: `${}`",
+                        self.users,
+                        self.cost_per_user_per_month,
+                        new,
+                        new_cost_per_user,
+                        new as f32 * new_cost_per_user
+                    ),
+                }),
+                elements: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            };
+
+            // Set our accessory.
+            msg.attachments[0].blocks.insert(1, text);
+
+            if self.users < new || self.cost_per_user_per_month < new_cost_per_user {
+                msg.attachments[0].color = crate::colors::Colors::Blue.to_string();
+            } else {
+                // We decreased in price.
+                msg.attachments[0].color = crate::colors::Colors::Green.to_string();
+            }
+
+            msg.channel = company.slack_channel_finance.to_string();
+
+            company.post_to_slack_channel(db, &msg).await?;
+        }
+
+        // Set the new count.
+        self.users = new;
+        self.cost_per_user_per_month = new_cost_per_user;
 
         Ok(())
     }

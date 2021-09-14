@@ -544,7 +544,7 @@ impl SwagInventoryItem {
         SwagItem::get_from_db(db, self.item.to_string())
     }
 
-    pub async fn send_notification_if_inventory_changed(
+    pub async fn send_slack_notification_if_inventory_changed(
         &mut self,
         db: &Database,
         company: &Company,

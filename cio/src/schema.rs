@@ -379,6 +379,7 @@ table! {
         slack_channel_swag -> Varchar,
         slack_channel_shipments -> Varchar,
         slack_channel_mailing_lists -> Varchar,
+        slack_channel_finance -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }

@@ -95,7 +95,7 @@ impl Order {
 
             // This will also set the value.
             swag_inventory_item
-                .send_notification_if_inventory_changed(db, &company, new)
+                .send_slack_notification_if_inventory_changed(db, &company, new)
                 .await?;
 
             info!(

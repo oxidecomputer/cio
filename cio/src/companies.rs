@@ -127,6 +127,8 @@ pub struct NewCompany {
     pub slack_channel_shipments: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub slack_channel_mailing_lists: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub slack_channel_finance: String,
 
     /// The CIO company ID.
     #[serde(default)]
