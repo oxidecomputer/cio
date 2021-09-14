@@ -1,7 +1,8 @@
+use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::repos::FromUrl;
+use crate::{companies::Companys, db::Database, repos::FromUrl};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Debug, Clone, JsonSchema)]
 pub struct NewPullRequest {
@@ -220,5 +221,54 @@ impl FromVecPullRequestSimpleLinks for octorust::types::PullRequestSimpleLinks {
             self.self_.href.to_string(),
             self.statuses.href.to_string(),
         ]
+    }
+}
+
+pub async fn refresh_pulls() -> Result<()> {
+    let db = Database::new();
+
+    let companies = Companys::get_from_db(&db, 1)?;
+
+    for company in companies {
+        let github = company.authenticate_github()?;
+
+        // List all the repos.
+        let repos = crate::repos::list_all_github_repos(&github, &company).await?;
+
+        // For each repo, get all the pull requests.
+        for repo in repos {
+            // Get all the pull requests.
+            let pulls = github
+                .pulls()
+                .list_all(
+                    &company.github_org,
+                    &repo.name,
+                    octorust::types::IssuesListState::All,
+                    "", // head
+                    "", // base
+                    octorust::types::PullsListSort::Created,
+                    octorust::types::Order::Asc,
+                )
+                .await?;
+
+            for pull in pulls {
+                println!("{:#?}", pull);
+                let p: NewPullRequest = pull.into();
+                println!("{:#?}", p);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_pulls() {
+        refresh_pulls().await.unwrap();
     }
 }

@@ -1,8 +1,9 @@
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{github_prs::FromSimpleUser, repos::FromUrl};
+use crate::{companies::Companys, db::Database, github_prs::FromSimpleUser, repos::FromUrl};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Debug, Clone, JsonSchema)]
 pub struct NewCommit {
@@ -63,10 +64,10 @@ impl From<octorust::types::CommitDataType> for NewCommit {
             author: item.author.to_string(),
             comments_url: item.comments_url.to_string(),
             commit_author: item.commit.author.to_string(),
-            commit_author_date: None,
+            commit_author_date: item.commit.author.to_date(),
             comment_count: item.commit.comment_count as i32,
             commit_committer: item.commit.committer.to_string(),
-            commit_committer_date: None,
+            commit_committer_date: item.commit.committer.to_date(),
             message: item.commit.message.to_string(),
             verified: item.commit.verification.is_some(),
             tree: item.commit.tree.sha.to_string(),
@@ -118,6 +119,7 @@ impl FromVecCommitFiles for Vec<octorust::types::CommitFiles> {
 
 pub trait FromTagger {
     fn to_string(&self) -> String;
+    fn to_date(&self) -> Option<DateTime<Utc>>;
 }
 
 impl FromTagger for Option<octorust::types::Tagger> {
@@ -127,5 +129,66 @@ impl FromTagger for Option<octorust::types::Tagger> {
         } else {
             String::new()
         }
+    }
+
+    fn to_date(&self) -> Option<DateTime<Utc>> {
+        if let Some(u) = self {
+            if let Ok(d) = DateTime::parse_from_str(&u.date, "%+") {
+                Some(d.with_timezone(&Utc))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+pub async fn refresh_commits() -> Result<()> {
+    let db = Database::new();
+
+    let companies = Companys::get_from_db(&db, 1)?;
+
+    for company in companies {
+        let github = company.authenticate_github()?;
+
+        // List all the repos.
+        let repos = crate::repos::list_all_github_repos(&github, &company).await?;
+
+        // For each repo, get all the commits.
+        for repo in repos {
+            // Get all the commits.
+            let commits = github
+                .repos()
+                .list_all_commits(
+                    &company.github_org,
+                    &repo.name,
+                    "",   // sha
+                    "",   // path
+                    "",   // author
+                    None, // since
+                    None, // until
+                )
+                .await?;
+
+            for commit in commits {
+                println!("{:#?}", commit);
+                let c: NewCommit = commit.into();
+                println!("{:#?}", c);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[ignore]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_commits() {
+        refresh_commits().await.unwrap();
     }
 }
