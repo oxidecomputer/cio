@@ -1290,7 +1290,9 @@ The Shipping Bot",
             cd_inner.certify = true;
             cd_inner.non_delivery_option = "RETURN".to_string();
             cd_inner.contents_type = "GIFT".to_string();
-            cd_inner.contents_explanation = self.contents.to_string();
+            // This can only have a max of 200 chars.
+            // Weird I know.
+            cd_inner.contents_explanation = crate::utils::truncate(&self.contents, 200);
             // TODO: I think this needs to change for Canada.
             cd_inner.eel_pfc = "NOEEI_30_37_a".to_string();
 
