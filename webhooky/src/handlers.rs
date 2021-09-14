@@ -1331,7 +1331,8 @@ pub async fn handle_airtable_shipments_inbound_create(
 
     if record.tracking_number.is_empty() || record.carrier.is_empty() {
         // Return early, we don't care.
-        bail!("tracking_number and carrier are empty, ignoring");
+        info!("tracking_number and carrier are empty, ignoring");
+        return Ok(());
     }
 
     let company = record.company(db)?;
@@ -1379,7 +1380,8 @@ pub async fn handle_shippo_tracking_update(
     if ts.tracking_number.is_empty() || ts.carrier.is_empty() {
         // We can reaturn early.
         // It's too early to get anything good from this event.
-        bail!("tracking_number and carrier are empty, ignoring");
+        info!("tracking_number and carrier are empty, ignoring");
+        return Ok(());
     }
 
     // Update the inbound shipment, if it exists.
