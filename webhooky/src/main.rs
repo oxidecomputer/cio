@@ -14,7 +14,7 @@ extern crate serde_json;
 
 use std::env;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use cio_api::{companies::Companys, db::Database};
 use clap::{AppSettings, Clap};
 use sentry::IntoDsn;
@@ -308,7 +308,9 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await?;
+                if let Err(e) = cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await {
+                    bail!("{:?}", e);
+                }
             }
         }
         SubCommand::SyncMailingLists(_) => {
