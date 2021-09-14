@@ -675,6 +675,18 @@ fn clean_vendor_name(s: &str) -> String {
         || s == "Amazon.co.uk"
     {
         "Amazon".to_string()
+    } else if s == "Walmart Supercenter" {
+        "Walmart".to_string()
+    } else if s == "dmarcian" {
+        "Dmarcian".to_string()
+    } else if s == "Paypal Transaction - Thing" || s == "Paypal" {
+        "PayPal".to_string()
+    } else if s == "Arrow Electronics" {
+        "Arrow".to_string()
+    } else if s == "Adafruit Industries" {
+        "Adafruit".to_string()
+    } else if s == "Various" {
+        "Travel Expense".to_string()
     } else if s == "JSX Air" {
         "JSX".to_string()
     } else if s == "Sublime Hq" {
