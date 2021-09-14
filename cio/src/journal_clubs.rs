@@ -296,7 +296,18 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
     let owner = &company.github_org;
     let repo = "papers";
 
-    let r = github.repos().get(owner, repo).await?;
+    let r = github.repos().get(owner, repo).await;
+
+    if let Err(e) = r {
+        if e.to_string().contains("404 Not Found") {
+            // They don't have a paper's repo, let's just return early.
+            return Ok(Default::default());
+        }
+
+        bail!(e);
+    }
+
+    let r = r?;
 
     // Get the contents of the .helpers/meetings.json file.
     let (meetings_json_content, _) = get_file_content_from_repo(
