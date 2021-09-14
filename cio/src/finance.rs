@@ -1224,7 +1224,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                 continue;
             }
             Err(e) => {
-                warn!(
+                info!(
                     "could not find transaction with merchant_name `{}` -> `{}` amount `{}`  date `{}`: {}",
                     bill_payment.vendor_ref.name, merchant_name, bill_payment.total_amt, bill_payment.txn_date, e
                 );
@@ -1276,7 +1276,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                     continue;
                 }
                 Err(e) => {
-                    warn!(
+                    info!(
                         "could not find transaction with merchant_name `{}` -> `{}` amount `{}` date `{}` --> less than `{}` greater than `{}`: {}",
                         purchase.entity_ref.name, merchant_name, purchase.total_amt, purchase.txn_date, sdt, edt, e
                     );
