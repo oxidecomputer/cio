@@ -294,7 +294,7 @@ impl Slack {
 
     /// Post message to a channel.
     /// FROM: https://api.slack.com/methods/chat.postMessage
-    pub async fn post_message(&self, body: &FormattedMessage) -> Result<(), APIError> {
+    pub async fn post_message(&self, body: &FormattedMessage) -> Result<FormattedMessageResponse, APIError> {
         let request = self.request(&self.token, Method::POST, "chat.postMessage", body, None);
 
         let resp = self.client.execute(request).await.unwrap();
@@ -308,7 +308,16 @@ impl Slack {
             }
         };
 
-        Ok(())
+        let f: FormattedMessageResponse = resp.json().await.unwrap();
+
+        if !f.ok {
+            return Err(APIError {
+                status_code: StatusCode::OK,
+                body: serde_json::json!(f).to_string(),
+            });
+        }
+
+        Ok(f)
     }
 
     /// Remove users from a workspace.
@@ -489,6 +498,21 @@ pub struct FormattedMessage {
     pub blocks: Vec<MessageBlock>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attachments: Vec<MessageAttachment>,
+}
+
+/// A formatted message response from Slack.
+///
+/// Docs: https://api.slack.com/methods/chat.postMessage
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub struct FormattedMessageResponse {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub channel: String,
+    #[serde(default)]
+    pub message: serde_json::Value,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub error: String,
 }
 
 /// A Slack message block.
