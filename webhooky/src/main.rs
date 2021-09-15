@@ -192,6 +192,15 @@ async fn main() -> Result<()> {
     }
     let _log_guard = slog_stdlog::init_with_level(log_level)?;
 
+    if let Err(err) = run_cmd(opts, logger).await {
+        sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
+        bail!("{:?}", err);
+    }
+
+    Ok(())
+}
+
+async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
     match opts.subcmd {
         SubCommand::Server(s) => {
             crate::server::server(s, logger).await?;
@@ -308,9 +317,7 @@ async fn main() -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                if let Err(e) = cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await {
-                    bail!("{:?}", e);
-                }
+                cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await?;
             }
         }
         SubCommand::SyncMailingLists(_) => {
