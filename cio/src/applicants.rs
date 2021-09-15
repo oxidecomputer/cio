@@ -1570,11 +1570,11 @@ impl From<NewApplicant> for FormattedMessage {
         let mut status_msg = item.role.to_string();
 
         if !item.interested_in.is_empty() {
-            status_msg += &format!(" | interested in: {}", item.interested_in.join(","));
+            status_msg += &format!(" | {}", item.interested_in.join(","));
         }
 
         if !item.status.is_empty() {
-            status_msg += &format!(" | status: *{}*", item.status);
+            status_msg += &format!(" | *{}*", item.status);
         }
 
         status_msg += &format!(" | applied {}", time);
