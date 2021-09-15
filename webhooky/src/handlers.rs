@@ -1529,11 +1529,14 @@ pub async fn handle_docusign_envelope_update(
             }
         }
         Err(e) => {
-            bail!(
+            // Likely this happens because we resent an offer or it was voided.
+            // Let's log it but ignore it and return early.
+            info!(
                 "database could not find applicant with docusign offer envelope id {}: {}",
-                event.envelope_id,
-                e
+                event.envelope_id, e
             );
+
+            return Ok(());
         }
     }
 
