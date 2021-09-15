@@ -905,7 +905,7 @@ pub async fn handle_airtable_applicants_update(
     // Grab the status and the status raw.
     let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
 
-    let send_notification = db_applicant.status != status.to_string();
+    let status_changed = db_applicant.status != status.to_string();
 
     db_applicant.status = status.to_string();
     if !applicant.raw_status.is_empty() {
@@ -917,10 +917,34 @@ pub async fn handle_airtable_applicants_update(
     // If we do this, we need to update the airtable webhook settings to include it as
     // well.
 
+    // If the status is now Giving Offer we should and it's changed from whatever it was before,
+    // let do the docusign stuff.
+    if status_changed && status == cio_api::applicant_status::Status::GivingOffer {
+        // Update the row in our database, first just in case..
+        db_applicant.update(&api_context.db).await?;
+
+        // Create our docusign client.
+        let company = db_applicant.company(&api_context.db)?;
+        let dsa = company.authenticate_docusign(&api_context.db).await;
+        if let Ok(ds) = dsa {
+            // Get the template we need.
+            let offer_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
+
+            db_applicant
+                .do_docusign_offer(&api_context.db, &ds, &offer_template_id, &company)
+                .await?;
+
+            let piia_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE).await;
+            db_applicant
+                .do_docusign_piia(&api_context.db, &ds, &piia_template_id, &company)
+                .await?;
+        }
+    }
+
     // Update the row in our database.
     db_applicant.update(&api_context.db).await?;
 
-    if send_notification {
+    if status_changed {
         let company = db_applicant.company(&api_context.db)?;
 
         db_applicant
