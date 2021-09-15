@@ -677,7 +677,7 @@ pub async fn handle_rfd_push(
 
             // If the title of the RFD changed, delete the old PDF file so it
             // doesn't linger in GitHub and Google Drive.
-            if old_rfd_pdf != rfd.get_pdf_filename() {
+            if !old_rfd_pdf.is_empty() && old_rfd_pdf != rfd.get_pdf_filename() {
                 let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
                 // First get the sha of the old pdf.
