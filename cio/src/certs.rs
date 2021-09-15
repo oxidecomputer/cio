@@ -560,6 +560,9 @@ impl Certificate {
         // Update the database and Airtable.
         cert.upsert(db).await?;
 
+        // Send the notification we renewed the cert.
+        cert.send_slack_notification(db, company).await?;
+
         Ok(())
     }
 }
