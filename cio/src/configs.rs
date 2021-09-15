@@ -2641,6 +2641,8 @@ pub async fn sync_certificates(
 
         certificate.populate_from_github(github, company).await?;
 
+        let mut send_notification = false;
+
         // If the cert is going to expire in less than 7 days, renew it.
         // Otherwise, return early.
         if certificate.valid_days_left > 7 {
@@ -2657,6 +2659,8 @@ pub async fn sync_certificates(
 
             // Update the Github Action secrets, with the new certificates if there are some.
             certificate.update_github_action_secrets(github, company).await?;
+
+            send_notification = true;
         }
 
         if certificate.certificate.is_empty() {
@@ -2666,6 +2670,12 @@ pub async fn sync_certificates(
 
         // Update the database and Airtable.
         certificate.upsert(db).await?;
+
+        // Send the notification, do this after updating the database, just in case there was
+        // an error.
+        if send_notification {
+            certificate.send_slack_notification(db, company).await?;
+        }
 
         // Remove the certificate from the BTreeMap.
         certificate_map.remove(&certificate.domain);

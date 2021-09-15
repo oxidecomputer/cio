@@ -159,7 +159,7 @@ impl NewCertificate {
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
 
-        for channel in self.notify_slack_channels {
+        for channel in &self.notify_slack_channels {
             // Set the channel.
             msg.channel = channel.to_string();
             // Post the message.
@@ -334,6 +334,10 @@ impl NewCertificate {
     /// verification.
     pub async fn populate(&mut self, company: &Company) -> Result<()> {
         self.create_cert(company).await?;
+
+        let exp_date = self.expiration_date();
+        self.expiration_date = exp_date.date().naive_utc();
+        self.valid_days_left = self.valid_days_left();
 
         Ok(())
     }
@@ -546,10 +550,6 @@ impl Certificate {
         let mut cert: NewCertificate = self.into();
 
         cert.populate(company).await?;
-
-        let exp_date = cert.expiration_date();
-        cert.expiration_date = exp_date.date().naive_utc();
-        cert.valid_days_left = cert.valid_days_left();
 
         // Save the certificate to disk.
         cert.save_to_github_repo(github, company).await?;
