@@ -156,7 +156,7 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
         }
         context += &format!("subscribed to mailing list {}", time);
 
-        FormattedMessage {
+        let mut msg = FormattedMessage {
             channel: Default::default(),
             attachments: Default::default(),
             blocks: vec![
@@ -171,7 +171,6 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
                     block_id: Default::default(),
                     fields: Default::default(),
                 },
-                interest,
                 MessageBlock {
                     block_type: MessageBlockType::Context,
                     elements: vec![MessageBlockText {
@@ -195,7 +194,15 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
                     fields: Default::default(),
                 },
             ],
+        };
+
+        if item.interest.is_empty() {
+            return msg;
         }
+
+        msg.blocks.insert(1, interest);
+
+        msg
     }
 }
 
