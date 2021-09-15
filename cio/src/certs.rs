@@ -11,6 +11,7 @@ use acme_lib::{create_p384_key, persist::FilePersist, Directory, DirectoryUrl};
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
+use chrono_humanize::HumanTime;
 use cloudflare::{
     endpoints::{dns, zone},
     framework::async_api::ApiClient,
@@ -20,6 +21,9 @@ use macros::db;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use slack_chat_api::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 
 use crate::{
     airtable::AIRTABLE_CERTIFICATES_TABLE,
@@ -70,12 +74,101 @@ pub struct NewCertificate {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub private_key_github_actions_secret_name: String,
 
+    /// The names of the Slack channels to notify on update.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notify_slack_channels: Vec<String>,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
 }
 
+/// Convert the certificate into a Slack message.
+impl From<NewCertificate> for FormattedMessage {
+    fn from(item: NewCertificate) -> Self {
+        let dur = item.expiration_date - Utc::now().date().naive_utc();
+        let human_date = HumanTime::from(dur);
+
+        let mut text = format!("`{}` certificate renewed", item.domain);
+        if !item.repos.is_empty() {
+            text += &format!(
+                "\nupdated `{}`, `{}` secrets in the following repos: `{}`",
+                item.certificate_github_actions_secret_name,
+                item.private_key_github_actions_secret_name,
+                item.repos.join("`, `")
+            );
+        }
+
+        FormattedMessage {
+            channel: Default::default(),
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: crate::colors::Colors::Green.to_string(),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Default::default(),
+                blocks: vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        text: Some(MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text,
+                        }),
+                        elements: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: format!("SSL cert | _expires {}_", human_date),
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                ],
+            }],
+        }
+    }
+}
+
+impl From<Certificate> for FormattedMessage {
+    fn from(item: Certificate) -> Self {
+        let new: NewCertificate = item.into();
+        new.into()
+    }
+}
+
 impl NewCertificate {
+    // Send a slack notification to the channels in the object.
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+
+        for channel in self.notify_slack_channels {
+            // Set the channel.
+            msg.channel = channel.to_string();
+            // Post the message.
+            company.post_to_slack_channel(db, &msg).await?;
+        }
+
+        Ok(())
+    }
+
     /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
     /// The DNS Challenge TXT record is added to Cloudflare automatically.
     pub async fn create_cert(&mut self, company: &Company) -> Result<()> {
@@ -444,6 +537,11 @@ impl UpdateAirtableRecord<Certificate> for Certificate {
 }
 
 impl Certificate {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewCertificate = self.into();
+        n.send_slack_notification(db, company).await
+    }
+
     pub async fn renew(&self, db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
         let mut cert: NewCertificate = self.into();
 

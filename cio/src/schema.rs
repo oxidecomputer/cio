@@ -334,6 +334,7 @@ table! {
         repos -> Array<Text>,
         certificate_github_actions_secret_name -> Varchar,
         private_key_github_actions_secret_name -> Varchar,
+        notify_slack_channels -> Array<Text>,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
