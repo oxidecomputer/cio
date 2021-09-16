@@ -544,7 +544,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a6a6b2483ff888c5461a6efc1edda0377d08ea23"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#2cf379079d2771e9af2dd5eeb44e0fd1e7a187dc"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -2298,7 +2298,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#a6a6b2483ff888c5461a6efc1edda0377d08ea23"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#2cf379079d2771e9af2dd5eeb44e0fd1e7a187dc"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -5086,9 +5086,9 @@ checksum = "8895849a949e7845e06bd6dc1aa51731a103c42707010a5b591c0038fb73385b"
 
 [[package]]
 name = "unicode-width"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9337591893a19b88d8d87f2cec1e73fad5cdfd10e5a6f349f498ad6ea2ffb1e3"
+checksum = "3ed742d4ea2bd1176e236172c8429aaf54486e7ac098db29ffe6529e0ce50973"
 
 [[package]]
 name = "unicode-xid"
