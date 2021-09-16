@@ -545,6 +545,8 @@ pub enum MessageBlockType {
     Context,
     #[serde(rename = "divider")]
     Divider,
+    #[serde(rename = "actions")]
+    Actions,
 }
 
 impl Default for MessageBlockType {
@@ -559,6 +561,11 @@ pub struct MessageBlockText {
     #[serde(rename = "type")]
     pub text_type: MessageType,
     pub text: String,
+
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub action_id: String,
 }
 
 /// Message type in Slack.
@@ -570,6 +577,8 @@ pub enum MessageType {
     Markdown,
     #[serde(rename = "image")]
     Image,
+    #[serde(rename = "button")]
+    Button,
 }
 
 impl Default for MessageType {
