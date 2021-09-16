@@ -28,6 +28,7 @@
 use std::{collections::HashMap, env, sync::Arc};
 
 use anyhow::{bail, Result};
+use async_recursion::async_recursion;
 use reqwest::{header, Body, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -280,8 +281,38 @@ impl Slack {
         Ok(())
     }
 
+    /// Join a channel.
+    /// FROM: https://api.slack.com/methods/conversations.join
+    pub async fn join_channel(&self, channel: &str) -> Result<Channel> {
+        let mut body: HashMap<&str, &str> = HashMap::new();
+        body.insert("channel", channel);
+
+        let request = self.request(&self.token, Method::POST, "conversations.join", body, None)?;
+
+        let resp = self.client.execute(request).await?;
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                bail!("status code: {}, body: {}", s, resp.text().await?);
+            }
+        };
+
+        let f: JoinChannelResponse = resp.json().await?;
+
+        if !f.ok {
+            bail!(
+                "status code: {}, body: {}",
+                StatusCode::OK,
+                serde_json::json!(f).to_string()
+            );
+        }
+
+        Ok(f.channel)
+    }
+
     /// Post message to a channel.
     /// FROM: https://api.slack.com/methods/chat.postMessage
+    #[async_recursion]
     pub async fn post_message(&self, body: &FormattedMessage) -> Result<FormattedMessageResponse> {
         let request = self.request(&self.token, Method::POST, "chat.postMessage", body, None)?;
 
@@ -296,6 +327,10 @@ impl Slack {
         let f: FormattedMessageResponse = resp.json().await?;
 
         if !f.ok {
+            if f.error.contains("not_in_channel") {
+                // Join the channel and try again.
+                return self.post_message(body).await;
+            }
             bail!(
                 "status code: {}, body: {}",
                 StatusCode::OK,
@@ -454,6 +489,90 @@ pub struct FormattedMessageResponse {
     pub message: serde_json::Value,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub error: String,
+}
+
+/// A channel join response.
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub struct JoinChannelResponse {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub channel: Channel,
+    #[serde(default)]
+    pub response_metadata: serde_json::Value,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub error: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub warning: String,
+}
+
+/// A channel.
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, Serialize)]
+pub struct Channel {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub accepted_user: String,
+    #[serde(default)]
+    pub created: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub creator: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    #[serde(default)]
+    pub is_archived: bool,
+    #[serde(default)]
+    pub is_channel: bool,
+    #[serde(default)]
+    pub is_general: bool,
+    #[serde(default)]
+    pub is_member: bool,
+    #[serde(default)]
+    pub is_moved: i32,
+    #[serde(default)]
+    pub is_mpim: bool,
+    #[serde(default)]
+    pub is_org_shared: bool,
+    #[serde(default)]
+    pub is_pending_ext_shared: bool,
+    #[serde(default)]
+    pub is_private: bool,
+    #[serde(default)]
+    pub is_read_only: bool,
+    #[serde(default)]
+    pub is_shared: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_read: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name_normalized: String,
+    #[serde(default)]
+    pub num_members: i32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub previous_names: Vec<String>,
+    #[serde(default)]
+    pub priority: f32,
+    #[serde(default)]
+    pub purpose: ChannelValue,
+    #[serde(default)]
+    pub topic: ChannelValue,
+    #[serde(default)]
+    pub unlinked: i32,
+    #[serde(default)]
+    pub unread_count: i32,
+    #[serde(default)]
+    pub unread_count_display: i32,
+}
+
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct ChannelValue {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub creator: String,
+    #[serde(default)]
+    pub last_set: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value: String,
 }
 
 /// A Slack message block.
