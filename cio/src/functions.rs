@@ -143,8 +143,8 @@ impl From<NewFunction> for FormattedMessage {
                 elements: vec![slack_chat_api::BlockOption::ActionBlock(ActionBlock {
                     text_type: MessageType::Button,
                     text: MessageBlockText {
-                        text_type: MessageType::Markdown,
-                        text: format!("Re-run `{}`", item.name),
+                        text_type: MessageType::PlainText,
+                        text: format!("Re-run {}", item.name),
                     },
                     action_id: "function".to_string(),
                     value: item.name.to_string(),
