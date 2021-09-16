@@ -127,7 +127,8 @@ impl APIToken {
         if let Some(d) = self.expires_date {
             // To be safe, let's subtract a few hours, since that might be
             // how long it takes for the job to run.
-            Utc::now() < d.checked_sub_signed(Duration::hours(10)).unwrap()
+            //Utc::now() < d.checked_sub_signed(Duration::hours(10)).unwrap()
+            true
         } else {
             // Set to being expired by default if we don't know the date.
             true
