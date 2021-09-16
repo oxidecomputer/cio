@@ -53,6 +53,31 @@ impl UpdateAirtableRecord<Function> for Function {
     }
 }
 
+fn get_color_based_from_status_and_conclusion(status: &str, conclusion: &str) -> String {
+    if status == octorust::types::JobStatus::InProgress.to_string() {
+        return crate::colors::Colors::Blue.to_string();
+    }
+
+    if status == octorust::types::JobStatus::Completed.to_string() && conclusion.is_empty() {
+        return crate::colors::Colors::Yellow.to_string();
+    }
+
+    if status == octorust::types::JobStatus::Completed.to_string()
+        && conclusion == octorust::types::Conclusion::Success.to_string()
+    {
+        return crate::colors::Colors::Green.to_string();
+    }
+
+    if status == octorust::types::JobStatus::Completed.to_string()
+        && (conclusion == octorust::types::Conclusion::TimedOut.to_string()
+            || conclusion == octorust::types::Conclusion::Failure.to_string())
+    {
+        return crate::colors::Colors::Red.to_string();
+    }
+
+    crate::colors::Colors::Yellow.to_string()
+}
+
 /// Convert the function into a Slack message.
 impl From<NewFunction> for FormattedMessage {
     fn from(item: NewFunction) -> Self {
@@ -77,7 +102,7 @@ impl From<NewFunction> for FormattedMessage {
             channel: Default::default(),
             blocks: Default::default(),
             attachments: vec![MessageAttachment {
-                color: crate::colors::Colors::Green.to_string(),
+                color: get_color_based_from_status_and_conclusion(&item.status, &item.conclusion),
                 author_icon: Default::default(),
                 author_link: Default::default(),
                 author_name: Default::default(),
@@ -275,6 +300,7 @@ impl Function {
 
 pub async fn refresh_functions() -> Result<()> {
     let db = Database::new();
+    let company = Company::get_by_id(&db, 1)?;
 
     let hours_ago = Utc::now().checked_sub_signed(chrono::Duration::days(1)).unwrap();
 
@@ -289,7 +315,9 @@ pub async fn refresh_functions() -> Result<()> {
         f.status = octorust::types::JobStatus::Completed.to_string();
         f.conclusion = octorust::types::Conclusion::TimedOut.to_string();
 
-        f.update(&db).await?;
+        let new = f.update(&db).await?;
+
+        new.send_slack_notification(&db, &company).await?;
     }
 
     // List all functions that are "Completed", but have no conclusion.
@@ -302,7 +330,9 @@ pub async fn refresh_functions() -> Result<()> {
         // Set the function as Neutral.
         f.conclusion = octorust::types::Conclusion::Neutral.to_string();
 
-        f.update(&db).await?;
+        let new = f.update(&db).await?;
+
+        new.send_slack_notification(&db, &company).await?;
     }
 
     Functions::get_from_db(&db, 1)?.update_airtable(&db).await?;
