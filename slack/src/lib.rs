@@ -25,8 +25,9 @@
  */
 #![allow(clippy::field_reassign_with_default)]
 #![allow(clippy::nonstandard_macro_braces)]
-use std::{collections::HashMap, env, error, fmt, fmt::Debug, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc};
 
+use anyhow::{bail, Result};
 use reqwest::{header, Body, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -107,9 +108,9 @@ impl Slack {
         T: ToString,
         R: ToString,
     {
-        let client_id = env::var("SLACK_CLIENT_ID").unwrap();
-        let client_secret = env::var("SLACK_CLIENT_SECRET").unwrap();
-        let redirect_uri = env::var("SLACK_REDIRECT_URI").unwrap();
+        let client_id = env::var("SLACK_CLIENT_ID").expect("SLACK_CLIENT_ID should be set");
+        let client_secret = env::var("SLACK_CLIENT_SECRET").expect("SLACK_CLIENT_SECRET should be set");
+        let redirect_uri = env::var("SLACK_REDIRECT_URI").expect("SLACK_REDIRECT_URI should be set");
 
         Slack::new(client_id, client_secret, workspace_id, redirect_uri, token, user_token)
     }
@@ -121,15 +122,15 @@ impl Slack {
         path: &str,
         body: B,
         query: Option<Vec<(&str, String)>>,
-    ) -> Request
+    ) -> Result<Request>
     where
         B: Serialize,
     {
-        let base = Url::parse(ENDPOINT).unwrap();
-        let url = base.join(path).unwrap();
+        let base = Url::parse(ENDPOINT)?;
+        let url = base.join(path)?;
 
         let bt = format!("Bearer {}", token);
-        let bearer = header::HeaderValue::from_str(&bt).unwrap();
+        let bearer = header::HeaderValue::from_str(&bt)?;
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
@@ -154,7 +155,7 @@ impl Slack {
         }
 
         // Build the request.
-        rb.build().unwrap()
+        Ok(rb.build()?)
     }
 
     pub fn user_consent_url(&self) -> String {
@@ -169,7 +170,7 @@ impl Slack {
         )
     }
 
-    pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
+    pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken> {
         let mut headers = header::HeaderMap::new();
         headers.append(header::ACCEPT, header::HeaderValue::from_static("application/json"));
 
@@ -186,11 +187,10 @@ impl Slack {
             .headers(headers)
             .form(&params)
             .send()
-            .await
-            .unwrap();
+            .await?;
 
         // Unwrap the response.
-        let t: AccessToken = resp.json().await.unwrap();
+        let t: AccessToken = resp.json().await?;
 
         self.token = t.access_token.to_string();
         if let Some(ref user) = t.authed_user {
@@ -202,7 +202,7 @@ impl Slack {
 
     /// List users on a workspace.
     /// FROM: https://api.slack.com/methods/admin.users.list
-    pub async fn list_users(&self) -> Result<Vec<User>, APIError> {
+    pub async fn list_users(&self) -> Result<Vec<User>> {
         // Build the request.
         // TODO: paginate.
         let request = self.request(
@@ -211,81 +211,69 @@ impl Slack {
             "users.list",
             (),
             Some(vec![("limit", "100".to_string())]),
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
-        let r: APIResponse = resp.json().await.unwrap();
+        let r: APIResponse = resp.json().await?;
 
         Ok(r.users)
     }
 
     /// Get the current user's identity.
     /// FROM: https://api.slack.com/methods/users.identity
-    pub async fn current_user(&self) -> Result<CurrentUser, APIError> {
+    pub async fn current_user(&self) -> Result<CurrentUser> {
         // Build the request.
-        let request = self.request(&self.user_token, Method::GET, "users.identity", (), None);
+        let request = self.request(&self.user_token, Method::GET, "users.identity", (), None)?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
-        let r: CurrentUserResponse = resp.json().await.unwrap();
+        let r: CurrentUserResponse = resp.json().await?;
         Ok(r.user)
     }
 
     /// Get billable info.
     /// FROM: https://api.slack.com/methods/team.billableInfo
-    pub async fn billable_info(&self) -> Result<HashMap<String, BillableInfo>, APIError> {
+    pub async fn billable_info(&self) -> Result<HashMap<String, BillableInfo>> {
         // Build the request.
         // TODO: paginate.
-        let request = self.request(&self.user_token, Method::GET, "team.billableInfo", (), None);
+        let request = self.request(&self.user_token, Method::GET, "team.billableInfo", (), None)?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
-        let r: BillableInfoResponse = resp.json().await.unwrap();
+        let r: BillableInfoResponse = resp.json().await?;
         Ok(r.billable_info)
     }
 
     /// Invite a user to a workspace.
     /// FROM: https://api.slack.com/methods/admin.users.invite
-    pub async fn invite_user(&self, invite: UserInvite) -> Result<(), APIError> {
+    pub async fn invite_user(&self, invite: UserInvite) -> Result<()> {
         // Build the request.
-        let request = self.request(&self.user_token, Method::POST, "admin.users.invite", invite, None);
+        let request = self.request(&self.user_token, Method::POST, "admin.users.invite", invite, None)?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
@@ -294,27 +282,25 @@ impl Slack {
 
     /// Post message to a channel.
     /// FROM: https://api.slack.com/methods/chat.postMessage
-    pub async fn post_message(&self, body: &FormattedMessage) -> Result<FormattedMessageResponse, APIError> {
-        let request = self.request(&self.token, Method::POST, "chat.postMessage", body, None);
+    pub async fn post_message(&self, body: &FormattedMessage) -> Result<FormattedMessageResponse> {
+        let request = self.request(&self.token, Method::POST, "chat.postMessage", body, None)?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
-        let f: FormattedMessageResponse = resp.json().await.unwrap();
+        let f: FormattedMessageResponse = resp.json().await?;
 
         if !f.ok {
-            return Err(APIError {
-                status_code: StatusCode::OK,
-                body: serde_json::json!(f).to_string(),
-            });
+            bail!(
+                "status code: {}, body: {}",
+                StatusCode::OK,
+                serde_json::json!(f).to_string()
+            );
         }
 
         Ok(f)
@@ -322,21 +308,18 @@ impl Slack {
 
     /// Remove users from a workspace.
     /// FROM: https://api.slack.com/methods/admin.users.remove
-    pub async fn remove_user(&self, user_id: &str) -> Result<(), APIError> {
+    pub async fn remove_user(&self, user_id: &str) -> Result<()> {
         // Build the request.
         let mut body: HashMap<&str, &str> = HashMap::new();
         body.insert("team_id", &self.workspace_id);
         body.insert("user_id", user_id);
-        let request = self.request(&self.user_token, Method::POST, "admin.users.remove", body, None);
+        let request = self.request(&self.user_token, Method::POST, "admin.users.remove", body, None)?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
@@ -345,7 +328,7 @@ impl Slack {
 
     /// Set a user's profile information, including custom status.
     /// FROM: https://api.slack.com/methods/users.profile.set
-    pub async fn update_user_profile(&self, user_id: &str, profile: UserProfile) -> Result<(), APIError> {
+    pub async fn update_user_profile(&self, user_id: &str, profile: UserProfile) -> Result<()> {
         // Build the request.
         let request = self.request(
             &self.user_token,
@@ -356,16 +339,13 @@ impl Slack {
                 profile,
             },
             None,
-        );
+        )?;
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.client.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
@@ -373,57 +353,18 @@ impl Slack {
     }
 
     /// Post text to a channel.
-    pub async fn post_to_channel(url: &str, v: &Value) -> Result<(), APIError> {
+    pub async fn post_to_channel(url: &str, v: &Value) -> Result<()> {
         let client = Client::new();
-        let resp = client.post(url).body(Body::from(v.to_string())).send().await.unwrap();
+        let resp = client.post(url).body(Body::from(v.to_string())).send().await?;
 
         match resp.status() {
             StatusCode::OK => (),
             s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
+                bail!("status code: {}, body: {}", s, resp.text().await?);
             }
         };
 
         Ok(())
-    }
-}
-
-/// Error type returned by our library.
-pub struct APIError {
-    pub status_code: StatusCode,
-    pub body: String,
-}
-
-impl fmt::Display for APIError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
-    }
-}
-
-impl fmt::Debug for APIError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
-        )
-    }
-}
-
-// This is important for other errors to wrap this one.
-impl error::Error for APIError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        // Generic error, underlying cause isn't tracked.
-        None
     }
 }
 
@@ -608,8 +549,20 @@ impl Default for MessageType {
 pub struct MessageBlockAccessory {
     #[serde(rename = "type")]
     pub accessory_type: MessageType,
+
+    /// These are for an image.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub image_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub alt_text: String,
+
+    /// These are for a button.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<MessageBlockText>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub action_id: String,
 }
 
 /// A message attachment in Slack.
