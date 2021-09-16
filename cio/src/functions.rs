@@ -6,7 +6,7 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::{
-    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+    ActionBlock, FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
 };
 
 use crate::{
@@ -98,26 +98,7 @@ impl From<NewFunction> for FormattedMessage {
             context += &format!(" | _completed {}_", human_date);
         }
 
-        FormattedMessage {
-            channel: Default::default(),
-            blocks: Default::default(),
-            attachments: vec![MessageAttachment {
-                color: get_color_based_from_status_and_conclusion(&item.status, &item.conclusion),
-                author_icon: Default::default(),
-                author_link: Default::default(),
-                author_name: Default::default(),
-                fallback: Default::default(),
-                fields: Default::default(),
-                footer: Default::default(),
-                footer_icon: Default::default(),
-                image_url: Default::default(),
-                pretext: Default::default(),
-                text: Default::default(),
-                thumb_url: Default::default(),
-                title: Default::default(),
-                title_link: Default::default(),
-                ts: Default::default(),
-                blocks: vec![
+        let mut blocks = vec![
                     MessageBlock {
                         block_type: MessageBlockType::Section,
                         text: Some(MessageBlockText {
@@ -151,7 +132,53 @@ impl From<NewFunction> for FormattedMessage {
                         block_id: Default::default(),
                         fields: Default::default(),
                     },
-                ],
+                ];
+
+        if item.status == octorust::types::JobStatus::Completed.to_string()
+            && item.conclusion != octorust::types::Conclusion::Success.to_string()
+        {
+            // Add a button to rerun the function.
+            let button = MessageBlock {
+                block_type: MessageBlockType::Actions,
+                elements: vec![slack_chat_api::BlockOption::ActionBlock(ActionBlock {
+                    text_type: MessageType::Button,
+                    text: MessageBlockText {
+                        text_type: MessageType::Markdown,
+                        text: format!("Re-run `{}`", item.name),
+                    },
+                    action_id: "function".to_string(),
+                    value: item.name.to_string(),
+                })],
+
+                text: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            };
+
+            blocks.push(button);
+        }
+
+        FormattedMessage {
+            channel: Default::default(),
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: get_color_based_from_status_and_conclusion(&item.status, &item.conclusion),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Default::default(),
+                blocks,
             }],
         }
     }
