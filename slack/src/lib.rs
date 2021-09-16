@@ -329,6 +329,7 @@ impl Slack {
         if !f.ok {
             if f.error.contains("not_in_channel") {
                 // Join the channel and try again.
+                self.join_channel(&body.channel).await?;
                 return self.post_message(body).await;
             }
             bail!(
