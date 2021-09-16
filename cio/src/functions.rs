@@ -1,12 +1,17 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use chrono_humanize::HumanTime;
 use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use slack_chat_api::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 
 use crate::{
-    airtable::AIRTABLE_FUNCTIONS_TABLE, core::UpdateAirtableRecord, db::Database, schema::functions, utils::truncate,
+    airtable::AIRTABLE_FUNCTIONS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
+    schema::functions, utils::truncate,
 };
 
 #[db {
@@ -48,7 +53,113 @@ impl UpdateAirtableRecord<Function> for Function {
     }
 }
 
+/// Convert the function into a Slack message.
+impl From<NewFunction> for FormattedMessage {
+    fn from(item: NewFunction) -> Self {
+        let dur = Utc::now() - item.created_at;
+        let human_date = HumanTime::from(dur);
+
+        let text = format!("`{}`", item.name);
+
+        let mut context = format!("**{}**", item.status);
+        if !item.conclusion.is_empty() {
+            context += &format!(" | **{}**", item.conclusion);
+        }
+        context += &format!(" | _created {}_", human_date);
+        if let Some(c) = item.completed_at {
+            let dur = Utc::now() - c;
+            let human_date = HumanTime::from(dur);
+
+            context += &format!(" | _completed {}_", human_date);
+        }
+
+        FormattedMessage {
+            channel: Default::default(),
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: crate::colors::Colors::Green.to_string(),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Default::default(),
+                blocks: vec![
+                    MessageBlock {
+                        block_type: MessageBlockType::Section,
+                        text: Some(MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text,
+                        }),
+                        elements: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: context,
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                    MessageBlock {
+                        block_type: MessageBlockType::Context,
+                        elements: vec![MessageBlockText {
+                            text_type: MessageType::Markdown,
+                            text: format!("Function | <https://webhooks.corp.oxide.computer/functions/{}/logs|webhooks.corp.oxide.computer/functions/{}/logs>",item.saga_id, item.saga_id),
+                        }],
+                        text: Default::default(),
+                        accessory: Default::default(),
+                        block_id: Default::default(),
+                        fields: Default::default(),
+                    },
+                ],
+            }],
+        }
+    }
+}
+
+impl From<Function> for FormattedMessage {
+    fn from(item: Function) -> Self {
+        let new: NewFunction = item.into();
+        new.into()
+    }
+}
+
+impl NewFunction {
+    // Send a slack notification to the channels in the object.
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+
+        // Set the channel.
+        msg.channel = company.slack_channel_debug.to_string();
+
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+}
+
 impl Function {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewFunction = self.into();
+        n.send_slack_notification(db, company).await
+    }
+
     /// Add logs to a running saga.
     pub async fn add_logs(db: &Database, saga_id: &uuid::Uuid, logs: &str) -> Result<()> {
         if logs.is_empty() {
@@ -81,6 +192,9 @@ impl Function {
         nf.logs = logs.to_string();
         nf.conclusion = conclusion.to_string();
         nf.update(db).await?;
+
+        let company = nf.company(db)?;
+        nf.send_slack_notification(db, &company).await?;
 
         Ok(())
     }
@@ -122,14 +236,23 @@ impl Function {
             steno::SagaCachedState::Done => octorust::types::JobStatus::Completed,
         };
 
+        let mut send_notification = false;
         if status == octorust::types::JobStatus::Completed && nf.completed_at.is_none() {
+            send_notification = true;
             nf.completed_at = Some(Utc::now());
         }
 
         // Update the status.
         nf.status = status.to_string();
 
-        nf.update(db).await
+        let new = nf.update(db).await?;
+
+        if send_notification {
+            let company = new.company(db)?;
+            new.send_slack_notification(db, &company).await?;
+        }
+
+        Ok(new)
     }
 
     /// Update a job from SagaNodeEvent.
