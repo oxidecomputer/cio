@@ -525,7 +525,7 @@ pub struct MessageBlock {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<MessageBlockText>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub elements: Vec<MessageBlockText>,
+    pub elements: Vec<BlockOption>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub block_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -555,12 +555,28 @@ impl Default for MessageBlockType {
     }
 }
 
+/// Action block in Slack.
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum BlockOption {
+    MessageBlockText(MessageBlockText),
+    ActionBlock(ActionBlock),
+}
+
 /// Message block text in Slack.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlockText {
     #[serde(rename = "type")]
     pub text_type: MessageType,
     pub text: String,
+}
+
+/// Action block in Slack.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct ActionBlock {
+    #[serde(rename = "type")]
+    pub text_type: MessageType,
+    pub text: MessageBlockText,
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
