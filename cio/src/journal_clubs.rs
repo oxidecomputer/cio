@@ -85,10 +85,10 @@ impl From<NewJournalClubMeeting> for FormattedMessage {
         }
         objects.push(MessageBlock {
             block_type: MessageBlockType::Context,
-            elements: vec![MessageBlockText {
+            elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                 text_type: MessageType::Markdown,
                 text,
-            }],
+            })],
             text: Default::default(),
             accessory: Default::default(),
             block_id: Default::default(),
@@ -98,10 +98,10 @@ impl From<NewJournalClubMeeting> for FormattedMessage {
         if !item.recording.is_empty() {
             objects.push(MessageBlock {
                 block_type: MessageBlockType::Context,
-                elements: vec![MessageBlockText {
+                elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                     text_type: MessageType::Markdown,
                     text: format!("<{}|Meeting recording>", item.recording),
-                }],
+                })],
                 text: Default::default(),
                 accessory: Default::default(),
                 block_id: Default::default(),
@@ -118,10 +118,10 @@ impl From<NewJournalClubMeeting> for FormattedMessage {
             }
             objects.push(MessageBlock {
                 block_type: MessageBlockType::Context,
-                elements: vec![MessageBlockText {
+                elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                     text_type: MessageType::Markdown,
                     text: format!("<{}|{}>", p.link, title),
-                }],
+                })],
                 text: Default::default(),
                 accessory: Default::default(),
                 block_id: Default::default(),

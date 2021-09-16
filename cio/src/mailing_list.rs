@@ -173,10 +173,10 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
+                    elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: updates,
-                    }],
+                    })],
                     text: Default::default(),
                     accessory: Default::default(),
                     block_id: Default::default(),
@@ -184,10 +184,10 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
                 },
                 MessageBlock {
                     block_type: MessageBlockType::Context,
-                    elements: vec![MessageBlockText {
+                    elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                         text_type: MessageType::Markdown,
                         text: context,
-                    }],
+                    })],
                     text: Default::default(),
                     accessory: Default::default(),
                     block_id: Default::default(),

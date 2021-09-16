@@ -135,10 +135,10 @@ impl From<NewSoftwareVendor> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: format!("Vendors | {} | {} | _just now_", item.category, item.status),
-                        }],
+                        })],
                         text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),

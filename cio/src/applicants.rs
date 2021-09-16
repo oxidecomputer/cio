@@ -1663,10 +1663,10 @@ impl From<NewApplicant> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: info_msg,
-                        }],
+                        })],
                         text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
@@ -1674,10 +1674,10 @@ impl From<NewApplicant> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: values_msg,
-                        }],
+                        })],
                         text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
@@ -1685,10 +1685,10 @@ impl From<NewApplicant> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: status_msg,
-                        }],
+                        })],
                         text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),

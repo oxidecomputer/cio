@@ -131,10 +131,10 @@ impl From<NewFunction> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: context,
-                        }],
+                        })],
                         text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
@@ -142,10 +142,10 @@ impl From<NewFunction> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: format!("Function | <https://webhooks.corp.oxide.computer/functions/{}/logs|webhooks.corp.oxide.computer/functions/{}/logs>",item.saga_id, item.saga_id),
-                        }],
+                        })],
                         text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),

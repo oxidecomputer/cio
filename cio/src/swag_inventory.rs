@@ -358,10 +358,10 @@ impl From<NewSwagInventoryItem> for FormattedMessage {
                     },
                     MessageBlock {
                         block_type: MessageBlockType::Context,
-                        elements: vec![MessageBlockText {
+                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: format!("Swag inventory item | {} | {}", item.item, item.size),
-                        }],
+                        })],
                         text: Default::default(),
                         accessory: Default::default(),
                         block_id: Default::default(),
