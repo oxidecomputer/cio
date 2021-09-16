@@ -766,6 +766,22 @@ pub async fn handle_slack_commands(
     Ok(response)
 }
 
+pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    let s = String::from_utf8(body_param.as_bytes().to_vec())?;
+    warn!("slack interactive `{}`", s);
+
+    // We should have a string, which we will then parse into our args.
+    // Parse the request body as a Slack BotCommand.
+    //let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes())?;
+
+    // Get the company from the Slack team id.
+    //let company = Company::get_from_slack_team_id(db, &bot_command.team_id)?;
+    Ok(())
+}
+
 pub async fn handle_airtable_employees_print_home_address_label(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,

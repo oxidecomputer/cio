@@ -111,6 +111,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(listen_products_sold_count_requests).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(listen_slack_commands_webhooks).unwrap();
+    api.register(listen_slack_interactive_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
@@ -1595,6 +1596,30 @@ async fn listen_slack_commands_webhooks(
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseOk(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for Slack interactive webhooks. */
+#[endpoint {
+    method = POST,
+    path = "/slack/interactive",
+}]
+async fn listen_slack_interactive_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
+    sentry::start_session();
+
+    match crate::handlers::handle_slack_interactive(rqctx, body_param).await {
+        Ok(r) => {
+            sentry::end_session();
+            Ok(HttpResponseOk(json!("thing")))
         }
         // Send the error to sentry.
         Err(e) => {
