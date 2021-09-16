@@ -202,7 +202,7 @@ impl Slack {
     }
 
     /// List users on a workspace.
-    /// FROM: https://api.slack.com/methods/admin.users.list
+    /// FROM: https://api.slack.com/methods/users.list
     pub async fn list_users(&self) -> Result<Vec<User>> {
         // Build the request.
         // TODO: paginate.
