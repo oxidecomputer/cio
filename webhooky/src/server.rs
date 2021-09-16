@@ -1613,20 +1613,16 @@ async fn listen_slack_commands_webhooks(
 async fn listen_slack_interactive_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
-) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
+) -> Result<HttpResponseOk<String>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers::handle_slack_interactive(rqctx, body_param).await {
-        Ok(r) => {
-            sentry::end_session();
-            Ok(HttpResponseOk(json!("thing")))
-        }
+    if let Err(e) = crate::handlers::handle_slack_interactive(rqctx, body_param).await {
         // Send the error to sentry.
-        Err(e) => {
-            sentry::end_session();
-            Err(handle_anyhow_err_as_http_err(e))
-        }
+        return Err(handle_anyhow_err_as_http_err(e));
     }
+
+    sentry::end_session();
+    Ok(HttpResponseOk("ok".to_string()))
 }
 
 #[derive(Deserialize, Debug, JsonSchema)]
