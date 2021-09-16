@@ -188,7 +188,11 @@ impl Company {
         // Post the message;
         if let Err(e) = slack.post_message(msg).await {
             // Give useful information with the error.
-            return Err(anyhow!("posting `{:#?}` as a slack message failed: {}", msg, e));
+            return Err(anyhow!(
+                "posting `{}` as a slack message failed: {}",
+                json!(msg).to_string(),
+                e
+            ));
         }
 
         Ok(())
