@@ -305,6 +305,15 @@ pub fn truncate(s: &str, max_chars: usize) -> String {
     }
 }
 
+pub fn tail(s: &str, max_chars: usize) -> String {
+    if s.len() < max_chars {
+        return s.to_string();
+    }
+
+    let len = s.len();
+    s[len - 3000..].to_string()
+}
+
 pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
     let empty: Vec<String> = Default::default();
     let a = map.get(key).unwrap_or(&empty);

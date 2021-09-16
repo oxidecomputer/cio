@@ -85,7 +85,7 @@ impl From<NewFunction> for FormattedMessage {
         let dur = Utc::now() - item.created_at;
         let human_date = HumanTime::from(dur);
 
-        let text = format!("`{}`", item.name);
+        let text = format!("Function | `{}`", item.name);
 
         let mut context = format!("**{}**", item.status);
         if !item.conclusion.is_empty() {
@@ -100,40 +100,29 @@ impl From<NewFunction> for FormattedMessage {
         }
 
         let mut blocks = vec![
-                    MessageBlock {
-                        block_type: MessageBlockType::Section,
-                        text: Some(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text,
-                        }),
-                        elements: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: context,
-                        })],
-                        text: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: format!("Function | <https://webhooks.corp.oxide.computer/functions/{}/logs|webhooks.corp.oxide.computer/functions/{}/logs>",item.saga_id, item.saga_id),
-                        })],
-                        text: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                ];
+            MessageBlock {
+                block_type: MessageBlockType::Section,
+                text: Some(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text,
+                }),
+                elements: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            },
+            MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: context,
+                })],
+                text: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            },
+        ];
 
         if item.status == octorust::types::JobStatus::Completed.to_string()
             && item.conclusion != octorust::types::Conclusion::Success.to_string()
@@ -141,10 +130,10 @@ impl From<NewFunction> for FormattedMessage {
             // Add a button to rerun the function.
             let button = MessageBlockAccessory {
                 accessory_type: MessageType::Button,
-                text: MessageBlockText {
+                text: Some(MessageBlockText {
                     text_type: MessageType::PlainText,
                     text: format!("Re-run {}", item.name),
-                },
+                }),
                 action_id: "function".to_string(),
                 value: item.name.to_string(),
                 image_url: Default::default(),
@@ -152,6 +141,21 @@ impl From<NewFunction> for FormattedMessage {
             };
 
             blocks[0].accessory = Some(button);
+
+            let logs = MessageBlock {
+                block_type: MessageBlockType::Context,
+                elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
+                    text_type: MessageType::PlainText,
+                    // We can only send max 3000 chars.
+                    text: crate::utils::tail(&item.logs, 3000),
+                })],
+                text: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            };
+
+            blocks.push(logs);
         }
 
         FormattedMessage {
