@@ -163,9 +163,9 @@ impl Slack {
         let state = uuid::Uuid::new_v4();
         format!(
             "https://slack.com/oauth/v2/authorize?scope={}&client_id={}&user_scope={}&redirect_uri={}&state={}",
-            "commands,incoming-webhook,team:read,users:read,users:read.email,users.profile:read,channels:read,chat:write,channels:join",
+            "commands,team:read,users:read,users:read.email,users.profile:read,channels:read,chat:write,channels:join",
             self.client_id,
-            "identity.basic,identity.email",
+            "admin,identify",
             self.redirect_uri,
             state
         )
