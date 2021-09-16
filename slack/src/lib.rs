@@ -264,6 +264,82 @@ impl Slack {
         Ok(r.billable_info)
     }
 
+    /// Get channel id from name.
+    pub async fn channel_id(&self, name: &str) -> Result<String> {
+        let channels = self.list_channels().await?;
+        for channel in channels {
+            if channel.name.trim_start_matches('#') == name.trim_start_matches('#') {
+                return Ok(channel.id);
+            }
+        }
+
+        bail!(
+            "could not find channel `{}` in our list of channels, perhaps this is a private channel",
+            name
+        );
+    }
+
+    /// List channels, defaults to public channels.
+    /// FROM: https://api.slack.com/methods/conversations.list
+    pub async fn list_channels(&self) -> Result<Vec<Channel>> {
+        // Build the request.
+        let mut request = self.request(&self.token, Method::GET, "conversations.list", (), None)?;
+
+        let mut resp = self.client.execute(request).await?;
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                bail!("status code: {}, body: {}", s, resp.text().await?);
+            }
+        };
+
+        let mut r: ListChannelsResponse = resp.json().await?;
+
+        if !r.ok {
+            bail!(
+                "status code: {}, body: {}",
+                StatusCode::OK,
+                serde_json::json!(r).to_string()
+            );
+        }
+
+        let mut channels = r.channels;
+
+        // Paginate.
+        while !r.response_metadata.next_cursor.is_empty() {
+            request = self.request(
+                &self.token,
+                Method::GET,
+                "conversations.list",
+                (),
+                Some(vec![("cursor", r.response_metadata.next_cursor.to_string())]),
+            )?;
+
+            resp = self.client.execute(request).await?;
+            match resp.status() {
+                StatusCode::OK => (),
+                s => {
+                    bail!("status code: {}, body: {}", s, resp.text().await?);
+                }
+            };
+
+            // Try to deserialize the response.
+            r = resp.json().await?;
+
+            if !r.ok {
+                bail!(
+                    "status code: {}, body: {}",
+                    StatusCode::OK,
+                    serde_json::json!(r).to_string()
+                );
+            }
+
+            channels.append(&mut r.channels);
+        }
+
+        Ok(channels)
+    }
+
     /// Invite a user to a workspace.
     /// FROM: https://api.slack.com/methods/admin.users.invite
     pub async fn invite_user(&self, invite: UserInvite) -> Result<()> {
@@ -284,8 +360,16 @@ impl Slack {
     /// Join a channel.
     /// FROM: https://api.slack.com/methods/conversations.join
     pub async fn join_channel(&self, channel: &str) -> Result<Channel> {
+        let mut channel_id = channel.to_string();
+        if channel.starts_with('#') {
+            // We have a name not a channel id.
+            // First get the channel id.
+            // We must have a channel id to join the channel.
+            channel_id = self.channel_id(channel).await?;
+        }
+
         let mut body: HashMap<&str, &str> = HashMap::new();
-        body.insert("channel", channel);
+        body.insert("channel", &channel_id);
 
         let request = self.request(&self.token, Method::POST, "conversations.join", body, None)?;
 
@@ -505,6 +589,28 @@ pub struct JoinChannelResponse {
     pub error: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub warning: String,
+}
+
+/// A channel list response.
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub struct ListChannelsResponse {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub channels: Vec<Channel>,
+    #[serde(default)]
+    pub response_metadata: ResponseMetadata,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub error: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub warning: String,
+}
+
+/// Response metadata.
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, Serialize)]
+pub struct ResponseMetadata {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub next_cursor: String,
 }
 
 /// A channel.
