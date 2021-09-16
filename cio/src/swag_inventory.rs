@@ -563,6 +563,9 @@ impl SwagInventoryItem {
                 accessory_type: MessageType::Image,
                 image_url: item.image.to_string(),
                 alt_text: self.item.to_string(),
+                text: None,
+                action_id: Default::default(),
+                value: Default::default(),
             };
 
             // Set our accessory.
