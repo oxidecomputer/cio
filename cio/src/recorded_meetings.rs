@@ -270,8 +270,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
 
 /// Sync the recorded meetings from Google.
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
-    let gcal = company.authenticate_google_calendar(db).await?;
-    let drive_client = company.authenticate_google_drive(db).await?;
+    let mut gcal = company.authenticate_google_calendar(db).await?;
 
     let revai = RevAI::new_from_env();
 
@@ -283,107 +282,88 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
     // Iterate over the calendars.
     for calendar in calendars {
-        if calendar.id.ends_with(&company.gsuite_domain) {
-            // Let's get all the events on this calendar and try and see if they
-            // have a meeting recorded.
-            info!("getting events for {}", calendar.id);
-            let events = gcal
-                .events()
-                .list_all(
-                    &calendar.id, // Calendar id.
-                    "",           // iCalID
-                    0,            // Max attendees, set to 0 to ignore.
-                    google_calendar::types::OrderBy::StartTime,
-                    &[],                      // private_extended_property
-                    "",                       // q
-                    &[],                      // shared_extended_property
-                    true,                     // show_deleted
-                    true,                     // show_hidden_invitations
-                    true,                     // single_events
-                    &Utc::now().to_rfc3339(), // time_max
-                    "",                       // time_min
-                    "",                       // time_zone
-                    "",                       // updated_min
-                )
-                .await?;
+        if !calendar.id.ends_with(&company.gsuite_domain) {
+            // We only care about those calendars in our domain.
+            // Continue early.
+            continue;
+        }
 
-            for event in events {
-                // Let's check if there are attachments. We only care if there are attachments.
-                if event.attachments.is_empty() {
-                    // Continue early.
-                    continue;
+        // Refresh our token.
+        // This function takes so long it's likely our token expired.
+        gcal = company.authenticate_google_calendar(db).await?;
+        let drive_client = company.authenticate_google_drive(db).await?;
+
+        // Let's get all the events on this calendar and try and see if they
+        // have a meeting recorded.
+        info!("getting events for {}", calendar.id);
+        let events = gcal
+            .events()
+            .list_all(
+                &calendar.id, // Calendar id.
+                "",           // iCalID
+                0,            // Max attendees, set to 0 to ignore.
+                google_calendar::types::OrderBy::StartTime,
+                &[],                      // private_extended_property
+                "",                       // q
+                &[],                      // shared_extended_property
+                true,                     // show_deleted
+                true,                     // show_hidden_invitations
+                true,                     // single_events
+                &Utc::now().to_rfc3339(), // time_max
+                "",                       // time_min
+                "",                       // time_zone
+                "",                       // updated_min
+            )
+            .await?;
+
+        for event in events {
+            // Let's check if there are attachments. We only care if there are attachments.
+            if event.attachments.is_empty() {
+                // Continue early.
+                continue;
+            }
+
+            let mut attendees: Vec<String> = Default::default();
+            for attendee in &event.attendees {
+                if !attendee.resource {
+                    attendees.push(attendee.email.to_string());
                 }
+            }
 
-                let mut attendees: Vec<String> = Default::default();
-                for attendee in &event.attendees {
-                    if !attendee.resource {
-                        attendees.push(attendee.email.to_string());
-                    }
+            let mut video = "".to_string();
+            let mut chat_log_link = "".to_string();
+            for attachment in &event.attachments {
+                if attachment.mime_type == "video/mp4" && attachment.title.starts_with(&event.summary) {
+                    video = attachment.file_url.to_string();
                 }
-
-                let mut video = "".to_string();
-                let mut chat_log_link = "".to_string();
-                for attachment in &event.attachments {
-                    if attachment.mime_type == "video/mp4" && attachment.title.starts_with(&event.summary) {
-                        video = attachment.file_url.to_string();
-                    }
-                    if attachment.mime_type == "text/plain" && attachment.title.starts_with(&event.summary) {
-                        chat_log_link = attachment.file_url.to_string();
-                    }
+                if attachment.mime_type == "text/plain" && attachment.title.starts_with(&event.summary) {
+                    chat_log_link = attachment.file_url.to_string();
                 }
-                let chat_log_id = chat_log_link
-                    .trim_start_matches("https://drive.google.com/open?id=")
-                    .trim_start_matches("https://drive.google.com/file/d/")
-                    .trim_end_matches("/view?usp=drive_web")
-                    .to_string();
-                let video_id = video
-                    .trim_start_matches("https://drive.google.com/open?id=")
-                    .trim_start_matches("https://drive.google.com/file/d/")
-                    .trim_end_matches("/view?usp=drive_web")
-                    .to_string();
+            }
+            let chat_log_id = chat_log_link
+                .trim_start_matches("https://drive.google.com/open?id=")
+                .trim_start_matches("https://drive.google.com/file/d/")
+                .trim_end_matches("/view?usp=drive_web")
+                .to_string();
+            let video_id = video
+                .trim_start_matches("https://drive.google.com/open?id=")
+                .trim_start_matches("https://drive.google.com/file/d/")
+                .trim_end_matches("/view?usp=drive_web")
+                .to_string();
 
-                if video.is_empty() {
-                    // Continue early, we don't care.
-                    continue;
-                }
+            if video.is_empty() {
+                // Continue early, we don't care.
+                continue;
+            }
 
-                // If we have a chat log, we should download it.
-                let mut chat_log = "".to_string();
-                if !chat_log_link.is_empty() {
-                    // Let's add our perms to the file to ensure we have access.
-                    match drive_client
-                        .permissions()
-                        .add_if_not_exists(
-                            &chat_log_id,
-                            &format!("all@{}", company.gsuite_domain),
-                            "",
-                            "writer",
-                            "group",
-                            false, // use domain admin access
-                            false, // send notification email
-                        )
-                        .await
-                    {
-                        Ok(_) => (),
-                        Err(e) => {
-                            info!("adding permission for event chat log {} failed: {}", chat_log_link, e);
-                        }
-                    };
-
-                    // Download the file.
-                    let contents = drive_client
-                        .files()
-                        .download_by_id(&chat_log_id)
-                        .await
-                        .unwrap_or_default();
-                    chat_log = from_utf8(&contents).unwrap_or_default().trim().to_string();
-                }
-
+            // If we have a chat log, we should download it.
+            let mut chat_log = "".to_string();
+            if !chat_log_link.is_empty() {
                 // Let's add our perms to the file to ensure we have access.
                 match drive_client
                     .permissions()
                     .add_if_not_exists(
-                        &video_id,
+                        &chat_log_id,
                         &format!("all@{}", company.gsuite_domain),
                         "",
                         "writer",
@@ -395,81 +375,109 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 {
                     Ok(_) => (),
                     Err(e) => {
-                        info!("adding permission for event video: {} failed: {}", video, e);
+                        info!("adding permission for event chat log {} failed: {}", chat_log_link, e);
                     }
                 };
 
-                // Download the video.
-                let video_contents = drive_client.files().download_by_id(&video_id).await.unwrap_or_default();
+                // Download the file.
+                let contents = drive_client
+                    .files()
+                    .download_by_id(&chat_log_id)
+                    .await
+                    .unwrap_or_default();
+                chat_log = from_utf8(&contents).unwrap_or_default().trim().to_string();
+            }
 
-                // Make sure the contents aren't empty.
-                if video_contents.is_empty() {
-                    // Continue early.
-                    //continue;
+            // Let's add our perms to the file to ensure we have access.
+            match drive_client
+                .permissions()
+                .add_if_not_exists(
+                    &video_id,
+                    &format!("all@{}", company.gsuite_domain),
+                    "",
+                    "writer",
+                    "group",
+                    false, // use domain admin access
+                    false, // send notification email
+                )
+                .await
+            {
+                Ok(_) => (),
+                Err(e) => {
+                    info!("adding permission for event video: {} failed: {}", video, e);
                 }
+            };
 
-                let mut meeting = NewRecordedMeeting {
-                    name: event.summary.trim().to_string(),
-                    description: event.description.trim().to_string(),
-                    start_time: event.start.unwrap().date_time.unwrap(),
-                    end_time: event.end.unwrap().date_time.unwrap(),
-                    video,
-                    chat_log_link,
-                    chat_log,
-                    is_recurring: !event.recurring_event_id.is_empty(),
-                    attendees,
-                    transcript: "".to_string(),
-                    transcript_id: "".to_string(),
-                    location: event.location.to_string(),
-                    google_event_id: event.id.to_string(),
-                    event_link: event.html_link.to_string(),
-                    cio_company_id: company.id,
-                };
+            // Download the video.
+            let video_contents = drive_client.files().download_by_id(&video_id).await.unwrap_or_default();
 
-                // Let's try to get the meeting.
-                let existing = RecordedMeeting::get_from_db(db, event.id.to_string());
-                if let Some(m) = existing {
-                    // Update the meeting.
-                    meeting.transcript = m.transcript.to_string();
-                    meeting.transcript_id = m.transcript_id.to_string();
+            // Make sure the contents aren't empty.
+            if video_contents.is_empty() {
+                // Continue early.
+                //continue;
+            }
 
-                    // Get it from Airtable.
-                    if let Some(existing_airtable) = m.get_existing_airtable_record(db).await {
-                        if meeting.transcript.is_empty() {
-                            meeting.transcript = existing_airtable.fields.transcript.to_string();
-                        }
-                        if meeting.transcript_id.is_empty() {
-                            meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
-                        }
+            let mut meeting = NewRecordedMeeting {
+                name: event.summary.trim().to_string(),
+                description: event.description.trim().to_string(),
+                start_time: event.start.unwrap().date_time.unwrap(),
+                end_time: event.end.unwrap().date_time.unwrap(),
+                video,
+                chat_log_link,
+                chat_log,
+                is_recurring: !event.recurring_event_id.is_empty(),
+                attendees,
+                transcript: "".to_string(),
+                transcript_id: "".to_string(),
+                location: event.location.to_string(),
+                google_event_id: event.id.to_string(),
+                event_link: event.html_link.to_string(),
+                cio_company_id: company.id,
+            };
+
+            // Let's try to get the meeting.
+            let existing = RecordedMeeting::get_from_db(db, event.id.to_string());
+            if let Some(m) = existing {
+                // Update the meeting.
+                meeting.transcript = m.transcript.to_string();
+                meeting.transcript_id = m.transcript_id.to_string();
+
+                // Get it from Airtable.
+                if let Some(existing_airtable) = m.get_existing_airtable_record(db).await {
+                    if meeting.transcript.is_empty() {
+                        meeting.transcript = existing_airtable.fields.transcript.to_string();
+                    }
+                    if meeting.transcript_id.is_empty() {
+                        meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
                     }
                 }
+            }
 
-                // Upsert the meeting in the database.
-                let mut db_meeting = meeting.upsert(db).await?;
+            // Upsert the meeting in the database.
+            let mut db_meeting = meeting.upsert(db).await?;
 
-                if !video_contents.is_empty() {
-                    // Only do this if we have the video contents.
-                    // Check if we have a transcript id.
-                    if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
-                        // If we don't have a transcript ID, let's post the video to be
-                        // transcribed.
-                        // Now let's upload it to rev.ai so it can start a job.
-                        let job = revai.create_job(video_contents).await?;
-                        // Set the transcript id.
-                        db_meeting.transcript_id = job.id.to_string();
+            if !video_contents.is_empty() {
+                // Only do this if we have the video contents.
+                // Check if we have a transcript id.
+                if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
+                    // If we don't have a transcript ID, let's post the video to be
+                    // transcribed.
+                    // Now let's upload it to rev.ai so it can start a job.
+                    let job = revai.create_job(video_contents).await?;
+                    // Set the transcript id.
+                    db_meeting.transcript_id = job.id.to_string();
+                    db_meeting.update(db).await?;
+                } else {
+                    // We have a transcript id, let's try and get the transcript if we don't have
+                    // it already.
+                    if db_meeting.transcript.is_empty() {
+                        // Now let's try to get the transcript.
+                        let transcript = revai
+                            .get_transcript(&db_meeting.transcript_id)
+                            .await
+                            .unwrap_or_default();
+                        db_meeting.transcript = transcript.trim().to_string();
                         db_meeting.update(db).await?;
-                    } else {
-                        // We have a transcript id, let's try and get the transcript if we don't have
-                        // it already.
-                        if db_meeting.transcript.is_empty() {
-                            // Now let's try to get the transcript.
-                            let transcript = revai
-                                .get_transcript(&db_meeting.transcript_id)
-                                .await
-                                .unwrap_or_default();
-                            db_meeting.transcript = transcript.trim().to_string();
-                            db_meeting.update(db).await?;
-                        }
                     }
                 }
             }
