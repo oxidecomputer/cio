@@ -138,25 +138,17 @@ impl From<NewFunction> for FormattedMessage {
             && item.conclusion != octorust::types::Conclusion::Success.to_string()
         {
             // Add a button to rerun the function.
-            let button = MessageBlock {
-                block_type: MessageBlockType::Actions,
-                elements: vec![slack_chat_api::BlockOption::ActionBlock(ActionBlock {
-                    text_type: MessageType::Button,
-                    text: MessageBlockText {
-                        text_type: MessageType::PlainText,
-                        text: format!("Re-run {}", item.name),
-                    },
-                    action_id: "function".to_string(),
-                    value: item.name.to_string(),
-                })],
+            let button = slack_chat_api::BlockOption::ActionBlock(ActionBlock {
+                text_type: MessageType::Button,
+                text: MessageBlockText {
+                    text_type: MessageType::PlainText,
+                    text: format!("Re-run {}", item.name),
+                },
+                action_id: "function".to_string(),
+                value: item.name.to_string(),
+            });
 
-                text: Default::default(),
-                accessory: Default::default(),
-                block_id: Default::default(),
-                fields: Default::default(),
-            };
-
-            blocks.push(button);
+            blocks[0].accessory = Some(button);
         }
 
         FormattedMessage {
