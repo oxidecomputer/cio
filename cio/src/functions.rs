@@ -6,7 +6,8 @@ use macros::db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::{
-    ActionBlock, FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockAccessory, MessageBlockText, MessageBlockType,
+    MessageType,
 };
 
 use crate::{
@@ -138,15 +139,17 @@ impl From<NewFunction> for FormattedMessage {
             && item.conclusion != octorust::types::Conclusion::Success.to_string()
         {
             // Add a button to rerun the function.
-            let button = slack_chat_api::BlockOption::ActionBlock(ActionBlock {
-                text_type: MessageType::Button,
+            let button = MessageBlockAccessory {
+                accessory_type: MessageType::Button,
                 text: MessageBlockText {
                     text_type: MessageType::PlainText,
                     text: format!("Re-run {}", item.name),
                 },
                 action_id: "function".to_string(),
                 value: item.name.to_string(),
-            });
+                image_url: Default::default(),
+                alt_text: Default::default(),
+            };
 
             blocks[0].accessory = Some(button);
         }
