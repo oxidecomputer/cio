@@ -864,10 +864,10 @@ pub struct InputBlock {
     pub label: Option<MessageBlockText>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<MessageBlockText>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub hint: String,
-    #[serde(default)]
-    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hint: Option<MessageBlockText>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub optional: Option<bool>,
 }
 
 /// Input block element in Slack.
