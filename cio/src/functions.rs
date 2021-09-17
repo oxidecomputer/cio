@@ -242,12 +242,20 @@ impl Function {
 
         // Get the saga from it's id.
         let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
+
+        let mut send_notification = false;
+        if conclusion.to_string() != nf.conclusion {
+            send_notification = true;
+        }
+
         nf.logs = logs.to_string();
         nf.conclusion = conclusion.to_string();
-        nf.update(db).await?;
+        let new = nf.update(db).await?;
 
-        let company = nf.company(db)?;
-        nf.send_slack_notification(db, &company).await?;
+        if send_notification {
+            let company = new.company(db)?;
+            new.send_slack_notification(db, &company).await?;
+        }
 
         Ok(())
     }
@@ -271,7 +279,12 @@ impl Function {
             cio_company_id: 1, // This is always 1 because these are meta and tied to Oxide.
         };
 
-        nf.upsert(db).await
+        let new = nf.upsert(db).await?;
+
+        let company = new.company(db)?;
+        new.send_slack_notification(db, &company).await?;
+
+        Ok(new)
     }
 
     /// Update a job from SagaCachedState.
@@ -289,10 +302,13 @@ impl Function {
             steno::SagaCachedState::Done => octorust::types::JobStatus::Completed,
         };
 
-        let mut send_notification = false;
         if status == octorust::types::JobStatus::Completed && nf.completed_at.is_none() {
-            send_notification = true;
             nf.completed_at = Some(Utc::now());
+        }
+
+        let mut send_notification = false;
+        if status.to_string() != nf.status {
+            send_notification = true;
         }
 
         // Update the status.
