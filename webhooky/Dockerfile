@@ -1,25 +1,7 @@
 # ------------------------------------------------------------------------------
-# Cargo Build Stage
+# App Base Stage
 # ------------------------------------------------------------------------------
-
-FROM rust:latest as cargo-build
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-WORKDIR /usr/src/webhooky
-
-RUN rustup default nightly
-
-COPY . .
-
-WORKDIR /usr/src/webhooky/webhooky
-RUN cargo build --release
-
-# ------------------------------------------------------------------------------
-# Final Stage
-# ------------------------------------------------------------------------------
-
-FROM debian:sid-slim
+FROM debian:sid-slim AS app-base
 
 RUN apt-get update && apt-get install -y \
 	asciidoctor \
@@ -40,6 +22,49 @@ RUN apt-get update && apt-get install -y \
 RUN gem install \
 	asciidoctor-pdf \
 	rouge
+
+# ------------------------------------------------------------------------------
+# Cargo Chef Stage
+# ------------------------------------------------------------------------------
+
+FROM rust:latest AS cargo-chef
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN cargo install cargo-chef
+
+WORKDIR /usr/src/webhooky
+
+# ------------------------------------------------------------------------------
+# Cargo Deps Stage
+# ------------------------------------------------------------------------------
+
+FROM cargo-chef AS cargo-deps
+
+COPY . .
+
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ------------------------------------------------------------------------------
+# Cargo Build Stage
+# ------------------------------------------------------------------------------
+
+FROM cargo-deps AS cargo-build
+
+COPY --from=cargo-deps /usr/src/webhooky/recipe.json recipe.json
+
+# Build dependencies - this is the caching Docker layer!
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY . .
+
+RUN cargo build --release --bin webhooky
+
+# ------------------------------------------------------------------------------
+# Final Stage
+# ------------------------------------------------------------------------------
+
+FROM app-base
 
 COPY --from=cargo-build /usr/src/webhooky/target/release/webhooky /usr/bin/webhooky
 
