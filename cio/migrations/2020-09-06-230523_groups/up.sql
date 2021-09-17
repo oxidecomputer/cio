@@ -5,6 +5,7 @@ CREATE TABLE groups (
     link VARCHAR NOT NULL,
     aliases TEXT [] NOT NULL,
     members TEXT [] NOT NULL,
+    repos TEXT [] NOT NULL,
     allow_external_members BOOLEAN NOT NULL DEFAULT 'f',
     allow_web_posting BOOLEAN NOT NULL DEFAULT 'f',
     is_archived BOOLEAN NOT NULL DEFAULT 'f',

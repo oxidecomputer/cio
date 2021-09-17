@@ -544,6 +544,7 @@ table! {
         link -> Varchar,
         aliases -> Array<Text>,
         members -> Array<Text>,
+        repos -> Array<Text>,
         allow_external_members -> Bool,
         allow_web_posting -> Bool,
         is_archived -> Bool,

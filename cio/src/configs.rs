@@ -1006,6 +1006,10 @@ pub struct GroupConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub members: Vec<String>,
 
+    /// Specific repos this group should have access to.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub repos: Vec<String>,
+
     /// allow_external_members: Identifies whether members external to your
     /// organization can join the group. Possible values are:
     /// - true: G Suite users external to your organization can become

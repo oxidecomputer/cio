@@ -272,7 +272,8 @@ pub mod meeting_date_format {
 impl Meeting {
     pub fn to_model(&self, company: &Company) -> NewJournalClubMeeting {
         let mut papers: Vec<String> = Default::default();
-        for p in &self.papers {
+        for mut p in self.papers.clone() {
+            p.cio_company_id = company.id;
             let paper = serde_json::to_string_pretty(&p).unwrap();
             papers.push(paper);
         }
@@ -332,6 +333,11 @@ pub async fn refresh_db_journal_club_meetings(db: &Database, company: &Company) 
     let github = company.authenticate_github()?;
 
     let journal_club_meetings = get_meetings_from_repo(&github, company).await?;
+
+    if journal_club_meetings.is_empty() {
+        // Return early.
+        return Ok(());
+    }
 
     // Sync journal_club_meetings.
     for journal_club_meeting in journal_club_meetings {
