@@ -33,9 +33,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN rustup default nightly
 
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --version 0.1.23
 
-WORKDIR /usr/src/webhooky
+WORKDIR /usr/src/cio
 
 # ------------------------------------------------------------------------------
 # Cargo Deps Stage
@@ -53,7 +53,7 @@ RUN cargo chef prepare --recipe-path recipe.json || true
 
 FROM cargo-chef AS cargo-build
 
-#COPY --from=cargo-deps /usr/src/webhooky/recipe.json recipe.json
+#COPY --from=cargo-deps /usr/src/cio/recipe.json recipe.json
 
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --recipe-path recipe.json || true
@@ -68,6 +68,6 @@ RUN cargo build --release --bin webhooky
 
 FROM app-base
 
-COPY --from=cargo-build /usr/src/webhooky/target/release/webhooky /usr/bin/webhooky
+COPY --from=cargo-build /usr/src/cio/target/release/webhooky /usr/bin/webhooky
 
 CMD ["webhooky", "server", "--do-cron"]

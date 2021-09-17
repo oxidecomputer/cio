@@ -21,9 +21,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN rustup default nightly
 
-RUN cargo install cargo-chef --version 0.1.31
-
-RUN cargo chef --version
+RUN cargo install cargo-chef --version 0.1.23
 
 WORKDIR /usr/src/cio
 
@@ -58,6 +56,6 @@ RUN cargo build --release --bin cio
 
 FROM app-base
 
-COPY --from=cargo-build /usr/src/cio-api/target/release/cio-api /usr/bin/cio-api
+COPY --from=cargo-build /usr/src/cio/target/release/cio-api /usr/bin/cio-api
 
 CMD ["cio-api"]
