@@ -769,26 +769,24 @@ pub async fn handle_slack_commands(
     Ok(response)
 }
 
-#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
-pub struct SlackInteractive {
-    pub payload: InteractivePayload,
-}
-
 pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
     let s = String::from_utf8(body_param.as_bytes().to_vec())?;
 
     sentry::capture_message(&format!("slack interactive: {}", s), sentry::Level::Info);
 
+    // Decode the URL encoded struct.
+    let decoded = url_encoding::decode(s.trim_start_matches("payload="))?;
+
+    sentry::capture_message(&format!("slack interactive decoded: {}", decoded), sentry::Level::Info);
+
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack InteractivePayload.
-    let payload: SlackInteractive = serde_urlencoded::from_str(&s)?;
+    let payload: InteractivePayload = serde_json::from_str(&s)?;
 
     sentry::capture_message(
         &format!("slack interactive payload: {:#?}", payload),
         sentry::Level::Info,
     );
-
-    let payload = payload.payload;
 
     let ctx = rqctx.context();
     let db = &ctx.db;
