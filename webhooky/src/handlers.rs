@@ -26,14 +26,12 @@ use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
 use mailchimp_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
-    BotCommand, FormattedMessage, InputBlock, InputBlockElement, InputType, InteractivePayload, MessageAttachment,
-    MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType, MessageType,
-    SelectInputOption, View,
+    BotCommand, FormattedMessage, InputBlock, InputBlockElement, InputType, InteractivePayload, InteractiveResponse,
+    MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType,
+    MessageType, SelectInputOption, View,
 };
 
 use crate::{
@@ -767,14 +765,6 @@ pub async fn handle_slack_commands(
     };
 
     Ok(response)
-}
-
-#[derive(Deserialize, Serialize, Default, Clone, Debug, JsonSchema)]
-pub struct InteractiveResponse {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub response_action: String,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub errors: HashMap<String, String>,
 }
 
 pub async fn handle_slack_interactive(
