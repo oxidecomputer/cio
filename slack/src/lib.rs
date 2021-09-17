@@ -779,6 +779,8 @@ pub enum MessageBlockType {
     Actions,
     #[serde(rename = "input")]
     Input,
+    #[serde(rename = "message")]
+    Message,
 }
 
 impl Default for MessageBlockType {
