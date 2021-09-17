@@ -609,7 +609,8 @@ pub struct Modal {
     pub close: MessageBlockText,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blocks: Vec<InputBlock>,
-    #[serde(default)]
+    // We only need this on deserializing.
+    #[serde(default, skip_serializing)]
     pub state: State,
 }
 
@@ -1275,8 +1276,7 @@ pub struct InteractivePayload {
     pub channel: Channel,
     #[serde(default)]
     pub message: Message,
-    // We only need this on deserializing.
-    #[serde(default, skip_serializing)]
+    #[serde(default)]
     pub state: State,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub response_url: String,
