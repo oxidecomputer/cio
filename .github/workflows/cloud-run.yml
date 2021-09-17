@@ -46,6 +46,7 @@ jobs:
     - name: Build image
       run: |-
         mv webhooky/Dockerfile .
+        cp .dockerignore .gcloudignore
         gcloud builds submit \
           --quiet \
           --timeout 2h \
