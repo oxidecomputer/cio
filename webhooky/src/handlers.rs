@@ -1863,6 +1863,8 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                 }),
                 element: None,
                 label: None,
+                optional: false,
+                hint: Default::default(),
             },
             InputBlock {
                 type_: MessageBlockType::Input,

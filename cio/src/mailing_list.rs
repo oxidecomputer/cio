@@ -129,7 +129,7 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
         let time = item.human_duration();
 
         let mut msg: String = Default::default();
-        if !item.name.is_empty() {
+        if !item.name.trim().is_empty() {
             msg += &format!("*{}*", item.name);
         }
         msg += &format!(" <mailto:{}|{}>", item.email, item.email);
