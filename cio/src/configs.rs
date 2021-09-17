@@ -584,6 +584,165 @@ impl UserConfig {
 }
 
 impl User {
+    /// Add the user to the github org if they are not already a member.
+    pub async fn add_to_github_org(&self, github: &octorust::Client, company: &Company) -> Result<()> {
+        let role = if self.is_group_admin {
+            octorust::types::OrgsSetMembershipUserRequestRole::Admin
+        } else {
+            octorust::types::OrgsSetMembershipUserRequestRole::Member
+        };
+
+        match github
+            .orgs()
+            .get_membership_for_user(&company.github_org, &self.github)
+            .await
+        {
+            Ok(membership) => {
+                if membership.role.to_string() == role.to_string() {
+                    info!(
+                        "user `{}` is already a member of the github org `{}` with role `{}`",
+                        self.github, company.github_org, role
+                    );
+                    // We can return early, they have the right perms.
+                    return Ok(());
+                }
+            }
+            Err(e) => {
+                // If the error is Not Found we need to add them.
+                if !e.to_string().contains("404") {
+                    // Otherwise bail.
+                    bail!(
+                        "checking if user `{}` is a member of the github org `{}` failed: {}",
+                        self.github,
+                        company.github_org,
+                        e
+                    );
+                }
+            }
+        }
+
+        // We need to add the user to the org or update their role, do it now.
+        github
+            .orgs()
+            .set_membership_for_user(
+                &company.github_org,
+                &self.github,
+                &octorust::types::OrgsSetMembershipUserRequest {
+                    role: Some(role.clone()),
+                },
+            )
+            .await?;
+
+        info!(
+            "updated user `{}` as a member of the github org `{}` with role `{}`",
+            self.github, company.github_org, role
+        );
+
+        Ok(())
+    }
+
+    /// Add the user to the github teams if they are not already a member.
+    pub async fn add_to_github_teams(&self, github: &octorust::Client, company: &Company) -> Result<()> {
+        let role = if self.is_group_admin {
+            octorust::types::TeamMembershipRole::Maintainer
+        } else {
+            octorust::types::TeamMembershipRole::Member
+        };
+
+        for group in &self.groups {
+            match github
+                .teams()
+                .get_membership_for_user_in_org(&company.github_org, group, &self.github)
+                .await
+            {
+                Ok(membership) => {
+                    if membership.role == role {
+                        // We can return early, they have the right perms.
+                        info!(
+                            "user `{}` is already a member of the github team `{}` with role `{}`",
+                            self.github, group, role
+                        );
+                        return Ok(());
+                    }
+                }
+                Err(e) => {
+                    // If the error is Not Found we need to add them.
+                    if !e.to_string().contains("404") {
+                        // Otherwise bail.
+                        bail!(
+                            "checking if user `{}` is a member of the github team `{}` failed: {}",
+                            self.github,
+                            group,
+                            e
+                        );
+                    }
+                }
+            }
+
+            // We need to add the user to the team or update their role, do it now.
+            github
+                .teams()
+                .add_or_update_membership_for_user_in_org(
+                    &company.github_org,
+                    group,
+                    &self.github,
+                    &octorust::types::TeamsAddUpdateMembershipUserInOrgRequest {
+                        role: Some(role.clone()),
+                    },
+                )
+                .await?;
+
+            info!(
+                "updated user `{}` as a member of the github team `{}` with role `{}`",
+                self.github, group, role
+            );
+        }
+
+        // Get all the GitHub teams.
+        let gh_teams = github.teams().list_all(&company.github_org).await?;
+
+        // Iterate over all the teams and if the user is a member and should not
+        // be, remove them from the team.
+        for team in &gh_teams {
+            if self.groups.contains(&team.slug) {
+                // They should be in the team, continue.
+                continue;
+            }
+
+            // Now we have a github team. The user should not be a member of it,
+            // but we need to make sure they are not a member.
+            if let Err(e) = github
+                .teams()
+                .get_membership_for_user_in_org(&company.github_org, &team.slug, &self.github)
+                .await
+            {
+                if e.to_string().contains("404") {
+                    // They are not a member so we can continue early.
+                    continue;
+                }
+
+                // We got some weird other error, bail just in case.
+                bail!(
+                    "checking if user `{}` is a member of the github team `{}` failed: {}",
+                    self.github,
+                    team.slug,
+                    e
+                );
+            }
+
+            // They are a member of the team.
+            // We need to remove them.
+            github
+                .teams()
+                .remove_membership_for_user_in_org(&company.github_org, &team.slug, &self.github)
+                .await?;
+
+            info!("removed `{}` from github team `{}`", self.github, team.slug);
+        }
+
+        Ok(())
+    }
+
     /// Get the user's manager, if they have one, otherwise return Jess.
     pub fn manager(&self, db: &Database) -> User {
         let mut manager = self.manager.to_string();
@@ -1840,6 +1999,15 @@ pub async fn sync_users(
             }
         }
 
+        // Add the user to their GitHub teams and the org.
+        if !new_user.github.is_empty() {
+            // Add them to the org.
+            new_user.add_to_github_org(github, company).await?;
+
+            // Add them to teams.
+            new_user.add_to_github_teams(github, company).await?;
+        }
+
         if let Ok(ref ramp) = ramp_auth {
             if !new_user.is_consultant() && !new_user.is_system_account() {
                 // Check if we have a Ramp user for the user.
@@ -2031,6 +2199,7 @@ pub async fn sync_users(
         // Remove the user from the BTreeMap.
         user_map.remove(&user.username);
     }
+
     // Remove any users that should no longer be in the database.
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
@@ -2086,13 +2255,23 @@ pub async fn sync_users(
                             true,                    // Transfer recordings
                         )
                         .await?;
+                    info!("deleted user from zoom: {}", username);
                 }
+            }
+
+            if !user.github.is_empty() {
+                // Delete the user from the GitHub org.
+                // Removing a user from this list will remove them from all teams and
+                // they will no longer have any access to the organization’s repositories.
+                github.orgs().remove_member(&company.github_org, &user.github).await?;
+                info!("deleted user from github org: {}", username);
             }
         }
 
         // Delete the user from the database and Airtable.
         user.delete(db).await?;
     }
+
     info!("updated configs users in the database");
 
     if company.okta_domain.is_empty() {
@@ -2600,7 +2779,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
                     description: group.description.to_string(),
                     parent_team_id,
                     permission: None, // This is depreciated, so just pass none.
-                    privacy: None,
+                    privacy: Some(octorust::types::Privacy::Closed),
                 },
             )
             .await?;
@@ -2619,7 +2798,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
             name: name.to_string(),
             description: group.description.to_string(),
             maintainers: Default::default(),
-            privacy: None,
+            privacy: Some(octorust::types::Privacy::Closed),
             permission: None, // This is depreciated, so just pass none.
             parent_team_id: 0,
             repo_names: group.repos,
