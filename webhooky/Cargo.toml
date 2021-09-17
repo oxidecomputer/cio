@@ -17,7 +17,7 @@ checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 chrono-tz = { version = "0.4", features = ["serde"] }
-cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "7ba0a6570ae5c6a00f1c745de50c1d24ee0c9959" }
+cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "d11126470cf7addb5a0fd0495823c53647d85173" }
 #cio-api = { path = "../cio" }
 clap = "3.0.0-beta.4"
 clokwerk = "0.4.0-rc1"
@@ -57,7 +57,7 @@ sheets = "^0.2.0"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.12"
 signal-hook = "^0.3"
-slack-chat-api = "^0.1.44"
+slack-chat-api = "^0.1.45"
 slog = "2"
 slog-async = "2"
 slog-scope = "4"

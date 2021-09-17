@@ -1875,8 +1875,10 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                 }),
                 label: Some(MessageBlockText {
                     text_type: MessageType::PlainText,
-                    text: "Short description for package".to_string(),
+                    text: "Name".to_string(),
                 }),
+                optional: false,
+                hint: "A short description of the package so that we can easily know what is inside.".to_string(),
             },
             InputBlock {
                 type_: MessageBlockType::Input,
@@ -1923,6 +1925,8 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                     text_type: MessageType::PlainText,
                     text: "Carrier".to_string(),
                 }),
+                optional: false,
+                hint: Default::default(),
             },
             InputBlock {
                 type_: MessageBlockType::Input,
@@ -1937,6 +1941,8 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                     text_type: MessageType::PlainText,
                     text: "Tracking number".to_string(),
                 }),
+                optional: false,
+                hint: Default::default(),
             },
             InputBlock {
                 type_: MessageBlockType::Input,
@@ -1951,6 +1957,8 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                     text_type: MessageType::PlainText,
                     text: "Order number".to_string(),
                 }),
+                optional: true,
+                hint: Default::default(),
             },
             InputBlock {
                 type_: MessageBlockType::Input,
@@ -1965,6 +1973,8 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                     text_type: MessageType::PlainText,
                     text: "Notes".to_string(),
                 }),
+                optional: true,
+                hint: "Any other additional information.".to_string(),
             },
         ],
         state: Default::default(),
