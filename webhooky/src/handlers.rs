@@ -1753,7 +1753,7 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                 label: None,
             },
             InputBlock {
-                type_: MessageBlockType::Section,
+                type_: MessageBlockType::Input,
                 text: None,
                 element: Some(InputBlockElement {
                     type_: InputType::StaticSelect,
@@ -1799,7 +1799,7 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                 }),
             },
             InputBlock {
-                type_: MessageBlockType::Section,
+                type_: MessageBlockType::Input,
                 text: None,
                 element: Some(InputBlockElement {
                     type_: InputType::PlainText,
