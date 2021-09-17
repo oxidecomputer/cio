@@ -1096,6 +1096,8 @@ pub struct InteractivePayload {
     #[serde(default)]
     pub container: Container,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub callback_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub trigger_id: String,
     #[serde(default)]
     pub team: Team,
