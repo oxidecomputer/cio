@@ -29,8 +29,8 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
-    BotCommand, FormattedMessage, MessageAttachment, MessageBlock, MessageBlockType, MessageResponse,
-    MessageResponseType,
+    BotCommand, FormattedMessage, InteractivePayload, MessageAttachment, MessageBlock, MessageBlockType,
+    MessageResponse, MessageResponseType,
 };
 
 use crate::{
@@ -767,18 +767,25 @@ pub async fn handle_slack_commands(
 }
 
 pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
-    let api_context = rqctx.context();
-    let db = &api_context.db;
-
     let s = String::from_utf8(body_param.as_bytes().to_vec())?;
-    warn!("slack interactive `{}`", s);
 
     // We should have a string, which we will then parse into our args.
-    // Parse the request body as a Slack BotCommand.
-    //let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes())?;
+    // Parse the request body as a Slack InteractivePayload.
+    let payload: InteractivePayload = serde_urlencoded::from_str(s.trim_start_matches("payload="))?;
 
-    // Get the company from the Slack team id.
-    //let company = Company::get_from_slack_team_id(db, &bot_command.team_id)?;
+    tokio::spawn(async move {
+        let ctx = rqctx.context();
+        for action in payload.actions {
+            // Trigger the action if it's a function.
+            if action.action_id == "function" {
+                // Run the command in the background so we don't have to wait for it.
+                if let Err(e) = crate::handlers_cron::handle_reexec_cmd(ctx, &action.value).await {
+                    sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", e));
+                }
+            }
+        }
+    });
+
     Ok(())
 }
 
