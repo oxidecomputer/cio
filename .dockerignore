@@ -1,3 +1,5 @@
 .cache
 .github
 README.md
+target
+*.png
