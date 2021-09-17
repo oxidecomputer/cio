@@ -35,6 +35,8 @@ COPY cio/src/dummy.rs ./src/dummy.rs
 
 COPY cio/Cargo.toml ./Cargo.toml
 
+COPY macros ../macros
+
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
 RUN cargo build --release --bin cio
