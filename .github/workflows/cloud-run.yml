@@ -46,6 +46,7 @@ jobs:
     - name: Build image
       run: |-
         gcloud config set builds/use_kaniko True
+        gcloud config set builds/kaniko_cache_ttl 72
         mv webhooky/Dockerfile .
         cp .dockerignore .gcloudignore
         gcloud builds submit \
